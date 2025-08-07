@@ -17,69 +17,101 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.auth;
+package org.apache.druid.testing.embedded.auth;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.inject.Inject;
-import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
-import org.apache.druid.msq.indexing.MSQControllerTask;
+import org.apache.druid.metadata.DefaultPasswordProvider;
+import org.apache.druid.msq.guice.IndexerMemoryManagementModule;
+import org.apache.druid.msq.guice.MSQDurableStorageModule;
+import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
+import org.apache.druid.msq.guice.MSQIndexingModule;
+import org.apache.druid.msq.guice.MSQSqlModule;
+import org.apache.druid.msq.guice.SqlTaskModule;
+import org.apache.druid.query.http.ClientSqlQuery;
+import org.apache.druid.query.http.SqlTaskStatus;
+import org.apache.druid.security.basic.authentication.BasicHTTPEscalator;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.storage.local.LocalFileExportStorageProvider;
 import org.apache.druid.storage.s3.output.S3ExportStorageProvider;
-import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
-import org.apache.druid.testing.clients.OverlordResourceTestClient;
-import org.apache.druid.testing.clients.SecurityClient;
-import org.apache.druid.testing.utils.DataLoaderHelper;
-import org.apache.druid.testing.utils.MsqTestQueryHelper;
-import org.apache.druid.tests.indexer.AbstractIndexerTest;
-import org.apache.druid.testsEx.categories.Security;
-import org.apache.druid.testsEx.config.DruidTestRunner;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
+import org.apache.druid.testing.embedded.EmbeddedBroker;
+import org.apache.druid.testing.embedded.EmbeddedCoordinator;
+import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedIndexer;
+import org.apache.druid.testing.embedded.EmbeddedOverlord;
+import org.apache.druid.testing.embedded.EmbeddedServiceClient;
+import org.apache.druid.testing.embedded.indexing.Resources;
+import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
+import org.apache.druid.testing.embedded.msq.MSQExportDirectory;
+import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
+import java.io.File;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
+import java.util.Map;
 
-@RunWith(DruidTestRunner.class)
-@Category(Security.class)
-public class ITSecurityBasicQuery
+public class BasicAuthMSQTest extends EmbeddedClusterTestBase
 {
-  @Inject
-  private MsqTestQueryHelper msqHelper;
-
-  @Inject
-  private DataLoaderHelper dataLoaderHelper;
-
-  @Inject
-  private CoordinatorResourceTestClient coordinatorClient;
-  @Inject
-  private SecurityClient securityClient;
-  @Inject
-  private OverlordResourceTestClient overlordResourceTestClient;
-
   public static final String USER_1 = "user1";
   public static final String ROLE_1 = "role1";
   public static final String USER_1_PASSWORD = "password1";
-  private static final String EXPORT_TASK = "/indexer/export_task.json";
 
-  // Time in ms to sleep after updating role permissions in each test. This intends to give the
-  // underlying test cluster enough time to sync permissions and be ready when test execution starts.
-  private static final int SYNC_SLEEP = 10000;
+  private SecurityClient securityClient;
+  private EmbeddedServiceClient userClient;
 
-  @Before
-  public void setUp() throws IOException
+  // Indexer with 2 slots, each with 150MB memory since minimum required memory
+  // computed for the required tests is 133MB
+  private final EmbeddedIndexer indexer = new EmbeddedIndexer()
+      .setServerMemory(300_000_000)
+      .addProperty("druid.worker.capacity", "2");
+  private final EmbeddedOverlord overlord = new EmbeddedOverlord();
+  private final MSQExportDirectory exportDirectory = new MSQExportDirectory();
+
+  @Override
+  protected EmbeddedDruidCluster createCluster()
+  {
+    return EmbeddedDruidCluster
+        .withEmbeddedDerbyAndZookeeper()
+        .useLatchableEmitter()
+        .addResource(exportDirectory)
+        .addResource(new EmbeddedBasicAuthResource())
+        .addServer(new EmbeddedCoordinator())
+        .addServer(overlord)
+        .addServer(indexer)
+        .addServer(new EmbeddedBroker())
+        .addExtensions(
+            MSQSqlModule.class,
+            MSQIndexingModule.class,
+            SqlTaskModule.class,
+            MSQDurableStorageModule.class,
+            MSQExternalDataSourceModule.class,
+            IndexerMemoryManagementModule.class
+        )
+        .addCommonProperty("druid.auth.basic.common.pollingPeriod", "100");
+  }
+
+  @BeforeAll
+  public void setupClient()
+  {
+    // Make a custom client for testing out auth for the test user
+    userClient = EmbeddedServiceClient.create(
+        cluster,
+        new BasicHTTPEscalator("basic", USER_1, new DefaultPasswordProvider(USER_1_PASSWORD))
+    );
+
+    // Use the default set of clients for calling security APIs
+    securityClient = new SecurityClient(cluster.callApi().serviceClient());
+  }
+
+  @BeforeEach
+  public void setupRoles()
   {
     // Authentication setup
     securityClient.createAuthenticationUser(USER_1);
@@ -91,8 +123,8 @@ public class ITSecurityBasicQuery
     securityClient.assignUserToRole(USER_1, ROLE_1);
   }
 
-  @After
-  public void tearDown() throws Exception
+  @AfterEach
+  public void tearDownRoles()
   {
     securityClient.deleteAuthenticationUser(USER_1);
     securityClient.deleteAuthorizerUser(USER_1);
@@ -100,13 +132,64 @@ public class ITSecurityBasicQuery
   }
 
   @Test
-  public void testIngestionWithoutPermissions() throws Exception
+  public void testIngestionWithoutPermissions()
   {
     List<ResourceAction> permissions = ImmutableList.of();
     securityClient.setPermissionsToRole(ROLE_1, permissions);
 
-    // Allow permissions sync across cluster to avoid flakes
-    Thread.sleep(SYNC_SLEEP);
+    String queryLocal =
+        StringUtils.format(
+            "INSERT INTO %s\n"
+            + "SELECT\n"
+            + "  TIME_PARSE(\"timestamp\") AS __time,\n"
+            + "  isRobot,\n"
+            + "  diffUrl,\n"
+            + "  added,\n"
+            + "  countryIsoCode,\n"
+            + "  regionName,\n"
+            + "  channel,\n"
+            + "  flags,\n"
+            + "  delta,\n"
+            + "  isUnpatrolled,\n"
+            + "  isNew,\n"
+            + "  deltaBucket,\n"
+            + "  isMinor,\n"
+            + "  isAnonymous,\n"
+            + "  deleted,\n"
+            + "  cityName,\n"
+            + "  metroCode,\n"
+            + "  namespace,\n"
+            + "  comment,\n"
+            + "  page,\n"
+            + "  commentLength,\n"
+            + "  countryName,\n"
+            + "  user,\n"
+            + "  regionIsoCode\n"
+            + "FROM TABLE(\n"
+            + "  EXTERN(\n"
+            + "    '{\"type\":\"local\",\"files\":[\"%s\"]}',\n"
+            + "    '{\"type\":\"json\"}',\n"
+            + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
+            + "  )\n"
+            + ")\n"
+            + "PARTITIONED BY DAY\n",
+            dataSource,
+            Resources.DataFile.tinyWiki1Json().getAbsolutePath()
+        );
+
+    verifySqlSubmitFailsWith403Forbidden(queryLocal);
+  }
+
+  @Test
+  public void testIngestionWithPermissions()
+  {
+    List<ResourceAction> permissions = ImmutableList.of(
+        new ResourceAction(new Resource(".*", "DATASOURCE"), Action.READ),
+        new ResourceAction(new Resource("EXTERNAL", "EXTERNAL"), Action.READ),
+        new ResourceAction(new Resource("STATE", "STATE"), Action.READ),
+        new ResourceAction(new Resource(".*", "DATASOURCE"), Action.WRITE)
+    );
+    securityClient.setPermissionsToRole(ROLE_1, permissions);
 
     String queryLocal =
         StringUtils.format(
@@ -138,90 +221,26 @@ public class ITSecurityBasicQuery
             + "  regionIsoCode\n"
             + "FROM TABLE(\n"
             + "  EXTERN(\n"
-            + "    '{\"type\":\"local\",\"files\":[\"/resources/data/batch_index/json/wikipedia_index_data1.json\"]}',\n"
+            + "    '{\"type\":\"local\",\"files\":[\"%s\"]}',\n"
             + "    '{\"type\":\"json\"}',\n"
             + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
             + "  )\n"
             + ")\n"
             + "PARTITIONED BY DAY\n",
-            "dst"
+            dataSource,
+            Resources.DataFile.tinyWiki1Json().getAbsolutePath()
         );
 
-    // Submit the task and wait for the datasource to get loaded
-    StatusResponseHolder statusResponseHolder = msqHelper.submitMsqTask(
-        new SqlQuery(queryLocal, null, false, false, false, ImmutableMap.of(), ImmutableList.of()),
-        USER_1,
-        USER_1_PASSWORD
+    final SqlTaskStatus taskStatus = userClient.onAnyBroker(
+        b -> b.submitSqlTask(
+            new ClientSqlQuery(queryLocal, null, false, false, false, Map.of(), List.of())
+        )
     );
-
-    Assert.assertEquals(HttpResponseStatus.FORBIDDEN, statusResponseHolder.getStatus());
+    cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord);
   }
 
   @Test
-  public void testIngestionWithPermissions() throws Exception
-  {
-    List<ResourceAction> permissions = ImmutableList.of(
-        new ResourceAction(new Resource(".*", "DATASOURCE"), Action.READ),
-        new ResourceAction(new Resource("EXTERNAL", "EXTERNAL"), Action.READ),
-        new ResourceAction(new Resource("STATE", "STATE"), Action.READ),
-        new ResourceAction(new Resource(".*", "DATASOURCE"), Action.WRITE)
-    );
-    securityClient.setPermissionsToRole(ROLE_1, permissions);
-
-    // Allow permissions sync across cluster to avoid flakes
-    Thread.sleep(SYNC_SLEEP);
-
-    String queryLocal =
-        StringUtils.format(
-            "INSERT INTO %s\n"
-            + "SELECT\n"
-            + "  TIME_PARSE(\"timestamp\") AS __time,\n"
-            + "  isRobot,\n"
-            + "  diffUrl,\n"
-            + "  added,\n"
-            + "  countryIsoCode,\n"
-            + "  regionName,\n"
-            + "  channel,\n"
-            + "  flags,\n"
-            + "  delta,\n"
-            + "  isUnpatrolled,\n"
-            + "  isNew,\n"
-            + "  deltaBucket,\n"
-            + "  isMinor,\n"
-            + "  isAnonymous,\n"
-            + "  deleted,\n"
-            + "  cityName,\n"
-            + "  metroCode,\n"
-            + "  namespace,\n"
-            + "  comment,\n"
-            + "  page,\n"
-            + "  commentLength,\n"
-            + "  countryName,\n"
-            + "  user,\n"
-            + "  regionIsoCode\n"
-            + "FROM TABLE(\n"
-            + "  EXTERN(\n"
-            + "    '{\"type\":\"local\",\"files\":[\"/resources/data/batch_index/json/wikipedia_index_data1.json\"]}',\n"
-            + "    '{\"type\":\"json\"}',\n"
-            + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
-            + "  )\n"
-            + ")\n"
-            + "PARTITIONED BY DAY\n",
-            "dst"
-        );
-
-    // Submit the task and wait for the datasource to get loaded
-    StatusResponseHolder statusResponseHolder = msqHelper.submitMsqTask(
-        new SqlQuery(queryLocal, null, false, false, false, ImmutableMap.of(), ImmutableList.of()),
-        USER_1,
-        USER_1_PASSWORD
-    );
-
-    Assert.assertEquals(HttpResponseStatus.ACCEPTED, statusResponseHolder.getStatus());
-  }
-
-  @Test
-  public void testExportWithoutPermissions() throws IOException, ExecutionException, InterruptedException
+  public void testExportWithoutPermissions()
   {
     // No external write permissions for s3
     List<ResourceAction> permissions = ImmutableList.of(
@@ -233,9 +252,6 @@ public class ITSecurityBasicQuery
     );
     securityClient.setPermissionsToRole(ROLE_1, permissions);
 
-    // Allow permissions sync across cluster to avoid flakes
-    Thread.sleep(SYNC_SLEEP);
-
     String exportQuery =
         StringUtils.format(
             "INSERT INTO extern(%s(exportPath => '%s'))\n"
@@ -243,25 +259,21 @@ public class ITSecurityBasicQuery
             + "SELECT page, added, delta\n"
             + "FROM TABLE(\n"
             + "  EXTERN(\n"
-            + "    '{\"type\":\"local\",\"files\":[\"/resources/data/batch_index/json/wikipedia_index_data1.json\"]}',\n"
+            + "    '{\"type\":\"local\",\"files\":[\"%s\"]}',\n"
             + "    '{\"type\":\"json\"}',\n"
             + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
             + "  )\n"
             + ")\n",
-            LocalFileExportStorageProvider.TYPE_NAME, "/shared/export/"
+            LocalFileExportStorageProvider.TYPE_NAME,
+            cluster.getTestFolder().getOrCreateFolder("msq-export").getAbsolutePath(),
+            Resources.DataFile.tinyWiki1Json().getAbsolutePath()
         );
 
-    StatusResponseHolder statusResponseHolder = msqHelper.submitMsqTask(
-        new SqlQuery(exportQuery, null, false, false, false, ImmutableMap.of(), ImmutableList.of()),
-        USER_1,
-        USER_1_PASSWORD
-    );
-
-    Assert.assertEquals(HttpResponseStatus.FORBIDDEN, statusResponseHolder.getStatus());
+    verifySqlSubmitFailsWith403Forbidden(exportQuery);
   }
 
   @Test
-  public void testExportWithPermissions() throws IOException, ExecutionException, InterruptedException
+  public void testExportWithPermissions()
   {
     // No external write permissions for s3
     List<ResourceAction> permissions = ImmutableList.of(
@@ -273,9 +285,6 @@ public class ITSecurityBasicQuery
     );
     securityClient.setPermissionsToRole(ROLE_1, permissions);
 
-    // Allow permissions sync across cluster to avoid flakes
-    Thread.sleep(SYNC_SLEEP);
-
     String exportQuery =
         StringUtils.format(
             "INSERT INTO extern(%s(exportPath => '%s'))\n"
@@ -283,69 +292,36 @@ public class ITSecurityBasicQuery
             + "SELECT page, added, delta\n"
             + "FROM TABLE(\n"
             + "  EXTERN(\n"
-            + "    '{\"type\":\"local\",\"files\":[\"/resources/data/batch_index/json/wikipedia_index_data1.json\"]}',\n"
+            + "    '{\"type\":\"local\",\"files\":[\"%s\"]}',\n"
             + "    '{\"type\":\"json\"}',\n"
             + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
             + "  )\n"
             + ")\n",
-            LocalFileExportStorageProvider.TYPE_NAME, "/shared/export/"
+            LocalFileExportStorageProvider.TYPE_NAME,
+            new File(exportDirectory.get(), dataSource).getAbsolutePath(),
+            Resources.DataFile.tinyWiki1Json()
         );
 
-    StatusResponseHolder statusResponseHolder = msqHelper.submitMsqTask(
-        new SqlQuery(exportQuery, null, false, false, false, ImmutableMap.of(), ImmutableList.of()),
-        USER_1,
-        USER_1_PASSWORD
+    final SqlTaskStatus taskStatus = userClient.onAnyBroker(
+        b -> b.submitSqlTask(
+            new ClientSqlQuery(exportQuery, null, false, false, false, Map.of(), List.of())
+        )
     );
-
-    Assert.assertEquals(HttpResponseStatus.ACCEPTED, statusResponseHolder.getStatus());
+    cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord);
   }
 
-  @Test
-  public void testExportTaskSubmitOverlordWithPermission() throws Exception
+  private void verifySqlSubmitFailsWith403Forbidden(String sql)
   {
-    // No external write permissions for s3
-    List<ResourceAction> permissions = ImmutableList.of(
-        new ResourceAction(new Resource(".*", "DATASOURCE"), Action.READ),
-        new ResourceAction(new Resource("EXTERNAL", "EXTERNAL"), Action.READ),
-        new ResourceAction(new Resource(LocalFileExportStorageProvider.TYPE_NAME, "EXTERNAL"), Action.WRITE),
-        new ResourceAction(new Resource("STATE", "STATE"), Action.READ),
-        new ResourceAction(new Resource(".*", "DATASOURCE"), Action.WRITE)
+    MatcherAssert.assertThat(
+        Assertions.assertThrows(
+            Exception.class,
+            () -> userClient.onAnyBroker(
+                b -> b.submitSqlTask(
+                    new ClientSqlQuery(sql, null, false, false, false, Map.of(), List.of())
+                )
+            )
+        ),
+        ExceptionMatcher.of(Exception.class).expectMessageContains("403 Forbidden")
     );
-    securityClient.setPermissionsToRole(ROLE_1, permissions);
-
-    // Allow permissions sync across cluster to avoid flakes
-    Thread.sleep(SYNC_SLEEP);
-
-    String task = createTaskString();
-    StatusResponseHolder statusResponseHolder = overlordResourceTestClient.submitTaskAndReturnStatusWithAuth(task, USER_1, USER_1_PASSWORD);
-    Assert.assertEquals(HttpResponseStatus.OK, statusResponseHolder.getStatus());
-  }
-
-  @Test
-  public void testExportTaskSubmitOverlordWithoutPermission() throws Exception
-  {
-    // No external write permissions for s3
-    List<ResourceAction> permissions = ImmutableList.of(
-        new ResourceAction(new Resource(".*", "DATASOURCE"), Action.READ),
-        new ResourceAction(new Resource("EXTERNAL", "EXTERNAL"), Action.READ),
-        new ResourceAction(new Resource(S3ExportStorageProvider.TYPE_NAME, "EXTERNAL"), Action.WRITE),
-        new ResourceAction(new Resource("STATE", "STATE"), Action.READ),
-        new ResourceAction(new Resource(".*", "DATASOURCE"), Action.WRITE)
-    );
-    securityClient.setPermissionsToRole(ROLE_1, permissions);
-
-    // Allow permissions sync across cluster to avoid flakes
-    Thread.sleep(SYNC_SLEEP);
-
-    String task = createTaskString();
-    StatusResponseHolder statusResponseHolder = overlordResourceTestClient.submitTaskAndReturnStatusWithAuth(task, USER_1, USER_1_PASSWORD);
-    Assert.assertEquals(HttpResponseStatus.FORBIDDEN, statusResponseHolder.getStatus());
-  }
-
-  private String createTaskString() throws Exception
-  {
-    String queryId = IdUtils.newTaskId(MSQControllerTask.TYPE, "external", null);
-    String template = AbstractIndexerTest.getResourceAsString(EXPORT_TASK);
-    return StringUtils.replace(template, "%%QUERY_ID%%", queryId);
   }
 }

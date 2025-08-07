@@ -41,7 +41,6 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngesti
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.indexing.input.DruidInputSource;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.TestHelper;
@@ -49,8 +48,6 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.joda.time.Interval;
 
 import java.io.File;
-import java.net.URL;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -156,26 +153,11 @@ public abstract class TaskBuilder<B extends TaskBuilder<B, C, T>, C, T extends T
    * }
    * </pre>
    */
-  public B localInputSourceWithFiles(String... resources)
+  public B localInputSourceWithFiles(File... files)
   {
-    try {
-      final List<File> files = new ArrayList<>();
-      for (String file : resources) {
-        final URL resourceUrl = getClass().getClassLoader().getResource(file);
-        if (resourceUrl == null) {
-          throw new ISE("Could not find file[%s]", file);
-        }
-
-        files.add(new File(resourceUrl.toURI()));
-      }
-
-      return inputSource(
-          new LocalInputSource(null, null, files, null)
-      );
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+    return inputSource(
+        new LocalInputSource(null, null, List.of(files), null)
+    );
   }
 
   public B inputFormat(InputFormat inputFormat)

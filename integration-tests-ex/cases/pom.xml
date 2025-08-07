@@ -546,15 +546,6 @@
             </build>
         </profile>
         <profile>
-            <id>IT-Security</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <properties>
-                <it.category>Security</it.category>
-            </properties>
-        </profile>
-        <profile>
             <id>IT-DruidExactCountBitmap</id>
             <activation>
                 <activeByDefault>false</activeByDefault>

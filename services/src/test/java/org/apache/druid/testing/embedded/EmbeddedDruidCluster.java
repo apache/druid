@@ -21,13 +21,10 @@ package org.apache.druid.testing.embedded;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import org.apache.druid.client.broker.BrokerClient;
-import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.testing.embedded.derby.InMemoryDerbyModule;
 import org.apache.druid.testing.embedded.derby.InMemoryDerbyResource;
@@ -71,7 +68,7 @@ import java.util.stream.Collectors;
  * cluster.stop();
  * </pre>
  */
-public class EmbeddedDruidCluster implements ClusterReferencesProvider, EmbeddedResource
+public class EmbeddedDruidCluster implements EmbeddedResource
 {
   private static final Logger log = new Logger(EmbeddedDruidCluster.class);
 
@@ -254,6 +251,12 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
   {
     Preconditions.checkArgument(!servers.isEmpty(), "Cluster must have at least one embedded Druid server");
 
+    // Add clusterApis as the last entry in the resources list, so that the
+    // EmbeddedServiceClient is initialized after mappers have been injected into the servers
+    if (!startedFirstDruidServer) {
+      resources.add(clusterApis);
+    }
+
     // Start the resources in order
     for (EmbeddedResource resource : resources) {
       try {
@@ -318,25 +321,12 @@ public class EmbeddedDruidCluster implements ClusterReferencesProvider, Embedded
     return clusterApis.runSql(sql, args);
   }
 
-  @Override
-  public CoordinatorClient leaderCoordinator()
+  EmbeddedDruidServer<?> anyServer()
   {
-    return findServerOfType(EmbeddedCoordinator.class).bindings().leaderCoordinator();
+    return servers.get(0);
   }
 
-  @Override
-  public OverlordClient leaderOverlord()
-  {
-    return findServerOfType(EmbeddedOverlord.class).bindings().leaderOverlord();
-  }
-
-  @Override
-  public BrokerClient anyBroker()
-  {
-    return findServerOfType(EmbeddedBroker.class).bindings().anyBroker();
-  }
-
-  private <S extends EmbeddedDruidServer<S>> EmbeddedDruidServer<S> findServerOfType(
+  <S extends EmbeddedDruidServer<S>> S findServerOfType(
       Class<S> serverType
   )
   {

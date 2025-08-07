@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
@@ -261,23 +260,6 @@ public class CoordinatorResourceTestClient
     }
     catch (Exception e) {
       throw new RuntimeException(e);
-    }
-  }
-
-  public HttpResponseStatus getProxiedOverlordScalingResponseStatus()
-  {
-    try {
-      StatusResponseHolder response = makeRequest(
-          HttpMethod.GET,
-          StringUtils.format(
-              "%s/druid/indexer/v1/scaling",
-              coordinator
-          )
-      );
-      return response.getStatus();
-    }
-    catch (Exception e) {
-      throw new RE(e, "Unable to get scaling status from [%s]", coordinator);
     }
   }
 

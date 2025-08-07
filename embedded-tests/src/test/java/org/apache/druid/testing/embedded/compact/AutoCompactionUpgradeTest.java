@@ -37,6 +37,7 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -47,14 +48,19 @@ public class AutoCompactionUpgradeTest extends EmbeddedClusterTestBase
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator()
       .addProperty("druid.manager.segments.useIncrementalCache", "always");
 
-  protected CompactionResourceTestClient compactionResource =
-      new CompactionResourceTestClient(coordinator, overlord);
+  protected CompactionResourceTestClient compactionResource;
 
   @Override
   protected EmbeddedDruidCluster createCluster()
   {
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .addServer(coordinator);
+  }
+
+  @BeforeAll
+  public void setupClient()
+  {
+    compactionResource = new CompactionResourceTestClient(cluster);
   }
 
   @Test

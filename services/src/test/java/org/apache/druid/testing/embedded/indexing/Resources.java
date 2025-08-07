@@ -19,11 +19,15 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
+import com.google.common.base.Throwables;
 import org.apache.druid.data.input.impl.HttpInputSource;
 import org.apache.druid.data.input.impl.HttpInputSourceConfig;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.http.client.utils.URIBuilder;
 
+import java.io.File;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.List;
 
 /**
@@ -31,6 +35,25 @@ import java.util.List;
  */
 public class Resources
 {
+  /**
+   * Returns the {@link File} for the given local resource.
+   */
+  public static File getFileForResource(String resourceName)
+  {
+    final URL resourceUrl = DataFile.class.getClassLoader().getResource(resourceName);
+    if (resourceUrl == null) {
+      throw new ISE("Could not find resource file[%s]", resourceName);
+    }
+
+    try {
+      return new File(resourceUrl.toURI());
+    }
+    catch (Exception e) {
+      Throwables.throwIfUnchecked(e);
+      throw new RuntimeException(e);
+    }
+  }
+
   public static class InlineData
   {
     /**
@@ -74,9 +97,20 @@ public class Resources
 
   public static class DataFile
   {
-    public static final String TINY_WIKI_1_JSON = "data/json/tiny_wiki_1.json";
-    public static final String TINY_WIKI_2_JSON = "data/json/tiny_wiki_2.json";
-    public static final String TINY_WIKI_3_JSON = "data/json/tiny_wiki_3.json";
+    public static File tinyWiki1Json()
+    {
+      return getFileForResource("data/json/tiny_wiki_1.json");
+    }
+
+    public static File tinyWiki2Json()
+    {
+      return getFileForResource("data/json/tiny_wiki_2.json");
+    }
+
+    public static File tinyWiki3Json()
+    {
+      return getFileForResource("data/json/tiny_wiki_3.json");
+    }
   }
 
   public static class HttpData

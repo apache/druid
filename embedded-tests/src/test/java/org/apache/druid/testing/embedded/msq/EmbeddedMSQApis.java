@@ -19,7 +19,6 @@
 
 package org.apache.druid.testing.embedded.msq;
 
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.report.TaskReport;
@@ -62,8 +61,8 @@ public class EmbeddedMSQApis
    */
   public String runDartSql(String sql, Object... args)
   {
-    return FutureUtils.getUnchecked(
-        cluster.anyBroker().submitSqlQuery(
+    return cluster.callApi().onAnyBroker(
+        b -> b.submitSqlQuery(
             new ClientSqlQuery(
                 StringUtils.format(sql, args),
                 ResultFormat.CSV.name(),
@@ -73,8 +72,7 @@ public class EmbeddedMSQApis
                 Map.of(QueryContexts.ENGINE, DartSqlEngine.NAME),
                 null
             )
-        ),
-        true
+        )
     ).trim();
   }
 
@@ -87,8 +85,8 @@ public class EmbeddedMSQApis
   public SqlTaskStatus submitTaskSql(String sql, Object... args)
   {
     final SqlTaskStatus taskStatus =
-        FutureUtils.getUnchecked(
-            cluster.anyBroker().submitSqlTask(
+        cluster.callApi().onAnyBroker(
+            b -> b.submitSqlTask(
                 new ClientSqlQuery(
                     StringUtils.format(sql, args),
                     ResultFormat.CSV.name(),
@@ -98,8 +96,7 @@ public class EmbeddedMSQApis
                     null,
                     null
                 )
-            ),
-            true
+            )
         );
 
     if (taskStatus.getState() != TaskState.RUNNING) {
@@ -125,9 +122,8 @@ public class EmbeddedMSQApis
 
     cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord);
 
-    final TaskReport.ReportMap taskReport = FutureUtils.getUnchecked(
-        cluster.leaderOverlord().taskReportAsMap(taskStatus.getTaskId()),
-        true
+    final TaskReport.ReportMap taskReport = cluster.callApi().onLeaderOverlord(
+        o -> o.taskReportAsMap(taskStatus.getTaskId())
     );
 
     final Optional<MSQTaskReport> report = taskReport.findReport(MSQTaskReport.REPORT_KEY);
