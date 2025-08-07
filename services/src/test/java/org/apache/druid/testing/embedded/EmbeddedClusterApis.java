@@ -43,6 +43,7 @@ import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -194,7 +195,7 @@ public class EmbeddedClusterApis implements EmbeddedResource
    */
   public void waitForTaskToSucceed(String taskId, EmbeddedOverlord overlord)
   {
-    TaskStatus taskStatus = waitForTaskToFinish(taskId, overlord);
+    TaskStatus taskStatus = waitForTaskToFinish(taskId, overlord.latchableEmitter());
     Assertions.assertEquals(
         TaskState.SUCCESS,
         taskStatus.getStatusCode(),
@@ -203,13 +204,26 @@ public class EmbeddedClusterApis implements EmbeddedResource
   }
 
   /**
-   * Waits for the given task to finish (either successfully or unsuccessfully). If the given
-   * {@link EmbeddedOverlord} is not the leader, this method can only return by
-   * throwing an exception upon timeout.
+   * Waits for the given task to finish successfully.
+   * If the given {@link LatchableEmitter} does not receive the task completion
+   * event, this method can only return by throwing an exception upon timeout.
    */
-  public TaskStatus waitForTaskToFinish(String taskId, EmbeddedOverlord overlord)
+  public void waitForTaskToSucceed(String taskId, LatchableEmitter emitter)
   {
-    overlord.latchableEmitter().waitForEvent(
+    Assertions.assertEquals(
+        TaskState.SUCCESS,
+        waitForTaskToFinish(taskId, emitter).getStatusCode()
+    );
+  }
+
+  /**
+   * Waits for the given task to finish (either successfully or unsuccessfully).
+   * If the given {@link LatchableEmitter} does not receive the task completion
+   * event, this method can only return by throwing an exception upon timeout.
+   */
+  public TaskStatus waitForTaskToFinish(String taskId, LatchableEmitter emitter)
+  {
+    emitter.waitForEvent(
         event -> event.hasMetricName(TaskMetrics.RUN_DURATION)
                       .hasDimension(DruidMetrics.TASK_ID, taskId)
     );
@@ -249,7 +263,7 @@ public class EmbeddedClusterApis implements EmbeddedResource
    */
   public void verifyNumVisibleSegmentsIs(int numExpectedSegments, String dataSource, EmbeddedOverlord overlord)
   {
-    int segmentCount = cluster.callApi().getVisibleUsedSegments(dataSource, overlord).size();
+    int segmentCount = getVisibleUsedSegments(dataSource, overlord).size();
     Assertions.assertEquals(
         numExpectedSegments,
         segmentCount,
@@ -257,7 +271,7 @@ public class EmbeddedClusterApis implements EmbeddedResource
     );
     Assertions.assertEquals(
         String.valueOf(segmentCount),
-        cluster.runSql(
+        runSql(
             "SELECT COUNT(*) FROM sys.segments WHERE datasource='%s'"
             + " AND is_overshadowed = 0 AND is_available = 1",
             dataSource

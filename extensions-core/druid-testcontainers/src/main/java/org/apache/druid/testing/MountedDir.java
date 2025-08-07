@@ -17,17 +17,31 @@
  * under the License.
  */
 
-package org.apache.druid.testing.tools;
+package org.apache.druid.testing;
 
-import com.github.rvesse.airline.builder.CliBuilder;
-import org.apache.druid.cli.CliCommandCreator;
+import java.io.File;
 
-public class CustomNodeRoleCommandCreator implements CliCommandCreator
+/**
+ * Represents a directory mounted on a {@link DruidContainer}.
+ */
+public class MountedDir
 {
-  @SuppressWarnings({ "rawtypes", "unchecked" })
-  @Override
-  public void addCommands(CliBuilder builder)
+  private final File hostFile;
+  private final File containerFile;
+
+  public MountedDir(File containerFile, File hostFile)
   {
-    builder.withGroup("server").withCommands(CliCustomNodeRole.class);
+    this.hostFile = hostFile;
+    this.containerFile = containerFile;
+  }
+
+  public File containerFile()
+  {
+    return containerFile;
+  }
+
+  public File hostFile()
+  {
+    return hostFile;
   }
 }

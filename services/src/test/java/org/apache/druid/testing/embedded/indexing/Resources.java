@@ -20,10 +20,15 @@
 package org.apache.druid.testing.embedded.indexing;
 
 import com.google.common.base.Throwables;
+import org.apache.druid.data.input.impl.HttpInputSource;
+import org.apache.druid.data.input.impl.HttpInputSourceConfig;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.http.client.utils.URIBuilder;
 
 import java.io.File;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.List;
 
 /**
  * Constants and utility methods used in embedded cluster tests.
@@ -105,6 +110,26 @@ public class Resources
     public static File tinyWiki3Json()
     {
       return getFileForResource("data/json/tiny_wiki_3.json");
+    }
+  }
+
+  public static class HttpData
+  {
+    public static HttpInputSource wikipedia1Day()
+    {
+      try {
+        return new HttpInputSource(
+            List.of(new URIBuilder("https://druid.apache.org/data/wikipedia.json.gz").build()),
+            null,
+            null,
+            null,
+            null,
+            new HttpInputSourceConfig(null, null)
+        );
+      }
+      catch (URISyntaxException e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 

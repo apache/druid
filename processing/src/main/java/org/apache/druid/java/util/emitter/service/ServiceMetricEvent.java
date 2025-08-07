@@ -85,12 +85,12 @@ public class ServiceMetricEvent implements Event
 
   public String getService()
   {
-    return serviceDims.get("service");
+    return serviceDims.get(SERVICE);
   }
 
   public String getHost()
   {
-    return serviceDims.get("host");
+    return serviceDims.get(HOST);
   }
 
   public Map<String, Object> getUserDims()
@@ -114,11 +114,11 @@ public class ServiceMetricEvent implements Event
   {
     return EventMap
         .builder()
-        .put("feed", getFeed())
-        .put("timestamp", createdTime.toString())
+        .put(FEED, getFeed())
+        .put(TIMESTAMP, createdTime.toString())
         .putAll(serviceDims)
-        .put("metric", metric)
-        .put("value", value)
+        .put(METRIC, metric)
+        .put(VALUE, value)
         .putAll(userDims)
         .build();
   }

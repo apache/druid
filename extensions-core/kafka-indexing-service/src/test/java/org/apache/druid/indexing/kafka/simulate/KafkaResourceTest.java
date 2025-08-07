@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.kafka.simulate;
 
+import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -37,6 +38,7 @@ public class KafkaResourceTest
   {
     final KafkaResource resource = new KafkaResource();
 
+    resource.beforeStart(EmbeddedDruidCluster.empty());
     resource.start();
     assertTrue(resource.isRunning());
 

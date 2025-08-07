@@ -80,8 +80,8 @@ public class EmbeddedDruidCluster implements EmbeddedResource
   private final List<Class<? extends DruidModule>> extensionModules = new ArrayList<>();
   private final Properties commonProperties = new Properties();
 
+  private EmbeddedHostname embeddedHostname = EmbeddedHostname.localhost();
   private boolean startedFirstDruidServer = false;
-  private EmbeddedZookeeper zookeeper;
 
   private EmbeddedDruidCluster()
   {
@@ -98,9 +98,7 @@ public class EmbeddedDruidCluster implements EmbeddedResource
    */
   public static EmbeddedDruidCluster withZookeeper()
   {
-    final EmbeddedDruidCluster cluster = new EmbeddedDruidCluster();
-    cluster.addEmbeddedZookeeper();
-    return cluster;
+    return new EmbeddedDruidCluster().addResource(new EmbeddedZookeeper());
   }
 
   /**
@@ -127,12 +125,6 @@ public class EmbeddedDruidCluster implements EmbeddedResource
   public static EmbeddedDruidCluster empty()
   {
     return new EmbeddedDruidCluster();
-  }
-
-  private void addEmbeddedZookeeper()
-  {
-    this.zookeeper = new EmbeddedZookeeper();
-    resources.add(zookeeper);
   }
 
   /**
@@ -184,7 +176,6 @@ public class EmbeddedDruidCluster implements EmbeddedResource
    */
   public EmbeddedDruidCluster addServer(EmbeddedDruidServer<?> server)
   {
-    server.onAddedToCluster(commonProperties);
     servers.add(server);
     resources.add(server);
     if (startedFirstDruidServer) {
@@ -219,6 +210,11 @@ public class EmbeddedDruidCluster implements EmbeddedResource
     return this;
   }
 
+  public Properties getCommonProperties()
+  {
+    return commonProperties;
+  }
+
   /**
    * The test directory used by this cluster. Each Druid service creates a
    * sub-folder inside this directory to write out task logs or segments.
@@ -229,13 +225,21 @@ public class EmbeddedDruidCluster implements EmbeddedResource
   }
 
   /**
-   * The embedded Zookeeper server used by this cluster, if any.
-   *
-   * @throws NullPointerException if this cluster has no embedded zookeeper.
+   * Uses a container-friendly hostname for all embedded services, Druid as well
+   * as external.
    */
-  public EmbeddedZookeeper getZookeeper()
+  public EmbeddedDruidCluster useContainerFriendlyHostname()
   {
-    return Objects.requireNonNull(zookeeper, "No embedded zookeeper configured for this cluster");
+    this.embeddedHostname = EmbeddedHostname.containerFriendly();
+    return this;
+  }
+
+  /**
+   * Hostname to be used for embedded services (both Druid or external).
+   */
+  public EmbeddedHostname getEmbeddedHostname()
+  {
+    return embeddedHostname;
   }
 
   /**

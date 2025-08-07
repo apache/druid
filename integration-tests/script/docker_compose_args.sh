@@ -29,7 +29,7 @@ getComposeArgs()
   if [ "$DRUID_INTEGRATION_TEST_INDEXER" = "indexer" ]
   then
     # Sanity check: cannot combine CliIndexer tests with security, query-retry tests
-    if [ "$DRUID_INTEGRATION_TEST_GROUP" = "security" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "ldap-security" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-retry" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-error" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "high-availability" ]
+    if [ "$DRUID_INTEGRATION_TEST_GROUP" = "security" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "ldap-security" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-retry" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-error" ]
     then
       echo "Cannot run test group '$DRUID_INTEGRATION_TEST_GROUP' with CliIndexer"
       exit 1
@@ -59,10 +59,6 @@ getComposeArgs()
     # default + additional historical modified for query error test
     # See CliHistoricalForQueryRetryTest.
     echo "-f ${DOCKERDIR}/docker-compose.query-error-test.yml"
-  elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "high-availability" ]
-  then
-    # the 'high availability' test cluster with multiple coordinators and overlords
-    echo "-f ${DOCKERDIR}/docker-compose.high-availability.yml"
   elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "kafka-data-format" ]
   then
     # default + schema registry container

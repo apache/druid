@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -13,29 +15,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: "Distribution Checks"
-on:
-  push:
-    branches:
-      - master
-      - '[0-9]+.[0-9]+.[0-9]+' # release branches
-      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
-    paths:
-      - 'distribution/**'
-      - '**/pom.xml'
-  pull_request:
-    branches:
-      - master
-      - '[0-9]+.[0-9]+.[0-9]+' # release branches
-      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
-    paths:
-      - 'distribution/**'
-      - '**/pom.xml'
+# Runs Docker tests
+# Requires environment variable DRUID_DIST_IMAGE_NAME
 
-jobs:
-  docker-build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build the Docker image
-        run: DOCKER_BUILDKIT=1 docker build -t apache/druid:tag -f distribution/docker/Dockerfile .
+set -e
+
+DRUID_IMAGE_NAME_ENV="DRUID_DIST_IMAGE_NAME"
+DRUID_IMAGE_NAME=$DRUID_DIST_IMAGE_NAME
+
+DRUID_IMAGE_SYS_PROPERTY="druid.testing.docker.image"
+
+if [ -z "${DRUID_IMAGE_NAME}" ]; then
+  echo "ERROR!! Environment variable [$DRUID_IMAGE_NAME_ENV] not set!"
+  echo "Run 'export $DRUID_IMAGE_NAME_ENV=<druid-image-to-test>' to specify the image to use in the Docker tests."
+  exit 1
+else
+  echo "Running Docker tests with image[$DRUID_IMAGE_NAME]"
+fi
+
+OPTS+="-pl embedded-tests"
+mvn -B $OPTS verify -Pdocker-tests -D$DRUID_IMAGE_SYS_PROPERTY=$DRUID_IMAGE_NAME "-DjfrProfilerArgLine=$JFR_PROFILER_ARG_LINE" "$@"
