@@ -26,12 +26,15 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.explain.ExplainAttributes;
 import org.apache.druid.query.explain.ExplainPlan;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
+import org.apache.druid.segment.TestDataSource;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.After;
@@ -63,6 +66,31 @@ public class BrokerClientImplTest
   public void tearDown()
   {
     serviceClient.verify();
+  }
+
+  @Test
+  public void test_submitNativeQuery() throws Exception
+  {
+    final ScanQuery scanQuery = Druids
+        .newScanQueryBuilder()
+        .dataSource(TestDataSource.WIKI)
+        .eternityInterval()
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+        .build();
+
+    final Map<String, Object> response = Map.of("events", List.of());
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid/v2")
+            .jsonContent(jsonMapper, scanQuery),
+        HttpResponseStatus.OK,
+        Map.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(response)
+    );
+
+    assertEquals(
+        jsonMapper.writeValueAsString(response),
+        brokerClient.submitNativeQuery(scanQuery).get()
+    );
   }
 
   @Test

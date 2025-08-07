@@ -177,7 +177,8 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         agg -> agg.hasSumAtLeast(totalRows)
     );
     broker.latchableEmitter().waitForEvent(
-        event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
+        event -> event.hasMetricName("segment/schemaCache/refresh/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
   }
 
@@ -290,7 +291,7 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
     SqlTaskStatus taskStatus = msqApis.submitTaskSql(sql);
 
     String taskId = taskStatus.getTaskId();
-    cluster.callApi().waitForTaskToFinish(taskId, overlord);
+    cluster.callApi().waitForTaskToFinish(taskId, overlord.latchableEmitter());
 
     final TaskStatusResponse currentStatus = cluster.callApi().onLeaderOverlord(
         o -> o.taskStatus(taskId)

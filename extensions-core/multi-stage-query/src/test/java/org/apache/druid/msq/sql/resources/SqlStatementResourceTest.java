@@ -62,6 +62,7 @@ import org.apache.druid.msq.sql.entity.PageInformation;
 import org.apache.druid.msq.sql.entity.ResultSetInformation;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
 import org.apache.druid.msq.test.MSQTestBase;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.scan.ScanQuery;
@@ -82,6 +83,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.TestAuthorizer;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlResourceTest;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -97,7 +99,6 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.Response;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
@@ -105,6 +106,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Supplier;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -358,34 +361,19 @@ public class SqlStatementResourceTest extends MSQTestBase
     @Override
     public Authorizer getAuthorizer(String name)
     {
-      return (authenticationResult, resource, action) -> {
-        if (SUPERUSER.equals(authenticationResult.getIdentity())) {
-          return Access.OK;
-        }
-
-        switch (resource.getType()) {
-          case ResourceType.DATASOURCE:
-          case ResourceType.VIEW:
-          case ResourceType.QUERY_CONTEXT:
-          case ResourceType.EXTERNAL:
-            return Access.OK;
-          case ResourceType.STATE:
-            String identity = authenticationResult.getIdentity();
-            if (action == Action.READ) {
-              if (STATE_R_USER.equals(identity) || STATE_RW_USER.equals(identity)) {
-                return Access.OK;
-              }
-            } else if (action == Action.WRITE) {
-              if (STATE_W_USER.equals(identity) || STATE_RW_USER.equals(identity)) {
-                return Access.OK;
-              }
-            }
-            return Access.DENIED;
-
-          default:
-            return Access.DENIED;
-        }
-      };
+      return (authenticationResult, resource, action) ->
+          new TestAuthorizer(authenticationResult, resource, action)
+              .allowIfSuperuser(SUPERUSER)
+              .allowIfResourceTypeIs(Set.of(
+                  ResourceType.DATASOURCE,
+                  ResourceType.VIEW,
+                  ResourceType.QUERY_CONTEXT,
+                  ResourceType.EXTERNAL
+              ))
+              .allowResourceAccessForUsers(ResourceType.STATE, Action.READ, Set.of(STATE_R_USER, STATE_RW_USER))
+              .allowResourceAccessForUsers(ResourceType.STATE, Action.WRITE, Set.of(STATE_W_USER, STATE_RW_USER))
+              .access()
+              .orElse(Access.DENIED);
     }
   };
 
@@ -711,7 +699,8 @@ public class SqlStatementResourceTest extends MSQTestBase
         objectMapper,
         overlordClient,
         tempDir -> localFileStorageConnector,
-        authorizerMapper
+        authorizerMapper,
+        new DefaultQueryConfig(Map.of("debug", "true"))
     );
   }
 

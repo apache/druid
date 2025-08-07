@@ -26,7 +26,6 @@ import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.security.basic.BasicAuthCommonCacheConfig;
-import org.apache.druid.security.basic.CoordinatorServiceClient;
 import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.AuthenticatorMapper;
@@ -63,9 +62,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManagerTest
             .andReturn(new AuthenticatorMapper(Map.of("test-basic-auth", authenticator))).once();
 
     // Create a mock leader client and request
-    final CoordinatorServiceClient leaderClient = EasyMock.createStrictMock(CoordinatorServiceClient.class);
     final MockServiceClient serviceClient = new MockServiceClient();
-    EasyMock.expect(leaderClient.getServiceClient()).andReturn(serviceClient).anyTimes();
 
     // Return the first request immediately
     final String path = StringUtils.format(
@@ -100,14 +97,14 @@ public class CoordinatorPollingBasicAuthenticatorCacheManagerTest
         }
     );
 
-    EasyMock.replay(injector, leaderClient);
+    EasyMock.replay(injector);
 
     final int numRetries = 10;
     final CoordinatorPollingBasicAuthenticatorCacheManager manager = new CoordinatorPollingBasicAuthenticatorCacheManager(
         injector,
         new BasicAuthCommonCacheConfig(0L, 1L, temporaryFolder.newFolder().getAbsolutePath(), numRetries),
         TestHelper.JSON_MAPPER,
-        leaderClient
+        serviceClient
     );
 
     // Start the manager and wait for a while to ensure that polling has started
@@ -120,7 +117,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManagerTest
 
     Assert.assertTrue(isInterrupted.get());
 
-    EasyMock.verify(injector, leaderClient);
+    EasyMock.verify(injector);
   }
 
 }

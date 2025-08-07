@@ -68,6 +68,7 @@ import org.apache.druid.msq.sql.entity.ResultSetInformation;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.msq.util.SqlStatementResourceHelper;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.ExecutionMode;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -113,7 +114,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -133,7 +133,7 @@ public class SqlStatementResource
   private final OverlordClient overlordClient;
   private final StorageConnector storageConnector;
   private final AuthorizerMapper authorizerMapper;
-
+  private final DefaultQueryConfig defaultQueryConfig;
 
   @Inject
   public SqlStatementResource(
@@ -141,7 +141,8 @@ public class SqlStatementResource
       final ObjectMapper jsonMapper,
       final OverlordClient overlordClient,
       final @MultiStageQuery StorageConnectorProvider storageConnectorProvider,
-      final AuthorizerMapper authorizerMapper
+      final AuthorizerMapper authorizerMapper,
+      final DefaultQueryConfig defaultQueryConfig
   )
   {
     this.msqSqlStatementFactory = msqSqlStatementFactory;
@@ -149,6 +150,7 @@ public class SqlStatementResource
     this.overlordClient = overlordClient;
     this.storageConnector = storageConnectorProvider.createStorageConnector(null);
     this.authorizerMapper = authorizerMapper;
+    this.defaultQueryConfig = defaultQueryConfig;
   }
 
   /**
@@ -176,19 +178,26 @@ public class SqlStatementResource
 
   @VisibleForTesting
   Response doPost(
-      SqlQuery sqlQuery, // Not final: reassigned using createModifiedSqlQuery
+      final SqlQuery sqlQuery,
       final HttpServletRequest req
   )
   {
     final SqlQueryPlus sqlQueryPlus;
     final HttpStatement stmt;
-    final QueryContext queryContext;
 
     try {
-      sqlQuery = createModifiedSqlQuery(sqlQuery);
-      sqlQueryPlus = SqlResource.makeSqlQueryPlus(sqlQuery, req);
-      queryContext = QueryContext.of(sqlQueryPlus.context());
-      stmt = msqSqlStatementFactory.httpStatement(SqlResource.makeSqlQueryPlus(sqlQuery, req), req);
+      if (sqlQuery.getContext().containsKey(RESULT_FORMAT)) {
+        throw InvalidInput.exception("Query context parameter [%s] is not allowed", RESULT_FORMAT);
+      }
+      sqlQueryPlus = SqlResource.makeSqlQueryPlus(
+          sqlQuery,
+          req,
+          ImmutableMap.<String, Object>builder()
+                      .putAll(defaultQueryConfig.getContext())
+                      .put(RESULT_FORMAT, sqlQuery.getResultFormat())
+                      .build()
+      );
+      stmt = msqSqlStatementFactory.httpStatement(sqlQueryPlus, req);
     }
     catch (Exception e) {
       return SqlResource.handleExceptionBeforeStatementCreated(e, sqlQuery.queryContext());
@@ -196,9 +205,9 @@ public class SqlStatementResource
 
     final String sqlQueryId = stmt.sqlQueryId();
     final String currThreadName = Thread.currentThread().getName();
-    boolean isDebug = false;
+    final QueryContext queryContext = QueryContext.of(sqlQueryPlus.context());
+    final boolean isDebug = queryContext.isDebug();
     try {
-      isDebug = queryContext.isDebug();
       contextChecks(queryContext);
 
       Thread.currentThread().setName(StringUtils.format("statement_sql[%s]", sqlQueryId));
@@ -718,30 +727,6 @@ public class SqlStatementResource
     }
 
     return msqControllerTask;
-  }
-
-  /**
-   * Creates a new sqlQuery from the user submitted sqlQuery after performing required modifications.
-   */
-  private SqlQuery createModifiedSqlQuery(SqlQuery sqlQuery)
-  {
-    Map<String, Object> context = sqlQuery.getContext();
-    if (context.containsKey(RESULT_FORMAT)) {
-      throw InvalidInput.exception("Query context parameter [%s] is not allowed", RESULT_FORMAT);
-    }
-    Map<String, Object> modifiedContext = ImmutableMap.<String, Object>builder()
-                                                      .putAll(context)
-                                                      .put(RESULT_FORMAT, sqlQuery.getResultFormat().toString())
-                                                      .build();
-    return new SqlQuery(
-        sqlQuery.getQuery(),
-        sqlQuery.getResultFormat(),
-        sqlQuery.includeHeader(),
-        sqlQuery.includeTypesHeader(),
-        sqlQuery.includeSqlTypesHeader(),
-        modifiedContext,
-        sqlQuery.getParameters()
-    );
   }
 
   private ResultFormat getPreferredResultFormat(String resultFormatParam, MSQSpec msqSpec)

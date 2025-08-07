@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Smile;
@@ -39,9 +40,9 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.rpc.RequestBuilder;
+import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.security.basic.BasicAuthCommonCacheConfig;
 import org.apache.druid.security.basic.BasicAuthUtils;
-import org.apache.druid.security.basic.CoordinatorServiceClient;
 import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 import org.apache.druid.server.security.Authenticator;
@@ -73,7 +74,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
   private final Injector injector;
   private final ObjectMapper objectMapper;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
-  private final CoordinatorServiceClient coordinatorClient;
+  private final ServiceClient coordinatorClient;
   private final BasicAuthCommonCacheConfig commonCacheConfig;
   private final ScheduledExecutorService exec;
 
@@ -82,7 +83,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
       Injector injector,
       BasicAuthCommonCacheConfig commonCacheConfig,
       @Smile ObjectMapper objectMapper,
-      CoordinatorServiceClient coordinatorClient
+      @Coordinator ServiceClient coordinatorClient
   )
   {
     this.exec = Execs.scheduledSingleThreaded("BasicAuthenticatorCacheManager-Exec--%d");
@@ -257,7 +258,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
         HttpMethod.GET,
         StringUtils.format("/druid-ext/basic-security/authentication/db/%s/cachedSerializedUserMap", prefix)
     );
-    BytesFullResponseHolder responseHolder = coordinatorClient.getServiceClient().request(
+    BytesFullResponseHolder responseHolder = coordinatorClient.request(
         req,
         new BytesFullResponseHandler()
     );

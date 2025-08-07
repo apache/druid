@@ -185,23 +185,24 @@ public class TestIndex
       new DoubleMaxAggregatorFactory(DOUBLE_METRICS[2], VIRTUAL_COLUMNS.getVirtualColumns()[0].getOutputName()),
       new HyperUniquesAggregatorFactory("quality_uniques", "quality")
   };
-  public static final ImmutableList<AggregateProjectionSpec> PROJECTIONS = ImmutableList.of(
-      new AggregateProjectionSpec(
-          "daily_market_maxQuality",
-          VirtualColumns.create(Granularities.toVirtualColumn(Granularities.DAY, "__gran")),
-          List.of(new LongDimensionSchema("__gran"), new StringDimensionSchema("market")),
-          new AggregatorFactory[]{new LongMaxAggregatorFactory("maxQuality", "qualityLong")}
-      ),
-      new AggregateProjectionSpec(
-          "daily_countAndQualityCardinalityAndMaxLongNullable",
-          VirtualColumns.create(Granularities.toVirtualColumn(Granularities.DAY, "__gran")),
-          List.of(new LongDimensionSchema("__gran")),
-          new AggregatorFactory[]{
-              new CountAggregatorFactory("count"),
-              QUALITY_CARDINALITY,
-              new LongMaxAggregatorFactory("longNullableMax", "longNumericNull")
-          }
-      )
+  public static final List<AggregateProjectionSpec> PROJECTIONS = List.of(
+      AggregateProjectionSpec.builder("daily_market_maxQuality")
+                             .virtualColumns(Granularities.toVirtualColumn(Granularities.DAY, "__gran"))
+                             .groupingColumns(
+                                 new LongDimensionSchema("__gran"),
+                                 new StringDimensionSchema("market")
+                             )
+                             .aggregators(new LongMaxAggregatorFactory("maxQuality", "qualityLong"))
+                             .build(),
+      AggregateProjectionSpec.builder("daily_countAndQualityCardinalityAndMaxLongNullable")
+                             .virtualColumns(Granularities.toVirtualColumn(Granularities.DAY, "__gran"))
+                             .groupingColumns(new LongDimensionSchema("__gran"))
+                             .aggregators(
+                                 new CountAggregatorFactory("count"),
+                                 QUALITY_CARDINALITY,
+                                 new LongMaxAggregatorFactory("longNullableMax", "longNumericNull")
+                             )
+                             .build()
   );
   public static final IndexSpec INDEX_SPEC = IndexSpec.DEFAULT;
 

@@ -95,7 +95,7 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
-    "@awesome-code-style/eslint-config": "^6.0.0",
+    "@awesome-code-style/eslint-config": "^6.0.2",
     "@awesome-code-style/prettier-config": "^4.0.0",
     "@awesome-code-style/stylelint-config": "^6.0.0",
     "@testing-library/dom": "^10.4.0",
@@ -127,7 +127,7 @@
     "browserslist": "^4.24.0",
     "codecov": "^3.8.2",
     "css-loader": "^5.2.1",
-    "eslint": "^9.12.0",
+    "eslint": "^9.31.0",
     "eslint-plugin-notice": "^1.0.0",
     "eslint-plugin-react": "^7.37.1",
     "eslint-plugin-react-hooks": "^5.0.0",

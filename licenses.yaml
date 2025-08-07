@@ -5101,6 +5101,62 @@ libraries:
 
 ---
 
+name: Testcontainers
+license_category: binary
+module: extensions-core/druid-testcontainers
+license_name: MIT License
+version: 1.21.3
+libraries:
+  - org.testcontainers: testcontainers
+
+---
+
+name: Junit
+license_category: binary
+module: extensions-core/druid-testcontainers
+license_name: Eclipse Public License 1.0
+version: 4.13.2
+license_file_path: licenses/bin/junit.EPL
+libraries:
+  - junit: junit
+
+---
+
+# Dependency of Testcontainers
+name: Docker Java
+license_category: binary
+module: extensions-core/druid-testcontainers
+license_name: Apache License version 2.0
+version: 3.3.4
+libraries:
+  - com.github.docker-java: docker-java-api
+  - com.github.docker-java: docker-java-transport
+  - com.github.docker-java: docker-java-transport-zerodep
+
+---
+
+# Dependency of Testcontainers
+name: Duct Tape
+license_category: binary
+module: extensions-core/druid-testcontainers
+license_name: MIT License
+version: 1.0.8
+libraries:
+  - org.rnorth.duct-tape: duct-tape
+
+---
+
+# Dependency of Testcontainers
+name: jakarta.activation
+license_category: binary
+module: extensions-core/druid-testcontainers
+license_name: Eclipse Distribution License 1.0
+version: 2.0.1
+libraries:
+  - com.sun.activation: jakarta.activation
+
+---
+
 # Web console modules start
 name: "@babel/code-frame"
 license_category: binary

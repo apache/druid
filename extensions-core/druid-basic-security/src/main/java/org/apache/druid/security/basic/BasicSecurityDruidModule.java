@@ -27,16 +27,12 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
-import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
-import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.http.client.NettyHttpClient;
-import org.apache.druid.rpc.ServiceClientFactory;
-import org.apache.druid.rpc.ServiceLocator;
 import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.security.basic.authentication.BasicHTTPEscalator;
 import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheManager;
@@ -212,17 +208,6 @@ public class BasicSecurityDruidModule implements DruidModule
     );
   }
 
-  @Provides
-  @LazySingleton
-  public static CoordinatorServiceClient createCoordinatorServiceClient(
-      @EscalatedGlobal ServiceClientFactory clientFactory,
-      @Coordinator ServiceLocator serviceLocator,
-      BasicAuthCommonCacheConfig cacheConfig
-  )
-  {
-    return new CoordinatorServiceClient(clientFactory, serviceLocator, cacheConfig);
-  }
-  
   @Override
   public List<? extends Module> getJacksonModules()
   {

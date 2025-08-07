@@ -377,14 +377,30 @@ public class MultiStageQueryContext
     return queryContext.getBoolean(CTX_REMOVE_NULL_BYTES, DEFAULT_REMOVE_NULL_BYTES);
   }
 
+  public static boolean isDartQuery(final QueryContext queryContext)
+  {
+    return queryContext.get(QueryContexts.CTX_DART_QUERY_ID) != null;
+  }
 
   public static MSQSelectDestination getSelectDestination(final QueryContext queryContext)
   {
-    return QueryContexts.getAsEnum(
+    MSQSelectDestination destination = QueryContexts.getAsEnum(
         CTX_SELECT_DESTINATION,
         queryContext.getString(CTX_SELECT_DESTINATION, DEFAULT_SELECT_DESTINATION),
         MSQSelectDestination.class
     );
+
+    if (isDartQuery(queryContext)) {
+      if (!MSQSelectDestination.TASKREPORT.equals(destination)) {
+        log.warn(
+            "Dart does not support [%s]. Using [%s] instead.",
+            destination,
+            MSQSelectDestination.TASKREPORT
+        );
+      }
+      return MSQSelectDestination.TASKREPORT;
+    }
+    return destination;
   }
 
   public static int getRowsInMemory(final QueryContext queryContext)

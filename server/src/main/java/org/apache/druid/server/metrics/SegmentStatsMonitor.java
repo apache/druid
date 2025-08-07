@@ -23,6 +23,8 @@ package org.apache.druid.server.metrics;
 
 import com.google.inject.Inject;
 import org.apache.druid.client.DruidServerConfig;
+import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
@@ -39,6 +41,7 @@ import java.util.Map;
  *
  * It keeps track of the average number of rows in a segment and the distribution of segments according to rowCount.
  */
+@LoadScope(roles = NodeRole.HISTORICAL_JSON_NAME)
 public class SegmentStatsMonitor extends AbstractMonitor
 {
   private final DruidServerConfig serverConfig;
