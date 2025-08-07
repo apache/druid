@@ -30,8 +30,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
-import org.apache.druid.testing.tools.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.AbstractQueryResourceTestClient;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
 import org.joda.time.Interval;
 
 import java.util.Collections;

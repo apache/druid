@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.sql.http.SqlQuery;
-import org.apache.druid.testing.tools.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
 
 import javax.ws.rs.core.MediaType;
 

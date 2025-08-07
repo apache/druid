@@ -28,8 +28,8 @@ import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorC
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.utils.HttpUtil;
 import org.apache.druid.testing.tools.ITRetryUtil;
+import org.apache.druid.testing.utils.HttpUtil;
 import org.apache.druid.tests.TestNGGroup;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.testng.annotations.BeforeClass;

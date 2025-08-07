@@ -72,7 +72,8 @@ public abstract class SyntheticStreamGenerator implements StreamGenerator
         eventTimestamp = eventTimestamp.plusSeconds(1);
         seconds++;
       }
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       throw new RuntimeException("Exception in event generation loop", e);
     }
 

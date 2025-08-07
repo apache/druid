@@ -22,8 +22,8 @@ package org.apache.druid.testing.utils;
 import com.google.inject.Injector;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.testing.tools.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
 import org.testng.ISuite;
 import org.testng.ISuiteListener;
 
