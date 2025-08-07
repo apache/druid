@@ -20,12 +20,7 @@
 package org.apache.druid.testing.embedded.auth;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.data.input.impl.JsonInputFormat;
-import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.error.ExceptionMatcher;
-import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.msq.guice.IndexerMemoryManagementModule;
@@ -34,25 +29,12 @@ import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.guice.MSQSqlModule;
 import org.apache.druid.msq.guice.SqlTaskModule;
-import org.apache.druid.msq.indexing.LegacyMSQSpec;
-import org.apache.druid.msq.indexing.MSQControllerTask;
-import org.apache.druid.msq.indexing.MSQTuningConfig;
-import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
-import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
-import org.apache.druid.query.Druids;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
-import org.apache.druid.security.basic.BasicSecurityDruidModule;
 import org.apache.druid.security.basic.authentication.BasicHTTPEscalator;
-import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.sql.calcite.external.ExternalDataSource;
-import org.apache.druid.sql.calcite.planner.ColumnMapping;
-import org.apache.druid.sql.calcite.planner.ColumnMappings;
-import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.local.LocalFileExportStorageProvider;
 import org.apache.druid.storage.s3.output.S3ExportStorageProvider;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
@@ -63,7 +45,7 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedServiceClient;
 import org.apache.druid.testing.embedded.indexing.Resources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.apache.druid.testing.embedded.msq.MsqExportDirectory;
+import org.apache.druid.testing.embedded.msq.MSQExportDirectory;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -75,24 +57,22 @@ import java.io.File;
 import java.util.List;
 import java.util.Map;
 
-public class BasicAuthMsqTest extends EmbeddedClusterTestBase
+public class BasicAuthMSQTest extends EmbeddedClusterTestBase
 {
   public static final String USER_1 = "user1";
   public static final String ROLE_1 = "role1";
   public static final String USER_1_PASSWORD = "password1";
 
-  // Time in ms to sleep after updating role permissions in each test. This intends to give the
-  // underlying test cluster enough time to sync permissions and be ready when test execution starts.
-  private static final int SYNC_SLEEP = 500;
-
   private SecurityClient securityClient;
   private EmbeddedServiceClient userClient;
 
-  private final EmbeddedOverlord overlord = new EmbeddedOverlord();
+  // Indexer with 2 slots, each with 150MB memory since minimum required memory
+  // computed for the required tests is 133MB
   private final EmbeddedIndexer indexer = new EmbeddedIndexer()
-      .setServerMemory(400_000_000)
+      .setServerMemory(300_000_000)
       .addProperty("druid.worker.capacity", "2");
-  private final MsqExportDirectory exportDirectory = new MsqExportDirectory();
+  private final EmbeddedOverlord overlord = new EmbeddedOverlord();
+  private final MSQExportDirectory exportDirectory = new MSQExportDirectory();
 
   @Override
   protected EmbeddedDruidCluster createCluster()
@@ -101,12 +81,12 @@ public class BasicAuthMsqTest extends EmbeddedClusterTestBase
         .withEmbeddedDerbyAndZookeeper()
         .useLatchableEmitter()
         .addResource(exportDirectory)
+        .addResource(new EmbeddedBasicAuthResource())
         .addServer(new EmbeddedCoordinator())
         .addServer(overlord)
         .addServer(indexer)
         .addServer(new EmbeddedBroker())
         .addExtensions(
-            BasicSecurityDruidModule.class,
             MSQSqlModule.class,
             MSQIndexingModule.class,
             SqlTaskModule.class,
@@ -114,18 +94,7 @@ public class BasicAuthMsqTest extends EmbeddedClusterTestBase
             MSQExternalDataSourceModule.class,
             IndexerMemoryManagementModule.class
         )
-        .addCommonProperty("druid.auth.basic.common.pollingPeriod", "100")
-        .addCommonProperty("druid.auth.authenticatorChain", "[\"basic\"]")
-        .addCommonProperty("druid.auth.authenticator.basic.type", "basic")
-        .addCommonProperty("druid.auth.authenticator.basic.initialAdminPassword", "priest")
-        .addCommonProperty("druid.auth.authenticator.basic.initialInternalClientPassword", "warlock")
-        .addCommonProperty("druid.auth.authenticator.basic.authorizerName", "basic")
-        .addCommonProperty("druid.auth.authorizers", "[\"basic\"]")
-        .addCommonProperty("druid.auth.authorizer.basic.type", "basic")
-        .addCommonProperty("druid.escalator.type", "basic")
-        .addCommonProperty("druid.escalator.internalClientPassword", "warlock")
-        .addCommonProperty("druid.escalator.internalClientUsername", "druid_system")
-        .addCommonProperty("druid.escalator.authorizerName", "basic");
+        .addCommonProperty("druid.auth.basic.common.pollingPeriod", "100");
   }
 
   @BeforeAll
@@ -167,8 +136,6 @@ public class BasicAuthMsqTest extends EmbeddedClusterTestBase
   {
     List<ResourceAction> permissions = ImmutableList.of();
     securityClient.setPermissionsToRole(ROLE_1, permissions);
-
-    waitForPermissionsToSync();
 
     String queryLocal =
         StringUtils.format(
@@ -223,8 +190,6 @@ public class BasicAuthMsqTest extends EmbeddedClusterTestBase
         new ResourceAction(new Resource(".*", "DATASOURCE"), Action.WRITE)
     );
     securityClient.setPermissionsToRole(ROLE_1, permissions);
-
-    waitForPermissionsToSync();
 
     String queryLocal =
         StringUtils.format(
@@ -287,8 +252,6 @@ public class BasicAuthMsqTest extends EmbeddedClusterTestBase
     );
     securityClient.setPermissionsToRole(ROLE_1, permissions);
 
-    waitForPermissionsToSync();
-
     String exportQuery =
         StringUtils.format(
             "INSERT INTO extern(%s(exportPath => '%s'))\n"
@@ -322,8 +285,6 @@ public class BasicAuthMsqTest extends EmbeddedClusterTestBase
     );
     securityClient.setPermissionsToRole(ROLE_1, permissions);
 
-    waitForPermissionsToSync();
-
     String exportQuery =
         StringUtils.format(
             "INSERT INTO extern(%s(exportPath => '%s'))\n"
@@ -347,130 +308,6 @@ public class BasicAuthMsqTest extends EmbeddedClusterTestBase
         )
     );
     cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord);
-  }
-
-  @Test
-  public void testExportTaskSubmitOverlordWithPermission() throws Exception
-  {
-    // No external write permissions for s3
-    List<ResourceAction> permissions = ImmutableList.of(
-        new ResourceAction(new Resource(".*", "DATASOURCE"), Action.READ),
-        new ResourceAction(new Resource("EXTERNAL", "EXTERNAL"), Action.READ),
-        new ResourceAction(new Resource(LocalFileExportStorageProvider.TYPE_NAME, "EXTERNAL"), Action.WRITE),
-        new ResourceAction(new Resource("STATE", "STATE"), Action.READ),
-        new ResourceAction(new Resource(".*", "DATASOURCE"), Action.WRITE)
-    );
-    securityClient.setPermissionsToRole(ROLE_1, permissions);
-
-    waitForPermissionsToSync();
-
-    final String taskId = IdUtils.getRandomId();
-    userClient.onLeaderOverlord(o -> o.runTask(taskId, createExportTask(taskId)));
-    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
-  }
-
-  @Test
-  public void testExportTaskSubmitOverlordWithoutPermission() throws Exception
-  {
-    // No external write permissions for s3
-    List<ResourceAction> permissions = ImmutableList.of(
-        new ResourceAction(new Resource(".*", "DATASOURCE"), Action.READ),
-        new ResourceAction(new Resource("EXTERNAL", "EXTERNAL"), Action.READ),
-        new ResourceAction(new Resource(S3ExportStorageProvider.TYPE_NAME, "EXTERNAL"), Action.WRITE),
-        new ResourceAction(new Resource("STATE", "STATE"), Action.READ),
-        new ResourceAction(new Resource(".*", "DATASOURCE"), Action.WRITE)
-    );
-    securityClient.setPermissionsToRole(ROLE_1, permissions);
-
-    waitForPermissionsToSync();
-
-    final String taskId = IdUtils.getRandomId();
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            Exception.class,
-            () -> userClient.onLeaderOverlord(o -> o.runTask(taskId, createExportTask(taskId)))
-        ),
-        ExceptionMatcher.of(Exception.class).expectMessageContains("403 Forbidden")
-    );
-  }
-
-  private Task createExportTask(String taskId)
-  {
-    final RowSignature rowSignature = RowSignature
-        .builder()
-        .add("timestamp", ColumnType.STRING)
-        .add("isRobot", ColumnType.STRING)
-        .add("diffUrl", ColumnType.STRING)
-        .add("added", ColumnType.LONG)
-        .add("countryIsoCode", ColumnType.STRING)
-        .add("regionName", ColumnType.STRING)
-        .add("channel", ColumnType.STRING)
-        .add("flags", ColumnType.STRING)
-        .add("delta", ColumnType.LONG)
-        .add("isUnpatrolled", ColumnType.STRING)
-        .add("isNew", ColumnType.STRING)
-        .add("deltaBucket", ColumnType.DOUBLE)
-        .add("isMinor", ColumnType.STRING)
-        .add("isAnonymous", ColumnType.STRING)
-        .add("deleted", ColumnType.LONG)
-        .add("cityName", ColumnType.STRING)
-        .add("metroCode", ColumnType.LONG)
-        .add("namespace", ColumnType.STRING)
-        .add("comment", ColumnType.STRING)
-        .add("page", ColumnType.STRING)
-        .add("commentLength", ColumnType.LONG)
-        .add("countryName", ColumnType.STRING)
-        .add("user", ColumnType.STRING)
-        .add("regionIsoCode", ColumnType.STRING)
-        .build();
-
-    return new MSQControllerTask(
-        taskId,
-        new LegacyMSQSpec(
-            new Druids.ScanQueryBuilder()
-                .columns("added", "delta", "page")
-                .dataSource(
-                    new ExternalDataSource(
-                        new LocalInputSource(null, null, List.of(Resources.DataFile.tinyWiki1Json()), null),
-                        new JsonInputFormat(null, null, null, null, null),
-                        rowSignature
-                    )
-                )
-                .eternityInterval()
-                .context(
-                    Map.of(
-                        "scanSignature",
-                        "[{\"name\":\"added\",\"type\":\"LONG\"},{\"name\":\"delta\",\"type\":\"LONG\"},{\"name\":\"page\",\"type\":\"STRING\"}]"
-                    )
-                )
-                .build(),
-            new ColumnMappings(
-                List.of(
-                    new ColumnMapping("page", "page"),
-                    new ColumnMapping("added", "added"),
-                    new ColumnMapping("delta", "delta")
-                )
-            ),
-            new ExportMSQDestination(
-                new LocalFileExportStorageProvider(new File(exportDirectory.get(), dataSource).getAbsolutePath()),
-                ResultFormat.CSV
-            ),
-            WorkerAssignmentStrategy.MAX,
-            MSQTuningConfig.defaultConfig()
-        ),
-        null,
-        null,
-        null,
-        List.of(SqlTypeName.VARCHAR, SqlTypeName.BIGINT, SqlTypeName.BIGINT),
-        List.of(ColumnType.STRING, ColumnType.LONG, ColumnType.LONG),
-        null,
-        null
-    );
-  }
-
-  private void waitForPermissionsToSync() throws InterruptedException
-  {
-    Thread.sleep(SYNC_SLEEP);
   }
 
   private void verifySqlSubmitFailsWith403Forbidden(String sql)

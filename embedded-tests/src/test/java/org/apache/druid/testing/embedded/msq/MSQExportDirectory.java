@@ -27,7 +27,7 @@ import java.io.File;
 /**
  * Embedded resource to set MSQ export directory.
  */
-public class MsqExportDirectory implements EmbeddedResource
+public class MSQExportDirectory implements EmbeddedResource
 {
   private File directory;
 

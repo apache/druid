@@ -21,8 +21,8 @@ package org.apache.druid.testing.embedded.auth;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.rpc.RequestBuilder;
-import org.apache.druid.security.basic.BasicSecurityDruidModule;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.IndexTaskTest;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Assertions;
@@ -35,20 +35,16 @@ public class BasicAuthIndexingTest extends IndexTaskTest
   @Override
   public EmbeddedDruidCluster createCluster()
   {
-    return super
-        .createCluster()
-        .addExtension(BasicSecurityDruidModule.class)
-        .addCommonProperty("druid.auth.authenticatorChain", "[\"basic\"]")
-        .addCommonProperty("druid.auth.authenticator.basic.type", "basic")
-        .addCommonProperty("druid.auth.authenticator.basic.initialAdminPassword", "priest")
-        .addCommonProperty("druid.auth.authenticator.basic.initialInternalClientPassword", "warlock")
-        .addCommonProperty("druid.auth.authenticator.basic.authorizerName", "basic")
-        .addCommonProperty("druid.auth.authorizers", "[\"basic\"]")
-        .addCommonProperty("druid.auth.authorizer.basic.type", "basic")
-        .addCommonProperty("druid.escalator.type", "basic")
-        .addCommonProperty("druid.escalator.internalClientPassword", "warlock")
-        .addCommonProperty("druid.escalator.internalClientUsername", "druid_system")
-        .addCommonProperty("druid.escalator.authorizerName", "basic")
+    return EmbeddedDruidCluster
+        .withEmbeddedDerbyAndZookeeper()
+        .addResource(new EmbeddedBasicAuthResource())
+        .useLatchableEmitter()
+        .addServer(coordinator)
+        .addServer(overlord)
+        .addServer(indexer)
+        .addServer(historical)
+        .addServer(broker)
+        .addServer(new EmbeddedRouter())
         .addCommonProperty("druid.indexer.autoscale.doAutoscale", "true");
   }
 
