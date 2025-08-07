@@ -21,7 +21,6 @@ package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.core.Event;
@@ -62,18 +61,5 @@ public class AlertEventSerdeTest
                       + "\"data\":{}"
                       + "}";
     Assert.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
-  }
-
-  @Test
-  public void test_deserializeSeverityFromString()
-  {
-    Assert.assertEquals(AlertEvent.Severity.ANOMALY, AlertEvent.Severity.fromString("anomaly"));
-    Assert.assertEquals(AlertEvent.Severity.DEPRECATED, AlertEvent.Severity.fromString("deprecated"));
-    Assert.assertEquals(AlertEvent.Severity.COMPONENT_FAILURE, AlertEvent.Severity.fromString("component-failure"));
-    Assert.assertEquals(AlertEvent.Severity.SERVICE_FAILURE, AlertEvent.Severity.fromString("service-failure"));
-    Assert.assertThrows(
-        DruidException.class,
-        () -> AlertEvent.Severity.fromString("unknown")
-    );
   }
 }

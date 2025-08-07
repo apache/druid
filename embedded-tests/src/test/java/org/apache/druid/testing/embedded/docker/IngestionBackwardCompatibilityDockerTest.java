@@ -20,11 +20,12 @@
 package org.apache.druid.testing.embedded.docker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.client.coordinator.CoordinatorServiceClient;
+import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.rpc.RequestBuilder;
+import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.testing.DruidCommand;
 import org.apache.druid.testing.DruidContainer;
@@ -88,15 +89,15 @@ public class IngestionBackwardCompatibilityDockerTest extends IngestionSmokeTest
   protected int markSegmentsAsUnused(String dataSource)
   {
     // For old Druid versions, use Coordinator to mark segments as unused
-    final CoordinatorServiceClient coordinatorClient =
-        overlord.bindings().getInstance(CoordinatorServiceClient.class);
+    final ServiceClient coordinatorClient =
+        overlord.bindings().getInstance(ServiceClient.class, Coordinator.class);
 
     try {
       RequestBuilder req = new RequestBuilder(
           HttpMethod.DELETE,
           StringUtils.format("/druid/coordinator/v1/datasources/%s", dataSource)
       );
-      BytesFullResponseHolder responseHolder = coordinatorClient.getServiceClient().request(
+      BytesFullResponseHolder responseHolder = coordinatorClient.request(
           req,
           new BytesFullResponseHandler()
       );

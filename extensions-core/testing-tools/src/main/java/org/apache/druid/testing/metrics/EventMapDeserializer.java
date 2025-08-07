@@ -94,11 +94,11 @@ public class EventMapDeserializer
   private ServiceMetricEvent asMetricEvent()
   {
     final ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder();
-    for (String key : map.keySet()) {
+    map.forEach((key, value) -> {
       if (!SYSTEM_DIMENSIONS.contains(key)) {
         builder.setDimension(key, map.get(key));
       }
-    }
+    });
 
     return builder
         .setFeed(getStringValue(Event.FEED))
