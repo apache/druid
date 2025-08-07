@@ -82,6 +82,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -336,6 +337,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testTimeseriesProjections()
   {
+    Assume.assumeTrue(QueryRunnerTestHelper.testRunnerHasProjection(runner));
 
     AggregatorFactory maxQuality = new LongMaxAggregatorFactory("maxQuality", "qualityLong");
     Druids.TimeseriesQueryBuilder queryBuilder = Druids.newTimeseriesQueryBuilder()
@@ -367,6 +369,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testTimeseriesProjectionsCounts()
   {
+    Assume.assumeTrue(QueryRunnerTestHelper.testRunnerHasProjection(runner));
 
     AggregatorFactory countAgg = new CountAggregatorFactory("count");
     Druids.TimeseriesQueryBuilder queryBuilder = Druids.newTimeseriesQueryBuilder()
@@ -398,6 +401,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testTimeseriesNullableLongMax()
   {
+    Assume.assumeTrue(QueryRunnerTestHelper.testRunnerHasProjection(runner));
 
     AggregatorFactory longNullableMax = new LongMaxAggregatorFactory("longNullableMax", "longNumericNull");
     Druids.TimeseriesQueryBuilder queryBuilder = Druids.newTimeseriesQueryBuilder()
@@ -2024,6 +2028,9 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testTimeseriesWithFirstLastAggregator()
   {
+    // some string dimensions are not included, and it changes the results
+    Assume.assumeFalse(runner.toString().equals("rtPartialSchemaStringDiscoveryIndex"));
+
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                                   .granularity(QueryRunnerTestHelper.MONTH_GRAN)
