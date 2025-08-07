@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Self;
@@ -44,7 +43,6 @@ import org.apache.hadoop.security.authentication.util.SignerException;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
 import org.eclipse.jetty.client.Request;
 import org.eclipse.jetty.http.HttpCookie;
-import org.eclipse.jetty.http.HttpHeader;
 
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
@@ -76,7 +74,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TimeZone;
-import java.util.stream.Collectors;
 
 
 @JsonTypeName("kerberos")

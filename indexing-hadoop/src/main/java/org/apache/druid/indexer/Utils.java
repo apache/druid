@@ -36,8 +36,8 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.ContentResponse;
+import org.eclipse.jetty.client.HttpClient;
 
 import javax.annotation.Nullable;
 

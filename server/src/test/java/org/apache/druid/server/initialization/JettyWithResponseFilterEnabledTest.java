@@ -19,9 +19,6 @@
 
 package org.apache.druid.server.initialization;
 
-import org.junit.Assert;
-import org.junit.Test;
-
 public class JettyWithResponseFilterEnabledTest extends JettyTest
 {
   @Override

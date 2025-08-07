@@ -643,19 +643,18 @@ public class QueryResourceTest
     ));
 
 
-    Assert.assertTrue(response.containsHeader(HttpHeader.TRAILER.toString()));
-    Assert.assertEquals(QueryResultPusher.RESULT_TRAILER_HEADERS, response.getHeader(HttpHeader.TRAILER.toString()));
+    Assert.assertTrue(response.getHeaders().contains(HttpHeader.TRAILER.toString()));
+    Assert.assertEquals(QueryResultPusher.RESULT_TRAILER_HEADERS, response.getHeaders().get(HttpHeader.TRAILER.toString()));
 
-    final HttpFields observedFields = response.getTrailers().get();
-
-    Assert.assertTrue(response.containsHeader(QueryResource.HEADER_RESPONSE_CONTEXT));
+    final HttpFields fields = response.getTrailersSupplier().get();
+    Assert.assertTrue(fields.contains(QueryResource.HEADER_RESPONSE_CONTEXT));
     Assert.assertEquals(
         jsonMapper.writeValueAsString(ImmutableMap.of("missingSegments", ImmutableList.of(missingSegDesc))),
-        response.getHeader(QueryResource.HEADER_RESPONSE_CONTEXT)
+        fields.get(QueryResource.HEADER_RESPONSE_CONTEXT)
     );
 
-    Assert.assertTrue(observedFields.containsKey(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
-    Assert.assertEquals("true", observedFields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
+    Assert.assertTrue(fields.contains(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
+    Assert.assertEquals("true", fields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
   }
 
 
@@ -1781,7 +1780,7 @@ public class QueryResourceTest
     return queryResource.doPost(new ByteArrayInputStream(bytes), null, req);
   }
 
-  private org.eclipse.jetty.server.Response jettyResponseforRequest(MockHttpServletRequest req) throws IOException
+  private org.eclipse.jetty.server.Response jettyResponseforRequest(MockHttpServletRequest req)
   {
     org.eclipse.jetty.server.Response responseMock = EasyMock.mock(org.eclipse.jetty.server.Response.class);
 

@@ -61,14 +61,14 @@ import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
+import org.eclipse.jetty.client.BytesRequestContent;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.Request;
 import org.eclipse.jetty.client.Response;
 import org.eclipse.jetty.client.Result;
-import org.eclipse.jetty.client.BytesRequestContent;
+import org.eclipse.jetty.ee8.proxy.AsyncProxyServlet;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
-import org.eclipse.jetty.ee8.proxy.AsyncProxyServlet;
 
 import javax.annotation.Nullable;
 import javax.servlet.ServletException;

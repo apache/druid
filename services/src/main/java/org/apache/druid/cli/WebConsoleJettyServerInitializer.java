@@ -22,10 +22,9 @@ package org.apache.druid.cli;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.security.AuthenticationUtils;
+import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
 import org.eclipse.jetty.rewrite.handler.RedirectPatternRule;
 import org.eclipse.jetty.rewrite.handler.RewriteHandler;
-import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
-import org.eclipse.jetty.util.resource.Resource;
 import org.eclipse.jetty.util.resource.ResourceFactory;
 
 import java.util.List;
