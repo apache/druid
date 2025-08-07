@@ -22,7 +22,6 @@ package org.apache.druid.testing.embedded.compact;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.task.TaskBuilder;
@@ -238,8 +237,7 @@ public class CompactionSparseColumnTest extends CompactionTestBase
    */
   private String getScanEvents(ScanQuery scanQuery)
   {
-    final String resultAsJson =
-        FutureUtils.getUnchecked(cluster.anyBroker().submitNativeQuery(scanQuery), true);
+    final String resultAsJson = cluster.callApi().onAnyBroker(b -> b.submitNativeQuery(scanQuery));
     final List<Map<String, Object>> resultList = JacksonUtils.readValue(
         TestHelper.JSON_MAPPER,
         resultAsJson.getBytes(StandardCharsets.UTF_8),

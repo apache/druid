@@ -211,23 +211,29 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
     bitmapIndexWriter.setObjectsNotSorted();
     final MutableBitmap[] bitmaps;
     bitmaps = new MutableBitmap[getCardinality()];
-    for (int i = 0; i < bitmaps.length; i++) {
-      bitmaps[i] = columnFormatSpec.getBitmapEncoding().getBitmapFactory().makeEmptyMutableBitmap();
-    }
 
     final IntIterator rows = intermediateValueWriter.getIterator();
     int rowCount = 0;
     while (rows.hasNext()) {
       final int dictId = rows.nextInt();
       encodedValueSerializer.addValue(dictId);
-      bitmaps[dictId].add(rowCount++);
+      MutableBitmap b = bitmaps[dictId];
+      if (b == null) {
+        b = columnFormatSpec.getBitmapEncoding().getBitmapFactory().makeEmptyMutableBitmap();
+        bitmaps[dictId] = b;
+      }
+      b.add(rowCount++);
     }
 
     for (int i = 0; i < bitmaps.length; i++) {
       final MutableBitmap bitmap = bitmaps[i];
-      bitmapIndexWriter.write(
-          columnFormatSpec.getBitmapEncoding().getBitmapFactory().makeImmutableBitmap(bitmap)
-      );
+      if (bitmap == null) {
+        bitmapIndexWriter.write(null);
+      } else {
+        bitmapIndexWriter.write(
+            columnFormatSpec.getBitmapEncoding().getBitmapFactory().makeImmutableBitmap(bitmap)
+        );
+      }
       bitmaps[i] = null; // Reclaim memory
     }
 

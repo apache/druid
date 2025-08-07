@@ -35,7 +35,6 @@ import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchAg
 import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.AutoTypeColumnSchema;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.transform.ExpressionTransform;
@@ -162,34 +161,47 @@ public class SqlBenchmarkDatasets
             makeDimensionsSpec(expressionsSchema),
             expressionsSchema.getAggsArray(),
             Arrays.asList(
-                new AggregateProjectionSpec(
-                    "string2_hourly_sums_hll",
-                    VirtualColumns.create(
-                        Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
-                    ),
-                    Arrays.asList(
-                        new StringDimensionSchema("string2"),
-                        new LongDimensionSchema("__gran")
-                    ),
-                    new AggregatorFactory[]{
-                        new LongSumAggregatorFactory("long4_sum", "long4"),
-                        new DoubleSumAggregatorFactory("double2_sum", "double2"),
-                        new HllSketchBuildAggregatorFactory("hll_string5", "string5", null, null, null, false, true)
-                    }
-                ),
-                new AggregateProjectionSpec(
-                    "string2_long2_sums",
-                    VirtualColumns.EMPTY,
-                    Arrays.asList(
-                        new StringDimensionSchema("string2"),
-                        new LongDimensionSchema("long2")
-                    ),
-                    new AggregatorFactory[]{
-                        new LongSumAggregatorFactory("long4_sum", "long4"),
-                        new DoubleSumAggregatorFactory("double2_sum", "double2"),
-                        new HllSketchBuildAggregatorFactory("hll_string5", "string5", null, null, null, false, true)
-                    }
-                )
+                AggregateProjectionSpec.builder("string2_hourly_sums_hll")
+                                       .virtualColumns(
+                                           Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
+                                       )
+                                       .groupingColumns(
+                                           new StringDimensionSchema("string2"),
+                                           new LongDimensionSchema("__gran")
+                                       )
+                                       .aggregators(
+                                           new LongSumAggregatorFactory("long4_sum", "long4"),
+                                           new DoubleSumAggregatorFactory("double2_sum", "double2"),
+                                           new HllSketchBuildAggregatorFactory(
+                                               "hll_string5",
+                                               "string5",
+                                               null,
+                                               null,
+                                               null,
+                                               false,
+                                               true
+                                           )
+                                       )
+                                       .build(),
+                AggregateProjectionSpec.builder("string2_long2_sums")
+                                       .groupingColumns(
+                                           new StringDimensionSchema("string2"),
+                                           new LongDimensionSchema("long2")
+                                       )
+                                       .aggregators(
+                                           new LongSumAggregatorFactory("long4_sum", "long4"),
+                                           new DoubleSumAggregatorFactory("double2_sum", "double2"),
+                                           new HllSketchBuildAggregatorFactory(
+                                               "hll_string5",
+                                               "string5",
+                                               null,
+                                               null,
+                                               null,
+                                               false,
+                                               true
+                                           )
+                                       )
+                                       .build()
             ),
             Granularities.NONE
         )
@@ -407,15 +419,17 @@ public class SqlBenchmarkDatasets
           ),
           aggregators,
           projections.stream()
-                     .map(projection -> new AggregateProjectionSpec(
-                         projection.getName(),
-                         projection.getVirtualColumns(),
-                         projection.getGroupingColumns()
-                                   .stream()
-                                   .map(dim -> AutoTypeColumnSchema.of(dim.getName()))
-                                   .collect(Collectors.toList()),
-                         projection.getAggregators()
-                     )).collect(Collectors.toList()),
+                     .map(
+                         projection ->
+                             AggregateProjectionSpec.builder(projection)
+                                                    .groupingColumns(
+                                                        projection.getGroupingColumns()
+                                                                  .stream()
+                                                                  .map(dim -> AutoTypeColumnSchema.of(dim.getName()))
+                                                                  .collect(Collectors.toList())
+                                                    )
+                                                    .build()
+                     ).collect(Collectors.toList()),
           queryGranularity
       );
     }

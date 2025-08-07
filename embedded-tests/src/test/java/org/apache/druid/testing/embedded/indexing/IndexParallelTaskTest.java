@@ -100,7 +100,7 @@ public class IndexParallelTaskTest extends EmbeddedClusterTestBase
                    .dataSource(dataSource)
                    .timestampColumn("timestamp")
                    .jsonInputFormat()
-                   .localInputSourceWithFiles(Resources.DataFile.TINY_WIKI_1_JSON)
+                   .localInputSourceWithFiles(Resources.DataFile.tinyWiki1Json())
                    .dimensions()
                    .tuningConfig(
                        t -> t.withAwaitSegmentAvailabilityTimeoutMillis(segmentAvailabilityTimeoutMillis)
@@ -135,9 +135,9 @@ public class IndexParallelTaskTest extends EmbeddedClusterTestBase
                    .timestampColumn("timestamp")
                    .jsonInputFormat()
                    .localInputSourceWithFiles(
-                       Resources.DataFile.TINY_WIKI_1_JSON,
-                       Resources.DataFile.TINY_WIKI_2_JSON,
-                       Resources.DataFile.TINY_WIKI_3_JSON
+                       Resources.DataFile.tinyWiki1Json(),
+                       Resources.DataFile.tinyWiki2Json(),
+                       Resources.DataFile.tinyWiki3Json()
                    )
                    .segmentGranularity("DAY")
                    .dimensions("namespace", "page", "language")
@@ -214,9 +214,7 @@ public class IndexParallelTaskTest extends EmbeddedClusterTestBase
   private String runTask(TaskBuilder.IndexParallel taskBuilder, String dataSource)
   {
     final String taskId = EmbeddedClusterApis.newTaskId(dataSource);
-    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, taskBuilder.withId(taskId)));
-    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
-
+    cluster.callApi().runTask(taskBuilder.withId(taskId), overlord);
     return taskId;
   }
 

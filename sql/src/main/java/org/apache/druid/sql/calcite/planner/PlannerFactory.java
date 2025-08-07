@@ -55,6 +55,7 @@ import org.apache.druid.sql.hook.DruidHookDispatcher;
 
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 public class PlannerFactory extends PlannerToolbox
 {
@@ -98,17 +99,19 @@ public class PlannerFactory extends PlannerToolbox
    * SET statements, for example 'SET x = 'y'; SET foo = 123; SELECT ...', where these values will be added to the
    * {@link org.apache.druid.query.QueryContext} of the final statement.
    *
-   * @param engine       current SQL engine
-   * @param sql          sql query string
-   * @param sqlNode      parsed sql query, from {@link DruidSqlParser#parse(String, boolean)}. This is the main
-   *                     statement from {@link StatementAndSetContext#getMainStatement()}.
-   * @param queryContext query context including {@link StatementAndSetContext#getSetContext()}
-   * @param hook         calcite planner hook
+   * @param engine          current SQL engine
+   * @param sql             sql query string
+   * @param sqlNode         parsed sql query, from {@link DruidSqlParser#parse(String, boolean)}. This is the main
+   *                        statement from {@link StatementAndSetContext#getMainStatement()}.
+   * @param authContextKeys an immutable set of context keys needed for authorization checks.
+   * @param queryContext    query context including {@link StatementAndSetContext#getSetContext()}
+   * @param hook            calcite planner hook
    */
   public DruidPlanner createPlanner(
       final SqlEngine engine,
       final String sql,
       final SqlNode sqlNode,
+      final Set<String> authContextKeys,
       final Map<String, Object> queryContext,
       final PlannerHook hook
   )
@@ -118,6 +121,7 @@ public class PlannerFactory extends PlannerToolbox
         sql,
         sqlNode,
         engine,
+        authContextKeys,
         queryContext,
         hook
     );
@@ -142,6 +146,7 @@ public class PlannerFactory extends PlannerToolbox
         engine,
         sql,
         statementAndSetContext.getMainStatement(),
+        Set.copyOf(queryContext.keySet()),
         statementAndSetContext.getSetContext().isEmpty()
         ? queryContext
         : QueryContexts.override(queryContext, statementAndSetContext.getSetContext()),

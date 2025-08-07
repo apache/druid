@@ -68,10 +68,7 @@ public class ConcurrentAppendReplaceTest extends EmbeddedClusterTestBase
                    .appendToExisting(true)
                    .context("useConcurrentLocks", true)
                    .dimensions();
-    cluster.callApi().onLeaderOverlord(
-        o -> o.runTask(task1, taskBuilder.withId(task1))
-    );
-    cluster.callApi().waitForTaskToSucceed(task1, overlord);
+    cluster.callApi().runTask(taskBuilder.withId(task1), overlord);
 
     List<DataSegment> usedSegments = getAllUsedSegments();
     Assertions.assertEquals(1, usedSegments.size());
@@ -87,10 +84,7 @@ public class ConcurrentAppendReplaceTest extends EmbeddedClusterTestBase
 
     // Run the APPEND task again with a different taskId
     final String task2 = EmbeddedClusterApis.newTaskId(dataSource);
-    cluster.callApi().onLeaderOverlord(
-        o -> o.runTask(task2, taskBuilder.withId(task2))
-    );
-    cluster.callApi().waitForTaskToSucceed(task2, overlord);
+    cluster.callApi().runTask(taskBuilder.withId(task2), overlord);
 
     // Verify that the new segment gets appended with the same version but a different ID
     usedSegments = getAllUsedSegments();

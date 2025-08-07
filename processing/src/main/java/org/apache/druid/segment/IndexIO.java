@@ -65,6 +65,7 @@ import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedIterable;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.data.VSizeColumnarMultiInts;
+import org.apache.druid.segment.projections.ConstantTimeColumn;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
 import org.apache.druid.segment.serde.FloatNumericColumnSupplier;
@@ -742,7 +743,7 @@ public class IndexIO
       if (projectionSpec.getSchema().getTimeColumnName() == null) {
         projectionColumns.put(
             ColumnHolder.TIME_COLUMN_NAME,
-            Projections.makeConstantTimeSupplier(projectionSpec.getNumRows(), dataInterval.getStartMillis())
+            ConstantTimeColumn.makeConstantTimeSupplier(projectionSpec.getNumRows(), dataInterval.getStartMillis())
         );
       }
       return projectionColumns;

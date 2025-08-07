@@ -28,18 +28,15 @@ sidebar_label: "SQL query context"
  This document describes the SQL language.
 :::
 
-Druid supports query context parameters which affect [SQL query](./sql.md) planning.
-See [Query context](query-context.md) for general query context parameters for all query types.
+In Apache Druid, you can control how your [Druid SQL queries](./sql.md) queries run by using query context parameters. The parameters let you adjust aspects of query processing such as using approximations, selecting particular filters, controlling how lookups are executed.
 
-## SQL query context parameters
+For additional context parameters supported for all query types, refer to [Query context reference](query-context-reference.md). To learn how to set the query context, see [Set query context](../querying/query-context.md).
 
-The following table lists query context parameters you can use to configure Druid SQL planning.
-You can override a parameter's default value by setting a runtime property in the format `druid.query.default.context.{query_context_key}`.
-For more information, see [Overriding default query context values](../configuration/index.md#overriding-default-query-context-values).
+The table below lists the query context parameters you can use with Druid SQL.
 
 |Parameter|Description|Default value|
 |---------|-----------|-------------|
-|`sqlQueryId`|SQL query ID. For HTTP client, Druid returns it in the `X-Druid-SQL-Query-Id` header.<br/><br/>To specify a SQL query ID, use `sqlQueryId` instead of [`queryId`](query-context.md). Setting `queryId` for a SQL request has no effect. All native queries underlying SQL use an auto-generated `queryId`.|auto-generated|
+|`sqlQueryId`|SQL query ID. For HTTP client, Druid returns it in the `X-Druid-SQL-Query-Id` header.<br/><br/>To specify a SQL query ID, use `sqlQueryId` instead of [`queryId`](query-context-reference.md). Setting `queryId` for a SQL request has no effect. All native queries underlying SQL use an auto-generated `queryId`.|auto-generated|
 |`sqlTimeZone`|Time zone for a connection. For example, "America/Los_Angeles" or an offset like "-08:00". This parameter affects how time functions and timestamp literals behave. |UTC|
 |`sqlStringifyArrays`|If `true`, Druid serializes result columns with array values as JSON strings in the response instead of arrays.|`true`, except for JDBC connections, where it's always `false`|
 |`useApproximateCountDistinct`|Whether to use an approximate cardinality algorithm for `COUNT(DISTINCT foo)`.|`true`|
@@ -59,51 +56,7 @@ For more information, see [Overriding default query context values](../configura
 |`inFunctionExprThreshold`|At or beyond this threshold number of values, SQL `IN` is eligible for execution using the native function `scalar_in_array` rather than an <code>&#124;&#124;</code> of `==`, even if the number of values is below `inFunctionThreshold`. This property only affects translation of SQL `IN` to a [native expression](math-expr.md). It doesn't affect translation of SQL `IN` to a [native filter](filters.md). This property is provided for backwards compatibility purposes, and may be removed in a future release.|`2`|
 |`inSubQueryThreshold`|At or beyond this threshold number of values, Druid converts SQL `IN` to `JOIN` on an inline table. `inFunctionThreshold` takes priority over this setting. A threshold of 0 forces usage of an inline table in all cases where the size of a SQL `IN` is larger than `inFunctionThreshold`. A threshold of `2147483647` disables the rewrite of SQL `IN` to `JOIN`. |`2147483647`|
 
-## Set the query context
-
-How query context parameters are set differs depending on whether you are using the [JSON API](../api-reference/sql-api.md) or [JDBC](../api-reference/sql-jdbc.md).
-
-### Set the query context when using JSON API
-When using the JSON API, you can configure query context parameters in the `context` object of the request.
-
-For example:
-
-```
-{
-  "query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar' AND __time > TIMESTAMP '2000-01-01 00:00:00'",
-  "context" : {
-    "sqlTimeZone" : "America/Los_Angeles",
-    "useCache": false
-  }
-}
-```
-
-Context parameters can also be set by including [SET](./sql.md#set) as part of the `query`
-string in the request, separated from the query by `;`. Context parameters set by `SET` statements take priority over
-values set in `context`.
-
-The following example expresses the previous example in this form:
-
-```
-{
-  "query" : "SET sqlTimeZone = 'America/Los_Angeles'; SET useCache = false; SELECT COUNT(*) FROM data_source WHERE foo = 'bar' AND __time > TIMESTAMP '2000-01-01 00:00:00'"
-}
-```
-
-### Set the query context when using JDBC
-If using JDBC, context parameters can be set using [connection properties object](../api-reference/sql-jdbc.md).
-
-For example:
-
-```java
-String url = "jdbc:avatica:remote:url=http://localhost:8082/druid/v2/sql/avatica/";
-
-// Set any query context parameters you need here.
-Properties connectionProperties = new Properties();
-connectionProperties.setProperty("sqlTimeZone", "America/Los_Angeles");
-connectionProperties.setProperty("useCache", "false");
-
-try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
-  // create and execute statements, process result sets, etc
-}
-```
+## Learn more
+- [Set query context](../querying/query-context.md) for how to set the query context.
+- [Query context reference](query-context-reference.md)  for available query context parameters.
+- [MSQ context parameters](../multi-stage-query/reference.md#context-parameters) for how to set context parameters for Multi-Stage Queries.

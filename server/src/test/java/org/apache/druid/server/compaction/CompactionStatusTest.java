@@ -34,12 +34,10 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestDataSource;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -340,19 +338,22 @@ public class CompactionStatusTest
     final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, 0L);
     final IndexSpec currentIndexSpec
         = IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build();
-    final AggregateProjectionSpec projection1 = new AggregateProjectionSpec(
-        "foo",
-        VirtualColumns.create(
-            Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
-        ),
-        List.of(
-            new LongDimensionSchema(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
-            new StringDimensionSchema("a")
-        ),
-        new AggregatorFactory[]{
-            new LongSumAggregatorFactory("sum_long", "long")
-        }
-    );
+    final AggregateProjectionSpec projection1 =
+        AggregateProjectionSpec.builder("foo")
+                               .virtualColumns(
+                                   Granularities.toVirtualColumn(
+                                       Granularities.HOUR,
+                                       Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                                   )
+                               )
+                               .groupingColumns(
+                                   new LongDimensionSchema(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
+                                   new StringDimensionSchema("a")
+                               )
+                               .aggregators(
+                                   new LongSumAggregatorFactory("sum_long", "long")
+                               )
+                               .build();
     final CompactionState lastCompactionState = new CompactionState(
         currentPartitionsSpec,
         null,
@@ -387,27 +388,26 @@ public class CompactionStatusTest
     final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, 0L);
     final IndexSpec currentIndexSpec
         = IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build();
-    final AggregateProjectionSpec projection1 = new AggregateProjectionSpec(
-        "1",
-        VirtualColumns.create(
-            Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
-        ),
-        List.of(
-            new LongDimensionSchema(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
-            new StringDimensionSchema("a")
-        ),
-        new AggregatorFactory[]{
-            new LongSumAggregatorFactory("sum_long", "long")
-        }
-    );
-    final AggregateProjectionSpec projection2 = new AggregateProjectionSpec(
-        "2",
-        VirtualColumns.EMPTY,
-        Collections.emptyList(),
-        new AggregatorFactory[]{
-            new LongSumAggregatorFactory("sum_long", "long")
-        }
-    );
+    final AggregateProjectionSpec projection1 =
+        AggregateProjectionSpec.builder("1")
+                               .virtualColumns(
+                                   Granularities.toVirtualColumn(
+                                       Granularities.HOUR,
+                                       Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                                   )
+                               )
+                               .groupingColumns(
+                                   new LongDimensionSchema(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
+                                   new StringDimensionSchema("a")
+                               )
+                               .aggregators(
+                                   new LongSumAggregatorFactory("sum_long", "long")
+                               )
+                               .build();
+    final AggregateProjectionSpec projection2 =
+        AggregateProjectionSpec.builder("2")
+                               .aggregators(new LongSumAggregatorFactory("sum_long", "long"))
+                               .build();
 
     final CompactionState lastCompactionState = new CompactionState(
         currentPartitionsSpec,
