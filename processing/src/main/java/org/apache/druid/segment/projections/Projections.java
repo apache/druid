@@ -31,18 +31,13 @@ import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.IsBooleanFilter;
-import org.apache.druid.segment.filter.TrueFilter;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -110,8 +105,7 @@ public class Projections
    * @param physicalColumnChecker Helper utility which can determine if a physical column required by
    *                              queryCursorBuildSpec is available on the projection OR does not exist on the base
    *                              table either
-   * @return a {@link ProjectionMatch} if the {@link CursorBuildSpec} matches the projection, which contains
-   * information such as which
+   * @return a {@link ProjectionMatch} if the {@link CursorBuildSpec} matches the projection, else null
    */
   @Nullable
   public static ProjectionMatch matchAggregateProjection(
@@ -561,173 +555,6 @@ public class Projections
   public static String getProjectionSmooshV9Prefix(AggregateProjectionMetadata projectionSpec)
   {
     return projectionSpec.getSchema().getName() + "/";
-  }
-
-  public static final class ProjectionMatch
-  {
-    private final CursorBuildSpec cursorBuildSpec;
-    private final Map<String, String> remapColumns;
-
-    public ProjectionMatch(CursorBuildSpec cursorBuildSpec, Map<String, String> remapColumns)
-    {
-      this.cursorBuildSpec = cursorBuildSpec;
-      this.remapColumns = remapColumns;
-    }
-
-    public CursorBuildSpec getCursorBuildSpec()
-    {
-      return cursorBuildSpec;
-    }
-
-    public Map<String, String> getRemapColumns()
-    {
-      return remapColumns;
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (!(o instanceof ProjectionMatch)) {
-        return false;
-      }
-      ProjectionMatch that = (ProjectionMatch) o;
-      return Objects.equals(cursorBuildSpec, that.cursorBuildSpec) && Objects.equals(remapColumns, that.remapColumns);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(cursorBuildSpec, remapColumns);
-    }
-
-    @Override
-    public String toString()
-    {
-      return "ProjectionMatch{" +
-             "cursorBuildSpec=" + cursorBuildSpec +
-             ", remapColumns=" + remapColumns +
-             '}';
-    }
-  }
-
-
-  public static final class ProjectionMatchBuilder
-  {
-    private final Set<String> referencedPhysicalColumns;
-    private final Set<VirtualColumn> referencedVirtualColumns;
-    private final Map<String, String> remapColumns;
-    private final List<AggregatorFactory> combiningFactories;
-    private final Set<String> matchedQueryColumns;
-    @Nullable
-    private Filter rewriteFilter;
-
-    public ProjectionMatchBuilder()
-    {
-      this.referencedPhysicalColumns = new HashSet<>();
-      this.referencedVirtualColumns = new HashSet<>();
-      this.remapColumns = new HashMap<>();
-      this.combiningFactories = new ArrayList<>();
-      this.matchedQueryColumns = new HashSet<>();
-    }
-
-    /**
-     * Map a query column name to a projection column name
-     */
-    public ProjectionMatchBuilder remapColumn(String queryColumn, String projectionColumn)
-    {
-      remapColumns.put(queryColumn, projectionColumn);
-      return this;
-    }
-
-    @Nullable
-    public String getRemapValue(String queryColumn)
-    {
-      return remapColumns.get(queryColumn);
-    }
-
-    /**
-     * Add a projection physical column, which will later be added to {@link ProjectionMatch#getCursorBuildSpec()} if
-     * the projection matches
-     */
-    public ProjectionMatchBuilder addReferencedPhysicalColumn(String column)
-    {
-      referencedPhysicalColumns.add(column);
-      return this;
-    }
-
-    /**
-     * Add a query virtual column that can use projection physical columns as inputs to the match builder, which will
-     * later be added to {@link ProjectionMatch#getCursorBuildSpec()} if the projection matches
-     */
-    public ProjectionMatchBuilder addReferenceedVirtualColumn(VirtualColumn virtualColumn)
-    {
-      referencedVirtualColumns.add(virtualColumn);
-      return this;
-    }
-
-    /**
-     * Add a query {@link AggregatorFactory#substituteCombiningFactory(AggregatorFactory)} which can combine the inputs
-     * of a selector created by a projection {@link AggregatorFactory}
-     */
-    public ProjectionMatchBuilder addPreAggregatedAggregator(AggregatorFactory aggregator)
-    {
-      combiningFactories.add(aggregator);
-      return this;
-    }
-
-    public ProjectionMatchBuilder addMatchedQueryColumn(String queryColumn)
-    {
-      matchedQueryColumns.add(queryColumn);
-      return this;
-    }
-
-    public ProjectionMatchBuilder addMatchedQueryColumns(Collection<String> queryColumns)
-    {
-      matchedQueryColumns.addAll(queryColumns);
-      return this;
-    }
-
-    public ProjectionMatchBuilder rewriteFilter(Filter rewriteFilter)
-    {
-      this.rewriteFilter = rewriteFilter;
-      return this;
-    }
-
-    public Filter getRewriteFilter()
-    {
-      return rewriteFilter;
-    }
-
-    public Map<String, String> getRemapColumns()
-    {
-      return remapColumns;
-    }
-
-    public Set<String> getMatchedQueryColumns()
-    {
-      return matchedQueryColumns;
-    }
-
-    public ProjectionMatch build(CursorBuildSpec queryCursorBuildSpec)
-    {
-      return new ProjectionMatch(
-          CursorBuildSpec.builder(queryCursorBuildSpec)
-                         .setFilter(rewriteFilter)
-                         .setPhysicalColumns(referencedPhysicalColumns)
-                         .setVirtualColumns(VirtualColumns.fromIterable(referencedVirtualColumns))
-                         .setAggregators(combiningFactories)
-                         .build(),
-          remapColumns
-      );
-    }
-  }
-
-  public static final class ProjectionFilterMatch extends TrueFilter
-  {
-    private static final ProjectionFilterMatch INSTANCE = new ProjectionFilterMatch();
   }
 
   /**

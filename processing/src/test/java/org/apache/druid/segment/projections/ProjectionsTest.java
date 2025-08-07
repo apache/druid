@@ -68,12 +68,12 @@ class ProjectionsTest
                                                      )
                                                      .build();
 
-    Projections.ProjectionMatch projectionMatch = Projections.matchAggregateProjection(
+    ProjectionMatch projectionMatch = Projections.matchAggregateProjection(
         spec.getSchema(),
         cursorBuildSpec,
         new RowSignatureChecker(baseTable)
     );
-    Projections.ProjectionMatch expected = new Projections.ProjectionMatch(
+    ProjectionMatch expected = new ProjectionMatch(
         CursorBuildSpec.builder()
                        .setAggregators(List.of(new LongSumAggregatorFactory("c", "c")))
                        .setPhysicalColumns(Set.of("c_sum"))
@@ -134,12 +134,12 @@ class ProjectionsTest
                                                                    )
                                                                )
                                                                .build();
-    Projections.ProjectionMatch projectionMatch = Projections.matchAggregateProjection(
+    ProjectionMatch projectionMatch = Projections.matchAggregateProjection(
         spec.getSchema(),
         cursorBuildSpecWithFilter,
         new RowSignatureChecker(baseTable)
     );
-    Projections.ProjectionMatch expected = new Projections.ProjectionMatch(
+    ProjectionMatch expected = new ProjectionMatch(
         CursorBuildSpec.builder()
                        .setAggregators(List.of(new LongSumAggregatorFactory("c", "c")))
                        .setPhysicalColumns(Set.of("c_sum"))
@@ -202,12 +202,12 @@ class ProjectionsTest
                                                                    )
                                                                )
                                                                .build();
-    Projections.ProjectionMatch projectionMatch = Projections.matchAggregateProjection(
+    ProjectionMatch projectionMatch = Projections.matchAggregateProjection(
         spec.getSchema(),
         cursorBuildSpecWithFilter,
         new RowSignatureChecker(baseTable)
     );
-    Projections.ProjectionMatch expected = new Projections.ProjectionMatch(
+    ProjectionMatch expected = new ProjectionMatch(
         CursorBuildSpec.builder()
                        .setGroupingColumns(List.of("a", "b"))
                        .setAggregators(List.of(new LongSumAggregatorFactory("c", "c")))
@@ -230,7 +230,7 @@ class ProjectionsTest
 
     Filter queryFilter = xeqfoo2;
     Assertions.assertInstanceOf(
-        Projections.ProjectionFilterMatch.class,
+        ProjectionFilterMatch.class,
         Projections.rewriteFilter(xeqfoo, queryFilter)
     );
 
