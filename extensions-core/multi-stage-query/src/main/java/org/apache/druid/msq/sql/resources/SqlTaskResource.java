@@ -127,7 +127,7 @@ public class SqlTaskResource
     final SqlQueryPlus sqlQueryPlus;
     final HttpStatement stmt;
     try {
-      sqlQueryPlus = SqlResource.makeSqlQueryPlus(sqlQuery, req, defaultQueryConfig);
+      sqlQueryPlus = SqlResource.makeSqlQueryPlus(sqlQuery, req, defaultQueryConfig.getContext());
       stmt = sqlStatementFactory.httpStatement(sqlQueryPlus, req);
     }
     catch (Exception e) {

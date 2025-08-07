@@ -101,6 +101,7 @@ public class DruidConnection
 
   public synchronized DruidJdbcStatement createStatement(
       final SqlStatementFactory sqlStatementFactory,
+      final Map<String, Object> systemDefaultContext,
       final ResultFetcherFactory fetcherFactory
   )
   {
@@ -122,6 +123,7 @@ public class DruidConnection
           connectionId,
           statementId,
           sessionContext,
+          systemDefaultContext,
           sqlStatementFactory,
           fetcherFactory
       );
@@ -135,6 +137,7 @@ public class DruidConnection
   public synchronized DruidJdbcPreparedStatement createPreparedStatement(
       final SqlStatementFactory sqlStatementFactory,
       final SqlQueryPlus sqlQueryPlus,
+      final Map<String, Object> systemDefaultContext,
       final long maxRowCount,
       final ResultFetcherFactory fetcherFactory
   )
@@ -154,7 +157,7 @@ public class DruidConnection
 
       @SuppressWarnings("GuardedBy")
       final PreparedStatement statement = sqlStatementFactory.preparedStatement(
-          sqlQueryPlus.withContext(sessionContext)
+          sqlQueryPlus.withContext(systemDefaultContext, sessionContext)
       );
       final DruidJdbcPreparedStatement jdbcStmt = new DruidJdbcPreparedStatement(
           connectionId,
