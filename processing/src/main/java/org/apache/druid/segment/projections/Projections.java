@@ -481,11 +481,8 @@ public class Projections
    * projection doesn't contain all the rows the query would match if not using the projection.
    */
   @Nullable
-  public static Filter rewriteFilter(@Nullable Filter projectionFilter, @Nullable Filter queryFilter)
+  public static Filter rewriteFilter(Filter projectionFilter, Filter queryFilter)
   {
-    if (projectionFilter == null || queryFilter == null) {
-      return queryFilter;
-    }
     if (queryFilter.equals(projectionFilter)) {
       return ProjectionFilterMatch.INSTANCE;
     }
@@ -508,6 +505,10 @@ public class Projections
       if (projectionFilter instanceof AndFilter) {
         AndFilter projectionAndFilter = (AndFilter) projectionFilter;
         Filter rewritten = andFilter;
+        // calling rewriteFilter using each child of the projection AND filter as the projection filter will remove
+        // the child from the query AND filter if it exists (or return null if it does not exist, since it must exist
+        // to be a valid rewrite). The remaining AND filter of will only contain children that were not part of the
+        // projection AND filter
         for (Filter filter : projectionAndFilter.getFilters()) {
           rewritten = rewriteFilter(filter, rewritten);
           if (rewritten != null) {
