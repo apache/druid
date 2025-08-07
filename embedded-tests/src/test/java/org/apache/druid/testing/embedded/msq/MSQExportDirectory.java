@@ -17,8 +17,41 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.categories;
+package org.apache.druid.testing.embedded.msq;
 
-public class Security
+import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedResource;
+
+import java.io.File;
+
+/**
+ * Embedded resource to set MSQ export directory.
+ */
+public class MSQExportDirectory implements EmbeddedResource
 {
+  private File directory;
+
+  @Override
+  public void start()
+  {
+    // Do nothing
+  }
+
+  @Override
+  public void stop()
+  {
+    // Do nothing
+  }
+
+  @Override
+  public void onStarted(EmbeddedDruidCluster cluster)
+  {
+    directory = cluster.getTestFolder().getOrCreateFolder("msq-export");
+    cluster.addCommonProperty("druid.export.storage.baseDir", directory.getAbsolutePath());
+  }
+
+  public File get()
+  {
+    return directory;
+  }
 }

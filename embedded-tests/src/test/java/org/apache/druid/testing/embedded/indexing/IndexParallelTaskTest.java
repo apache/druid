@@ -100,7 +100,7 @@ public class IndexParallelTaskTest extends EmbeddedClusterTestBase
                    .dataSource(dataSource)
                    .timestampColumn("timestamp")
                    .jsonInputFormat()
-                   .localInputSourceWithFiles(Resources.DataFile.TINY_WIKI_1_JSON)
+                   .localInputSourceWithFiles(Resources.DataFile.tinyWiki1Json())
                    .dimensions()
                    .tuningConfig(
                        t -> t.withAwaitSegmentAvailabilityTimeoutMillis(segmentAvailabilityTimeoutMillis)
@@ -135,9 +135,9 @@ public class IndexParallelTaskTest extends EmbeddedClusterTestBase
                    .timestampColumn("timestamp")
                    .jsonInputFormat()
                    .localInputSourceWithFiles(
-                       Resources.DataFile.TINY_WIKI_1_JSON,
-                       Resources.DataFile.TINY_WIKI_2_JSON,
-                       Resources.DataFile.TINY_WIKI_3_JSON
+                       Resources.DataFile.tinyWiki1Json(),
+                       Resources.DataFile.tinyWiki2Json(),
+                       Resources.DataFile.tinyWiki3Json()
                    )
                    .segmentGranularity("DAY")
                    .dimensions("namespace", "page", "language")
