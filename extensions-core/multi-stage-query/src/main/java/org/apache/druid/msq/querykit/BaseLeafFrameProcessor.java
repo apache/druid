@@ -29,6 +29,7 @@ import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.Unit;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
@@ -44,6 +45,7 @@ import java.util.Optional;
 
 public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
 {
+  private static final Logger log = new Logger(BaseLeafFrameProcessor.class);
   private final ReadableInput baseInput;
   private final ResourceHolder<WritableFrameChannel> outputChannelHolder;
   private final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder;
@@ -85,7 +87,14 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
     final ReturnOrAwait retVal;
 
     if (baseInput.hasSegment()) {
-      retVal = runWithSegment(baseInput.getSegment());
+      try {
+        retVal = runWithSegment(baseInput.getSegment());
+      }
+      catch (Exception e) {
+        // did not want to load the segment, hence adding the descriptor to the log to figure out for which segment the processing failed
+        log.error("Error processing segment descriptor: %s", baseInput.getSegment().getDescriptor());
+        throw e;
+      }
     } else if (baseInput.hasDataServerQuery()) {
       retVal = runWithDataServerQuery(baseInput.getDataServerQuery());
     } else {
