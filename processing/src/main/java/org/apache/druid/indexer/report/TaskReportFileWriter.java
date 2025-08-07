@@ -21,6 +21,8 @@ package org.apache.druid.indexer.report;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 
@@ -31,4 +33,7 @@ public interface TaskReportFileWriter
   OutputStream openReportOutputStream(String taskId) throws IOException;
 
   void setObjectMapper(ObjectMapper objectMapper);
+
+  @Nullable
+  File getReportsFile(String taskId);
 }
