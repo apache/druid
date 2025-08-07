@@ -132,7 +132,7 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void testIngestionWithoutPermissions() throws Exception
+  public void testIngestionWithoutPermissions()
   {
     List<ResourceAction> permissions = ImmutableList.of();
     securityClient.setPermissionsToRole(ROLE_1, permissions);
@@ -181,7 +181,7 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void testIngestionWithPermissions() throws Exception
+  public void testIngestionWithPermissions()
   {
     List<ResourceAction> permissions = ImmutableList.of(
         new ResourceAction(new Resource(".*", "DATASOURCE"), Action.READ),
@@ -240,7 +240,7 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void testExportWithoutPermissions() throws InterruptedException
+  public void testExportWithoutPermissions()
   {
     // No external write permissions for s3
     List<ResourceAction> permissions = ImmutableList.of(
@@ -273,7 +273,7 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void testExportWithPermissions() throws InterruptedException
+  public void testExportWithPermissions()
   {
     // No external write permissions for s3
     List<ResourceAction> permissions = ImmutableList.of(
