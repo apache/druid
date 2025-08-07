@@ -52,7 +52,6 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -636,18 +635,16 @@ class DataSchemaTest extends InitializedNullHandlingTest
   public void testSerdeWithProjections() throws Exception
   {
     // serialize, then deserialize of DataSchema with projections.
-    AggregateProjectionSpec projectionSpec = new AggregateProjectionSpec(
-        "ab_count_projection",
-        null,
-        null,
-        Arrays.asList(
-            new StringDimensionSchema("a"),
-            new LongDimensionSchema("b")
-        ),
-        new AggregatorFactory[]{
-            new CountAggregatorFactory("count")
-        }
-    );
+    AggregateProjectionSpec projectionSpec =
+        AggregateProjectionSpec.builder("ab_count_projection")
+                               .groupingColumns(
+                                   new StringDimensionSchema("a"),
+                                   new LongDimensionSchema("b")
+                               )
+                               .aggregators(
+                                   new CountAggregatorFactory("count")
+                               )
+                               .build();
     DataSchema original = DataSchema.builder()
                                     .withDataSource("datasource")
                                     .withTimestamp(new TimestampSpec(null, null, null))
@@ -877,20 +874,20 @@ class DataSchemaTest extends InitializedNullHandlingTest
                         )
                         .withProjections(
                             List.of(
-                                new AggregateProjectionSpec(
-                                    "some projection",
-                                    null,
-                                    VirtualColumns.create(Granularities.toVirtualColumn(Granularities.HOUR, "g")),
-                                    List.of(new LongDimensionSchema("g")),
-                                    new AggregatorFactory[]{new CountAggregatorFactory("count")}
-                                ),
-                                new AggregateProjectionSpec(
-                                    "some projection",
-                                    null,
-                                    VirtualColumns.create(Granularities.toVirtualColumn(Granularities.MINUTE, "g")),
-                                    List.of(new LongDimensionSchema("g")),
-                                    new AggregatorFactory[]{new CountAggregatorFactory("count")}
-                                )
+                                AggregateProjectionSpec.builder("some projection")
+                                                       .virtualColumns(
+                                                           Granularities.toVirtualColumn(Granularities.HOUR, "g")
+                                                       )
+                                                       .groupingColumns(new LongDimensionSchema("g"))
+                                                       .aggregators(new CountAggregatorFactory("count"))
+                                                       .build(),
+                                AggregateProjectionSpec.builder("some projection")
+                                                       .virtualColumns(
+                                                           Granularities.toVirtualColumn(Granularities.MINUTE, "g")
+                                                       )
+                                                       .groupingColumns(new LongDimensionSchema("g"))
+                                                       .aggregators(new CountAggregatorFactory("count"))
+                                                       .build()
                             )
                         )
                         .build()
@@ -905,6 +902,9 @@ class DataSchemaTest extends InitializedNullHandlingTest
   @Test
   void testInvalidProjectionGranularity()
   {
+    AggregateProjectionSpec.Builder bob = AggregateProjectionSpec.builder()
+                                                                 .groupingColumns(new LongDimensionSchema("g"))
+                                                                 .aggregators(new CountAggregatorFactory("count"));
     Throwable t = Assertions.assertThrows(
         DruidException.class,
         () -> DataSchema.builder()
@@ -919,34 +919,19 @@ class DataSchemaTest extends InitializedNullHandlingTest
                         )
                         .withProjections(
                             List.of(
-                                new AggregateProjectionSpec(
-                                    "ok granularity",
-                                    null,
-                                    VirtualColumns.create(Granularities.toVirtualColumn(Granularities.HOUR, "g")),
-                                    List.of(new LongDimensionSchema("g")),
-                                    new AggregatorFactory[]{new CountAggregatorFactory("count")}
-                                ),
-                                new AggregateProjectionSpec(
-                                    "acceptable granularity",
-                                    null,
-                                    VirtualColumns.create(Granularities.toVirtualColumn(Granularities.MINUTE, "g")),
-                                    List.of(new LongDimensionSchema("g")),
-                                    new AggregatorFactory[]{new CountAggregatorFactory("count")}
-                                ),
-                                new AggregateProjectionSpec(
-                                    "not having a time column is ok too",
-                                    null,
-                                    VirtualColumns.EMPTY,
-                                    null,
-                                    new AggregatorFactory[]{new CountAggregatorFactory("count")}
-                                ),
-                                new AggregateProjectionSpec(
-                                    "bad granularity",
-                                    null,
-                                    VirtualColumns.create(Granularities.toVirtualColumn(Granularities.DAY, "g")),
-                                    List.of(new LongDimensionSchema("g")),
-                                    new AggregatorFactory[]{new CountAggregatorFactory("count")}
-                                )
+                                bob.name("ok granularity")
+                                   .virtualColumns(Granularities.toVirtualColumn(Granularities.HOUR, "g"))
+                                   .build(),
+                                bob.name("acceptable granularity")
+                                   .virtualColumns(Granularities.toVirtualColumn(Granularities.MINUTE, "g"))
+                                   .build(),
+                                AggregateProjectionSpec.builder()
+                                                       .name("not having a time column is ok too")
+                                                       .aggregators(new CountAggregatorFactory("count"))
+                                                       .build(),
+                                bob.name("bad granularity")
+                                   .virtualColumns(Granularities.toVirtualColumn(Granularities.DAY, "g"))
+                                   .build()
                             )
                         )
                         .build()

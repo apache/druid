@@ -36,6 +36,7 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
@@ -44,6 +45,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Aggregate projection schema and row count information to store in {@link Metadata} which itself is stored inside a
@@ -65,6 +67,11 @@ public class AggregateProjectionMetadata
     }
     return Schema.COMPARATOR.compare(o1.getSchema(), o2.getSchema());
   };
+
+  public static SchemaBuilder schemaBuilder(String name)
+  {
+    return new SchemaBuilder().name(name);
+  }
 
   private final Schema schema;
   private final int numRows;
@@ -297,10 +304,10 @@ public class AggregateProjectionMetadata
      * Check if a column is either part of {@link #groupingColumns}, or at least is not present in
      * {@link #virtualColumns}. Naively, we would just check that grouping column contains the column in question,
      * however, we can also use a projection when a column is truly missing.
-     * {@link org.apache.druid.segment.projections.Projections#matchAggregateProjection} returns a match builder if the
-     * column is present as either a physical column, or a virtual column, but a virtual column could also be present
-     * for an aggregator input, so we must further check that a column not in the grouping list is also not a virtual
-     * column, the implication being that it is a missing column.
+     * {@link Projections#matchAggregateProjection(Schema, CursorBuildSpec, Projections.PhysicalColumnChecker)} returns
+     * a match builder if the column is present as either a physical column, or a virtual column, but a virtual column
+     * could also be present for an aggregator input, so we must further check that a column not in the grouping list
+     * is also not a virtual column, the implication being that it is a missing column.
      */
     public boolean isInvalidGrouping(@Nullable String columnName)
     {
@@ -357,6 +364,96 @@ public class AggregateProjectionMetadata
              ", effectiveGranularity=" + effectiveGranularity +
              ", orderingWithTimeSubstitution=" + orderingWithTimeSubstitution +
              '}';
+    }
+  }
+
+  public static class SchemaBuilder
+  {
+    /*
+    @JsonProperty("name") String name,
+        @JsonProperty("timeColumnName") @Nullable String timeColumnName,
+        @JsonProperty("filter") @Nullable DimFilter filter,
+        @JsonProperty("virtualColumns") @Nullable VirtualColumns virtualColumns,
+        @JsonProperty("groupingColumns") @Nullable List<String> groupingColumns,
+        @JsonProperty("aggregators") @Nullable AggregatorFactory[] aggregators,
+        @JsonProperty("ordering") List<OrderBy> ordering
+     */
+    @Nullable
+    private String name;
+    @Nullable
+    private String timeColumnName;
+    private VirtualColumns virtualColumns = VirtualColumns.EMPTY;
+    @Nullable
+    private DimFilter filter;
+    private List<String> groupingColumns;
+    private AggregatorFactory[] aggregators;
+    private List<OrderBy> ordering;
+
+    public SchemaBuilder name(@Nullable String name)
+    {
+      this.name = name;
+      return this;
+    }
+
+    public SchemaBuilder timeColumnName(@Nullable String timeColumnName)
+    {
+      this.timeColumnName = timeColumnName;
+      return this;
+    }
+
+    public SchemaBuilder virtualColumns(VirtualColumns virtualColumns)
+    {
+      this.virtualColumns = virtualColumns;
+      return this;
+    }
+
+    public SchemaBuilder virtualColumns(VirtualColumn... virtualColumns)
+    {
+      this.virtualColumns = VirtualColumns.create(virtualColumns);
+      return this;
+    }
+
+    public SchemaBuilder filter(@Nullable DimFilter filter)
+    {
+      this.filter = filter;
+      return this;
+    }
+
+    public SchemaBuilder groupAndOrder(String... groupingColumns)
+    {
+      this.groupingColumns = Arrays.asList(groupingColumns);
+      return ordering(groupingColumns);
+    }
+
+    public SchemaBuilder aggregators(@Nullable AggregatorFactory... aggregators)
+    {
+      this.aggregators = aggregators;
+      return this;
+    }
+
+    public SchemaBuilder ordering(final String... columnNames)
+    {
+      this.ordering = Arrays.stream(columnNames).map(OrderBy::ascending).collect(Collectors.toList());
+      return this;
+    }
+
+    public SchemaBuilder ordering(List<OrderBy> ordering)
+    {
+      this.ordering = ordering;
+      return this;
+    }
+
+    public Schema build()
+    {
+      return new Schema(
+          name,
+          timeColumnName,
+          filter,
+          virtualColumns,
+          groupingColumns,
+          aggregators,
+          ordering
+      );
     }
   }
 }

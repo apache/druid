@@ -104,6 +104,7 @@ public class Projections
    * aggregator factories to process the pre-aggregated data from the projection, as well as a mapping of query column
    * names to projection column names.
    *
+   * @param projection            the {@link AggregateProjectionMetadata.Schema} to check for match
    * @param queryCursorBuildSpec  the {@link CursorBuildSpec} that contains the required inputs to build a
    *                              {@link CursorHolder} for a query
    * @param physicalColumnChecker Helper utility which can determine if a physical column required by
@@ -124,12 +125,9 @@ public class Projections
     }
     ProjectionMatchBuilder matchBuilder = new ProjectionMatchBuilder();
 
-    matchBuilder = matchGrouping(projection, queryCursorBuildSpec, physicalColumnChecker, matchBuilder);
+    // match virtual columns first, which will populate the 'remapColumns' of the match builder
+    matchBuilder = matchQueryVirtualColumns(projection, queryCursorBuildSpec, physicalColumnChecker, matchBuilder);
     if (matchBuilder == null) {
-      return null;
-    }
-
-    if (matchAggregators(projection, queryCursorBuildSpec, matchBuilder)) {
       return null;
     }
 
@@ -138,13 +136,55 @@ public class Projections
       return null;
     }
 
-    matchBuilder = matchRemainingRequiredColumns(projection, queryCursorBuildSpec, physicalColumnChecker, matchBuilder);
+    matchBuilder = matchGrouping(projection, queryCursorBuildSpec, physicalColumnChecker, matchBuilder);
     if (matchBuilder == null) {
       return null;
     }
 
-    // todo (clint): combine this with match filter, but need to figure out how to handle remapping since ideally all
-    //  the remapping has been done before we match filters so the filter required column rewrites are chill
+    matchBuilder = matchAggregators(projection, queryCursorBuildSpec, matchBuilder);
+    if (matchBuilder == null) {
+      return null;
+    }
+
+    matchBuilder = matchRemainingPhysicalColumns(projection, queryCursorBuildSpec, physicalColumnChecker, matchBuilder);
+    if (matchBuilder == null) {
+      return null;
+    }
+
+    return matchBuilder.build(queryCursorBuildSpec);
+  }
+
+  @Nullable
+  public static ProjectionMatchBuilder matchQueryVirtualColumns(
+      AggregateProjectionMetadata.Schema projection,
+      CursorBuildSpec queryCursorBuildSpec,
+      PhysicalColumnChecker physicalColumnChecker,
+      ProjectionMatchBuilder matchBuilder
+  )
+  {
+    for (VirtualColumn vc : queryCursorBuildSpec.getVirtualColumns().getVirtualColumns()) {
+      matchBuilder = matchQueryVirtualColumn(
+          vc,
+          projection,
+          queryCursorBuildSpec,
+          physicalColumnChecker,
+          matchBuilder
+      );
+      if (matchBuilder == null) {
+        return null;
+      }
+    }
+    return matchBuilder;
+  }
+
+  @Nullable
+  public static ProjectionMatchBuilder matchFilter(
+      AggregateProjectionMetadata.Schema projection,
+      CursorBuildSpec queryCursorBuildSpec,
+      PhysicalColumnChecker physicalColumnChecker,
+      ProjectionMatchBuilder matchBuilder
+  )
+  {
     // if the projection has a filter, the query must contain this filter match
     if (projection.getFilter() != null) {
       final Filter queryFilter = queryCursorBuildSpec.getFilter();
@@ -183,11 +223,27 @@ public class Projections
       matchBuilder.rewriteFilter(queryCursorBuildSpec.getFilter());
     }
 
-    return matchBuilder.build(queryCursorBuildSpec);
+    // now that filter has been possibly rewritten, make sure the projection actually has all the required columns.
+    if (matchBuilder.getRewriteFilter() != null) {
+      for (String queryColumn : matchBuilder.getRewriteFilter().getRequiredColumns()) {
+        matchBuilder = matchRequiredColumn(
+            queryColumn,
+            projection,
+            queryCursorBuildSpec,
+            physicalColumnChecker,
+            matchBuilder
+        );
+        if (matchBuilder == null) {
+          return null;
+        }
+      }
+    }
+
+    return matchBuilder;
   }
 
   @Nullable
-  private static ProjectionMatchBuilder matchGrouping(
+  public static ProjectionMatchBuilder matchGrouping(
       AggregateProjectionMetadata.Schema projection,
       CursorBuildSpec queryCursorBuildSpec,
       PhysicalColumnChecker physicalColumnChecker,
@@ -198,11 +254,11 @@ public class Projections
     if (queryGrouping != null) {
       for (String queryColumn : queryGrouping) {
         matchBuilder = matchRequiredColumn(
-            projection,
-            matchBuilder,
             queryColumn,
-            queryCursorBuildSpec.getVirtualColumns(),
-            physicalColumnChecker
+            projection,
+            queryCursorBuildSpec,
+            physicalColumnChecker,
+            matchBuilder
         );
         if (matchBuilder == null) {
           return null;
@@ -220,63 +276,40 @@ public class Projections
     return matchBuilder;
   }
 
-
-  private static boolean matchAggregators(
+  @Nullable
+  public static ProjectionMatchBuilder matchAggregators(
       AggregateProjectionMetadata.Schema projection,
       CursorBuildSpec queryCursorBuildSpec,
       ProjectionMatchBuilder matchBuilder
   )
   {
-    if (!CollectionUtils.isNullOrEmpty(queryCursorBuildSpec.getAggregators())) {
-      boolean allMatch = true;
-      for (AggregatorFactory queryAgg : queryCursorBuildSpec.getAggregators()) {
-        boolean foundMatch = false;
-        for (AggregatorFactory projectionAgg : projection.getAggregators()) {
-          final AggregatorFactory combining = queryAgg.substituteCombiningFactory(projectionAgg);
-          if (combining != null) {
-            matchBuilder.remapColumn(queryAgg.getName(), projectionAgg.getName())
-                        .addReferencedPhysicalColumn(projectionAgg.getName())
-                        .addPreAggregatedAggregator(combining)
-                        .addMatchedQueryColumns(queryAgg.requiredFields());
-            foundMatch = true;
-            break;
-          }
-        }
-        allMatch = allMatch && foundMatch;
-      }
-      return !allMatch;
+    if (CollectionUtils.isNullOrEmpty(queryCursorBuildSpec.getAggregators())) {
+      return matchBuilder;
     }
-    return false;
+    boolean allMatch = true;
+    for (AggregatorFactory queryAgg : queryCursorBuildSpec.getAggregators()) {
+      boolean foundMatch = false;
+      for (AggregatorFactory projectionAgg : projection.getAggregators()) {
+        final AggregatorFactory combining = queryAgg.substituteCombiningFactory(projectionAgg);
+        if (combining != null) {
+          matchBuilder.remapColumn(queryAgg.getName(), projectionAgg.getName())
+                      .addReferencedPhysicalColumn(projectionAgg.getName())
+                      .addPreAggregatedAggregator(combining)
+                      .addMatchedQueryColumns(queryAgg.requiredFields());
+          foundMatch = true;
+          break;
+        }
+      }
+      allMatch = allMatch && foundMatch;
+    }
+    if (allMatch) {
+      return matchBuilder;
+    }
+    return null;
   }
 
   @Nullable
-  private static ProjectionMatchBuilder matchFilter(
-      AggregateProjectionMetadata.Schema projection,
-      CursorBuildSpec queryCursorBuildSpec,
-      PhysicalColumnChecker physicalColumnChecker,
-      ProjectionMatchBuilder matchBuilder
-  )
-  {
-    if (queryCursorBuildSpec.getFilter() != null) {
-      for (String queryColumn : queryCursorBuildSpec.getFilter().getRequiredColumns()) {
-        matchBuilder = matchRequiredColumn(
-            projection,
-            matchBuilder,
-            queryColumn,
-            queryCursorBuildSpec.getVirtualColumns(),
-            physicalColumnChecker
-        );
-        if (matchBuilder == null) {
-          return null;
-        }
-      }
-    }
-
-    return matchBuilder;
-  }
-
-  @Nullable
-  private static ProjectionMatchBuilder matchRemainingRequiredColumns(
+  public static ProjectionMatchBuilder matchRemainingPhysicalColumns(
       AggregateProjectionMetadata.Schema projection,
       CursorBuildSpec queryCursorBuildSpec,
       PhysicalColumnChecker physicalColumnChecker,
@@ -293,26 +326,11 @@ public class Projections
           continue;
         }
         if (!matchedQueryColumns.contains(queryColumn)) {
-          matchBuilder = matchRequiredColumn(
-              projection,
-              matchBuilder,
+          matchBuilder = matchQueryPhysicalColumn(
               queryColumn,
-              queryCursorBuildSpec.getVirtualColumns(),
-              physicalColumnChecker
-          );
-          if (matchBuilder == null) {
-            return null;
-          }
-        }
-      }
-      for (VirtualColumn vc : queryCursorBuildSpec.getVirtualColumns().getVirtualColumns()) {
-        if (!matchedQueryColumns.contains(vc.getOutputName())) {
-          matchBuilder = matchRequiredColumn(
               projection,
-              matchBuilder,
-              vc.getOutputName(),
-              queryCursorBuildSpec.getVirtualColumns(),
-              physicalColumnChecker
+              physicalColumnChecker,
+              matchBuilder
           );
           if (matchBuilder == null) {
             return null;
@@ -336,89 +354,123 @@ public class Projections
    * which true if the column is present on the projection OR if the column is NOT present on the base table (meaning
    * missing columns that do not exist anywhere do not disqualify a projection from being used).
    *
+   * @param column                Column name to check
+   * @param projection            {@link AggregateProjectionMetadata.Schema} to match against
+   * @param queryCursorBuildSpec  the {@link CursorBuildSpec} required by the query
+   * @param physicalColumnChecker Helper to check if the physical column exists on a projection, or does not exist on
+   *                              the base table
    * @param matchBuilder          match state to add mappings of query virtual columns to projection physical columns
    *                              and query virtual columns which still must be computed from projection physical
    *                              columns
-   * @param column                Column name to check
-   * @param queryVirtualColumns   {@link VirtualColumns} from the {@link CursorBuildSpec} required by the query
-   * @param physicalColumnChecker Helper to check if the physical column exists on a projection, or does not exist on
-   *                              the base table
    * @return {@link ProjectionMatchBuilder} with updated state per the rules described above, or null if the column
    * cannot be matched
    */
   @Nullable
-  private static ProjectionMatchBuilder matchRequiredColumn(
-      AggregateProjectionMetadata.Schema projection,
-      ProjectionMatchBuilder matchBuilder,
+  public static ProjectionMatchBuilder matchRequiredColumn(
       String column,
-      VirtualColumns queryVirtualColumns,
-      PhysicalColumnChecker physicalColumnChecker
+      AggregateProjectionMetadata.Schema projection,
+      CursorBuildSpec queryCursorBuildSpec,
+      PhysicalColumnChecker physicalColumnChecker,
+      ProjectionMatchBuilder matchBuilder
   )
   {
-    final VirtualColumn queryVirtualColumn = queryVirtualColumns.getVirtualColumn(column);
-    if (queryVirtualColumn != null) {
-      matchBuilder.addMatchedQueryColumn(column)
-                  .addMatchedQueryColumns(queryVirtualColumn.requiredColumns());
-      // check to see if we have an equivalent virtual column defined in the projection, if so we can
-      final VirtualColumn projectionEquivalent = projection.getVirtualColumns().findEquivalent(queryVirtualColumn);
-      if (projectionEquivalent != null) {
-        final String remapColumnName;
-        if (Objects.equals(projectionEquivalent.getOutputName(), projection.getTimeColumnName())) {
-          remapColumnName = ColumnHolder.TIME_COLUMN_NAME;
-        } else {
-          remapColumnName = projectionEquivalent.getOutputName();
-        }
-        if (!queryVirtualColumn.getOutputName().equals(remapColumnName)) {
-          matchBuilder.remapColumn(queryVirtualColumn.getOutputName(), remapColumnName);
-        }
-        return matchBuilder.addReferencedPhysicalColumn(remapColumnName);
-      }
+    if (matchBuilder.getMatchedQueryColumns().contains(column)) {
+      return matchBuilder;
+    }
+    final VirtualColumn virtualColumn = queryCursorBuildSpec.getVirtualColumns().getVirtualColumn(column);
+    if (virtualColumn != null) {
+      return matchQueryVirtualColumn(
+          virtualColumn,
+          projection,
+          queryCursorBuildSpec,
+          physicalColumnChecker,
+          matchBuilder
+      );
+    }
 
-      matchBuilder.addReferenceedVirtualColumn(queryVirtualColumn);
-      final List<String> requiredInputs = queryVirtualColumn.requiredColumns();
-      if (requiredInputs.size() == 1 && ColumnHolder.TIME_COLUMN_NAME.equals(requiredInputs.get(0))) {
-        // special handle time granularity. in the future this should be reworked to push this concept into the
-        // virtual column and underlying expression itself, but this will do for now
-        final Granularity virtualGranularity = Granularities.fromVirtualColumn(queryVirtualColumn);
-        if (virtualGranularity != null) {
-          if (virtualGranularity.isFinerThan(projection.getEffectiveGranularity())) {
-            return null;
-          }
-          // same granularity, replace virtual column directly by remapping it to the physical column
-          if (projection.getEffectiveGranularity().equals(virtualGranularity)) {
-            return matchBuilder.remapColumn(column, ColumnHolder.TIME_COLUMN_NAME)
-                               .addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
-          }
-          return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
-        } else {
-          // anything else with __time requires none granularity
-          if (Granularities.NONE.equals(projection.getEffectiveGranularity())) {
-            return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
-          }
+    return matchQueryPhysicalColumn(column, projection, physicalColumnChecker, matchBuilder);
+  }
+
+  @Nullable
+  public static ProjectionMatchBuilder matchQueryVirtualColumn(
+      VirtualColumn queryVirtualColumn,
+      AggregateProjectionMetadata.Schema projection,
+      CursorBuildSpec queryCursorBuildSpec,
+      PhysicalColumnChecker physicalColumnChecker,
+      ProjectionMatchBuilder matchBuilder
+  )
+  {
+    // check to see if we have an equivalent virtual column defined in the projection, if so we can
+    final VirtualColumn projectionEquivalent = projection.getVirtualColumns().findEquivalent(queryVirtualColumn);
+    if (projectionEquivalent != null) {
+      final String remapColumnName;
+      if (Objects.equals(projectionEquivalent.getOutputName(), projection.getTimeColumnName())) {
+        remapColumnName = ColumnHolder.TIME_COLUMN_NAME;
+      } else {
+        remapColumnName = projectionEquivalent.getOutputName();
+      }
+      if (!queryVirtualColumn.getOutputName().equals(remapColumnName)) {
+        matchBuilder.remapColumn(queryVirtualColumn.getOutputName(), remapColumnName);
+      }
+      return matchBuilder.addMatchedQueryColumn(queryVirtualColumn.getOutputName())
+                         .addMatchedQueryColumns(queryVirtualColumn.requiredColumns())
+                         .addReferencedPhysicalColumn(remapColumnName);
+    }
+
+    matchBuilder.addMatchedQueryColumn(queryVirtualColumn.getOutputName())
+                .addReferenceedVirtualColumn(queryVirtualColumn);
+    final List<String> requiredInputs = queryVirtualColumn.requiredColumns();
+    if (requiredInputs.size() == 1 && ColumnHolder.TIME_COLUMN_NAME.equals(requiredInputs.get(0))) {
+      // special handle time granularity. in the future this should be reworked to push this concept into the
+      // virtual column and underlying expression itself, but this will do for now
+      final Granularity virtualGranularity = Granularities.fromVirtualColumn(queryVirtualColumn);
+      if (virtualGranularity != null) {
+        if (virtualGranularity.isFinerThan(projection.getEffectiveGranularity())) {
           return null;
         }
-      } else {
-        for (String required : requiredInputs) {
-          matchBuilder = matchRequiredColumn(
-              projection,
-              matchBuilder,
-              required,
-              queryVirtualColumns,
-              physicalColumnChecker
-          );
-          if (matchBuilder == null) {
-            return null;
-          }
+        // same granularity, replace virtual column directly by remapping it to the physical column
+        if (projection.getEffectiveGranularity().equals(virtualGranularity)) {
+          return matchBuilder.remapColumn(queryVirtualColumn.getOutputName(), ColumnHolder.TIME_COLUMN_NAME)
+                             .addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
         }
-        return matchBuilder;
+        return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
+      } else {
+        // anything else with __time requires none granularity
+        if (Granularities.NONE.equals(projection.getEffectiveGranularity())) {
+          return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
+        }
+        return null;
       }
     } else {
-      if (physicalColumnChecker.check(projection.getName(), column)) {
-        return matchBuilder.addMatchedQueryColumn(column)
-                           .addReferencedPhysicalColumn(column);
+      for (String required : requiredInputs) {
+        matchBuilder = matchRequiredColumn(
+            required,
+            projection,
+            queryCursorBuildSpec,
+            physicalColumnChecker,
+            matchBuilder
+        );
+        if (matchBuilder == null) {
+          return null;
+        }
       }
-      return null;
+      return matchBuilder;
     }
+  }
+
+  @Nullable
+  public static ProjectionMatchBuilder matchQueryPhysicalColumn(
+      String column,
+      AggregateProjectionMetadata.Schema projection,
+      PhysicalColumnChecker physicalColumnChecker,
+      ProjectionMatchBuilder matchBuilder
+  )
+  {
+    if (physicalColumnChecker.check(projection.getName(), column)) {
+      return matchBuilder.addMatchedQueryColumn(column)
+                         .addReferencedPhysicalColumn(column);
+    }
+    return null;
   }
 
   /**
@@ -451,6 +503,26 @@ public class Projections
     }
     if (queryFilter instanceof AndFilter) {
       AndFilter andFilter = (AndFilter) queryFilter;
+
+      // if both and filters, check to see if the query and filter contains all of the clauses of the projection and filter
+      if (projectionFilter instanceof AndFilter) {
+        AndFilter projectionAndFilter = (AndFilter) projectionFilter;
+        Filter rewritten = andFilter;
+        for (Filter filter : projectionAndFilter.getFilters()) {
+          rewritten = rewriteFilter(filter, rewritten);
+          if (rewritten != null) {
+            if (rewritten == ProjectionFilterMatch.INSTANCE) {
+              return ProjectionFilterMatch.INSTANCE;
+            }
+          }
+        }
+        if (rewritten != null) {
+          return rewritten;
+        }
+        return null;
+      }
+
+      // else check to see if any clause of the query AND filter is the projection filter
       List<Filter> newChildren = Lists.newArrayListWithExpectedSize(andFilter.getFilters().size());
       boolean childRewritten = false;
       for (Filter filter : andFilter.getFilters()) {
@@ -529,7 +601,17 @@ public class Projections
     {
       return Objects.hash(cursorBuildSpec, remapColumns);
     }
+
+    @Override
+    public String toString()
+    {
+      return "ProjectionMatch{" +
+             "cursorBuildSpec=" + cursorBuildSpec +
+             ", remapColumns=" + remapColumns +
+             '}';
+    }
   }
+
 
   public static final class ProjectionMatchBuilder
   {
@@ -611,6 +693,11 @@ public class Projections
     {
       this.rewriteFilter = rewriteFilter;
       return this;
+    }
+
+    public Filter getRewriteFilter()
+    {
+      return rewriteFilter;
     }
 
     public Map<String, String> getRemapColumns()

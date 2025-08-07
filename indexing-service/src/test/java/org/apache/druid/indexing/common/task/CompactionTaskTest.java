@@ -105,7 +105,6 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.SimpleQueryableIndex;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
@@ -573,21 +572,18 @@ public class CompactionTaskTest
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
-    final List<AggregateProjectionSpec> projections = ImmutableList.of(
-        new AggregateProjectionSpec(
-            "test",
-            null,
-            VirtualColumns.EMPTY,
-            ImmutableList.of(
-                new StringDimensionSchema("dim1"),
-                new StringDimensionSchema("dim2"),
-                new StringDimensionSchema("dim3")
-            ),
-            new AggregatorFactory[]{
-                new CountAggregatorFactory("count"),
-                new LongSumAggregatorFactory("sum_long_dim_1", "long_dim_1")
-            }
-        )
+    final List<AggregateProjectionSpec> projections = List.of(
+        AggregateProjectionSpec.builder("test")
+                               .groupingColumns(
+                                   new StringDimensionSchema("dim1"),
+                                   new StringDimensionSchema("dim2"),
+                                   new StringDimensionSchema("dim3")
+                               )
+                               .aggregators(
+                                   new CountAggregatorFactory("count"),
+                                   new LongSumAggregatorFactory("sum_long_dim_1", "long_dim_1")
+                               )
+                               .build()
     );
 
     final CompactionTask task = builder

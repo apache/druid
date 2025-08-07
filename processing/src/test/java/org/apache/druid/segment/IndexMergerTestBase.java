@@ -3011,31 +3011,18 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
                       );
 
     List<AggregateProjectionSpec> projections = Arrays.asList(
-        new AggregateProjectionSpec(
-            "a_hourly_c_sum",
-            null,
-            VirtualColumns.create(
-                Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
-            ),
-            Arrays.asList(
-                new StringDimensionSchema("a"),
-                new LongDimensionSchema("__gran")
-            ),
-            new AggregatorFactory[]{
-                new LongSumAggregatorFactory("c_sum", "c")
-            }
-        ),
-        new AggregateProjectionSpec(
-            "a_c_sum",
-            null,
-            VirtualColumns.EMPTY,
-            Collections.singletonList(
-                new StringDimensionSchema("a")
-            ),
-            new AggregatorFactory[]{
-                new LongSumAggregatorFactory("c_sum", "c")
-            }
-        )
+        AggregateProjectionSpec.builder("a_hourly_c_sum")
+                               .virtualColumns(Granularities.toVirtualColumn(Granularities.HOUR, "__gran"))
+                               .groupingColumns(
+                                   new StringDimensionSchema("a"),
+                                   new LongDimensionSchema("__gran")
+                               )
+                               .aggregators(new LongSumAggregatorFactory("c_sum", "c"))
+                               .build(),
+        AggregateProjectionSpec.builder("a_c_sum")
+                               .groupingColumns(new StringDimensionSchema("a"))
+                               .aggregators(new LongSumAggregatorFactory("c_sum", "c"))
+                               .build()
     );
 
     IndexBuilder bob = IndexBuilder.create()

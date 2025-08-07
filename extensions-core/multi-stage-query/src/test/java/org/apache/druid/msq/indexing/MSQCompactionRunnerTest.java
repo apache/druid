@@ -64,7 +64,6 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.NestedDataColumnSchema;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.CompressionFactory;
@@ -81,7 +80,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -119,20 +117,19 @@ public class MSQCompactionRunnerTest
       NESTED_DIMENSION,
       AUTO_DIMENSION
   );
-  private static final AggregateProjectionSpec PROJECTION_SPEC = new AggregateProjectionSpec(
-      "projection",
-      null,
-      VirtualColumns.create(
-          Granularities.toVirtualColumn(
-              Granularities.HOUR,
-              Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
-          )
-      ),
-      ImmutableList.of(STRING_DIMENSION),
-      new AggregatorFactory[]{
-          new LongSumAggregatorFactory(LONG_DIMENSION.getName(), LONG_DIMENSION.getName())
-      }
-  );
+  private static final AggregateProjectionSpec PROJECTION_SPEC =
+      AggregateProjectionSpec.builder("projection")
+                             .virtualColumns(
+                                 Granularities.toVirtualColumn(
+                                     Granularities.HOUR,
+                                     Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                                 )
+                             )
+                             .groupingColumns(STRING_DIMENSION)
+                             .aggregators(
+                                 new LongSumAggregatorFactory(LONG_DIMENSION.getName(), LONG_DIMENSION.getName())
+                             )
+                             .build();
   private static final Map<Interval, DataSchema> INTERVAL_DATASCHEMAS = ImmutableMap.of(
       COMPACTION_INTERVAL,
       new CombinedDataSchema(

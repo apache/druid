@@ -57,6 +57,25 @@ public class AggregateProjectionSpec
 {
   public static final String TYPE_NAME = "aggregate";
 
+  public static Builder builder()
+  {
+    return new Builder();
+  }
+
+  public static Builder builder(String name)
+  {
+    return new Builder().name(name);
+  }
+
+  public static Builder builder(AggregateProjectionSpec spec)
+  {
+    return new Builder().name(spec.getName())
+                        .virtualColumns(spec.getVirtualColumns())
+                        .filter(spec.getFilter())
+                        .groupingColumns(spec.getGroupingColumns())
+                        .aggregators(spec.getAggregators());
+  }
+
   private final String name;
   @Nullable
   private final DimFilter filter;
@@ -189,7 +208,6 @@ public class AggregateProjectionSpec
            '}';
   }
 
-
   private static ProjectionOrdering computeOrdering(VirtualColumns virtualColumns, List<DimensionSchema> groupingColumns)
   {
     if (groupingColumns.isEmpty()) {
@@ -234,6 +252,68 @@ public class AggregateProjectionSpec
     {
       this.ordering = ordering;
       this.timeColumnName = timeColumnName;
+    }
+  }
+
+  public static final class Builder
+  {
+    private String name;
+    private DimFilter filter;
+    private VirtualColumns virtualColumns = VirtualColumns.EMPTY;
+    private List<DimensionSchema> groupingColumns;
+    private AggregatorFactory[] aggregators;
+
+    public Builder name(String name)
+    {
+      this.name = name;
+      return this;
+    }
+
+    public Builder filter(@Nullable DimFilter filter)
+    {
+      this.filter = filter;
+      return this;
+    }
+
+    public Builder virtualColumns(@Nullable VirtualColumns virtualColumns)
+    {
+      this.virtualColumns = virtualColumns;
+      return this;
+    }
+
+    public Builder virtualColumns(VirtualColumn... virtualColumns)
+    {
+      this.virtualColumns = VirtualColumns.create(virtualColumns);
+      return this;
+    }
+
+    public Builder groupingColumns(@Nullable List<DimensionSchema> groupingColumns)
+    {
+      this.groupingColumns = groupingColumns;
+      return this;
+    }
+
+    public Builder groupingColumns(DimensionSchema... groupingColumns)
+    {
+      this.groupingColumns = Arrays.asList(groupingColumns);
+      return this;
+    }
+
+    public Builder aggregators(@Nullable AggregatorFactory... aggregators)
+    {
+      this.aggregators = aggregators;
+      return this;
+    }
+
+    public AggregateProjectionSpec build()
+    {
+      return new AggregateProjectionSpec(
+          name,
+          filter,
+          virtualColumns,
+          groupingColumns,
+          aggregators
+      );
     }
   }
 }

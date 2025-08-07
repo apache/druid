@@ -21,7 +21,6 @@ package org.apache.druid.segment.incremental;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
@@ -38,7 +37,6 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
@@ -63,31 +61,28 @@ public class OnheapIncrementalIndexTest
   @Test
   public void testProjectionHappyPath()
   {
-    // arrange
     DimensionsSpec dimensionsSpec = DimensionsSpec.builder()
-                                                  .setDimensions(ImmutableList.of(
+                                                  .setDimensions(List.of(
                                                       new StringDimensionSchema("string"),
                                                       new LongDimensionSchema("long")
                                                   ))
                                                   .build();
     AggregatorFactory aggregatorFactory = new DoubleSumAggregatorFactory("double", "double");
-    AggregateProjectionSpec projectionSpec = new AggregateProjectionSpec(
-        "proj",
-        null,
-        VirtualColumns.EMPTY,
-        ImmutableList.of(new StringDimensionSchema("string")),
-        new AggregatorFactory[]{
-            new LongSumAggregatorFactory("sum_long", "long"),
-            new DoubleSumAggregatorFactory("double", "double")
-        }
-    );
-    // act & assert
+    AggregateProjectionSpec projectionSpec =
+        AggregateProjectionSpec.builder("proj")
+                               .groupingColumns(new StringDimensionSchema("string"))
+                               .aggregators(
+                                   new LongSumAggregatorFactory("sum_long", "long"),
+                                   new DoubleSumAggregatorFactory("double", "double")
+                               )
+                               .build();
+
     IncrementalIndex index = IndexBuilder.create()
                                          .schema(IncrementalIndexSchema.builder()
                                                                        .withDimensionsSpec(dimensionsSpec)
                                                                        .withRollup(true)
                                                                        .withMetrics(aggregatorFactory)
-                                                                       .withProjections(ImmutableList.of(projectionSpec))
+                                                                       .withProjections(List.of(projectionSpec))
                                                                        .build())
                                          .buildIncrementalIndex();
     Assert.assertNotNull(index.getProjection("proj"));
@@ -99,20 +94,7 @@ public class OnheapIncrementalIndexTest
     // arrange
     DimensionsSpec dimensionsSpec = DimensionsSpec.EMPTY;
     AggregatorFactory aggregatorFactory = new DoubleSumAggregatorFactory("double", "double");
-    AggregateProjectionSpec projectionSpec1 = new AggregateProjectionSpec(
-        "proj",
-        null,
-        VirtualColumns.EMPTY,
-        ImmutableList.of(),
-        new AggregatorFactory[]{new DoubleSumAggregatorFactory("double", "double")}
-    );
-    AggregateProjectionSpec projectionSpec2 = new AggregateProjectionSpec(
-        "proj",
-        null,
-        VirtualColumns.EMPTY,
-        ImmutableList.of(),
-        new AggregatorFactory[]{new DoubleSumAggregatorFactory("double", "double")}
-    );
+    AggregateProjectionSpec.Builder bob = new AggregateProjectionSpec.Builder().aggregators(aggregatorFactory);
     // act & assert
     DruidException e = Assert.assertThrows(
         DruidException.class,
@@ -121,10 +103,12 @@ public class OnheapIncrementalIndexTest
                                                         .withDimensionsSpec(dimensionsSpec)
                                                         .withRollup(true)
                                                         .withMetrics(aggregatorFactory)
-                                                        .withProjections(ImmutableList.of(
-                                                            projectionSpec1,
-                                                            projectionSpec2
-                                                        ))
+                                                        .withProjections(
+                                                            List.of(
+                                                                bob.name("proj").build(),
+                                                                bob.name("proj").build()
+                                                            )
+                                                        )
                                                         .build())
                           .buildIncrementalIndex()
     );
@@ -152,7 +136,7 @@ public class OnheapIncrementalIndexTest
                                                   .withDimensionsSpec(
                                                       DimensionsSpec.builder()
                                                                     .setDimensions(
-                                                                        ImmutableList.of(
+                                                                        List.of(
                                                                             new StringDimensionSchema("string"),
                                                                             new LongDimensionSchema("long")
                                                                         )
@@ -160,16 +144,10 @@ public class OnheapIncrementalIndexTest
                                                                     .build()
                                                   )
                                                   .withProjections(
-                                                      ImmutableList.of(
-                                                          new AggregateProjectionSpec(
-                                                              "mismatched dims",
-                                                              null,
-                                                              VirtualColumns.EMPTY,
-                                                              ImmutableList.of(
-                                                                  new LongDimensionSchema("string")
-                                                              ),
-                                                              null
-                                                          )
+                                                      List.of(
+                                                          AggregateProjectionSpec.builder("mismatched dims")
+                                                                                 .groupingColumns(new LongDimensionSchema("string"))
+                                                                                 .build()
                                                       )
                                                   )
                                                   .build()
@@ -193,7 +171,7 @@ public class OnheapIncrementalIndexTest
                                                   .withDimensionsSpec(
                                                       DimensionsSpec.builder()
                                                                     .setDimensions(
-                                                                        ImmutableList.of(
+                                                                        List.of(
                                                                             new StringDimensionSchema("string"),
                                                                             new LongDimensionSchema("long")
                                                                         )
@@ -201,24 +179,21 @@ public class OnheapIncrementalIndexTest
                                                                     .build()
                                                   )
                                                   .withProjections(
-                                                      ImmutableList.of(
-                                                          new AggregateProjectionSpec(
-                                                              "sad grouping column",
-                                                              null,
-                                                              VirtualColumns.create(
-                                                                  new ExpressionVirtualColumn(
-                                                                      "v0",
-                                                                      "cast(long, 'double')",
-                                                                      ColumnType.DOUBLE,
-                                                                      TestExprMacroTable.INSTANCE
-                                                                  )
-                                                              ),
-                                                              ImmutableList.of(
-                                                                  new DoubleDimensionSchema("v0"),
-                                                                  new StringDimensionSchema("missing")
-                                                              ),
-                                                              null
-                                                          )
+                                                      List.of(
+                                                          AggregateProjectionSpec.builder("sad grouping column")
+                                                                                 .virtualColumns(
+                                                                                     new ExpressionVirtualColumn(
+                                                                                         "v0",
+                                                                                         "cast(long, 'double')",
+                                                                                         ColumnType.DOUBLE,
+                                                                                         TestExprMacroTable.INSTANCE
+                                                                                     )
+                                                                                 )
+                                                                                 .groupingColumns(
+                                                                                     new DoubleDimensionSchema("v0"),
+                                                                                     new StringDimensionSchema("missing")
+                                                                                 )
+                                                                                 .build()
                                                       )
                                                   )
                                                   .build()
@@ -242,7 +217,7 @@ public class OnheapIncrementalIndexTest
                                                   .withDimensionsSpec(
                                                       DimensionsSpec.builder()
                                                                     .setDimensions(
-                                                                        ImmutableList.of(
+                                                                        List.of(
                                                                             new StringDimensionSchema("string"),
                                                                             new LongDimensionSchema("long")
                                                                         )
@@ -250,23 +225,20 @@ public class OnheapIncrementalIndexTest
                                                                     .build()
                                                   )
                                                   .withProjections(
-                                                      ImmutableList.of(
-                                                          new AggregateProjectionSpec(
-                                                              "sad virtual column",
-                                                              null,
-                                                              VirtualColumns.create(
-                                                                  new ExpressionVirtualColumn(
-                                                                      "v0",
-                                                                      "double",
-                                                                      ColumnType.DOUBLE,
-                                                                      TestExprMacroTable.INSTANCE
-                                                                  )
-                                                              ),
-                                                              ImmutableList.of(
-                                                                  new LongDimensionSchema("long")
-                                                              ),
-                                                              null
-                                                          )
+                                                      List.of(
+                                                          AggregateProjectionSpec.builder("sad virtual column")
+                                                                                 .virtualColumns(
+                                                                                     new ExpressionVirtualColumn(
+                                                                                         "v0",
+                                                                                         "double",
+                                                                                         ColumnType.DOUBLE,
+                                                                                         TestExprMacroTable.INSTANCE
+                                                                                     )
+                                                                                 )
+                                                                                 .groupingColumns(
+                                                                                     new LongDimensionSchema("long")
+                                                                                 )
+                                                                                 .build()
                                                       )
                                                   )
                                                   .build()
@@ -290,7 +262,7 @@ public class OnheapIncrementalIndexTest
                                                   .withDimensionsSpec(
                                                       DimensionsSpec.builder()
                                                                     .setDimensions(
-                                                                        ImmutableList.of(
+                                                                        List.of(
                                                                             new StringDimensionSchema("string"),
                                                                             new LongDimensionSchema("long")
                                                                         )
@@ -302,21 +274,17 @@ public class OnheapIncrementalIndexTest
                                                       new DoubleSumAggregatorFactory("sum_double", "sum_double")
                                                   )
                                                   .withProjections(
-                                                      ImmutableList.of(
-                                                          new AggregateProjectionSpec(
-                                                              "mismatched agg",
-                                                              null,
-                                                              VirtualColumns.EMPTY,
-                                                              ImmutableList.of(
-                                                                  new StringDimensionSchema("string")
-                                                              ),
-                                                              new AggregatorFactory[]{
-                                                                  new LongSumAggregatorFactory(
-                                                                      "sum_double",
-                                                                      "sum_double"
-                                                                  )
-                                                              }
-                                                          )
+                                                      List.of(
+                                                          AggregateProjectionSpec.builder("mismatched agg")
+                                                                                 .groupingColumns(new StringDimensionSchema(
+                                                                                     "string"))
+                                                                                 .aggregators(
+                                                                                     new LongSumAggregatorFactory(
+                                                                                         "sum_double",
+                                                                                         "sum_double"
+                                                                                     )
+                                                                                 )
+                                                                                 .build()
                                                       )
                                                   )
                                                   .build()
@@ -340,7 +308,7 @@ public class OnheapIncrementalIndexTest
                                                   .withDimensionsSpec(
                                                       DimensionsSpec.builder()
                                                                     .setDimensions(
-                                                                        ImmutableList.of(
+                                                                        List.of(
                                                                             new StringDimensionSchema("string"),
                                                                             new LongDimensionSchema("long")
                                                                         )
@@ -352,19 +320,21 @@ public class OnheapIncrementalIndexTest
                                                       new DoubleSumAggregatorFactory("double", "double")
                                                   )
                                                   .withProjections(
-                                                      ImmutableList.of(
-                                                          new AggregateProjectionSpec(
-                                                              "renamed agg",
-                                                              null,
-                                                              VirtualColumns.EMPTY,
-                                                              ImmutableList.of(
-                                                                  new StringDimensionSchema("string")
-                                                              ),
-                                                              new AggregatorFactory[]{
-                                                                  new LongSumAggregatorFactory("sum_long", "long"),
-                                                                  new DoubleSumAggregatorFactory("sum_double", "double")
-                                                              }
-                                                          )
+                                                      List.of(
+                                                          AggregateProjectionSpec.builder("renamed agg")
+                                                                                 .groupingColumns(new StringDimensionSchema(
+                                                                                     "string"))
+                                                                                 .aggregators(
+                                                                                     new LongSumAggregatorFactory(
+                                                                                         "sum_long",
+                                                                                         "long"
+                                                                                     ),
+                                                                                     new DoubleSumAggregatorFactory(
+                                                                                         "sum_double",
+                                                                                         "double"
+                                                                                     )
+                                                                                 )
+                                                                                 .build()
                                                       )
                                                   )
                                                   .build()
@@ -388,7 +358,7 @@ public class OnheapIncrementalIndexTest
                                                   .withDimensionsSpec(
                                                       DimensionsSpec.builder()
                                                                     .setDimensions(
-                                                                        ImmutableList.of(
+                                                                        List.of(
                                                                             new StringDimensionSchema("string"),
                                                                             new LongDimensionSchema("long")
                                                                         )
@@ -396,25 +366,26 @@ public class OnheapIncrementalIndexTest
                                                                     .build()
                                                   )
                                                   .withProjections(
-                                                      ImmutableList.of(
-                                                          new AggregateProjectionSpec(
-                                                              "sad agg virtual column",
-                                                              null,
-                                                              VirtualColumns.create(
-                                                                  new ExpressionVirtualColumn(
-                                                                      "v0",
-                                                                      "long + 100",
-                                                                      ColumnType.LONG,
-                                                                      TestExprMacroTable.INSTANCE
-                                                                  )
-                                                              ),
-                                                              ImmutableList.of(
-                                                                  new LongDimensionSchema("long")
-                                                              ),
-                                                              new AggregatorFactory[]{
-                                                                  new LongSumAggregatorFactory("v0_sum", "v0")
-                                                              }
-                                                          )
+                                                      List.of(
+                                                          AggregateProjectionSpec.builder("sad agg virtual column")
+                                                                                 .virtualColumns(
+                                                                                     new ExpressionVirtualColumn(
+                                                                                         "v0",
+                                                                                         "long + 100",
+                                                                                         ColumnType.LONG,
+                                                                                         TestExprMacroTable.INSTANCE
+                                                                                     )
+                                                                                 )
+                                                                                 .groupingColumns(
+                                                                                     new LongDimensionSchema("long")
+                                                                                 )
+                                                                                 .aggregators(
+                                                                                     new LongSumAggregatorFactory(
+                                                                                         "v0_sum",
+                                                                                         "v0"
+                                                                                     )
+                                                                                 )
+                                                                                 .build()
                                                       )
                                                   )
                                                   .build()
@@ -432,22 +403,20 @@ public class OnheapIncrementalIndexTest
   {
     // arrange
     DimensionsSpec dimensionsSpec = DimensionsSpec.builder()
-                                                  .setDimensions(ImmutableList.of(
+                                                  .setDimensions(List.of(
                                                       new StringDimensionSchema("string"),
                                                       new LongDimensionSchema("long")
                                                   ))
                                                   .build();
     AggregatorFactory aggregatorFactory = new DoubleSumAggregatorFactory("double", "double");
-    AggregateProjectionSpec projectionSpec = new AggregateProjectionSpec(
-        "proj",
-        null,
-        VirtualColumns.EMPTY,
-        ImmutableList.of(new StringDimensionSchema("string")),
-        new AggregatorFactory[]{
-            new LongSumAggregatorFactory("sum_long", "long"),
-            new DoubleSumAggregatorFactory("double", "double")
-        }
-    );
+    AggregateProjectionSpec projectionSpec =
+        AggregateProjectionSpec.builder("proj")
+                               .groupingColumns(new StringDimensionSchema("string"))
+                               .aggregators(
+                                   new LongSumAggregatorFactory("sum_long", "long"),
+                                   new DoubleSumAggregatorFactory("double", "double")
+                               )
+                               .build();
 
     final DateTime minTimestamp = DateTimes.nowUtc();
     final DateTime outOfRangeTimestamp = DateTimes.nowUtc().minusDays(1);
@@ -499,18 +468,15 @@ public class OnheapIncrementalIndexTest
         t.getMessage()
     );
 
-    AggregateProjectionSpec projectionSpecYear = new AggregateProjectionSpec(
-        "proj",
-        null,
-        VirtualColumns.create(
-            Granularities.toVirtualColumn(Granularities.YEAR, "g")
-        ),
-        ImmutableList.of(new StringDimensionSchema("string"), new LongDimensionSchema("g")),
-        new AggregatorFactory[]{
-            new LongSumAggregatorFactory("sum_long", "long"),
-            new DoubleSumAggregatorFactory("double", "double")
-        }
-    );
+    AggregateProjectionSpec projectionSpecYear =
+        AggregateProjectionSpec.builder("proj")
+                               .virtualColumns(Granularities.toVirtualColumn(Granularities.YEAR, "g"))
+                               .groupingColumns(new StringDimensionSchema("string"), new LongDimensionSchema("g"))
+                               .aggregators(
+                                   new LongSumAggregatorFactory("sum_long", "long"),
+                                   new DoubleSumAggregatorFactory("double", "double")
+                               )
+                               .build();
     IncrementalIndex index2 = IndexBuilder.create()
                                           .schema(IncrementalIndexSchema.builder()
                                                                         .withDimensionsSpec(dimensionsSpec)

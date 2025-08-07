@@ -1178,13 +1178,13 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           }
           projections.put(
               schema.getName(),
-              new AggregateProjectionSpec(
-                  schema.getName(),
-                  schema.getFilter(),
-                  schema.getVirtualColumns(),
-                  columnSchemas,
-                  schema.getAggregators()
-              )
+              AggregateProjectionSpec.builder()
+                                     .name(schema.getName())
+                                     .virtualColumns(schema.getVirtualColumns())
+                                     .filter(schema.getFilter())
+                                     .groupingColumns(columnSchemas)
+                                     .aggregators(schema.getAggregators())
+                                     .build()
           );
         }
       }

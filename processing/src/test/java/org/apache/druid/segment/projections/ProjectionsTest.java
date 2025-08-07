@@ -19,49 +19,51 @@
 
 package org.apache.druid.segment.projections;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import org.apache.druid.query.OrderBy;
-import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.IsBooleanFilter;
 import org.apache.druid.segment.filter.OrFilter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 class ProjectionsTest
 {
   @Test
   void testSchemaMatchSimple()
   {
+    RowSignature baseTable = RowSignature.builder()
+                                         .addTimeColumn()
+                                         .add("a", ColumnType.LONG)
+                                         .add("b", ColumnType.STRING)
+                                         .add("c", ColumnType.LONG)
+                                         .build();
     AggregateProjectionMetadata spec = new AggregateProjectionMetadata(
-        new AggregateProjectionMetadata.Schema(
-            "some_projection",
-            null,
-            null,
-            VirtualColumns.EMPTY,
-            Arrays.asList("a", "b"),
-            new AggregatorFactory[]{new LongSumAggregatorFactory("a_projection", "a")},
-            Arrays.asList(OrderBy.ascending("a"), OrderBy.ascending("b"))
-        ),
+        AggregateProjectionSpec.builder("some_projection")
+                               .groupingColumns(new LongDimensionSchema("a"), new StringDimensionSchema("b"))
+                               .aggregators(new LongSumAggregatorFactory("c_sum", "c"))
+                               .build()
+                               .toMetadataSchema(),
         12345
     );
     CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
-                                                     .setPreferredOrdering(ImmutableList.of())
+                                                     .setPreferredOrdering(List.of())
                                                      .setAggregators(
                                                          List.of(
-                                                             new LongSumAggregatorFactory("a", "a")
+                                                             new LongSumAggregatorFactory("c", "c")
                                                          )
                                                      )
                                                      .build();
@@ -69,15 +71,150 @@ class ProjectionsTest
     Projections.ProjectionMatch projectionMatch = Projections.matchAggregateProjection(
         spec.getSchema(),
         cursorBuildSpec,
-        (projectionName, columnName) -> true
+        new RowSignatureChecker(baseTable)
     );
     Projections.ProjectionMatch expected = new Projections.ProjectionMatch(
         CursorBuildSpec.builder()
-                       .setAggregators(ImmutableList.of(new LongSumAggregatorFactory("a", "a")))
-                       .setPhysicalColumns(ImmutableSet.of("a_projection"))
-                       .setPreferredOrdering(ImmutableList.of())
+                       .setAggregators(List.of(new LongSumAggregatorFactory("c", "c")))
+                       .setPhysicalColumns(Set.of("c_sum"))
+                       .setPreferredOrdering(List.of())
                        .build(),
-        ImmutableMap.of("a", "a_projection")
+        Map.of("c", "c_sum")
+    );
+    Assertions.assertEquals(expected, projectionMatch);
+  }
+
+  @Test
+  void testSchemaMatchFilter()
+  {
+    RowSignature baseTable = RowSignature.builder()
+                                         .addTimeColumn()
+                                         .add("a", ColumnType.LONG)
+                                         .add("b", ColumnType.STRING)
+                                         .add("c", ColumnType.LONG)
+                                         .build();
+    AggregateProjectionMetadata spec = new AggregateProjectionMetadata(
+        AggregateProjectionSpec.builder("some_projection")
+                               .filter(new EqualityFilter("b", ColumnType.STRING, "foo", null))
+                               .groupingColumns(new LongDimensionSchema("a"))
+                               .aggregators(new LongSumAggregatorFactory("c_sum", "c"))
+                               .build()
+                               .toMetadataSchema(),
+        12345
+    );
+    CursorBuildSpec cursorBuildSpecNoFilter = CursorBuildSpec.builder()
+                                                             .setPreferredOrdering(List.of())
+                                                             .setAggregators(
+                                                                 List.of(
+                                                                     new LongSumAggregatorFactory("c", "c")
+                                                                 )
+                                                             )
+                                                             .build();
+
+    Assertions.assertNull(
+        Projections.matchAggregateProjection(
+            spec.getSchema(),
+            cursorBuildSpecNoFilter,
+            new RowSignatureChecker(baseTable)
+        )
+    );
+    CursorBuildSpec cursorBuildSpecWithFilter = CursorBuildSpec.builder()
+                                                               .setPreferredOrdering(List.of())
+                                                               .setFilter(
+                                                                   new EqualityFilter(
+                                                                       "b",
+                                                                       ColumnType.STRING,
+                                                                       "foo",
+                                                                       null
+                                                                   )
+                                                               )
+                                                               .setAggregators(
+                                                                   List.of(
+                                                                       new LongSumAggregatorFactory("c", "c")
+                                                                   )
+                                                               )
+                                                               .build();
+    Projections.ProjectionMatch projectionMatch = Projections.matchAggregateProjection(
+        spec.getSchema(),
+        cursorBuildSpecWithFilter,
+        new RowSignatureChecker(baseTable)
+    );
+    Projections.ProjectionMatch expected = new Projections.ProjectionMatch(
+        CursorBuildSpec.builder()
+                       .setAggregators(List.of(new LongSumAggregatorFactory("c", "c")))
+                       .setPhysicalColumns(Set.of("c_sum"))
+                       .setPreferredOrdering(List.of())
+                       .build(),
+        Map.of("c", "c_sum")
+    );
+    Assertions.assertEquals(expected, projectionMatch);
+  }
+
+  @Test
+  void testSchemaMatchFilterIncludedInProjection()
+  {
+    RowSignature baseTable = RowSignature.builder()
+                                         .addTimeColumn()
+                                         .add("a", ColumnType.LONG)
+                                         .add("b", ColumnType.STRING)
+                                         .add("c", ColumnType.LONG)
+                                         .build();
+    AggregateProjectionMetadata spec = new AggregateProjectionMetadata(
+        AggregateProjectionSpec.builder("some_projection")
+                               .filter(new LikeDimFilter("b", "foo%", null, null))
+                               .groupingColumns(new LongDimensionSchema("a"), new StringDimensionSchema("b"))
+                               .aggregators(new LongSumAggregatorFactory("c_sum", "c"))
+                               .build()
+                               .toMetadataSchema(),
+        12345
+    );
+    CursorBuildSpec cursorBuildSpecNoFilter = CursorBuildSpec.builder()
+                                                             .setPreferredOrdering(List.of())
+                                                             .setGroupingColumns(List.of("a", "b"))
+                                                             .setAggregators(
+                                                                 List.of(
+                                                                     new LongSumAggregatorFactory("c", "c")
+                                                                 )
+                                                             )
+                                                             .build();
+
+    Assertions.assertNull(
+        Projections.matchAggregateProjection(
+            spec.getSchema(),
+            cursorBuildSpecNoFilter,
+            new RowSignatureChecker(baseTable)
+        )
+    );
+    CursorBuildSpec cursorBuildSpecWithFilter = CursorBuildSpec.builder()
+                                                               .setGroupingColumns(List.of("a", "b"))
+                                                               .setPreferredOrdering(List.of())
+                                                               .setFilter(
+                                                                   new LikeDimFilter(
+                                                                       "b",
+                                                                       "foo%",
+                                                                       null,
+                                                                       null
+                                                                   ).toFilter()
+                                                               )
+                                                               .setAggregators(
+                                                                   List.of(
+                                                                       new LongSumAggregatorFactory("c", "c")
+                                                                   )
+                                                               )
+                                                               .build();
+    Projections.ProjectionMatch projectionMatch = Projections.matchAggregateProjection(
+        spec.getSchema(),
+        cursorBuildSpecWithFilter,
+        new RowSignatureChecker(baseTable)
+    );
+    Projections.ProjectionMatch expected = new Projections.ProjectionMatch(
+        CursorBuildSpec.builder()
+                       .setGroupingColumns(List.of("a", "b"))
+                       .setAggregators(List.of(new LongSumAggregatorFactory("c", "c")))
+                       .setPhysicalColumns(Set.of("a", "b", "c_sum"))
+                       .setPreferredOrdering(List.of())
+                       .build(),
+        Map.of("c", "c_sum")
     );
     Assertions.assertEquals(expected, projectionMatch);
   }
@@ -120,5 +257,41 @@ class ProjectionsTest
         new AndFilter(List.of(yeqbar, zeq123)),
         Projections.rewriteFilter(xeqfoo, queryFilter)
     );
+
+    queryFilter = new AndFilter(
+        List.of(
+            new EqualityFilter("a", ColumnType.STRING, "foo", null),
+            new EqualityFilter("b", ColumnType.STRING, "bar", null),
+            new EqualityFilter("c", ColumnType.STRING, "baz", null)
+        )
+    );
+    Assertions.assertEquals(
+        new EqualityFilter("b", ColumnType.STRING, "bar", null),
+        Projections.rewriteFilter(
+            new AndFilter(
+                List.of(
+                    new EqualityFilter("a", ColumnType.STRING, "foo", null),
+                    new EqualityFilter("c", ColumnType.STRING, "baz", null)
+                )
+            ),
+            queryFilter
+        )
+    );
+  }
+
+  private static class RowSignatureChecker implements Projections.PhysicalColumnChecker
+  {
+    private final RowSignature rowSignature;
+
+    private RowSignatureChecker(RowSignature rowSignature)
+    {
+      this.rowSignature = rowSignature;
+    }
+
+    @Override
+    public boolean check(String projectionName, String columnName)
+    {
+      return rowSignature.contains(columnName);
+    }
   }
 }

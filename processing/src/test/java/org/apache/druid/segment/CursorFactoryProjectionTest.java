@@ -91,7 +91,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -170,221 +169,159 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
   static final List<InputRow> ROLLUP_ROWS = makeRows(ImmutableList.of("a", "b"));
 
   private static final List<AggregateProjectionSpec> PROJECTIONS = Arrays.asList(
-      new AggregateProjectionSpec(
-          "ab_hourly_cd_sum",
-          null,
-          VirtualColumns.create(
-              Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
-          ),
-          Arrays.asList(
-              new StringDimensionSchema("a"),
-              new StringDimensionSchema("b"),
-              new LongDimensionSchema("__gran")
-          ),
-          new AggregatorFactory[]{
-              new LongSumAggregatorFactory("_c_sum", "c"),
-              new DoubleSumAggregatorFactory("d", "d")
-          }
-      ),
-      new AggregateProjectionSpec(
-          "a_hourly_c_sum_with_count_latest",
-          null,
-          VirtualColumns.create(
-              Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
-          ),
-          Arrays.asList(
-              new LongDimensionSchema("__gran"),
-              new StringDimensionSchema("a")
-          ),
-          new AggregatorFactory[]{
-              new CountAggregatorFactory("chocula"),
-              new LongSumAggregatorFactory("_c_sum", "c"),
-              new LongLastAggregatorFactory("_c_last", "c", null)
-          }
-      ),
-      new AggregateProjectionSpec(
-          "b_hourly_c_sum_non_time_ordered",
-          null,
-          VirtualColumns.create(
-              Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
-          ),
-          Arrays.asList(
-              new StringDimensionSchema("b"),
-              new LongDimensionSchema("__gran")
-          ),
-          new AggregatorFactory[]{
-              new CountAggregatorFactory("chocula"),
-              new LongSumAggregatorFactory("_c_sum", "c"),
-              new LongLastAggregatorFactory("_c_last", "c", null)
-          }
-      ),
-      new AggregateProjectionSpec(
-          "bf_daily_c_sum",
-          null,
-          VirtualColumns.create(
-              Granularities.toVirtualColumn(Granularities.DAY, "__gran")
-          ),
-          Arrays.asList(
-              new LongDimensionSchema("__gran"),
-              new StringDimensionSchema("b"),
-              new FloatDimensionSchema("e")
-          ),
-          new AggregatorFactory[]{
-              new LongSumAggregatorFactory("_c_sum", "c")
-          }
-      ),
-      new AggregateProjectionSpec(
-          "b_c_sum",
-          null,
-          VirtualColumns.EMPTY,
-          List.of(new StringDimensionSchema("b")),
-          new AggregatorFactory[]{
-              new LongSumAggregatorFactory("_c_sum", "c")
-          }
-      ),
-      new AggregateProjectionSpec(
-          "ab",
-          null,
-          null,
-          Arrays.asList(
-              new StringDimensionSchema("a"),
-              new StringDimensionSchema("b")
-          ),
-          null
-      ),
-      new AggregateProjectionSpec(
-          "abfoo",
-          null,
-          VirtualColumns.create(
-              new ExpressionVirtualColumn(
-                  "bfoo",
-                  "concat(b, 'foo')",
-                  ColumnType.STRING,
-                  TestExprMacroTable.INSTANCE
-              )
-          ),
-          Arrays.asList(
-              new StringDimensionSchema("a"),
-              new StringDimensionSchema("bfoo")
-          ),
-          null
-      ),
-      new AggregateProjectionSpec(
-          "c_sum_daily",
-          null,
-          VirtualColumns.create(Granularities.toVirtualColumn(Granularities.DAY, "__gran")),
-          Collections.singletonList(new LongDimensionSchema("__gran")),
-          new AggregatorFactory[]{
-              new LongSumAggregatorFactory("_c_sum", "c")
-          }
-      ),
-      new AggregateProjectionSpec(
-          "c_sum",
-          null,
-          VirtualColumns.EMPTY,
-          Collections.emptyList(),
-          new AggregatorFactory[]{
-              new LongSumAggregatorFactory("_c_sum", "c")
-          }
-      ),
-      new AggregateProjectionSpec(
-          "missing_column",
-          null,
-          VirtualColumns.EMPTY,
-          List.of(new StringDimensionSchema("missing")),
-          new AggregatorFactory[]{
-              new LongSumAggregatorFactory("csum", "c")
-          }
-      ),
-      new AggregateProjectionSpec(
-          "json",
-          null,
-          VirtualColumns.EMPTY,
-          List.of(new AutoTypeColumnSchema("f", null)),
-          new AggregatorFactory[]{
-              new LongSumAggregatorFactory("_c_sum", "c")
-          }
-      ),
-      new AggregateProjectionSpec(
-          "ab_filter_baaonly_hourly_cd_sum",
-          new EqualityFilter("b", ColumnType.STRING, "aa", null),
-          VirtualColumns.create(
-              Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
-          ),
-          Arrays.asList(
-              new StringDimensionSchema("a"),
-              new StringDimensionSchema("b"),
-              new LongDimensionSchema("__gran")
-          ),
-          new AggregatorFactory[]{
-              new LongSumAggregatorFactory("_c_sum", "c"),
-              new DoubleSumAggregatorFactory("d", "d")
-          }
-      )
+      AggregateProjectionSpec.builder("ab_hourly_cd_sum")
+                             .virtualColumns(Granularities.toVirtualColumn(Granularities.HOUR, "__gran"))
+                             .groupingColumns(
+                                 new StringDimensionSchema("a"),
+                                 new StringDimensionSchema("b"),
+                                 new LongDimensionSchema("__gran")
+                             )
+                             .aggregators(
+                                 new LongSumAggregatorFactory("_c_sum", "c"),
+                                 new DoubleSumAggregatorFactory("d", "d")
+                             )
+                             .build(),
+      AggregateProjectionSpec.builder("a_hourly_c_sum_with_count_latest")
+                             .virtualColumns(Granularities.toVirtualColumn(Granularities.HOUR, "__gran"))
+                             .groupingColumns(
+                                 new LongDimensionSchema("__gran"),
+                                 new StringDimensionSchema("a")
+                             )
+                             .aggregators(
+                                 new CountAggregatorFactory("chocula"),
+                                 new LongSumAggregatorFactory("_c_sum", "c"),
+                                 new LongLastAggregatorFactory("_c_last", "c", null)
+                             )
+                             .build(),
+      AggregateProjectionSpec.builder("b_hourly_c_sum_non_time_ordered")
+                             .virtualColumns(Granularities.toVirtualColumn(Granularities.HOUR, "__gran"))
+                             .groupingColumns(
+                                 new StringDimensionSchema("b"),
+                                 new LongDimensionSchema("__gran")
+                             )
+                             .aggregators(
+                                 new CountAggregatorFactory("chocula"),
+                                 new LongSumAggregatorFactory("_c_sum", "c"),
+                                 new LongLastAggregatorFactory("_c_last", "c", null)
+                             )
+                             .build(),
+      AggregateProjectionSpec.builder("bf_daily_c_sum")
+                             .virtualColumns(Granularities.toVirtualColumn(Granularities.DAY, "__gran"))
+                             .groupingColumns(
+                                 new LongDimensionSchema("__gran"),
+                                 new StringDimensionSchema("b"),
+                                 new FloatDimensionSchema("e")
+                             )
+                             .aggregators(new LongSumAggregatorFactory("_c_sum", "c"))
+                             .build(),
+      AggregateProjectionSpec.builder("b_c_sum")
+                             .groupingColumns(new StringDimensionSchema("b"))
+                             .aggregators(new LongSumAggregatorFactory("_c_sum", "c"))
+                             .build(),
+      AggregateProjectionSpec.builder("ab")
+                             .groupingColumns(
+                                 new StringDimensionSchema("a"),
+                                 new StringDimensionSchema("b")
+                             )
+                             .build(),
+      AggregateProjectionSpec.builder("abfoo")
+                             .virtualColumns(
+                                 new ExpressionVirtualColumn(
+                                     "bfoo",
+                                     "concat(b, 'foo')",
+                                     ColumnType.STRING,
+                                     TestExprMacroTable.INSTANCE
+                                 )
+                             )
+                             .groupingColumns(
+                                 new StringDimensionSchema("a"),
+                                 new StringDimensionSchema("bfoo")
+                             )
+                             .build(),
+      AggregateProjectionSpec.builder("c_sum_daily")
+                             .virtualColumns(Granularities.toVirtualColumn(Granularities.DAY, "__gran"))
+                             .groupingColumns(new LongDimensionSchema("__gran"))
+                             .aggregators(new LongSumAggregatorFactory("_c_sum", "c"))
+                             .build(),
+      AggregateProjectionSpec.builder("c_sum")
+                             .aggregators(new LongSumAggregatorFactory("_c_sum", "c"))
+                             .build(),
+      AggregateProjectionSpec.builder("missing_column")
+                             .groupingColumns(new StringDimensionSchema("missing"))
+                             .aggregators(new LongSumAggregatorFactory("csum", "c"))
+                             .build(),
+      AggregateProjectionSpec.builder("json")
+                             .groupingColumns(new AutoTypeColumnSchema("f", null))
+                             .aggregators(new LongSumAggregatorFactory("_c_sum", "c"))
+                             .build(),
+      AggregateProjectionSpec.builder("a_filter_b_aaonly_hourly_cd_sum")
+                             .virtualColumns(Granularities.toVirtualColumn(Granularities.HOUR, "__gran"))
+                             .filter(new EqualityFilter("b", ColumnType.STRING, "aa", null))
+                             .groupingColumns(
+                                 new StringDimensionSchema("a"),
+                                 new LongDimensionSchema("__gran")
+                             )
+                             .aggregators(
+                                 new LongSumAggregatorFactory("_c_sum", "c"),
+                                 new DoubleSumAggregatorFactory("d", "d")
+                             )
+                             .build()
   );
 
   private static final List<AggregateProjectionSpec> ROLLUP_PROJECTIONS = Arrays.asList(
-      new AggregateProjectionSpec(
-          "a_hourly_c_sum_with_count",
-          null,
-          VirtualColumns.create(
-              Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
-          ),
-          Arrays.asList(
-              new LongDimensionSchema("__gran"),
-              new StringDimensionSchema("a")
-          ),
-          new AggregatorFactory[]{
+      AggregateProjectionSpec.builder("a_hourly_c_sum_with_count")
+                             .virtualColumns(Granularities.toVirtualColumn(Granularities.HOUR, "__gran"))
+                             .groupingColumns(
+                                 new LongDimensionSchema("__gran"),
+                                 new StringDimensionSchema("a")
+                             )
+          .aggregators(
               new CountAggregatorFactory("chocula"),
               new LongSumAggregatorFactory("sum_c", "sum_c")
-          }
-      ),
-      new AggregateProjectionSpec(
-          "afoo",
-          null,
-          VirtualColumns.create(
-              new ExpressionVirtualColumn(
-                  "afoo",
-                  "concat(a, 'foo')",
-                  ColumnType.STRING,
-                  TestExprMacroTable.INSTANCE
-              )
-          ),
-          List.of(
-              new StringDimensionSchema("afoo")
-          ),
-          new AggregatorFactory[]{
-              new LongSumAggregatorFactory("sum_c", "sum_c")
-          }
-      )
+          )
+                             .build(),
+      AggregateProjectionSpec.builder("afoo")
+                             .virtualColumns(
+                                 new ExpressionVirtualColumn(
+                                     "afoo",
+                                     "concat(a, 'foo')",
+                                     ColumnType.STRING,
+                                     TestExprMacroTable.INSTANCE
+                                 )
+                             )
+                             .groupingColumns(new StringDimensionSchema("afoo"))
+                             .aggregators(new LongSumAggregatorFactory("sum_c", "sum_c"))
+                             .build()
   );
 
   private static final List<AggregateProjectionSpec> AUTO_PROJECTIONS =
       PROJECTIONS.stream()
-                 .map(projection -> new AggregateProjectionSpec(
-                     projection.getName(),
-                     projection.getFilter(),
-                     projection.getVirtualColumns(),
-                     projection.getGroupingColumns()
-                               .stream()
-                               .map(x -> new AutoTypeColumnSchema(x.getName(), null))
-                               .collect(Collectors.toList()),
-                     projection.getAggregators()
-                 ))
+                 .map(
+                     projection ->
+                         AggregateProjectionSpec.builder(projection)
+                                                .groupingColumns(
+                                                    projection.getGroupingColumns()
+                                                              .stream()
+                                                              .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                              .collect(Collectors.toList())
+                                                )
+                                                .build()
+                 )
                  .collect(Collectors.toList());
 
   private static final List<AggregateProjectionSpec> AUTO_ROLLUP_PROJECTIONS =
       ROLLUP_PROJECTIONS.stream()
-                        .map(projection -> new AggregateProjectionSpec(
-                            projection.getName(),
-                            projection.getFilter(),
-                            projection.getVirtualColumns(),
-                            projection.getGroupingColumns()
-                                      .stream()
-                                      .map(x -> new AutoTypeColumnSchema(x.getName(), null))
-                                      .collect(Collectors.toList()),
-                            projection.getAggregators()
-                        ))
+                        .map(
+                            projection ->
+                                AggregateProjectionSpec.builder(projection)
+                                                       .groupingColumns(
+                                                           projection.getGroupingColumns()
+                                                                     .stream()
+                                                                     .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                                     .collect(Collectors.toList())
+                                                       )
+                                                       .build()
+                        )
                         .collect(Collectors.toList());
 
   @Parameterized.Parameters(name = "name: {0}, segmentTimeOrdered: {5}, autoSchema: {6}")
