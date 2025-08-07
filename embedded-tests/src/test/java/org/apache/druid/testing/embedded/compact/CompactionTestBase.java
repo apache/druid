@@ -19,6 +19,7 @@
 
 package org.apache.druid.testing.embedded.compact;
 
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
@@ -68,12 +69,11 @@ public abstract class CompactionTestBase extends EmbeddedClusterTestBase
    */
   protected String runTask(TaskBuilder<?, ?, ?> taskBuilder)
   {
-    return cluster.callApi().runTask(
-        (ds, taskId) -> taskBuilder.dataSource(ds).withId(taskId),
-        dataSource,
-        overlord,
-        coordinator
-    );
+    final String taskId = IdUtils.getRandomId();
+    cluster.callApi().runTask(taskBuilder.dataSource(dataSource).withId(taskId), overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
+
+    return taskId;
   }
 
   protected void verifySegmentIntervals(List<Interval> expectedIntervals)

@@ -39,14 +39,27 @@ public class MoreResources
    */
   public static class Task
   {
+    /**
+     * A minimal 'index' task that ingests inline data {@link Resources.InlineData#CSV_10_DAYS}
+     * using "DAY" granularity.
+     */
     public static final Supplier<TaskBuilder.Index> BASIC_INDEX =
+        () -> TaskBuilder
+            .ofTypeIndex()
+            .isoTimestampColumn("time")
+            .csvInputFormatWithColumns("time", "item", "value")
+            .inlineInputSourceWithData(Resources.InlineData.CSV_10_DAYS)
+            .segmentGranularity("DAY")
+            .dimensions();
+
+    public static final Supplier<TaskBuilder.Index> INDEX_TASK_WITH_AGGREGATORS =
         () -> TaskBuilder
             .ofTypeIndex()
             .jsonInputFormat()
             .localInputSourceWithFiles(
-                Resources.DataFile.TINY_WIKI_1_JSON,
-                Resources.DataFile.TINY_WIKI_2_JSON,
-                Resources.DataFile.TINY_WIKI_3_JSON
+                Resources.DataFile.tinyWiki1Json(),
+                Resources.DataFile.tinyWiki2Json(),
+                Resources.DataFile.tinyWiki3Json()
             )
             .timestampColumn("timestamp")
             .dimensions(

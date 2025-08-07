@@ -19,7 +19,6 @@
 
 package org.apache.druid.testing.embedded.query;
 
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.TaskState;
@@ -37,9 +36,7 @@ import org.apache.druid.msq.guice.MSQSqlModule;
 import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.DruidProcessingConfigTest;
-import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -148,7 +145,7 @@ class QueryVirtualStorageFabricTest extends EmbeddedClusterTestBase
   {
     Throwable t = Assertions.assertThrows(
         RuntimeException.class,
-        () -> runSql("select * from \"%s\"", dataSource)
+        () -> cluster.runSql("select * from \"%s\"", dataSource)
     );
     Assertions.assertTrue(t.getMessage().contains("Unable to load segment"));
     Assertions.assertTrue(t.getMessage().contains("] on demand, ensure enough disk space has been allocated to load all segments involved in the query"));
@@ -177,38 +174,20 @@ class QueryVirtualStorageFabricTest extends EmbeddedClusterTestBase
         8683
     };
 
-    Assertions.assertEquals(expectedResults[0], Long.parseLong(runSql(queries[0], dataSource)));
-    Assertions.assertEquals(expectedResults[1], Long.parseLong(runSql(queries[1], dataSource)));
-    Assertions.assertEquals(expectedResults[2], Long.parseLong(runSql(queries[2], dataSource)));
-    Assertions.assertEquals(expectedResults[3], Long.parseLong(runSql(queries[3], dataSource)));
+    Assertions.assertEquals(expectedResults[0], Long.parseLong(cluster.runSql(queries[0], dataSource)));
+    Assertions.assertEquals(expectedResults[1], Long.parseLong(cluster.runSql(queries[1], dataSource)));
+    Assertions.assertEquals(expectedResults[2], Long.parseLong(cluster.runSql(queries[2], dataSource)));
+    Assertions.assertEquals(expectedResults[3], Long.parseLong(cluster.runSql(queries[3], dataSource)));
 
     for (int i = 0; i < 1000; i++) {
       int nextQuery = ThreadLocalRandom.current().nextInt(queries.length);
-      Assertions.assertEquals(expectedResults[nextQuery], Long.parseLong(runSql(queries[nextQuery], dataSource)));
+      Assertions.assertEquals(expectedResults[nextQuery], Long.parseLong(cluster.runSql(queries[nextQuery], dataSource)));
     }
   }
 
   private String createTestDatasourceName()
   {
     return "wiki-" + IdUtils.getRandomId();
-  }
-
-  private String runSql(String sql, Object... args)
-  {
-    return FutureUtils.getUnchecked(
-        cluster.anyBroker().submitSqlQuery(
-            new ClientSqlQuery(
-                StringUtils.format(sql, args),
-                ResultFormat.CSV.name(),
-                false,
-                false,
-                false,
-                null,
-                null
-            )
-        ),
-        true
-    ).trim();
   }
 
   /**
