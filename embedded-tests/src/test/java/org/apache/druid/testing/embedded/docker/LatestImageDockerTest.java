@@ -19,14 +19,15 @@
 
 package org.apache.druid.testing.embedded.docker;
 
-import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 /**
- * Base class for running embedded tests which use {@link DruidContainerResource}.
- * All test classes extending this class should be named {@code *DockerTest*}.
+ * Interface for embedded tests which use {@link DruidContainerResource} running
+ * the latest Druid image. All test classes implementing this interface should be
+ * named {@code *DockerTest*} to allow maven to recognize them as integration tests,
+ * and should use {@code EmbeddedHostname.containerFriendly()} to allow Druid
+ * containers to be reachable by embedded servers and vice-versa.
  * <p>
  * DO NOT write a new Docker test unless absolutely necessary.
  * For all testing needs, use regular EmbeddedDruidServer-based tests only.
@@ -34,13 +35,7 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
  */
 @Tag("docker-test")
 @EnabledIfSystemProperty(named = DruidContainerResource.PROPERTY_TEST_IMAGE, matches = ".+")
-public abstract class DockerTestBase extends EmbeddedClusterTestBase
+public interface LatestImageDockerTest
 {
-  @BeforeAll
-  @Override
-  protected void setup() throws Exception
-  {
-    cluster = createCluster().useContainerFriendlyHostname();
-    cluster.start();
-  }
+
 }

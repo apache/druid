@@ -26,51 +26,86 @@ import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
+import org.apache.druid.testing.DruidCommand;
 import org.apache.druid.testing.DruidContainer;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedHistorical;
+import org.apache.druid.testing.embedded.EmbeddedRouter;
+import org.apache.druid.testing.embedded.indexing.IngestionSmokeTest;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
- * Runs some basic ingestion tests using {@code DruidContainers} to verify
- * backward compatibility with old Druid images.
+ * Runs some basic ingestion tests using Coordinator and Overlord at version
+ * {@link DruidContainer.Image#APACHE_31} and other services at current version
+ * to test backward compatibility.
+ * <p>
+ * This test does not implement {@link LatestImageDockerTest} and runs in the
+ * {@code mvn test} phase.
  */
-public class IngestionBackwardCompatibilityDockerTest
+public class IngestionBackwardCompatibilityDockerTest extends IngestionSmokeTest
 {
-  @Nested
-  public class Apache31 extends IngestionDockerTest
+  @Override
+  protected EmbeddedDruidCluster addServers(EmbeddedDruidCluster cluster)
   {
-    @Override
-    public EmbeddedDruidCluster createCluster()
-    {
-      coordinator.usingImage(DruidContainer.Image.APACHE_31);
-      overlordLeader.usingImage(DruidContainer.Image.APACHE_31);
-      return super.createCluster();
+    DruidContainerResource containerOverlord = new DruidContainerResource(DruidCommand.Server.OVERLORD)
+        .usingImage(DruidContainer.Image.APACHE_31);
+    DruidContainerResource containerCoordinator = new DruidContainerResource(DruidCommand.Server.COORDINATOR)
+        .usingImage(DruidContainer.Image.APACHE_31);
+
+    // Add an EmbeddedOverlord to the cluster to use its client and mapper bindings.
+    // but ensure that it is not the leader.
+    overlord.addProperty("druid.plaintextPort", "7090");
+
+    return cluster
+        .useContainerFriendlyHostname()
+        .addResource(containerOverlord)
+        .addResource(containerCoordinator)
+        .addServer(overlord)
+        .addServer(indexer)
+        .addServer(broker)
+        .addServer(new EmbeddedHistorical())
+        .addServer(new EmbeddedRouter())
+        .addServer(eventCollector)
+        .addCommonProperty(
+            "druid.extensions.loadList",
+            "[\"druid-s3-extensions\", \"druid-kafka-indexing-service\","
+            + "\"druid-multi-stage-query\", \"postgresql-metadata-storage\"]"
+        );
+  }
+
+  @BeforeEach
+  public void verifyOverlordLeader()
+  {
+    // Verify that the EmbeddedOverlord is not leader i.e. the container Overlord is leader
+    Assertions.assertFalse(
+        overlord.bindings().overlordLeaderSelector().isLeader()
+    );
+  }
+
+  @Override
+  protected int markSegmentsAsUnused(String dataSource)
+  {
+    // For old Druid versions, use Coordinator to mark segments as unused
+    final CoordinatorServiceClient coordinatorClient =
+        overlord.bindings().getInstance(CoordinatorServiceClient.class);
+
+    try {
+      RequestBuilder req = new RequestBuilder(
+          HttpMethod.DELETE,
+          StringUtils.format("/druid/coordinator/v1/datasources/%s", dataSource)
+      );
+      BytesFullResponseHolder responseHolder = coordinatorClient.getServiceClient().request(
+          req,
+          new BytesFullResponseHandler()
+      );
+
+      final ObjectMapper mapper = overlord.bindings().jsonMapper();
+      return mapper.readValue(responseHolder.getContent(), SegmentUpdateResponse.class).getNumChangedSegments();
     }
-
-    @Override
-    protected int markSegmentsAsUnused(String dataSource)
-    {
-      // For old Druid versions, use Coordinator to mark segments as unused
-      final CoordinatorServiceClient coordinatorClient =
-          overlordFollower.bindings().getInstance(CoordinatorServiceClient.class);
-
-      try {
-        RequestBuilder req = new RequestBuilder(
-            HttpMethod.DELETE,
-            StringUtils.format("/druid/coordinator/v1/datasources/%s", dataSource)
-        );
-        BytesFullResponseHolder responseHolder = coordinatorClient.getServiceClient().request(
-            req,
-            new BytesFullResponseHandler()
-        );
-
-        final ObjectMapper mapper = overlordFollower.bindings().jsonMapper();
-        return mapper.readValue(responseHolder.getContent(), SegmentUpdateResponse.class).getNumChangedSegments();
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
+    catch (Exception e) {
+      throw new RuntimeException(e);
     }
   }
 }

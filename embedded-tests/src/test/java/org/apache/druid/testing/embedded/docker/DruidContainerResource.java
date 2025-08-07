@@ -47,7 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * such as {@code druid-s3-extensions} or {@code postgresql-metadata-storage},
  * simply by adding them to {@code druid.extensions.loadList}.
  *
- * @see DockerTestBase
+ * @see LatestImageDockerTest
  */
 public class DruidContainerResource extends TestcontainerResource<DruidContainer>
 {
@@ -145,7 +145,7 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
     // Mount directories used by this container for easier debugging with service logs
     this.containerDirectory = cluster.getTestFolder().getOrCreateFolder(name);
 
-    final File logDirectory = new File("log", name);
+    final File logDirectory = new File(containerDirectory, "log");
     this.serviceLogsDirectory = new MountedDir(new File("/opt/druid/log"), logDirectory);
 
     // Create the log directory upfront to avoid permission issues
@@ -217,7 +217,7 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
   {
     try {
       FileUtils.mkdirp(dir);
-      Files.setPosixFilePermissions(dir.toPath(), PosixFilePermissions.fromString("rw-rw-rw-"));
+      Files.setPosixFilePermissions(dir.toPath(), PosixFilePermissions.fromString("rwxrwxrwx"));
     }
     catch (Exception e) {
       throw new RuntimeException(e);

@@ -371,6 +371,7 @@
             <configuration>
               <groups>docker-test</groups>
               <includes>
+                <!-- Search for Docker tests intead of just IT*/*IT -->
                 <include>*DockerTest*</include>
               </includes>
               <redirectTestOutputToFile>true</redirectTestOutputToFile>

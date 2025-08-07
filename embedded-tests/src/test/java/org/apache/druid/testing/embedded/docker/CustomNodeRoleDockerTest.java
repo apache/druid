@@ -23,6 +23,7 @@ import org.apache.druid.testing.DruidCommand;
 import org.apache.druid.testing.cli.CliEventCollector;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
+import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.testing.embedded.server.HighAvailabilityTest;
 import org.junit.jupiter.api.Test;
 
@@ -36,12 +37,9 @@ import java.util.Map;
  * See {@code HttpEmitterEventCollector} for running the custom node as an
  * embedded server.
  */
-public class CustomNodeRoleDockerTest extends DockerTestBase
+public class CustomNodeRoleDockerTest extends EmbeddedClusterTestBase implements LatestImageDockerTest
 {
-  private final DruidContainerResource customNodeEventCollector =
-      new DruidContainerResource(new EventCollectorCommand())
-          .usingTestImage();
-
+  // Server used only for its bindings
   private final EmbeddedRouter router = new EmbeddedRouter();
 
   @Override
@@ -49,8 +47,9 @@ public class CustomNodeRoleDockerTest extends DockerTestBase
   {
     return EmbeddedDruidCluster
         .withZookeeper()
+        .useContainerFriendlyHostname()
         .addCommonProperty("druid.extensions.loadList", "[\"druid-testing-tools\"]")
-        .addResource(customNodeEventCollector)
+        .addResource(new DruidContainerResource(new EventCollectorCommand()).usingTestImage())
         .addServer(router);
   }
 
