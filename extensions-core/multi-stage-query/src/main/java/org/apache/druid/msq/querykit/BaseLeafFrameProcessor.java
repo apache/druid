@@ -92,7 +92,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
       }
       catch (Exception e) {
         // Did not want to load the segment for exception handling, hence adding the descriptor in the log to figure out failures.
-        log.error("Error processing segment descriptor: %s", baseInput.getSegment().getDescriptor());
+        log.error("Error processing segment descriptor: [%s]", baseInput.getSegment().getDescriptor());
         throw e;
       }
     } else if (baseInput.hasDataServerQuery()) {
