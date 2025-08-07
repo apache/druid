@@ -33,7 +33,6 @@ import org.apache.druid.sql.http.SqlQuery;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -84,11 +83,9 @@ public class SqlQueryPlus
     this.sql = Preconditions.checkNotNull(sql);
     this.sqlNode = sqlNode;
     this.allowSetStatements = allowSetStatements;
-    // stmtContext is used for query planning and execution
     this.stmtContext = stmtContext == null
                        ? Collections.emptyMap()
-                       : Collections.unmodifiableMap(new HashMap<>(stmtContext));
-    // authContextKeys is used for security checks
+                       : Collections.unmodifiableMap(stmtContext);
     this.authContextKeys = authContextKeys == null
                            ? Collections.emptySet()
                            : Collections.unmodifiableSet(authContextKeys);

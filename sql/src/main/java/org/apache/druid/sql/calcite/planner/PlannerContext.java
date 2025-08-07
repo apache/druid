@@ -178,9 +178,7 @@ public class PlannerContext
     this.sql = sql;
     this.sqlNode = sqlNode;
     this.engine = engine;
-    // authContextKeys is used for security checks
     this.authContextKeys = authContextKeys;
-    // queryContext is used for query planning and execution
     this.queryContext = new LinkedHashMap<>(queryContext);
     this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
     initializeContextFieldsAndPlannerConfig();

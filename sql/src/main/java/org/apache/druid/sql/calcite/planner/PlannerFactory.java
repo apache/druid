@@ -146,7 +146,7 @@ public class PlannerFactory extends PlannerToolbox
         engine,
         sql,
         statementAndSetContext.getMainStatement(),
-        ImmutableSet.copyOf(queryContext.keySet()),
+        Set.copyOf(queryContext.keySet()),
         statementAndSetContext.getSetContext().isEmpty()
         ? queryContext
         : QueryContexts.override(queryContext, statementAndSetContext.getSetContext()),
