@@ -22,6 +22,7 @@ package org.apache.druid.java.util.emitter.service;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -35,7 +36,7 @@ import java.util.Map;
 public class ServiceMetricEventTest
 {
   @Test
-  public void testStupidTest()
+  public void testBuilder()
   {
     ServiceMetricEvent builderEvent = new ServiceMetricEvent.Builder()
         .setDimension("user1", "a")
@@ -316,5 +317,46 @@ public class ServiceMetricEventTest
                                                   .build("service", "host");
     Assert.assertTrue(target.getUserDims().isEmpty());
     Assert.assertNull(target.getUserDims().get("userDimMap"));
+  }
+
+  @Test
+  public void test_builder_createsImmutableEvents()
+  {
+    final ServiceMetricEvent.Builder eventBuilder = ServiceMetricEvent
+        .builder()
+        .setDimension("dim1", "v1")
+        .setMetric("m1", 100);
+
+    final ServiceMetricEvent event1 = eventBuilder.build("coordinator", "localhost");
+
+    Assert.assertEquals(Map.of("dim1", "v1"), event1.getUserDims());
+
+    final ServiceMetricEvent event2 = eventBuilder
+        .setDimension("dim2", "v2")
+        .setMetric("m2", 200)
+        .build("coordinator", "localhost");
+
+    // Verify that the original event gets changed dimensions
+    Assert.assertEquals(Map.of("dim1", "v1", "dim2", "v2"), event2.getUserDims());
+    Assert.assertEquals(Map.of("dim1", "v1"), event1.getUserDims());
+  }
+
+  @Test
+  public void test_builder_throwsException_ifDimNameOrValueIsNull()
+  {
+    final ServiceMetricEvent.Builder eventBuilder = ServiceMetricEvent.builder();
+
+    Assert.assertThrows(
+        IAE.class,
+        () -> eventBuilder.setDimension("dim1", (Object) null)
+    );
+    Assert.assertThrows(
+        IAE.class,
+        () -> eventBuilder.setDimension(null, null)
+    );
+    Assert.assertThrows(
+        IAE.class,
+        () -> eventBuilder.setDimension(null, new String[]{"a"})
+    );
   }
 }

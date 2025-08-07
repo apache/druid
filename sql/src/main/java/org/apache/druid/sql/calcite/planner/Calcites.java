@@ -77,8 +77,8 @@ import java.util.regex.Pattern;
  */
 public class Calcites
 {
-  private static final DateTimes.UtcFormatter CALCITE_DATE_PARSER = DateTimes.wrapFormatter(ISODateTimeFormat.dateParser());
-  private static final DateTimes.UtcFormatter CALCITE_TIMESTAMP_PARSER = DateTimes.wrapFormatter(
+  public static final DateTimes.UtcFormatter CALCITE_DATE_PARSER = DateTimes.wrapFormatter(ISODateTimeFormat.dateParser());
+  public static final DateTimes.UtcFormatter CALCITE_TIMESTAMP_PARSER = DateTimes.wrapFormatter(
       new DateTimeFormatterBuilder()
           .append(ISODateTimeFormat.dateParser())
           .appendLiteral(' ')
@@ -126,7 +126,7 @@ public class Calcites
     final StringBuilder builder = new StringBuilder("'");
     for (int i = 0; i < s.length(); i++) {
       final char c = s.charAt(i);
-      if (Character.isLetterOrDigit(c) || c == ' ') {
+      if (Character.isLetterOrDigit(c) || (c >= 32 && c < 127 && c != '\'' && c != '\\')) {
         builder.append(c);
         if (c > 127) {
           isPlainAscii = false;

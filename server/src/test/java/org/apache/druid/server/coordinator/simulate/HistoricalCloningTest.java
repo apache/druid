@@ -297,4 +297,49 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
       Assert.assertEquals(segment, historicalT13.getSegment(segment.getId()));
     });
   }
+
+  @Test
+  public void test_loadsAreCancelledOnClone_ifSegmentsAreRemovedFromSource()
+  {
+    final CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(Segments.WIKI_10X1D)
+                             .withServers(historicalT11, historicalT12)
+                             .withRules(datasource, Load.on(Tier.T1, 1).forever())
+                             .withDynamicConfig(
+                                 CoordinatorDynamicConfig.builder()
+                                                         .withCloneServers(Map.of(historicalT12.getHost(), historicalT11.getHost()))
+                                                         .withSmartSegmentLoading(true)
+                                                         .build()
+                             )
+                             .build();
+
+
+    // Load all segments on histT11
+    Segments.WIKI_10X1D.forEach(historicalT11::addDataSegment);
+
+    startSimulation(sim);
+    runCoordinatorCycle();
+
+    verifyValue(
+        Stats.Segments.ASSIGNED_TO_CLONE.getMetricName(),
+        Map.of("server", historicalT12.getName()),
+        10L
+    );
+
+    // Remove some segments from histT11
+    deleteSegments(Segments.WIKI_10X1D.subList(0, 5));
+
+    // Verify that the loads are cancelled from the clone
+    runCoordinatorCycle();
+    verifyValue(
+        Metric.CANCELLED_ACTIONS,
+        Map.of("server", historicalT12.getName()),
+        5L
+    );
+
+    loadQueuedSegments();
+    Assert.assertEquals(5, historicalT11.getTotalSegments());
+    Assert.assertEquals(5, historicalT12.getTotalSegments());
+  }
 }

@@ -64,6 +64,8 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.metadata.PasswordProviderRedactionMixIn;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 
@@ -100,6 +102,7 @@ import java.util.stream.Collectors;
  */
 public class TaskQueue
 {
+  public static final String FAILED_TO_RUN_TASK_SEE_OVERLORD_MSG = "Failed to run task. See overlord logs for more details.";
   private static final long MANAGEMENT_WAIT_TIMEOUT_NANOS = TimeUnit.SECONDS.toNanos(60);
   private static final long MIN_WAIT_TIME_MS = 100;
 
@@ -118,7 +121,7 @@ public class TaskQueue
   private final TaskStorage taskStorage;
   private final TaskRunner taskRunner;
   private final TaskActionClientFactory taskActionClientFactory;
-  private final TaskLockbox taskLockbox;
+  private final GlobalTaskLockbox taskLockbox;
   private final ServiceEmitter emitter;
   private final ObjectMapper passwordRedactingMapper;
   private final TaskContextEnricher taskContextEnricher;
@@ -153,12 +156,12 @@ public class TaskQueue
 
   private static final EmittingLogger log = new EmittingLogger(TaskQueue.class);
 
-  private final ConcurrentHashMap<String, AtomicLong> totalSuccessfulTaskCount = new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<String, AtomicLong> totalFailedTaskCount = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<RowKey, AtomicLong> totalSuccessfulTaskCount = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<RowKey, AtomicLong> totalFailedTaskCount = new ConcurrentHashMap<>();
   @GuardedBy("totalSuccessfulTaskCount")
-  private Map<String, Long> prevTotalSuccessfulTaskCount = new HashMap<>();
+  private Map<RowKey, Long> prevTotalSuccessfulTaskCount = new HashMap<>();
   @GuardedBy("totalFailedTaskCount")
-  private Map<String, Long> prevTotalFailedTaskCount = new HashMap<>();
+  private Map<RowKey, Long> prevTotalFailedTaskCount = new HashMap<>();
 
   private final AtomicInteger statusUpdatesInQueue = new AtomicInteger();
   private final AtomicInteger handledStatusUpdates = new AtomicInteger();
@@ -170,7 +173,7 @@ public class TaskQueue
       TaskStorage taskStorage,
       TaskRunner taskRunner,
       TaskActionClientFactory taskActionClientFactory,
-      TaskLockbox taskLockbox,
+      GlobalTaskLockbox taskLockbox,
       ServiceEmitter emitter,
       ObjectMapper mapper,
       TaskContextEnricher taskContextEnricher
@@ -216,10 +219,10 @@ public class TaskQueue
     try {
       Preconditions.checkState(!active, "queue must be stopped");
       setActive(true);
-      syncFromStorage();
       // Mark these tasks as failed as they could not reacuire the lock
       // Clean up needs to happen after tasks have been synced from storage
       Set<Task> tasksToFail = taskLockbox.syncFromStorage().getTasksToFail();
+      syncFromStorage();
       for (Task task : tasksToFail) {
         shutdown(task.getId(),
                  "Shutting down forcefully as task failed to reacquire lock while becoming leader");
@@ -293,6 +296,7 @@ public class TaskQueue
     try {
       setActive(false);
       activeTasks.clear();
+      taskLockbox.shutdown();
       managerExec.shutdownNow();
       storageSyncExec.shutdownNow();
       requestManagement();
@@ -441,8 +445,9 @@ public class TaskQueue
                   e.getMessage()
               );
             }
-            TaskStatus taskStatus = TaskStatus.failure(task.getId(), errorMessage);
+            final TaskStatus taskStatus = TaskStatus.failure(task.getId(), errorMessage);
             notifyStatus(entry, taskStatus, taskStatus.getErrorMsg());
+            emitTaskCompletionLogsAndMetrics(task, taskStatus);
             return;
           }
           if (taskIsReady) {
@@ -563,7 +568,7 @@ public class TaskQueue
     if (added.get()) {
       taskLockbox.add(task);
     } else if (!entry.task.equals(task)) {
-      throw new ISE("Cannot add task ID [%s] with same ID as task that has already been added", task.getId());
+      throw new ISE("Cannot add task[%s] as a different task for the same ID has already been added.", task.getId());
     }
   }
 
@@ -577,15 +582,15 @@ public class TaskQueue
    * might add it back to the queue, thus causing a duplicate run of the task.
    */
   @GuardedBy("startStopLock")
-  private void removeTaskInternal(final String taskId, final DateTime deleteTime)
+  private boolean removeTaskInternal(final String taskId, final DateTime deleteTime)
   {
     final AtomicReference<Task> removedTask = new AtomicReference<>();
 
     addOrUpdateTaskEntry(
         taskId,
         prevEntry -> {
-          // Remove the task only if it doesn't have a more recent update
-          if (prevEntry != null && prevEntry.lastUpdatedTime.isBefore(deleteTime)) {
+          // Remove the task only if it is complete OR it doesn't have a more recent update
+          if (prevEntry != null && (prevEntry.isComplete || prevEntry.lastUpdatedTime.isBefore(deleteTime))) {
             removedTask.set(prevEntry.task);
             // Remove this taskId from activeTasks by mapping it to null
             return null;
@@ -597,7 +602,9 @@ public class TaskQueue
 
     if (removedTask.get() != null) {
       removeTaskLock(removedTask.get());
+      return true;
     }
+    return false;
   }
 
   /**
@@ -663,9 +670,9 @@ public class TaskQueue
    * This method does not remove the task from {@link #activeTasks} to avoid
    * race conditions with {@link #syncFromStorage()}.
    * <p>
-   * Since this operation involves DB updates and synchronous remote calls, it
-   * must be invoked on a dedicated executor so that task runner and worker sync
-   * is not blocked.
+   * Since this operation is intended to be performed under one of activeTasks hash segment locks, involves DB updates
+   * and synchronous remote calls, it must be invoked on a dedicated executor so that task runner and worker sync
+   * are not blocked.
    *
    * @throws NullPointerException     if task or status is null
    * @throws IllegalArgumentException if the task ID does not match the status ID
@@ -693,6 +700,10 @@ public class TaskQueue
     if (!taskStatus.isComplete()) {
       // Nothing to do for incomplete statuses.
       return;
+    } else if (entry.isComplete) {
+      // A callback() or shutdown() beat us to updating the status and has already cleaned up this task
+      log.info("Ignoring notification with status[%s] for already completed task[%s]", taskStatus, task.getId());
+      return;
     }
 
     // Mark this task as complete, so it isn't managed while being cleaned up.
@@ -703,10 +714,10 @@ public class TaskQueue
     // Save status to metadata store first, so if we crash while doing the rest of the shutdown, our successor
     // remembers that this task has completed.
     try {
-      //The code block is only called when a task completes,
-      //and we need to check to make sure the metadata store has the correct status stored.
+      // The code block is only called when a task completes,
+      // and we need to check to make sure the metadata store has the correct status stored.
       final Optional<TaskStatus> previousStatus = taskStorage.getStatus(task.getId());
-      if (!previousStatus.isPresent() || !previousStatus.get().isRunnable()) {
+      if (!previousStatus.isPresent() || previousStatus.get().isComplete()) {
         log.makeAlert("Ignoring notification for already-complete task").addData("task", task.getId()).emit();
       } else {
         taskStorage.setStatus(taskStatus.withLocation(taskLocation));
@@ -726,13 +737,14 @@ public class TaskQueue
       taskRunner.shutdown(task.getId(), reasonFormat, args);
     }
     catch (Throwable e) {
-      // If task runner shutdown fails, continue with the task shutdown routine. We'll come back and try to
-      // shut it down again later in manageInternalPostCritical, once it's removed from the "tasks" map.
+      // If task runner shutdown fails, continue with the task shutdown routine.
       log.warn(e, "TaskRunner failed to cleanup task after completion: %s", task.getId());
     }
 
     removeTaskLock(task);
     requestManagement();
+
+    log.info("Completed notifyStatus for task[%s] with status[%s]", task.getId(), taskStatus);
   }
 
   /**
@@ -748,9 +760,6 @@ public class TaskQueue
    */
   private void attachCallbacks(final Task task, final ListenableFuture<TaskStatus> statusFuture)
   {
-    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
-    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-
     Futures.addCallback(
         statusFuture,
         new FutureCallback<>()
@@ -774,7 +783,7 @@ public class TaskQueue
             statusUpdatesInQueue.incrementAndGet();
             TaskStatus status = TaskStatus.failure(
                 task.getId(),
-                "Failed to run task. See overlord logs for more details."
+                FAILED_TO_RUN_TASK_SEE_OVERLORD_MSG
             );
             taskCompleteCallbackExecutor.execute(() -> handleStatus(status));
           }
@@ -795,21 +804,7 @@ public class TaskQueue
               );
 
               // Emit event and log, if the task is done
-              if (status.isComplete()) {
-                IndexTaskUtils.setTaskStatusDimensions(metricBuilder, status);
-                emitter.emit(metricBuilder.setMetric("task/run/time", status.getDuration()));
-
-                log.info(
-                    "Completed task[%s] with status[%s] in [%d]ms.",
-                    task.getId(), status.getStatusCode(), status.getDuration()
-                );
-
-                if (status.isSuccess()) {
-                  Counters.incrementAndGetLong(totalSuccessfulTaskCount, task.getDataSource());
-                } else {
-                  Counters.incrementAndGetLong(totalFailedTaskCount, task.getDataSource());
-                }
-              }
+              emitTaskCompletionLogsAndMetrics(task, status);
             }
             catch (Exception e) {
               log.makeAlert(e, "Failed to handle task status")
@@ -851,8 +846,11 @@ public class TaskQueue
         final Collection<Task> removedTasks = mapDifference.entriesOnlyOnLeft().values();
 
         // Remove tasks not present in metadata store if their lastUpdatedTime is before syncStartTime
+        int numTasksRemoved = 0;
         for (Task task : removedTasks) {
-          removeTaskInternal(task.getId(), syncStartTime);
+          if (removeTaskInternal(task.getId(), syncStartTime)) {
+            ++numTasksRemoved;
+          }
         }
 
         // Add new tasks present in metadata store if their lastUpdatedTime is before syncStartTime
@@ -861,8 +859,8 @@ public class TaskQueue
         }
 
         log.info(
-            "Synced [%d] tasks from storage (%d tasks added, %d tasks removed).",
-            newTasks.size(), addedTasks.size(), removedTasks.size()
+            "Synced [%d] tasks from storage (%d tasks added, %d tasks removable, %d tasks removed).",
+            newTasks.size(), addedTasks.size(), removedTasks.size(), numTasksRemoved
         );
         requestManagement();
       } else {
@@ -887,9 +885,9 @@ public class TaskQueue
     return rv;
   }
 
-  private Map<String, Long> getDeltaValues(Map<String, Long> total, Map<String, Long> prev)
+  private Map<RowKey, Long> getDeltaValues(Map<RowKey, Long> total, Map<RowKey, Long> prev)
   {
-    final Map<String, Long> deltaValues = new HashMap<>();
+    final Map<RowKey, Long> deltaValues = new HashMap<>();
     total.forEach(
         (dataSource, totalCount) -> deltaValues.put(
             dataSource,
@@ -899,58 +897,59 @@ public class TaskQueue
     return deltaValues;
   }
 
-  public Map<String, Long> getSuccessfulTaskCount()
+  public Map<RowKey, Long> getSuccessfulTaskCount()
   {
-    Map<String, Long> total = CollectionUtils.mapValues(totalSuccessfulTaskCount, AtomicLong::get);
+    final Map<RowKey, Long> total = CollectionUtils.mapValues(totalSuccessfulTaskCount, AtomicLong::get);
     synchronized (totalSuccessfulTaskCount) {
-      Map<String, Long> delta = getDeltaValues(total, prevTotalSuccessfulTaskCount);
+      Map<RowKey, Long> delta = getDeltaValues(total, prevTotalSuccessfulTaskCount);
       prevTotalSuccessfulTaskCount = total;
       return delta;
     }
   }
 
-  public Map<String, Long> getFailedTaskCount()
+  public Map<RowKey, Long> getFailedTaskCount()
   {
-    Map<String, Long> total = CollectionUtils.mapValues(totalFailedTaskCount, AtomicLong::get);
+    final Map<RowKey, Long> total = CollectionUtils.mapValues(totalFailedTaskCount, AtomicLong::get);
     synchronized (totalFailedTaskCount) {
-      Map<String, Long> delta = getDeltaValues(total, prevTotalFailedTaskCount);
+      Map<RowKey, Long> delta = getDeltaValues(total, prevTotalFailedTaskCount);
       prevTotalFailedTaskCount = total;
       return delta;
     }
   }
 
-  private Map<String, String> getCurrentTaskDatasources()
+  private Map<String, RowKey> getCurrentTaskDatasources()
   {
     return activeTasks.values().stream()
+                      .filter(entry -> !entry.isComplete)
                       .map(entry -> entry.task)
-                      .collect(Collectors.toMap(Task::getId, Task::getDataSource));
+                      .collect(Collectors.toMap(Task::getId, TaskQueue::getMetricKey));
   }
 
-  public Map<String, Long> getRunningTaskCount()
+  public Map<RowKey, Long> getRunningTaskCount()
   {
-    Map<String, String> taskDatasources = getCurrentTaskDatasources();
+    final Map<String, RowKey> taskDatasources = getCurrentTaskDatasources();
     return taskRunner.getRunningTasks()
                      .stream()
                      .collect(Collectors.toMap(
-                         e -> taskDatasources.getOrDefault(e.getTaskId(), ""),
+                         e -> taskDatasources.getOrDefault(e.getTaskId(), RowKey.empty()),
                          e -> 1L,
                          Long::sum
                      ));
   }
 
-  public Map<String, Long> getPendingTaskCount()
+  public Map<RowKey, Long> getPendingTaskCount()
   {
-    Map<String, String> taskDatasources = getCurrentTaskDatasources();
+    final Map<String, RowKey> taskDatasources = getCurrentTaskDatasources();
     return taskRunner.getPendingTasks()
                      .stream()
                      .collect(Collectors.toMap(
-                         e -> taskDatasources.getOrDefault(e.getTaskId(), ""),
+                         e -> taskDatasources.getOrDefault(e.getTaskId(), RowKey.empty()),
                          e -> 1L,
                          Long::sum
                      ));
   }
 
-  public Map<String, Long> getWaitingTaskCount()
+  public Map<RowKey, Long> getWaitingTaskCount()
   {
     Set<String> runnerKnownTaskIds = taskRunner.getKnownTasks()
                                                .stream()
@@ -958,9 +957,10 @@ public class TaskQueue
                                                .collect(Collectors.toSet());
 
     return activeTasks.values().stream()
+                      .filter(entry -> !entry.isComplete)
                       .map(entry -> entry.task)
                       .filter(task -> !runnerKnownTaskIds.contains(task.getId()))
-                      .collect(Collectors.toMap(Task::getDataSource, task -> 1L, Long::sum));
+                      .collect(Collectors.toMap(TaskQueue::getMetricKey, task -> 1L, Long::sum));
   }
 
   /**
@@ -1043,21 +1043,43 @@ public class TaskQueue
     );
   }
 
+  private void emitTaskCompletionLogsAndMetrics(final Task task, final TaskStatus status)
+  {
+    if (status.isComplete()) {
+      final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
+      IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+      IndexTaskUtils.setTaskStatusDimensions(metricBuilder, status);
+
+      emitter.emit(metricBuilder.setMetric("task/run/time", status.getDuration()));
+
+      if (status.isSuccess()) {
+        Counters.incrementAndGetLong(totalSuccessfulTaskCount, getMetricKey(task));
+      } else {
+        Counters.incrementAndGetLong(totalFailedTaskCount, getMetricKey(task));
+      }
+
+      log.info(
+          "Completed task[%s] with status[%s] in [%d]ms.",
+          task.getId(), status, status.getDuration()
+      );
+    }
+  }
+
   private void validateTaskPayload(Task task)
   {
     try {
       String payload = passwordRedactingMapper.writeValueAsString(task);
       if (config.getMaxTaskPayloadSize() != null && config.getMaxTaskPayloadSize().getBytesInInt() < payload.length()) {
         throw InvalidInput.exception(
-                "Task[%s] has payload of size[%d] but max allowed size is [%d]. " +
-                    "Reduce the size of the task payload or increase 'druid.indexer.queue.maxTaskPayloadSize'.",
-                task.getId(), payload.length(), config.getMaxTaskPayloadSize()
-            );
+            "Task[%s] has payload of size[%d] but max allowed size is [%d]. " +
+            "Reduce the size of the task payload or increase 'druid.indexer.queue.maxTaskPayloadSize'.",
+            task.getId(), payload.length(), config.getMaxTaskPayloadSize()
+        );
       } else if (payload.length() > TASK_SIZE_WARNING_THRESHOLD) {
         log.warn(
             "Task[%s] of datasource[%s] has payload size[%d] larger than the recommended maximum[%d]. " +
-                "Large task payloads may cause stability issues in the Overlord and may fail while persisting to the metadata store." +
-                "Such tasks may be rejected by the Overlord in future Druid versions.",
+            "Large task payloads may cause stability issues in the Overlord and may fail while persisting to the metadata store." +
+            "Such tasks may be rejected by the Overlord in future Druid versions.",
             task.getId(),
             task.getDataSource(),
             payload.length(),
@@ -1129,5 +1151,14 @@ public class TaskQueue
       this.task = task;
       this.lastUpdatedTime = DateTimes.nowUtc();
     }
+  }
+
+  private static RowKey getMetricKey(final Task task)
+  {
+    if (task == null) {
+      return RowKey.empty();
+    }
+    return RowKey.with(Dimension.DATASOURCE, task.getDataSource())
+                 .and(Dimension.TASK_TYPE, task.getType());
   }
 }

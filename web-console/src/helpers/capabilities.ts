@@ -18,6 +18,7 @@
 
 import type { DruidEngine } from '../druid-models';
 import { Api } from '../singletons';
+import { filterMap } from '../utils';
 
 import { maybeGetClusterCapacity } from './index';
 
@@ -34,6 +35,37 @@ export type CapabilitiesModeExtended =
 
 export type QueryType = 'none' | 'nativeOnly' | 'nativeAndSql';
 
+const FUNCTION_SQL = `SELECT "ROUTINE_NAME", "SIGNATURES", "IS_AGGREGATOR" FROM "INFORMATION_SCHEMA"."ROUTINES" WHERE "SIGNATURES" IS NOT NULL`;
+
+type FunctionRow = [string, string, string];
+
+export interface FunctionsDefinition {
+  args: string[];
+  isAggregate: boolean;
+}
+
+export type AvailableFunctions = Map<string, FunctionsDefinition>;
+
+function functionRowsToMap(functionRows: FunctionRow[]): AvailableFunctions {
+  return new Map<string, FunctionsDefinition>(
+    filterMap(functionRows, ([ROUTINE_NAME, SIGNATURES, IS_AGGREGATOR]) => {
+      if (!SIGNATURES) return;
+      const args = filterMap(SIGNATURES.replace(/'/g, '').split('\n'), sig => {
+        if (!sig.startsWith(`${ROUTINE_NAME}(`) || !sig.endsWith(')')) return;
+        return sig.slice(ROUTINE_NAME.length + 1, sig.length - 1);
+      });
+      if (!args.length) return;
+      return [
+        ROUTINE_NAME,
+        {
+          args,
+          isAggregate: IS_AGGREGATOR === 'YES',
+        },
+      ];
+    }),
+  );
+}
+
 export interface CapabilitiesValue {
   queryType: QueryType;
   multiStageQueryTask: boolean;
@@ -41,6 +73,7 @@ export interface CapabilitiesValue {
   coordinator: boolean;
   overlord: boolean;
   maxTaskSlots?: number;
+  availableSqlFunctions?: AvailableFunctions;
 }
 
 export class Capabilities {
@@ -51,13 +84,6 @@ export class Capabilities {
   static COORDINATOR: Capabilities;
   static OVERLORD: Capabilities;
   static NO_PROXY: Capabilities;
-
-  private readonly queryType: QueryType;
-  private readonly multiStageQueryTask: boolean;
-  private readonly multiStageQueryDart: boolean;
-  private readonly coordinator: boolean;
-  private readonly overlord: boolean;
-  private readonly maxTaskSlots?: number;
 
   static async detectQueryType(): Promise<QueryType | undefined> {
     // Check SQL endpoint
@@ -143,8 +169,11 @@ export class Capabilities {
 
   static async detectMultiStageQueryDart(): Promise<boolean> {
     try {
-      const resp = await Api.instance.get(`/druid/v2/sql/dart/enabled?capabilities`);
-      return Boolean(resp.data.enabled);
+      const resp = (await Api.instance.get(`/druid/v2/sql/engines?capabilities`)).data;
+      return (
+        Array.isArray(resp.engines) &&
+        resp.engines.some(({ name }: { name: string }) => name === 'msq-dart')
+      );
     } catch {
       return false;
     }
@@ -190,6 +219,38 @@ export class Capabilities {
       maxTaskSlots: capacity.totalTaskSlots,
     });
   }
+
+  static async detectAvailableSqlFunctions(
+    capabilities: Capabilities,
+  ): Promise<AvailableFunctions | undefined> {
+    if (!capabilities.hasSql()) return;
+
+    try {
+      return functionRowsToMap(
+        (
+          await Api.instance.post<FunctionRow[]>(
+            '/druid/v2/sql?capabilities-functions',
+            {
+              query: FUNCTION_SQL,
+              resultFormat: 'array',
+              context: { timeout: Capabilities.STATUS_TIMEOUT },
+            },
+            { timeout: Capabilities.STATUS_TIMEOUT },
+          )
+        ).data,
+      );
+    } catch (e) {
+      console.error(e);
+      return;
+    }
+  }
+
+  private readonly queryType: QueryType;
+  private readonly multiStageQueryTask: boolean;
+  private readonly multiStageQueryDart: boolean;
+  private readonly coordinator: boolean;
+  private readonly overlord: boolean;
+  private readonly maxTaskSlots?: number;
 
   constructor(value: CapabilitiesValue) {
     this.queryType = value.queryType;

@@ -19,7 +19,7 @@
 
 # Apache Druid web console
 
-This is the Druid web console that servers as a data management interface for Druid.
+This is the Druid web console that serves as a data management interface for Druid.
 
 ## Developing the console
 
@@ -27,11 +27,11 @@ This is the Druid web console that servers as a data management interface for Dr
 
 1. You need to be within the `web-console` directory
 2. Install the modules with `npm install`
-3. Run `npm run compile` to compile the scss files (this usually needs to be done only once)
-4. Run `npm start` will start in development mode and will proxy druid requests to `localhost:8888`
+3. Run `npm run compile` to compile the SCSS files (this usually needs to be done only once)
+4. Run `npm start` to start in development mode and proxy Druid requests to `localhost:8888`
 
 **Note:** you can provide an environment variable to proxy to a different Druid host like so: `druid_host=1.2.3.4:8888 npm start`
-**Note:** you can provide an environment variable use webpack-bundle-analyzer as a plugin in the build script or like so: `BUNDLE_ANALYZER_PLUGIN='TRUE' npm start`
+**Note:** you can provide an environment variable to use webpack-bundle-analyzer as a plugin in the build script like so: `BUNDLE_ANALYZER_PLUGIN='TRUE' npm start`
 
 To try the console in (say) coordinator mode you could run it as such:
 
@@ -42,6 +42,16 @@ To try the console in (say) coordinator mode you could run it as such:
 You should use a TypeScript friendly IDE (such as [WebStorm](https://www.jetbrains.com/webstorm/), or [VS Code](https://code.visualstudio.com/)) to develop the web console.
 
 The console relies on [eslint](https://eslint.org) (and various plugins), [sass-lint](https://github.com/sasstools/sass-lint), and [prettier](https://prettier.io/) to enforce code style. If you are going to do any non-trivial development you should set up your IDE to automatically lint and fix your code as you make changes.
+
+#### Updating dependencies due to CVEs
+
+Sometimes a scanner flags an issue with a dependency of the console, if you want to fix it with minimal effort, follow these steps:
+
+1. From the web-console directory run `npm audit` to get a list of dependencies with issues as reported by npm. Make sure that whatever CVE leads you to follow these steps is also being flagged by npm (it almost always is).
+2. Run `npm audit --fix` to fix the issues, npm will bump the dependencies minimally.
+3. Run `script/licenses` to update the Druid license file with the changes from the audit fix command.
+4. Bonus points: start the console with `npm start` and make sure it loads and basically works. CI tests will also do that but it's good practice to verify yourself first.
+5. Commit the changes in a branch and make a pull request.
 
 #### Configuring WebStorm
 
@@ -59,7 +69,7 @@ The console relies on [eslint](https://eslint.org) (and various plugins), [sass-
 
 - Install `dbaeumer.vscode-eslint` extension
 - Install `esbenp.prettier-vscode` extension
-- Select `Open User Settings (JSON)` from the editor commnads (`Ctrl+Shift+P` or `Comand+Shift+P`) and set the following:
+- Select `Open User Settings (JSON)` from the editor commands (`Ctrl+Shift+P` or `Command+Shift+P`) and set the following:
 
   ```json
     "editor.defaultFormatter": "esbenp.prettier-vscode",
@@ -83,7 +93,7 @@ You could also run fixers individually:
 
 ### Updating the list of license files
 
-If you change the dependencies of the console in any way please run `script/licenses` (from the web-console directory).
+If you change the dependencies of the console in any way, please run `script/licenses` (from the web-console directory).
 It will analyze the changes and update the `../licenses` file as needed.
 
 Please be conscious of not introducing dependencies on packages with Apache incompatible licenses.

@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -33,8 +34,9 @@ import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.ServerView;
 import org.apache.druid.client.TimelineServerView;
+import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.discovery.DiscoveryDruidNode;
-import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
@@ -79,6 +81,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
@@ -121,6 +124,7 @@ public class CalciteTests
   public static final String BROADCAST_DATASOURCE = "broadcast";
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
   public static final String RESTRICTED_DATASOURCE = "restrictedDatasource_m1_is_6";
+  public static final String RESTRICTED_BROADCAST_DATASOURCE = "restrictedBroadcastDatasource_m1_is_6";
   public static final String FORBIDDEN_DESTINATION = "forbiddenDestination";
   public static final String SOME_DATASOURCE = "some_datasource";
   public static final String SOME_DATSOURCE_ESCAPED = "some\\_datasource";
@@ -138,14 +142,17 @@ public class CalciteTests
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
   public static final Policy POLICY_NO_RESTRICTION_SUPERUSER = NoRestrictionPolicy.instance();
-  public static final Policy POLICY_RESTRICTION = RowFilterPolicy.from(BaseCalciteQueryTest.equality("m1", 6, ColumnType.LONG));
+  public static final Policy POLICY_RESTRICTION = RowFilterPolicy.from(
+      BaseCalciteQueryTest.equality("m1", 6, ColumnType.LONG)
+  );
   public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
   {
     @Override
     public Authorizer getAuthorizer(String name)
     {
       return (authenticationResult, resource, action) -> {
-        boolean readRestrictedTable = resource.getName().equals(RESTRICTED_DATASOURCE) && action.equals(Action.READ);
+        boolean readRestrictedTable = ImmutableSet.of(RESTRICTED_DATASOURCE, RESTRICTED_BROADCAST_DATASOURCE)
+                                                  .contains(resource.getName()) && action.equals(Action.READ);
 
         if (TEST_SUPERUSER_NAME.equals(authenticationResult.getIdentity())) {
           return readRestrictedTable ? Access.allowWithRestriction(POLICY_NO_RESTRICTION_SUPERUSER) : Access.OK;
@@ -189,7 +196,8 @@ public class CalciteTests
     public Authorizer getAuthorizer(String name)
     {
       return (authenticationResult, resource, action) -> {
-        boolean readRestrictedTable = resource.getName().equals(RESTRICTED_DATASOURCE) && action.equals(Action.READ);
+        boolean readRestrictedTable = ImmutableSet.of(RESTRICTED_DATASOURCE, RESTRICTED_BROADCAST_DATASOURCE)
+                                                  .contains(resource.getName()) && action.equals(Action.READ);
 
         if (TEST_SUPERUSER_NAME.equals(authenticationResult.getIdentity())) {
           return readRestrictedTable ? Access.allowWithRestriction(POLICY_NO_RESTRICTION_SUPERUSER) : Access.OK;
@@ -280,7 +288,20 @@ public class CalciteTests
       final QueryRunnerFactoryConglomerate conglomerate
   )
   {
-    return new NativeSqlEngine(createMockQueryLifecycleFactory(walker, conglomerate), getJsonMapper());
+    return createMockSqlEngine(walker, conglomerate, null);
+  }
+
+  public static NativeSqlEngine createMockSqlEngine(
+      final QuerySegmentWalker walker,
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final SqlStatementFactory sqlStatementFactory
+  )
+  {
+    return new NativeSqlEngine(
+        createMockQueryLifecycleFactory(walker, conglomerate),
+        getJsonMapper(),
+        sqlStatementFactory
+    );
   }
 
   public static QueryLifecycleFactory createMockQueryLifecycleFactory(
@@ -400,17 +421,17 @@ public class CalciteTests
 
     final DruidNode overlordNode = new DruidNode("test-overlord", "dummy", false, 8090, null, true, false);
 
-    final DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
-        new FakeHttpClient(),
-        provider,
-        NodeRole.COORDINATOR,
-        "/simple/leader"
-    )
+    final CoordinatorClient coordinatorClient = new NoopCoordinatorClient()
     {
       @Override
-      public String findCurrentLeader()
+      public ListenableFuture<URI> findCurrentLeader()
       {
-        return coordinatorNode.getHostAndPortToUse();
+        try {
+          return Futures.immediateFuture(new URI(coordinatorNode.getHostAndPortToUse()));
+        }
+        catch (URISyntaxException e) {
+          throw new RuntimeException(e);
+        }
       }
     };
 
@@ -463,15 +484,14 @@ public class CalciteTests
     return new SystemSchema(
         druidSchema,
         new MetadataSegmentView(
-            druidLeaderClient,
-            getJsonMapper(),
+            coordinatorClient,
             new BrokerSegmentWatcherConfig(),
             BrokerSegmentMetadataCacheConfig.create()
         ),
         timelineServerView,
         new FakeServerInventoryView(),
         authorizerMapper,
-        druidLeaderClient,
+        coordinatorClient,
         overlordClient,
         provider,
         getJsonMapper()
@@ -522,7 +542,7 @@ public class CalciteTests
   /**
    * A fake {@link DruidNodeDiscoveryProvider} for {@link #createMockSystemSchema}.
    */
-  private static class FakeDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
+  public static class FakeDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
   {
     private final Map<NodeRole, FakeDruidNodeDiscovery> nodeDiscoveries;
 
@@ -625,9 +645,9 @@ public class CalciteTests
     }
 
     @Override
-    public void registerServerRemovedCallback(
+    public void registerServerCallback(
         Executor exec,
-        ServerView.ServerRemovedCallback callback
+        ServerView.ServerCallback callback
     )
     {
       throw new UnsupportedOperationException();

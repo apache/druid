@@ -22,11 +22,22 @@ package org.apache.druid.segment.virtual;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import org.apache.druid.common.guava.SettableSupplier;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.DoubleDimensionSchema;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.segment.FrameSegment;
+import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -45,29 +56,42 @@ import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.IncrementalIndexSegment;
+import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
+import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.RowAdapters;
+import org.apache.druid.segment.RowBasedSegment;
+import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.TestObjectColumnSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.utils.CloseableUtils;
+import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -131,6 +155,10 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
     CloseableUtils.closeAndSuppressExceptions(CLOSER, throwable -> {
     });
   }
+
+  @Rule
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+
 
   @Test
   public void test_single_value_string_bindings()
@@ -608,7 +636,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_incrementalIndexStringSelector() throws IndexSizeExceededException
+  public void test_incrementalIndexStringSelector()
   {
     // This test covers a regression caused by ColumnCapabilites.isDictionaryEncoded not matching the value of
     // DimensionSelector.nameLookupPossibleInAdvance in the indexers of an IncrementalIndex, which resulted in an
@@ -671,7 +699,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_incrementalIndexStringSelectorCast() throws IndexSizeExceededException
+  public void test_incrementalIndexStringSelectorCast()
   {
     IncrementalIndexSchema schema = IncrementalIndexSchema.builder()
                                                           .withTimestampSpec(new TimestampSpec("time", "millis", DateTimes.nowUtc()))
@@ -704,6 +732,385 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
       }
 
       Assert.assertEquals(1, rowCount);
+    }
+  }
+
+  @Test
+  public void testCastSelectors() throws IOException
+  {
+    final RowSignature rowSignature = RowSignature.builder()
+                                                  .add("string", ColumnType.STRING)
+                                                  .add("multiString", ColumnType.STRING)
+                                                  .add("long", ColumnType.LONG)
+                                                  .add("double", ColumnType.DOUBLE)
+                                                  .add("stringArray", ColumnType.STRING_ARRAY)
+                                                  .add("longArray", ColumnType.LONG_ARRAY)
+                                                  .add("doubleArray", ColumnType.DOUBLE_ARRAY)
+                                                  .build();
+    final DateTime start = DateTimes.nowUtc();
+    List<InputRow> rows = List.of(
+        new ListBasedInputRow(
+            rowSignature,
+            start,
+            rowSignature.getColumnNames(),
+            List.of(
+                "a",
+                List.of("a1", "a2"),
+                1L,
+                1.1,
+                new Object[]{"a1", "a2"},
+                new Object[]{1L, 1L},
+                new Object[]{1.1, 1.1}
+            )
+        ),
+        new ListBasedInputRow(
+            rowSignature,
+            start.plusMinutes(1),
+            rowSignature.getColumnNames(),
+            List.of(
+                "b",
+                List.of("b1"),
+                2L,
+                2.2,
+                new Object[]{"2.2"},
+                new Object[]{2L},
+                new Object[]{2.2}
+            )
+        ),
+        new ListBasedInputRow(
+            rowSignature,
+            start.plusMinutes(2),
+            rowSignature.getColumnNames(),
+            Lists.newArrayList(
+                null,
+                List.of(),
+                null,
+                null,
+                null,
+                null,
+                null
+            )
+        ),
+        new ListBasedInputRow(
+            rowSignature,
+            start.plusMinutes(3),
+            rowSignature.getColumnNames(),
+            List.of(
+                "4",
+                Lists.newArrayList(null, null, "4.4"),
+                4L,
+                4.4,
+                new Object[0],
+                new Object[0],
+                new Object[0]
+            )
+        )
+    );
+
+    final IncrementalIndexSchema schema =
+        IncrementalIndexSchema.builder()
+                              .withDimensionsSpec(
+                                  DimensionsSpec.builder()
+                                                .setDimensions(
+                                                    List.of(
+                                                        new StringDimensionSchema("string"),
+                                                        new StringDimensionSchema("multiString"),
+                                                        new LongDimensionSchema("long"),
+                                                        new DoubleDimensionSchema("double")
+                                                    )
+                                                )
+                                                .useSchemaDiscovery(true)
+                                                .build()
+                              )
+                              .build();
+
+    IndexBuilder bob = IndexBuilder.create()
+                                   .schema(schema)
+                                   .tmpDir(temporaryFolder.newFolder())
+                                   .rows(rows);
+
+    try (final Closer closer = Closer.create()) {
+      final List<Segment> segments = List.of(
+          new IncrementalIndexSegment(bob.buildIncrementalIndex(), SegmentId.dummy("test")),
+          new QueryableIndexSegment(bob.buildMMappedIndex(), SegmentId.dummy("test")),
+          new RowBasedSegment<>(Sequences.simple(rows), RowAdapters.standardRow(), RowSignature.empty()),
+          new RowBasedSegment<>(Sequences.simple(rows), RowAdapters.standardRow(), rowSignature),
+          FrameTestUtil.cursorFactoryToFrameSegment(
+              new QueryableIndexCursorFactory(bob.buildMMappedIndex()),
+              FrameType.latestRowBased()
+          ),
+          FrameTestUtil.cursorFactoryToFrameSegment(
+              new QueryableIndexCursorFactory(bob.buildMMappedIndex()),
+              FrameType.latestColumnar()
+          )
+      );
+
+      for (Segment segment : segments) {
+        final CursorFactory cursorFactory = segment.as(CursorFactory.class);
+        Assert.assertNotNull(cursorFactory);
+        final CursorHolder holder = closer.register(cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN));
+
+        final Cursor cursor = holder.asCursor();
+        final Offset offset = new SimpleAscendingOffset(rows.size());
+
+        ColumnValueSelector baseStringSelector = cursor.getColumnSelectorFactory().makeColumnValueSelector("string");
+        ColumnValueSelector baseMultiStringSelector = cursor.getColumnSelectorFactory().makeColumnValueSelector("multiString");
+        ColumnValueSelector baseLongSelector = cursor.getColumnSelectorFactory().makeColumnValueSelector("long");
+        ColumnValueSelector baseDoubleSelector = cursor.getColumnSelectorFactory().makeColumnValueSelector("double");
+        ColumnValueSelector baseStringArraySelector = cursor.getColumnSelectorFactory().makeColumnValueSelector("stringArray");
+        ColumnValueSelector baseLongArraySelector = cursor.getColumnSelectorFactory().makeColumnValueSelector("longArray");
+        ColumnValueSelector baseDoubleArraySelector = cursor.getColumnSelectorFactory().makeColumnValueSelector("doubleArray");
+
+        ColumnValueSelector stringSelectorToLong = ExpressionSelectors.castColumnValueSelector(
+            offset::getOffset,
+            baseStringSelector,
+            ColumnType.STRING,
+            ColumnType.LONG
+        );
+        ColumnValueSelector stringSelectorToDouble = ExpressionSelectors.castColumnValueSelector(
+            offset::getOffset,
+            baseStringSelector,
+            ColumnType.STRING,
+            ColumnType.DOUBLE
+        );
+        ColumnValueSelector stringToArraySelector = ExpressionSelectors.castColumnValueSelector(
+            offset::getOffset,
+            baseStringSelector,
+            ColumnType.STRING,
+            ColumnType.STRING_ARRAY
+        );
+
+        ColumnValueSelector multiStringToStringSelector = ExpressionSelectors.castColumnValueSelector(
+            offset::getOffset,
+            baseMultiStringSelector,
+            ColumnType.STRING,
+            ColumnType.STRING
+        );
+
+        ColumnValueSelector multiStringToStringArraySelector = ExpressionSelectors.castColumnValueSelector(
+            offset::getOffset,
+            baseMultiStringSelector,
+            ColumnType.STRING,
+            ColumnType.STRING_ARRAY
+        );
+
+        ColumnValueSelector longToStringSelector = ExpressionSelectors.castColumnValueSelector(
+            offset::getOffset,
+            baseLongSelector,
+            ColumnType.LONG,
+            ColumnType.STRING
+        );
+
+        ColumnValueSelector longToDoubleArraySelector = ExpressionSelectors.castColumnValueSelector(
+            offset::getOffset,
+            baseLongSelector,
+            ColumnType.LONG,
+            ColumnType.DOUBLE_ARRAY
+        );
+
+        ColumnValueSelector doubleToStringSelector = ExpressionSelectors.castColumnValueSelector(
+            offset::getOffset,
+            baseDoubleSelector,
+            ColumnType.DOUBLE,
+            ColumnType.STRING
+        );
+
+        ColumnValueSelector doubleToLongArraySelector = ExpressionSelectors.castColumnValueSelector(
+            offset::getOffset,
+            baseDoubleSelector,
+            ColumnType.DOUBLE,
+            ColumnType.LONG_ARRAY
+        );
+
+        ColumnValueSelector stringArrayToStringSelector = ExpressionSelectors.castColumnValueSelector(
+            offset::getOffset,
+            baseStringArraySelector,
+            ColumnType.STRING_ARRAY,
+            ColumnType.STRING
+        );
+
+        ColumnValueSelector stringArrayToLongArraySelector = ExpressionSelectors.castColumnValueSelector(
+            offset::getOffset,
+            baseStringArraySelector,
+            ColumnType.STRING_ARRAY,
+            ColumnType.LONG_ARRAY
+        );
+
+        ColumnValueSelector stringArrayToDoubleSelector = ExpressionSelectors.castColumnValueSelector(
+            offset::getOffset,
+            baseStringArraySelector,
+            ColumnType.STRING_ARRAY,
+            ColumnType.DOUBLE
+        );
+
+        ColumnValueSelector longArrayToStringSelector = ExpressionSelectors.castColumnValueSelector(
+            offset::getOffset,
+            baseLongArraySelector,
+            ColumnType.LONG_ARRAY,
+            ColumnType.STRING
+        );
+
+        ColumnValueSelector longArrayToDoubleArraySelector = ExpressionSelectors.castColumnValueSelector(
+            offset::getOffset,
+            baseLongArraySelector,
+            ColumnType.LONG_ARRAY,
+            ColumnType.DOUBLE_ARRAY
+        );
+
+        ColumnValueSelector doubleArrayToStringArraySelector = ExpressionSelectors.castColumnValueSelector(
+            offset::getOffset,
+            baseDoubleArraySelector,
+            ColumnType.DOUBLE_ARRAY,
+            ColumnType.STRING_ARRAY
+        );
+
+        ColumnValueSelector doubleArrayToLongSelector = ExpressionSelectors.castColumnValueSelector(
+            offset::getOffset,
+            baseDoubleArraySelector,
+            ColumnType.DOUBLE_ARRAY,
+            ColumnType.LONG
+        );
+
+        // first row
+        // "a"
+        Assert.assertNull(stringSelectorToLong.getObject());
+        Assert.assertNull(stringSelectorToDouble.getObject());
+        Assert.assertArrayEquals(new Object[]{"a"}, (Object[]) stringToArraySelector.getObject());
+
+        // ["a1", "a2"]
+        Assert.assertNull(multiStringToStringSelector.getObject());
+        Assert.assertArrayEquals(new Object[]{"a1", "a2"}, (Object[]) multiStringToStringArraySelector.getObject());
+
+        // 1
+        Assert.assertEquals("1", longToStringSelector.getObject());
+        Assert.assertArrayEquals(new Object[]{1.0}, (Object[]) longToDoubleArraySelector.getObject());
+
+        // 1.1
+        Assert.assertEquals("1.1", doubleToStringSelector.getObject());
+        Assert.assertArrayEquals(new Object[]{1L}, (Object[]) doubleToLongArraySelector.getObject());
+
+        // ["a1", "a2"]
+        Assert.assertNull(stringArrayToStringSelector.getObject());
+        Assert.assertArrayEquals(new Object[]{null, null}, (Object[]) stringArrayToLongArraySelector.getObject());
+        Assert.assertNull(stringArrayToDoubleSelector.getObject());
+
+        // [1, 1]
+        Assert.assertNull(longArrayToStringSelector.getObject());
+        Assert.assertArrayEquals(new Object[]{1.0, 1.0}, (Object[]) longArrayToDoubleArraySelector.getObject());
+
+        // [1.1, 1.1]
+        Assert.assertArrayEquals(new Object[]{"1.1", "1.1"}, (Object[]) doubleArrayToStringArraySelector.getObject());
+        Assert.assertNull(doubleArrayToLongSelector.getObject());
+
+        cursor.advance();
+        offset.increment();
+
+        // first row
+        // "b"
+        Assert.assertNull(stringSelectorToLong.getObject());
+        Assert.assertNull(stringSelectorToDouble.getObject());
+        Assert.assertArrayEquals(new Object[]{"b"}, (Object[]) stringToArraySelector.getObject());
+
+        // ["b1"]
+        Assert.assertEquals("b1", multiStringToStringSelector.getObject());
+        Assert.assertArrayEquals(new Object[]{"b1"}, (Object[]) multiStringToStringArraySelector.getObject());
+
+        // 2
+        Assert.assertEquals("2", longToStringSelector.getObject());
+        Assert.assertArrayEquals(new Object[]{2.0}, (Object[]) longToDoubleArraySelector.getObject());
+
+        // 2.2
+        Assert.assertEquals("2.2", doubleToStringSelector.getObject());
+        Assert.assertArrayEquals(new Object[]{2L}, (Object[]) doubleToLongArraySelector.getObject());
+
+        // ["2.2"]
+        Assert.assertEquals("2.2", stringArrayToStringSelector.getObject());
+        Assert.assertArrayEquals(new Object[]{2L}, (Object[]) stringArrayToLongArraySelector.getObject());
+        Assert.assertEquals(2.2, stringArrayToDoubleSelector.getObject());
+
+        // [2]
+        Assert.assertEquals("2", longArrayToStringSelector.getObject());
+        Assert.assertArrayEquals(new Object[]{2.0}, (Object[]) longArrayToDoubleArraySelector.getObject());
+
+        // [2.2]
+        Assert.assertArrayEquals(new Object[]{"2.2"}, (Object[]) doubleArrayToStringArraySelector.getObject());
+        Assert.assertEquals(2L, doubleArrayToLongSelector.getObject());
+
+        cursor.advance();
+        offset.increment();
+
+
+        // third row
+        // null
+        Assert.assertNull(stringSelectorToLong.getObject());
+        Assert.assertNull(stringSelectorToDouble.getObject());
+        Assert.assertNull(stringToArraySelector.getObject());
+
+        // []
+        Assert.assertNull(multiStringToStringSelector.getObject());
+        if (segment instanceof IncrementalIndexSegment || segment instanceof QueryableIndexSegment || segment instanceof FrameSegment) {
+          Assert.assertNull(multiStringToStringSelector.getObject());
+        } else {
+          // this one is kind of weird, the row based segment selector does not convert the empty list into null like
+          // the others do
+          Assert.assertArrayEquals(new Object[0], (Object[]) multiStringToStringArraySelector.getObject());
+        }
+
+        // null
+        Assert.assertNull(longToStringSelector.getObject());
+        Assert.assertNull(longToDoubleArraySelector.getObject());
+
+        // null
+        Assert.assertNull(doubleToStringSelector.getObject());
+        Assert.assertNull(doubleToLongArraySelector.getObject());
+
+        // null
+        Assert.assertNull(stringArrayToStringSelector.getObject());
+        Assert.assertNull(stringArrayToLongArraySelector.getObject());
+        Assert.assertNull(stringArrayToDoubleSelector.getObject());
+
+        // null
+        Assert.assertNull(longArrayToStringSelector.getObject());
+        Assert.assertNull(longArrayToDoubleArraySelector.getObject());
+
+        // null
+        Assert.assertNull(doubleArrayToStringArraySelector.getObject());
+        Assert.assertNull(doubleArrayToLongSelector.getObject());
+
+        cursor.advance();
+        offset.increment();
+
+        // fourth row
+        // "4"
+        Assert.assertEquals(4L, stringSelectorToLong.getObject());
+        Assert.assertEquals(4.0, stringSelectorToDouble.getObject());
+        Assert.assertArrayEquals(new Object[]{"4"}, (Object[]) stringToArraySelector.getObject());
+
+        // [null, null, 4.4]
+        Assert.assertNull(multiStringToStringSelector.getObject());
+        Assert.assertArrayEquals(new Object[]{null, null, "4.4"}, (Object[]) multiStringToStringArraySelector.getObject());
+
+        // 4
+        Assert.assertEquals("4", longToStringSelector.getObject());
+        Assert.assertArrayEquals(new Object[]{4.0}, (Object[]) longToDoubleArraySelector.getObject());
+
+        // 4.4
+        Assert.assertEquals("4.4", doubleToStringSelector.getObject());
+        Assert.assertArrayEquals(new Object[]{4L}, (Object[]) doubleToLongArraySelector.getObject());
+
+        // []
+        Assert.assertNull(stringArrayToStringSelector.getObject());
+        Assert.assertArrayEquals(new Object[0], (Object[]) stringArrayToLongArraySelector.getObject());
+        Assert.assertNull(stringArrayToDoubleSelector.getObject());
+
+        // []
+        Assert.assertNull(longArrayToStringSelector.getObject());
+        Assert.assertArrayEquals(new Object[0], (Object[]) longArrayToDoubleArraySelector.getObject());
+
+        // []
+        Assert.assertArrayEquals(new Object[0], (Object[]) doubleArrayToStringArraySelector.getObject());
+        Assert.assertNull(doubleArrayToLongSelector.getObject());
+      }
     }
   }
 

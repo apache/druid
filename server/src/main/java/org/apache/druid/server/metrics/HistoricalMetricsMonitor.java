@@ -23,6 +23,8 @@ import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.client.DruidServerConfig;
+import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
@@ -33,6 +35,7 @@ import org.apache.druid.timeline.DataSegment;
 
 import java.util.Map;
 
+@LoadScope(roles = NodeRole.HISTORICAL_JSON_NAME)
 public class HistoricalMetricsMonitor extends AbstractMonitor
 {
   private final DruidServerConfig serverConfig;

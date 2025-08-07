@@ -204,6 +204,7 @@ import {
   TransformMessage,
   TuningMessage,
 } from './info-messages';
+import { INGESTION_SPEC_COMPLETIONS } from './ingestion-spec-completions';
 import { ParseDataTable } from './parse-data-table/parse-data-table';
 import {
   ParseTimeTable,
@@ -3598,6 +3599,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               this.updateSpec(s);
             }}
             height="100%"
+            jsonCompletions={INGESTION_SPEC_COMPLETIONS}
           />
         </div>
         <div className="control">

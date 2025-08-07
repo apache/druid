@@ -22,14 +22,14 @@ package org.apache.druid.msq.exec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
-import org.apache.druid.msq.kernel.FrameContext;
-import org.apache.druid.msq.kernel.FrameProcessorFactory;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.server.DruidNode;
 
+import java.io.Closeable;
 import java.io.File;
 
 /**
@@ -37,7 +37,7 @@ import java.io.File;
  *
  * Each context is scoped to a {@link Worker} and is shared across all {@link WorkOrder} run by that worker.
  */
-public interface WorkerContext
+public interface WorkerContext extends Closeable
 {
   /**
    * Query ID for this context.
@@ -58,8 +58,18 @@ public interface WorkerContext
   Injector injector();
 
   /**
+   * Emit the metric in the {@link MSQMetriceEventBuilder} using a {@link ServiceEmitter}. Might sets up addtional
+   * context dependant dimensions.
+   */
+  void emitMetric(MSQMetriceEventBuilder metricBuilder);
+
+  /**
    * Callback from the worker implementation to "register" the worker. Used in
    * the indexer to set up the task chat services.
+   *
+   * @param worker instance that is running with this context
+   * @param closer closer that is tied to the lifecycle of the worker. Any registration done by this method should
+   *               be un-done by closeables attached to the closer.
    */
   void registerWorker(Worker worker, Closer closer);
 
@@ -87,7 +97,7 @@ public interface WorkerContext
   File tempDir();
 
   /**
-   * Create a context with useful objects required by {@link FrameProcessorFactory#makeProcessors}.
+   * Create a context with useful objects required by {@link StageProcessor#makeProcessors}.
    */
   FrameContext frameContext(WorkOrder workOrder);
 
@@ -101,10 +111,16 @@ public interface WorkerContext
    */
   DruidNode selfNode();
 
+  /**
+   * Returns the factory for {@link DataServerQueryHandler} from the context. Used to query realtime tasks.
+   */
   DataServerQueryHandlerFactory dataServerQueryHandlerFactory();
 
   /**
    * Whether to include all counters in reports. See {@link MultiStageQueryContext#CTX_INCLUDE_ALL_COUNTERS} for detail.
    */
   boolean includeAllCounters();
+
+  @Override
+  void close();
 }

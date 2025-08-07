@@ -20,8 +20,8 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.IngestionTestBase;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -77,7 +77,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
           @Override
           public ListenableFuture<TaskStatus> run(Task task)
           {
-            return Futures.immediateFuture(TaskStatus.success(task.getId()));
+            return SettableFuture.create();
           }
         },
         createActionClientFactory(),
@@ -398,6 +398,78 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
             )
         )
     );
+  }
+
+  @Test(timeout = 20_000L)
+  public void test_shutdown_then_manageQueuedTasks_blocks_syncFromStorage_and_forcesTaskRemoval()
+  {
+    taskQueue.setActive(true);
+
+    final Task task1 = createTask("t1");
+    taskQueue.add(task1);
+
+    // shutdown the task ahead of time to mark it as isComplete
+    taskQueue.shutdown(task1.getId(), "shutdown");
+
+    // verify that managedQueuedTasks() called before syncFromStorage() forces the sync to block
+    // but ensures that syncFromStorage() is able to remove the task
+    ActionVerifier.verifyThat(
+        update(
+            () -> taskQueue.manageQueuedTasks()
+        ).withEndState(
+            () -> Assert.assertEquals(
+                Optional.of(TaskStatus.failure(task1.getId(), "shutdown")),
+                taskQueue.getTaskStatus(task1.getId())
+            )
+        )
+    ).blocks(
+        update(
+            () -> taskQueue.syncFromStorage()
+        ).withEndState(
+            () -> Assert.assertEquals(
+                Optional.absent(),
+                taskQueue.getActiveTask(task1.getId())
+            )
+        )
+    );
+
+    Assert.assertEquals(Optional.absent(), taskQueue.getActiveTask(task1.getId()));
+  }
+
+  @Test(timeout = 20_000L)
+  public void test_shutdown_then_syncFromStorage_blocks_manageQueuedTasks_and_forcesTaskRemoval()
+  {
+    taskQueue.setActive(true);
+
+    final Task task1 = createTask("t1");
+    taskQueue.add(task1);
+
+    // shutdown the task ahead of time to mark it as isComplete
+    taskQueue.shutdown(task1.getId(), "shutdown");
+
+    // verify that syncFromStorage() called before managedQueuedTasks() forces the sync to block
+    // but ensures that syncFromStorage() is able to remove the task
+    ActionVerifier.verifyThat(
+        update(
+            () -> taskQueue.syncFromStorage()
+        ).withEndState(
+            () -> Assert.assertEquals(
+                Optional.absent(),
+                taskQueue.getActiveTask(task1.getId())
+            )
+        )
+    ).blocks(
+        update(
+            () -> taskQueue.manageQueuedTasks()
+        ).withEndState(
+            () -> Assert.assertEquals(
+                Optional.absent(),
+                taskQueue.getActiveTask(task1.getId())
+            )
+        )
+    );
+
+    Assert.assertEquals(Optional.absent(), taskQueue.getActiveTask(task1.getId()));
   }
 
   private UpdateAction update(Action action)

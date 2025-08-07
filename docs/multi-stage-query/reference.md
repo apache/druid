@@ -111,14 +111,16 @@ s3://export-bucket/export/query-6564a32f-2194-423a-912e-eead470a37c4-worker0-par
 Keep the following in mind when using EXTERN to export rows:
 - Only INSERT statements are supported.
 - Only `CSV` format is supported as an export format.
-- Partitioning (`PARTITIONED BY`) and clustering (`CLUSTERED BY`) aren't supported with EXTERN statements.
+- Partitioning (PARTITIONED BY) and clustering (CLUSTERED BY) aren't supported with EXTERN statements.
 - You can export to Amazon S3, Google GCS, or local storage.
 - The destination provided should contain no other files or directories.
 
 When you export data, use the `rowsPerPage` context parameter to restrict the size of exported files.
 When the number of rows in the result set exceeds the value of the parameter, Druid splits the output into multiple files.
+The following statement shows the format of a SQL query using EXTERN to export rows:
 
 ```sql
+SET rowsPerPage=<number_of_rows>;
 INSERT INTO
   EXTERN(<destination function>)
 AS CSV
@@ -126,6 +128,9 @@ SELECT
   <column>
 FROM <table>
 ```
+
+For details on applying context parameters using SET, see [SET](../querying/sql.md#set).
+
 
 ##### S3 - Amazon S3
 
@@ -381,21 +386,11 @@ For more information about clustering, see [Clustering](concepts.md#clustering).
 
 ## Context parameters
 
-In addition to the Druid SQL [context parameters](../querying/sql-query-context.md), the multi-stage query task engine accepts certain context parameters that are specific to it.
+The multi-stage query task engine supports the [SQL context parameters](../querying/sql-query-context.md), as well as its own context parameters described in this section. Use these parameters to tailor how Druid executes your query.
 
-Use context parameters alongside your queries to customize the behavior of the query. If you're using the API, include the context parameters in the query context when you submit a query:
+You can specify the context parameters in SELECT, INSERT, or REPLACE statements.
 
-```json
-{
-  "query": "SELECT 1 + 1",
-  "context": {
-    "<key>": "<value>",
-    "maxNumTasks": 3
-  }
-}
-```
-
-If you're using the web console, you can specify the context parameters through various UI options.
+For detailed instructions on configuring query context parameters, refer to [Set query context](../querying/query-context.md).
 
 The following table lists the context parameters for the MSQ task engine:
 
@@ -408,7 +403,7 @@ The following table lists the context parameters for the MSQ task engine:
 | `sqlJoinAlgorithm` | SELECT, INSERT, REPLACE<br /><br />Algorithm to use for JOIN. Use `broadcast` (the default) for broadcast hash join or `sortMerge` for sort-merge join. Affects all JOIN operations in the query. This is a hint to the MSQ engine and the actual joins in the query may proceed in a different way than specified. See [Joins](#joins) for more details. | `broadcast` |
 | `rowsInMemory` | INSERT or REPLACE<br /><br />Maximum number of rows to store in memory at once before flushing to disk during the segment generation process. Ignored for non-INSERT queries. In most cases, use the default value. You may need to override the default if you run into one of the [known issues](./known-issues.md) around memory usage. | 100,000 |
 | `segmentSortOrder` | INSERT or REPLACE<br /><br />Normally, Druid sorts rows in individual segments using `__time` first, followed by the [CLUSTERED BY](#clustered-by) clause. When you set `segmentSortOrder`, Druid uses the order from this context parameter instead. Provide the column list as comma-separated values or as a JSON array in string form.<br />< br/>For example, consider an INSERT query that uses `CLUSTERED BY country` and has `segmentSortOrder` set to `__time,city,country`. Within each time chunk, Druid assigns rows to segments based on `country`, and then within each of those segments, Druid sorts those rows by `__time` first, then `city`, then `country`. | empty list |
-| `forceSegmentSortByTime` | INSERT or REPLACE<br /><br />When set to `true` (the default), Druid prepends `__time` to [CLUSTERED BY](#clustered-by) when determining the sort order for individual segments. Druid also requires that `segmentSortOrder`, if provided, starts with `__time`.<br /><br />When set to `false`, Druid uses the [CLUSTERED BY](#clustered-by) alone to determine the sort order for individual segments, and does not require that `segmentSortOrder` begin with `__time`. Setting this parameter to `false` is an experimental feature; see [Sorting](../ingestion/partitioning#sorting) for details. | `true` |
+| `forceSegmentSortByTime` | INSERT or REPLACE<br /><br />When set to `true` (the default), Druid prepends `__time` to [CLUSTERED BY](#clustered-by) when determining the sort order for individual segments. Druid also requires that `segmentSortOrder`, if provided, starts with `__time`.<br /><br />When set to `false`, Druid uses the [CLUSTERED BY](#clustered-by) alone to determine the sort order for individual segments, and does not require that `segmentSortOrder` begin with `__time`. Setting this parameter to `false` is an experimental feature; see [Sorting](../ingestion/partitioning.md#sorting) for details. | `true` |
 | `maxParseExceptions`| SELECT, INSERT, REPLACE<br /><br />Maximum number of parse exceptions that are ignored while executing the query before it stops with `TooManyWarningsFault`. To ignore all the parse exceptions, set the value to -1. | 0 |
 | `rowsPerSegment` | INSERT or REPLACE<br /><br />The number of rows per segment to target. The actual number of rows per segment may be somewhat higher or lower than this number. In most cases, use the default. For general information about sizing rows per segment, see [Segment Size Optimization](../operations/segment-optimization.md). | 3,000,000 |
 | `indexSpec` | INSERT or REPLACE<br /><br />An [`indexSpec`](../ingestion/ingestion-spec.md#indexspec) to use when generating segments. May be a JSON string or object. See [Front coding](../ingestion/ingestion-spec.md#front-coding) for details on configuring an `indexSpec` with front coding. | See [`indexSpec`](../ingestion/ingestion-spec.md#indexspec). |
@@ -501,10 +496,15 @@ When using the sort-merge algorithm, keep the following in mind:
 
 - All join types are supported with `sortMerge`: LEFT, RIGHT, INNER, FULL, and CROSS.
 
-The following example  runs using a single sort-merge join stage that receives `eventstream`
-(partitioned on `user_id`) and `users` (partitioned on `id`) as inputs. There is no limit on the size of either input.
+The following query runs a single sort-merge join stage that takes the following inputs:
+* `eventstream` partitioned on `user_id`
+* `users` partitioned on `id`
+
+There is no limit on the size of either input.
+The SET command assigns the `sqlJoinAlgorithm` context parameter so that Druid uses the sort-merge join algorithm for the query.
 
 ```sql
+SET sqlJoinAlgorithm='sortMerge';
 REPLACE INTO eventstream_enriched
 OVERWRITE ALL
 SELECT
@@ -518,8 +518,6 @@ LEFT JOIN users ON eventstream.user_id = users.id
 PARTITIONED BY HOUR
 CLUSTERED BY user
 ```
-
-The context parameter that sets `sqlJoinAlgorithm` to `sortMerge` is not shown in the above example.
 
 ## Durable storage
 

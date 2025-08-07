@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.math.LongMath;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
@@ -461,6 +462,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
         (ClusterByStatisticsCollectorImpl) ClusterByStatisticsCollectorImpl.create(
             CLUSTER_BY_XYZ_BUCKET_BY_X,
             SIGNATURE,
+            FrameType.latestRowBased(),
             35000,
             500,
             false,
@@ -490,6 +492,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
   {
     ClusterByStatisticsCollectorImpl.create(ClusterBy.none(),
                                             RowSignature.empty(),
+                                            FrameType.latestRowBased(),
                                             0,
                                             5,
                                             false,
@@ -501,6 +504,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
   {
     ClusterByStatisticsCollector clusterByStatisticsCollector = ClusterByStatisticsCollectorImpl.create(ClusterBy.none(),
                                                                                                         RowSignature.empty(),
+                                                                                                        FrameType.latestRowBased(),
                                                                                                         5,
                                                                                                         0,
                                                                                                         false,
@@ -513,6 +517,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
   {
     ClusterByStatisticsCollector clusterByStatisticsCollector = ClusterByStatisticsCollectorImpl.create(ClusterBy.none(),
                                                                                                         RowSignature.empty(),
+                                                                                                        FrameType.latestRowBased(),
                                                                                                         5,
                                                                                                         0,
                                                                                                         false,
@@ -525,6 +530,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
   {
     ClusterByStatisticsCollector clusterByStatisticsCollector = ClusterByStatisticsCollectorImpl.create(ClusterBy.none(),
                                                                                                         RowSignature.empty(),
+                                                                                                        FrameType.latestRowBased(),
                                                                                                         5,
                                                                                                         0,
                                                                                                         false, false);
@@ -536,6 +542,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
   {
     ClusterByStatisticsCollector clusterByStatisticsCollector = ClusterByStatisticsCollectorImpl.create(ClusterBy.none(),
                                                                                                         RowSignature.empty(),
+                                                                                                        FrameType.latestRowBased(),
                                                                                                         5,
                                                                                                         0,
                                                                                                         false,
@@ -548,6 +555,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
   {
     ClusterByStatisticsCollector clusterByStatisticsCollector = ClusterByStatisticsCollectorImpl.create(ClusterBy.none(),
                                                                                                         RowSignature.empty(),
+                                                                                                        FrameType.latestRowBased(),
                                                                                                         5,
                                                                                                         0,
                                                                                                         false,
@@ -560,6 +568,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
   {
     ClusterByStatisticsCollector clusterByStatisticsCollector = ClusterByStatisticsCollectorImpl.create(ClusterBy.none(),
                                                                                                         RowSignature.empty(),
+                                                                                                        FrameType.latestRowBased(),
                                                                                                         5,
                                                                                                         0,
                                                                                                         false,
@@ -644,8 +653,15 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
 
   private ClusterByStatisticsCollectorImpl makeCollector(final ClusterBy clusterBy, final boolean aggregate)
   {
-    return (ClusterByStatisticsCollectorImpl)
-        ClusterByStatisticsCollectorImpl.create(clusterBy, SIGNATURE, MAX_BYTES, MAX_BUCKETS, aggregate, false);
+    return (ClusterByStatisticsCollectorImpl) ClusterByStatisticsCollectorImpl.create(
+        clusterBy,
+        SIGNATURE,
+        FrameType.latestRowBased(),
+        MAX_BYTES,
+        MAX_BUCKETS,
+        aggregate,
+        false
+    );
   }
 
   private static void verifyPartitions(
@@ -657,7 +673,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
       final long expectedPartitionSize
   )
   {
-    final RowKeyReader keyReader = clusterBy.keyReader(SIGNATURE);
+    final RowKeyReader keyReader = clusterBy.keyReader(SIGNATURE, FrameType.latestRowBased());
 
     final int expectedNumberOfBuckets =
         sortedKeyWeights.keySet()
@@ -681,6 +697,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
   {
     return KeyTestUtils.createKey(
         KeyTestUtils.createKeySignature(clusterBy.getColumns(), SIGNATURE),
+        FrameType.latestRowBased(),
         objects
     );
   }
@@ -740,7 +757,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
       final int expectedNumberOfBuckets
   )
   {
-    final RowKeyReader keyReader = clusterBy.keyReader(SIGNATURE);
+    final RowKeyReader keyReader = clusterBy.keyReader(SIGNATURE, FrameType.latestRowBased());
 
     Assert.assertEquals(
         StringUtils.format("%s: number of buckets", testName),
@@ -823,7 +840,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
       final NavigableMap<RowKey, List<Integer>> sortedKeyWeights
   )
   {
-    final RowKeyReader keyReader = clusterBy.keyReader(SIGNATURE);
+    final RowKeyReader keyReader = clusterBy.keyReader(SIGNATURE, FrameType.latestRowBased());
     final List<ClusterByPartition> ranges = partitions.ranges();
 
     for (int i = 0; i < ranges.size(); i++) {
@@ -856,7 +873,7 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
       final long expectedPartitionSize
   )
   {
-    final RowKeyReader keyReader = clusterBy.keyReader(SIGNATURE);
+    final RowKeyReader keyReader = clusterBy.keyReader(SIGNATURE, FrameType.latestRowBased());
     final List<ClusterByPartition> ranges = partitions.ranges();
 
     // Compute actual number of rows per partition.

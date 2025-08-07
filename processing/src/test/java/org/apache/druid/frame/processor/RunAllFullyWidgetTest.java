@@ -161,7 +161,7 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
     final Frame frame =
         Iterables.getOnlyElement(
             FrameSequenceBuilder.fromCursorFactory(new QueryableIndexCursorFactory(TestIndex.getMMappedTestIndex()))
-                                .frameType(FrameType.ROW_BASED)
+                                .frameType(FrameType.latestRowBased())
                                 .frames()
                                 .toList()
         );

@@ -68,7 +68,7 @@ public class IncrementalIndexMultiValueSpecTest extends InitializedNullHandlingT
   }
 
   @Test
-  public void test() throws IndexSizeExceededException
+  public void test()
   {
     DimensionsSpec dimensionsSpec = new DimensionsSpec(
         Arrays.asList(

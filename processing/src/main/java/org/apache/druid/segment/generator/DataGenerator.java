@@ -27,7 +27,6 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.incremental.IncrementalIndex;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
@@ -207,12 +206,7 @@ public class DataGenerator
   public static void addStreamToIndex(Stream<InputRow> stream, IncrementalIndex index)
   {
     stream.forEachOrdered(row -> {
-      try {
-        index.add(row);
-      }
-      catch (IndexSizeExceededException e) {
-        throw new RuntimeException(e);
-      }
+      index.add(row);
     });
   }
 

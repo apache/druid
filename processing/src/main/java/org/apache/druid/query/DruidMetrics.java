@@ -36,12 +36,16 @@ public class DruidMetrics
   public static final String ID = "id";
   public static final String SUBQUERY_ID = "subQueryId";
   public static final String STATUS = "status";
+  public static final String ENGINE = "engine";
+  public static final String DURATION = "duration";
+  public static final String SUCCESS = "success";
 
   // Task dimensions
   public static final String TASK_ID = "taskId";
   public static final String GROUP_ID = "groupId";
   public static final String TASK_TYPE = "taskType";
   public static final String TASK_STATUS = "taskStatus";
+  public static final String DESCRIPTION = "description";
 
   // Ingestion dimensions
   public static final String PARTITIONING_TYPE = "partitioningType";
@@ -49,6 +53,7 @@ public class DruidMetrics
   public static final String TASK_ACTION_TYPE = "taskActionType";
   public static final String STREAM = "stream";
   public static final String PARTITION = "partition";
+  public static final String SUPERVISOR_ID = "supervisorId";
 
   public static final String TAGS = "tags";
 

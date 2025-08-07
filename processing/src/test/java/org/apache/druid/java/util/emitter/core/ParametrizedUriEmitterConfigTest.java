@@ -22,9 +22,6 @@ package org.apache.druid.java.util.emitter.core;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import org.apache.druid.utils.JvmUtils;
-import org.apache.druid.utils.RuntimeInfo;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -41,23 +38,12 @@ public class ParametrizedUriEmitterConfigTest
   {
     return Guice.createInjector(
         binder -> {
-          JvmUtils.resetTestsToDefaultRuntimeInfo();
-          binder.bind(RuntimeInfo.class)
-                .toInstance(JvmUtils.getRuntimeInfo());
-          binder.requestStaticInjection(JvmUtils.class);
-
           final ParametrizedUriEmitterConfig paramConfig = new ObjectMapper().convertValue(
               Emitters.makeCustomFactoryMap(props), ParametrizedUriEmitterConfig.class);
           final HttpEmitterConfig httpEmitterConfig = paramConfig.buildHttpEmitterConfig("http://example.com/topic");
           binder.bind(HttpEmitterConfig.class).toInstance(httpEmitterConfig);
         }
     );
-  }
-
-  @AfterClass
-  public static void teardown()
-  {
-    JvmUtils.resetTestsToDefaultRuntimeInfo();
   }
 
   @Test

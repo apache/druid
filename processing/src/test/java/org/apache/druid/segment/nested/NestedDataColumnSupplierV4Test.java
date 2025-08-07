@@ -200,7 +200,7 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
     SimpleAscendingOffset offset = new SimpleAscendingOffset(data.size());
     ColumnValueSelector<?> rawSelector = column.makeColumnValueSelector(offset);
     final List<NestedPathPart> xPath = NestedPathFinder.parseJsonPath("$.x");
-    Assert.assertEquals(ImmutableSet.of(ColumnType.LONG), column.getColumnTypes(xPath));
+    Assert.assertEquals(ImmutableSet.of(ColumnType.LONG), column.getFieldTypes(xPath));
     Assert.assertEquals(ColumnType.LONG, column.getColumnHolder(xPath).getCapabilities().toColumnType());
     ColumnValueSelector<?> xSelector = column.makeColumnValueSelector(xPath, offset);
     DimensionSelector xDimSelector = column.makeDimensionSelector(xPath, offset, null);
@@ -210,7 +210,7 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
     DruidPredicateIndexes xPredicateIndex = xIndexSupplier.as(DruidPredicateIndexes.class);
     NullValueIndex xNulls = xIndexSupplier.as(NullValueIndex.class);
     final List<NestedPathPart> yPath = NestedPathFinder.parseJsonPath("$.y");
-    Assert.assertEquals(ImmutableSet.of(ColumnType.DOUBLE), column.getColumnTypes(yPath));
+    Assert.assertEquals(ImmutableSet.of(ColumnType.DOUBLE), column.getFieldTypes(yPath));
     Assert.assertEquals(ColumnType.DOUBLE, column.getColumnHolder(yPath).getCapabilities().toColumnType());
     ColumnValueSelector<?> ySelector = column.makeColumnValueSelector(yPath, offset);
     DimensionSelector yDimSelector = column.makeDimensionSelector(yPath, offset, null);
@@ -220,7 +220,7 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
     DruidPredicateIndexes yPredicateIndex = yIndexSupplier.as(DruidPredicateIndexes.class);
     NullValueIndex yNulls = yIndexSupplier.as(NullValueIndex.class);
     final List<NestedPathPart> zPath = NestedPathFinder.parseJsonPath("$.z");
-    Assert.assertEquals(ImmutableSet.of(ColumnType.STRING), column.getColumnTypes(zPath));
+    Assert.assertEquals(ImmutableSet.of(ColumnType.STRING), column.getFieldTypes(zPath));
     Assert.assertEquals(ColumnType.STRING, column.getColumnHolder(zPath).getCapabilities().toColumnType());
     ColumnValueSelector<?> zSelector = column.makeColumnValueSelector(zPath, offset);
     DimensionSelector zDimSelector = column.makeDimensionSelector(zPath, offset, null);
@@ -232,7 +232,7 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
     final List<NestedPathPart> vPath = NestedPathFinder.parseJsonPath("$.v");
     Assert.assertEquals(
         ImmutableSet.of(ColumnType.STRING, ColumnType.LONG, ColumnType.DOUBLE),
-        column.getColumnTypes(vPath)
+        column.getFieldTypes(vPath)
     );
     Assert.assertEquals(ColumnType.STRING, column.getColumnHolder(vPath).getCapabilities().toColumnType());
     ColumnValueSelector<?> vSelector = column.makeColumnValueSelector(vPath, offset);
@@ -243,7 +243,7 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
     DruidPredicateIndexes vPredicateIndex = vIndexSupplier.as(DruidPredicateIndexes.class);
     NullValueIndex vNulls = vIndexSupplier.as(NullValueIndex.class);
     final List<NestedPathPart> nullishPath = NestedPathFinder.parseJsonPath("$.nullish");
-    Assert.assertEquals(ImmutableSet.of(ColumnType.STRING), column.getColumnTypes(nullishPath));
+    Assert.assertEquals(ImmutableSet.of(ColumnType.STRING), column.getFieldTypes(nullishPath));
     Assert.assertEquals(ColumnType.STRING, column.getColumnHolder(nullishPath).getCapabilities().toColumnType());
     ColumnValueSelector<?> nullishSelector = column.makeColumnValueSelector(nullishPath, offset);
     DimensionSelector nullishDimSelector = column.makeDimensionSelector(nullishPath, offset, null);

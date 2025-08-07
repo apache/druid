@@ -62,7 +62,10 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
   const [dartQueryEntriesState, queryManager] = useQueryManager<number, DartQueryEntry[]>({
     query: useStore(WORK_STATE_STORE, getMsqDartVersion),
     processQuery: async (_, cancelToken) => {
-      return (await Api.instance.get('/druid/v2/sql/dart', { cancelToken })).data.queries;
+      return (
+        (await Api.instance.get('/druid/v2/sql/queries', { cancelToken })).data
+          .queries as DartQueryEntry[]
+      ).filter(q => q.engine === 'msq-dart');
     },
   });
 
@@ -167,7 +170,7 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
           onCancel={async () => {
             if (!confirmCancelId) return;
             try {
-              await Api.instance.delete(`/druid/v2/sql/dart/${Api.encodePath(confirmCancelId)}`);
+              await Api.instance.delete(`/druid/v2/sql/${Api.encodePath(confirmCancelId)}`);
 
               AppToaster.show({
                 message: 'Query canceled',

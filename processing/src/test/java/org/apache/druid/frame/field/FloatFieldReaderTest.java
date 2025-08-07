@@ -20,6 +20,7 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.WritableMemory;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.frame.write.FrameWriterTestData;
 import org.apache.druid.java.util.common.ISE;
@@ -41,15 +42,19 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import org.mockito.quality.Strictness;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+@RunWith(Parameterized.class)
 public class FloatFieldReaderTest extends InitializedNullHandlingTest
 {
   private static final long MEMORY_POSITION = 1;
@@ -60,14 +65,33 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
   @Mock
   public BaseFloatColumnValueSelector writeSelector;
 
+  private final FrameType frameType;
+
   private WritableMemory memory;
   private FieldWriter fieldWriter;
+
+  public FloatFieldReaderTest(FrameType frameType)
+  {
+    this.frameType = frameType;
+  }
+
+  @Parameterized.Parameters(name = "frameType = {0}")
+  public static Iterable<Object[]> constructorFeeder()
+  {
+    final List<Object[]> constructors = new ArrayList<>();
+    for (FrameType frameType : FrameType.values()) {
+      if (frameType.isRowBased()) {
+        constructors.add(new Object[]{frameType});
+      }
+    }
+    return constructors;
+  }
 
   @Before
   public void setUp()
   {
     memory = WritableMemory.allocate(1000);
-    fieldWriter = FloatFieldWriter.forPrimitive(writeSelector);
+    fieldWriter = FloatFieldWriter.forPrimitive(writeSelector, frameType);
   }
 
   @After
@@ -80,7 +104,7 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
   public void test_isNull_defaultOrNull()
   {
     writeToMemory(null);
-    Assert.assertTrue(FloatFieldReader.forPrimitive().isNull(memory, MEMORY_POSITION));
+    Assert.assertTrue(FloatFieldReader.forPrimitive(frameType).isNull(memory, MEMORY_POSITION));
   }
 
   @Test
@@ -108,7 +132,7 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
   public void test_isNull_aValue()
   {
     writeToMemory(5.1f);
-    Assert.assertFalse(FloatFieldReader.forPrimitive().isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(FloatFieldReader.forPrimitive(frameType).isNull(memory, MEMORY_POSITION));
   }
 
   @Test
@@ -117,7 +141,8 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(null);
 
     final ColumnValueSelector<?> readSelector =
-        FloatFieldReader.forPrimitive().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
+        FloatFieldReader.forPrimitive(frameType)
+                        .makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
 
     Assert.assertTrue(readSelector.isNull());
   }
@@ -128,7 +153,8 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(5.1f);
 
     final ColumnValueSelector<?> readSelector =
-        FloatFieldReader.forPrimitive().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
+        FloatFieldReader.forPrimitive(frameType)
+                        .makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
 
     Assert.assertEquals(5.1f, readSelector.getObject());
   }
@@ -139,7 +165,7 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(null);
 
     final DimensionSelector readSelector =
-        FloatFieldReader.forPrimitive()
+        FloatFieldReader.forPrimitive(frameType)
                         .makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1), null);
 
     // Data retrieval tests.
@@ -167,7 +193,7 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(5.1f);
 
     final DimensionSelector readSelector =
-        FloatFieldReader.forPrimitive()
+        FloatFieldReader.forPrimitive(frameType)
                         .makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1), null);
 
     // Data retrieval tests.
@@ -185,7 +211,8 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
     // Value matcher tests.
     Assert.assertTrue(readSelector.makeValueMatcher("5.1").matches(false));
     Assert.assertFalse(readSelector.makeValueMatcher("5").matches(false));
-    Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("5.1")).matches(false));
+    Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("5.1"))
+                                  .matches(false));
     Assert.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("5")).matches(false));
   }
 
@@ -195,7 +222,7 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(20.5f);
 
     final DimensionSelector readSelector =
-        FloatFieldReader.forPrimitive().makeDimensionSelector(
+        FloatFieldReader.forPrimitive(frameType).makeDimensionSelector(
             memory,
             new ConstantFieldPointer(MEMORY_POSITION, -1),
             new SubstringDimExtractionFn(1, null)
@@ -216,7 +243,8 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
     // Value matcher tests.
     Assert.assertTrue(readSelector.makeValueMatcher("0.5").matches(false));
     Assert.assertFalse(readSelector.makeValueMatcher("2").matches(false));
-    Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("0.5")).matches(false));
+    Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("0.5"))
+                                  .matches(false));
     Assert.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("2")).matches(false));
   }
 

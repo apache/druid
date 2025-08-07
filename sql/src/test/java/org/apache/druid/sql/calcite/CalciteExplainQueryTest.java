@@ -181,10 +181,10 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
     final String attributes = "{\"statementType\":\"SELECT\"}";
 
     testQuery(
-            query,
-            ImmutableMap.of("plannerStrategy", "COUPLED"),
-            ImmutableList.of(),
-            ImmutableList.of(new Object[]{explanation, resources, attributes})
+        query,
+        ImmutableMap.of("plannerStrategy", "COUPLED"),
+        ImmutableList.of(),
+        ImmutableList.of(new Object[]{explanation, resources, attributes})
     );
   }
 
@@ -233,7 +233,9 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
 
     final String explainSql = "EXPLAIN PLAN FOR SELECT"
                               + " MV_FILTER_ONLY(\"dim1\", ARRAY['true', 'false']),"
-                              + " MV_FILTER_NONE(\"dim1\", ARRAY['true', 'false'])"
+                              + " MV_FILTER_NONE(\"dim1\", ARRAY['true', 'false']),"
+                              + " MV_FILTER_REGEX(\"dim1\", '^true$'),"
+                              + " MV_FILTER_PREFIX(\"dim1\", 'tr')"
                               + " FROM druid.foo";
 
     // Test plan as default expressions
@@ -241,7 +243,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
     defaultExprContext.put(PlannerConfig.CTX_KEY_USE_NATIVE_QUERY_EXPLAIN, true);
     defaultExprContext.put(PlannerConfig.CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS, true);
 
-    final String expectedPlanWithDefaultExpressions = "[{\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[{\"type\":\"expression\",\"name\":\"v0\",\"expression\":\"filter((x) -> array_contains(array('true','false'), x), \\\"dim1\\\")\",\"outputType\":\"STRING\"},{\"type\":\"expression\",\"name\":\"v1\",\"expression\":\"filter((x) -> !array_contains(array('true','false'), x), \\\"dim1\\\")\",\"outputType\":\"STRING\"}],\"resultFormat\":\"compactedList\",\"columns\":[\"v0\",\"v1\"],\"context\":{\"defaultTimeout\":300000,\"forceExpressionVirtualColumns\":true,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"useNativeQueryExplain\":true,\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"columnTypes\":[\"STRING\",\"STRING\"],\"granularity\":{\"type\":\"all\"},\"legacy\":false},\"signature\":[{\"name\":\"v0\",\"type\":\"STRING\"},{\"name\":\"v1\",\"type\":\"STRING\"}],\"columnMappings\":[{\"queryColumn\":\"v0\",\"outputColumn\":\"EXPR$0\"},{\"queryColumn\":\"v1\",\"outputColumn\":\"EXPR$1\"}]}]";
+    final String expectedPlanWithDefaultExpressions = "[{\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[{\"type\":\"expression\",\"name\":\"v0\",\"expression\":\"filter((x) -> array_contains(array('true','false'), x), \\\"dim1\\\")\",\"outputType\":\"STRING\"},{\"type\":\"expression\",\"name\":\"v1\",\"expression\":\"filter((x) -> !array_contains(array('true','false'), x), \\\"dim1\\\")\",\"outputType\":\"STRING\"},{\"type\":\"expression\",\"name\":\"v2\",\"expression\":\"filter((x) -> regexp_like(x, \\\"^true$\\\"), \\\"dim1\\\")\",\"outputType\":\"STRING\"},{\"type\":\"expression\",\"name\":\"v3\",\"expression\":\"filter((x) -> (x != null && substring(x, 0, 2) == \\\"tr\\\"), \\\"dim1\\\")\",\"outputType\":\"STRING\"}],\"resultFormat\":\"compactedList\",\"columns\":[\"v0\",\"v1\",\"v2\",\"v3\"],\"context\":{\"defaultTimeout\":300000,\"forceExpressionVirtualColumns\":true,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"useNativeQueryExplain\":true,\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"columnTypes\":[\"STRING\",\"STRING\",\"STRING\",\"STRING\"],\"granularity\":{\"type\":\"all\"},\"legacy\":false},\"signature\":[{\"name\":\"v0\",\"type\":\"STRING\"},{\"name\":\"v1\",\"type\":\"STRING\"},{\"name\":\"v2\",\"type\":\"STRING\"},{\"name\":\"v3\",\"type\":\"STRING\"}],\"columnMappings\":[{\"queryColumn\":\"v0\",\"outputColumn\":\"EXPR$0\"},{\"queryColumn\":\"v1\",\"outputColumn\":\"EXPR$1\"},{\"queryColumn\":\"v2\",\"outputColumn\":\"EXPR$2\"},{\"queryColumn\":\"v3\",\"outputColumn\":\"EXPR$3\"}]}]";
     final String expectedResources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
     final String expectedAttributes = "{\"statementType\":\"SELECT\"}";
     testQuery(
@@ -252,7 +254,7 @@ public class CalciteExplainQueryTest extends BaseCalciteQueryTest
     );
 
     // Test plan as mv-filtered virtual columns
-    final String expectedPlanWithMvfiltered = "[{\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[{\"type\":\"mv-filtered\",\"name\":\"v0\",\"delegate\":{\"type\":\"default\",\"dimension\":\"dim1\",\"outputName\":\"dim1\",\"outputType\":\"STRING\"},\"values\":[\"true\",\"false\"],\"isAllowList\":true},{\"type\":\"mv-filtered\",\"name\":\"v1\",\"delegate\":{\"type\":\"default\",\"dimension\":\"dim1\",\"outputName\":\"dim1\",\"outputType\":\"STRING\"},\"values\":[\"true\",\"false\"],\"isAllowList\":false}],\"resultFormat\":\"compactedList\",\"columns\":[\"v0\",\"v1\"],\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"useNativeQueryExplain\":true,\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"columnTypes\":[\"STRING\",\"STRING\"],\"granularity\":{\"type\":\"all\"},\"legacy\":false},\"signature\":[{\"name\":\"v0\",\"type\":\"STRING\"},{\"name\":\"v1\",\"type\":\"STRING\"}],\"columnMappings\":[{\"queryColumn\":\"v0\",\"outputColumn\":\"EXPR$0\"},{\"queryColumn\":\"v1\",\"outputColumn\":\"EXPR$1\"}]}]";
+    final String expectedPlanWithMvfiltered = "[{\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[{\"type\":\"mv-filtered\",\"name\":\"v0\",\"delegate\":{\"type\":\"default\",\"dimension\":\"dim1\",\"outputName\":\"dim1\",\"outputType\":\"STRING\"},\"values\":[\"true\",\"false\"],\"isAllowList\":true},{\"type\":\"mv-filtered\",\"name\":\"v1\",\"delegate\":{\"type\":\"default\",\"dimension\":\"dim1\",\"outputName\":\"dim1\",\"outputType\":\"STRING\"},\"values\":[\"true\",\"false\"],\"isAllowList\":false},{\"type\":\"mv-regex-filtered\",\"name\":\"v2\",\"delegate\":{\"type\":\"default\",\"dimension\":\"dim1\",\"outputName\":\"dim1\",\"outputType\":\"STRING\"},\"pattern\":\"^true$\"},{\"type\":\"mv-prefix-filtered\",\"name\":\"v3\",\"delegate\":{\"type\":\"default\",\"dimension\":\"dim1\",\"outputName\":\"dim1\",\"outputType\":\"STRING\"},\"prefix\":\"tr\"}],\"resultFormat\":\"compactedList\",\"columns\":[\"v0\",\"v1\",\"v2\",\"v3\"],\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"useNativeQueryExplain\":true,\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"columnTypes\":[\"STRING\",\"STRING\",\"STRING\",\"STRING\"],\"granularity\":{\"type\":\"all\"},\"legacy\":false},\"signature\":[{\"name\":\"v0\",\"type\":\"STRING\"},{\"name\":\"v1\",\"type\":\"STRING\"},{\"name\":\"v2\",\"type\":\"STRING\"},{\"name\":\"v3\",\"type\":\"STRING\"}],\"columnMappings\":[{\"queryColumn\":\"v0\",\"outputColumn\":\"EXPR$0\"},{\"queryColumn\":\"v1\",\"outputColumn\":\"EXPR$1\"},{\"queryColumn\":\"v2\",\"outputColumn\":\"EXPR$2\"},{\"queryColumn\":\"v3\",\"outputColumn\":\"EXPR$3\"}]}]";
     final Map<String, Object> mvFilteredContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     mvFilteredContext.put(PlannerConfig.CTX_KEY_USE_NATIVE_QUERY_EXPLAIN, true);
 

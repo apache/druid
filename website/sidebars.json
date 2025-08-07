@@ -181,6 +181,7 @@
       "querying/querying",
       "querying/query-processing",
       "querying/query-execution",
+      "querying/dart",
       "querying/troubleshooting",
       {
         "type": "category",
@@ -204,7 +205,8 @@
           "querying/multitenancy",
           "querying/caching",
           "querying/using-caching",
-          "querying/query-context"
+          "querying/query-context",
+          "querying/query-context-reference"
         ]
       },
       {

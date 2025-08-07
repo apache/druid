@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.name.Named;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.indexing.kinesis.KinesisIndexTask;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskClientFactory;
 import org.apache.druid.indexing.kinesis.KinesisIndexingServiceModule;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -39,14 +40,10 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
@@ -57,6 +54,7 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
 
   @JsonCreator
   public KinesisSupervisorSpec(
+      @JsonProperty("id") @Nullable String id,
       @JsonProperty("spec") @Nullable KinesisSupervisorIngestionSpec ingestionSchema,
       @JsonProperty("dataSchema") @Nullable DataSchema dataSchema,
       @JsonProperty("tuningConfig") @Nullable KinesisSupervisorTuningConfig tuningConfig,
@@ -76,6 +74,7 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
   )
   {
     super(
+        id,
         ingestionSchema != null
         ? ingestionSchema
         : new KinesisSupervisorIngestionSpec(
@@ -127,10 +126,7 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
   @Override
   public Set<ResourceAction> getInputSourceResources()
   {
-    return Collections.singleton(new ResourceAction(
-        new Resource(SUPERVISOR_TYPE, ResourceType.EXTERNAL),
-        Action.READ
-    ));
+    return KinesisIndexTask.INPUT_SOURCE_RESOURCES;
   }
 
   @Override
@@ -178,6 +174,7 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
   protected KinesisSupervisorSpec toggleSuspend(boolean suspend)
   {
     return new KinesisSupervisorSpec(
+        getId(),
         getSpec(),
         getDataSchema(),
         getTuningConfig(),

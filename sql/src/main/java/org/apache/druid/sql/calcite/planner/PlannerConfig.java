@@ -34,6 +34,7 @@ public class PlannerConfig
   public static final String CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT = "useApproximateCountDistinct";
   public static final String CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT = "useGroupingSetForExactDistinct";
   public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
+  public static final String CTX_KEY_USE_LEXICOGRAPHIC_TOPN = "useLexicographicTopN";
   public static final String CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";
   public static final String CTX_KEY_USE_NATIVE_QUERY_EXPLAIN = "useNativeQueryExplain";
   public static final String CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS = "forceExpressionVirtualColumns";
@@ -48,6 +49,9 @@ public class PlannerConfig
 
   @JsonProperty
   private boolean useApproximateTopN = true;
+
+  @JsonProperty
+  private boolean useLexicographicTopN = false;
 
   @JsonProperty
   private boolean requireTimeCondition = false;
@@ -101,6 +105,11 @@ public class PlannerConfig
     return useApproximateTopN;
   }
 
+  public boolean isUseLexicographicTopN()
+  {
+    return useLexicographicTopN;
+  }
+
   public boolean isRequireTimeCondition()
   {
     return requireTimeCondition;
@@ -151,41 +160,43 @@ public class PlannerConfig
   }
 
   @Override
-  public boolean equals(final Object o)
+  public boolean equals(Object o)
   {
-    if (this == o) {
-      return true;
-    }
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final PlannerConfig that = (PlannerConfig) o;
-    return maxTopNLimit == that.maxTopNLimit &&
-           useApproximateCountDistinct == that.useApproximateCountDistinct &&
-           useApproximateTopN == that.useApproximateTopN &&
-           requireTimeCondition == that.requireTimeCondition &&
-           Objects.equals(sqlTimeZone, that.sqlTimeZone) &&
-           useNativeQueryExplain == that.useNativeQueryExplain &&
-           forceExpressionVirtualColumns == that.forceExpressionVirtualColumns &&
-           useGroupingSetForExactDistinct == that.useGroupingSetForExactDistinct &&
-           computeInnerJoinCostAsFilter == that.computeInnerJoinCostAsFilter &&
-           authorizeSystemTablesDirectly == that.authorizeSystemTablesDirectly &&
-           maxNumericInFilters == that.maxNumericInFilters &&
-           nativeQuerySqlPlanningMode.equals(that.nativeQuerySqlPlanningMode);
+    PlannerConfig that = (PlannerConfig) o;
+    return maxTopNLimit == that.maxTopNLimit
+           && useApproximateCountDistinct == that.useApproximateCountDistinct
+           && useApproximateTopN == that.useApproximateTopN
+           && useLexicographicTopN == that.useLexicographicTopN
+           && requireTimeCondition == that.requireTimeCondition
+           && useGroupingSetForExactDistinct == that.useGroupingSetForExactDistinct
+           && computeInnerJoinCostAsFilter == that.computeInnerJoinCostAsFilter
+           && authorizeSystemTablesDirectly == that.authorizeSystemTablesDirectly
+           && useNativeQueryExplain == that.useNativeQueryExplain
+           && forceExpressionVirtualColumns == that.forceExpressionVirtualColumns
+           && maxNumericInFilters == that.maxNumericInFilters
+           && Objects.equals(sqlTimeZone, that.sqlTimeZone)
+           && Objects.equals(nativeQuerySqlPlanningMode, that.nativeQuerySqlPlanningMode);
   }
 
   @Override
   public int hashCode()
   {
-
     return Objects.hash(
         maxTopNLimit,
         useApproximateCountDistinct,
         useApproximateTopN,
+        useLexicographicTopN,
         requireTimeCondition,
         sqlTimeZone,
+        useGroupingSetForExactDistinct,
+        computeInnerJoinCostAsFilter,
+        authorizeSystemTablesDirectly,
         useNativeQueryExplain,
         forceExpressionVirtualColumns,
+        maxNumericInFilters,
         nativeQuerySqlPlanningMode
     );
   }
@@ -197,6 +208,7 @@ public class PlannerConfig
            "maxTopNLimit=" + maxTopNLimit +
            ", useApproximateCountDistinct=" + useApproximateCountDistinct +
            ", useApproximateTopN=" + useApproximateTopN +
+           ", useLexicographicTopN=" + useLexicographicTopN +
            ", requireTimeCondition=" + requireTimeCondition +
            ", sqlTimeZone=" + sqlTimeZone +
            ", useNativeQueryExplain=" + useNativeQueryExplain +
@@ -225,6 +237,7 @@ public class PlannerConfig
     private int maxTopNLimit;
     private boolean useApproximateCountDistinct;
     private boolean useApproximateTopN;
+    private boolean useLexicographicTopN;
     private boolean requireTimeCondition;
     private DateTimeZone sqlTimeZone;
     private boolean useGroupingSetForExactDistinct;
@@ -243,6 +256,7 @@ public class PlannerConfig
       maxTopNLimit = base.getMaxTopNLimit();
       useApproximateCountDistinct = base.isUseApproximateCountDistinct();
       useApproximateTopN = base.isUseApproximateTopN();
+      useLexicographicTopN = base.isUseLexicographicTopN();
       requireTimeCondition = base.isRequireTimeCondition();
       sqlTimeZone = base.getSqlTimeZone();
       useGroupingSetForExactDistinct = base.isUseGroupingSetForExactDistinct();
@@ -281,6 +295,12 @@ public class PlannerConfig
     public Builder useApproximateTopN(boolean option)
     {
       this.useApproximateTopN = option;
+      return this;
+    }
+
+    public Builder useLexicographicTopN(boolean option)
+    {
+      this.useLexicographicTopN = option;
       return this;
     }
 
@@ -336,6 +356,11 @@ public class PlannerConfig
           queryContext,
           CTX_KEY_USE_APPROXIMATE_TOPN,
           useApproximateTopN
+      );
+      useLexicographicTopN = QueryContexts.parseBoolean(
+          queryContext,
+          CTX_KEY_USE_LEXICOGRAPHIC_TOPN,
+          useLexicographicTopN
       );
       computeInnerJoinCostAsFilter = QueryContexts.parseBoolean(
           queryContext,
@@ -401,6 +426,7 @@ public class PlannerConfig
       config.maxTopNLimit = maxTopNLimit;
       config.useApproximateCountDistinct = useApproximateCountDistinct;
       config.useApproximateTopN = useApproximateTopN;
+      config.useLexicographicTopN = useLexicographicTopN;
       config.requireTimeCondition = requireTimeCondition;
       config.sqlTimeZone = sqlTimeZone;
       config.useGroupingSetForExactDistinct = useGroupingSetForExactDistinct;

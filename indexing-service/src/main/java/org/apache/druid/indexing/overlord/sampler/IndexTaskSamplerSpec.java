@@ -31,10 +31,8 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -103,7 +101,7 @@ public class IndexTaskSamplerSpec implements SamplerSpec
   {
     return inputSource.getTypes()
                       .stream()
-                      .map(i -> new ResourceAction(new Resource(i, ResourceType.EXTERNAL), Action.READ))
+                      .map(AuthorizationUtils::createExternalResourceReadAction)
                       .collect(Collectors.toSet());
   }
 }

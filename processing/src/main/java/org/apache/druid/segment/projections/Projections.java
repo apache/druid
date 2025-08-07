@@ -46,10 +46,12 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.function.Function;
@@ -124,7 +126,7 @@ public class Projections
   /**
    * Returns true if column is defined in {@link AggregateProjectionSpec#getGroupingColumns()} OR if the column does not
    * exist in the base table. Part of determining if a projection can be used for a given {@link CursorBuildSpec},
-   * 
+   *
    * @see AggregateProjectionMetadata.Schema#matches(CursorBuildSpec, PhysicalColumnChecker)
    */
   @FunctionalInterface
@@ -153,6 +155,25 @@ public class Projections
     {
       return remapColumns;
     }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (!(o instanceof ProjectionMatch)) {
+        return false;
+      }
+      ProjectionMatch that = (ProjectionMatch) o;
+      return Objects.equals(cursorBuildSpec, that.cursorBuildSpec) && Objects.equals(remapColumns, that.remapColumns);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(cursorBuildSpec, remapColumns);
+    }
   }
 
   public static final class ProjectionMatchBuilder
@@ -161,6 +182,7 @@ public class Projections
     private final Set<VirtualColumn> referencedVirtualColumns;
     private final Map<String, String> remapColumns;
     private final List<AggregatorFactory> combiningFactories;
+    private final Set<String> matchedQueryColumns;
 
     public ProjectionMatchBuilder()
     {
@@ -168,6 +190,7 @@ public class Projections
       this.referencedVirtualColumns = new HashSet<>();
       this.remapColumns = new HashMap<>();
       this.combiningFactories = new ArrayList<>();
+      this.matchedQueryColumns = new HashSet<>();
     }
 
     /**
@@ -208,12 +231,28 @@ public class Projections
     /**
      * Add a query {@link AggregatorFactory#substituteCombiningFactory(AggregatorFactory)} which can combine the inputs
      * of a selector created by a projection {@link AggregatorFactory}
-     *
      */
     public ProjectionMatchBuilder addPreAggregatedAggregator(AggregatorFactory aggregator)
     {
       combiningFactories.add(aggregator);
       return this;
+    }
+
+    public ProjectionMatchBuilder addMatchedQueryColumn(String queryColumn)
+    {
+      matchedQueryColumns.add(queryColumn);
+      return this;
+    }
+
+    public ProjectionMatchBuilder addMatchedQueryColumns(Collection<String> queryColumns)
+    {
+      matchedQueryColumns.addAll(queryColumns);
+      return this;
+    }
+
+    public Set<String> getMatchedQueryColumns()
+    {
+      return matchedQueryColumns;
     }
 
     public ProjectionMatch build(CursorBuildSpec queryCursorBuildSpec)

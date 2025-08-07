@@ -25,11 +25,11 @@ import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
+import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.ReadableInputs;
-import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.timeline.SegmentId;
 
@@ -85,6 +85,7 @@ public class SegmentsInputSliceReader implements InputSliceReader
       Iterator<ReadableInput> dataServerIterator =
           Iterators.transform(
               dataServerIterator(
+                  inputNumber,
                   segmentsInputSlice.getDataSource(),
                   segmentsInputSlice.getServedSegments(),
                   counters.channel(CounterNames.inputChannel(inputNumber)).setTotalFiles(slice.fileCount())
@@ -118,6 +119,7 @@ public class SegmentsInputSliceReader implements InputSliceReader
   }
 
   private Iterator<DataServerQueryHandler> dataServerIterator(
+      final int inputNumber,
       final String dataSource,
       final List<DataServerRequestDescriptor> servedSegments,
       final ChannelCounters channelCounters
@@ -125,6 +127,7 @@ public class SegmentsInputSliceReader implements InputSliceReader
   {
     return servedSegments.stream().map(
         dataServerRequestDescriptor -> dataServerQueryHandlerFactory.createDataServerQueryHandler(
+            inputNumber,
             dataSource,
             channelCounters,
             dataServerRequestDescriptor

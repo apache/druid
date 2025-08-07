@@ -21,6 +21,8 @@ package org.apache.druid.msq.test;
 
 import com.google.inject.Binder;
 import com.google.inject.Provides;
+import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -35,7 +37,7 @@ import org.apache.druid.msq.dart.guice.DartControllerModule;
 import org.apache.druid.msq.dart.guice.DartModules;
 import org.apache.druid.msq.dart.guice.DartWorkerMemoryManagementModule;
 import org.apache.druid.msq.dart.guice.DartWorkerModule;
-import org.apache.druid.msq.exec.Worker;
+import org.apache.druid.msq.exec.WorkerRunRef;
 import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.guice.ServiceClientModule;
@@ -44,14 +46,16 @@ import org.apache.druid.sql.avatica.DartDruidMeta;
 import org.apache.druid.sql.avatica.DruidMeta;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 
 import java.nio.ByteBuffer;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
 {
@@ -113,12 +117,13 @@ public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
     @Provides
     final DruidNodeDiscoveryProvider getDiscoveryProvider()
     {
-      return null;
+      return new CalciteTests.FakeDruidNodeDiscoveryProvider(Collections.emptyMap());
     }
 
     @Override
     public void configure(Binder binder)
     {
+      binder.bind(CoordinatorClient.class).to(NoopCoordinatorClient.class);
     }
   }
 
@@ -149,9 +154,9 @@ public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
     @Provides
     @LazySingleton
     @Dart
-    Map<String, Worker> workerMap()
+    Map<String, WorkerRunRef> workerMap()
     {
-      return new HashMap<String, Worker>();
+      return new ConcurrentHashMap<>();
     }
   }
 }

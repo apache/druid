@@ -20,8 +20,10 @@
 package org.apache.druid.msq.querykit.groupby;
 
 import com.google.common.collect.Iterables;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
@@ -56,12 +58,14 @@ import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.CursorFactory;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.column.RowSignature;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
@@ -84,13 +88,14 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   private long currentAllocatorCapacity; // Used for generating FrameRowTooLargeException if needed
   private SegmentsInputSlice handedOffSegments = null;
   private Yielder<Yielder<ResultRow>> currentResultsYielder;
+  private ListenableFuture<DataServerQueryResult<ResultRow>> dataServerQueryResultFuture;
 
   public GroupByPreShuffleFrameProcessor(
       final GroupByQuery query,
       final GroupingEngine groupingEngine,
       final NonBlockingPool<ByteBuffer> bufferPool,
       final ReadableInput baseInput,
-      final Function<SegmentReference, SegmentReference> segmentMapFn,
+      final SegmentMapFunction segmentMapFn,
       final ResourceHolder<WritableFrameChannel> outputChannelHolder,
       final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder
   )
@@ -116,12 +121,23 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   {
     if (resultYielder == null || resultYielder.isDone()) {
       if (currentResultsYielder == null) {
+        if (dataServerQueryResultFuture == null) {
+          dataServerQueryResultFuture =
+              dataServerQueryHandler.fetchRowsFromDataServer(
+                  groupingEngine.prepareGroupByQuery(query),
+                  Function.identity(),
+                  closer
+              );
+
+          // Give up the processing thread while we wait for the query to finish. This is only really asynchronous
+          // with Dart. On tasks, the IndexerDataServerQueryHandler does not return from fetchRowsFromDataServer until
+          // the response has started to come back.
+          return ReturnOrAwait.awaitAllFutures(Collections.singletonList(dataServerQueryResultFuture));
+        }
+
         final DataServerQueryResult<ResultRow> dataServerQueryResult =
-            dataServerQueryHandler.fetchRowsFromDataServer(
-                groupingEngine.prepareGroupByQuery(query),
-                Function.identity(),
-                closer
-            );
+            FutureUtils.getUncheckedImmediately(dataServerQueryResultFuture);
+        dataServerQueryResultFuture = null;
         handedOffSegments = dataServerQueryResult.getHandedOffSegments();
         if (!handedOffSegments.getDescriptors().isEmpty()) {
           log.info(
@@ -154,7 +170,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   {
     if (resultYielder == null) {
       final ResourceHolder<CompleteSegment> segmentHolder = closer.register(segment.getOrLoad());
-      final SegmentReference mappedSegment = mapSegment(segmentHolder.get().getSegment());
+      final Segment mappedSegment = closer.register(mapSegment(segmentHolder.get().getSegment()).orElseThrow());
 
       final Sequence<ResultRow> rowSequence =
           groupingEngine.process(
@@ -189,7 +205,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
       if (inputChannel.canRead()) {
         final Frame frame = inputChannel.read();
         final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader);
-        final SegmentReference mappedSegment = mapSegment(frameSegment);
+        final Segment mappedSegment = mapSegment(frameSegment).orElseThrow();
 
         final Sequence<ResultRow> rowSequence =
             groupingEngine.process(

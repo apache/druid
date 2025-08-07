@@ -45,7 +45,6 @@ import {
   getDruidErrorMessage,
   nonEmptyArray,
   queryDruidSql,
-  queryDruidSqlDart,
   wrapInExplainIfNeeded,
 } from '../../../utils';
 
@@ -91,6 +90,7 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
       let result: any[];
       switch (engine) {
         case 'sql-native':
+        case 'sql-msq-dart':
           result = await queryDruidSql(payload, cancelToken);
           break;
 
@@ -100,10 +100,6 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
           } catch (e) {
             throw new Error(getDruidErrorMessage(e));
           }
-          break;
-
-        case 'sql-msq-dart':
-          result = await queryDruidSqlDart(payload, cancelToken);
           break;
 
         default:

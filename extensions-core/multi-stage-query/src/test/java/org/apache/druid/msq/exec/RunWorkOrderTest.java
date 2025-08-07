@@ -22,7 +22,6 @@ package org.apache.druid.msq.exec;
 import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.indexing.error.MSQException;
-import org.apache.druid.msq.kernel.FrameContext;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentMatchers;
@@ -44,7 +43,7 @@ public class RunWorkOrderTest
     Mockito.when(frameContext.storageParameters()).thenReturn(storageParameters);
 
     final RunWorkOrder runWorkOrder =
-        new RunWorkOrder(null, null, null, exec, CANCELLATION_ID, workerContext, frameContext, listener, false, false);
+        new RunWorkOrder(null, null, null, exec, CANCELLATION_ID, workerContext, frameContext, listener);
 
     runWorkOrder.stopUnchecked(null);
 
@@ -68,7 +67,7 @@ public class RunWorkOrderTest
     Mockito.when(frameContext.storageParameters()).thenReturn(storageParameters);
 
     final RunWorkOrder runWorkOrder =
-        new RunWorkOrder(null, null, null, exec, CANCELLATION_ID, workerContext, frameContext, listener, false, false);
+        new RunWorkOrder(null, null, null, exec, CANCELLATION_ID, workerContext, frameContext, listener);
 
     final ISE exception = new ISE("oops");
 
@@ -99,7 +98,7 @@ public class RunWorkOrderTest
     Mockito.doThrow(exception).when(exec).cancel(CANCELLATION_ID);
 
     final RunWorkOrder runWorkOrder =
-        new RunWorkOrder(null, null, null, exec, CANCELLATION_ID, workerContext, frameContext, listener, false, false);
+        new RunWorkOrder(null, null, null, exec, CANCELLATION_ID, workerContext, frameContext, listener);
 
     Assert.assertThrows(
         IllegalStateException.class,
@@ -125,7 +124,7 @@ public class RunWorkOrderTest
     Mockito.doThrow(exception).when(frameContext).close();
 
     final RunWorkOrder runWorkOrder =
-        new RunWorkOrder(null, null, null, exec, CANCELLATION_ID, workerContext, frameContext, listener, false, false);
+        new RunWorkOrder(null, null, null, exec, CANCELLATION_ID, workerContext, frameContext, listener);
 
     Assert.assertThrows(
         IllegalStateException.class,

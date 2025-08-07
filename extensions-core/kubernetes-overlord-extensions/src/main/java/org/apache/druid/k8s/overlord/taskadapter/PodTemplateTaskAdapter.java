@@ -49,6 +49,7 @@ import org.apache.druid.tasklogs.TaskLogs;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -217,6 +218,10 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     List<EnvVar> envVars = Lists.newArrayList(
         new EnvVarBuilder()
             .withName(DruidK8sConstants.TASK_DIR_ENV)
+            .withValue(Paths.get(taskConfig.getBaseDir()).resolve(task.getId()).toString())
+            .build(),
+        new EnvVarBuilder()
+            .withName("druid_indexer_task_baseTaskDir")
             .withValue(taskConfig.getBaseDir())
             .build(),
         new EnvVarBuilder()

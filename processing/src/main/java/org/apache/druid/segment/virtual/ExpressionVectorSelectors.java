@@ -87,7 +87,7 @@ public class ExpressionVectorSelectors
     if (plan.isConstant()) {
       return ConstantVectorSelectors.vectorValueSelector(
           factory.getReadableVectorInspector(),
-          (Number) plan.getExpression().eval(InputBindings.nilBindings()).valueOrDefault()
+          (Number) plan.getExpression().eval(InputBindings.nilBindings()).value()
       );
     }
     final Expr.VectorInputBinding bindings = createVectorBindings(plan.getAnalysis(), factory);
@@ -114,7 +114,7 @@ public class ExpressionVectorSelectors
       }
       return ConstantVectorSelectors.vectorObjectSelector(
           factory.getReadableVectorInspector(),
-          eval.valueOrDefault()
+          eval.value()
       );
     }
 
@@ -179,8 +179,27 @@ public class ExpressionVectorSelectors
       ColumnType castTo
   )
   {
-    ExpressionVectorInputBinding binding = new ExpressionVectorInputBinding(inspector);
+    final ExpressionVectorInputBinding binding = new ExpressionVectorInputBinding(inspector);
     binding.addNumeric(columnName, ExpressionType.fromColumnType(selectorType), selector);
+    return new ExpressionVectorObjectSelector(
+        CastToTypeVectorProcessor.cast(
+            VectorProcessors.identifier(binding, columnName),
+            ExpressionType.fromColumnType(castTo)
+        ),
+        binding
+    );
+  }
+
+  public static VectorObjectSelector castObject(
+      ReadableVectorInspector inspector,
+      String columnName,
+      VectorObjectSelector selector,
+      ColumnType selectorType,
+      ColumnType castTo
+  )
+  {
+    final ExpressionVectorInputBinding binding = new ExpressionVectorInputBinding(inspector);
+    binding.addObjectSelector(columnName, ExpressionType.fromColumnType(selectorType), selector);
     return new ExpressionVectorObjectSelector(
         CastToTypeVectorProcessor.cast(
             VectorProcessors.identifier(binding, columnName),

@@ -34,6 +34,7 @@ import org.apache.druid.query.filter.TypedInFilter;
 import javax.annotation.Nullable;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -471,6 +472,15 @@ public class QueryContext
     return getLong(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
   }
 
+  public String getEngine()
+  {
+    return QueryContexts.parseString(
+        context,
+        QueryContexts.ENGINE,
+        QueryContexts.DEFAULT_ENGINE
+    );
+  }
+
   public boolean hasTimeout()
   {
     return getTimeout() != QueryContexts.NO_TIMEOUT;
@@ -494,6 +504,15 @@ public class QueryContext
             timeout
         )
     );
+  }
+
+  @Nullable
+  public Duration getTimeoutDuration()
+  {
+    if (hasTimeout()) {
+      return Duration.ofMillis(getTimeout());
+    }
+    return null;
   }
 
   public long getDefaultTimeout()

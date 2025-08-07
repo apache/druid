@@ -22,14 +22,19 @@ package org.apache.druid.rpc.guice;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Key;
+import org.apache.druid.client.broker.Broker;
 import org.apache.druid.client.broker.BrokerClient;
+import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocator;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -102,5 +107,23 @@ public class ServiceClientModuleTest
   public void testGetBrokerClient()
   {
     assertNotNull(injector.getInstance(BrokerClient.class));
+  }
+
+  @Test
+  public void testGetCoordinatorServiceClient()
+  {
+    assertNotNull(injector.getInstance(Key.get(ServiceClient.class, Coordinator.class)));
+  }
+
+  @Test
+  public void testGetOverlordServiceClient()
+  {
+    assertNotNull(injector.getInstance(Key.get(ServiceClient.class, IndexingService.class)));
+  }
+
+  @Test
+  public void testGetBrokerServiceClient()
+  {
+    assertNotNull(injector.getInstance(Key.get(ServiceClient.class, Broker.class)));
   }
 }

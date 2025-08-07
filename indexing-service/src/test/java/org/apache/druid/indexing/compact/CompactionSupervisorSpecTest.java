@@ -216,6 +216,17 @@ public class CompactionSupervisorSpecTest
     Assert.assertEquals(activeSpec.getDataSources(), suspendedSpec.getDataSources());
   }
 
+  @Test
+  public void test_getInputSourceResources_returnsEmpty()
+  {
+    final CompactionSupervisorSpec supervisorSpec = new CompactionSupervisorSpec(
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        true,
+        scheduler
+    );
+    Assert.assertTrue(supervisorSpec.getInputSourceResources().isEmpty());
+  }
+
   private void testSerde(CompactionSupervisorSpec spec)
   {
     try {

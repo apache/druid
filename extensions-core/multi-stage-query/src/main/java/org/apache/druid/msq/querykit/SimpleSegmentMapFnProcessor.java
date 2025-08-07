@@ -27,22 +27,20 @@ import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.policy.PolicyEnforcer;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.SegmentMapFunction;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 
 /**
  * Processor that creates a segment mapping function that does *not* require broadcast join data. The resulting segment
  * mapping function embeds the joinable data within itself, and can be applied anywhere that would otherwise have used
- * {@link org.apache.druid.query.JoinDataSource#createSegmentMapFunction(Query, AtomicLong)}.
+ * {@link org.apache.druid.query.JoinDataSource#createSegmentMapFunction(Query)}.
  *
  * @see BroadcastJoinSegmentMapFnProcessor processor that creates a segment mapping function when there is
  * broadcast input
  */
-public class SimpleSegmentMapFnProcessor implements FrameProcessor<Function<SegmentReference, SegmentReference>>
+public class SimpleSegmentMapFnProcessor implements FrameProcessor<SegmentMapFunction>
 {
   private final Query<?> query;
   private final PolicyEnforcer policyEnforcer;
@@ -67,7 +65,7 @@ public class SimpleSegmentMapFnProcessor implements FrameProcessor<Function<Segm
   }
 
   @Override
-  public ReturnOrAwait<Function<SegmentReference, SegmentReference>> runIncrementally(final IntSet readableInputs)
+  public ReturnOrAwait<SegmentMapFunction> runIncrementally(final IntSet readableInputs)
   {
     ExecutionVertex ev = ExecutionVertex.of(query);
     return ReturnOrAwait.returnObject(ev.createSegmentMapFunction(policyEnforcer));

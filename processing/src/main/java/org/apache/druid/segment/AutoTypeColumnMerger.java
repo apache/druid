@@ -244,9 +244,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         // pick the least restrictive type for the logical type
         isVariantType = true;
         variantTypeByte = rootTypes.getByteValue();
-        for (ColumnType type : FieldTypeInfo.convertToSet(rootTypes.getByteValue())) {
-          logicalType = ColumnType.leastRestrictiveType(logicalType, type);
-        }
+        logicalType = ColumnType.leastRestrictiveType(FieldTypeInfo.convertToSet(rootTypes.getByteValue()));
         // empty arrays can be missed since they don't have a type, so handle them here
         if (!logicalType.isArray() && hasArrays) {
           logicalType = ColumnTypeFactory.getInstance().ofArray(logicalType);
@@ -447,12 +445,16 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         );
       }
     } else {
-      serializer = new NestedDataColumnSerializer(
+      NestedDataColumnSerializer nestedSerializer = new NestedDataColumnSerializer(
           outputName,
           indexSpec,
           segmentWriteOutMedium,
           closer
       );
+      // need to set dictionaries before can open field writers, it is harmless that it is set again later
+      nestedSerializer.setDictionaryIdLookup(autoParent.getIdLookup());
+      nestedSerializer.setFieldsAndOpenWriters((NestedDataColumnSerializer) autoParent.serializer);
+      serializer = nestedSerializer;
     }
 
     serializer.setDictionaryIdLookup(autoParent.getIdLookup());

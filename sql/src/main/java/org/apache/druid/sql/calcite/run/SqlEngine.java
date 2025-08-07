@@ -23,9 +23,16 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.tools.ValidationException;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizationResult;
+import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.destination.IngestDestination;
+import org.apache.druid.sql.http.QueryInfo;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -115,5 +122,33 @@ public interface SqlEngine
    */
   default void initContextMap(Map<String, Object> contextMap)
   {
+  }
+
+  /**
+   * Returns a {@link SqlStatementFactory} which uses this engine to create statements.
+   */
+  SqlStatementFactory getSqlStatementFactory();
+
+  /**
+   * Returns a list of {@link QueryInfo} containing the currently running queries using this engine. Returns an empty
+   * list if the operation is not supported.
+   */
+  default List<QueryInfo> getRunningQueries(
+      boolean selfOnly,
+      AuthenticationResult authenticationResult,
+      AuthorizationResult authorizationResult
+  )
+  {
+    return List.of();
+  }
+
+  /**
+   * Cancels a currently running query given the {@link PlannerContext} for the query.
+   */
+  default void cancelQuery(PlannerContext plannerContext, QueryScheduler queryScheduler)
+  {
+    throw DruidException.forPersona(DruidException.Persona.USER)
+                        .ofCategory(DruidException.Category.UNSUPPORTED)
+                        .build("Engine[%s] does not support canceling queries", name());
   }
 }

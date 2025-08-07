@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.loading;
 
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 
@@ -59,10 +59,10 @@ public interface SegmentCacheManager
   void removeInfoFile(DataSegment segment);
 
   /**
-   * Returns a {@link ReferenceCountingSegment} that will be added by the {@link org.apache.druid.server.SegmentManager}
+   * Returns a {@link ReferenceCountedSegmentProvider} that will be added by the {@link org.apache.druid.server.SegmentManager}
    * to the {@link org.apache.druid.timeline.VersionedIntervalTimeline}. This method can be called multiple times
-   * by the {@link org.apache.druid.server.SegmentManager} and implementation can either return same {@link ReferenceCountingSegment}
-   * or a different {@link ReferenceCountingSegment}. Caller should not assume any particular behavior.
+   * by the {@link org.apache.druid.server.SegmentManager} and implementation can either return same {@link ReferenceCountedSegmentProvider}
+   * or a different {@link ReferenceCountedSegmentProvider}. Caller should not assume any particular behavior.
    * <p>
    * Returning a {@code ReferenceCountingSegment} will let custom implementations keep track of reference count for
    * segments that the custom implementations are creating. That way, custom implementations can know when the segment
@@ -72,10 +72,10 @@ public interface SegmentCacheManager
    * @throws SegmentLoadingException If there is an error in loading the segment
    * @see SegmentCacheManager#getBootstrapSegment(DataSegment, SegmentLazyLoadFailCallback)
    */
-  ReferenceCountingSegment getSegment(DataSegment segment) throws SegmentLoadingException;
+  ReferenceCountedSegmentProvider getSegment(DataSegment segment) throws SegmentLoadingException;
 
   /**
-   * Similar to {@link #getSegment(DataSegment)}, this method returns a {@link ReferenceCountingSegment} that will be
+   * Similar to {@link #getSegment(DataSegment)}, this method returns a {@link ReferenceCountedSegmentProvider} that will be
    * added by the {@link org.apache.druid.server.SegmentManager} to the {@link org.apache.druid.timeline.VersionedIntervalTimeline}
    * during startup on data nodes.
    * @param segment Segment to retrieve during service bootstrap
@@ -84,7 +84,7 @@ public interface SegmentCacheManager
    * @throws SegmentLoadingException - If there is an error in loading the segment
    * @see SegmentCacheManager#getSegment(DataSegment)
    */
-  ReferenceCountingSegment getBootstrapSegment(
+  ReferenceCountedSegmentProvider getBootstrapSegment(
       DataSegment segment,
       SegmentLazyLoadFailCallback loadFailed
   ) throws SegmentLoadingException;

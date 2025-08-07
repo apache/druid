@@ -55,6 +55,7 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
@@ -68,7 +69,6 @@ import org.junit.internal.matchers.ThrowableMessageMatcher;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Function;
 
 public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
 {
@@ -100,7 +100,8 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
 
     // Limit output frames to 1 row to ensure we test edge cases
     final FrameWriterFactory frameWriterFactory = new LimitedFrameWriterFactory(
-        FrameWriters.makeRowBasedFrameWriterFactory(
+        FrameWriters.makeFrameWriterFactory(
+            FrameType.latestRowBased(),
             new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
             cursorFactory.getRowSignature(),
             Collections.emptyList(),
@@ -119,7 +120,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
                 new RichSegmentDescriptor(queryableIndex.getDataInterval(), queryableIndex.getDataInterval(), "dummy_version", 0)
             )
         ),
-        Function.identity(),
+        SegmentMapFunction.IDENTITY,
         new ResourceHolder<>()
         {
           @Override
@@ -166,7 +167,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
     final FrameSequenceBuilder frameSequenceBuilder =
         FrameSequenceBuilder.fromCursorFactory(cursorFactory)
                             .maxRowsPerFrame(5)
-                            .frameType(FrameType.ROW_BASED)
+                            .frameType(FrameType.latestRowBased())
                             .allocator(ArenaMemoryAllocator.createOnHeap(100_000));
 
     final RowSignature signature = frameSequenceBuilder.signature();
@@ -199,7 +200,8 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
 
     // Limit output frames to 1 row to ensure we test edge cases
     final FrameWriterFactory frameWriterFactory = new LimitedFrameWriterFactory(
-        FrameWriters.makeRowBasedFrameWriterFactory(
+        FrameWriters.makeFrameWriterFactory(
+            FrameType.latestRowBased(),
             new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
             signature,
             Collections.emptyList(),
@@ -213,7 +215,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
         null,
         new DefaultObjectMapper(),
         ReadableInput.channel(inputChannel.readable(), FrameReader.create(signature), stagePartition),
-        Function.identity(),
+        SegmentMapFunction.IDENTITY,
         new ResourceHolder<>()
         {
           @Override

@@ -174,13 +174,13 @@ For example, consider a groupBy query like this one:
 ],
 ...
 ...
-"subtotalsSpec":[ ["D1", "D2", D3"], ["D1", "D3"], ["D3"]],
+"subtotalsSpec":[ ["D1", "D2", "D3"], ["D1", "D3"], ["D3"]],
 ..
 
 }
 ```
 
-The result of the subtotalsSpec would be equivalent to concatenating the result of three groupBy queries, with the "dimensions" field being `["D1", "D2", D3"]`, `["D1", "D3"]` and `["D3"]`, given the `DimensionSpec` shown above.
+The result of the subtotalsSpec would be equivalent to concatenating the result of three groupBy queries, with the "dimensions" field being `["D1", "D2", "D3"]`, `["D1", "D3"]` and `["D3"]`, given the `DimensionSpec` shown above.
 The response for the query above would look something like: 
 
 ```json
@@ -337,7 +337,7 @@ dictionary that can spill to disk. The outer query is run on the Broker in a sin
 
 ### Configurations
 
-This section describes the configurations for groupBy queries. You can set the runtime properties in the `runtime.properties` file on Broker, Historical, and Middle Manager processes. You can set the query context parameters through the [query context](query-context.md).
+This section describes the configurations for groupBy queries. You can set the runtime properties in the `runtime.properties` file on Broker, Historical, and Middle Manager processes. You can set the query context parameters through the [query context](query-context-reference.md).
 
 Supported runtime properties:
 

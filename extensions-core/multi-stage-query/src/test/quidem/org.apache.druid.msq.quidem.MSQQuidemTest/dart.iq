@@ -44,3 +44,18 @@ select dim2,count(dim3) from foo group by dim2;
 (4 rows)
 
 !ok
+
+select dim1,BIG_SUM(dbl1)  from numfoo group by 1;
++------+-------------+
+| dim1 | EXPR$1      |
++------+-------------+
+|      | 1.000000000 |
+| 1    |             |
+| 10.1 | 1.700000000 |
+| 2    | 0           |
+| abc  |             |
+| def  |             |
++------+-------------+
+(6 rows)
+
+!ok

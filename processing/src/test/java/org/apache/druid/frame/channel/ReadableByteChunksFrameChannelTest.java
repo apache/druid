@@ -143,7 +143,7 @@ public class ReadableByteChunksFrameChannelTest
       final File file = FrameTestUtil.writeFrameFile(
           FrameSequenceBuilder.fromCursorFactory(cursorFactory)
                               .allocator(ArenaMemoryAllocator.create(ByteBuffer.allocate(allocatorSize)))
-                              .frameType(FrameType.COLUMNAR) // No particular reason to test with both frame types
+                              .frameType(FrameType.latestColumnar()) // No particular reason to test with all types
                               .frames(),
           temporaryFolder.newFile()
       );
@@ -190,7 +190,7 @@ public class ReadableByteChunksFrameChannelTest
       final File file = FrameTestUtil.writeFrameFile(
           FrameSequenceBuilder.fromCursorFactory(cursorFactory)
                               .allocator(ArenaMemoryAllocator.create(ByteBuffer.allocate(allocatorSize)))
-                              .frameType(FrameType.COLUMNAR) // No particular reason to test with both frame types
+                              .frameType(FrameType.latestColumnar()) // No particular reason to test with all types
                               .frames(),
           temporaryFolder.newFile()
       );

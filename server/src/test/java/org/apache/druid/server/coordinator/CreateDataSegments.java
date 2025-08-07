@@ -231,10 +231,12 @@ public class CreateDataSegments
           Collections.emptyMap(),
           Collections.emptyList(),
           Collections.emptyList(),
+          Collections.emptyList(),
           shardSpec,
           compactionState,
           IndexIO.CURRENT_VERSION_ID,
-          size
+          size,
+          PruneSpecsHolder.DEFAULT
       );
       this.uniqueId = uniqueId;
     }

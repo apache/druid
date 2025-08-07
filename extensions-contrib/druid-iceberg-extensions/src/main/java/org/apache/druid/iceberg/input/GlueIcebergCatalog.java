@@ -24,9 +24,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.DynamicConfigProviderUtils;
-import org.apache.iceberg.CatalogUtil;
+import org.apache.iceberg.aws.glue.GlueCatalog;
 import org.apache.iceberg.catalog.Catalog;
 
 import javax.annotation.Nullable;
@@ -95,7 +96,21 @@ public class GlueIcebergCatalog extends IcebergCatalog
   {
     // We are not passing any hadoop config, third parameter is null
     catalogProperties.put("type", TYPE_KEY);
-    catalog = CatalogUtil.buildIcebergCatalog(CATALOG_NAME, catalogProperties, null);
+
+    // AWS Glue catalog internally uses reflection to locate certain classes from the iceberg-aws dependency.
+    // These classes are not available in the current context class loader, and so we explicitly set the context class loader to the system classloader.
+    ClassLoader currCtxClassloader = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+      catalog = new GlueCatalog();
+      catalog.initialize(CATALOG_NAME, catalogProperties);
+    }
+    catch (Exception e) {
+      throw new RE(e, "Failed to initialize Glue catalog");
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(currCtxClassloader);
+    }
     return catalog;
   }
 

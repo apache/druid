@@ -6,6 +6,7 @@ private/
 lib/*.css
 coverage/
 .claude/
+CLAUDE.md
 
 coordinator-console/
 pages/

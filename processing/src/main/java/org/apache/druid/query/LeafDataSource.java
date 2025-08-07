@@ -20,11 +20,10 @@
 package org.apache.druid.query;
 
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.SegmentMapFunction;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Function;
 
 /**
  * Leaf {@link DataSource}-s have no inputs.
@@ -48,8 +47,8 @@ public abstract class LeafDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
+  public SegmentMapFunction createSegmentMapFunction(Query query)
   {
-    return Function.identity();
+    return SegmentMapFunction.IDENTITY;
   }
 }

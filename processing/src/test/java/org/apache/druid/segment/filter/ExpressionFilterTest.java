@@ -176,6 +176,23 @@ public class ExpressionFilterTest extends BaseFilterTest
     assertFilterMatchesSkipVectorize(edf("dim4 == ''"), ImmutableList.of("2"));
     // AS per SQL standard null == null returns false.
     assertFilterMatchesSkipVectorize(edf("dim4 == null"), ImmutableList.of());
+    if (hasTypeInformation()) {
+      assertFilterMatchesSkipVectorize(edf("isnull(dim4)"), ImmutableList.of("1", "6", "7", "8"));
+      assertFilterMatchesSkipVectorize(
+          NotDimFilter.of(edf("isnull(dim4)")),
+          ImmutableList.of("0", "2", "3", "4", "5", "9")
+      );
+      assertFilterMatchesSkipVectorize(edf("cast(dim4, 'LONG')"), ImmutableList.of("0", "3", "4", "5", "9"));
+      assertFilterMatchesSkipVectorize(NotDimFilter.of(edf("cast(dim4, 'LONG')")), ImmutableList.of());
+      assertFilterMatchesSkipVectorize(edf("cast(dim4, 'STRING')"), ImmutableList.of());
+      assertFilterMatchesSkipVectorize(
+          NotDimFilter.of(edf("cast(dim4, 'STRING')")),
+          ImmutableList.of("0", "2", "3", "4", "5", "9")
+      );
+      assertFilterMatchesSkipVectorize(edf("cast(dim4, 'DOUBLE')"), ImmutableList.of("0", "3", "4", "5", "9"));
+      assertFilterMatchesSkipVectorize(NotDimFilter.of(edf("cast(dim4, 'DOUBLE')")), ImmutableList.of());
+    }
+
     assertFilterMatchesSkipVectorize(edf("dim4 == '1'"), ImmutableList.of("0"));
     assertFilterMatchesSkipVectorize(edf("dim4 == '3'"), ImmutableList.of("3"));
     assertFilterMatchesSkipVectorize(edf("dim4 == '4'"), ImmutableList.of("4", "5"));
@@ -189,6 +206,17 @@ public class ExpressionFilterTest extends BaseFilterTest
   public void testSingleAndMultiValuedStringColumn()
   {
     assertFilterMatchesSkipVectorize(edf("array_contains(dim4, dim3)"), ImmutableList.of("5", "9"));
+  }
+
+  @Test
+  public void testMvOverlap()
+  {
+    assertFilterMatchesSkipVectorize(edf("mv_overlap(dim4, '1')"), List.of("0"));
+    assertFilterMatchesSkipVectorize(edf("mv_overlap(dim4, '4')"), List.of("4", "5"));
+    assertFilterMatchesSkipVectorize(edf("mv_overlap(dim4, array(1, 2, 3, 4)"), List.of("0", "3", "4", "5"));
+    assertFilterMatchesSkipVectorize(edf("mv_overlap(dim4, dim3)"), List.of("5", "9"));
+    assertFilterMatchesSkipVectorize(edf("mv_overlap(dim4, null)"), List.of("1", "6", "7", "8"));
+    assertFilterMatchesSkipVectorize(edf("mv_overlap(dim4, [])"), List.of());
   }
 
   @Test

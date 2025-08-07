@@ -45,7 +45,7 @@ import { AsyncActionDialog } from '../../dialogs';
 import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import type { QueryContext, QueryWithContext, ShardSpec } from '../../druid-models';
-import { computeSegmentTimeSpan, getDatasourceColor } from '../../druid-models';
+import { computeSegmentTimeSpan, getConsoleViewIcon, getDatasourceColor } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
   booleanCustomTableFilter,
@@ -56,9 +56,10 @@ import {
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../react-table';
 import { Api } from '../../singletons';
-import type { NumberLike, TableState } from '../../utils';
+import type { AuxiliaryQueryFn, NumberLike, TableState } from '../../utils';
 import {
   applySorting,
+  assemble,
   compact,
   countBy,
   filterMap,
@@ -74,6 +75,7 @@ import {
   queryDruidSql,
   QueryManager,
   QueryState,
+  ResultWithAuxiliaryWork,
   sortedToOrderByClause,
   twoLines,
 } from '../../utils';
@@ -217,6 +219,11 @@ interface SegmentQueryResultRow {
   is_overshadowed: number;
 }
 
+interface SegmentsWithAuxiliaryInfo {
+  readonly segments: SegmentQueryResultRow[];
+  readonly count: number;
+}
+
 export interface SegmentsViewProps {
   filters: Filter[];
   onFiltersChange(filters: Filter[]): void;
@@ -225,7 +232,7 @@ export interface SegmentsViewProps {
 }
 
 export interface SegmentsViewState {
-  segmentsState: QueryState<SegmentQueryResultRow[]>;
+  segmentsState: QueryState<SegmentsWithAuxiliaryInfo>;
   segmentTableActionDialogId?: string;
   datasourceTableActionDialogId?: string;
   actions: BasicAction[];
@@ -245,7 +252,7 @@ export interface SegmentsViewState {
 export class SegmentsView extends React.PureComponent<SegmentsViewProps, SegmentsViewState> {
   static baseQuery(visibleColumns: LocalStorageBackedVisibility) {
     const columns = compact([
-      visibleColumns.shown('Segment ID') && `"segment_id"`,
+      `"segment_id"`,
       visibleColumns.shown('Datasource') && `"datasource"`,
       `"start"`,
       `"end"`,
@@ -268,7 +275,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     return `WITH s AS (SELECT\n${columns.join(',\n')}\nFROM sys.segments)`;
   }
 
-  private readonly segmentsQueryManager: QueryManager<SegmentsQuery, SegmentQueryResultRow[]>;
+  private readonly segmentsQueryManager: QueryManager<SegmentsQuery, SegmentsWithAuxiliaryInfo>;
 
   constructor(props: SegmentsViewProps) {
     super(props);
@@ -295,6 +302,10 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       processQuery: async (query: SegmentsQuery, cancelToken, setIntermediateQuery) => {
         const { page, pageSize, filtered, sorted, visibleColumns, capabilities, groupByInterval } =
           query;
+
+        let segments: SegmentQueryResultRow[];
+        let count = -1;
+        const auxiliaryQueries: AuxiliaryQueryFn<SegmentsWithAuxiliaryInfo>[] = [];
 
         if (capabilities.hasSql()) {
           const whereExpression = segmentFiltersToExpression(filtered);
@@ -374,7 +385,27 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             }));
           }
 
-          return result as SegmentQueryResultRow[];
+          segments = result as SegmentQueryResultRow[];
+
+          auxiliaryQueries.push(async (segmentsWithAuxiliaryInfo, cancelToken) => {
+            const sqlQuery = assemble(
+              'SELECT COUNT(*) AS "cnt"',
+              'FROM "sys"."segments"',
+              filterClause ? `WHERE ${filterClause}` : undefined,
+            ).join('\n');
+            const cnt: any = (
+              await queryDruidSql<{ cnt: number }>(
+                {
+                  query: sqlQuery,
+                },
+                cancelToken,
+              )
+            )[0].cnt;
+            return {
+              ...segmentsWithAuxiliaryInfo,
+              count: typeof cnt === 'number' ? cnt : -1,
+            };
+          });
         } else if (capabilities.hasCoordinatorAccess()) {
           let datasourceList: string[] = [];
           const datasourceFilter = filtered.find(({ id }) => id === 'datasource');
@@ -428,11 +459,17 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             });
           }
 
+          count = results.length;
           const maxResults = (page + 1) * pageSize;
-          return applySorting(results, sorted).slice(page * pageSize, maxResults);
+          segments = applySorting(results, sorted).slice(page * pageSize, maxResults);
         } else {
           throw new Error('must have SQL or coordinator access to load this view');
         }
+
+        return new ResultWithAuxiliaryWork<SegmentsWithAuxiliaryInfo>(
+          { segments, count },
+          auxiliaryQueries,
+        );
       },
       onStateChange: segmentsState => {
         this.setState({
@@ -497,14 +534,31 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     });
   };
 
+  private readonly handleFilterChange = (filters: Filter[]) => {
+    this.goToFirstPage();
+    this.props.onFiltersChange(filters);
+  };
+
+  private goToFirstPage() {
+    if (this.state.page) {
+      this.setState({ page: 0 });
+    }
+  }
+
   private getSegmentActions(id: string, datasource: string): BasicAction[] {
+    const { capabilities } = this.props;
     const actions: BasicAction[] = [];
-    actions.push({
-      icon: IconNames.IMPORT,
-      title: 'Drop segment (disable)',
-      intent: Intent.DANGER,
-      onAction: () => this.setState({ terminateSegmentId: id, terminateDatasourceId: datasource }),
-    });
+
+    if (capabilities.hasOverlordAccess()) {
+      actions.push({
+        icon: IconNames.IMPORT,
+        title: 'Drop segment (disable)',
+        intent: Intent.DANGER,
+        onAction: () =>
+          this.setState({ terminateSegmentId: id, terminateDatasourceId: datasource }),
+      });
+    }
+
     return actions;
   }
 
@@ -521,7 +575,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     enableComparisons = false,
     valueFn: (value: string) => ReactNode = String,
   ) {
-    const { filters, onFiltersChange } = this.props;
+    const { filters } = this.props;
+    const { handleFilterChange } = this;
 
     return function FilterableCell(row: { value: any }) {
       return (
@@ -529,7 +584,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           field={field}
           value={row.value}
           filters={filters}
-          onFiltersChange={onFiltersChange}
+          onFiltersChange={handleFilterChange}
           enableComparisons={enableComparisons}
         >
           {valueFn(row.value)}
@@ -539,7 +594,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   }
 
   renderSegmentsTable() {
-    const { capabilities, filters, onFiltersChange } = this.props;
+    const { capabilities, filters } = this.props;
     const {
       segmentsState,
       visibleColumns,
@@ -550,7 +605,10 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       showSegmentTimeline,
     } = this.state;
 
-    const segments = segmentsState.data || [];
+    const { segments, count } = segmentsState.data || {
+      segments: [],
+      count: -1,
+    };
 
     const sizeValues = segments.map(d => formatBytes(d.size)).concat('(realtime)');
 
@@ -570,7 +628,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     return (
       <ReactTable
         data={segments}
-        pages={10000000} // Dummy, we are hiding the page selector
+        pages={count >= 0 ? Math.ceil(count / pageSize) : 10000000}
         loading={segmentsState.loading}
         noDataText={
           segmentsState.isEmpty()
@@ -580,7 +638,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         manual
         filterable
         filtered={filters}
-        onFilteredChange={onFiltersChange}
+        onFilteredChange={this.handleFilterChange}
         sorted={sorted}
         onSortedChange={sorted => this.setState({ sorted })}
         page={page}
@@ -588,9 +646,9 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         pageSize={pageSize}
         onPageSizeChange={pageSize => this.setState({ pageSize })}
         pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
-        showPagination={segments.length >= STANDARD_TABLE_PAGE_SIZE || page > 0}
+        showPagination
         showPageJump={false}
-        ofText=""
+        ofText={count >= 0 ? `of ${formatInteger(count)}` : ''}
         pivotBy={groupByInterval ? ['interval'] : []}
         columns={[
           {
@@ -965,7 +1023,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       <AsyncActionDialog
         action={async () => {
           const resp = await Api.instance.delete(
-            `/druid/coordinator/v1/datasources/${Api.encodePath(
+            `/druid/indexer/v1/datasources/${Api.encodePath(
               terminateDatasourceId,
             )}/segments/${Api.encodePath(terminateSegmentId)}`,
             {},
@@ -973,7 +1031,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           return resp.data;
         }}
         confirmButtonText="Drop segment"
-        successText="Segment drop request acknowledged, next time the coordinator runs segment will be dropped"
+        successText="Segment drop request acknowledged, next time the overlord runs segment will be dropped"
         failText="Could not drop segment"
         intent={Intent.DANGER}
         onClose={() => {
@@ -999,7 +1057,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       <MoreButton>
         {capabilities.hasSql() && (
           <MenuItem
-            icon={IconNames.APPLICATION}
+            icon={getConsoleViewIcon('workbench')}
             text="View SQL query for table"
             disabled={typeof lastSegmentsQuery !== 'string'}
             onClick={() => {
@@ -1013,7 +1071,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   }
 
   render() {
-    const { capabilities, filters, onFiltersChange } = this.props;
+    const { capabilities, filters } = this.props;
     const {
       segmentTableActionDialogId,
       datasourceTableActionDialogId,
@@ -1104,7 +1162,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                     small
                     rightIcon={IconNames.ARROW_DOWN}
                     onClick={() =>
-                      onFiltersChange(
+                      this.handleFilterChange(
                         compact([
                           start && { id: 'start', value: `>=${start.toISOString()}` },
                           end && { id: 'end', value: `<${end.toISOString()}` },

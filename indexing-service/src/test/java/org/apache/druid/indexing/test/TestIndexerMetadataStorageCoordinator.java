@@ -57,33 +57,50 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   private int deleteSegmentsCount = 0;
 
   @Override
-  public DataSourceMetadata retrieveDataSourceMetadata(String dataSource)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean deleteDataSourceMetadata(String dataSource)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean resetDataSourceMetadata(String dataSource, DataSourceMetadata dataSourceMetadata)
-  {
-    return false;
-  }
-
-  @Override
-  public boolean insertDataSourceMetadata(String dataSource, DataSourceMetadata dataSourceMetadata)
-  {
-    return false;
-  }
-
-  @Override
   public Set<String> retrieveAllDatasourceNames()
   {
     return Set.of();
+  }
+
+  @Override
+  public List<Interval> retrieveUnusedSegmentIntervals(String dataSource, int limit)
+  {
+    return List.of();
+  }
+
+  @Override
+  public List<DataSegment> retrieveUnusedSegmentsWithExactInterval(
+      String dataSource,
+      Interval interval,
+      DateTime maxUpdatedTime,
+      int limit
+  )
+  {
+    return List.of();
+  }
+
+  @Override
+  public DataSourceMetadata retrieveDataSourceMetadata(String supervisorId)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean deleteDataSourceMetadata(String supervisorId)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean resetDataSourceMetadata(String supervisorId, DataSourceMetadata dataSourceMetadata)
+  {
+    return false;
+  }
+
+  @Override
+  public boolean insertDataSourceMetadata(String supervisorId, DataSourceMetadata dataSourceMetadata)
+  {
+    return false;
   }
 
   @Override
@@ -219,6 +236,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   public SegmentPublishResult commitAppendSegmentsAndMetadata(
       Set<DataSegment> appendSegments,
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      String supervisorId,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata,
       String taskAllocatorId,
@@ -231,6 +249,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public SegmentPublishResult commitSegmentsAndMetadata(
       Set<DataSegment> segments,
+      @Nullable final String supervisorId,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
       SegmentSchemaMapping segmentSchemaMapping
@@ -242,6 +261,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
 
   @Override
   public SegmentPublishResult commitMetadataOnly(
+      String supervisorId,
       String dataSource,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata
@@ -286,10 +306,11 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public void deleteSegments(Set<DataSegment> segments)
+  public int deleteSegments(Set<DataSegment> segments)
   {
     deleteSegmentsCount++;
     nuked.addAll(segments);
+    return segments.size();
   }
 
   @Override

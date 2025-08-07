@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from template import BaseTemplate, generate
-from template import ZOO_KEEPER, METADATA, OVERLORD
+from template import ZOO_KEEPER, METADATA, OVERLORD, MINIO
 
 class Template(BaseTemplate):
 
@@ -56,11 +56,11 @@ class Template(BaseTemplate):
         self.add_volume(service, '../data', '/resources')
 
     def create_minio_container(self):
-        return self.define_external_service("minio")
+        return self.define_external_service(MINIO)
 
     def create_minio_bucket(self):
         service = self.define_external_service("create_minio_buckets")
-        self.add_depends(service, ['minio'])
+        self.add_depends(service, [MINIO])
         return service
 
     # No kafka dependency in this cluster

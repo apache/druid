@@ -149,7 +149,7 @@ public class S3DataSegmentKiller implements DataSegmentKiller
       try {
         deleteObjectsRequest.setKeys(chunkOfKeys);
         log.info(
-            "Removing from bucket: [%s] the following index files: [%s] from s3!",
+            "Deleting the following segment files from S3 bucket[%s]: [%s]",
             s3Bucket,
             keysToDeleteStrings
         );

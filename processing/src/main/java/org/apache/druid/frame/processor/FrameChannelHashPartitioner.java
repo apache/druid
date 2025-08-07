@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.datasketches.memory.Memory;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryRange;
@@ -60,7 +61,7 @@ import java.util.function.Supplier;
  * Processor that hash-partitions rows from any number of input channels, and writes partitioned frames to output
  * channels.
  *
- * Input frames must be {@link FrameType#ROW_BASED}, and input signature must be the same as output signature.
+ * Input frames must be {@link FrameType#isRowBased()}, and input signature must be the same as output signature.
  * This processor hashes each row using {@link Memory#xxHash64} with a seed of {@link #HASH_SEED}.
  */
 public class FrameChannelHashPartitioner implements FrameProcessor<Long>
@@ -194,10 +195,16 @@ public class FrameChannelHashPartitioner implements FrameProcessor<Long>
 
       if (!channel.isFinished()) {
         // Need row-based frame so we can hash memory directly.
-        final Frame frame = FrameType.ROW_BASED.ensureType(channel.read());
+        final Frame frame = channel.read().ensureRowBased();
 
         final HashPartitionVirtualColumn hashPartitionVirtualColumn =
-            new HashPartitionVirtualColumn(PARTITION_COLUMN_NAME, frameReader, keyFieldCount, outputChannels.size());
+            new HashPartitionVirtualColumn(
+                PARTITION_COLUMN_NAME,
+                frameReader,
+                frameWriterFactory.frameType(),
+                keyFieldCount,
+                outputChannels.size()
+            );
 
         cursor = FrameProcessors.makeCursor(
             frame,
@@ -243,25 +250,28 @@ public class FrameChannelHashPartitioner implements FrameProcessor<Long>
   }
 
   /**
-   * Virtual column that provides a hash code of the {@link FrameType#ROW_BASED} frame row that is wrapped in
+   * Virtual column that provides a hash code of the {@link FrameType#isRowBased()} frame row that is wrapped in
    * the provided {@link ColumnSelectorFactory}, using {@link FrameReaderUtils#makeRowMemorySupplier}.
    */
   private static class HashPartitionVirtualColumn implements VirtualColumn
   {
     private final String name;
     private final FrameReader frameReader;
+    private final FrameType outputFrameType;
     private final int keyFieldCount;
     private final int partitionCount;
 
     public HashPartitionVirtualColumn(
         final String name,
         final FrameReader frameReader,
+        final FrameType outputFrameType,
         final int keyFieldCount,
         final int partitionCount
     )
     {
       this.name = name;
       this.frameReader = frameReader;
+      this.outputFrameType = outputFrameType;
       this.keyFieldCount = keyFieldCount;
       this.partitionCount = partitionCount;
     }
@@ -282,7 +292,7 @@ public class FrameChannelHashPartitioner implements FrameProcessor<Long>
     public ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelectorFactory factory)
     {
       final Supplier<MemoryRange<Memory>> rowMemorySupplier =
-          FrameReaderUtils.makeRowMemorySupplier(factory, frameReader.signature());
+          FrameReaderUtils.makeRowMemorySupplier(factory, outputFrameType, frameReader.signature());
       final int frameFieldCount = frameReader.signature().size();
 
       return new LongColumnSelector()
@@ -295,6 +305,9 @@ public class FrameChannelHashPartitioner implements FrameProcessor<Long>
           }
 
           final MemoryRange<Memory> rowMemoryRange = rowMemorySupplier.get();
+          if (rowMemoryRange == null) {
+            throw DruidException.defensive("Unexpectedly null row memory");
+          }
           final Memory memory = rowMemoryRange.memory();
           final long keyStartPosition = (long) Integer.BYTES * frameFieldCount;
           final long keyEndPosition =
@@ -328,6 +341,7 @@ public class FrameChannelHashPartitioner implements FrameProcessor<Long>
     public List<String> requiredColumns()
     {
       return ImmutableList.of(
+          FrameColumnSelectorFactory.FRAME_TYPE_COLUMN,
           FrameColumnSelectorFactory.ROW_MEMORY_COLUMN,
           FrameColumnSelectorFactory.ROW_SIGNATURE_COLUMN
       );

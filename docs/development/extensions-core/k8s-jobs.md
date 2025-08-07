@@ -372,10 +372,11 @@ The below runtime properties need to be passed to the Job's peon process.
 druid.port=8100 (what port the peon should run on)
 druid.peon.mode=remote
 druid.service=druid/peon (for metrics reporting)
-druid.indexer.task.baseTaskDir=/druid/data (this should match the argument to the ./peon.sh run command in the PodTemplate)
 druid.indexer.runner.type=k8s
 druid.indexer.task.encapsulatedTask=true
 ```
+
+**Note**: Prior to Druid 35.0.0, you will need the `druid.indexer.task.baseTaskDir` runtime property, along with the `TASK_DIR` and `attemptId` arguments to `/peon.sh` to run your jobs. There is no need for that now as Druid will automatically configure the task directory. You can still choose to customize the target task directory by adjusting `druid.indexer.task.baseTaskDir` on the Overlord service.
 
 #### Example 1: Using a Pod Template that retrieves values from a ConfigMap 
 
@@ -398,7 +399,7 @@ template:
         - sh
         - -c
         - |
-          /peon.sh /druid/data 1
+          /peon.sh
       env:
       - name: CUSTOM_ENV_VARIABLE
         value: "hello"
@@ -492,7 +493,6 @@ data:
         druid.port=8100
         druid.service=druid/peon
         druid.server.http.numThreads=5
-        druid.indexer.task.baseTaskDir=/druid/data
         druid.indexer.runner.type=k8s
         druid.peon.mode=remote
         druid.indexer.task.encapsulatedTask=true
@@ -544,7 +544,7 @@ data:
             - sh
             - -c
             - |
-              /peon.sh /druid/data 1
+              /peon.sh
           env:
             - name: druid_port
               value: 8100
@@ -556,8 +556,6 @@ data:
               value: remote
             - name: druid_service
               value: "druid/peon"
-            - name: druid_indexer_task_baseTaskDir
-              value: /druid/data
             - name: druid_indexer_runner_type
               value: k8s
             - name: druid_indexer_task_encapsulatedTask
@@ -777,7 +775,7 @@ Should you require the needed permissions for interacting across Kubernetes name
 | `druid.indexer.runner.namespace` | `String` | If Overlord and task pods are running in different namespaces, specify the Overlord namespace. | - | Yes |
 | `druid.indexer.runner.overlordNamespace` | `String` | Only applicable when using Custom Template Pod Adapter. If Overlord and task pods are running in different namespaces, specify the Overlord namespace. <br /> Warning: You need to stop all running tasks in Druid to change this property. Failure to do so will lead to duplicate data and metadata inconsistencies. | `""` | No |
 | `druid.indexer.runner.k8sTaskPodNamePrefix` | `String` |  Use this if you want to change your task name to contain a more human-readable prefix. Maximum 30 characters. Special characters `: - . _` will be ignored. <br /> Warning: You need to stop all running tasks in Druid to change this property. Failure to do so will lead to duplicate data and metadata inconsistencies. | `""` | No |
-| `druid.indexer.runner.debugJobs` | `boolean` | Clean up K8s jobs after tasks complete. | False | No |
+| `druid.indexer.runner.debugJobs` | `boolean` | Boolean flag used to disable clean up of K8s jobs after tasks complete. | False | No |
 | `druid.indexer.runner.sidecarSupport` | `boolean` | Deprecated, specify adapter type as runtime property `druid.indexer.runner.k8s.adapter.type: overlordMultiContainer` instead. If your overlord pod has sidecars, this will attempt to start the task with the same sidecars as the overlord pod. | False | No |
 | `druid.indexer.runner.primaryContainerName` | `String` | If running with sidecars, the `primaryContainerName` should be that of your druid container like `druid-overlord`. | First container in `podSpec` list | No |
 | `druid.indexer.runner.kubexitImage` | `String` | Used kubexit project to help shutdown sidecars when the main pod completes. Otherwise, jobs with sidecars never terminate. | karlkfi/kubexit:latest | No |
@@ -786,7 +784,7 @@ Should you require the needed permissions for interacting across Kubernetes name
 | `druid.indexer.runner.taskCleanupDelay` | `Duration` | How long do jobs stay around before getting reaped from K8s. | `P2D` | No |
 | `druid.indexer.runner.taskCleanupInterval` | `Duration` | How often to check for jobs to be reaped. | `PT10M` | No |
 | `druid.indexer.runner.taskJoinTimeout` | `Duration` | Timeout for gathering metadata about existing tasks on startup. | `PT1M` | No |
-| `druid.indexer.runner.K8sjobLaunchTimeout` | `Duration` | How long to wait to launch a K8s task before marking it as failed, on a resource constrained cluster it may take some time. | `PT1H` | No |
+| `druid.indexer.runner.k8sjobLaunchTimeout` | `Duration` | How long to wait to launch a K8s task before marking it as failed, on a resource constrained cluster it may take some time. | `PT1H` | No |
 | `druid.indexer.runner.javaOptsArray` | `JsonArray` | java opts for the task. | `-Xmx1g` | No |
 | `druid.indexer.runner.labels` | `JsonObject` | Additional labels you want to add to peon pod. | `{}` | No |
 | `druid.indexer.runner.annotations` | `JsonObject` | Additional annotations you want to add to peon pod. | `{}` | No |
@@ -818,7 +816,7 @@ rules:
     resources: ["jobs"]
     verbs: ["get", "watch", "list", "delete", "create"]
   - apiGroups: [""]
-    resources: ["pods", "pods/log"]
+    resources: ["events", "pods", "pods/log"]
     verbs: ["get", "watch", "list", "delete", "create"]
 ---
 kind: RoleBinding

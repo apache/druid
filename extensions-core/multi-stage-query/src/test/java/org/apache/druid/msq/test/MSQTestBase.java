@@ -44,13 +44,13 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.ExpressionModule;
-import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -217,7 +217,6 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -244,9 +243,6 @@ import static org.apache.druid.sql.calcite.util.CalciteTests.WIKIPEDIA;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -278,6 +274,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0)
                   .put(MSQTaskQueryMaker.USER_KEY, CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity())
                   .put(MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION, true)
+                  .put(MultiStageQueryContext.CTX_ROW_BASED_FRAME_TYPE, (int) FrameType.latestRowBased().version())
                   .build();
 
   public static final Map<String, Object> SUPERUSER_MSQ_CONTEXT =
@@ -366,7 +363,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return DruidModuleCollection.of(
           super.getCoreModule(),
           new HllSketchModule(),
-          new LocalMsqSqlModule()
+          new LocalMsqSqlModule(),
+          new ExpressionModule(),
+          binder -> binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT)
       );
     }
 
@@ -425,15 +424,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
     groupByBuffers = TestGroupByBuffers.createDefault();
 
     SqlTestFramework qf = queryFramework();
-    Injector secondInjector = GuiceInjectors.makeStartupInjectorWithModules(
-        ImmutableList.of(
-            new ExpressionModule(),
-            (Module) binder ->
-                binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT)
-        )
-    );
 
-    ObjectMapper secondMapper = setupObjectMapper(secondInjector);
+    ObjectMapper secondMapper = setupObjectMapper(qf.injector());
     indexIO = new IndexIO(secondMapper, ColumnConfig.DEFAULT);
 
     segmentCacheManager = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, secondMapper).manufacturate(newTempFolder("cacheManager"));
@@ -581,7 +573,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         indexingServiceClient,
         qf.queryJsonMapper().copy().registerModules(new MSQSqlModule().getJacksonModules()),
         new SegmentGenerationTerminalStageSpecFactory(),
-        injector.getInstance(MSQTaskQueryKitSpecFactory.class)
+        injector.getInstance(MSQTaskQueryKitSpecFactory.class),
+        null
     );
 
     PlannerFactory plannerFactory = new PlannerFactory(
@@ -644,11 +637,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
   private DataServerQueryHandlerFactory getTestDataServerQueryHandlerFactory()
   {
-    DataServerQueryHandlerFactory mockFactory = Mockito.mock(DataServerQueryHandlerFactory.class);
-    doReturn(dataServerQueryHandler)
-        .when(mockFactory)
-        .createDataServerQueryHandler(anyString(), any(), any());
-    return mockFactory;
+    return (inputNumber, dataSourceName, channelCounters, dataServerRequestDescriptor) -> dataServerQueryHandler;
+  }
+
+  protected List<Number> getEmittedMetrics(String metricName, Map<String, Object> dimensionFilters)
+  {
+    return indexingServiceClient.getEmittedMetrics(metricName, dimensionFilters);
   }
 
   @Nonnull
@@ -810,12 +804,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
   )
   {
     final DirectStatement stmt = sqlStatementFactory.directStatement(
-        new SqlQueryPlus(
-            query,
-            context,
-            parameters,
-            authenticationResult
-        )
+        SqlQueryPlus.builder()
+                    .sql(query)
+                    .context(context)
+                    .parameters(parameters)
+                    .auth(authenticationResult)
+                    .build()
     );
 
     final List<Object[]> sequence = stmt.execute().getResults().toList();
@@ -937,6 +931,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected Map<Integer, Integer> expectedStageVsWorkerCount = new HashMap<>();
     protected final Map<Integer, Map<Integer, Map<String, CounterSnapshotMatcher>>>
         expectedStageWorkerChannelToCounters = new HashMap<>();
+    protected Map<String, Object> expectedMetricDimensions = null;
 
     private boolean hasRun = false;
 
@@ -1086,6 +1081,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return asBuilder();
     }
 
+    public Builder setExpectedMetricDimensions(Map<String, Object> expectedMetricDimensions)
+    {
+      this.expectedMetricDimensions = expectedMetricDimensions;
+      return asBuilder();
+    }
+
     @SuppressWarnings("unchecked")
     private Builder asBuilder()
     {
@@ -1104,6 +1105,31 @@ public class MSQTestBase extends BaseCalciteQueryTest
       );
 
       assertThat(e, expectedValidationErrorMatcher);
+    }
+
+    protected void verifyMetrics()
+    {
+      if (expectedMetricDimensions != null) {
+        Map<String, Object> controllerDims = new HashMap<>(expectedMetricDimensions);
+        controllerDims.put(MSQTestOverlordServiceClient.TEST_METRIC_DIMENSION, MSQTestOverlordServiceClient.METRIC_CONTROLLER_TASK_TYPE);
+
+        Map<String, Object> workerDims = new HashMap<>(expectedMetricDimensions);
+        workerDims.put(MSQTestOverlordServiceClient.TEST_METRIC_DIMENSION, MSQTestOverlordServiceClient.METRIC_WORKER_TASK_TYPE);
+
+        // Since the time could vary, it can't be asserted, but the dimensions are asserted by using them as a filter.
+        // The value should be greater than 0 as a basic sanity check.
+        List<Number> metric = getEmittedMetrics("query/time", controllerDims);
+        Assert.assertEquals(1, metric.size());
+        Assert.assertTrue(metric.get(0).longValue() > 0);
+
+        metric = getEmittedMetrics("query/time", workerDims);
+        Assert.assertEquals(1, metric.size());
+        Assert.assertTrue(metric.get(0).longValue() > 0);
+
+        metric = getEmittedMetrics("query/cpu/time", workerDims);
+        Assert.assertEquals(1, metric.size());
+        Assert.assertTrue(metric.get(0).longValue() > 0);
+      }
     }
 
     protected void verifyLookupLoadingInfoInTaskContext(Map<String, Object> context)
@@ -1289,6 +1315,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         MSQTaskReportPayload reportPayload = getPayloadOrThrow(controllerId);
         verifyWorkerCount(reportPayload.getCounters());
         verifyCounters(reportPayload.getCounters());
+        verifyMetrics();
 
         MSQControllerTask msqControllerTask = indexingServiceClient.getMSQControllerTask(controllerId);
         LegacyMSQSpec foundSpec = msqControllerTask.getQuerySpec();
@@ -1344,13 +1371,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           for (List<Object> row : FrameTestUtil.readRowsFromCursorFactory(cursorFactory).toList()) {
             // transforming rows for sketch assertions
             List<Object> transformedRow = row.stream()
-                                             .map(r -> {
-                                               if (r instanceof HyperLogLogCollector) {
-                                                 return ((HyperLogLogCollector) r).estimateCardinalityRound();
-                                               } else {
-                                                 return r;
-                                               }
-                                             })
+                                             .map(MSQTestBase.this::segmentToAssertionValueMapper)
                                              .collect(Collectors.toList());
             segmentIdVsOutputRowsMap.computeIfAbsent(dataSegment.getId(), r -> new ArrayList<>()).add(transformedRow);
           }
@@ -1414,8 +1435,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
         // Assert on the tombstone intervals
         // Tombstone segments are only published, but since they do not have any data, they are not pushed by the
-        // SegmentGeneratorFrameProcessorFactory. We can get the tombstone segment ids published by taking a set
-        // difference of all the segments published with the segments that are created by the SegmentGeneratorFrameProcessorFactory
+        // SegmentGeneratorStageProcessor. We can get the tombstone segment ids published by taking a set
+        // difference of all the segments published with the segments that are created by the SegmentGeneratorStageProcessor
         if (!testTaskActionClient.getPublishedSegments().isEmpty()) {
           if (expectedLastCompactionState != null) {
             CompactionState compactionState = testTaskActionClient.getPublishedSegments().stream().findFirst().get()
@@ -1497,6 +1518,21 @@ public class MSQTestBase extends BaseCalciteQueryTest
             expectedExecutionErrorMatcher
         );
       }
+      verifyMetrics();
+    }
+  }
+
+  /**
+   * Maps certain fields on the segment to a different equivalent value, which is easier to assert against.
+   * For example, the HLL collector can't really be directly asserted as part of the test, so it is converted to its
+   * cardinality.
+   */
+  protected Object segmentToAssertionValueMapper(Object r)
+  {
+    if (r instanceof HyperLogLogCollector) {
+      return ((HyperLogLogCollector) r).estimateCardinalityRound();
+    } else {
+      return r;
     }
   }
 
@@ -1639,6 +1675,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       Assert.assertEquals(expectedRowSignature, specAndResults.rhs.lhs);
       assertResultsEquals(sql != null ? sql : taskSpec.toString(), expectedResultRows, specAndResults.rhs.rhs);
       assertMSQSpec(expectedMSQSpec, specAndResults.lhs);
+      verifyMetrics();
     }
 
     public void verifyExecutionError()
@@ -1647,6 +1684,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       if (runQueryWithResult() != null) {
         throw new ISE("Query %s did not throw an exception", sql != null ? sql : taskSpec);
       }
+      verifyMetrics();
     }
   }
 

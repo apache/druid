@@ -44,7 +44,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 /**
- * Write row-based frames: type {@link FrameType#ROW_BASED}.
+ * Write row-based frames, where {@link FrameType#isRowBased()}.
  *
  * Row-based frames have two regions: an offset region and data region.
  *
@@ -64,6 +64,7 @@ public class RowBasedFrameWriter implements FrameWriter
    */
   static final int BASE_DATA_ALLOCATION_SIZE = 1 << 13; // 8 KB
 
+  private final FrameType frameType;
   private final RowSignature signature;
   private final List<KeyColumn> sortColumns;
   private final List<FieldWriter> fieldWriters;
@@ -76,6 +77,7 @@ public class RowBasedFrameWriter implements FrameWriter
   private boolean written = false;
 
   public RowBasedFrameWriter(
+      final FrameType frameType,
       final RowSignature signature,
       final List<KeyColumn> sortColumns,
       final List<FieldWriter> fieldWriters,
@@ -85,6 +87,7 @@ public class RowBasedFrameWriter implements FrameWriter
       final AppendableMemory dataMemory
   )
   {
+    this.frameType = frameType;
     this.signature = signature;
     this.sortColumns = sortColumns;
     this.rowMemorySupplier = rowMemorySupplier;
@@ -168,7 +171,7 @@ public class RowBasedFrameWriter implements FrameWriter
     currentPosition += FrameWriterUtils.writeFrameHeader(
         memory,
         startPosition,
-        FrameType.ROW_BASED,
+        frameType,
         totalSize,
         numRows,
         NUM_REGIONS,

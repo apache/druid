@@ -24,7 +24,11 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.FallbackVectorProcessor;
+import org.apache.druid.query.filter.ColumnIndexSelector;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.Types;
+import org.apache.druid.segment.index.BitmapColumnIndex;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -111,6 +115,33 @@ class FunctionExpr implements Expr
     } else {
       return FallbackVectorProcessor.create(function, args, inspector);
     }
+  }
+
+  @Nullable
+  @Override
+  public ColumnIndexSupplier asColumnIndexSupplier(
+      ColumnIndexSelector columnIndexSelector,
+      @Nullable ColumnType outputType
+  )
+  {
+    final ColumnIndexSupplier indexSupplier = function.asSingleThreaded(args, columnIndexSelector)
+                                                      .asColumnIndexSupplier(columnIndexSelector, outputType, args);
+    if (indexSupplier != null) {
+      return indexSupplier;
+    }
+    return Expr.super.asColumnIndexSupplier(columnIndexSelector, outputType);
+  }
+
+  @Nullable
+  @Override
+  public BitmapColumnIndex asBitmapColumnIndex(ColumnIndexSelector selector)
+  {
+    final BitmapColumnIndex functionIndex = function.asSingleThreaded(args, selector)
+                                                    .asBitmapColumnIndex(selector, args);
+    if (functionIndex != null) {
+      return functionIndex;
+    }
+    return Expr.super.asBitmapColumnIndex(selector);
   }
 
   @Override

@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.OrderBy;
@@ -149,10 +150,24 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
         projectionDims[i] = key.dims[parentDimensionIndex[i]];
       }
     }
+    final long timestamp;
+
+    if (projectionSchema.getTimeColumnName() != null) {
+      timestamp = projectionSchema.getGranularity().bucketStart(DateTimes.utc(key.getTimestamp())).getMillis();
+      if (timestamp < minTimestamp) {
+        throw DruidException.defensive(
+            "Cannot add row[%s] to projection[%s] because projection effective timestamp[%s] is below the minTimestamp[%s]",
+            inputRow,
+            projectionSchema.getName(),
+            DateTimes.utc(timestamp),
+            DateTimes.utc(minTimestamp)
+        );
+      }
+    } else {
+      timestamp = minTimestamp;
+    }
     final IncrementalIndexRow subKey = new IncrementalIndexRow(
-        projectionSchema.getTimeColumnName() != null
-        ? projectionSchema.getGranularity().bucketStart(DateTimes.utc(key.getTimestamp())).getMillis()
-        : minTimestamp,
+        timestamp,
         projectionDims,
         dimensions
     );
@@ -379,6 +394,14 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
       }
       final IncrementalIndex.DimensionDesc parent = getBaseTableDimensionDesc.apply(dimension.getName());
       if (parent == null) {
+        // ensure that this dimension refers to a virtual column, otherwise it is invalid
+        if (!projectionSpec.getVirtualColumns().exists(dimension.getName())) {
+          throw InvalidInput.exception(
+              "projection[%s] contains dimension[%s] that is not present on the base table or a virtual column",
+              projectionSpec.getName(),
+              dimension.getName()
+          );
+        }
         // this dimension only exists in the child, it needs its own handler
         final IncrementalIndex.DimensionDesc childOnly = new IncrementalIndex.DimensionDesc(
             i++,

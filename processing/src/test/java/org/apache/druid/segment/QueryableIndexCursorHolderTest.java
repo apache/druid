@@ -145,7 +145,7 @@ public class QueryableIndexCursorHolderTest
   @Test
   public void testProjectionTimeBoundaryInspector()
   {
-    final DateTime startTime = DateTimes.nowUtc();
+    final DateTime startTime = Granularities.HOUR.bucketStart(DateTimes.nowUtc());
     final DimensionsSpec dims = DimensionsSpec.builder()
                                               .setDimensions(
                                                   Arrays.asList(

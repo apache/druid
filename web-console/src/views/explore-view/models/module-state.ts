@@ -170,7 +170,7 @@ export class ModuleState {
     }
 
     return this.change({
-      moduleId: 'grouping-table',
+      moduleId: 'time-chart',
       parameterValues: {
         measures: [measure],
       },

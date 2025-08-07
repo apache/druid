@@ -293,16 +293,7 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
     QueryableDruidServer queryableDruidServer = mock(QueryableDruidServer.class);
     DruidServer server = mock(DruidServer.class);
     SegmentId segmentId = SegmentId.dummy("data-source", partitionNumber);
-    DataSegment segment = new DataSegment(
-        segmentId,
-        null,
-        null,
-        null,
-        new NumberedShardSpec(partitionNumber, 10),
-        null,
-        0,
-        0
-    );
+    DataSegment segment = DataSegment.builder(segmentId).shardSpec(new NumberedShardSpec(partitionNumber, 10)).build();
     expect(server.isSegmentReplicationTarget()).andReturn(isHistorical).anyTimes();
     expect(serverSelector.pick(query, CloneQueryMode.EXCLUDECLONES)).andReturn(queryableDruidServer).anyTimes();
     expect(queryableDruidServer.getServer()).andReturn(server).anyTimes();

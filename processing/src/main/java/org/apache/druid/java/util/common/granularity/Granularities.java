@@ -25,10 +25,13 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.Order;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -39,6 +42,7 @@ import org.joda.time.chrono.ISOChronology;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -117,6 +121,16 @@ public class Granularities
             () -> Arrays.stream(buildSpec.getVirtualColumns().getVirtualColumns()).iterator()
         )
     );
+    final Order existingTimeOrder = Cursors.getTimeOrdering(buildSpec.getPreferredOrdering());
+    final List<OrderBy> orderBy;
+    if (Order.NONE.equals(existingTimeOrder)) {
+      orderBy = ImmutableList.copyOf(
+          Iterables.concat(Cursors.ascendingTimeOrder(), buildSpec.getPreferredOrdering())
+      );
+    } else {
+      orderBy = buildSpec.getPreferredOrdering();
+    }
+
     final ImmutableList.Builder<String> groupingColumnsBuilder = ImmutableList.builder();
     groupingColumnsBuilder.add(granularityVirtual.getOutputName());
     if (buildSpec.getGroupingColumns() != null) {
@@ -125,6 +139,7 @@ public class Granularities
     return CursorBuildSpec.builder(buildSpec)
                           .setVirtualColumns(virtualColumns)
                           .setGroupingColumns(groupingColumnsBuilder.build())
+                          .setPreferredOrdering(orderBy)
                           .build();
   }
 

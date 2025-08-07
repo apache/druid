@@ -1199,6 +1199,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
         + " FROM druid.foo"
         + " GROUP BY 1 ORDER BY 1"
         + " LIMIT 2",
+        QUERY_CONTEXT_LEXICOGRAPHIC_TOPN,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -1213,7 +1214,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                 ))
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
                 .threshold(2)
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(QUERY_CONTEXT_LEXICOGRAPHIC_TOPN)
                 .build()
         ),
         ImmutableList.of(

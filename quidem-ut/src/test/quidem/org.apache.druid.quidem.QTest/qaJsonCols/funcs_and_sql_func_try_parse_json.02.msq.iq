@@ -156,6 +156,7 @@ FROM test_json_cols;
           "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
+          "rowBasedFrameType" : 19,
           "scanSignature" : "[{\"name\":\"v0\",\"type\":\"COMPLEX<json>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,

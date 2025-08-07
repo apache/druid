@@ -109,7 +109,7 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
 
     CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
         = CentralizedDatasourceSchemaConfig.enabled(true);
-    config = new SegmentsMetadataManagerConfig(Period.seconds(3), null);
+    config = new SegmentsMetadataManagerConfig(Period.seconds(3), null, null);
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
         jsonMapper,
         Suppliers.ofInstance(config),
@@ -193,7 +193,7 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
 
     CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
         = CentralizedDatasourceSchemaConfig.enabled(true);
-    config = new SegmentsMetadataManagerConfig(Period.seconds(3), null);
+    config = new SegmentsMetadataManagerConfig(Period.seconds(3), null, null);
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
         jsonMapper,
         Suppliers.ofInstance(config),

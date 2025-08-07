@@ -166,6 +166,48 @@ public class SeekableStreamIndexTaskRunnerTest
     Assert.assertTrue(runner.withinMinMaxRecordTime(row));
   }
 
+  @Test
+  public void testGetSupervisorId()
+  {
+    DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        Arrays.asList(
+            new StringDimensionSchema("d1"),
+            new StringDimensionSchema("d2")
+        )
+    );
+    DataSchema schema =
+        DataSchema.builder()
+                  .withDataSource("datasource")
+                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withDimensions(dimensionsSpec)
+                  .withGranularity(
+                      new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null)
+                  )
+                  .build();
+
+    SeekableStreamIndexTaskTuningConfig tuningConfig = Mockito.mock(SeekableStreamIndexTaskTuningConfig.class);
+    SeekableStreamIndexTaskIOConfig<String, String> ioConfig = Mockito.mock(SeekableStreamIndexTaskIOConfig.class);
+    SeekableStreamStartSequenceNumbers<String, String> sequenceNumbers = Mockito.mock(SeekableStreamStartSequenceNumbers.class);
+    SeekableStreamEndSequenceNumbers<String, String> endSequenceNumbers = Mockito.mock(SeekableStreamEndSequenceNumbers.class);
+
+    Mockito.when(ioConfig.getRefreshRejectionPeriodsInMinutes()).thenReturn(null);
+    Mockito.when(ioConfig.getInputFormat()).thenReturn(new JsonInputFormat(null, null, null, null, null));
+    Mockito.when(ioConfig.getStartSequenceNumbers()).thenReturn(sequenceNumbers);
+    Mockito.when(ioConfig.getEndSequenceNumbers()).thenReturn(endSequenceNumbers);
+
+    Mockito.when(endSequenceNumbers.getPartitionSequenceNumberMap()).thenReturn(ImmutableMap.of());
+    Mockito.when(sequenceNumbers.getStream()).thenReturn("test");
+
+    Mockito.when(task.getDataSchema()).thenReturn(schema);
+    Mockito.when(task.getIOConfig()).thenReturn(ioConfig);
+    Mockito.when(task.getTuningConfig()).thenReturn(tuningConfig);
+
+    Mockito.when(task.getSupervisorId()).thenReturn("supervisorId");
+    TestasbleSeekableStreamIndexTaskRunner runner = new TestasbleSeekableStreamIndexTaskRunner(task, null,
+                                                                                               LockGranularity.TIME_CHUNK);
+    Assert.assertEquals("supervisorId", runner.getSupervisorId());
+  }
+
   static class TestasbleSeekableStreamIndexTaskRunner extends SeekableStreamIndexTaskRunner
   {
     public TestasbleSeekableStreamIndexTaskRunner(

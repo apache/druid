@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.segment.FrameCursorUtils;
@@ -127,7 +128,8 @@ public class FrameBasedInlineDataSourceSerializerTest
     RowSignature modifiedRowSignature = FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature);
     Sequence<Frame> frames = FrameCursorUtils.cursorToFramesSequence(
         cursor,
-        FrameWriters.makeRowBasedFrameWriterFactory(
+        FrameWriters.makeFrameWriterFactory(
+            FrameType.latestColumnar(),
             new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
             modifiedRowSignature,
             new ArrayList<>(),

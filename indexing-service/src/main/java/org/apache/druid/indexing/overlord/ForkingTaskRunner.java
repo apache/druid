@@ -521,9 +521,21 @@ public class ForkingTaskRunner
     finally {
       Thread.currentThread().setName(priorThreadName);
         // Upload task logs
-      taskLogPusher.pushTaskLog(task.getId(), logFile);
+      try {
+        taskLogPusher.pushTaskLog(task.getId(), logFile);
+      }
+      catch (IOException e) {
+        LOGGER.error("Task[%s] failed to push task logs to [%s]: Exception[%s]",
+            task.getId(), logFile.getName(), e.getMessage());
+      }
       if (reportsFile.exists()) {
-        taskLogPusher.pushTaskReports(task.getId(), reportsFile);
+        try {
+          taskLogPusher.pushTaskReports(task.getId(), reportsFile);
+        }
+        catch (IOException e) {
+          LOGGER.error("Task[%s] failed to push task reports to [%s]: Exception[%s]",
+              task.getId(), reportsFile.getName(), e.getMessage());
+        }
       }
     }
   }
@@ -713,29 +725,22 @@ public class ForkingTaskRunner
   @Override
   public Map<String, Long> getTotalTaskSlotCount()
   {
-    return ImmutableMap.of(workerConfig.getCategory(), getTotalTaskSlotCountLong());
-  }
-
-  public long getTotalTaskSlotCountLong()
-  {
-    return workerConfig.getCapacity();
+    return Map.of(workerConfig.getCategory(), getWorkerTotalTaskSlotCount());
   }
 
   @Override
   public Map<String, Long> getIdleTaskSlotCount()
   {
-    return ImmutableMap.of(workerConfig.getCategory(), Math.max(getTotalTaskSlotCountLong() - getUsedTaskSlotCountLong(), 0));
+    return Map.of(
+        workerConfig.getCategory(),
+        Math.max(getWorkerTotalTaskSlotCount() - getWorkerUsedTaskSlotCount(), 0)
+    );
   }
 
   @Override
   public Map<String, Long> getUsedTaskSlotCount()
   {
-    return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(portFinder.findUsedPortCount()));
-  }
-
-  public long getUsedTaskSlotCountLong()
-  {
-    return portFinder.findUsedPortCount();
+    return Map.of(workerConfig.getCategory(), getWorkerUsedTaskSlotCount());
   }
 
   @Override
@@ -762,19 +767,19 @@ public class ForkingTaskRunner
   @Override
   public Long getWorkerIdleTaskSlotCount()
   {
-    return Math.max(getTotalTaskSlotCountLong() - getUsedTaskSlotCountLong(), 0);
+    return Math.max(getWorkerTotalTaskSlotCount() - getWorkerUsedTaskSlotCount(), 0);
   }
 
   @Override
   public Long getWorkerUsedTaskSlotCount()
   {
-    return (long) portFinder.findUsedPortCount();
+    return getTracker().getNumUsedSlots();
   }
 
   @Override
   public Long getWorkerTotalTaskSlotCount()
   {
-    return getTotalTaskSlotCountLong();
+    return (long) workerConfig.getCapacity();
   }
 
   @Override

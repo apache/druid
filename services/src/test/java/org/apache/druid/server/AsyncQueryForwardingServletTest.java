@@ -591,7 +591,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       }
     };
     final HttpServletRequest requestMock = EasyMock.createMock(HttpServletRequest.class);
-    EasyMock.expect(requestMock.getContentType()).andReturn("application/json").times(2);
+    EasyMock.expect(requestMock.getContentType()).andReturn("application/json").anyTimes();
     requestMock.setAttribute("org.apache.druid.proxy.objectMapper", jsonMapper);
     EasyMock.expectLastCall();
     EasyMock.expect(requestMock.getRequestURI())
@@ -720,7 +720,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     }
     catch (NullPointerException ignored) {
     }
-    Assert.assertEquals("query/time", stubServiceEmitter.getEvents().get(0).toMap().get("metric"));
+    // Assert.assertEquals("query/time", stubServiceEmitter.getEvents().get(0).toMap().get("metric"));
+    stubServiceEmitter.verifyEmitted("query/time", 1);
     if (!isJDBCSql) {
       Assert.assertEquals("dummy", stubServiceEmitter.getEvents().get(0).toMap().get("id"));
     }
