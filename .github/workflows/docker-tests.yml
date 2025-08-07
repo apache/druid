@@ -48,7 +48,7 @@ jobs:
           cache: 'maven'
       - name: Run Docker tests
         id: run-it
-        run: .github/scripts/run_docker-tests.sh
+        run: .github/scripts/run_docker-tests
         timeout-minutes: 60
 
       - name: Collect docker logs on failure
