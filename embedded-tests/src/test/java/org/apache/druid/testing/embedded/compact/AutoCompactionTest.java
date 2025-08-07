@@ -225,7 +225,7 @@ public class AutoCompactionTest extends CompactionTestBase
   }
 
   @BeforeEach
-  public void resetCompactionTaskSlots() throws Exception
+  public void resetCompactionTaskSlots()
   {
     // Set compaction slot to 5
     updateCompactionTaskSlot(0.5, 10);
@@ -580,7 +580,6 @@ public class AutoCompactionTest extends CompactionTestBase
       verifySegmentIntervals(intervalsBeforeCompaction);
       getAndAssertCompactionStatus(
           fullDatasourceName,
-          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           Matchers.equalTo(0L),
           Matchers.greaterThan(0L),
           Matchers.greaterThan(0L),
@@ -598,7 +597,6 @@ public class AutoCompactionTest extends CompactionTestBase
       verifySegmentIntervals(intervalsBeforeCompaction);
       getAndAssertCompactionStatus(
           fullDatasourceName,
-          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           Matchers.equalTo(0L),
           Matchers.greaterThan(0L),
           Matchers.equalTo(0L),
@@ -642,7 +640,7 @@ public class AutoCompactionTest extends CompactionTestBase
         LOG.info("Auto compaction test with hash partitioning");
 
         final HashedPartitionsSpec hashedPartitionsSpec = new HashedPartitionsSpec(null, 3, null);
-        submitCompactionConfig(hashedPartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, null, false, engine);
+        submitCompactionConfig(hashedPartitionsSpec, NO_SKIP_OFFSET, null, null, null, null, false, engine);
         // 3 segments for both 2013-08-31 and 2013-09-01. (Note that numShards guarantees max shards but not exact
         // number of final shards, since some shards may end up empty.)
         forceTriggerAutoCompaction(6);
@@ -669,7 +667,7 @@ public class AutoCompactionTest extends CompactionTestBase
             false
         );
       }
-      submitCompactionConfig(inputRangePartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, null, false, engine);
+      submitCompactionConfig(inputRangePartitionsSpec, NO_SKIP_OFFSET, null, null, null, null, false, engine);
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(expectedRangePartitionsSpec, 2);
@@ -731,7 +729,6 @@ public class AutoCompactionTest extends CompactionTestBase
       verifySegmentIntervals(intervalsBeforeCompaction);
       getAndAssertCompactionStatus(
           fullDatasourceName,
-          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           Matchers.greaterThan(0L),
           Matchers.greaterThan(0L),
           Matchers.equalTo(0L),
@@ -753,7 +750,6 @@ public class AutoCompactionTest extends CompactionTestBase
       verifySegmentIntervals(intervalsBeforeCompaction);
       getAndAssertCompactionStatus(
           fullDatasourceName,
-          AutoCompactionSnapshot.ScheduleStatus.RUNNING,
           Matchers.equalTo(0L),
           Matchers.greaterThan(0L),
           Matchers.equalTo(0L),
@@ -1321,7 +1317,7 @@ public class AutoCompactionTest extends CompactionTestBase
       List<TaskStatusPlus> tasks = getCompleteTasksForDataSource(fullDatasourceName);
       TaskStatusPlus compactTask = null;
       for (TaskStatusPlus task : tasks) {
-        if (task.getType().equals("compact")) {
+        if ("compact".equals(task.getType())) {
           compactTask = task;
         }
       }
@@ -1365,7 +1361,7 @@ public class AutoCompactionTest extends CompactionTestBase
       List<TaskStatusPlus> tasks = getCompleteTasksForDataSource(fullDatasourceName);
       TaskStatusPlus compactTask = null;
       for (TaskStatusPlus task : tasks) {
-        if (task.getType().equals("compact")) {
+        if ("compact".equals(task.getType())) {
           compactTask = task;
         }
       }
@@ -1681,7 +1677,7 @@ public class AutoCompactionTest extends CompactionTestBase
       Integer maxRowsPerSegment,
       Period skipOffsetFromLatest,
       CompactionEngine engine
-  ) throws Exception
+  )
   {
     submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, null, engine);
   }
@@ -1691,7 +1687,7 @@ public class AutoCompactionTest extends CompactionTestBase
       Period skipOffsetFromLatest,
       UserCompactionTaskGranularityConfig granularitySpec,
       CompactionEngine engine
-  ) throws Exception
+  )
   {
     submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, granularitySpec, false, engine);
   }
@@ -1702,7 +1698,7 @@ public class AutoCompactionTest extends CompactionTestBase
       UserCompactionTaskGranularityConfig granularitySpec,
       boolean dropExisting,
       CompactionEngine engine
-  ) throws Exception
+  )
   {
     submitCompactionConfig(
         maxRowsPerSegment,
@@ -1725,12 +1721,11 @@ public class AutoCompactionTest extends CompactionTestBase
       AggregatorFactory[] metricsSpec,
       boolean dropExisting,
       CompactionEngine engine
-  ) throws Exception
+  )
   {
     submitCompactionConfig(
         new DynamicPartitionsSpec(maxRowsPerSegment, null),
         skipOffsetFromLatest,
-        1,
         granularitySpec,
         dimensionsSpec,
         transformSpec,
@@ -1743,7 +1738,6 @@ public class AutoCompactionTest extends CompactionTestBase
   private void submitCompactionConfig(
       PartitionsSpec partitionsSpec,
       Period skipOffsetFromLatest,
-      int maxNumConcurrentSubTasks,
       UserCompactionTaskGranularityConfig granularitySpec,
       UserCompactionTaskDimensionsConfig dimensionsSpec,
       CompactionTransformSpec transformSpec,
@@ -1769,7 +1763,7 @@ public class AutoCompactionTest extends CompactionTestBase
                                                 null,
                                                 null,
                                                 null,
-                                                maxNumConcurrentSubTasks,
+                                                1,
                                                 null,
                                                 null,
                                                 null,
@@ -1856,7 +1850,7 @@ public class AutoCompactionTest extends CompactionTestBase
 
   private void waitForCompactionToFinish(int numExpectedSegmentsAfterCompaction)
   {
-    final Set<String> taskIds = getTaskIdsForState(null, dataSource);
+    final Set<String> taskIds = getTaskIdsForState(dataSource);
     for (String taskId : taskIds) {
       cluster.callApi().waitForTaskToSucceed(taskId, overlord);
     }
@@ -1949,7 +1943,6 @@ public class AutoCompactionTest extends CompactionTestBase
 
   private void getAndAssertCompactionStatus(
       String fullDatasourceName,
-      AutoCompactionSnapshot.ScheduleStatus scheduleStatus,
       Matcher<Long> bytesAwaitingCompactionMatcher,
       Matcher<Long> bytesCompactedMatcher,
       Matcher<Long> bytesSkippedMatcher,
@@ -1963,7 +1956,7 @@ public class AutoCompactionTest extends CompactionTestBase
   {
     AutoCompactionSnapshot actualStatus = compactionResource.getCompactionStatus(fullDatasourceName);
     Assertions.assertNotNull(actualStatus);
-    Assertions.assertEquals(actualStatus.getScheduleStatus(), scheduleStatus);
+    Assertions.assertEquals(actualStatus.getScheduleStatus(), AutoCompactionSnapshot.ScheduleStatus.RUNNING);
     MatcherAssert.assertThat(actualStatus.getBytesAwaitingCompaction(), bytesAwaitingCompactionMatcher);
     MatcherAssert.assertThat(actualStatus.getBytesCompacted(), bytesCompactedMatcher);
     MatcherAssert.assertThat(actualStatus.getBytesSkipped(), bytesSkippedMatcher);
@@ -1989,10 +1982,10 @@ public class AutoCompactionTest extends CompactionTestBase
     return cluster.callApi().onLeaderOverlord(o -> o.taskPayload(taskId));
   }
 
-  private Set<String> getTaskIdsForState(String state, String dataSource)
+  private Set<String> getTaskIdsForState(String dataSource)
   {
     return ImmutableList.copyOf(
-        (CloseableIterator<TaskStatusPlus>) cluster.callApi().onLeaderOverlord(o -> o.taskStatuses(state, dataSource, 0))
+        (CloseableIterator<TaskStatusPlus>) cluster.callApi().onLeaderOverlord(o -> o.taskStatuses(null, dataSource, 0))
     ).stream().map(TaskStatusPlus::getId).collect(Collectors.toSet());
   }
 }
