@@ -1,0 +1,84 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "Docker Tests using Distribution Image"
+on:
+  workflow_call:
+
+jobs:
+  run-docker-tests:
+    name: Run Docker tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set Docker image env var
+        run: echo "DRUID_DIST_IMAGE_NAME=apache/druid:docker-tests" >> $GITHUB_ENV
+      - name: Build the Docker image
+        run: DOCKER_BUILDKIT=1 docker build -t $DRUID_DIST_IMAGE_NAME -f distribution/docker/Dockerfile .
+      - name: Save Docker image to archive
+        run: |
+          echo "Saving image $DRUID_DIST_IMAGE_NAME in archive druid-dist-container.tar.gz"
+          docker save "$DRUID_DIST_IMAGE_NAME" | gzip > druid-dist-container.tar.gz
+      - name: Stop and remove Druid Docker containers
+        run: |
+          echo "Force stopping all Druid containers and pruning"
+          docker ps -aq --filter "ancestor=apache/druid" | xargs -r docker rm -f
+          docker system prune -af --volumes
+      - name: Load Docker image
+        run: |
+          docker load --input druid-dist-container.tar.gz
+          docker images
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: 17
+          cache: 'maven'
+      - name: Run Docker tests
+        id: run-it
+        run: .github/scripts/run_docker-tests
+        timeout-minutes: 60
+
+      - name: Collect docker logs on failure
+        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
+        run: |
+          mkdir docker-logs
+          for c in $(docker ps -a --format="{{.Names}}")
+          do
+            docker logs $c > ./docker-logs/$c.log
+          done
+
+      - name: Tar docker logs
+        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
+        run: tar cvzf ./docker-logs.tgz ./docker-logs
+
+      - name: Upload docker logs to GitHub
+        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-docker-logs
+          path: docker-logs.tgz
+
+      - name: Collect surefire reports on failure
+        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
+        run: |
+          tar cvzf ./surefire-logs.tgz ./embedded-tests/target/surefire-reports
+
+      - name: Upload surefire reports to GitHub
+        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-surefire-logs
+          path: surefire-logs.tgz

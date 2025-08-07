@@ -359,15 +359,6 @@
 
     <profiles>
         <profile>
-          <id>IT-HighAvailability</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-        <properties>
-          <it.category>HighAvailability</it.category>
-        </properties>
-        </profile>
-        <profile>
           <id>IT-BatchIndex</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
@@ -553,15 +544,6 @@
                     </plugin>
                 </plugins>
             </build>
-        </profile>
-        <profile>
-            <id>IT-Security</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <properties>
-                <it.category>Security</it.category>
-            </properties>
         </profile>
         <profile>
             <id>IT-DruidExactCountBitmap</id>

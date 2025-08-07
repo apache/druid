@@ -28,6 +28,7 @@ import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.hamcrest.CoreMatchers;
@@ -323,6 +324,22 @@ public class MultiStageQueryContextTest
     Assert.assertEquals(
         TaskLockType.APPEND,
         MultiStageQueryContext.validateAndGetTaskLockType(context, false)
+    );
+  }
+
+  @Test
+  public void testDartSelectDestination()
+  {
+    final QueryContext context = QueryContext.of(
+        ImmutableMap.of(
+            QueryContexts.CTX_DART_QUERY_ID, "test",
+            MultiStageQueryContext.CTX_SELECT_DESTINATION, "durablestorage"
+        )
+    );
+
+    Assert.assertEquals(
+        MSQSelectDestination.TASKREPORT,
+        MultiStageQueryContext.getSelectDestination(context)
     );
   }
 

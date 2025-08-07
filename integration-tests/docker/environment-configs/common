@@ -87,4 +87,5 @@ druid_indexer_task_ignoreTimestampSpecForDruidInputSource=true
 druid_unsafe_cluster_testing=true
 
 # Dart
-druid_msq_dart_enabled = true
+druid_msq_dart_enabled=true
+druid_query_default_context_debug=false

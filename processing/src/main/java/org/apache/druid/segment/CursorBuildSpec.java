@@ -278,6 +278,22 @@ public class CursorBuildSpec
     );
   }
 
+  @Override
+  public String toString()
+  {
+    return "CursorBuildSpec{" +
+           "filter=" + filter +
+           ", interval=" + interval +
+           ", groupingColumns=" + groupingColumns +
+           ", virtualColumns=" + virtualColumns +
+           ", aggregators=" + aggregators +
+           ", preferredOrdering=" + preferredOrdering +
+           ", queryContext=" + queryContext +
+           ", isAggregate=" + isAggregate +
+           ", physicalColumns=" + physicalColumns +
+           '}';
+  }
+
   public static class CursorBuildSpecBuilder
   {
     @Nullable

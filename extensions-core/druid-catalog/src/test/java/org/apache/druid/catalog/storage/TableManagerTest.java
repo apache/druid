@@ -40,9 +40,7 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.metadata.TestDerbyConnector;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.segment.VirtualColumns;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -94,21 +92,16 @@ public class TableManagerTest
   public void testCreate() throws DuplicateKeyException, NotFoundException
   {
     final DatasourceProjectionMetadata projectionMetadata = new DatasourceProjectionMetadata(
-        new AggregateProjectionSpec(
-            "projection",
-            VirtualColumns.create(
-                Granularities.toVirtualColumn(
-                    Granularities.HOUR,
-                    Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
-                )
-            ),
-            ImmutableList.of(
-                new StringDimensionSchema("dim")
-            ),
-            new AggregatorFactory[]{
-                new CountAggregatorFactory("count")
-            }
-        )
+        AggregateProjectionSpec.builder("projection")
+                               .virtualColumns(
+                                   Granularities.toVirtualColumn(
+                                       Granularities.HOUR,
+                                       Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                                   )
+                               )
+                               .groupingColumns(new StringDimensionSchema("dim"))
+                               .aggregators(new CountAggregatorFactory("count"))
+                               .build()
     );
 
     List<Object> jsonProjectionSpec = JSON_MAPPER.convertValue(ImmutableList.of(projectionMetadata), List.class);

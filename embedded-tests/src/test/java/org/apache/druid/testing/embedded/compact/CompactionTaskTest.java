@@ -21,7 +21,6 @@ package org.apache.druid.testing.embedded.compact;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.report.IngestionStatsAndErrors;
 import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
@@ -62,7 +61,7 @@ import java.util.stream.Collectors;
 
 public class CompactionTaskTest extends CompactionTestBase
 {
-  private static final Supplier<TaskBuilder.Index> INDEX_TASK = MoreResources.Task.BASIC_INDEX;
+  private static final Supplier<TaskBuilder.Index> INDEX_TASK = MoreResources.Task.INDEX_TASK_WITH_AGGREGATORS;
 
   private static final List<Pair<String, String>> INDEX_QUERIES_RESOURCE = List.of(
       Pair.of(Resources.Query.SELECT_MIN_MAX_TIME, "2013-08-31T01:02:33.000Z,2013-09-01T12:41:27.000Z"),
@@ -103,7 +102,7 @@ public class CompactionTaskTest extends CompactionTestBase
           .ioConfig(new CompactionIntervalSpec(Intervals.of("2013-08-31/2013-09-02"), null), true);
 
   private static final Supplier<TaskBuilder.Index> INDEX_TASK_WITH_TIMESTAMP =
-      () -> MoreResources.Task.BASIC_INDEX.get().dimensions(
+      () -> MoreResources.Task.INDEX_TASK_WITH_AGGREGATORS.get().dimensions(
           "page",
           "language", "user", "unpatrolled", "newPage", "robot", "anonymous",
           "namespace", "continent", "country", "region", "city", "timestamp"
@@ -321,10 +320,7 @@ public class CompactionTaskTest extends CompactionTestBase
         .intervals("2013-08-31/2013-09-02")
         .build();
 
-    final String resultAsJson = FutureUtils.getUnchecked(
-        cluster.anyBroker().submitNativeQuery(query),
-        true
-    );
+    final String resultAsJson = cluster.callApi().onAnyBroker(b -> b.submitNativeQuery(query));
 
     // Trim the result so that it contains only the `queryGranularity` fields
     final List<Map<String, Object>> resultList = JacksonUtils.readValue(

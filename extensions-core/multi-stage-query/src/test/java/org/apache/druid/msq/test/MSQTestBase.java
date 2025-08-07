@@ -51,7 +51,6 @@ import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.ExpressionModule;
-import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -162,9 +161,12 @@ import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
@@ -191,6 +193,7 @@ import org.apache.druid.sql.calcite.util.LookylooModule;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
+import org.apache.druid.sql.calcite.util.TestAuthorizer;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.guice.SqlBindings;
@@ -364,7 +367,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return DruidModuleCollection.of(
           super.getCoreModule(),
           new HllSketchModule(),
-          new LocalMsqSqlModule()
+          new LocalMsqSqlModule(),
+          new ExpressionModule(),
+          binder -> binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT)
       );
     }
 
@@ -423,15 +428,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
     groupByBuffers = TestGroupByBuffers.createDefault();
 
     SqlTestFramework qf = queryFramework();
-    Injector secondInjector = GuiceInjectors.makeStartupInjectorWithModules(
-        ImmutableList.of(
-            new ExpressionModule(),
-            (Module) binder ->
-                binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT)
-        )
-    );
 
-    ObjectMapper secondMapper = setupObjectMapper(secondInjector);
+    ObjectMapper secondMapper = setupObjectMapper(qf.injector());
     indexIO = new IndexIO(secondMapper, ColumnConfig.DEFAULT);
 
     segmentCacheManager = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, secondMapper).manufacturate(newTempFolder("cacheManager"));
@@ -583,12 +581,33 @@ public class MSQTestBase extends BaseCalciteQueryTest
         null
     );
 
+    authorizerMapper = new AuthorizerMapper(null)
+    {
+      @Override
+      public Authorizer getAuthorizer(String name)
+      {
+        // default allow read/write access to external resources
+        return (authenticationResult, resource, action) ->
+            new TestAuthorizer(authenticationResult, resource, action)
+                .defaultPolicyOnReadTable(CalciteTests.POLICY_RESTRICTION)
+                .allowIfSuperuser(CalciteTests.TEST_SUPERUSER_NAME)
+                .denyIfResourceNameHasKeyword("forbidden")
+                .allowIfResourceTypeIs(Set.of(
+                    ResourceType.DATASOURCE,
+                    ResourceType.VIEW,
+                    ResourceType.QUERY_CONTEXT,
+                    ResourceType.EXTERNAL
+                ))
+                .access()
+                .orElse(Access.DENIED);
+      }
+    };
     PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
         qf.operatorTable(),
         qf.macroTable(),
         PLANNER_CONFIG_DEFAULT,
-        CalciteTests.TEST_EXTERNAL_AUTHORIZER_MAPPER,
+        authorizerMapper,
         objectMapper,
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of()),
@@ -600,8 +619,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
     );
 
     sqlStatementFactory = QueryFrameworkUtils.createSqlMultiStatementFactory(engine, plannerFactory);
-
-    authorizerMapper = CalciteTests.TEST_EXTERNAL_AUTHORIZER_MAPPER;
 
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
   }
@@ -812,7 +829,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     final DirectStatement stmt = sqlStatementFactory.directStatement(
         SqlQueryPlus.builder()
                     .sql(query)
-                    .context(context)
+                    .queryContext(context)
                     .parameters(parameters)
                     .auth(authenticationResult)
                     .build()
@@ -1377,13 +1394,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           for (List<Object> row : FrameTestUtil.readRowsFromCursorFactory(cursorFactory).toList()) {
             // transforming rows for sketch assertions
             List<Object> transformedRow = row.stream()
-                                             .map(r -> {
-                                               if (r instanceof HyperLogLogCollector) {
-                                                 return ((HyperLogLogCollector) r).estimateCardinalityRound();
-                                               } else {
-                                                 return r;
-                                               }
-                                             })
+                                             .map(MSQTestBase.this::segmentToAssertionValueMapper)
                                              .collect(Collectors.toList());
             segmentIdVsOutputRowsMap.computeIfAbsent(dataSegment.getId(), r -> new ArrayList<>()).add(transformedRow);
           }
@@ -1531,6 +1542,20 @@ public class MSQTestBase extends BaseCalciteQueryTest
         );
       }
       verifyMetrics();
+    }
+  }
+
+  /**
+   * Maps certain fields on the segment to a different equivalent value, which is easier to assert against.
+   * For example, the HLL collector can't really be directly asserted as part of the test, so it is converted to its
+   * cardinality.
+   */
+  protected Object segmentToAssertionValueMapper(Object r)
+  {
+    if (r instanceof HyperLogLogCollector) {
+      return ((HyperLogLogCollector) r).estimateCardinalityRound();
+    } else {
+      return r;
     }
   }
 
