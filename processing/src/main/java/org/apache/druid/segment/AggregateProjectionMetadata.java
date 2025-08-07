@@ -59,7 +59,7 @@ import java.util.stream.Collectors;
 public class AggregateProjectionMetadata
 {
   private static final Interner<Schema> SCHEMA_INTERNER = Interners.newWeakInterner();
-  
+
   public static final Comparator<AggregateProjectionMetadata> COMPARATOR = (o1, o2) -> {
     int rowCompare = Integer.compare(o1.numRows, o2.numRows);
     if (rowCompare != 0) {
@@ -369,15 +369,6 @@ public class AggregateProjectionMetadata
 
   public static class SchemaBuilder
   {
-    /*
-    @JsonProperty("name") String name,
-        @JsonProperty("timeColumnName") @Nullable String timeColumnName,
-        @JsonProperty("filter") @Nullable DimFilter filter,
-        @JsonProperty("virtualColumns") @Nullable VirtualColumns virtualColumns,
-        @JsonProperty("groupingColumns") @Nullable List<String> groupingColumns,
-        @JsonProperty("aggregators") @Nullable AggregatorFactory[] aggregators,
-        @JsonProperty("ordering") List<OrderBy> ordering
-     */
     @Nullable
     private String name;
     @Nullable
