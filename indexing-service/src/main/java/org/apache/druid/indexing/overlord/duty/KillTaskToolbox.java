@@ -33,6 +33,7 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.OutputStream;
 
@@ -84,6 +85,7 @@ public class KillTaskToolbox
     }
 
     @Override
+    @Nullable
     public File getReportsFile(String taskId)
     {
       return null;

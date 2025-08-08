@@ -34,6 +34,9 @@ public interface TaskReportFileWriter
 
   void setObjectMapper(ObjectMapper objectMapper);
 
+  /**
+   * Returns the reports file for the given taskId. Returns null if writer does not write reports to any file.
+   */
   @Nullable
   File getReportsFile(String taskId);
 }
