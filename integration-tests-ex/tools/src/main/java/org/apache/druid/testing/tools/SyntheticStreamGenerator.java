@@ -57,7 +57,6 @@ public abstract class SyntheticStreamGenerator implements StreamGenerator
   @Override
   public List<byte[]> generate(int totalNumberOfSeconds, DateTime overrideFirstEventTime)
   {
-    serializer.initialize(null);
     DateTime nowCeilingToSecond = DateTimes.nowUtc().secondOfDay().roundCeilingCopy();
     DateTime eventTimestamp = overrideFirstEventTime == null ? nowCeilingToSecond : overrideFirstEventTime;
     int seconds = 0;

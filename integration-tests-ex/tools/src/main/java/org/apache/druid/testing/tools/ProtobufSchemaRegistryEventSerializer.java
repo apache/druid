@@ -42,6 +42,22 @@ public class ProtobufSchemaRegistryEventSerializer extends ProtobufEventSerializ
   private final CachedSchemaRegistryClient client;
   private int schemaId = -1;
 
+  public ProtobufSchemaRegistryEventSerializer(
+      String schemaRegistryHost
+  )
+  {
+    this.config = null;
+    this.client = new CachedSchemaRegistryClient(
+        StringUtils.format("http://%s", schemaRegistryHost),
+        Integer.MAX_VALUE,
+        ImmutableMap.of(
+            "basic.auth.credentials.source", "USER_INFO",
+            "basic.auth.user.info", "druid:diurd"
+        ),
+        ImmutableMap.of()
+    );
+  }
+
 
   @JsonCreator
   public ProtobufSchemaRegistryEventSerializer(

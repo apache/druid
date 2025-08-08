@@ -354,7 +354,12 @@
       <artifactId>aws-java-sdk-core</artifactId>
       <scope>test</scope>
     </dependency>
-
+    <dependency>
+      <groupId>io.confluent</groupId>
+      <artifactId>kafka-protobuf-provider</artifactId>
+      <version>6.2.12</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
