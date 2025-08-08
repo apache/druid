@@ -59,7 +59,10 @@ This section contains important information about new and existing features.
 
 ### Hadoop-based ingestion
 
-Hadoop-based ingestion has been deprecated since Druid 32.0. You must now opt-in to using the deprecated `index_hadoop` task type. If you don't do this, your Hadoop-based ingestion tasks will fail.
+Hadoop-based ingestion has been deprecated since Druid 32.0 and will be removed as early as Druid 35.0.0. 
+We recommend one of Druid's other supported ingestion methods, such as [SQL-based ingestion](../multi-stage-query/index.md) or [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md).
+
+As part of this change, you must now opt-in to using the deprecated `index_hadoop` task type. If you don't do this, your Hadoop-based ingestion tasks will fail.
 
 To opt-in, set `druid.indexer.task.allowHadoopTaskExecution` to `true` in your `common.runtime.properties` file.
 
@@ -377,13 +380,12 @@ Additionally, MSQ task engine metrics now include the following dimensions:
 
 #### Hadoop-based ingestion
 
-Hadoop-based ingestion has been deprecated since Druid 32.0. You must now opt-in to using the deprecated `index_hadoop` task type. If you don't do this, your Hadoop-based ingestion tasks will fail.
+Hadoop-based ingestion has been deprecated since Druid 32.0 and will be removed as early as Druid 35.0.0. 
 
+We recommend one of Druid's other supported ingestion methods, such as [SQL-based ingestion](../multi-stage-query/index.md) or [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md).
+
+As part of this change, you must now opt-in to using the deprecated `index_hadoop` task type. If you don't do this, your Hadoop-based ingestion tasks will fail.
 To opt-in, set `druid.indexer.task.allowHadoopTaskExecution` to `true` in your `common.runtime.properties` file.
-
-Hadoop-based ingestion deprecated. Use [SQL-based ingestion](../multi-stage-query/index.md) instead of MapReduce or [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md) instead of YARN.
-
-
 [#18239](https://github.com/apache/druid/pull/18239)
 
 #### `groupBy` and `topN` queries
