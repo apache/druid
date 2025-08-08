@@ -89,6 +89,7 @@ import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlEngineRegistry;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
+import org.apache.druid.sql.http.SqlResourceQueryResultPusherFactory;
 import org.apache.druid.sql.http.SupportedEnginesResponse;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.AfterEach;
@@ -218,7 +219,6 @@ public class DartSqlResourceTest extends MSQTestBase
         lifecycleManager
     );
 
-
     final DartSqlEngine engine = new DartSqlEngine(
         new MSQTestControllerContext(
             "did2",
@@ -265,14 +265,16 @@ public class DartSqlResourceTest extends MSQTestBase
     );
 
     sqlResource = new SqlResource(
-        objectMapper,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        new ServerConfig() /* currently only used for error transform strategy */,
         lifecycleManager,
         new SqlEngineRegistry(Set.of(engine)),
-        ResponseContextConfig.newConfig(false),
-        DefaultQueryConfig.NIL,
-        SELF_NODE
+        new SqlResourceQueryResultPusherFactory(
+            objectMapper,
+            new ServerConfig(),
+            ResponseContextConfig.newConfig(false),
+            SELF_NODE
+        ),
+        DefaultQueryConfig.NIL
     );
 
     // Setup mocks
