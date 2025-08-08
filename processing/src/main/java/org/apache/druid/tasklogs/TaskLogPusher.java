@@ -39,9 +39,4 @@ public interface TaskLogPusher
   default void pushTaskStatus(String taskid, File reportFile) throws IOException
   {
   }
-
-  default boolean logPushEnabled()
-  {
-    return true;
-  }
 }

@@ -119,10 +119,4 @@ public class SwitchingTaskLogs implements TaskLogs
   {
     return reportTaskLogs.streamTaskPayload(taskid);
   }
-
-  @Override
-  public boolean logPushEnabled()
-  {
-    return logPusher.logPushEnabled();
-  }
 }
