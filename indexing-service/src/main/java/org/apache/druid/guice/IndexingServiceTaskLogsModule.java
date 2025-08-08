@@ -52,13 +52,13 @@ public class IndexingServiceTaskLogsModule implements Module
   @Override
   public void configure(Binder binder)
   {
-      PolyBind.createChoice(binder, "druid.indexer.logs.type", Key.get(TaskLogs.class), Key.get(FileTaskLogs.class));
-      PolyBind.createChoice(
-          binder,
-          SwitchingTaskLogs.PROPERTY_KEY_SWITCHING_DEFAULT_TYPE,
-          Key.get(TaskLogs.class, Names.named(SwitchingTaskLogs.KEY_SWITCHING_DEFAULT)),
-          Key.get(FileTaskLogs.class)
-      );
+    PolyBind.createChoice(binder, "druid.indexer.logs.type", Key.get(TaskLogs.class), Key.get(FileTaskLogs.class));
+    PolyBind.createChoice(
+        binder,
+        SwitchingTaskLogs.PROPERTY_KEY_SWITCHING_DEFAULT_TYPE,
+        Key.get(TaskLogs.class, Names.named(SwitchingTaskLogs.KEY_SWITCHING_DEFAULT)),
+        Key.get(FileTaskLogs.class)
+    );
 
     if (props != null && props.getProperty(SwitchingTaskLogs.PROPERTY_KEY_SWITCHING_PUSH_TYPE) != null) {
       PolyBind.createChoice(
