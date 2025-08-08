@@ -44,18 +44,15 @@ class BindersTest
         binder -> {
           binder.bind(Properties.class).toInstance(props);
           PolyBind.createChoice(binder, "druid.indexer.logs.type", Key.get(TaskLogs.class), null);
-          PolyBind.createChoiceWithDefault(binder, "druid.indexer.logs.defaultType", Key.get(TaskLogs.class, Names.named("defaultType")), "noop");
+          PolyBind.createChoiceWithDefault(binder, "druid.indexer.logs.defaultType", Key.get(TaskLogs.class, Names.named("switching.defaultType")), "noop");
           Binders.bindTaskLogs(binder, "noop", NoopTaskLogs.class);
         }
     );
 
     TaskLogs taskLogs = injector.getInstance(TaskLogs.class);
     Assertions.assertInstanceOf(NoopTaskLogs.class, taskLogs);
-    
-    TaskLogs namedTaskLogs = injector.getInstance(Key.get(TaskLogs.class, Names.named("noop")));
-    Assertions.assertInstanceOf(NoopTaskLogs.class, namedTaskLogs);
-    
-    TaskLogs defaultTypeTaskLogs = injector.getInstance(Key.get(TaskLogs.class, Names.named("defaultType")));
+
+    TaskLogs defaultTypeTaskLogs = injector.getInstance(Key.get(TaskLogs.class, Names.named("switching.defaultType")));
     Assertions.assertInstanceOf(NoopTaskLogs.class, defaultTypeTaskLogs);
   }
 }

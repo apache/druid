@@ -19,13 +19,11 @@
 
 package org.apache.druid.indexing.common.config;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.NotNull;
 import java.io.File;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class FileTaskLogsConfig
 {
   @JsonProperty
