@@ -40,6 +40,9 @@ import java.nio.charset.StandardCharsets;
 public class SwitchingTaskLogsTest extends EasyMockSupport
 {
   @Mock
+  private TaskLogs defaultTaskLogs;
+
+  @Mock
   private TaskLogs reportTaskLogs;
 
   @Mock
@@ -53,7 +56,7 @@ public class SwitchingTaskLogsTest extends EasyMockSupport
   @Before
   public void setUp()
   {
-    taskLogs = new SwitchingTaskLogs(reportTaskLogs, streamerTaskLogs, pusherTaskLogs);
+    taskLogs = new SwitchingTaskLogs(defaultTaskLogs, reportTaskLogs, streamerTaskLogs, pusherTaskLogs);
   }
 
   @Test

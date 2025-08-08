@@ -61,10 +61,15 @@ public class Binders
     return PolyBind.optionBinder(binder, Key.get(TaskLogs.class));
   }
 
+  /**
+   * Binds implementation of {@link TaskLogs} to the named keys for injection.
+   */
   public static <T extends TaskLogs> void bindTaskLogs(Binder binder, String type, Class<T> clazz)
   {
     PolyBind.optionBinder(binder, Key.get(TaskLogs.class)).addBinding(type).to(clazz);
-    PolyBind.optionBinder(binder, Key.get(TaskLogs.class, Names.named("defaultType"))).addBinding(type).to(clazz);
-    binder.bind(Key.get(TaskLogs.class, Names.named(type))).to(clazz);
+    PolyBind.optionBinder(binder, Key.get(TaskLogs.class, Names.named("switching.reportType"))).addBinding(type).to(clazz);
+    PolyBind.optionBinder(binder, Key.get(TaskLogs.class, Names.named("switching.streamType"))).addBinding(type).to(clazz);
+    PolyBind.optionBinder(binder, Key.get(TaskLogs.class, Names.named("switching.pushType"))).addBinding(type).to(clazz);
+    PolyBind.optionBinder(binder, Key.get(TaskLogs.class, Names.named("switching.defaultType"))).addBinding(type).to(clazz);
   }
 }

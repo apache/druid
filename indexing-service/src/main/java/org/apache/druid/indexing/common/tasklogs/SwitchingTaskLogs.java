@@ -24,26 +24,40 @@ import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import org.apache.druid.tasklogs.TaskLogs;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
 public class SwitchingTaskLogs implements TaskLogs
 {
+
+  public static final String PROPERTY_PREFIX_SWITCHING = "druid.indexer.logs.switching";
+  public static final String PROPERTY_KEY_SWITCHING_DEFAULT_TYPE = PROPERTY_PREFIX_SWITCHING + ".defaultType";
+  public static final String PROPERTY_KEY_SWITCHING_PUSH_TYPE = PROPERTY_PREFIX_SWITCHING + ".pushType";
+  public static final String PROPERTY_KEY_SWITCHING_STREAM_TYPE = PROPERTY_PREFIX_SWITCHING + ".streamType";
+  public static final String PROPERTY_KEY_SWITCHING_REPORTS_TYPE = PROPERTY_PREFIX_SWITCHING + ".reportsType";
+
+  public static final String KEY_SWITCHING_REPORTS = "switching.reportType";
+  public static final String KEY_SWITCHING_STREAM = "switching.streamType";
+  public static final String KEY_SWITCHING_PUSH = "switching.pushType";
+  public static final String KEY_SWITCHING_DEFAULT = "switching.defaultType";
+
   private final TaskLogs reportTaskLogs;
   private final TaskLogs logStreamer;
   private final TaskLogs logPusher;
 
   @Inject
   public SwitchingTaskLogs(
-      @Named("reports") TaskLogs reportTaskLogs,
-      @Named("streamer") TaskLogs logStreamer,
-      @Named("pusher") TaskLogs logPusher
+      @Nullable @Named(KEY_SWITCHING_DEFAULT) TaskLogs defaultTaskLogs,
+      @Nullable @Named(KEY_SWITCHING_REPORTS) TaskLogs reportTaskLogs,
+      @Nullable @Named(KEY_SWITCHING_STREAM) TaskLogs logStreamer,
+      @Nullable @Named(KEY_SWITCHING_PUSH) TaskLogs logPusher
   )
   {
-    this.reportTaskLogs = reportTaskLogs;
-    this.logStreamer = logStreamer;
-    this.logPusher = logPusher;
+    this.reportTaskLogs = reportTaskLogs != null ? reportTaskLogs : defaultTaskLogs;
+    this.logStreamer = logStreamer != null ? logStreamer : defaultTaskLogs;
+    this.logPusher = logPusher != null ? logPusher : defaultTaskLogs;
   }
 
   @Override

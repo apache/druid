@@ -20,18 +20,14 @@
 package org.apache.druid.guice;
 
 import com.google.inject.Binder;
-import com.google.inject.Injector;
+import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
-import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
 import org.apache.druid.indexing.common.tasklogs.FileTaskLogs;
 import org.apache.druid.indexing.common.tasklogs.SwitchingTaskLogs;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.TaskLogKiller;
 import org.apache.druid.tasklogs.TaskLogPusher;
@@ -45,22 +41,60 @@ import java.util.Properties;
  */
 public class IndexingServiceTaskLogsModule implements Module
 {
-  private static final Logger log = new EmittingLogger(IndexingServiceTaskLogsModule.class);
-  private static final String PROPERTY_PREFIX_SWITCHING = "druid.indexer.logs.switching";
-  private static final String PROPERTY_KEY_SWITCHING_PUSH_TYPE = PROPERTY_PREFIX_SWITCHING + ".pushType";
-  private static final String PROPERTY_KEY_SWITCHING_STREAM_TYPE = PROPERTY_PREFIX_SWITCHING + ".streamType";
-  private static final String PROPERTY_KEY_SWITCHING_REPORTS_TYPE = PROPERTY_PREFIX_SWITCHING + ".reportsType";
+  private Properties props;
+
+  @Inject
+  public IndexingServiceTaskLogsModule(Properties props)
+  {
+    this.props = props;
+  }
 
   @Override
   public void configure(Binder binder)
   {
-    PolyBind.createChoice(binder, "druid.indexer.logs.type", Key.get(TaskLogs.class), Key.get(FileTaskLogs.class));
-    PolyBind.createChoice(
-        binder,
-        PROPERTY_PREFIX_SWITCHING + ".defaultType",
-        Key.get(TaskLogs.class, Names.named("defaultType")),
-        Key.get(FileTaskLogs.class)
-    );
+      PolyBind.createChoice(binder, "druid.indexer.logs.type", Key.get(TaskLogs.class), Key.get(FileTaskLogs.class));
+      PolyBind.createChoice(
+          binder,
+          SwitchingTaskLogs.PROPERTY_KEY_SWITCHING_DEFAULT_TYPE,
+          Key.get(TaskLogs.class, Names.named(SwitchingTaskLogs.KEY_SWITCHING_DEFAULT)),
+          Key.get(FileTaskLogs.class)
+      );
+
+    if (props != null && props.getProperty(SwitchingTaskLogs.PROPERTY_KEY_SWITCHING_PUSH_TYPE) != null) {
+      PolyBind.createChoice(
+          binder,
+          SwitchingTaskLogs.PROPERTY_KEY_SWITCHING_PUSH_TYPE,
+          Key.get(TaskLogs.class, Names.named(SwitchingTaskLogs.KEY_SWITCHING_PUSH)),
+          null
+      );
+    } else {
+      binder.bind(Key.get(TaskLogs.class, Names.named(SwitchingTaskLogs.KEY_SWITCHING_PUSH)))
+            .toProvider(() -> null);
+    }
+
+    if (props != null && props.getProperty(SwitchingTaskLogs.PROPERTY_KEY_SWITCHING_REPORTS_TYPE) != null) {
+      PolyBind.createChoice(
+          binder,
+          SwitchingTaskLogs.PROPERTY_KEY_SWITCHING_REPORTS_TYPE,
+          Key.get(TaskLogs.class, Names.named(SwitchingTaskLogs.KEY_SWITCHING_REPORTS)),
+          null
+      );
+    } else {
+      binder.bind(Key.get(TaskLogs.class, Names.named(SwitchingTaskLogs.KEY_SWITCHING_REPORTS)))
+            .toProvider(() -> null);
+    }
+
+    if (props != null && props.getProperty(SwitchingTaskLogs.PROPERTY_KEY_SWITCHING_STREAM_TYPE) != null) {
+      PolyBind.createChoice(
+          binder,
+          SwitchingTaskLogs.PROPERTY_KEY_SWITCHING_STREAM_TYPE,
+          Key.get(TaskLogs.class, Names.named(SwitchingTaskLogs.KEY_SWITCHING_STREAM)),
+          null
+      );
+    } else {
+      binder.bind(Key.get(TaskLogs.class, Names.named(SwitchingTaskLogs.KEY_SWITCHING_STREAM)))
+            .toProvider(() -> null);
+    }
 
 
     JsonConfigProvider.bind(binder, "druid.indexer.logs", FileTaskLogsConfig.class);
@@ -78,65 +112,5 @@ public class IndexingServiceTaskLogsModule implements Module
     binder.bind(TaskLogPusher.class).to(TaskLogs.class);
     binder.bind(TaskLogKiller.class).to(TaskLogs.class);
     binder.bind(TaskPayloadManager.class).to(TaskLogs.class);
-  }
-
-  @Provides
-  @Named("streamer")
-  public TaskLogs provideStreamer(
-      Properties properties,
-      Injector injector,
-      @Named("defaultType") TaskLogs defaultTaskLogs
-  )
-  {
-    String logStreamerType = properties.getProperty(PROPERTY_KEY_SWITCHING_STREAM_TYPE);
-    if (logStreamerType != null) {
-      try {
-        return injector.getInstance(Key.get(TaskLogs.class, Names.named(logStreamerType)));
-      }
-      catch (Exception e) {
-        log.warn(e, "Failed to get TaskLogs for type[%s], using default", logStreamerType);
-      }
-    }
-    return defaultTaskLogs;
-  }
-
-  @Provides
-  @Named("pusher")
-  public TaskLogs providePusher(
-      Properties properties,
-      Injector injector,
-      @Named("defaultType") TaskLogs defaultTaskLogs
-  )
-  {
-    String logPusherType = properties.getProperty(PROPERTY_KEY_SWITCHING_PUSH_TYPE);
-    if (logPusherType != null) {
-      try {
-        return injector.getInstance(Key.get(TaskLogs.class, Names.named(logPusherType)));
-      }
-      catch (Exception e) {
-        log.warn(e, "Failed to get TaskLogs for type[%s], using default", logPusherType);
-      }
-    }
-    return defaultTaskLogs;
-  }
-
-  @Provides
-  @Named("reports")
-  public TaskLogs provideDelegate(
-      Properties properties,
-      Injector injector,
-      @Named("defaultType") TaskLogs defaultTaskLogs
-  )
-  {
-    String reportsType = properties.getProperty(PROPERTY_KEY_SWITCHING_REPORTS_TYPE);
-    if (reportsType != null) {
-      try {
-        return injector.getInstance(Key.get(TaskLogs.class, Names.named(reportsType)));
-      }
-      catch (Exception e) {
-        log.warn(e, "Failed to get TaskLogs for type[%s], using default", reportsType);
-      }
-    }
-    return defaultTaskLogs;
   }
 }
