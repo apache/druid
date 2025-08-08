@@ -164,7 +164,7 @@ As part of this feature, [new metrics](#overlord-kill-task-metrics) have been ad
 ### Preferred tier selection 
 You can now configure the Broker service to prefer Historicals on a specific tier. This is useful for across availability zone deployment. Brokers in one AZ select historicals in the same AZ by default but still keeps the ability to select historical nodes in another AZ if historicals in the same AZ are not available.
 
-To enable, set property `druid.broker.select.tier` to `perferred` in Broker runtime properties. You can then configure `druid.broker.select.tier.preferred.tier` to the tier you want each broker to prefer (i.e. for brokers in AZ1, you could set this to the tier name of your AZ1 historical servers).
+To enable, set property `druid.broker.select.tier` to `perferred` in Broker runtime properties. You can then configure `druid.broker.select.tier.preferred.tier` to the tier you want each broker to prefer (i.e. for brokers in `AZ1`, you could set this to the tier name of your `AZ1` historical servers).
 
 [#18136](https://github.com/apache/druid/pull/18136)
 
