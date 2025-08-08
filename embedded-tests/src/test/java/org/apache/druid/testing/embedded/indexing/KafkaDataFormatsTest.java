@@ -294,7 +294,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
   {
     new AvroExtensionsModule().getJacksonModules().forEach(jsonMapper::registerModule);
 
-    kafkaServer.createTopicWithPartitions(dataSource,  3);
+    kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new AvroSchemaRegistryEventSerializer(StringUtils.format("%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081)));
     serializer.initialize(dataSource);
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, true);
@@ -323,7 +323,8 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = jsonMapper.readValue("{\"type\": \"csv\"}", EventSerializer.class);
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
-    CsvInputFormat inputFormat = new CsvInputFormat(List.of("timestamp","page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city","added","deleted","delta"), null, null, false, 0, false);
+
+    CsvInputFormat inputFormat = new CsvInputFormat(List.of("timestamp", "page", "language", "user", "unpatrolled", "newPage", "robot", "anonymous", "namespace", "continent", "country", "region", "city", "added", "deleted", "delta"), null, null, false, 0, false);
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
 
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
@@ -341,7 +342,6 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = jsonMapper.readValue("{\"type\": \"csv\"}", EventSerializer.class);
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
-    CsvInputFormat inputFormat = new CsvInputFormat(List.of("timestamp","page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city","added","deleted","delta"), null, null, false, 0, false);
     String jsonString = "{"
                        + "\"type\": \"string\","
                        + "\"parseSpec\": {"
@@ -532,8 +532,8 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
   {
     new ProtobufExtensionsModule().getJacksonModules().forEach(jsonMapper::registerModule);
 
-    kafkaServer.createTopicWithPartitions(dataSource,  3);
-    EventSerializer serializer = new ProtobufSchemaRegistryEventSerializer( StringUtils.format("%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081)));
+    kafkaServer.createTopicWithPartitions(dataSource, 3);
+    EventSerializer serializer = new ProtobufSchemaRegistryEventSerializer(StringUtils.format("%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081)));
     serializer.initialize(dataSource);
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, true);
     SchemaRegistryBasedProtobufBytesDecoder protobufBytesDecoder = jsonMapper.readValue(
