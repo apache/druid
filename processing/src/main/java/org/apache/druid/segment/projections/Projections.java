@@ -20,6 +20,7 @@
 package org.apache.druid.segment.projections;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -125,10 +126,6 @@ public class Projections
       return null;
     }
 
-    matchBuilder = matchFilter(projection, queryCursorBuildSpec, physicalColumnChecker, matchBuilder);
-    if (matchBuilder == null) {
-      return null;
-    }
 
     matchBuilder = matchGrouping(projection, queryCursorBuildSpec, physicalColumnChecker, matchBuilder);
     if (matchBuilder == null) {
@@ -136,6 +133,11 @@ public class Projections
     }
 
     matchBuilder = matchAggregators(projection, queryCursorBuildSpec, matchBuilder);
+    if (matchBuilder == null) {
+      return null;
+    }
+
+    matchBuilder = matchFilter(projection, queryCursorBuildSpec, physicalColumnChecker, matchBuilder);
     if (matchBuilder == null) {
       return null;
     }
@@ -183,6 +185,7 @@ public class Projections
     if (projection.getFilter() != null) {
       final Filter queryFilter = queryCursorBuildSpec.getFilter();
       if (queryFilter != null) {
+        final Set<String> originalRequired = queryFilter.getRequiredColumns();
         // try to rewrite the query filter into a projection filter, if the rewrite is valid, we can proceed
         final Filter projectionFilter = projection.getFilter().toOptimizedFilter(false);
         final Map<String, String> filterRewrites = new HashMap<>();
@@ -204,9 +207,11 @@ public class Projections
         if (rewritten == ProjectionFilterMatch.INSTANCE) {
           // we can remove the whole thing since the query filter exactly matches the projection filter
           matchBuilder.rewriteFilter(null);
+          matchBuilder.addMatchedQueryColumns(originalRequired);
         } else {
           // otherwise, we partially rewrote the query filter to eliminate the projection filter since it is baked in
           matchBuilder.rewriteFilter(rewritten);
+          matchBuilder.addMatchedQueryColumns(Sets.difference(originalRequired, rewritten.getRequiredColumns()));
         }
       } else {
         // projection has a filter, but the query doesn't, no good

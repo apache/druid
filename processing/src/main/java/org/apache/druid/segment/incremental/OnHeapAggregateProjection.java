@@ -52,7 +52,6 @@ import org.apache.druid.segment.column.ValueType;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -103,7 +102,7 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
     // always have its time-like column in the grouping columns list, so its position in this array specifies -1
     this.parentDimensionIndex = new int[projectionSpec.getGroupingColumns().size()];
     Arrays.fill(parentDimensionIndex, -1);
-    this.dimensionsMap = new HashMap<>();
+    this.dimensionsMap = new LinkedHashMap<>();
     this.columnFormats = new LinkedHashMap<>();
 
     initializeAndValidateDimensions(projectionSpec, getBaseTableDimensionDesc);
