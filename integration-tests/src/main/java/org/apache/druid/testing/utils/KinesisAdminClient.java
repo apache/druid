@@ -40,6 +40,7 @@ import com.amazonaws.services.kinesis.model.UpdateShardCountResult;
 import com.amazonaws.util.AwsHostNameUtils;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.testing.tools.ITRetryUtil;
 
 import java.io.FileInputStream;
 import java.util.Arrays;

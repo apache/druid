@@ -19,7 +19,7 @@
 
 package org.apache.druid.testsEx.config;
 
-import org.apache.druid.testing.IntegrationTestingConfig;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
 import org.apache.druid.testsEx.config.ClusterConfig.ClusterType;
 import org.apache.druid.testsEx.config.ResolvedService.ResolvedZk;
 import org.junit.Test;

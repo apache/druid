@@ -17,18 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.testing;
+package org.apache.druid.testing.tools;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.inject.Provider;
+import org.joda.time.DateTime;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DockerConfigProvider.class)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "docker", value = DockerConfigProvider.class),
-    @JsonSubTypes.Type(name = "configFile", value = ConfigFileConfigProvider.class)
-})
-public interface IntegrationTestingConfigProvider extends Provider<IntegrationTestingConfig>
+import java.util.List;
+
+public interface StreamGenerator
 {
-  String PROPERTY_BASE = "druid.test.config";
+  /**
+   * Runs and returns the number of messages written.
+   */
+  long run(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds);
+
+  /**
+   * Runs and returns the number of messages written.
+   */
+  long run(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds, DateTime overrrideFirstEventTime);
+
+  List<byte[]> generate(int totalNumberOfSeconds);
+
+  List<byte[]> generate(int totalNumberOfSeconds, DateTime overrideFirstEventTime);
 }

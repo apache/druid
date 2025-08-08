@@ -23,6 +23,7 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
+import org.apache.druid.testing.tools.ITRetryUtil;
 import org.testng.Assert;
 
 public final class DataLoaderHelper

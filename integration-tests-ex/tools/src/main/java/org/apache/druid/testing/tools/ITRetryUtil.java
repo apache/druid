@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.utils;
+package org.apache.druid.testing.tools;
 
 import io.netty.util.SuppressForbidden;
 import org.apache.druid.java.util.common.ISE;

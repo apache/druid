@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.curator.CuratorConfig;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.testing.IntegrationTestingConfigProvider;
+import org.apache.druid.testing.tools.IntegrationTestingConfigProvider;
 import org.apache.druid.testsEx.config.ClusterConfig.ClusterType;
 import org.apache.druid.testsEx.config.ResolvedService.ResolvedKafka;
 import org.apache.druid.testsEx.config.ResolvedService.ResolvedZk;

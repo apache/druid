@@ -28,7 +28,7 @@ import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.utils.ITRetryUtil;
+import org.apache.druid.testing.tools.ITRetryUtil;
 import org.apache.druid.tests.TestNGGroup;
 import org.joda.time.Interval;
 import org.testng.Assert;

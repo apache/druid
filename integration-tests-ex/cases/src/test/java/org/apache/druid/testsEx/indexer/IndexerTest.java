@@ -27,7 +27,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
-import org.apache.druid.testing.utils.ITRetryUtil;
+import org.apache.druid.testing.tools.ITRetryUtil;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;

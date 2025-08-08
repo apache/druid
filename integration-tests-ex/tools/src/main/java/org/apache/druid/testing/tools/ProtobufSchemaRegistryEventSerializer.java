@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.utils;
+package org.apache.druid.testing.tools;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -29,7 +29,6 @@ import io.confluent.kafka.schemaregistry.protobuf.ProtobufSchema;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.testing.IntegrationTestingConfig;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -42,6 +41,22 @@ public class ProtobufSchemaRegistryEventSerializer extends ProtobufEventSerializ
   private final IntegrationTestingConfig config;
   private final CachedSchemaRegistryClient client;
   private int schemaId = -1;
+
+  public ProtobufSchemaRegistryEventSerializer(
+      String schemaRegistryHost
+  )
+  {
+    this.config = null;
+    this.client = new CachedSchemaRegistryClient(
+        StringUtils.format("http://%s", schemaRegistryHost),
+        Integer.MAX_VALUE,
+        ImmutableMap.of(
+            "basic.auth.credentials.source", "USER_INFO",
+            "basic.auth.user.info", "druid:diurd"
+        ),
+        ImmutableMap.of()
+    );
+  }
 
 
   @JsonCreator

@@ -23,6 +23,7 @@ import org.apache.druid.client.selector.Server;
 import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.testing.tools.ITRetryUtil;
 
 import java.util.concurrent.Callable;
 

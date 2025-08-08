@@ -33,10 +33,6 @@ getComposeArgs()
     then
       echo "Cannot run test group '$DRUID_INTEGRATION_TEST_GROUP' with CliIndexer"
       exit 1
-    elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "kafka-data-format" ]
-    then
-      # Replace MiddleManager with Indexer + schema registry container
-      echo "-f ${DOCKERDIR}/docker-compose.cli-indexer.yml -f ${DOCKERDIR}/docker-compose.schema-registry-indexer.yml"
     else
       # Replace MiddleManager with Indexer
       echo "-f ${DOCKERDIR}/docker-compose.cli-indexer.yml"
@@ -59,10 +55,6 @@ getComposeArgs()
     # default + additional historical modified for query error test
     # See CliHistoricalForQueryRetryTest.
     echo "-f ${DOCKERDIR}/docker-compose.query-error-test.yml"
-  elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "kafka-data-format" ]
-  then
-    # default + schema registry container
-    echo "-f ${DOCKERDIR}/docker-compose.yml -f ${DOCKERDIR}/docker-compose.schema-registry.yml"
   elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "kinesis-data-format" ]
       then
         # default + with override config + schema registry container

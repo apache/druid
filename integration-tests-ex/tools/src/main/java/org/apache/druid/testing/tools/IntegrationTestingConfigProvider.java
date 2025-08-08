@@ -17,28 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.testing.utils;
+package org.apache.druid.testing.tools;
 
-import java.nio.ByteBuffer;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.inject.Provider;
 
-/**
- * Writes only to a single shard
- */
-public class KinesisSingleShardEventWriter extends KinesisEventWriter
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DockerConfigProvider.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "docker", value = DockerConfigProvider.class),
+    @JsonSubTypes.Type(name = "configFile", value = ConfigFileConfigProvider.class)
+})
+public interface IntegrationTestingConfigProvider extends Provider<IntegrationTestingConfig>
 {
-
-  public KinesisSingleShardEventWriter(String endpoint, boolean aggregate) throws Exception
-  {
-    super(endpoint, aggregate);
-  }
-
-  @Override
-  public void write(String streamName, byte[] event)
-  {
-    getKinesisProducer().addUserRecord(
-        streamName,
-        "0",
-        ByteBuffer.wrap(event)
-    );
-  }
+  String PROPERTY_BASE = "druid.test.config";
 }
