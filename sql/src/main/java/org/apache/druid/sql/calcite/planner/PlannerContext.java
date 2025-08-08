@@ -41,6 +41,7 @@ import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.explain.ExplainAttributes;
+import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.lookup.LookupExtractor;
@@ -106,6 +107,12 @@ public class PlannerContext
   public static final boolean DEFAULT_SQL_USE_BOUNDS_AND_SELECTORS = false;
 
   /**
+   * Context key for {@link PlannerContext#isUseExtractionFns()}.
+   */
+  public static final String CTX_SQL_USE_EXTRACTION_FNS = "sqlUseExtractionFns";
+  public static final boolean DEFAULT_SQL_USE_EXTRACTION_FNS = false;
+
+  /**
    * Context key for {@link PlannerContext#isPullUpLookup()}.
    */
   public static final String CTX_SQL_PULL_UP_LOOKUP = "sqlPullUpLookup";
@@ -141,6 +148,7 @@ public class PlannerContext
   private String sqlQueryId;
   private boolean stringifyArrays;
   private boolean useBoundsAndSelectors;
+  private boolean useExtractionFns;
   private boolean pullUpLookup;
   private boolean reverseLookup;
   private boolean useGranularity;
@@ -354,6 +362,14 @@ public class PlannerContext
   public boolean isUseBoundsAndSelectors()
   {
     return useBoundsAndSelectors;
+  }
+
+  /**
+   * Whether we should use {@link ExtractionFn} in planning.
+   */
+  public boolean isUseExtractionFns()
+  {
+    return useExtractionFns;
   }
 
   /**
@@ -687,6 +703,13 @@ public class PlannerContext
       useBoundsAndSelectors = Numbers.parseBoolean(useBoundsAndSelectorsParam);
     } else {
       useBoundsAndSelectors = DEFAULT_SQL_USE_BOUNDS_AND_SELECTORS;
+    }
+
+    final Object useExtractionFnsParam = queryContext.get(CTX_SQL_USE_EXTRACTION_FNS);
+    if (useExtractionFnsParam != null) {
+      useExtractionFns = Numbers.parseBoolean(useExtractionFnsParam);
+    } else {
+      useExtractionFns = DEFAULT_SQL_USE_EXTRACTION_FNS;
     }
 
     final Object pullUpLookupParam = queryContext.get(CTX_SQL_PULL_UP_LOOKUP);
