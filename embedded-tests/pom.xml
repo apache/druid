@@ -354,6 +354,7 @@
       <artifactId>aws-java-sdk-core</artifactId>
       <scope>test</scope>
     </dependency>
+
   </dependencies>
 
   <build>

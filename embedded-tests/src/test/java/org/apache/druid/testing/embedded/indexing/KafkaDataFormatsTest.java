@@ -32,6 +32,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.protobuf.FileBasedProtobufBytesDecoder;
 import org.apache.druid.data.input.protobuf.ProtobufExtensionsModule;
 import org.apache.druid.data.input.protobuf.ProtobufInputFormat;
+import org.apache.druid.data.input.protobuf.SchemaRegistryBasedProtobufBytesDecoder;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
@@ -47,7 +48,6 @@ import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
-import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.testing.tools.EventSerializer;
 import org.apache.druid.testing.tools.StreamGenerator;
@@ -59,9 +59,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -146,6 +144,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
                + "\"org.apache.druid.server.metrics.TaskCountStatsMonitor\"]"
            )
            .addResource(kafkaServer)
+           .addResource(schemaRegistry)
            .addServer(coordinator)
            .addServer(overlord)
            .addServer(indexer)
@@ -161,7 +160,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     new AvroExtensionsModule().getJacksonModules().forEach(jsonMapper::registerModule);
     kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = jsonMapper.readValue("{\"type\": \"avro\"}", EventSerializer.class);
-    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer);
+    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
     AvroStreamInputFormat inputFormat = jsonMapper.readValue(
         getClass().getResourceAsStream("/test-data/avro/input_format.json"),
         AvroStreamInputFormat.class
@@ -199,7 +198,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = jsonMapper.readValue("{\"type\": \"csv\"}", EventSerializer.class);
-    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer);
+    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
     CsvInputFormat inputFormat = new CsvInputFormat(List.of("timestamp","page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city","added","deleted","delta"), null, null, false, 0, false);
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
 
@@ -229,7 +228,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     kafkaServer.createTopicWithPartitions(dataSource, 3);
 
     EventSerializer serializer = jsonMapper.readValue("{\"type\": \"json\"}", EventSerializer.class);
-    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer);
+    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
     InputFormat inputFormat = new JsonInputFormat(null, null, null, false, null, null);
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
 
@@ -260,7 +259,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
     kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = jsonMapper.readValue("{\"type\": \"protobuf\"}", EventSerializer.class);
-    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer);
+    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
 
     FileBasedProtobufBytesDecoder protobufBytesDecoder = jsonMapper.readValue(
         "{\"type\": \"file\", \"protoMessageType\": \"Wikipedia\", \"descriptor\": \"test-data/protobuf/wikipedia.desc\"}",
@@ -292,9 +291,39 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void test_indexKafka_protobufDataFormatWithSchemaRegistry()
+  public void test_indexKafka_protobufDataFormatWithSchemaRegistry() throws JsonProcessingException
   {
+    new ProtobufExtensionsModule().getJacksonModules().forEach(jsonMapper::registerModule);
+
     kafkaServer.createTopicWithPartitions(dataSource,  3);
+    EventSerializer serializer = jsonMapper.readValue("{\"type\": \"protobuf\"}", EventSerializer.class);
+    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
+    SchemaRegistryBasedProtobufBytesDecoder protobufBytesDecoder = jsonMapper.readValue(
+        StringUtils.format("{\"type\": \"schema_registry\", \"urls\": [\"http://localhost:%s\"]}",
+            schemaRegistry.getContainer().getExposedPorts().get(0)),
+        SchemaRegistryBasedProtobufBytesDecoder.class
+    );
+    ProtobufInputFormat inputFormat = new ProtobufInputFormat(null, protobufBytesDecoder);
+    KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
+    final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
+        o -> o.postSupervisor(supervisorSpec)
+    );
+
+    Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
+
+    // Wait for a task to succeed
+    overlord.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("task/success/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(1)
+    );
+    // Wait for the broker to discover the realtime segments
+    broker.latchableEmitter().waitForEvent(
+        event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
+    );
+
+    // Verify the count of rows ingested into the datasource so far
+    Assertions.assertEquals(StringUtils.format("%d", recordCount), cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
   }
 
   @Test
@@ -302,7 +331,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = jsonMapper.readValue("{\"type\": \"tsv\"}", EventSerializer.class);
-    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer);
+    int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
     DelimitedInputFormat inputFormat = new DelimitedInputFormat(List.of("timestamp", "page", "language", "user", "unpatrolled", "newPage", "robot", "anonymous", "namespace", "continent", "country", "region", "city", "added", "deleted", "delta"), null, null, false, false, 0, null);
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
 
@@ -326,7 +355,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(StringUtils.format("%d", recordCount), cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
   }
 
-  private int generateStreamAndPublishToKafka(String topic, EventSerializer serializer)
+  private int generateStreamAndPublishToKafka(String topic, EventSerializer serializer, boolean useSchemaRegistry)
   {
     final StreamGenerator streamGenerator = new WikipediaStreamEventStreamGenerator(
         serializer,
@@ -340,7 +369,14 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
       producerRecords.add(new ProducerRecord<>(topic, record));
     }
 
-    kafkaServer.produceRecordsToTopic(producerRecords);
+    if (useSchemaRegistry) {
+      kafkaServer.produceRecordsToTopicWithExtraProperties(
+          producerRecords,
+          Map.of("schema.registry.url", "http://localhost:" + schemaRegistry.getContainer().getExposedPorts().get(0))
+      );
+    } else {
+      kafkaServer.produceRecordsToTopic(producerRecords);
+    }
     return producerRecords.size();
   }
 

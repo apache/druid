@@ -25,18 +25,11 @@ public class SchemaRegistryResource extends TestcontainerResource<GenericContain
   @Override
   protected GenericContainer<?> createContainer()
   {
-    try {
-    Thread.sleep(6000000);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new RuntimeException("Interrupted while waiting for Kafka to start", e);
-    }
     return new GenericContainer<>(SCHEMA_REGISTRY_IMAGE)
-        .withNetwork(Network.SHARED)
         .dependsOn(kafkaContainer)
         .withExposedPorts(9081)
         .withEnv("SCHEMA_REGISTRY_HOST_NAME", "schema-registry")
         .withEnv("SCHEMA_REGISTRY_LISTENERS", "http://0.0.0.0:9081")
-        .withEnv("SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS", StringUtils.format("%s:9092", "kafkatc"));
+        .withEnv("SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS", kafkaContainer.getBootstrapServers());
   }
 }
