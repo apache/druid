@@ -26,6 +26,7 @@ import com.google.inject.Scopes;
 import com.google.inject.name.Names;
 import org.apache.druid.indexing.common.tasklogs.FileTaskLogs;
 import org.apache.druid.indexing.common.tasklogs.SwitchingTaskLogs;
+import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.junit.Assert;
@@ -55,7 +56,8 @@ public class IndexingServiceTaskLogsModuleTest
           binder.bind(Properties.class).toInstance(props);
           binder.bind(Validator.class).toInstance(new MockValidator());
         },
-        new IndexingServiceTaskLogsModule(props)
+        new IndexingServiceTaskLogsModule(props),
+        new JacksonModule()
     );
 
     TaskLogs taskLogs = injector.getInstance(TaskLogs.class);
@@ -78,7 +80,8 @@ public class IndexingServiceTaskLogsModuleTest
           binder.bind(Properties.class).toInstance(props);
           binder.bind(Validator.class).toInstance(new MockValidator());
         },
-        new IndexingServiceTaskLogsModule(props)
+        new IndexingServiceTaskLogsModule(props),
+        new JacksonModule()
     );
 
     TaskLogs pusher = injector.getInstance(Key.get(TaskLogs.class, Names.named("switching.pushType")));
