@@ -126,10 +126,6 @@ public class Projections
       return null;
     }
 
-    matchBuilder = matchFilter(projection, queryCursorBuildSpec, physicalColumnChecker, matchBuilder);
-    if (matchBuilder == null) {
-      return null;
-    }
 
     matchBuilder = matchGrouping(projection, queryCursorBuildSpec, physicalColumnChecker, matchBuilder);
     if (matchBuilder == null) {
@@ -137,6 +133,11 @@ public class Projections
     }
 
     matchBuilder = matchAggregators(projection, queryCursorBuildSpec, matchBuilder);
+    if (matchBuilder == null) {
+      return null;
+    }
+
+    matchBuilder = matchFilter(projection, queryCursorBuildSpec, physicalColumnChecker, matchBuilder);
     if (matchBuilder == null) {
       return null;
     }

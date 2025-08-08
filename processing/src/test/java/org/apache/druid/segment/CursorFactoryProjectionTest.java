@@ -97,6 +97,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -274,10 +275,10 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                              .build(),
       AggregateProjectionSpec.builder("a_concat_b_d_plus_f_sum_c")
                              .virtualColumns(
-                                 new ExpressionVirtualColumn("__vc2", "d + e", ColumnType.DOUBLE, TestExprMacroTable.INSTANCE),
+                                 new ExpressionVirtualColumn("__vc2", "d + e", ColumnType.LONG, TestExprMacroTable.INSTANCE),
                                  new ExpressionVirtualColumn("__vc3", "concat(a, b)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
                              )
-                             .groupingColumns(new DoubleDimensionSchema("__vc2"), new StringDimensionSchema("__vc3"))
+                             .groupingColumns(new LongDimensionSchema("__vc2"), new StringDimensionSchema("__vc3"))
                              .aggregators(new LongSumAggregatorFactory("sum_c", "c"))
                              .build()
   );
@@ -530,41 +531,18 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     assertCursorProjection(buildSpec, queryMetrics, 6);
 
-    final Sequence<ResultRow> resultRows = groupingEngine.process(
+    testGroupBy(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        nonBlockingPool,
-        queryMetrics
+        queryMetrics,
+        makeArrayResultSet(
+            new Object[]{"b", "bb"},
+            new Object[]{"a", "dd"},
+            new Object[]{"b", "aa"},
+            new Object[]{"a", "cc"},
+            new Object[]{"a", "bb"},
+            new Object[]{"a", "aa"}
+        )
     );
-
-    queryMetrics.assertProjection();
-    final List<ResultRow> results = resultRows.toList();
-    Assert.assertEquals(6, results.size());
-    if (projectionsCursorFactory instanceof QueryableIndexCursorFactory) {
-      if (autoSchema) {
-        Assert.assertArrayEquals(new Object[]{"b", "bb"}, results.get(0).getArray());
-        Assert.assertArrayEquals(new Object[]{"a", "dd"}, results.get(1).getArray());
-        Assert.assertArrayEquals(new Object[]{"b", "aa"}, results.get(2).getArray());
-        Assert.assertArrayEquals(new Object[]{"a", "cc"}, results.get(3).getArray());
-        Assert.assertArrayEquals(new Object[]{"a", "bb"}, results.get(4).getArray());
-        Assert.assertArrayEquals(new Object[]{"a", "aa"}, results.get(5).getArray());
-      } else {
-        Assert.assertArrayEquals(new Object[]{"a", "dd"}, results.get(0).getArray());
-        Assert.assertArrayEquals(new Object[]{"a", "aa"}, results.get(1).getArray());
-        Assert.assertArrayEquals(new Object[]{"b", "aa"}, results.get(2).getArray());
-        Assert.assertArrayEquals(new Object[]{"a", "cc"}, results.get(3).getArray());
-        Assert.assertArrayEquals(new Object[]{"a", "bb"}, results.get(4).getArray());
-        Assert.assertArrayEquals(new Object[]{"b", "bb"}, results.get(5).getArray());
-      }
-    } else {
-      Assert.assertArrayEquals(new Object[]{"a", "aa"}, results.get(0).getArray());
-      Assert.assertArrayEquals(new Object[]{"a", "bb"}, results.get(1).getArray());
-      Assert.assertArrayEquals(new Object[]{"a", "cc"}, results.get(2).getArray());
-      Assert.assertArrayEquals(new Object[]{"a", "dd"}, results.get(3).getArray());
-      Assert.assertArrayEquals(new Object[]{"b", "aa"}, results.get(4).getArray());
-      Assert.assertArrayEquals(new Object[]{"b", "bb"}, results.get(5).getArray());
-    }
   }
 
   @Test
@@ -602,42 +580,18 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
     assertCursorProjection(buildSpec, queryMetrics, 6);
 
-    final Sequence<ResultRow> resultRows = groupingEngine.process(
+    testGroupBy(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        nonBlockingPool,
-        queryMetrics
+        queryMetrics,
+        makeArrayResultSet(
+            new Object[]{"b", "bbfoo"},
+            new Object[]{"a", "ddfoo"},
+            new Object[]{"b", "aafoo"},
+            new Object[]{"a", "ccfoo"},
+            new Object[]{"a", "bbfoo"},
+            new Object[]{"a", "aafoo"}
+        )
     );
-
-    queryMetrics.assertProjection();
-    final List<ResultRow> results = resultRows.toList();
-    Assert.assertEquals(6, results.size());
-    if (projectionsCursorFactory instanceof QueryableIndexCursorFactory) {
-      // testing ordering of stuff is kind of tricky at this level...
-      if (autoSchema) {
-        Assert.assertArrayEquals(new Object[]{"b", "bbfoo"}, results.get(0).getArray());
-        Assert.assertArrayEquals(new Object[]{"a", "ddfoo"}, results.get(1).getArray());
-        Assert.assertArrayEquals(new Object[]{"b", "aafoo"}, results.get(2).getArray());
-        Assert.assertArrayEquals(new Object[]{"a", "ccfoo"}, results.get(3).getArray());
-        Assert.assertArrayEquals(new Object[]{"a", "bbfoo"}, results.get(4).getArray());
-        Assert.assertArrayEquals(new Object[]{"a", "aafoo"}, results.get(5).getArray());
-      } else {
-        Assert.assertArrayEquals(new Object[]{"a", "ddfoo"}, results.get(0).getArray());
-        Assert.assertArrayEquals(new Object[]{"a", "aafoo"}, results.get(1).getArray());
-        Assert.assertArrayEquals(new Object[]{"b", "aafoo"}, results.get(2).getArray());
-        Assert.assertArrayEquals(new Object[]{"a", "ccfoo"}, results.get(3).getArray());
-        Assert.assertArrayEquals(new Object[]{"a", "bbfoo"}, results.get(4).getArray());
-        Assert.assertArrayEquals(new Object[]{"b", "bbfoo"}, results.get(5).getArray());
-      }
-    } else {
-      Assert.assertArrayEquals(new Object[]{"a", "aafoo"}, results.get(0).getArray());
-      Assert.assertArrayEquals(new Object[]{"a", "bbfoo"}, results.get(1).getArray());
-      Assert.assertArrayEquals(new Object[]{"a", "ccfoo"}, results.get(2).getArray());
-      Assert.assertArrayEquals(new Object[]{"a", "ddfoo"}, results.get(3).getArray());
-      Assert.assertArrayEquals(new Object[]{"b", "aafoo"}, results.get(4).getArray());
-      Assert.assertArrayEquals(new Object[]{"b", "bbfoo"}, results.get(5).getArray());
-    }
   }
 
   @Test
@@ -659,41 +613,18 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
     assertCursorNoProjection(buildSpec, queryMetrics);
 
-    final Sequence<ResultRow> resultRows = groupingEngine.process(
+    testGroupBy(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        nonBlockingPool,
-        queryMetrics
+        queryMetrics,
+        makeArrayResultSet(
+            new Object[]{"b", "aa", 2L},
+            new Object[]{"a", "cc", 1L},
+            new Object[]{"a", "bb", 1L},
+            new Object[]{"b", "bb", 1L},
+            new Object[]{"a", "dd", 1L},
+            new Object[]{"a", "aa", 2L}
+        )
     );
-
-    queryMetrics.assertProjection();
-    final List<ResultRow> results = resultRows.toList();
-    Assert.assertEquals(6, results.size());
-    if (projectionsCursorFactory instanceof QueryableIndexCursorFactory) {
-      if (autoSchema) {
-        Assert.assertArrayEquals(new Object[]{"b", "aa", 2L}, results.get(0).getArray());
-        Assert.assertArrayEquals(new Object[]{"a", "cc", 1L}, results.get(1).getArray());
-        Assert.assertArrayEquals(new Object[]{"a", "bb", 1L}, results.get(2).getArray());
-        Assert.assertArrayEquals(new Object[]{"b", "bb", 1L}, results.get(3).getArray());
-        Assert.assertArrayEquals(new Object[]{"a", "dd", 1L}, results.get(4).getArray());
-        Assert.assertArrayEquals(new Object[]{"a", "aa", 2L}, results.get(5).getArray());
-      } else {
-        Assert.assertArrayEquals(new Object[]{"a", "dd", 1L}, results.get(0).getArray());
-        Assert.assertArrayEquals(new Object[]{"a", "aa", 2L}, results.get(1).getArray());
-        Assert.assertArrayEquals(new Object[]{"a", "bb", 1L}, results.get(2).getArray());
-        Assert.assertArrayEquals(new Object[]{"b", "aa", 2L}, results.get(3).getArray());
-        Assert.assertArrayEquals(new Object[]{"a", "cc", 1L}, results.get(4).getArray());
-        Assert.assertArrayEquals(new Object[]{"b", "bb", 1L}, results.get(5).getArray());
-      }
-    } else {
-      Assert.assertArrayEquals(new Object[]{"a", "aa", 2L}, results.get(0).getArray());
-      Assert.assertArrayEquals(new Object[]{"a", "bb", 1L}, results.get(1).getArray());
-      Assert.assertArrayEquals(new Object[]{"a", "cc", 1L}, results.get(2).getArray());
-      Assert.assertArrayEquals(new Object[]{"b", "aa", 2L}, results.get(3).getArray());
-      Assert.assertArrayEquals(new Object[]{"b", "bb", 1L}, results.get(4).getArray());
-      Assert.assertArrayEquals(new Object[]{"a", "dd", 1L}, results.get(5).getArray());
-    }
   }
 
   @Test
@@ -739,23 +670,13 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     assertCursorNoProjection(buildSpec, queryMetrics);
 
-    final Sequence<ResultRow> resultRows = groupingEngine.process(
+    testGroupBy(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        nonBlockingPool,
-        queryMetrics
-    );
-    queryMetrics.assertNoProjection();
-    final List<ResultRow> results = resultRows.toList();
-    Assert.assertEquals(2, results.size());
-    Assert.assertArrayEquals(
-        new Object[]{"a", 7L, Pair.of(TIMESTAMP.plusHours(1).plusMinutes(1).getMillis(), 2L)},
-        results.get(0).getArray()
-    );
-    Assert.assertArrayEquals(
-        new Object[]{"b", 12L, Pair.of(TIMESTAMP.plusMinutes(10).getMillis(), 5L)},
-        results.get(1).getArray()
+        queryMetrics,
+        List.of(
+            new Object[]{"a", 7L, Pair.of(TIMESTAMP.plusHours(1).plusMinutes(1).getMillis(), 2L)},
+            new Object[]{"b", 12L, Pair.of(TIMESTAMP.plusMinutes(10).getMillis(), 5L)}
+        )
     );
   }
 
@@ -777,23 +698,13 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     assertCursorProjection(buildSpec, queryMetrics, 3);
 
-    final Sequence<ResultRow> resultRows = groupingEngine.process(
+    testGroupBy(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        nonBlockingPool,
-        queryMetrics
-    );
-    queryMetrics.assertProjection();
-    final List<ResultRow> results = resultRows.toList();
-    Assert.assertEquals(2, results.size());
-    Assert.assertArrayEquals(
-        new Object[]{"a", 7L, Pair.of(TIMESTAMP.plusHours(1).plusMinutes(1).getMillis(), 2L)},
-        results.get(0).getArray()
-    );
-    Assert.assertArrayEquals(
-        new Object[]{"b", 12L, Pair.of(TIMESTAMP.plusMinutes(10).getMillis(), 5L)},
-        results.get(1).getArray()
+        queryMetrics,
+        List.of(
+            new Object[]{"a", 7L, Pair.of(TIMESTAMP.plusHours(1).plusMinutes(1).getMillis(), 2L)},
+            new Object[]{"b", 12L, Pair.of(TIMESTAMP.plusMinutes(10).getMillis(), 5L)}
+        )
     );
   }
 
@@ -814,19 +725,12 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     assertCursorProjection(buildSpec, queryMetrics, 1);
 
-    final Sequence<ResultRow> resultRows = groupingEngine.process(
+    testGroupBy(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        nonBlockingPool,
-        queryMetrics
-    );
-    queryMetrics.assertProjection();
-    final List<ResultRow> results = resultRows.toList();
-    Assert.assertEquals(1, results.size());
-    Assert.assertArrayEquals(
-        new Object[]{null, 20.8},
-        results.get(0).getArray()
+        queryMetrics,
+        Collections.singletonList(
+            new Object[]{null, 20.8}
+        )
     );
   }
 
@@ -849,19 +753,12 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     assertCursorProjection(buildSpec, queryMetrics, 2);
 
-    final Sequence<ResultRow> resultRows = groupingEngine.process(
+    testGroupBy(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        nonBlockingPool,
-        queryMetrics
-    );
-    queryMetrics.assertProjection();
-    final List<ResultRow> results = resultRows.toList();
-    Assert.assertEquals(1, results.size());
-    Assert.assertArrayEquals(
-        new Object[]{"a", 7L, Pair.of(TIMESTAMP.plusHours(1).plusMinutes(1).getMillis(), 2L)},
-        results.get(0).getArray()
+        queryMetrics,
+        Collections.singletonList(
+            new Object[]{"a", 7L, Pair.of(TIMESTAMP.plusHours(1).plusMinutes(1).getMillis(), 2L)}
+        )
     );
   }
 
@@ -883,18 +780,14 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     assertCursorProjection(buildSpec, queryMetrics, 3);
 
-    final Sequence<ResultRow> resultRows = groupingEngine.process(
+    testGroupBy(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        nonBlockingPool,
-        queryMetrics
+        queryMetrics,
+        List.of(
+            new Object[]{"a", 7L, 5L},
+            new Object[]{"b", 12L, 3L}
+        )
     );
-    queryMetrics.assertProjection();
-    final List<ResultRow> results = resultRows.toList();
-    Assert.assertEquals(2, results.size());
-    Assert.assertArrayEquals(new Object[]{"a", 7L, 5L}, results.get(0).getArray());
-    Assert.assertArrayEquals(new Object[]{"b", 12L, 3L}, results.get(1).getArray());
   }
 
   @Test
@@ -915,18 +808,14 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     assertCursorProjection(buildSpec, queryMetrics, 3);
 
-    final Sequence<ResultRow> resultRows = groupingEngine.process(
+    testGroupBy(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        nonBlockingPool,
-        queryMetrics
+        queryMetrics,
+        List.of(
+            new Object[]{"a", 7L, 7L},
+            new Object[]{"b", 12L, 12L}
+        )
     );
-    queryMetrics.assertProjection();
-    final List<ResultRow> results = resultRows.toList();
-    Assert.assertEquals(2, results.size());
-    Assert.assertArrayEquals(new Object[]{"a", 7L, 7L}, results.get(0).getArray());
-    Assert.assertArrayEquals(new Object[]{"b", 12L, 12L}, results.get(1).getArray());
   }
 
   @Test
@@ -954,63 +843,17 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     assertCursorNoProjection(buildSpec, queryMetrics);
 
-    final Sequence<ResultRow> resultRows = groupingEngine.process(
-        query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        nonBlockingPool,
-        queryMetrics
+    Set<Object[]> resultsInNoParticularOrder = makeArrayResultSet();
+    resultsInNoParticularOrder.addAll(
+        ROWS.stream()
+            .map(x -> new Object[]{x.getTimestamp().getMillis(), x.getRaw("a"), x.getRaw("c")})
+            .collect(Collectors.toList())
     );
-
-    queryMetrics.assertNoProjection();
-    final List<ResultRow> results = resultRows.toList();
-    Assert.assertEquals(8, results.size());
-
-    if (!segmentSortedByTime && projectionsCursorFactory instanceof QueryableIndexCursorFactory) {
-      // this sorts funny when not time ordered
-      Set<Object[]> resultsInNoParticularOrder = makeArrayResultSet();
-      resultsInNoParticularOrder.addAll(
-          ROWS.stream()
-              .map(x -> new Object[]{x.getTimestamp().getMillis(), x.getRaw("a"), x.getRaw("c")})
-              .collect(Collectors.toList())
-      );
-      for (ResultRow row : results) {
-        Assert.assertTrue(resultsInNoParticularOrder.contains(row.getArray()));
-      }
-    } else {
-      Assert.assertArrayEquals(
-          new Object[]{ROWS.get(0).getTimestamp().getMillis(), "a", 1L},
-          results.get(0).getArray()
-      );
-      Assert.assertArrayEquals(
-          new Object[]{ROWS.get(1).getTimestamp().getMillis(), "a", 1L},
-          results.get(1).getArray()
-      );
-      Assert.assertArrayEquals(
-          new Object[]{ROWS.get(2).getTimestamp().getMillis(), "a", 2L},
-          results.get(2).getArray()
-      );
-      Assert.assertArrayEquals(
-          new Object[]{ROWS.get(3).getTimestamp().getMillis(), "b", 3L},
-          results.get(3).getArray()
-      );
-      Assert.assertArrayEquals(
-          new Object[]{ROWS.get(4).getTimestamp().getMillis(), "b", 4L},
-          results.get(4).getArray()
-      );
-      Assert.assertArrayEquals(
-          new Object[]{ROWS.get(5).getTimestamp().getMillis(), "b", 5L},
-          results.get(5).getArray()
-      );
-      Assert.assertArrayEquals(
-          new Object[]{ROWS.get(6).getTimestamp().getMillis(), "a", 1L},
-          results.get(6).getArray()
-      );
-      Assert.assertArrayEquals(
-          new Object[]{ROWS.get(7).getTimestamp().getMillis(), "a", 2L},
-          results.get(7).getArray()
-      );
-    }
+    testGroupBy(
+        query,
+        queryMetrics,
+        resultsInNoParticularOrder
+    );
   }
 
   @Test
@@ -1039,31 +882,15 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     assertCursorProjection(buildSpec, queryMetrics, 3);
 
-    final Sequence<ResultRow> resultRows = groupingEngine.process(
+    testGroupBy(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        nonBlockingPool,
-        queryMetrics
+        queryMetrics,
+        makeArrayResultSet(
+            new Object[]{TIMESTAMP.getMillis(), "a", 4L},
+            new Object[]{TIMESTAMP.getMillis(), "b", 12L},
+            new Object[]{TIMESTAMP.plusHours(1).getMillis(), "a", 3L}
+        )
     );
-
-    queryMetrics.assertProjection();
-    final List<ResultRow> results = resultRows.toList();
-    Assert.assertEquals(3, results.size());
-    if (!segmentSortedByTime && projectionsCursorFactory instanceof QueryableIndexCursorFactory) {
-      Set<Object[]> resultsInNoParticularOrder = makeArrayResultSet(
-          new Object[]{TIMESTAMP.getMillis(), "a", 4L},
-          new Object[]{TIMESTAMP.getMillis(), "b", 12L},
-          new Object[]{TIMESTAMP.plusHours(1).getMillis(), "a", 3L}
-      );
-      for (ResultRow row : results) {
-        Assert.assertTrue(resultsInNoParticularOrder.contains(row.getArray()));
-      }
-    } else {
-      Assert.assertArrayEquals(new Object[]{TIMESTAMP.getMillis(), "a", 4L}, results.get(0).getArray());
-      Assert.assertArrayEquals(new Object[]{TIMESTAMP.getMillis(), "b", 12L}, results.get(1).getArray());
-      Assert.assertArrayEquals(new Object[]{TIMESTAMP.plusHours(1).getMillis(), "a", 3L}, results.get(2).getArray());
-    }
   }
 
   @Test
@@ -1075,7 +902,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                     .setInterval(Intervals.ETERNITY)
                     .addAggregator(new LongSumAggregatorFactory("c_sum", "c"));
     final ExpectedProjectionGroupBy queryMetrics =
-        new ExpectedProjectionGroupBy("b_hourly_c_sum_non_time_ordered");
+        new ExpectedProjectionGroupBy(segmentSortedByTime ? null : "b_hourly_c_sum_non_time_ordered");
     if (segmentSortedByTime) {
       queryBuilder.addDimension("b")
                   .setGranularity(Granularities.HOUR);
@@ -1090,28 +917,19 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     final GroupByQuery query = queryBuilder.build();
     final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
 
-    assertCursor(buildSpec, queryMetrics, !segmentSortedByTime, segmentSortedByTime ? 8 : 5);
+    assertCursorProjection(buildSpec, queryMetrics, segmentSortedByTime ? 8 : 5);
 
-    final Sequence<ResultRow> resultRows = groupingEngine.process(
+    testGroupBy(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        nonBlockingPool,
-        null
+        queryMetrics,
+        makeArrayResultSet(
+            new Object[]{TIMESTAMP.getMillis(), "aa", 8L},
+            new Object[]{TIMESTAMP.getMillis(), "bb", 6L},
+            new Object[]{TIMESTAMP.getMillis(), "cc", 2L},
+            new Object[]{TIMESTAMP.plusHours(1).getMillis(), "aa", 1L},
+            new Object[]{TIMESTAMP.plusHours(1).getMillis(), "dd", 2L}
+        )
     );
-
-    final List<ResultRow> results = resultRows.toList();
-    Assert.assertEquals(5, results.size());
-    Set<Object[]> resultsInNoParticularOrder = makeArrayResultSet(
-        new Object[]{TIMESTAMP.getMillis(), "aa", 8L},
-        new Object[]{TIMESTAMP.getMillis(), "bb", 6L},
-        new Object[]{TIMESTAMP.getMillis(), "cc", 2L},
-        new Object[]{TIMESTAMP.plusHours(1).getMillis(), "aa", 1L},
-        new Object[]{TIMESTAMP.plusHours(1).getMillis(), "dd", 2L}
-    );
-    for (ResultRow row : results) {
-      Assert.assertTrue("missing row" + row.toString(), resultsInNoParticularOrder.contains(row.getArray()));
-    }
   }
 
 
@@ -1141,29 +959,14 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     assertCursorProjection(buildSpec, queryMetrics, 3);
 
-    final Sequence<ResultRow> resultRows = groupingEngine.process(
+    testGroupBy(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        nonBlockingPool,
-        queryMetrics
+        queryMetrics,
+        makeArrayResultSet(
+            new Object[]{TIMESTAMP.getMillis(), "a", 7L},
+            new Object[]{TIMESTAMP.getMillis(), "b", 12L}
+        )
     );
-
-    queryMetrics.assertProjection();
-    final List<ResultRow> results = resultRows.toList();
-    Assert.assertEquals(2, results.size());
-    if (!segmentSortedByTime && projectionsCursorFactory instanceof QueryableIndexCursorFactory) {
-      Set<Object[]> resultsInNoParticularOrder = makeArrayResultSet(
-          new Object[]{TIMESTAMP.getMillis(), "a", 7L},
-          new Object[]{TIMESTAMP.getMillis(), "b", 12L}
-      );
-      for (ResultRow row : results) {
-        Assert.assertTrue(resultsInNoParticularOrder.contains(row.getArray()));
-      }
-    } else {
-      Assert.assertArrayEquals(new Object[]{TIMESTAMP.getMillis(), "a", 7L}, results.get(0).getArray());
-      Assert.assertArrayEquals(new Object[]{TIMESTAMP.getMillis(), "b", 12L}, results.get(1).getArray());
-    }
   }
 
   @Test
@@ -1183,21 +986,16 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     assertCursorNoProjection(buildSpec, queryMetrics);
 
-    final Sequence<ResultRow> resultRows = groupingEngine.process(
+    testGroupBy(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        nonBlockingPool,
-        queryMetrics
+        queryMetrics,
+        List.of(
+            new Object[]{"aa", 9L, 8.8f},
+            new Object[]{"bb", 6L, 6.6f},
+            new Object[]{"cc", 2L, 2.2f},
+            new Object[]{"dd", 2L, 2.2f}
+        )
     );
-
-    queryMetrics.assertNoProjection();
-    final List<ResultRow> results = resultRows.toList();
-    Assert.assertEquals(4, results.size());
-    Assert.assertArrayEquals(new Object[]{"aa", 9L, 8.8f}, results.get(0).getArray());
-    Assert.assertArrayEquals(new Object[]{"bb", 6L, 6.6f}, results.get(1).getArray());
-    Assert.assertArrayEquals(new Object[]{"cc", 2L, 2.2f}, results.get(2).getArray());
-    Assert.assertArrayEquals(new Object[]{"dd", 2L, 2.2f}, results.get(3).getArray());
   }
 
   @Test
@@ -1218,19 +1016,14 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     assertCursorProjection(buildSpec, queryMetrics, 7);
 
-    final Sequence<ResultRow> resultRows = groupingEngine.process(
+    testGroupBy(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        nonBlockingPool,
-        queryMetrics
+        queryMetrics,
+        List.of(
+            new Object[]{"a", 7L, 7.6000000000000005},
+            new Object[]{"b", 12L, 13.2}
+        )
     );
-
-    queryMetrics.assertProjection();
-    final List<ResultRow> results = resultRows.toList();
-    Assert.assertEquals(2, results.size());
-    Assert.assertArrayEquals(new Object[]{"a", 7L, 7.6000000000000005}, results.get(0).getArray());
-    Assert.assertArrayEquals(new Object[]{"b", 12L, 13.2}, results.get(1).getArray());
   }
 
   @Test
@@ -1252,19 +1045,14 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     assertCursorProjection(buildSpec, queryMetrics, 7);
 
-    final Sequence<ResultRow> resultRows = groupingEngine.process(
+    testGroupBy(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        nonBlockingPool,
-        queryMetrics
+        queryMetrics,
+        List.of(
+            new Object[]{"a", null, 7L, 7.6000000000000005},
+            new Object[]{"b", null, 12L, 13.2}
+        )
     );
-
-    queryMetrics.assertProjection();
-    final List<ResultRow> results = resultRows.toList();
-    Assert.assertEquals(2, results.size());
-    Assert.assertArrayEquals(new Object[]{"a", null, 7L, 7.6000000000000005}, results.get(0).getArray());
-    Assert.assertArrayEquals(new Object[]{"b", null, 12L, 13.2}, results.get(1).getArray());
   }
 
   @Test
@@ -1284,18 +1072,13 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     assertCursorProjection(buildSpec, queryMetrics, 4);
 
-    final Sequence<Result<TimeseriesResultValue>> resultRows = timeseriesEngine.process(
+    testTimeseries(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        queryMetrics
+        queryMetrics,
+        Collections.singletonList(
+            new Object[]{TIMESTAMP, 19L}
+        )
     );
-
-    queryMetrics.assertProjection();
-    final List<Result<TimeseriesResultValue>> results = resultRows.toList();
-    Assert.assertEquals(1, results.size());
-    final RowSignature querySignature = query.getResultRowSignature(RowSignature.Finalization.YES);
-    Assert.assertArrayEquals(new Object[]{TIMESTAMP, 19L}, getResultArray(results.get(0), querySignature));
   }
 
   @Test
@@ -1312,24 +1095,18 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                         .build();
 
     final ExpectedProjectionTimeseries queryMetrics =
-        new ExpectedProjectionTimeseries("ab_hourly_cd_sum");
+        new ExpectedProjectionTimeseries(null);
     final CursorBuildSpec buildSpec = TimeseriesQueryEngine.makeCursorBuildSpec(query, queryMetrics);
 
     assertCursorNoProjection(buildSpec, queryMetrics);
 
-    final Sequence<Result<TimeseriesResultValue>> resultRows = timeseriesEngine.process(
+    testTimeseries(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        queryMetrics
+        queryMetrics,
+        Collections.singletonList(
+            new Object[]{TIMESTAMP, 19L}
+        )
     );
-
-    queryMetrics.assertNoProjection();
-
-    final List<Result<TimeseriesResultValue>> results = resultRows.toList();
-    Assert.assertEquals(1, results.size());
-    final RowSignature querySignature = query.getResultRowSignature(RowSignature.Finalization.YES);
-    Assert.assertArrayEquals(new Object[]{TIMESTAMP, 19L}, getResultArray(results.get(0), querySignature));
   }
 
   @Test
@@ -1369,19 +1146,14 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     assertCursorProjection(buildSpec, queryMetrics, 3);
 
-    final Sequence<Result<TimeseriesResultValue>> resultRows = timeseriesEngine.process(
+    testTimeseries(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        queryMetrics
+        queryMetrics,
+        List.of(
+            new Object[]{TIMESTAMP, 16L},
+            new Object[]{TIMESTAMP.plusHours(1), 3L}
+        )
     );
-
-    queryMetrics.assertProjection();
-    final List<Result<TimeseriesResultValue>> results = resultRows.toList();
-    Assert.assertEquals(2, results.size());
-    final RowSignature querySignature = query.getResultRowSignature(RowSignature.Finalization.YES);
-    Assert.assertArrayEquals(new Object[]{TIMESTAMP, 16L}, getResultArray(results.get(0), querySignature));
-    Assert.assertArrayEquals(new Object[]{TIMESTAMP.plusHours(1), 3L}, getResultArray(results.get(1), querySignature));
   }
 
   @Test
@@ -1401,18 +1173,13 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     assertCursorProjection(buildSpec, queryMetrics, 1);
 
-    final Sequence<Result<TimeseriesResultValue>> resultRows = timeseriesEngine.process(
+    testTimeseries(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        queryMetrics
+        queryMetrics,
+        Collections.singletonList(
+            new Object[]{TIMESTAMP, 19L}
+        )
     );
-
-    queryMetrics.assertProjection();
-    final List<Result<TimeseriesResultValue>> results = resultRows.toList();
-    Assert.assertEquals(1, results.size());
-    final RowSignature querySignature = query.getResultRowSignature(RowSignature.Finalization.YES);
-    Assert.assertArrayEquals(new Object[]{TIMESTAMP, 19L}, getResultArray(results.get(0), querySignature));
   }
 
   @Test
@@ -1432,19 +1199,13 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     assertCursorProjection(buildSpec, queryMetrics, 1);
 
-    final Sequence<Result<TimeseriesResultValue>> resultRows = timeseriesEngine.process(
+    testTimeseries(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        queryMetrics
+        queryMetrics,
+        Collections.singletonList(
+            new Object[]{TIMESTAMP, 19L}
+        )
     );
-
-    queryMetrics.assertProjection();
-
-    final List<Result<TimeseriesResultValue>> results = resultRows.toList();
-    Assert.assertEquals(1, results.size());
-    final RowSignature querySignature = query.getResultRowSignature(RowSignature.Finalization.YES);
-    Assert.assertArrayEquals(new Object[]{TIMESTAMP, 19L}, getResultArray(results.get(0), querySignature));
   }
 
   @Test
@@ -1465,26 +1226,20 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     assertCursorNoProjection(buildSpec, queryMetrics);
 
-    final Sequence<Result<TimeseriesResultValue>> resultRows = timeseriesEngine.process(
+    testTimeseries(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        queryMetrics
+        queryMetrics,
+        List.of(
+            new Object[]{TIMESTAMP, 1L},
+            new Object[]{TIMESTAMP.plusMinutes(2), 1L},
+            new Object[]{TIMESTAMP.plusMinutes(4), 2L},
+            new Object[]{TIMESTAMP.plusMinutes(6), 3L},
+            new Object[]{TIMESTAMP.plusMinutes(8), 4L},
+            new Object[]{TIMESTAMP.plusMinutes(10), 5L},
+            new Object[]{TIMESTAMP.plusHours(1), 1L},
+            new Object[]{TIMESTAMP.plusHours(1).plusMinutes(1), 2L}
+        )
     );
-
-    queryMetrics.assertNoProjection();
-
-    final List<Result<TimeseriesResultValue>> results = resultRows.toList();
-    Assert.assertEquals(8, results.size());
-    final RowSignature querySignature = query.getResultRowSignature(RowSignature.Finalization.YES);
-    Assert.assertArrayEquals(new Object[]{TIMESTAMP, 1L}, getResultArray(results.get(0), querySignature));
-    Assert.assertArrayEquals(new Object[]{TIMESTAMP.plusMinutes(2), 1L}, getResultArray(results.get(1), querySignature));
-    Assert.assertArrayEquals(new Object[]{TIMESTAMP.plusMinutes(4), 2L}, getResultArray(results.get(2), querySignature));
-    Assert.assertArrayEquals(new Object[]{TIMESTAMP.plusMinutes(6), 3L}, getResultArray(results.get(3), querySignature));
-    Assert.assertArrayEquals(new Object[]{TIMESTAMP.plusMinutes(8), 4L}, getResultArray(results.get(4), querySignature));
-    Assert.assertArrayEquals(new Object[]{TIMESTAMP.plusMinutes(10), 5L}, getResultArray(results.get(5), querySignature));
-    Assert.assertArrayEquals(new Object[]{TIMESTAMP.plusHours(1), 1L}, getResultArray(results.get(6), querySignature));
-    Assert.assertArrayEquals(new Object[]{TIMESTAMP.plusHours(1).plusMinutes(1), 2L}, getResultArray(results.get(7), querySignature));
   }
 
   @Test
@@ -1498,32 +1253,22 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                     .addDimension("a")
                     .addAggregator(new LongSumAggregatorFactory("c_sum", "sum_c"))
                     .build();
-    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
-    try (final CursorHolder cursorHolder = rollupProjectionsCursorFactory.makeCursorHolder(buildSpec)) {
-      final Cursor cursor = cursorHolder.asCursor();
-      int rowCount = 0;
-      while (!cursor.isDone()) {
-        rowCount++;
-        cursor.advance();
-      }
-      Assert.assertEquals(3, rowCount);
-    }
-    final Sequence<ResultRow> resultRows = groupingEngine.process(
-        query,
+
+    final ExpectedProjectionGroupBy queryMetrics =
+        new ExpectedProjectionGroupBy("a_hourly_c_sum_with_count");
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(rollupProjectionsCursorFactory, buildSpec, queryMetrics, 3);
+
+    testGroupBy(
         rollupProjectionsCursorFactory,
         rollupProjectionsTimeBoundaryInspector,
-        nonBlockingPool,
-        null
-    );
-    final List<ResultRow> results = resultRows.toList();
-    Assert.assertEquals(2, results.size());
-    Assert.assertArrayEquals(
-        new Object[]{"a", 7L},
-        results.get(0).getArray()
-    );
-    Assert.assertArrayEquals(
-        new Object[]{"b", 12L},
-        results.get(1).getArray()
+        query,
+        queryMetrics,
+        List.of(
+            new Object[]{"a", 7L},
+            new Object[]{"b", 12L}
+        )
     );
   }
 
@@ -1539,45 +1284,23 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                     .setVirtualColumns(new ExpressionVirtualColumn("v0", "concat(a, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE))
                     .addAggregator(new LongSumAggregatorFactory("c_sum", "sum_c"))
                     .build();
-    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
-    try (final CursorHolder cursorHolder = rollupProjectionsCursorFactory.makeCursorHolder(buildSpec)) {
-      final Cursor cursor = cursorHolder.asCursor();
-      int rowCount = 0;
-      while (!cursor.isDone()) {
-        rowCount++;
-        cursor.advance();
-      }
-      Assert.assertEquals(2, rowCount);
-    }
-    final Sequence<ResultRow> resultRows = groupingEngine.process(
-        query,
+
+    final ExpectedProjectionGroupBy queryMetrics =
+        new ExpectedProjectionGroupBy("afoo");
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(rollupProjectionsCursorFactory, buildSpec, queryMetrics, 2);
+
+    testGroupBy(
         rollupProjectionsCursorFactory,
         rollupProjectionsTimeBoundaryInspector,
-        nonBlockingPool,
-        null
+        query,
+        queryMetrics,
+        makeArrayResultSet(
+            new Object[]{"afoo", 7L},
+            new Object[]{"bfoo", 12L}
+        )
     );
-    final List<ResultRow> results = resultRows.toList();
-    Assert.assertEquals(2, results.size());
-    if (!(projectionsCursorFactory instanceof QueryableIndexCursorFactory) || !autoSchema) {
-      Assert.assertArrayEquals(
-          new Object[]{"afoo", 7L},
-          results.get(0).getArray()
-      );
-      Assert.assertArrayEquals(
-          new Object[]{"bfoo", 12L},
-          results.get(1).getArray()
-      );
-    } else {
-      // inconsistent ordering since query isn't ordering
-      Assert.assertArrayEquals(
-          new Object[]{"bfoo", 12L},
-          results.get(0).getArray()
-      );
-      Assert.assertArrayEquals(
-          new Object[]{"afoo", 7L},
-          results.get(1).getArray()
-      );
-    }
   }
 
   @Test
@@ -1607,29 +1330,14 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     assertCursorProjection(buildSpec, queryMetrics, 6);
 
-    final Sequence<ResultRow> resultRows = groupingEngine.process(
+    testGroupBy(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        nonBlockingPool,
-        null
+        queryMetrics,
+        List.of(
+            new Object[]{"a", 7L},
+            new Object[]{"b", 12L}
+        )
     );
-    final List<ResultRow> results = resultRows.toList();
-    Assert.assertEquals(2, results.size());
-    Assert.assertArrayEquals(new Object[]{"a", 7L}, results.get(0).getArray());
-    Assert.assertArrayEquals(new Object[]{"b", 12L}, results.get(1).getArray());
-
-    final Sequence<ResultRow> resultRowsNoProjection = groupingEngine.process(
-        query.withOverriddenContext(Map.of(QueryContexts.NO_PROJECTIONS, true)),
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        nonBlockingPool,
-        null
-    );
-    final List<ResultRow> resultsNoProjection = resultRowsNoProjection.toList();
-    Assert.assertEquals(2, resultsNoProjection.size());
-    Assert.assertArrayEquals(new Object[]{"a", 7L}, resultsNoProjection.get(0).getArray());
-    Assert.assertArrayEquals(new Object[]{"b", 12L}, resultsNoProjection.get(1).getArray());
   }
 
 
@@ -1653,18 +1361,14 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     assertCursorProjection(buildSpec, queryMetrics, 3);
 
-    final Sequence<ResultRow> resultRows = groupingEngine.process(
+    testGroupBy(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
-        nonBlockingPool,
-        null
+        queryMetrics,
+        List.of(
+            new Object[]{"a", 2L, 2.1},
+            new Object[]{"b", 7L, 7.7}
+        )
     );
-
-    final List<ResultRow> results = resultRows.toList();
-    Assert.assertEquals(2, results.size());
-    Assert.assertArrayEquals(new Object[]{"a", 2L, 2.1}, results.get(0).getArray());
-    Assert.assertArrayEquals(new Object[]{"b", 7L, 7.7}, results.get(1).getArray());
   }
 
   @Test
@@ -1676,7 +1380,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                     .setGranularity(Granularities.ALL)
                     .setInterval(Intervals.ETERNITY)
                     .addDimension("v0")
-                    .addDimension("v1")
+                    .addDimension(DefaultDimensionSpec.of("v1", ColumnType.LONG))
                     .setVirtualColumns(
                         new ExpressionVirtualColumn(
                             "v0",
@@ -1687,7 +1391,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                         new ExpressionVirtualColumn(
                             "v1",
                             "d + e",
-                            ColumnType.DOUBLE,
+                            ColumnType.LONG,
                             TestExprMacroTable.INSTANCE
                         )
                     )
@@ -1699,21 +1403,175 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     assertCursorProjection(buildSpec, queryMetrics, 8);
 
+    testGroupBy(
+        query,
+        queryMetrics,
+        makeArrayResultSet(
+            new Object[]{"aaa", null},
+            new Object[]{"aaa", 2L},
+            new Object[]{"abb", 2L},
+            new Object[]{"acc", 4L},
+            new Object[]{"add", 4L},
+            new Object[]{"baa", 8L},
+            new Object[]{"baa", 6L},
+            new Object[]{"baa", 8L},
+            new Object[]{"bbb", 11L}
+        )
+    );
+  }
+
+  private void testGroupBy(GroupByQuery query, ExpectedProjectionGroupBy queryMetrics, List<Object[]> expectedResults)
+  {
+    testGroupBy(projectionsCursorFactory, projectionsTimeBoundaryInspector, query, queryMetrics, expectedResults);
+  }
+
+  private void testGroupBy(
+      CursorFactory cursorFactory,
+      TimeBoundaryInspector timeBoundaryInspector,
+      GroupByQuery query,
+      ExpectedProjectionGroupBy queryMetrics,
+      List<Object[]> expectedResults
+  )
+  {
     final Sequence<ResultRow> resultRows = groupingEngine.process(
         query,
-        projectionsCursorFactory,
-        projectionsTimeBoundaryInspector,
+        cursorFactory,
+        timeBoundaryInspector,
+        nonBlockingPool,
+        queryMetrics
+    );
+
+    queryMetrics.assertProjection();
+
+    final List<ResultRow> results = resultRows.toList();
+    assertGroupByResults(expectedResults, results);
+
+    final Sequence<ResultRow> resultRowsNoProjection = groupingEngine.process(
+        query.withOverriddenContext(Map.of(QueryContexts.NO_PROJECTIONS, true)),
+        cursorFactory,
+        timeBoundaryInspector,
         nonBlockingPool,
         null
     );
 
+    final List<ResultRow> resultsNoProjection = resultRowsNoProjection.toList();
+    assertGroupByResults(expectedResults, resultsNoProjection);
+  }
+
+  private void testGroupBy(GroupByQuery query, ExpectedProjectionGroupBy queryMetrics, Set<Object[]> expectedResults)
+  {
+    testGroupBy(projectionsCursorFactory, projectionsTimeBoundaryInspector, query, queryMetrics, expectedResults);
+  }
+
+  private void testGroupBy(
+      CursorFactory cursorFactory,
+      TimeBoundaryInspector timeBoundaryInspector,
+      GroupByQuery query,
+      ExpectedProjectionGroupBy queryMetrics,
+      Set<Object[]> expectedResults
+  )
+  {
+    final Sequence<ResultRow> resultRows = groupingEngine.process(
+        query,
+        cursorFactory,
+        timeBoundaryInspector,
+        nonBlockingPool,
+        queryMetrics
+    );
+
+    queryMetrics.assertProjection();
+
     final List<ResultRow> results = resultRows.toList();
-    Assert.assertEquals(8, results.size());
+    assertGroupByResultsAnyOrder(expectedResults, results);
+
+    final Sequence<ResultRow> resultRowsNoProjection = groupingEngine.process(
+        query.withOverriddenContext(Map.of(QueryContexts.NO_PROJECTIONS, true)),
+        cursorFactory,
+        timeBoundaryInspector,
+        nonBlockingPool,
+        null
+    );
+
+    final List<ResultRow> resultsNoProjection = resultRowsNoProjection.toList();
+    assertGroupByResultsAnyOrder(expectedResults, resultsNoProjection);
+  }
+
+  private void testTimeseries(
+      TimeseriesQuery query,
+      ExpectedProjectionTimeseries queryMetrics,
+      List<Object[]> expectedResults
+  )
+  {
+    testTimeseries(projectionsCursorFactory, projectionsTimeBoundaryInspector, query, queryMetrics, expectedResults);
+  }
+
+  private void testTimeseries(
+      CursorFactory cursorFactory,
+      TimeBoundaryInspector timeBoundaryInspector,
+      TimeseriesQuery query,
+      ExpectedProjectionTimeseries queryMetrics,
+      List<Object[]> expectedResults
+  )
+  {
+    final Sequence<Result<TimeseriesResultValue>> resultRows = timeseriesEngine.process(
+        query,
+        cursorFactory,
+        timeBoundaryInspector,
+        queryMetrics
+    );
+
+    queryMetrics.assertProjection();
+
+    final List<Result<TimeseriesResultValue>> results = resultRows.toList();
+    assertTimeseriesResults(query.getResultRowSignature(RowSignature.Finalization.YES), expectedResults, results);
+
+    Assume.assumeTrue(segmentSortedByTime);
+    final Sequence<Result<TimeseriesResultValue>> resultRowsNoProjection = timeseriesEngine.process(
+        query.withOverriddenContext(Map.of(QueryContexts.NO_PROJECTIONS, true)),
+        cursorFactory,
+        timeBoundaryInspector,
+        queryMetrics
+    );
+
+    final List<Result<TimeseriesResultValue>> resultsNoProjection = resultRowsNoProjection.toList();
+    assertTimeseriesResults(
+        query.getResultRowSignature(RowSignature.Finalization.YES),
+        expectedResults,
+        resultsNoProjection
+    );
+  }
+
+  private void assertGroupByResults(List<Object[]> expected, List<ResultRow> actual)
+  {
+    Assertions.assertEquals(expected.size(), actual.size());
+    for (int i = 0; i < expected.size(); i++) {
+      Assertions.assertArrayEquals(expected.get(i), actual.get(i).getArray());
+    }
+  }
+
+  private void assertGroupByResultsAnyOrder(Set<Object[]> expected, List<ResultRow> actual)
+  {
+    Assertions.assertEquals(expected.size(), actual.size());
+    for (ResultRow row : actual) {
+      Assertions.assertTrue(expected.contains(row.getArray()), "missing row:" + Arrays.deepToString(row.getArray()));
+    }
+  }
+
+  private void assertTimeseriesResults(
+      RowSignature querySignature,
+      List<Object[]> expected,
+      List<Result<TimeseriesResultValue>> actual
+  )
+  {
+    Assertions.assertEquals(expected.size(), actual.size());
+    for (int i = 0; i < expected.size(); i++) {
+      Assertions.assertArrayEquals(expected.get(i), getResultArray(actual.get(i), querySignature));
+    }
   }
 
   private void assertCursorNoProjection(CursorBuildSpec buildSpec, ExpectedProjectionQueryMetrics<?> queryMetrics)
   {
-    assertCursor(buildSpec, queryMetrics, false, 8);
+    assertCursorProjection(buildSpec, queryMetrics, 8);
   }
 
   private void assertCursorProjection(
@@ -1722,22 +1580,18 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       int expectedRowCount
   )
   {
-    assertCursor(buildSpec, queryMetrics, true, expectedRowCount);
+    assertCursorProjection(projectionsCursorFactory, buildSpec, queryMetrics, expectedRowCount);
   }
 
-  private void assertCursor(
+  private void assertCursorProjection(
+      CursorFactory cursorFactory,
       CursorBuildSpec buildSpec,
       ExpectedProjectionQueryMetrics<?> queryMetrics,
-      boolean expectProjection,
       int expectedRowCount
   )
   {
-    try (final CursorHolder cursorHolder = projectionsCursorFactory.makeCursorHolder(buildSpec)) {
-      if (expectProjection) {
-        queryMetrics.assertProjection();
-      } else {
-        queryMetrics.assertNoProjection();
-      }
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)) {
+      queryMetrics.assertProjection();
       final Cursor cursor = cursorHolder.asCursor();
       int rowCount = 0;
       while (!cursor.isDone()) {
@@ -1793,7 +1647,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
           @Override
           public int hashCode(Object[] o)
           {
-            return Arrays.hashCode(o);
+            return Arrays.deepHashCode(o);
           }
 
           @Override
@@ -1848,12 +1702,6 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     {
       Assertions.assertEquals(expectedProjection, capturedProjection);
       capturedProjection = null;
-    }
-
-
-    void assertNoProjection()
-    {
-      Assertions.assertNull(capturedProjection);
     }
   }
 
