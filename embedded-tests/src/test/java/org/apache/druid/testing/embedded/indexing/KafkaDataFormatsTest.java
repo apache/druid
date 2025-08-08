@@ -237,7 +237,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     EventSerializer serializer = jsonMapper.readValue("{\"type\": \"avro\"}", EventSerializer.class);
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
     AvroStreamInputFormat inputFormat = jsonMapper.readValue(
-        getClass().getResourceAsStream("/test-data/avro/input_format.json"),
+        KafkaDataFormatsTest.class.getResourceAsStream("/test-data/avro/input_format.json"),
         AvroStreamInputFormat.class
     );
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
