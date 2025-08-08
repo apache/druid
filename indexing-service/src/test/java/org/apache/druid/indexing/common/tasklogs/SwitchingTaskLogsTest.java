@@ -87,8 +87,6 @@ public class SwitchingTaskLogsTest extends EasyMockSupport
     reportTaskLogs.pushTaskPayload(taskId, logFile);
     EasyMock.expectLastCall();
 
-    EasyMock.expect(pusherTaskLogs.logPushEnabled()).andReturn(true);
-
     reportTaskLogs.killAll();
     EasyMock.expectLastCall();
     long timestamp = System.currentTimeMillis();
@@ -119,7 +117,6 @@ public class SwitchingTaskLogsTest extends EasyMockSupport
     taskLogs.pushTaskStatus(taskId, logFile);
     taskLogs.pushTaskPayload(taskId, logFile);
 
-    Assert.assertTrue(taskLogs.logPushEnabled());
     taskLogs.killAll();
     taskLogs.killOlderThan(timestamp);
 
