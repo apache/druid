@@ -70,10 +70,15 @@ export function timezoneAwareTicks(
   count: number,
   timezone: Timezone,
 ): Date[] {
-  if (end < start) throw new Error('start must come before end end');
+  if (end < start) return [];
   const interval = tickInterval(start, end, count);
   if (!interval) return [];
-  return interval.materialize(start, end, timezone);
+  try {
+    return interval.materialize(start, end, timezone);
+  } catch {
+    // If there is some issue with materialization (maybe a strange duration, return nothing)
+    return [];
+  }
 }
 
 const durationSecond = new Duration('PT1S');
