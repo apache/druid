@@ -222,7 +222,6 @@
     <module name="ImportOrder">
       <property name="groups" value="*,javax,java"/>
       <property name="ordered" value="true"/>
-      <property name="caseSensitive" value="true"/>
       <property name="separated" value="true"/>
       <property name="option" value="bottom"/>
       <property name="sortStaticImportsAlphabetically" value="true"/>
