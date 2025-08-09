@@ -239,7 +239,7 @@ public class CliIndexer extends ServerRunnable
         },
         new ShuffleModule(),
         new IndexingServiceInputSourceModule(),
-        new IndexingServiceTaskLogsModule(),
+        new IndexingServiceTaskLogsModule(properties),
         new IndexingServiceTuningConfigModule(),
         new InputSourceModule(),
         new HadoopIndexTaskModule(),

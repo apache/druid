@@ -220,7 +220,7 @@ public class CliPeon extends GuiceRunnable
         new QueryRunnerFactoryModule(),
         new SegmentWranglerModule(),
         new JoinableFactoryModule(),
-        new IndexingServiceTaskLogsModule(),
+        new IndexingServiceTaskLogsModule(properties),
         new Module()
         {
           @SuppressForbidden(reason = "System#out, System#err")

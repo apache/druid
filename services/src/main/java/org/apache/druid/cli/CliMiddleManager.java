@@ -248,7 +248,7 @@ public class CliMiddleManager extends ServerRunnable
         },
         new ShuffleModule(),
         new IndexingServiceInputSourceModule(),
-        new IndexingServiceTaskLogsModule(),
+        new IndexingServiceTaskLogsModule(getProperties()),
         new IndexingServiceTuningConfigModule(),
         new InputSourceModule(),
         new HadoopIndexTaskModule(),

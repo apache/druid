@@ -32,7 +32,6 @@ import com.google.inject.name.Named;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.ConfigBuilder;
 import org.apache.druid.discovery.NodeRole;
-import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.JacksonConfigProvider;
 import org.apache.druid.guice.Jerseys;
@@ -43,9 +42,7 @@ import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
-import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.common.tasklogs.FileTaskLogs;
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
@@ -68,9 +65,6 @@ import org.apache.druid.k8s.overlord.taskadapter.SingleContainerTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
-import org.apache.druid.tasklogs.NoopTaskLogs;
-import org.apache.druid.tasklogs.TaskLogKiller;
-import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogs;
 
 import java.util.Locale;
@@ -80,7 +74,6 @@ import java.util.Properties;
 @LoadScope(roles = NodeRole.OVERLORD_JSON_NAME)
 public class KubernetesOverlordModule implements DruidModule
 {
-
   private static final Logger log = new Logger(KubernetesOverlordModule.class);
   private static final String K8SANDWORKER_PROPERTIES_PREFIX = IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX
                                                                + ".k8sAndWorker";
@@ -111,14 +104,13 @@ public class KubernetesOverlordModule implements DruidModule
          .to(KubernetesTaskRunnerFactory.class)
          .in(LazySingleton.class);
     biddy.addBinding(KubernetesAndWorkerTaskRunnerFactory.TYPE_NAME)
-        .to(KubernetesAndWorkerTaskRunnerFactory.class)
-        .in(LazySingleton.class);
+         .to(KubernetesAndWorkerTaskRunnerFactory.class)
+         .in(LazySingleton.class);
     binder.bind(KubernetesTaskRunnerFactory.class).in(LazySingleton.class);
     binder.bind(KubernetesAndWorkerTaskRunnerFactory.class).in(LazySingleton.class);
     binder.bind(RunnerStrategy.class)
           .toProvider(RunnerStrategyProvider.class)
           .in(LazySingleton.class);
-    configureTaskLogs(binder);
 
     Jerseys.addResource(binder, KubernetesTaskExecutionConfigResource.class);
 
@@ -208,7 +200,9 @@ public class KubernetesOverlordModule implements DruidModule
         "k8s"
     ));
 
-    if (adapter != null && !MultiContainerTaskAdapter.TYPE.equals(adapter) && kubernetesTaskRunnerConfig.isSidecarSupport()) {
+    if (adapter != null
+        && !MultiContainerTaskAdapter.TYPE.equals(adapter)
+        && kubernetesTaskRunnerConfig.isSidecarSupport()) {
       throw new IAE(
           "Invalid pod adapter [%s], only pod adapter [%s] can be specified when sidecarSupport is enabled",
           adapter,
@@ -286,20 +280,4 @@ public class KubernetesOverlordModule implements DruidModule
       return provider.get();
     }
   }
-
-  private void configureTaskLogs(Binder binder)
-  {
-    PolyBind.createChoice(binder, "druid.indexer.logs.type", Key.get(TaskLogs.class), Key.get(FileTaskLogs.class));
-    JsonConfigProvider.bind(binder, "druid.indexer.logs", FileTaskLogsConfig.class);
-
-    final MapBinder<String, TaskLogs> taskLogBinder = Binders.taskLogsBinder(binder);
-    taskLogBinder.addBinding("noop").to(NoopTaskLogs.class).in(LazySingleton.class);
-    taskLogBinder.addBinding("file").to(FileTaskLogs.class).in(LazySingleton.class);
-    binder.bind(NoopTaskLogs.class).in(LazySingleton.class);
-    binder.bind(FileTaskLogs.class).in(LazySingleton.class);
-
-    binder.bind(TaskLogPusher.class).to(TaskLogs.class);
-    binder.bind(TaskLogKiller.class).to(TaskLogs.class);
-  }
-
 }

@@ -503,7 +503,6 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     EasyMock.expectLastCall().once();
 
     Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
-
     replayAll();
 
     TaskStatus taskStatus = peonLifecycle.join(0L);

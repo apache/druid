@@ -454,7 +454,7 @@ public class CliOverlord extends ServerRunnable
           }
         },
         new IndexingServiceInputSourceModule(),
-        new IndexingServiceTaskLogsModule(),
+        new IndexingServiceTaskLogsModule(properties),
         new IndexingServiceTuningConfigModule(),
         new InputSourceModule(),
         new HadoopIndexTaskModule(),

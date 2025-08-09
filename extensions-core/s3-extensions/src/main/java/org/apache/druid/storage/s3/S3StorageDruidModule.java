@@ -116,9 +116,8 @@ public class S3StorageDruidModule implements DruidModule
     JsonConfigProvider.bind(binder, "druid.storage.sse.kms", S3SSEKmsConfig.class);
     JsonConfigProvider.bind(binder, "druid.storage.sse.custom", S3SSECustomConfig.class);
 
-    Binders.taskLogsBinder(binder).addBinding(SCHEME).to(S3TaskLogs.class);
+    Binders.bindTaskLogs(binder, SCHEME, S3TaskLogs.class);
     JsonConfigProvider.bind(binder, "druid.indexer.logs", S3TaskLogsConfig.class);
-    binder.bind(S3TaskLogs.class).in(LazySingleton.class);
   }
 
   // This provides ServerSideEncryptingAmazonS3.Builder with default configs from Guice injection initially set.
