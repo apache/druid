@@ -26,11 +26,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.avatica.AvaticaSqlException;
 import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
@@ -74,7 +72,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -86,10 +83,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
-@ExtensionPoint
 public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestBase
 {
-  private static final Logger LOG = new Logger(AbstractAuthConfigurationTest.class);
   protected static final String INVALID_NAME = "invalid%2Fname";
 
   protected static final String SYS_SCHEMA_SEGMENTS_QUERY =
@@ -235,16 +230,17 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
   protected HttpClient httpClient;
   protected Map<User, HttpClient> httpClients;
 
-  protected abstract void setupDatasourceOnlyUser() throws Exception;
-  protected abstract void setupDatasourceAndContextParamsUser() throws Exception;
-  protected abstract void setupDatasourceAndSysTableUser() throws Exception;
-  protected abstract void setupDatasourceAndSysAndStateUser() throws Exception;
-  protected abstract void setupSysTableAndStateOnlyUser() throws Exception;
-  protected abstract void setupTestSpecificHttpClients() throws Exception;
+  protected abstract void setupDatasourceOnlyUser();
+  protected abstract void setupDatasourceAndContextParamsUser();
+  protected abstract void setupDatasourceAndSysTableUser();
+  protected abstract void setupDatasourceAndSysAndStateUser();
+  protected abstract void setupSysTableAndStateOnlyUser();
+  protected abstract void setupTestSpecificHttpClients();
   protected abstract String getAuthenticatorName();
   protected abstract String getAuthorizerName();
   protected abstract String getExpectedAvaticaAuthError();
   protected abstract String getExpectedAvaticaAuthzError();
+  protected abstract EmbeddedResource getAuthResource();
 
   /**
    * Returns properties for the admin with an invalid password.
@@ -262,8 +258,11 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
   private final EmbeddedRouter router = new EmbeddedRouter();
-  private final EmbeddedBroker broker = new EmbeddedBroker();
-  private final EmbeddedHistorical historical = new EmbeddedHistorical();
+  private final EmbeddedBroker broker = new EmbeddedBroker().setServerMemory(500_000_000);
+  private final EmbeddedHistorical historical = new EmbeddedHistorical().setServerMemory(500_000_000);
+  private final EmbeddedIndexer indexer = new EmbeddedIndexer()
+      .setServerMemory(300_000_000)
+      .addProperty("druid.worker.capacity", "2");
 
   @Override
   protected EmbeddedDruidCluster createCluster()
@@ -291,13 +290,11 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
         )
         .addServer(coordinator)
         .addServer(overlord)
-        .addServer(new EmbeddedIndexer().setServerMemory(300_000_000).addProperty("druid.worker.capacity", "2"))
-        .addServer(broker.setServerMemory(500_000_000))
-        .addServer(historical.setServerMemory(500_000_000))
+        .addServer(indexer)
+        .addServer(broker)
+        .addServer(historical)
         .addServer(router);
   }
-
-  protected abstract EmbeddedResource getAuthResource();
 
   @BeforeAll
   public void setupDataAndRoles() throws Exception
@@ -321,35 +318,31 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
   }
 
   @Test
-  public void test_systemSchemaAccess_admin() throws Exception
+  public void test_systemSchemaAccess_admin()
   {
     final HttpClient adminClient = getHttpClient(User.ADMIN);
     // check that admin access works on all nodes
     checkNodeAccess(adminClient);
 
     // as admin
-    LOG.info("Checking sys.segments query as admin...");
     verifySystemSchemaQuery(
         adminClient,
         SYS_SCHEMA_SEGMENTS_QUERY,
         adminSegments
     );
 
-    LOG.info("Checking sys.servers query as admin...");
     verifySystemSchemaServerQuery(
         adminClient,
         SYS_SCHEMA_SERVERS_QUERY,
         adminServers
     );
 
-    LOG.info("Checking sys.server_segments query as admin...");
     verifySystemSchemaQuery(
         adminClient,
         SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
         adminServerSegments
     );
 
-    LOG.info("Checking sys.tasks query as admin...");
     verifySystemSchemaQuery(
         adminClient,
         SYS_SCHEMA_TASKS_QUERY,
@@ -358,89 +351,73 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
   }
 
   @Test
-  public void test_systemSchemaAccess_datasourceOnlyUser() throws Exception
+  public void test_systemSchemaAccess_datasourceOnlyUser()
   {
     final HttpClient datasourceOnlyUserClient = getHttpClient(User.DATASOURCE_ONLY_USER);
     // check that we can access a datasource-permission restricted resource on the broker
     HttpUtil.makeRequest(
         datasourceOnlyUserClient,
         HttpMethod.GET,
-        getServerUrl(broker) + "/druid/v2/datasources/auth_test",
-        null
+        getServerUrl(broker) + "/druid/v2/datasources/auth_test"
     );
 
     // as user that can only read auth_test
-    LOG.info("Checking sys.segments query as datasourceOnlyUser...");
     final String expectedMsg = "{\"Access-Check-Result\":\"" + Access.DEFAULT_ERROR_MESSAGE + "\"}";
-    verifySystemSchemaQueryFailure(
+    verifySystemSchemaQueryIsForbidden(
         datasourceOnlyUserClient,
         SYS_SCHEMA_SEGMENTS_QUERY,
-        HttpResponseStatus.FORBIDDEN,
         expectedMsg
     );
 
-    LOG.info("Checking sys.servers query as datasourceOnlyUser...");
-    verifySystemSchemaQueryFailure(
+    verifySystemSchemaQueryIsForbidden(
         datasourceOnlyUserClient,
         SYS_SCHEMA_SERVERS_QUERY,
-        HttpResponseStatus.FORBIDDEN,
         expectedMsg
     );
 
-    LOG.info("Checking sys.server_segments query as datasourceOnlyUser...");
-    verifySystemSchemaQueryFailure(
+    verifySystemSchemaQueryIsForbidden(
         datasourceOnlyUserClient,
         SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
-        HttpResponseStatus.FORBIDDEN,
         expectedMsg
     );
 
-    LOG.info("Checking sys.tasks query as datasourceOnlyUser...");
-    verifySystemSchemaQueryFailure(
+    verifySystemSchemaQueryIsForbidden(
         datasourceOnlyUserClient,
         SYS_SCHEMA_TASKS_QUERY,
-        HttpResponseStatus.FORBIDDEN,
         expectedMsg
     );
   }
 
   @Test
-  public void test_systemSchemaAccess_datasourceAndSysUser() throws Exception
+  public void test_systemSchemaAccess_datasourceAndSysUser()
   {
     final HttpClient datasourceAndSysUserClient = getHttpClient(User.DATASOURCE_AND_SYS_USER);
     // check that we can access a datasource-permission restricted resource on the broker
     HttpUtil.makeRequest(
         datasourceAndSysUserClient,
         HttpMethod.GET,
-        getServerUrl(broker) + "/druid/v2/datasources/auth_test",
-        null
+        getServerUrl(broker) + "/druid/v2/datasources/auth_test"
     );
 
     // as user that can only read auth_test
-    LOG.info("Checking sys.segments query as datasourceAndSysUser...");
     verifySystemSchemaQuery(
         datasourceAndSysUserClient,
         SYS_SCHEMA_SEGMENTS_QUERY,
         adminSegments
     );
 
-    LOG.info("Checking sys.servers query as datasourceAndSysUser...");
-    verifySystemSchemaQueryFailure(
+    verifySystemSchemaQueryIsForbidden(
         datasourceAndSysUserClient,
         SYS_SCHEMA_SERVERS_QUERY,
-        HttpResponseStatus.FORBIDDEN,
         "{\"Access-Check-Result\":\"Insufficient permission to view servers: Unauthorized\"}"
     );
 
-    LOG.info("Checking sys.server_segments query as datasourceAndSysUser...");
-    verifySystemSchemaQueryFailure(
+    verifySystemSchemaQueryIsForbidden(
         datasourceAndSysUserClient,
         SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
-        HttpResponseStatus.FORBIDDEN,
         "{\"Access-Check-Result\":\"Insufficient permission to view servers: Unauthorized\"}"
     );
 
-    LOG.info("Checking sys.tasks query as datasourceAndSysUser...");
     verifySystemSchemaQuery(
         datasourceAndSysUserClient,
         SYS_SCHEMA_TASKS_QUERY,
@@ -449,40 +426,35 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
   }
 
   @Test
-  public void test_systemSchemaAccess_datasourceAndSysWithStateUser() throws Exception
+  public void test_systemSchemaAccess_datasourceAndSysWithStateUser()
   {
     final HttpClient datasourceWithStateUserClient = getHttpClient(User.DATASOURCE_WITH_STATE_USER);
     // check that we can access a state-permission restricted resource on the broker
     HttpUtil.makeRequest(
         datasourceWithStateUserClient,
         HttpMethod.GET,
-        getServerUrl(broker) + "/status",
-        null
+        getServerUrl(broker) + "/status"
     );
 
     // as user that can read auth_test and STATE
-    LOG.info("Checking sys.segments query as datasourceWithStateUser...");
     verifySystemSchemaQuery(
         datasourceWithStateUserClient,
         SYS_SCHEMA_SEGMENTS_QUERY,
         adminSegments
     );
 
-    LOG.info("Checking sys.servers query as datasourceWithStateUser...");
     verifySystemSchemaServerQuery(
         datasourceWithStateUserClient,
         SYS_SCHEMA_SERVERS_QUERY,
         adminServers
     );
 
-    LOG.info("Checking sys.server_segments query as datasourceWithStateUser...");
     verifySystemSchemaQuery(
         datasourceWithStateUserClient,
         SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
         adminServerSegments
     );
 
-    LOG.info("Checking sys.tasks query as datasourceWithStateUser...");
     verifySystemSchemaQuery(
         datasourceWithStateUserClient,
         SYS_SCHEMA_TASKS_QUERY,
@@ -491,34 +463,30 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
   }
 
   @Test
-  public void test_systemSchemaAccess_stateOnlyUser() throws Exception
+  public void test_systemSchemaAccess_stateOnlyUser()
   {
     final HttpClient stateOnlyUserClient = getHttpClient(User.STATE_ONLY_USER);
-    HttpUtil.makeRequest(stateOnlyUserClient, HttpMethod.GET, getServerUrl(broker) + "/status", null);
+    HttpUtil.makeRequest(stateOnlyUserClient, HttpMethod.GET, getServerUrl(broker) + "/status");
 
     // as user that can only read STATE
-    LOG.info("Checking sys.segments query as stateOnlyUser...");
     verifySystemSchemaQuery(
         stateOnlyUserClient,
         SYS_SCHEMA_SEGMENTS_QUERY,
         "segment_id,num_rows,size"
     );
 
-    LOG.info("Checking sys.servers query as stateOnlyUser...");
     verifySystemSchemaServerQuery(
         stateOnlyUserClient,
         SYS_SCHEMA_SERVERS_QUERY,
         adminServers
     );
 
-    LOG.info("Checking sys.server_segments query as stateOnlyUser...");
     verifySystemSchemaQuery(
         stateOnlyUserClient,
         SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
         "server,segment_id"
     );
 
-    LOG.info("Checking sys.tasks query as stateOnlyUser...");
     verifySystemSchemaQuery(
         stateOnlyUserClient,
         SYS_SCHEMA_TASKS_QUERY,
@@ -598,7 +566,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
   }
 
   @Test
-  public void test_msqQueryWithContext_datasourceOnlyUser_fail() throws Exception
+  public void test_msqQueryWithContext_datasourceOnlyUser_fail()
   {
     final String query = "select count(*) from auth_test";
     makeMSQQueryRequest(
@@ -624,7 +592,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
   }
 
   @Test
-  public void test_dartQueryWithContext_datasourceOnlyUser_fail() throws Exception
+  public void test_dartQueryWithContext_datasourceOnlyUser_fail()
   {
     final String query = "select count(*) from auth_test";
     makeDartQueryRequest(
@@ -636,7 +604,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
   }
 
   @Test
-  public void test_dartQueryWithContext_datasourceAndContextParamsUser_succeed() throws Exception
+  public void test_dartQueryWithContext_datasourceAndContextParamsUser_succeed()
   {
     final String query = "select count(*) from auth_test";
     makeDartQueryRequest(
@@ -648,7 +616,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
   }
 
   @Test
-  public void test_sqlQueryWithContext_datasourceOnlyUser_fail() throws Exception
+  public void test_sqlQueryWithContext_datasourceOnlyUser_fail()
   {
     final String query = "select count(*) from auth_test";
     makeSQLQueryRequest(
@@ -660,7 +628,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
   }
 
   @Test
-  public void test_sqlQueryWithContext_datasourceAndContextParamsUser_succeed() throws Exception
+  public void test_sqlQueryWithContext_datasourceAndContextParamsUser_succeed()
   {
     final String query = "select count(*) from auth_test";
     makeSQLQueryRequest(
@@ -706,7 +674,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
     return Preconditions.checkNotNull(httpClients.get(user), "http client for user[%s]", user.getName());
   }
 
-  protected void setupHttpClientsAndUsers() throws Exception
+  protected void setupHttpClientsAndUsers()
   {
     setupHttpClients();
     setupDatasourceOnlyUser();
@@ -718,11 +686,11 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
 
   protected void checkNodeAccess(HttpClient httpClient)
   {
-    HttpUtil.makeRequest(httpClient, HttpMethod.GET, getServerUrl(coordinator) + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.GET, getServerUrl(overlord) + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.GET, getServerUrl(broker) + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.GET, getServerUrl(historical) + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.GET, getServerUrl(router) + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.GET, getServerUrl(coordinator) + "/status");
+    HttpUtil.makeRequest(httpClient, HttpMethod.GET, getServerUrl(overlord) + "/status");
+    HttpUtil.makeRequest(httpClient, HttpMethod.GET, getServerUrl(broker) + "/status");
+    HttpUtil.makeRequest(httpClient, HttpMethod.GET, getServerUrl(historical) + "/status");
+    HttpUtil.makeRequest(httpClient, HttpMethod.GET, getServerUrl(router) + "/status");
   }
 
   protected void checkLoadStatus(HttpClient httpClient) throws Exception
@@ -736,16 +704,16 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
 
   protected void testOptionsRequests(HttpClient httpClient)
   {
-    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, getServerUrl(coordinator) + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, getServerUrl(overlord) + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, getServerUrl(broker) + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, getServerUrl(historical) + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, getServerUrl(router) + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, getServerUrl(coordinator) + "/status");
+    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, getServerUrl(overlord) + "/status");
+    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, getServerUrl(broker) + "/status");
+    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, getServerUrl(historical) + "/status");
+    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, getServerUrl(router) + "/status");
   }
 
   protected void checkUnsecuredCoordinatorLoadQueuePath(HttpClient client)
   {
-    HttpUtil.makeRequest(client, HttpMethod.GET, getServerUrl(coordinator) + "/druid/coordinator/v1/loadqueue", null);
+    HttpUtil.makeRequest(client, HttpMethod.GET, getServerUrl(coordinator) + "/druid/coordinator/v1/loadqueue");
   }
 
   private Properties getAvaticaConnectionPropertiesForAdmin()
@@ -755,7 +723,6 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
 
   protected void testAvaticaQuery(Properties connectionProperties, String url)
   {
-    LOG.info("URL: " + url);
     try (
         Connection connection = DriverManager.getConnection(url, connectionProperties);
         Statement statement = connection.createStatement()) {
@@ -782,7 +749,6 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
   protected void testAvaticaAuthFailure(Properties connectionProperties, String url, String expectedError)
       throws Exception
   {
-    LOG.info("URL: " + url);
     try (
         Connection connection = DriverManager.getConnection(url, connectionProperties);
         Statement statement = connection.createStatement()) {
@@ -805,8 +771,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
     StatusResponseHolder holder = HttpUtil.makeRequest(
         httpClient,
         HttpMethod.GET,
-        baseUrl + "/druid-ext/basic-security/authentication/loadStatus",
-        null
+        baseUrl + "/druid-ext/basic-security/authentication/loadStatus"
     );
     String content = holder.getContent();
     Map<String, Boolean> loadStatus = jsonMapper.readValue(content, JacksonUtils.TYPE_REFERENCE_MAP_STRING_BOOLEAN);
@@ -818,8 +783,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
     holder = HttpUtil.makeRequest(
         httpClient,
         HttpMethod.GET,
-        baseUrl + "/druid-ext/basic-security/authorization/loadStatus",
-        null
+        baseUrl + "/druid-ext/basic-security/authorization/loadStatus"
     );
     content = holder.getContent();
     loadStatus = jsonMapper.readValue(content, JacksonUtils.TYPE_REFERENCE_MAP_STRING_BOOLEAN);
@@ -833,7 +797,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
       HttpClient httpClient,
       String query,
       HttpResponseStatus expectedStatus
-  ) throws Exception
+  )
   {
     return makeSQLQueryRequest(httpClient, query, "/druid/v2/sql", ImmutableMap.of(), expectedStatus);
   }
@@ -843,7 +807,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
       String query,
       Map<String, Object> context,
       HttpResponseStatus expectedStatus
-  ) throws Exception
+  )
   {
     return makeSQLQueryRequest(httpClient, query, "/druid/v2/sql", context, expectedStatus);
   }
@@ -853,7 +817,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
       String query,
       Map<String, Object> context,
       HttpResponseStatus expectedStatus
-  ) throws Exception
+  )
   {
     return makeSQLQueryRequest(httpClient, query, "/druid/v2/sql/task", context, expectedStatus);
   }
@@ -863,7 +827,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
       String query,
       Map<String, Object> context,
       HttpResponseStatus expectedStatus
-  ) throws Exception
+  )
   {
     final Map<String, Object> dartContext = new HashMap<>(context);
     dartContext.put(QueryContexts.ENGINE, DartSqlEngine.NAME);
@@ -876,7 +840,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
       String path,
       Map<String, Object> context,
       HttpResponseStatus expectedStatus
-  ) throws Exception
+  )
   {
     Map<String, Object> queryMap = ImmutableMap.of(
         "query", query,
@@ -884,11 +848,11 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
         "resultFormat", "csv",
         "header", true
     );
-    return HttpUtil.makeRequestWithExpectedStatus(
+    return HttpUtil.makeRequest(
         httpClient,
         HttpMethod.POST,
         getServerUrl(broker) + path,
-        jsonMapper.writeValueAsBytes(queryMap),
+        queryMap,
         expectedStatus
     );
   }
@@ -896,9 +860,8 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
   protected void verifySystemSchemaQueryBase(
       HttpClient client,
       String query,
-      String expectedResults,
-      boolean isServerQuery
-  ) throws Exception
+      String expectedResults
+  )
   {
     StatusResponseHolder responseHolder = makeSQLQueryRequest(client, query, HttpResponseStatus.OK);
     String content = responseHolder.getContent().trim();
@@ -909,29 +872,28 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
       HttpClient client,
       String query,
       String expectedResults
-  ) throws Exception
+  )
   {
-    verifySystemSchemaQueryBase(client, query, expectedResults, false);
+    verifySystemSchemaQueryBase(client, query, expectedResults);
   }
 
   protected void verifySystemSchemaServerQuery(
       HttpClient client,
       String query,
       String expectedResults
-  ) throws Exception
+  )
   {
-    verifySystemSchemaQueryBase(client, query, expectedResults, true);
+    verifySystemSchemaQueryBase(client, query, expectedResults);
   }
 
-  protected void verifySystemSchemaQueryFailure(
+  private void verifySystemSchemaQueryIsForbidden(
       HttpClient client,
       String query,
-      HttpResponseStatus expectedErrorStatus,
       String expectedErrorMessage
-  ) throws Exception
+  )
   {
-    StatusResponseHolder responseHolder = makeSQLQueryRequest(client, query, expectedErrorStatus);
-    Assertions.assertEquals(responseHolder.getStatus(), expectedErrorStatus);
+    StatusResponseHolder responseHolder = makeSQLQueryRequest(client, query, HttpResponseStatus.FORBIDDEN);
+    Assertions.assertEquals(responseHolder.getStatus(), HttpResponseStatus.FORBIDDEN);
     Assertions.assertEquals(responseHolder.getContent(), expectedErrorMessage);
   }
 
@@ -979,11 +941,11 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
 
   protected void verifyInvalidAuthNameFails(String endpoint)
   {
-    HttpUtil.makeRequestWithExpectedStatus(
+    HttpUtil.makeRequest(
         getHttpClient(User.ADMIN),
         HttpMethod.POST,
         endpoint,
-        "SERIALIZED_DATA".getBytes(StandardCharsets.UTF_8),
+        "SERIALIZED_DATA",
         HttpResponseStatus.INTERNAL_SERVER_ERROR
     );
   }
@@ -995,7 +957,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
         new BasicCredentials(maliciousUsername, "noPass"),
         httpClient
     );
-    StatusResponseHolder responseHolder = HttpUtil.makeRequestWithExpectedStatus(
+    StatusResponseHolder responseHolder = HttpUtil.makeRequest(
         maliciousClient,
         HttpMethod.GET,
         getServerUrl(broker) + "/status",
@@ -1007,7 +969,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
     Assertions.assertFalse(responseContent.contains(maliciousUsername));
   }
 
-  protected void setupHttpClients() throws Exception
+  protected void setupHttpClients()
   {
     setupCommonHttpClients();
     setupTestSpecificHttpClients();

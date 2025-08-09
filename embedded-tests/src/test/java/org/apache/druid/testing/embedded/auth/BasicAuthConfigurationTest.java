@@ -20,7 +20,6 @@
 package org.apache.druid.testing.embedded.auth;
 
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
@@ -29,16 +28,14 @@ import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.testing.embedded.EmbeddedResource;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
 
 public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
 {
-  private static final Logger LOG = new Logger(BasicAuthConfigurationTest.class);
-
   private static final String BASIC_AUTHENTICATOR = "basic";
   private static final String BASIC_AUTHORIZER = "basic";
 
@@ -65,7 +62,7 @@ public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   }
 
   @Override
-  protected void setupDatasourceOnlyUser() throws Exception
+  protected void setupDatasourceOnlyUser()
   {
     createUserAndRoleWithPermissions(
         "datasourceOnlyUser",
@@ -76,7 +73,7 @@ public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   }
 
   @Override
-  protected void setupDatasourceAndContextParamsUser() throws Exception
+  protected void setupDatasourceAndContextParamsUser()
   {
     createUserAndRoleWithPermissions(
         "datasourceAndContextParamsUser",
@@ -87,7 +84,7 @@ public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   }
 
   @Override
-  protected void setupDatasourceAndSysTableUser() throws Exception
+  protected void setupDatasourceAndSysTableUser()
   {
     createUserAndRoleWithPermissions(
         "datasourceAndSysUser",
@@ -98,7 +95,7 @@ public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   }
 
   @Override
-  protected void setupDatasourceAndSysAndStateUser() throws Exception
+  protected void setupDatasourceAndSysAndStateUser()
   {
     createUserAndRoleWithPermissions(
         "datasourceWithStateUser",
@@ -109,7 +106,7 @@ public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   }
 
   @Override
-  protected void setupSysTableAndStateOnlyUser() throws Exception
+  protected void setupSysTableAndStateOnlyUser()
   {
     createUserAndRoleWithPermissions(
         "stateOnlyUser",
@@ -120,7 +117,7 @@ public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   }
 
   @Override
-  protected void setupTestSpecificHttpClients() throws Exception
+  protected void setupTestSpecificHttpClients()
   {
     // create a new user+role that can read /status
     createUserAndRoleWithPermissions(
@@ -135,7 +132,6 @@ public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
       final String username = "druid" + i;
       postAsAdmin(null, "/authentication/db/basic/users/%s", username);
       postAsAdmin(null, "/authorization/db/basic/users/%s", username);
-      LOG.info("Created user[%s]", username);
     }
 
     // setup the last of 100 users and check that it works
@@ -198,7 +194,7 @@ public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
       String password,
       String role,
       List<ResourceAction> permissions
-  ) throws Exception
+  )
   {
     // Setup authentication by creating user and password
     postAsAdmin(null, "/authentication/db/basic/users/%s", user);
@@ -218,13 +214,11 @@ public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
       Object payload,
       String pathFormat,
       Object... pathParams
-  ) throws IOException
+  )
   {
     HttpClient adminClient = getHttpClient(User.ADMIN);
-
-    byte[] payloadBytes = payload == null ? null : jsonMapper.writeValueAsBytes(payload);
     String url = getBaseUrl() + StringUtils.format(pathFormat, pathParams);
-    HttpUtil.makeRequest(adminClient, HttpMethod.POST, url, payloadBytes);
+    HttpUtil.makeRequest(adminClient, HttpMethod.POST, url, payload, HttpResponseStatus.OK);
   }
 
   private String getBaseUrl()

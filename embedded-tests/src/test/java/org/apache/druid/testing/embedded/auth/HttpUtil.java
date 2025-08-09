@@ -19,12 +19,14 @@
 
 package org.apache.druid.testing.embedded.auth;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.segment.TestHelper;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
@@ -35,30 +37,31 @@ import java.net.URL;
 public class HttpUtil
 {
   private static final StatusResponseHandler RESPONSE_HANDLER = StatusResponseHandler.getInstance();
+  private static final ObjectMapper MAPPER = TestHelper.JSON_MAPPER;
 
-  public static StatusResponseHolder makeRequest(HttpClient httpClient, HttpMethod method, String url, byte[] content)
+  public static StatusResponseHolder makeRequest(HttpClient httpClient, HttpMethod method, String url)
   {
-    return makeRequestWithExpectedStatus(
+    return makeRequest(
         httpClient,
         method,
         url,
-        content,
+        null,
         HttpResponseStatus.OK
     );
   }
 
-  public static StatusResponseHolder makeRequestWithExpectedStatus(
+  public static StatusResponseHolder makeRequest(
       HttpClient httpClient,
       HttpMethod method,
       String url,
-      @Nullable byte[] content,
+      @Nullable Object content,
       HttpResponseStatus expectedStatus
   )
   {
     try {
       Request request = new Request(method, new URL(url));
       if (content != null) {
-        request.setContent(MediaType.APPLICATION_JSON, content);
+        request.setContent(MediaType.APPLICATION_JSON, MAPPER.writeValueAsBytes(content));
       }
       StatusResponseHolder response = httpClient.go(request, RESPONSE_HANDLER).get();
 
