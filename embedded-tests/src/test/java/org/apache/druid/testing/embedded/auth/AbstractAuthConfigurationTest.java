@@ -63,6 +63,7 @@ import org.apache.druid.testing.embedded.EmbeddedDruidServer;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
+import org.apache.druid.testing.embedded.EmbeddedResource;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
@@ -270,7 +271,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
     return EmbeddedDruidCluster
         .withEmbeddedDerbyAndZookeeper()
         .useLatchableEmitter()
-        .addResource(new EmbeddedBasicAuthResource())
+        .addResource(getAuthResource())
         .addCommonProperty("druid.auth.unsecuredPaths", "[\"/druid/coordinator/v1/loadqueue\"]")
         .addCommonProperty("druid.auth.authorizeQueryContextParams", "true")
         .addCommonProperty("druid.msq.dart.enabled", "true")
@@ -295,6 +296,8 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
         .addServer(historical.setServerMemory(500_000_000))
         .addServer(router);
   }
+
+  protected abstract EmbeddedResource getAuthResource();
 
   @BeforeAll
   public void setupDataAndRoles() throws Exception

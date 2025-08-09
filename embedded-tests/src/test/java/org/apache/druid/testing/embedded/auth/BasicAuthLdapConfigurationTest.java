@@ -28,6 +28,7 @@ import org.apache.druid.java.util.http.client.auth.BasicCredentials;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.testing.embedded.EmbeddedResource;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Test;
 
@@ -48,6 +49,12 @@ public class BasicAuthLdapConfigurationTest extends AbstractAuthConfigurationTes
   private HttpClient druidUserClient;
   private HttpClient stateOnlyNoLdapGroupUserClient;
 
+  @Override
+  protected EmbeddedResource getAuthResource()
+  {
+    return new LdapAuthResource();
+  }
+
   @Test
   public void test_systemSchemaAccess_stateOnlyNoLdapGroupUser() throws Exception
   {
@@ -58,7 +65,7 @@ public class BasicAuthLdapConfigurationTest extends AbstractAuthConfigurationTes
     verifySystemSchemaQuery(
         stateOnlyNoLdapGroupUserClient,
         SYS_SCHEMA_SEGMENTS_QUERY,
-        ""
+        "segment_id,num_rows,size"
     );
 
     LOG.info("Checking sys.servers query as stateOnlyNoLdapGroupUser...");
@@ -72,14 +79,14 @@ public class BasicAuthLdapConfigurationTest extends AbstractAuthConfigurationTes
     verifySystemSchemaQuery(
         stateOnlyNoLdapGroupUserClient,
         SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
-        ""
+        "server,segment_id"
     );
 
     LOG.info("Checking sys.tasks query as stateOnlyNoLdapGroupUser...");
     verifySystemSchemaQuery(
         stateOnlyNoLdapGroupUserClient,
         SYS_SCHEMA_TASKS_QUERY,
-        ""
+        "task_id,group_id,type,datasource,status,location"
     );
   }
 

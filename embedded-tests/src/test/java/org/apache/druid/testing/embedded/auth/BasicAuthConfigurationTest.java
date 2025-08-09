@@ -27,6 +27,7 @@ import org.apache.druid.java.util.http.client.auth.BasicCredentials;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.testing.embedded.EmbeddedResource;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Test;
 
@@ -50,6 +51,12 @@ public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   private static final String EXPECTED_AVATICA_AUTHZ_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: " + Access.DEFAULT_ERROR_MESSAGE;
 
   private HttpClient druid99;
+
+  @Override
+  protected EmbeddedResource getAuthResource()
+  {
+    return new EmbeddedBasicAuthResource();
+  }
 
   @Test
   public void test_druid99User_hasNodeAccess()
