@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.tests.security;
+package org.apache.druid.testing.embedded.auth;
 
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -27,24 +27,16 @@ import org.apache.druid.java.util.http.client.auth.BasicCredentials;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.utils.HttpUtil;
-import org.apache.druid.testing.utils.ITRetryUtil;
-import org.apache.druid.tests.TestNGGroup;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Guice;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
 
-@Test(groups = TestNGGroup.SECURITY)
-@Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
+public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
 {
-  private static final Logger LOG = new Logger(ITBasicAuthConfigurationTest.class);
+  private static final Logger LOG = new Logger(BasicAuthConfigurationTest.class);
 
   private static final String BASIC_AUTHENTICATOR = "basic";
   private static final String BASIC_AUTHORIZER = "basic";
@@ -59,37 +51,10 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
 
   private HttpClient druid99;
 
-  @BeforeClass
-  public void before() throws Exception
-  {
-    // ensure that auth_test segments are loaded completely, we use them for testing system schema tables
-    ITRetryUtil.retryUntilTrue(
-        () -> coordinatorClient.areSegmentsLoaded("auth_test"), "auth_test segment load"
-    );
-
-    setupHttpClientsAndUsers();
-    setExpectedSystemSchemaObjects();
-  }
-
   @Test
   public void test_druid99User_hasNodeAccess()
   {
     checkNodeAccess(druid99);
-  }
-
-  @Override
-  protected void setupHttpClientsAndUsers() throws Exception
-  {
-    super.setupHttpClientsAndUsers();
-
-    // Add a large enough delay to allow propagation of credentials to all services. It'd be ideal
-    // to have a "readiness" endpoint exposed by different services that'd return the version of auth creds cached.
-    try {
-      Thread.sleep(20000);
-    }
-    catch (InterruptedException e) {
-      // Ignore exception
-    }
   }
 
   @Override
@@ -257,6 +222,6 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
 
   private String getBaseUrl()
   {
-    return config.getCoordinatorUrl() + "/druid-ext/basic-security";
+    return getCoordinatorUrl() + "/druid-ext/basic-security";
   }
 }

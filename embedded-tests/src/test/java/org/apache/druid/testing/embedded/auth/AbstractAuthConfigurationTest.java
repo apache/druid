@@ -17,18 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.tests.security;
+package org.apache.druid.testing.embedded.auth;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.inject.Inject;
+import com.google.common.collect.Iterables;
 import org.apache.calcite.avatica.AvaticaSqlException;
-import org.apache.druid.guice.annotations.Client;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -37,26 +36,43 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
+import org.apache.druid.msq.dart.guice.DartControllerMemoryManagementModule;
+import org.apache.druid.msq.dart.guice.DartControllerModule;
+import org.apache.druid.msq.dart.guice.DartWorkerMemoryManagementModule;
+import org.apache.druid.msq.dart.guice.DartWorkerModule;
+import org.apache.druid.msq.guice.IndexerMemoryManagementModule;
+import org.apache.druid.msq.guice.MSQDurableStorageModule;
+import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
+import org.apache.druid.msq.guice.MSQIndexingModule;
+import org.apache.druid.msq.guice.MSQSqlModule;
+import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.http.SqlTaskStatus;
+import org.apache.druid.segment.TestHelper;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.avatica.DruidAvaticaJsonHandler;
-import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
-import org.apache.druid.testing.utils.HttpUtil;
-import org.apache.druid.testing.utils.MsqTestQueryHelper;
-import org.apache.druid.testing.utils.TestQueryHelper;
-import org.apache.druid.tests.indexer.AbstractIndexerTest;
+import org.apache.druid.testing.embedded.EmbeddedBroker;
+import org.apache.druid.testing.embedded.EmbeddedCoordinator;
+import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedDruidServer;
+import org.apache.druid.testing.embedded.EmbeddedHistorical;
+import org.apache.druid.testing.embedded.EmbeddedIndexer;
+import org.apache.druid.testing.embedded.EmbeddedOverlord;
+import org.apache.druid.testing.embedded.EmbeddedRouter;
+import org.apache.druid.testing.embedded.indexing.MoreResources;
+import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
+import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.testng.Assert;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -67,37 +83,27 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 @ExtensionPoint
-public abstract class AbstractAuthConfigurationTest
+public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestBase
 {
   private static final Logger LOG = new Logger(AbstractAuthConfigurationTest.class);
   protected static final String INVALID_NAME = "invalid%2Fname";
 
-  protected static final String SYSTEM_SCHEMA_SEGMENTS_RESULTS_RESOURCE =
-      "/results/auth_test_sys_schema_segments.json";
-  protected static final String SYSTEM_SCHEMA_SERVER_SEGMENTS_RESULTS_RESOURCE =
-      "/results/auth_test_sys_schema_server_segments.json";
-  protected static final String SYSTEM_SCHEMA_SERVERS_RESULTS_RESOURCE =
-      "/results/auth_test_sys_schema_servers.json";
-  protected static final String SYSTEM_SCHEMA_TASKS_RESULTS_RESOURCE =
-      "/results/auth_test_sys_schema_tasks.json";
-
   protected static final String SYS_SCHEMA_SEGMENTS_QUERY =
-      "SELECT * FROM sys.segments WHERE datasource IN ('auth_test')";
+      "SELECT segment_id, num_rows, size FROM sys.segments WHERE datasource = 'auth_test'";
 
   protected static final String SYS_SCHEMA_SERVERS_QUERY =
-      "SELECT * FROM sys.servers WHERE tier IS NOT NULL";
+      "SELECT server, host, plaintext_port, tls_port, server_type, tier, curr_size, max_size, is_leader"
+      + " FROM sys.servers WHERE tier IS NOT NULL";
 
   protected static final String SYS_SCHEMA_SERVER_SEGMENTS_QUERY =
       "SELECT * FROM sys.server_segments WHERE segment_id LIKE 'auth_test%'";
 
   protected static final String SYS_SCHEMA_TASKS_QUERY =
-      "SELECT * FROM sys.tasks WHERE datasource IN ('auth_test')";
-
-  protected static final TypeReference<List<Map<String, Object>>> SYS_SCHEMA_RESULTS_TYPE_REFERENCE =
-      new TypeReference<>() {};
+      "SELECT task_id, group_id, type, datasource, status, location"
+      + " FROM sys.tasks WHERE datasource IN ('auth_test')";
 
   /**
    * create a ResourceAction set of permissions that can only read a 'auth_test' datasource, for Authorizer
@@ -218,27 +224,14 @@ public abstract class AbstractAuthConfigurationTest
     }
   }
 
-  protected List<Map<String, Object>> adminSegments;
-  protected List<Map<String, Object>> adminTasks;
-  protected List<Map<String, Object>> adminServers;
-  protected List<Map<String, Object>> adminServerSegments;
+  protected String adminSegments;
+  protected String adminTasks;
+  protected String adminServers;
+  protected String adminServerSegments;
 
-  @Inject
-  protected IntegrationTestingConfig config;
+  protected final ObjectMapper jsonMapper = TestHelper.JSON_MAPPER;
 
-  @Inject
-  protected ObjectMapper jsonMapper;
-
-  @Inject
-  protected MsqTestQueryHelper msqHelper;
-
-  @Inject
-  @Client
   protected HttpClient httpClient;
-
-  @Inject
-  protected CoordinatorResourceTestClient coordinatorClient;
-
   protected Map<User, HttpClient> httpClients;
 
   protected abstract void setupDatasourceOnlyUser() throws Exception;
@@ -264,6 +257,65 @@ public abstract class AbstractAuthConfigurationTest
    * @see User
    */
   protected abstract Properties getAvaticaConnectionPropertiesForUser(User user);
+  
+  private final EmbeddedOverlord overlord = new EmbeddedOverlord();
+  private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
+  private final EmbeddedRouter router = new EmbeddedRouter();
+  private final EmbeddedBroker broker = new EmbeddedBroker();
+  private final EmbeddedHistorical historical = new EmbeddedHistorical();
+
+  @Override
+  protected EmbeddedDruidCluster createCluster()
+  {
+    return EmbeddedDruidCluster
+        .withEmbeddedDerbyAndZookeeper()
+        .useLatchableEmitter()
+        .addResource(new EmbeddedBasicAuthResource())
+        .addCommonProperty("druid.auth.unsecuredPaths", "[\"/druid/coordinator/v1/loadqueue\"]")
+        .addCommonProperty("druid.auth.authorizeQueryContextParams", "true")
+        .addCommonProperty("druid.msq.dart.enabled", "true")
+        .addCommonProperty("druid.sql.planner.authorizeSystemTablesDirectly", "true")
+        .addCommonProperty("druid.server.http.allowedHttpMethods", "[\"OPTIONS\"]")
+        .addExtensions(
+            MSQSqlModule.class,
+            MSQIndexingModule.class,
+            SqlTaskModule.class,
+            MSQDurableStorageModule.class,
+            MSQExternalDataSourceModule.class,
+            IndexerMemoryManagementModule.class,
+            DartControllerModule.class,
+            DartWorkerModule.class,
+            DartControllerMemoryManagementModule.class,
+            DartWorkerMemoryManagementModule.class
+        )
+        .addServer(coordinator)
+        .addServer(overlord)
+        .addServer(new EmbeddedIndexer().setServerMemory(300_000_000).addProperty("druid.worker.capacity", "2"))
+        .addServer(broker.setServerMemory(500_000_000))
+        .addServer(historical.setServerMemory(500_000_000))
+        .addServer(router);
+  }
+
+  @BeforeAll
+  public void setupDataAndRoles() throws Exception
+  {
+    httpClient = router.bindings().globalHttpClient();
+
+    // Ingest some data
+    final String dataSource = "auth_test";
+    final String taskId = IdUtils.getRandomId();
+    final Task task = MoreResources.Task.BASIC_INDEX
+        .get()
+        .segmentGranularity("YEAR")
+        .dataSource(dataSource)
+        .withId(taskId);
+
+    cluster.callApi().runTask(task, overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
+
+    setupHttpClientsAndUsers();
+    setExpectedSystemSchemaObjects(dataSource, taskId);
+  }
 
   @Test
   public void test_systemSchemaAccess_admin() throws Exception
@@ -284,7 +336,7 @@ public abstract class AbstractAuthConfigurationTest
     verifySystemSchemaServerQuery(
         adminClient,
         SYS_SCHEMA_SERVERS_QUERY,
-        getServersWithoutCurrentSizeAndStartTime(adminServers)
+        adminServers
     );
 
     LOG.info("Checking sys.server_segments query as admin...");
@@ -310,7 +362,7 @@ public abstract class AbstractAuthConfigurationTest
     HttpUtil.makeRequest(
         datasourceOnlyUserClient,
         HttpMethod.GET,
-        config.getBrokerUrl() + "/druid/v2/datasources/auth_test",
+        getServerUrl(broker) + "/druid/v2/datasources/auth_test",
         null
     );
 
@@ -357,7 +409,7 @@ public abstract class AbstractAuthConfigurationTest
     HttpUtil.makeRequest(
         datasourceAndSysUserClient,
         HttpMethod.GET,
-        config.getBrokerUrl() + "/druid/v2/datasources/auth_test",
+        getServerUrl(broker) + "/druid/v2/datasources/auth_test",
         null
     );
 
@@ -366,9 +418,7 @@ public abstract class AbstractAuthConfigurationTest
     verifySystemSchemaQuery(
         datasourceAndSysUserClient,
         SYS_SCHEMA_SEGMENTS_QUERY,
-        adminSegments.stream()
-                     .filter((segmentEntry) -> "auth_test".equals(segmentEntry.get("datasource")))
-                     .collect(Collectors.toList())
+        adminSegments
     );
 
     LOG.info("Checking sys.servers query as datasourceAndSysUser...");
@@ -391,9 +441,7 @@ public abstract class AbstractAuthConfigurationTest
     verifySystemSchemaQuery(
         datasourceAndSysUserClient,
         SYS_SCHEMA_TASKS_QUERY,
-        adminTasks.stream()
-                  .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
-                  .collect(Collectors.toList())
+        adminTasks
     );
   }
 
@@ -405,7 +453,7 @@ public abstract class AbstractAuthConfigurationTest
     HttpUtil.makeRequest(
         datasourceWithStateUserClient,
         HttpMethod.GET,
-        config.getBrokerUrl() + "/status",
+        getServerUrl(broker) + "/status",
         null
     );
 
@@ -414,9 +462,7 @@ public abstract class AbstractAuthConfigurationTest
     verifySystemSchemaQuery(
         datasourceWithStateUserClient,
         SYS_SCHEMA_SEGMENTS_QUERY,
-        adminSegments.stream()
-                     .filter((segmentEntry) -> "auth_test".equals(segmentEntry.get("datasource")))
-                     .collect(Collectors.toList())
+        adminSegments
     );
 
     LOG.info("Checking sys.servers query as datasourceWithStateUser...");
@@ -430,19 +476,14 @@ public abstract class AbstractAuthConfigurationTest
     verifySystemSchemaQuery(
         datasourceWithStateUserClient,
         SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
-        adminServerSegments.stream()
-                           .filter((serverSegmentEntry) -> ((String) serverSegmentEntry.get("segment_id")).contains(
-                               "auth_test"))
-                           .collect(Collectors.toList())
+        adminServerSegments
     );
 
     LOG.info("Checking sys.tasks query as datasourceWithStateUser...");
     verifySystemSchemaQuery(
         datasourceWithStateUserClient,
         SYS_SCHEMA_TASKS_QUERY,
-        adminTasks.stream()
-                  .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
-                  .collect(Collectors.toList())
+        adminTasks
     );
   }
 
@@ -450,14 +491,14 @@ public abstract class AbstractAuthConfigurationTest
   public void test_systemSchemaAccess_stateOnlyUser() throws Exception
   {
     final HttpClient stateOnlyUserClient = getHttpClient(User.STATE_ONLY_USER);
-    HttpUtil.makeRequest(stateOnlyUserClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
+    HttpUtil.makeRequest(stateOnlyUserClient, HttpMethod.GET, getServerUrl(broker) + "/status", null);
 
     // as user that can only read STATE
     LOG.info("Checking sys.segments query as stateOnlyUser...");
     verifySystemSchemaQuery(
         stateOnlyUserClient,
         SYS_SCHEMA_SEGMENTS_QUERY,
-        Collections.emptyList()
+        "segment_id,num_rows,size"
     );
 
     LOG.info("Checking sys.servers query as stateOnlyUser...");
@@ -471,14 +512,14 @@ public abstract class AbstractAuthConfigurationTest
     verifySystemSchemaQuery(
         stateOnlyUserClient,
         SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
-        Collections.emptyList()
+        "server,segment_id"
     );
 
     LOG.info("Checking sys.tasks query as stateOnlyUser...");
     verifySystemSchemaQuery(
         stateOnlyUserClient,
         SYS_SCHEMA_TASKS_QUERY,
-        Collections.emptyList()
+        "task_id,group_id,type,datasource,status,location"
     );
   }
 
@@ -576,7 +617,7 @@ public abstract class AbstractAuthConfigurationTest
         HttpResponseStatus.ACCEPTED
     );
     String taskId = jsonMapper.readValue(responseHolder.getContent(), SqlTaskStatus.class).getTaskId();
-    msqHelper.pollTaskIdForSuccess(taskId);
+    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
   }
 
   @Test
@@ -674,34 +715,34 @@ public abstract class AbstractAuthConfigurationTest
 
   protected void checkNodeAccess(HttpClient httpClient)
   {
-    HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getCoordinatorUrl() + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getOverlordUrl() + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getBrokerUrl() + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getHistoricalUrl() + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.GET, config.getRouterUrl() + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.GET, getServerUrl(coordinator) + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.GET, getServerUrl(overlord) + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.GET, getServerUrl(broker) + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.GET, getServerUrl(historical) + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.GET, getServerUrl(router) + "/status", null);
   }
 
   protected void checkLoadStatus(HttpClient httpClient) throws Exception
   {
-    checkLoadStatusSingle(httpClient, config.getCoordinatorUrl());
-    checkLoadStatusSingle(httpClient, config.getOverlordUrl());
-    checkLoadStatusSingle(httpClient, config.getBrokerUrl());
-    checkLoadStatusSingle(httpClient, config.getHistoricalUrl());
-    checkLoadStatusSingle(httpClient, config.getRouterUrl());
+    checkLoadStatusSingle(httpClient, getServerUrl(coordinator));
+    checkLoadStatusSingle(httpClient, getServerUrl(overlord));
+    checkLoadStatusSingle(httpClient, getServerUrl(broker));
+    checkLoadStatusSingle(httpClient, getServerUrl(historical));
+    checkLoadStatusSingle(httpClient, getServerUrl(router));
   }
 
   protected void testOptionsRequests(HttpClient httpClient)
   {
-    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getCoordinatorUrl() + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getOverlordUrl() + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getBrokerUrl() + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getHistoricalUrl() + "/status", null);
-    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getRouterUrl() + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, getServerUrl(coordinator) + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, getServerUrl(overlord) + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, getServerUrl(broker) + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, getServerUrl(historical) + "/status", null);
+    HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, getServerUrl(router) + "/status", null);
   }
 
   protected void checkUnsecuredCoordinatorLoadQueuePath(HttpClient client)
   {
-    HttpUtil.makeRequest(client, HttpMethod.GET, config.getCoordinatorUrl() + "/druid/coordinator/v1/loadqueue", null);
+    HttpUtil.makeRequest(client, HttpMethod.GET, getServerUrl(coordinator) + "/druid/coordinator/v1/loadqueue", null);
   }
 
   private Properties getAvaticaConnectionPropertiesForAdmin()
@@ -718,7 +759,7 @@ public abstract class AbstractAuthConfigurationTest
       statement.setMaxRows(450);
       String query = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS";
       ResultSet resultSet = statement.executeQuery(query);
-      Assert.assertTrue(resultSet.next());
+      Assertions.assertTrue(resultSet.next());
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -747,13 +788,13 @@ public abstract class AbstractAuthConfigurationTest
       statement.executeQuery(query);
     }
     catch (AvaticaSqlException ase) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ase.getErrorMessage(),
           expectedError
       );
       return;
     }
-    Assert.fail("Test failed, did not get AvaticaSqlException.");
+    Assertions.fail("Test failed, did not get AvaticaSqlException.");
   }
 
   protected void checkLoadStatusSingle(HttpClient httpClient, String baseUrl) throws Exception
@@ -768,8 +809,8 @@ public abstract class AbstractAuthConfigurationTest
     Map<String, Boolean> loadStatus = jsonMapper.readValue(content, JacksonUtils.TYPE_REFERENCE_MAP_STRING_BOOLEAN);
 
     String authenticatorName = getAuthenticatorName();
-    Assert.assertNotNull(loadStatus.get(authenticatorName));
-    Assert.assertTrue(loadStatus.get(authenticatorName));
+    Assertions.assertNotNull(loadStatus.get(authenticatorName));
+    Assertions.assertTrue(loadStatus.get(authenticatorName));
 
     holder = HttpUtil.makeRequest(
         httpClient,
@@ -781,8 +822,8 @@ public abstract class AbstractAuthConfigurationTest
     loadStatus = jsonMapper.readValue(content, JacksonUtils.TYPE_REFERENCE_MAP_STRING_BOOLEAN);
 
     String authorizerName = getAuthorizerName();
-    Assert.assertNotNull(loadStatus.get(authorizerName));
-    Assert.assertTrue(loadStatus.get(authorizerName));
+    Assertions.assertNotNull(loadStatus.get(authorizerName));
+    Assertions.assertTrue(loadStatus.get(authorizerName));
   }
 
   protected StatusResponseHolder makeSQLQueryRequest(
@@ -836,12 +877,14 @@ public abstract class AbstractAuthConfigurationTest
   {
     Map<String, Object> queryMap = ImmutableMap.of(
         "query", query,
-        "context", context
+        "context", context,
+        "resultFormat", "csv",
+        "header", true
     );
     return HttpUtil.makeRequestWithExpectedStatus(
         httpClient,
         HttpMethod.POST,
-        config.getBrokerUrl() + path,
+        getServerUrl(broker) + path,
         jsonMapper.writeValueAsBytes(queryMap),
         expectedStatus
     );
@@ -850,23 +893,19 @@ public abstract class AbstractAuthConfigurationTest
   protected void verifySystemSchemaQueryBase(
       HttpClient client,
       String query,
-      List<Map<String, Object>> expectedResults,
+      String expectedResults,
       boolean isServerQuery
   ) throws Exception
   {
     StatusResponseHolder responseHolder = makeSQLQueryRequest(client, query, HttpResponseStatus.OK);
-    String content = responseHolder.getContent();
-    List<Map<String, Object>> responseMap = jsonMapper.readValue(content, SYS_SCHEMA_RESULTS_TYPE_REFERENCE);
-    if (isServerQuery) {
-      responseMap = getServersWithoutCurrentSizeAndStartTime(responseMap);
-    }
-    Assert.assertEquals(responseMap, expectedResults);
+    String content = responseHolder.getContent().trim();
+    Assertions.assertEquals(expectedResults, content);
   }
 
   protected void verifySystemSchemaQuery(
       HttpClient client,
       String query,
-      List<Map<String, Object>> expectedResults
+      String expectedResults
   ) throws Exception
   {
     verifySystemSchemaQueryBase(client, query, expectedResults, false);
@@ -875,7 +914,7 @@ public abstract class AbstractAuthConfigurationTest
   protected void verifySystemSchemaServerQuery(
       HttpClient client,
       String query,
-      List<Map<String, Object>> expectedResults
+      String expectedResults
   ) throws Exception
   {
     verifySystemSchemaQueryBase(client, query, expectedResults, true);
@@ -889,18 +928,18 @@ public abstract class AbstractAuthConfigurationTest
   ) throws Exception
   {
     StatusResponseHolder responseHolder = makeSQLQueryRequest(client, query, expectedErrorStatus);
-    Assert.assertEquals(responseHolder.getStatus(), expectedErrorStatus);
-    Assert.assertEquals(responseHolder.getContent(), expectedErrorMessage);
+    Assertions.assertEquals(responseHolder.getStatus(), expectedErrorStatus);
+    Assertions.assertEquals(responseHolder.getContent(), expectedErrorMessage);
   }
 
   protected String getBrokerAvacticaUrl()
   {
-    return "jdbc:avatica:remote:url=" + config.getBrokerUrl() + DruidAvaticaJsonHandler.AVATICA_PATH;
+    return "jdbc:avatica:remote:url=" + getServerUrl(broker) + DruidAvaticaJsonHandler.AVATICA_PATH;
   }
 
   protected String getRouterAvacticaUrl()
   {
-    return "jdbc:avatica:remote:url=" + config.getRouterUrl() + DruidAvaticaJsonHandler.AVATICA_PATH;
+    return "jdbc:avatica:remote:url=" + getServerUrl(router) + DruidAvaticaJsonHandler.AVATICA_PATH;
   }
 
   protected void verifyAdminOptionsRequest()
@@ -912,7 +951,7 @@ public abstract class AbstractAuthConfigurationTest
   {
     verifyInvalidAuthNameFails(StringUtils.format(
         "%s/druid-ext/basic-security/authentication/listen/%s",
-        config.getCoordinatorUrl(),
+        getServerUrl(coordinator),
         INVALID_NAME
     ));
   }
@@ -921,7 +960,7 @@ public abstract class AbstractAuthConfigurationTest
   {
     verifyInvalidAuthNameFails(StringUtils.format(
         "%s/druid-ext/basic-security/authorization/listen/users/%s",
-        config.getCoordinatorUrl(),
+        getServerUrl(coordinator),
         INVALID_NAME
     ));
   }
@@ -930,7 +969,7 @@ public abstract class AbstractAuthConfigurationTest
   {
     verifyInvalidAuthNameFails(StringUtils.format(
         "%s/druid-ext/basic-security/authorization/listen/groupMappings/%s",
-        config.getCoordinatorUrl(),
+        getServerUrl(coordinator),
         INVALID_NAME
     ));
   }
@@ -956,13 +995,13 @@ public abstract class AbstractAuthConfigurationTest
     StatusResponseHolder responseHolder = HttpUtil.makeRequestWithExpectedStatus(
         maliciousClient,
         HttpMethod.GET,
-        config.getBrokerUrl() + "/status",
+        getServerUrl(broker) + "/status",
         null,
         HttpResponseStatus.UNAUTHORIZED
     );
     String responseContent = responseHolder.getContent();
-    Assert.assertTrue(responseContent.contains("<tr><th>MESSAGE:</th><td>Unauthorized</td></tr>"));
-    Assert.assertFalse(responseContent.contains(maliciousUsername));
+    Assertions.assertTrue(responseContent.contains("<tr><th>MESSAGE:</th><td>Unauthorized</td></tr>"));
+    Assertions.assertFalse(responseContent.contains(maliciousUsername));
   }
 
   protected void setupHttpClients() throws Exception
@@ -992,64 +1031,56 @@ public abstract class AbstractAuthConfigurationTest
     );
   }
 
-  protected void setExpectedSystemSchemaObjects() throws IOException
+  protected void setExpectedSystemSchemaObjects(String dataSource, String taskId)
   {
     // initial setup is done now, run the system schema response content tests
-    adminSegments = jsonMapper.readValue(
-        TestQueryHelper.class.getResourceAsStream(SYSTEM_SCHEMA_SEGMENTS_RESULTS_RESOURCE),
-        SYS_SCHEMA_RESULTS_TYPE_REFERENCE
+    final Set<DataSegment> segments = cluster.callApi().getVisibleUsedSegments(dataSource, overlord);
+    Assertions.assertEquals(1, segments.size());
+
+    final DataSegment segment = Iterables.getOnlyElement(segments);
+    final String segmentId = segment.getId().toString();
+
+    adminSegments = StringUtils.format(
+        "segment_id,num_rows,size\n"
+        + "%s,10,%s",
+        segmentId, segment.getSize()
     );
 
-    adminTasks = jsonMapper.readValue(
-        TestQueryHelper.class.getResourceAsStream(SYSTEM_SCHEMA_TASKS_RESULTS_RESOURCE),
-        SYS_SCHEMA_RESULTS_TYPE_REFERENCE
+    adminTasks = StringUtils.format(
+        "task_id,group_id,type,datasource,status,location\n"
+        + "%s,%s,index,%s,SUCCESS,localhost:8091",
+        taskId, taskId, dataSource
     );
 
-    adminServers = getServersWithoutCurrentSizeAndStartTime(
-        jsonMapper.readValue(
-            fillServersTemplate(
-                config,
-                AbstractIndexerTest.getResourceAsString(SYSTEM_SCHEMA_SERVERS_RESULTS_RESOURCE)
-            ),
-            SYS_SCHEMA_RESULTS_TYPE_REFERENCE
-        )
-    );
+    adminServers =
+        "server,host,plaintext_port,tls_port,server_type,tier,curr_size,max_size,is_leader\n"
+        + "localhost:8083,localhost,8083,-1,historical,_default_tier,1939,100000000,\n"
+        + "localhost:8091,localhost,8091,-1,indexer,_default_tier,0,0,";
 
-    adminServerSegments = jsonMapper.readValue(
-        fillSegementServersTemplate(
-            config,
-            AbstractIndexerTest.getResourceAsString(SYSTEM_SCHEMA_SERVER_SEGMENTS_RESULTS_RESOURCE)
-        ),
-        SYS_SCHEMA_RESULTS_TYPE_REFERENCE
+    adminServerSegments = StringUtils.format(
+        "server,segment_id\n"
+        + "localhost:8083,%s",
+        segmentId
     );
   }
 
-  /**
-   * curr_size on historicals changes because cluster state is not isolated across different
-   * integration tests, zero it out for consistent test results
-   */
-  protected static List<Map<String, Object>> getServersWithoutCurrentSizeAndStartTime(List<Map<String, Object>> servers)
+  protected String getCoordinatorUrl()
   {
-    return Lists.transform(
-        servers,
-        (server) -> {
-          Map<String, Object> newServer = new HashMap<>(server);
-          newServer.put("curr_size", 0);
-          newServer.put("start_time", "0");
-          return newServer;
-        }
+    return getServerUrl(coordinator);
+  }
+
+  protected String getBrokerUrl()
+  {
+    return getServerUrl(broker);
+  }
+  
+  private static String getServerUrl(EmbeddedDruidServer<?> server)
+  {
+    final DruidNode node = server.bindings().selfNode();
+    return StringUtils.format(
+        "http://%s:%s",
+        node.getHost(),
+        node.getPlaintextPort()
     );
-  }
-
-  protected static String fillSegementServersTemplate(IntegrationTestingConfig config, String template)
-  {
-    return StringUtils.replace(template, "%%HISTORICAL%%", config.getHistoricalInternalHost());
-  }
-
-  protected static String fillServersTemplate(IntegrationTestingConfig config, String template)
-  {
-    String json = StringUtils.replace(template, "%%HISTORICAL%%", config.getHistoricalInternalHost());
-    json = StringUtils.replace(json, "%%BROKER%%", config.getBrokerInternalHost());
-    return json;
-  }
+  }  
 }
