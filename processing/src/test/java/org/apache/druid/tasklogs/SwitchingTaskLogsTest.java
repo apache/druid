@@ -17,10 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.tasklogs;
+package org.apache.druid.tasklogs;
 
 import com.google.common.base.Optional;
-import org.apache.druid.tasklogs.TaskLogs;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
@@ -60,64 +59,151 @@ public class SwitchingTaskLogsTest extends EasyMockSupport
   }
 
   @Test
-  public void test_shouldUseIndividualLogs() throws IOException
+  public void test_streamTaskLog_shouldUseStreamerTaskLogs() throws IOException
   {
     String taskId = "test-task-id";
     long offset = 0L;
-    File logFile = new File("test.log");
     InputStream logStream = new ByteArrayInputStream("test log content".getBytes(StandardCharsets.UTF_8));
-    InputStream reportStream = new ByteArrayInputStream("test report content".getBytes(StandardCharsets.UTF_8));
-    InputStream statusStream = new ByteArrayInputStream("test status content".getBytes(StandardCharsets.UTF_8));
-    InputStream payloadStream = new ByteArrayInputStream("test payload content".getBytes(StandardCharsets.UTF_8));
 
     EasyMock.expect(streamerTaskLogs.streamTaskLog(taskId, offset)).andReturn(Optional.of(logStream));
-    EasyMock.expect(reportTaskLogs.streamTaskReports(taskId)).andReturn(Optional.of(reportStream));
-    EasyMock.expect(reportTaskLogs.streamTaskStatus(taskId)).andReturn(Optional.of(statusStream));
-    EasyMock.expect(reportTaskLogs.streamTaskPayload(taskId)).andReturn(Optional.of(payloadStream));
-
-    pusherTaskLogs.pushTaskLog(taskId, logFile);
-    EasyMock.expectLastCall();
-
-    reportTaskLogs.pushTaskReports(taskId, logFile);
-    EasyMock.expectLastCall();
-
-    reportTaskLogs.pushTaskStatus(taskId, logFile);
-    EasyMock.expectLastCall();
-
-    reportTaskLogs.pushTaskPayload(taskId, logFile);
-    EasyMock.expectLastCall();
-
-    reportTaskLogs.killAll();
-    EasyMock.expectLastCall();
-    long timestamp = System.currentTimeMillis();
-
-    reportTaskLogs.killOlderThan(timestamp);
-    EasyMock.expectLastCall();
-
     replayAll();
 
     Optional<InputStream> actualLogStream = taskLogs.streamTaskLog(taskId, offset);
     Assert.assertTrue(actualLogStream.isPresent());
     Assert.assertEquals(logStream, actualLogStream.get());
 
+    verifyAll();
+  }
+
+  @Test
+  public void test_streamTaskReports_shouldUseReportTaskLogs() throws IOException
+  {
+    String taskId = "test-task-id";
+    InputStream reportStream = new ByteArrayInputStream("test report content".getBytes(StandardCharsets.UTF_8));
+
+    EasyMock.expect(reportTaskLogs.streamTaskReports(taskId)).andReturn(Optional.of(reportStream));
+    replayAll();
+
     Optional<InputStream> actualReportStream = taskLogs.streamTaskReports(taskId);
     Assert.assertTrue(actualReportStream.isPresent());
     Assert.assertEquals(reportStream, actualReportStream.get());
+
+    verifyAll();
+  }
+
+  @Test
+  public void test_streamTaskStatus_shouldUseReportTaskLogs() throws IOException
+  {
+    String taskId = "test-task-id";
+    InputStream statusStream = new ByteArrayInputStream("test status content".getBytes(StandardCharsets.UTF_8));
+
+    EasyMock.expect(reportTaskLogs.streamTaskStatus(taskId)).andReturn(Optional.of(statusStream));
+    replayAll();
 
     Optional<InputStream> actualStatusStream = taskLogs.streamTaskStatus(taskId);
     Assert.assertTrue(actualStatusStream.isPresent());
     Assert.assertEquals(statusStream, actualStatusStream.get());
 
+    verifyAll();
+  }
+
+  @Test
+  public void test_streamTaskPayload_shouldUseReportTaskLogs() throws IOException
+  {
+    String taskId = "test-task-id";
+    InputStream payloadStream = new ByteArrayInputStream("test payload content".getBytes(StandardCharsets.UTF_8));
+
+    EasyMock.expect(reportTaskLogs.streamTaskPayload(taskId)).andReturn(Optional.of(payloadStream));
+    replayAll();
+
     Optional<InputStream> actualPayloadStream = taskLogs.streamTaskPayload(taskId);
     Assert.assertTrue(actualPayloadStream.isPresent());
     Assert.assertEquals(payloadStream, actualPayloadStream.get());
 
+    verifyAll();
+  }
+
+  @Test
+  public void test_pushTaskLog_shouldUsePusherTaskLogs() throws IOException
+  {
+    String taskId = "test-task-id";
+    File logFile = new File("test.log");
+
+    pusherTaskLogs.pushTaskLog(taskId, logFile);
+    EasyMock.expectLastCall();
+    replayAll();
+
     taskLogs.pushTaskLog(taskId, logFile);
+
+    verifyAll();
+  }
+
+  @Test
+  public void test_pushTaskReports_shouldUseReportTaskLogs() throws IOException
+  {
+    String taskId = "test-task-id";
+    File logFile = new File("test.log");
+
+    reportTaskLogs.pushTaskReports(taskId, logFile);
+    EasyMock.expectLastCall();
+    replayAll();
+
     taskLogs.pushTaskReports(taskId, logFile);
+
+    verifyAll();
+  }
+
+  @Test
+  public void test_pushTaskStatus_shouldUseReportTaskLogs() throws IOException
+  {
+    String taskId = "test-task-id";
+    File logFile = new File("test.log");
+
+    reportTaskLogs.pushTaskStatus(taskId, logFile);
+    EasyMock.expectLastCall();
+    replayAll();
+
     taskLogs.pushTaskStatus(taskId, logFile);
+
+    verifyAll();
+  }
+
+  @Test
+  public void test_pushTaskPayload_shouldUseReportTaskLogs() throws IOException
+  {
+    String taskId = "test-task-id";
+    File logFile = new File("test.log");
+
+    reportTaskLogs.pushTaskPayload(taskId, logFile);
+    EasyMock.expectLastCall();
+    replayAll();
+
     taskLogs.pushTaskPayload(taskId, logFile);
 
+    verifyAll();
+  }
+
+  @Test
+  public void test_killAll_shouldUseReportTaskLogs() throws IOException
+  {
+    reportTaskLogs.killAll();
+    EasyMock.expectLastCall();
+    replayAll();
+
     taskLogs.killAll();
+
+    verifyAll();
+  }
+
+  @Test
+  public void test_killOlderThan_shouldUseReportTaskLogs() throws IOException
+  {
+    long timestamp = System.currentTimeMillis();
+
+    reportTaskLogs.killOlderThan(timestamp);
+    EasyMock.expectLastCall();
+    replayAll();
+
     taskLogs.killOlderThan(timestamp);
 
     verifyAll();

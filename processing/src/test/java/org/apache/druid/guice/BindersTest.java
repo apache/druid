@@ -30,7 +30,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Properties;
 
-class BindersTest
+public class BindersTest
 {
 
   @Test

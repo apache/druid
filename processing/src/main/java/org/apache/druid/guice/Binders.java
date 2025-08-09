@@ -28,6 +28,7 @@ import org.apache.druid.segment.loading.DataSegmentArchiver;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.tasklogs.SwitchingTaskLogs;
 import org.apache.druid.tasklogs.TaskLogs;
 
 /**
@@ -64,12 +65,12 @@ public class Binders
   /**
    * Binds implementation of {@link TaskLogs} to the named keys for injection.
    */
-  public static <T extends TaskLogs> void bindTaskLogs(Binder binder, String type, Class<T> clazz)
+  public static <T extends TaskLogs> void bindTaskLogs(Binder binder, String type, Class<T> taskLogsType)
   {
-    PolyBind.optionBinder(binder, Key.get(TaskLogs.class)).addBinding(type).to(clazz);
-    PolyBind.optionBinder(binder, Key.get(TaskLogs.class, Names.named("switching.reportType"))).addBinding(type).to(clazz);
-    PolyBind.optionBinder(binder, Key.get(TaskLogs.class, Names.named("switching.streamType"))).addBinding(type).to(clazz);
-    PolyBind.optionBinder(binder, Key.get(TaskLogs.class, Names.named("switching.pushType"))).addBinding(type).to(clazz);
-    PolyBind.optionBinder(binder, Key.get(TaskLogs.class, Names.named("switching.defaultType"))).addBinding(type).to(clazz);
+    PolyBind.optionBinder(binder, Key.get(TaskLogs.class)).addBinding(type).to(taskLogsType);
+    PolyBind.optionBinder(binder, Key.get(TaskLogs.class, Names.named(SwitchingTaskLogs.NAME_REPORTS_TYPE))).addBinding(type).to(taskLogsType);
+    PolyBind.optionBinder(binder, Key.get(TaskLogs.class, Names.named(SwitchingTaskLogs.NAME_LOG_STREAM_TYPE))).addBinding(type).to(taskLogsType);
+    PolyBind.optionBinder(binder, Key.get(TaskLogs.class, Names.named(SwitchingTaskLogs.NAME_LOG_PUSH_TYPE))).addBinding(type).to(taskLogsType);
+    PolyBind.optionBinder(binder, Key.get(TaskLogs.class, Names.named(SwitchingTaskLogs.NAME_DEFAULT_TYPE))).addBinding(type).to(taskLogsType);
   }
 }
