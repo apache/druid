@@ -47,6 +47,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import simulate.KubernetesResource;
 
 import java.util.List;
 import java.util.Optional;
@@ -66,6 +67,7 @@ public class IndexParallelTaskTest extends EmbeddedClusterTestBase
   private final EmbeddedHistorical historical = new EmbeddedHistorical();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
 
+
   @Override
   protected EmbeddedDruidCluster createCluster()
   {
@@ -76,6 +78,7 @@ public class IndexParallelTaskTest extends EmbeddedClusterTestBase
                                .addServer(indexer)
                                .addServer(historical)
                                .addServer(broker)
+                               .addResource(new KubernetesResource())
                                .addServer(new EmbeddedRouter());
   }
 
