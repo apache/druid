@@ -20,7 +20,6 @@
 package org.apache.druid.testing.embedded.indexing;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.data.input.AvroStreamInputRowParser;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.avro.AvroExtensionsModule;
@@ -28,14 +27,14 @@ import org.apache.druid.data.input.avro.AvroParseSpec;
 import org.apache.druid.data.input.avro.AvroStreamInputFormat;
 import org.apache.druid.data.input.avro.InlineSchemaAvroBytesDecoder;
 import org.apache.druid.data.input.avro.SchemaRegistryBasedAvroBytesDecoder;
-import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.CSVParseSpec;
+import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DelimitedInputFormat;
 import org.apache.druid.data.input.impl.DelimitedParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.protobuf.FileBasedProtobufBytesDecoder;
@@ -58,8 +57,13 @@ import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
+import org.apache.druid.testing.tools.AvroEventSerializer;
 import org.apache.druid.testing.tools.AvroSchemaRegistryEventSerializer;
+import org.apache.druid.testing.tools.CsvEventSerializer;
+import org.apache.druid.testing.tools.DelimitedEventSerializer;
 import org.apache.druid.testing.tools.EventSerializer;
+import org.apache.druid.testing.tools.JsonEventSerializer;
+import org.apache.druid.testing.tools.ProtobufEventSerializer;
 import org.apache.druid.testing.tools.ProtobufSchemaRegistryEventSerializer;
 import org.apache.druid.testing.tools.StreamGenerator;
 import org.apache.druid.testing.tools.WikipediaStreamEventStreamGenerator;
@@ -143,35 +147,30 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
   public void test_indexKafka_avroDataFormat_withParser() throws IOException
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
-    EventSerializer serializer = overlord.bindings().jsonMapper().readValue("{\"type\": \"avro\"}", EventSerializer.class);
+    EventSerializer serializer = new AvroEventSerializer();
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
     
-    // Create Avro schema as a Map for InlineSchemaAvroBytesDecoder
     Map<String, Object> avroSchema = createWikipediaAvroSchemaMap();
     
-    // Build InlineSchemaAvroBytesDecoder
     InlineSchemaAvroBytesDecoder avroBytesDecoder = overlord.bindings().jsonMapper().readValue(
         StringUtils.format("{\"type\": \"schema_inline\", \"schema\": %s}", 
                            overlord.bindings().jsonMapper().writeValueAsString(avroSchema)),
         InlineSchemaAvroBytesDecoder.class
     );
 
-    // Build AvroParseSpec with proper object construction
     AvroParseSpec parseSpec = new AvroParseSpec(
         new TimestampSpec("timestamp", "auto", null),
         createWikipediaDimensionsSpec(),
-        null  // flattenSpec - null uses DEFAULT
+        null
     );
 
-    // Build AvroStreamInputRowParser using constructor
     AvroStreamInputRowParser parser = new AvroStreamInputRowParser(
         parseSpec,
         avroBytesDecoder,
-        false,  // binaryAsString
-        null    // extractUnionsByType
+        false,
+        null
     );
 
-    // Convert to map for deprecated withParserMap method
     Map<String, Object> parserMap = overlord.bindings().jsonMapper().convertValue(parser, Map.class);
     KafkaSupervisorSpec supervisorSpec = createDeprectatedKafkaSupervisor(dataSource, dataSource, parserMap);
 
@@ -188,23 +187,19 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
   public void test_indexKafka_avroDataFormat() throws IOException
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
-    EventSerializer serializer = overlord.bindings().jsonMapper().readValue("{\"type\": \"avro\"}", EventSerializer.class);
+    EventSerializer serializer = new AvroEventSerializer();
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
     
-    // Create Avro schema as a Map for InlineSchemaAvroBytesDecoder
     Map<String, Object> avroSchema = createWikipediaAvroSchemaMap();
     
-    // Create the AvroBytesDecoder with inline schema
     InlineSchemaAvroBytesDecoder avroBytesDecoder = overlord.bindings().jsonMapper().readValue(
         StringUtils.format("{\"type\": \"schema_inline\", \"schema\": %s}", 
                            overlord.bindings().jsonMapper().writeValueAsString(avroSchema)),
         InlineSchemaAvroBytesDecoder.class
     );
     
-    // Create JSONPathSpec for field discovery
     JSONPathSpec flattenSpec = new JSONPathSpec(true, null);
     
-    // Build AvroStreamInputFormat using constructor
     AvroStreamInputFormat inputFormat = new AvroStreamInputFormat(
         flattenSpec,
         avroBytesDecoder,
@@ -229,7 +224,6 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     EventSerializer serializer = new AvroSchemaRegistryEventSerializer(StringUtils.format("%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081)));
     serializer.initialize(dataSource);
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, true);
-    // Build SchemaRegistryBasedAvroBytesDecoder
     SchemaRegistryBasedAvroBytesDecoder avroBytesDecoder = overlord.bindings().jsonMapper().readValue(
         StringUtils.format("{\"type\": \"schema_registry\", \"url\": \"http://%s:%s\"}", 
                            cluster.getEmbeddedHostname().toString(), 
@@ -237,19 +231,17 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
         SchemaRegistryBasedAvroBytesDecoder.class
     );
 
-    // Build AvroParseSpec with proper object construction
     AvroParseSpec parseSpec = new AvroParseSpec(
         new TimestampSpec("timestamp", "auto", null),
         createWikipediaDimensionsSpec(),
-        null  // flattenSpec - null uses DEFAULT
+        null
     );
 
-    // Build AvroStreamInputRowParser using constructor
     AvroStreamInputRowParser parser = new AvroStreamInputRowParser(
         parseSpec,
         avroBytesDecoder,
-        false,  // binaryAsString
-        null    // extractUnionsByType
+        false,
+        null
     );
 
     // Convert to map for deprecated withParserMap method
@@ -292,10 +284,10 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_csvDataFormat() throws JsonProcessingException
+  public void test_indexKafka_csvDataFormat()
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
-    EventSerializer serializer = overlord.bindings().jsonMapper().readValue("{\"type\": \"csv\"}", EventSerializer.class);
+    EventSerializer serializer = new CsvEventSerializer();
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
 
     CsvInputFormat inputFormat = new CsvInputFormat(WIKI_DIM_LIST, null, null, false, 0, false);
@@ -314,19 +306,17 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
   public void test_indexKafka_csvDataFormat_withParser() throws JsonProcessingException
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
-    EventSerializer serializer = overlord.bindings().jsonMapper().readValue("{\"type\": \"csv\"}", EventSerializer.class);
+    EventSerializer serializer = new CsvEventSerializer();
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
-    // Build CSVParseSpec with proper object construction
     CSVParseSpec parseSpec = new CSVParseSpec(
         new TimestampSpec("timestamp", "auto", null),
         createWikipediaDimensionsSpec(),
-        null,  // listDelimiter
+        null,
         WIKI_DIM_LIST,
-        false, // hasHeaderRow
-        0      // skipHeaderRows
+        false,
+        0
     );
 
-    // Build StringInputRowParser using constructor
     StringInputRowParser parser = new StringInputRowParser(parseSpec, null);
 
     // Convert to map for deprecated withParserMap method
@@ -346,18 +336,16 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
   public void test_indexKafka_jsonDataFormat_withParser() throws JsonProcessingException
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
-    EventSerializer serializer = overlord.bindings().jsonMapper().readValue("{\"type\": \"json\"}", EventSerializer.class);
+    EventSerializer serializer = new JsonEventSerializer(overlord.bindings().jsonMapper());
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
-    // Build JSONParseSpec with proper object construction
     JSONParseSpec parseSpec = new JSONParseSpec(
         new TimestampSpec("timestamp", "auto", null),
         createWikipediaDimensionsSpec(),
-        new JSONPathSpec(true, null),  // flattenSpec with useFieldDiscovery=true
-        null,  // featureSpec
-        false  // keepNullColumns
+        new JSONPathSpec(true, null),
+        null,
+        false
     );
 
-    // Build StringInputRowParser using constructor
     StringInputRowParser parser = new StringInputRowParser(parseSpec, null);
 
     // Convert to map for deprecated withParserMap method
@@ -378,7 +366,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
 
-    EventSerializer serializer = overlord.bindings().jsonMapper().readValue("{\"type\": \"json\"}", EventSerializer.class);
+    EventSerializer serializer = new JsonEventSerializer(overlord.bindings().jsonMapper());
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
     InputFormat inputFormat = new JsonInputFormat(null, null, null, false, null, null);
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
@@ -393,33 +381,30 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_protobufDataFormat_withParser() throws JsonProcessingException
+  public void test_indexKafka_protobufDataFormat_withParser()
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
-    EventSerializer serializer = overlord.bindings().jsonMapper().readValue("{\"type\": \"protobuf\"}", EventSerializer.class);
+    EventSerializer serializer = new ProtobufEventSerializer();
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
 
-    String jsonString = "{"
-                       + "\"type\": \"protobuf\","
-                       + "\"protoBytesDecoder\": {"
-                       + "\"type\": \"file\","
-                       + "\"descriptor\": \"data/protobuf/wikipedia.desc\","
-                       + "\"protoMessageType\": \"Wikipedia\""
-                       + "},"
-                       + "\"parseSpec\": {"
-                       + "\"format\": \"json\","
-                       + "\"timestampSpec\": {"
-                       + "\"column\": \"timestamp\","
-                       + "\"format\": \"auto\""
-                       + "},"
-                       + "\"dimensionsSpec\": {"
-                       + "\"dimensions\": [\"page\", \"language\", \"user\", \"unpatrolled\", \"newPage\", \"robot\", \"anonymous\", \"namespace\", \"continent\", \"country\", \"region\", \"city\"],"
-                       + "\"dimensionExclusions\": [],"
-                       + "\"spatialDimensions\": []"
-                       + "}"
-                       + "}"
-                       + "}";
-    Map<String, Object> parserMap = overlord.bindings().jsonMapper().readValue(jsonString, new TypeReference<Map<String, Object>>(){});
+    FileBasedProtobufBytesDecoder protobufBytesDecoder = new FileBasedProtobufBytesDecoder(
+        "data/protobuf/wikipedia.desc",
+        "Wikipedia"
+    );
+
+    JSONParseSpec parseSpec = new JSONParseSpec(
+        new TimestampSpec("timestamp", "auto", null),
+        createWikipediaDimensionsSpec(),
+        new JSONPathSpec(true, null),
+        null,
+        false
+    );
+
+    // Manually create parser map for deprecated withParserMap method
+    Map<String, Object> parserMap = new HashMap<>();
+    parserMap.put("type", "protobuf");
+    parserMap.put("parseSpec", overlord.bindings().jsonMapper().convertValue(parseSpec, Map.class));
+    parserMap.put("protoBytesDecoder", overlord.bindings().jsonMapper().convertValue(protobufBytesDecoder, Map.class));
     KafkaSupervisorSpec supervisorSpec = createDeprectatedKafkaSupervisor(dataSource, dataSource, parserMap);
 
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
@@ -434,13 +419,13 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
   public void test_indexKafka_protobufDataFormat() throws JsonProcessingException
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
-    EventSerializer serializer = overlord.bindings().jsonMapper().readValue("{\"type\": \"protobuf\"}", EventSerializer.class);
+    EventSerializer serializer = new ProtobufEventSerializer();
 
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
 
-    FileBasedProtobufBytesDecoder protobufBytesDecoder = overlord.bindings().jsonMapper().readValue(
-        "{\"type\": \"file\", \"protoMessageType\": \"Wikipedia\", \"descriptor\": \"data/protobuf/wikipedia.desc\"}",
-        FileBasedProtobufBytesDecoder.class
+    FileBasedProtobufBytesDecoder protobufBytesDecoder = new FileBasedProtobufBytesDecoder(
+        "data/protobuf/wikipedia.desc",
+        "Wikipedia"
     );
 
     ProtobufInputFormat inputFormat = new ProtobufInputFormat(null, protobufBytesDecoder);
@@ -457,32 +442,34 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_protobufDataFormatWithSchemaRegistry_withParser() throws JsonProcessingException
+  public void test_indexKafka_protobufDataFormatWithSchemaRegistry_withParser()
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new ProtobufSchemaRegistryEventSerializer(StringUtils.format("%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081)));
     serializer.initialize(dataSource);
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, true);
-    String jsonString = "{"
-                       + "\"type\": \"protobuf\","
-                       + "\"protoBytesDecoder\": {"
-                       + "\"type\": \"schema_registry\","
-                       + "\"url\": \"" + StringUtils.format("http://%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081)) + "\""
-                       + "},"
-                       + "\"parseSpec\": {"
-                       + "\"format\": \"json\","
-                       + "\"timestampSpec\": {"
-                       + "\"column\": \"timestamp\","
-                       + "\"format\": \"auto\""
-                       + "},"
-                       + "\"dimensionsSpec\": {"
-                       + "\"dimensions\": [\"page\", \"language\", \"user\", \"unpatrolled\", \"newPage\", \"robot\", \"anonymous\", \"namespace\", \"continent\", \"country\", \"region\", \"city\"],"
-                       + "\"dimensionExclusions\": [],"
-                       + "\"spatialDimensions\": []"
-                       + "}"
-                       + "}"
-                       + "}";
-    Map<String, Object> parserMap = overlord.bindings().jsonMapper().readValue(jsonString, new TypeReference<Map<String, Object>>(){});
+    SchemaRegistryBasedProtobufBytesDecoder protobufBytesDecoder = new SchemaRegistryBasedProtobufBytesDecoder(
+        StringUtils.format("http://%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081)),
+        null,
+        null,
+        null,
+        null,
+        overlord.bindings().jsonMapper()
+    );
+
+    JSONParseSpec parseSpec = new JSONParseSpec(
+        new TimestampSpec("timestamp", "auto", null),
+        createWikipediaDimensionsSpec(),
+        new JSONPathSpec(true, null),
+        null,
+        false
+    );
+
+    // Manually create parser map for deprecated withParserMap method
+    Map<String, Object> parserMap = new HashMap<>();
+    parserMap.put("type", "protobuf");
+    parserMap.put("parseSpec", overlord.bindings().jsonMapper().convertValue(parseSpec, Map.class));
+    parserMap.put("protoBytesDecoder", overlord.bindings().jsonMapper().convertValue(protobufBytesDecoder, Map.class));
     KafkaSupervisorSpec supervisorSpec = createDeprectatedKafkaSupervisor(dataSource, dataSource, parserMap);
 
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
@@ -495,17 +482,19 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_protobufDataFormatWithSchemaRegistry() throws JsonProcessingException
+  public void test_indexKafka_protobufDataFormatWithSchemaRegistry()
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new ProtobufSchemaRegistryEventSerializer(StringUtils.format("%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081)));
     serializer.initialize(dataSource);
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, true);
-    SchemaRegistryBasedProtobufBytesDecoder protobufBytesDecoder = overlord.bindings().jsonMapper().readValue(
-        StringUtils.format("{\"type\": \"schema_registry\", \"urls\": [\"http://%s:%s\"]}",
-            cluster.getEmbeddedHostname().toString(),
-            schemaRegistry.getContainer().getMappedPort(9081)),
-        SchemaRegistryBasedProtobufBytesDecoder.class
+    SchemaRegistryBasedProtobufBytesDecoder protobufBytesDecoder = new SchemaRegistryBasedProtobufBytesDecoder(
+        null,
+        null,
+        List.of(StringUtils.format("http://%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081))),
+        null,
+        null,
+        overlord.bindings().jsonMapper()
     );
     ProtobufInputFormat inputFormat = new ProtobufInputFormat(null, protobufBytesDecoder);
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
@@ -520,26 +509,24 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_tsvDataFormat_withParser() throws JsonProcessingException
+  public void test_indexKafka_tsvDataFormat_withParser()
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
-    EventSerializer serializer = overlord.bindings().jsonMapper().readValue("{\"type\": \"tsv\"}", EventSerializer.class);
+    EventSerializer serializer = new DelimitedEventSerializer();
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
     // Build DelimitedParseSpec with proper object construction for TSV
     DelimitedParseSpec parseSpec = new DelimitedParseSpec(
         new TimestampSpec("timestamp", "auto", null),
         createWikipediaDimensionsSpec(),
-        "\t",     // delimiter for TSV
-        null,     // listDelimiter
+        "\t",
+        null,
         WIKI_DIM_LIST,
-        false,    // hasHeaderRow
-        0         // skipHeaderRows
+        false,
+        0
     );
 
-    // Build StringInputRowParser using constructor
     StringInputRowParser parser = new StringInputRowParser(parseSpec, null);
 
-    // Convert to map for deprecated withParserMap method
     Map<String, Object> parserMap = overlord.bindings().jsonMapper().convertValue(parser, Map.class);
     KafkaSupervisorSpec supervisorSpec = createDeprectatedKafkaSupervisor(dataSource, dataSource, parserMap);
 
@@ -553,13 +540,18 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_tsvDataFormat() throws JsonProcessingException
+  public void test_indexKafka_tsvDataFormat()
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
-    EventSerializer serializer = overlord.bindings().jsonMapper().readValue("{\"type\": \"tsv\"}", EventSerializer.class);
+    EventSerializer serializer = new DelimitedEventSerializer();
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
     DelimitedInputFormat inputFormat = new DelimitedInputFormat(
-        WIKI_DIM_LIST, null, null, false, false, 0,
+        WIKI_DIM_LIST,
+        null,
+        null,
+        false,
+        false,
+        0,
         null
     );
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
