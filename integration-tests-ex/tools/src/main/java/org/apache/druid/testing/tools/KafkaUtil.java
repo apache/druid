@@ -19,6 +19,8 @@
 
 package org.apache.druid.testing.tools;
 
+import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -48,5 +50,18 @@ public class KafkaUtil
       }
     }
     return theMap;
+  }
+
+  public static CachedSchemaRegistryClient createSchemaRegistryClient(String schemaRegistryHost)
+  {
+    return new CachedSchemaRegistryClient(
+        String.format("http://%s", schemaRegistryHost),
+        Integer.MAX_VALUE,
+        Map.of(
+            "basic.auth.credentials.source", "USER_INFO",
+            "basic.auth.user.info", "druid:diurd"
+        ),
+        Map.of()
+    );
   }
 }

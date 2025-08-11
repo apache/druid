@@ -53,15 +53,7 @@ public class AvroSchemaRegistryEventSerializer extends AvroEventSerializer
   )
   {
     this.config = null;
-    this.client = new CachedSchemaRegistryClient(
-        StringUtils.format("http://%s", schemaRegistryHost),
-        Integer.MAX_VALUE,
-        ImmutableMap.of(
-            "basic.auth.credentials.source", "USER_INFO",
-            "basic.auth.user.info", "druid:diurd"
-        ),
-        ImmutableMap.of()
-    );
+    this.client = KafkaUtil.createSchemaRegistryClient(schemaRegistryHost);
   }
 
   @JsonCreator
@@ -70,16 +62,7 @@ public class AvroSchemaRegistryEventSerializer extends AvroEventSerializer
   )
   {
     this.config = config;
-    this.client = new CachedSchemaRegistryClient(
-        StringUtils.format("http://%s", config.getSchemaRegistryHost()),
-        Integer.MAX_VALUE,
-        ImmutableMap.of(
-            "basic.auth.credentials.source", "USER_INFO",
-            "basic.auth.user.info", "druid:diurd"
-        ),
-        ImmutableMap.of()
-    );
-
+    this.client = KafkaUtil.createSchemaRegistryClient(config.getSchemaRegistryHost());
   }
 
   @Override
