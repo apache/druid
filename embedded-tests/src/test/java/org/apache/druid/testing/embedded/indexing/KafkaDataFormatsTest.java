@@ -21,15 +21,22 @@ package org.apache.druid.testing.embedded.indexing;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import org.apache.druid.data.input.AvroStreamInputRowParser;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.avro.AvroExtensionsModule;
+import org.apache.druid.data.input.avro.AvroParseSpec;
 import org.apache.druid.data.input.avro.AvroStreamInputFormat;
 import org.apache.druid.data.input.avro.InlineSchemaAvroBytesDecoder;
 import org.apache.druid.data.input.avro.SchemaRegistryBasedAvroBytesDecoder;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.CsvInputFormat;
+import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DelimitedInputFormat;
+import org.apache.druid.data.input.impl.DelimitedParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.protobuf.FileBasedProtobufBytesDecoder;
 import org.apache.druid.data.input.protobuf.ProtobufExtensionsModule;
@@ -84,6 +91,10 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 {
   private static final long CYCLE_PADDING_MS = 100;
   private static final int EVENTS_PER_SECOND = 6;
+  private static final List<String> WIKI_DIM_LIST = List.of("timestamp", "page", "language", "user",
+                                                            "unpatrolled", "newPage", "robot", "anonymous", "namespace",
+                                                            "continent", "country", "region", "city", "added",
+                                                            "deleted", "delta");
 
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();
@@ -134,48 +145,34 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = overlord.bindings().jsonMapper().readValue("{\"type\": \"avro\"}", EventSerializer.class);
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
-    String jsonString = "{"
-                       + "\"type\": \"avro_stream\","
-                       + "\"avroBytesDecoder\": {"
-                       + "\"type\": \"schema_inline\","
-                       + "\"schema\": {"
-                       + "\"namespace\": \"org.apache.druid\","
-                       + "\"name\": \"wikipedia\","
-                       + "\"type\": \"record\","
-                       + "\"fields\": ["
-                       + "{ \"name\": \"timestamp\", \"type\": \"string\" },"
-                       + "{ \"name\": \"page\", \"type\": \"string\" },"
-                       + "{ \"name\": \"language\", \"type\": \"string\" },"
-                       + "{ \"name\": \"user\", \"type\": \"string\" },"
-                       + "{ \"name\": \"unpatrolled\", \"type\": \"string\" },"
-                       + "{ \"name\": \"newPage\", \"type\": \"string\" },"
-                       + "{ \"name\": \"robot\", \"type\": \"string\" },"
-                       + "{ \"name\": \"anonymous\", \"type\": \"string\" },"
-                       + "{ \"name\": \"namespace\", \"type\": \"string\" },"
-                       + "{ \"name\": \"continent\", \"type\": \"string\" },"
-                       + "{ \"name\": \"country\", \"type\": \"string\" },"
-                       + "{ \"name\": \"region\", \"type\": \"string\" },"
-                       + "{ \"name\": \"city\", \"type\": \"string\" },"
-                       + "{ \"name\": \"added\", \"type\": \"long\" },"
-                       + "{ \"name\": \"deleted\", \"type\": \"long\" },"
-                       + "{ \"name\": \"delta\", \"type\": \"long\" }"
-                       + "]"
-                       + "}"
-                       + "},"
-                       + "\"parseSpec\": {"
-                       + "\"format\": \"avro\","
-                       + "\"timestampSpec\": {"
-                       + "\"column\": \"timestamp\","
-                       + "\"format\": \"auto\""
-                       + "},"
-                       + "\"dimensionsSpec\": {"
-                       + "\"dimensions\": [\"page\", \"language\", \"user\", \"unpatrolled\", \"newPage\", \"robot\", \"anonymous\", \"namespace\", \"continent\", \"country\", \"region\", \"city\"],"
-                       + "\"dimensionExclusions\": [],"
-                       + "\"spatialDimensions\": []"
-                       + "}"
-                       + "}"
-                       + "}";
-    Map<String, Object> parserMap = overlord.bindings().jsonMapper().readValue(jsonString, new TypeReference<Map<String, Object>>(){});
+    
+    // Create Avro schema as a Map for InlineSchemaAvroBytesDecoder
+    Map<String, Object> avroSchema = createWikipediaAvroSchemaMap();
+    
+    // Build InlineSchemaAvroBytesDecoder
+    InlineSchemaAvroBytesDecoder avroBytesDecoder = overlord.bindings().jsonMapper().readValue(
+        StringUtils.format("{\"type\": \"schema_inline\", \"schema\": %s}", 
+                           overlord.bindings().jsonMapper().writeValueAsString(avroSchema)),
+        InlineSchemaAvroBytesDecoder.class
+    );
+
+    // Build AvroParseSpec with proper object construction
+    AvroParseSpec parseSpec = new AvroParseSpec(
+        new TimestampSpec("timestamp", "auto", null),
+        createWikipediaDimensionsSpec(),
+        null  // flattenSpec - null uses DEFAULT
+    );
+
+    // Build AvroStreamInputRowParser using constructor
+    AvroStreamInputRowParser parser = new AvroStreamInputRowParser(
+        parseSpec,
+        avroBytesDecoder,
+        false,  // binaryAsString
+        null    // extractUnionsByType
+    );
+
+    // Convert to map for deprecated withParserMap method
+    Map<String, Object> parserMap = overlord.bindings().jsonMapper().convertValue(parser, Map.class);
     KafkaSupervisorSpec supervisorSpec = createDeprectatedKafkaSupervisor(dataSource, dataSource, parserMap);
 
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
@@ -209,10 +206,10 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     
     // Build AvroStreamInputFormat using constructor
     AvroStreamInputFormat inputFormat = new AvroStreamInputFormat(
-        flattenSpec,        // flattenSpec with useFieldDiscovery=true
-        avroBytesDecoder,   // avroBytesDecoder 
-        false,              // binaryAsString
-        null                // extractUnionsByType
+        flattenSpec,
+        avroBytesDecoder,
+        false,
+        null
     );
     
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
@@ -232,26 +229,31 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     EventSerializer serializer = new AvroSchemaRegistryEventSerializer(StringUtils.format("%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081)));
     serializer.initialize(dataSource);
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, true);
-    String jsonString = "{"
-                       + "\"type\": \"avro_stream\","
-                       + "\"avroBytesDecoder\": {"
-                       + "\"type\": \"schema_registry\","
-                       + "\"url\": \"" + StringUtils.format("http://%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081)) + "\""
-                       + "},"
-                       + "\"parseSpec\": {"
-                       + "\"format\": \"avro\","
-                       + "\"timestampSpec\": {"
-                       + "\"column\": \"timestamp\","
-                       + "\"format\": \"auto\""
-                       + "},"
-                       + "\"dimensionsSpec\": {"
-                       + "\"dimensions\": [\"page\", \"language\", \"user\", \"unpatrolled\", \"newPage\", \"robot\", \"anonymous\", \"namespace\", \"continent\", \"country\", \"region\", \"city\"],"
-                       + "\"dimensionExclusions\": [],"
-                       + "\"spatialDimensions\": []"
-                       + "}"
-                       + "}"
-                       + "}";
-    Map<String, Object> parserMap = overlord.bindings().jsonMapper().readValue(jsonString, new TypeReference<Map<String, Object>>(){});
+    // Build SchemaRegistryBasedAvroBytesDecoder
+    SchemaRegistryBasedAvroBytesDecoder avroBytesDecoder = overlord.bindings().jsonMapper().readValue(
+        StringUtils.format("{\"type\": \"schema_registry\", \"url\": \"http://%s:%s\"}", 
+                           cluster.getEmbeddedHostname().toString(), 
+                           schemaRegistry.getContainer().getMappedPort(9081)),
+        SchemaRegistryBasedAvroBytesDecoder.class
+    );
+
+    // Build AvroParseSpec with proper object construction
+    AvroParseSpec parseSpec = new AvroParseSpec(
+        new TimestampSpec("timestamp", "auto", null),
+        createWikipediaDimensionsSpec(),
+        null  // flattenSpec - null uses DEFAULT
+    );
+
+    // Build AvroStreamInputRowParser using constructor
+    AvroStreamInputRowParser parser = new AvroStreamInputRowParser(
+        parseSpec,
+        avroBytesDecoder,
+        false,  // binaryAsString
+        null    // extractUnionsByType
+    );
+
+    // Convert to map for deprecated withParserMap method
+    Map<String, Object> parserMap = overlord.bindings().jsonMapper().convertValue(parser, Map.class);
     KafkaSupervisorSpec supervisorSpec = createDeprectatedKafkaSupervisor(dataSource, dataSource, parserMap);
 
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
@@ -296,7 +298,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     EventSerializer serializer = overlord.bindings().jsonMapper().readValue("{\"type\": \"csv\"}", EventSerializer.class);
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
 
-    CsvInputFormat inputFormat = new CsvInputFormat(List.of("timestamp", "page", "language", "user", "unpatrolled", "newPage", "robot", "anonymous", "namespace", "continent", "country", "region", "city", "added", "deleted", "delta"), null, null, false, 0, false);
+    CsvInputFormat inputFormat = new CsvInputFormat(WIKI_DIM_LIST, null, null, false, 0, false);
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
 
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
@@ -314,23 +316,21 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = overlord.bindings().jsonMapper().readValue("{\"type\": \"csv\"}", EventSerializer.class);
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
-    String jsonString = "{"
-                       + "\"type\": \"string\","
-                       + "\"parseSpec\": {"
-                       + "\"format\": \"csv\","
-                       + "\"timestampSpec\": {"
-                       + "\"column\": \"timestamp\","
-                       + "\"format\": \"auto\""
-                       + "},"
-                       + "\"columns\": [\"timestamp\",\"page\",\"language\",\"user\",\"unpatrolled\",\"newPage\",\"robot\",\"anonymous\",\"namespace\",\"continent\",\"country\",\"region\",\"city\",\"added\",\"deleted\",\"delta\"],"
-                       + "\"dimensionsSpec\": {"
-                       + "\"dimensions\": [\"page\", \"language\", \"user\", \"unpatrolled\", \"newPage\", \"robot\", \"anonymous\", \"namespace\", \"continent\", \"country\", \"region\", \"city\"],"
-                       + "\"dimensionExclusions\": [],"
-                       + "\"spatialDimensions\": []"
-                       + "}"
-                       + "}"
-                       + "}";
-    Map<String, Object> parserMap = overlord.bindings().jsonMapper().readValue(jsonString, new TypeReference<Map<String, Object>>(){});
+    // Build CSVParseSpec with proper object construction
+    CSVParseSpec parseSpec = new CSVParseSpec(
+        new TimestampSpec("timestamp", "auto", null),
+        createWikipediaDimensionsSpec(),
+        null,  // listDelimiter
+        WIKI_DIM_LIST,
+        false, // hasHeaderRow
+        0      // skipHeaderRows
+    );
+
+    // Build StringInputRowParser using constructor
+    StringInputRowParser parser = new StringInputRowParser(parseSpec, null);
+
+    // Convert to map for deprecated withParserMap method
+    Map<String, Object> parserMap = overlord.bindings().jsonMapper().convertValue(parser, Map.class);
     KafkaSupervisorSpec supervisorSpec = createDeprectatedKafkaSupervisor(dataSource, dataSource, parserMap);
 
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
@@ -348,22 +348,20 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = overlord.bindings().jsonMapper().readValue("{\"type\": \"json\"}", EventSerializer.class);
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
-    String jsonString = "{"
-                       + "\"type\": \"string\","
-                       + "\"parseSpec\": {"
-                       + "\"format\": \"json\","
-                       + "\"timestampSpec\": {"
-                       + "\"column\": \"timestamp\","
-                       + "\"format\": \"auto\""
-                       + "},"
-                       + "\"dimensionsSpec\": {"
-                       + "\"dimensions\": [\"page\", \"language\", \"user\", \"unpatrolled\", \"newPage\", \"robot\", \"anonymous\", \"namespace\", \"continent\", \"country\", \"region\", \"city\"],"
-                       + "\"dimensionExclusions\": [],"
-                       + "\"spatialDimensions\": []"
-                       + "}"
-                       + "}"
-                       + "}";
-    Map<String, Object> parserMap = overlord.bindings().jsonMapper().readValue(jsonString, new TypeReference<Map<String, Object>>(){});
+    // Build JSONParseSpec with proper object construction
+    JSONParseSpec parseSpec = new JSONParseSpec(
+        new TimestampSpec("timestamp", "auto", null),
+        createWikipediaDimensionsSpec(),
+        new JSONPathSpec(true, null),  // flattenSpec with useFieldDiscovery=true
+        null,  // featureSpec
+        false  // keepNullColumns
+    );
+
+    // Build StringInputRowParser using constructor
+    StringInputRowParser parser = new StringInputRowParser(parseSpec, null);
+
+    // Convert to map for deprecated withParserMap method
+    Map<String, Object> parserMap = overlord.bindings().jsonMapper().convertValue(parser, Map.class);
     KafkaSupervisorSpec supervisorSpec = createDeprectatedKafkaSupervisor(dataSource, dataSource, parserMap);
 
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
@@ -527,23 +525,22 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = overlord.bindings().jsonMapper().readValue("{\"type\": \"tsv\"}", EventSerializer.class);
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
-    String jsonString = "{"
-                       + "\"type\": \"string\","
-                       + "\"parseSpec\": {"
-                       + "\"format\": \"tsv\","
-                       + "\"timestampSpec\": {"
-                       + "\"column\": \"timestamp\","
-                       + "\"format\": \"auto\""
-                       + "},"
-                       + "\"columns\": [\"timestamp\",\"page\",\"language\",\"user\",\"unpatrolled\",\"newPage\",\"robot\",\"anonymous\",\"namespace\",\"continent\",\"country\",\"region\",\"city\",\"added\",\"deleted\",\"delta\"],"
-                       + "\"dimensionsSpec\": {"
-                       + "\"dimensions\": [\"page\", \"language\", \"user\", \"unpatrolled\", \"newPage\", \"robot\", \"anonymous\", \"namespace\", \"continent\", \"country\", \"region\", \"city\"],"
-                       + "\"dimensionExclusions\": [],"
-                       + "\"spatialDimensions\": []"
-                       + "}"
-                       + "}"
-                       + "}";
-    Map<String, Object> parserMap = overlord.bindings().jsonMapper().readValue(jsonString, new TypeReference<Map<String, Object>>(){});
+    // Build DelimitedParseSpec with proper object construction for TSV
+    DelimitedParseSpec parseSpec = new DelimitedParseSpec(
+        new TimestampSpec("timestamp", "auto", null),
+        createWikipediaDimensionsSpec(),
+        "\t",     // delimiter for TSV
+        null,     // listDelimiter
+        WIKI_DIM_LIST,
+        false,    // hasHeaderRow
+        0         // skipHeaderRows
+    );
+
+    // Build StringInputRowParser using constructor
+    StringInputRowParser parser = new StringInputRowParser(parseSpec, null);
+
+    // Convert to map for deprecated withParserMap method
+    Map<String, Object> parserMap = overlord.bindings().jsonMapper().convertValue(parser, Map.class);
     KafkaSupervisorSpec supervisorSpec = createDeprectatedKafkaSupervisor(dataSource, dataSource, parserMap);
 
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
@@ -562,9 +559,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     EventSerializer serializer = overlord.bindings().jsonMapper().readValue("{\"type\": \"tsv\"}", EventSerializer.class);
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
     DelimitedInputFormat inputFormat = new DelimitedInputFormat(
-        List.of("timestamp", "page", "language", "user", "unpatrolled", "newPage", "robot", "anonymous",
-                "namespace", "continent", "country", "region", "city", "added", "deleted", "delta"),
-        null, null, false, false, 0,
+        WIKI_DIM_LIST, null, null, false, false, 0,
         null
     );
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
@@ -712,6 +707,24 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     
     schema.put("fields", fields);
     return schema;
+  }
+
+  private DimensionsSpec createWikipediaDimensionsSpec()
+  {
+    return new DimensionsSpec(List.of(
+        new StringDimensionSchema("page"),
+        new StringDimensionSchema("language"),
+        new StringDimensionSchema("user"),
+        new StringDimensionSchema("unpatrolled"),
+        new StringDimensionSchema("newPage"),
+        new StringDimensionSchema("robot"),
+        new StringDimensionSchema("anonymous"),
+        new StringDimensionSchema("namespace"),
+        new StringDimensionSchema("continent"),
+        new StringDimensionSchema("country"),
+        new StringDimensionSchema("region"),
+        new StringDimensionSchema("city")
+    ));
   }
 
 }
