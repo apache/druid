@@ -19,30 +19,33 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
+import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.testing.embedded.TestcontainerResource;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.kafka.KafkaContainer;
 
 /**
  * A resource for managing a Schema Registry instance in embedded tests.
- * This class extends TestcontainerResource to provide a Schema Registry container.
- * Confluent schema registry is commonly used for managing schemas in Kafka-based applications but not
- * natively supported by testcontainers.
  */
-public class SchemaRegistryResource extends TestcontainerResource<GenericContainer<?>>
+public class KafkaSchemaRegistryResource extends TestcontainerResource<GenericContainer<?>>
 {
   private static final String SCHEMA_REGISTRY_IMAGE = "confluentinc/cp-schema-registry:latest";
 
-  KafkaContainer kafkaContainer;
+  KafkaResource kafkaResource;
+
+  KafkaSchemaRegistryResource(KafkaResource kafkaResource)
+  {
+    super();
+    this.kafkaResource = kafkaResource;
+  }
 
   @Override
   protected GenericContainer<?> createContainer()
   {
     return new GenericContainer<>(SCHEMA_REGISTRY_IMAGE)
-        .dependsOn(kafkaContainer)
+        .dependsOn(kafkaResource.getContainer())
         .withExposedPorts(9081)
         .withEnv("SCHEMA_REGISTRY_HOST_NAME", "schema-registry")
         .withEnv("SCHEMA_REGISTRY_LISTENERS", "http://0.0.0.0:9081")
-        .withEnv("SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS", kafkaContainer.getBootstrapServers());
+        .withEnv("SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS", kafkaResource.getBootstrapServerUrl());
   }
 }

@@ -40,7 +40,7 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class KafkaResource extends TestcontainerResource<KafkaContainer>
 {
-  private static final String KAFKA_IMAGE = "apache/kafka:4.0.0";
+  private static final String KAFKA_IMAGE = "apache/kafka-native:4.1.0-rc2";
 
   private EmbeddedDruidCluster cluster;
 
@@ -133,10 +133,7 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
    */
   public void produceRecordsToTopic(List<ProducerRecord<byte[], byte[]>> records)
   {
-    produceRecordsToTopicWithExtraProperties(
-        records,
-        null
-    );
+    produceRecordsToTopicWithExtraProperties(records, null);
   }
 
   public Map<String, Object> producerProperties()
