@@ -526,7 +526,7 @@ public class SqlStatementTest
   {
     SqlQueryPlus sqlReq = SqlQueryPlus
         .builder("select 1 + ?")
-        .context(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, "true"))
+        .queryContext(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, "true"))
         .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
         .build();
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
