@@ -58,9 +58,9 @@ public class IndexingServiceTaskLogsModule implements Module
         Key.get(FileTaskLogs.class)
     );
 
-    bindTaskLogImplementation(binder, SwitchingTaskLogs.PROPERTY_KEY_SWITCHING_PUSH_TYPE, SwitchingTaskLogs.NAME_LOG_PUSH_TYPE);
-    bindTaskLogImplementation(binder, SwitchingTaskLogs.PROPERTY_KEY_SWITCHING_REPORTS_TYPE, SwitchingTaskLogs.NAME_REPORTS_TYPE);
-    bindTaskLogImplementation(binder, SwitchingTaskLogs.PROPERTY_KEY_SWITCHING_STREAM_TYPE, SwitchingTaskLogs.NAME_LOG_STREAM_TYPE);
+    bindTaskLogImplementation(binder, SwitchingTaskLogs.PROPERTY_LOG_PUSH_TYPE, SwitchingTaskLogs.NAME_LOG_PUSH_TYPE);
+    bindTaskLogImplementation(binder, SwitchingTaskLogs.PROPERTY_REPORTS_TYPE, SwitchingTaskLogs.NAME_REPORTS_TYPE);
+    bindTaskLogImplementation(binder, SwitchingTaskLogs.PROPERTY_LOG_STREAM_TYPE, SwitchingTaskLogs.NAME_LOG_STREAM_TYPE);
 
 
     JsonConfigProvider.bind(binder, "druid.indexer.logs", FileTaskLogsConfig.class);
@@ -82,19 +82,19 @@ public class IndexingServiceTaskLogsModule implements Module
 
   private void bindTaskLogImplementation(
       Binder binder,
-      String propertyKeySwitchingStreamType,
-      String keySwitchingStream
+      String propertyKey,
+      String typeName
   )
   {
-    if (props != null && props.getProperty(propertyKeySwitchingStreamType) != null) {
+    if (props != null && props.getProperty(propertyKey) != null) {
       PolyBind.createChoice(
           binder,
-          propertyKeySwitchingStreamType,
-          Key.get(TaskLogs.class, Names.named(keySwitchingStream)),
+          propertyKey,
+          Key.get(TaskLogs.class, Names.named(typeName)),
           null
       );
     } else {
-      binder.bind(Key.get(TaskLogs.class, Names.named(keySwitchingStream)))
+      binder.bind(Key.get(TaskLogs.class, Names.named(typeName)))
             .to(Key.get(TaskLogs.class, Names.named(SwitchingTaskLogs.NAME_DEFAULT_TYPE)));
     }
   }

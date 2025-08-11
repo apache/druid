@@ -59,7 +59,7 @@ public class SwitchingTaskLogsTest extends EasyMockSupport
   }
 
   @Test
-  public void test_streamTaskLog_shouldUseStreamerTaskLogs() throws IOException
+  public void test_streamTaskLog_usesStreamerTaskLogs() throws IOException
   {
     String taskId = "test-task-id";
     long offset = 0L;
@@ -76,7 +76,7 @@ public class SwitchingTaskLogsTest extends EasyMockSupport
   }
 
   @Test
-  public void test_streamTaskReports_shouldUseReportTaskLogs() throws IOException
+  public void test_streamTaskReports_usesReportTaskLogs() throws IOException
   {
     String taskId = "test-task-id";
     InputStream reportStream = new ByteArrayInputStream("test report content".getBytes(StandardCharsets.UTF_8));
@@ -92,7 +92,7 @@ public class SwitchingTaskLogsTest extends EasyMockSupport
   }
 
   @Test
-  public void test_streamTaskStatus_shouldUseReportTaskLogs() throws IOException
+  public void test_streamTaskStatus_usesReportTaskLogs() throws IOException
   {
     String taskId = "test-task-id";
     InputStream statusStream = new ByteArrayInputStream("test status content".getBytes(StandardCharsets.UTF_8));
@@ -108,7 +108,7 @@ public class SwitchingTaskLogsTest extends EasyMockSupport
   }
 
   @Test
-  public void test_streamTaskPayload_shouldUseReportTaskLogs() throws IOException
+  public void test_streamTaskPayload_usesReportTaskLogs() throws IOException
   {
     String taskId = "test-task-id";
     InputStream payloadStream = new ByteArrayInputStream("test payload content".getBytes(StandardCharsets.UTF_8));
@@ -124,7 +124,7 @@ public class SwitchingTaskLogsTest extends EasyMockSupport
   }
 
   @Test
-  public void test_pushTaskLog_shouldUsePusherTaskLogs() throws IOException
+  public void test_pushTaskLog_usesPusherTaskLogs() throws IOException
   {
     String taskId = "test-task-id";
     File logFile = new File("test.log");
@@ -139,7 +139,7 @@ public class SwitchingTaskLogsTest extends EasyMockSupport
   }
 
   @Test
-  public void test_pushTaskReports_shouldUseReportTaskLogs() throws IOException
+  public void test_pushTaskReports_usesReportTaskLogs() throws IOException
   {
     String taskId = "test-task-id";
     File logFile = new File("test.log");
@@ -154,7 +154,7 @@ public class SwitchingTaskLogsTest extends EasyMockSupport
   }
 
   @Test
-  public void test_pushTaskStatus_shouldUseReportTaskLogs() throws IOException
+  public void test_pushTaskStatus_usesReportTaskLogs() throws IOException
   {
     String taskId = "test-task-id";
     File logFile = new File("test.log");
@@ -169,7 +169,7 @@ public class SwitchingTaskLogsTest extends EasyMockSupport
   }
 
   @Test
-  public void test_pushTaskPayload_shouldUseReportTaskLogs() throws IOException
+  public void test_pushTaskPayload_usesReportTaskLogs() throws IOException
   {
     String taskId = "test-task-id";
     File logFile = new File("test.log");
@@ -184,7 +184,7 @@ public class SwitchingTaskLogsTest extends EasyMockSupport
   }
 
   @Test
-  public void test_killAll_shouldUseReportTaskLogs() throws IOException
+  public void test_killAll_usesReportTaskLogs() throws IOException
   {
     reportTaskLogs.killAll();
     EasyMock.expectLastCall();
@@ -196,7 +196,7 @@ public class SwitchingTaskLogsTest extends EasyMockSupport
   }
 
   @Test
-  public void test_killOlderThan_shouldUseReportTaskLogs() throws IOException
+  public void test_killOlderThan_usesReportTaskLogs() throws IOException
   {
     long timestamp = System.currentTimeMillis();
 

@@ -39,9 +39,9 @@ public class SwitchingTaskLogs implements TaskLogs
 
   public static final String PROPERTY_PREFIX = "druid.indexer.logs.switching";
   public static final String PROPERTY_DEFAULT_TYPE = PROPERTY_PREFIX + ".defaultType";
-  public static final String PROPERTY_KEY_SWITCHING_PUSH_TYPE = PROPERTY_PREFIX + ".logPushType";
-  public static final String PROPERTY_KEY_SWITCHING_STREAM_TYPE = PROPERTY_PREFIX + ".logStreamType";
-  public static final String PROPERTY_KEY_SWITCHING_REPORTS_TYPE = PROPERTY_PREFIX + ".reportsType";
+  public static final String PROPERTY_LOG_PUSH_TYPE = PROPERTY_PREFIX + ".logPushType";
+  public static final String PROPERTY_LOG_STREAM_TYPE = PROPERTY_PREFIX + ".logStreamType";
+  public static final String PROPERTY_REPORTS_TYPE = PROPERTY_PREFIX + ".reportsType";
 
   public static final String NAME_REPORTS_TYPE = "switching.reportsType";
   public static final String NAME_LOG_STREAM_TYPE = "switching.logStreamType";
