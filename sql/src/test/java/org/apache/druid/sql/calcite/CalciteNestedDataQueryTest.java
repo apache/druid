@@ -70,7 +70,6 @@ import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.CalciteNestedDataQueryTest.NestedComponentSupplier;
-import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
@@ -886,7 +885,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.DART_SECOND_SEGMENT_NOT_SCANNED)
   @Test
   public void testGroupByRootSingleTypeLongMixed1()
   {
@@ -923,7 +921,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.DART_SECOND_SEGMENT_NOT_SCANNED)
   @Test
   public void testGroupByRootSingleTypeStringMixed1()
   {
@@ -960,7 +957,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.DART_SECOND_SEGMENT_NOT_SCANNED)
   @Test
   public void testGroupByRootSingleTypeStringMixed1Sparse()
   {
@@ -996,7 +992,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.DART_SECOND_SEGMENT_NOT_SCANNED)
   @Test
   public void testGroupByRootSingleTypeLongMixed2()
   {
@@ -1033,7 +1028,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.DART_SECOND_SEGMENT_NOT_SCANNED)
   @Test
   public void testGroupByRootSingleTypeStringMixed2()
   {
@@ -1070,7 +1064,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.DART_SECOND_SEGMENT_NOT_SCANNED)
   @Test
   public void testGroupByRootSingleTypeStringMixed2Sparse()
   {
@@ -5385,7 +5378,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.DART_SECOND_SEGMENT_NOT_SCANNED)
   @Test
   public void testGroupByRegularLongLongMixed1FilterNotNull()
   {
@@ -5424,7 +5416,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.DART_SECOND_SEGMENT_NOT_SCANNED)
   @Test
   public void testGroupByRootSingleTypeStringMixed1SparseNotNull()
   {
@@ -5474,7 +5465,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.DART_SECOND_SEGMENT_NOT_SCANNED)
   @Test
   public void testScanStringNotNullCast()
   {
@@ -5507,7 +5497,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.DART_SECOND_SEGMENT_NOT_SCANNED)
   @Test
   public void testGroupByRootSingleTypeStringMixed1SparseNotNullCast2()
   {

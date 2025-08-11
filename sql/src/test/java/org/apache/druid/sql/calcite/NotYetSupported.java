@@ -117,8 +117,7 @@ public @interface NotYetSupported
     DD_UNNEST_INLINED(Scope.DECOUPLED_DART, Exception.class, "Missing conversion is Uncollect"),
     DD_SORT_REMOVE_TROUBLE(Scope.DECOUPLED_DART, DruidException.class, "Calcite assertion violated.*Sort\\.<init>"),
     DD_JOIN_CONDITION_NORMALIZATION(Scope.DECOUPLED_DART, DruidException.class, "Cannot handle equality"),
-    DART_SECOND_SEGMENT_NOT_SCANNED(Scope.DECOUPLED_DART, AssertionError.class, "(Result count mismatch|column content mismatch)"),
-    DD_RESULT_MISMATCH_FLOAT_DOUBLE(Scope.DECOUPLED_DART, AssertionError.class, "(Result count mismatch|column content mismatch)");
+    DD_RESULT_MISMATCH_FLOAT_DOUBLE(Scope.DECOUPLED_DART, AssertionError.class, "column content mismatch");
     // @formatter:on
 
     public Scope scope;
