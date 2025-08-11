@@ -859,6 +859,9 @@ public class TestDataBuilder
         TestDataSet.NUMFOO,
         new File(tmpDir, "3")
     ).add(
+        TestDataSet.LARRY,
+        new File(tmpDir, "larry")
+    ).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE4)
                    .interval(index4.getDataInterval())

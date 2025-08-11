@@ -7401,4 +7401,61 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+
+  @Test
+  public void testSimpleArraysUnnest()
+  {
+    skipVectorize();
+    testBuilder()
+        .sql("SELECT label,l_arr,val from larry,unnest(l_arr) as u(val)")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {"[1]", "[1]", 1L},
+                new Object[] {"[2,3]", "[2,3]", 2L},
+                new Object[] {"[2,3]", "[2,3]", 3L},
+                new Object[] {"[null]", "[null]", null}
+            )
+        )
+        .run();
+  }
+
+  @Test
+  public void testMvToArrayResults()
+  {
+    skipVectorize();
+    testBuilder()
+        .sql("SELECT label,l_arr,mv_to_array(mv) from larry")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{"[1]", "[1]", "[\"1\"]"},
+                new Object[]{"[2,3]", "[2,3]", "[\"2\",\"3\"]"},
+                new Object[]{"[]", "[]", null},
+                new Object[]{"[null]", "[null]", null},
+                new Object[]{"null", null, null}
+            )
+        )
+        .run();
+  }
+
+  @NotYetSupported({Modes.UNNEST_RESULT_MISMATCH, Modes.DD_UNNEST_RESULT_MISMATCH})
+  @Test
+  public void testMvToArrayUnnest()
+  {
+    skipVectorize();
+    testBuilder()
+        .sql("SELECT label,l_arr,mv_to_array(mv),val from larry,unnest(mv_to_array(mv)) as u(val)")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{"[1]", "[1]", "[\"1\"]", "1"},
+                new Object[]{"[2,3]", "[2,3]", "[\"2\",\"3\"]", "2"},
+                new Object[]{"[2,3]", "[2,3]", "[\"2\",\"3\"]", "3"},
+                // below results will be missing in decoupled mode
+                new Object[]{"[]", "[]", null, null},
+                new Object[]{"[null]", "[null]", null, null},
+                new Object[]{"null", null, null, null}
+            )
+        )
+        .run();
+  }
 }
