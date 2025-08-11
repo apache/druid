@@ -92,7 +92,7 @@ public class GoogleStorageDruidModule implements DruidModule
     Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME).to(GoogleDataSegmentKiller.class)
            .in(LazySingleton.class);
 
-    Binders.taskLogsBinder(binder).addBinding(SCHEME).to(GoogleTaskLogs.class);
+    Binders.bindTaskLogs(binder, SCHEME, GoogleTaskLogs.class);
     JsonConfigProvider.bind(binder, "druid.indexer.logs", GoogleTaskLogsConfig.class);
     binder.bind(GoogleTaskLogs.class).in(LazySingleton.class);
     MapBinder.newMapBinder(binder, String.class, SearchableVersionedDataFinder.class)
