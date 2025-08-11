@@ -24,6 +24,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.avro.AvroExtensionsModule;
 import org.apache.druid.data.input.avro.AvroStreamInputFormat;
+import org.apache.druid.data.input.avro.InlineSchemaAvroBytesDecoder;
 import org.apache.druid.data.input.avro.SchemaRegistryBasedAvroBytesDecoder;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DelimitedInputFormat;
@@ -40,6 +41,7 @@ import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
@@ -62,6 +64,7 @@ import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -190,91 +193,28 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = overlord.bindings().jsonMapper().readValue("{\"type\": \"avro\"}", EventSerializer.class);
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
-    String avroInputFormat = "{\n"
-                             + "  \"type\": \"avro_stream\",\n"
-                             + "  \"avroBytesDecoder\": {\n"
-                             + "    \"type\": \"schema_inline\",\n"
-                             + "    \"schema\": {\n"
-                             + "      \"namespace\": \"org.apache.druid\",\n"
-                             + "      \"name\": \"wikipedia\",\n"
-                             + "      \"type\": \"record\",\n"
-                             + "      \"fields\": [\n"
-                             + "        {\n"
-                             + "          \"name\": \"timestamp\",\n"
-                             + "          \"type\": \"string\"\n"
-                             + "        },\n"
-                             + "        {\n"
-                             + "          \"name\": \"page\",\n"
-                             + "          \"type\": \"string\"\n"
-                             + "        },\n"
-                             + "        {\n"
-                             + "          \"name\": \"language\",\n"
-                             + "          \"type\": \"string\"\n"
-                             + "        },\n"
-                             + "        {\n"
-                             + "          \"name\": \"user\",\n"
-                             + "          \"type\": \"string\"\n"
-                             + "        },\n"
-                             + "        {\n"
-                             + "          \"name\": \"unpatrolled\",\n"
-                             + "          \"type\": \"string\"\n"
-                             + "        },\n"
-                             + "        {\n"
-                             + "          \"name\": \"newPage\",\n"
-                             + "          \"type\": \"string\"\n"
-                             + "        },\n"
-                             + "        {\n"
-                             + "          \"name\": \"robot\",\n"
-                             + "          \"type\": \"string\"\n"
-                             + "        },\n"
-                             + "        {\n"
-                             + "          \"name\": \"anonymous\",\n"
-                             + "          \"type\": \"string\"\n"
-                             + "        },\n"
-                             + "        {\n"
-                             + "          \"name\": \"namespace\",\n"
-                             + "          \"type\": \"string\"\n"
-                             + "        },\n"
-                             + "        {\n"
-                             + "          \"name\": \"continent\",\n"
-                             + "          \"type\": \"string\"\n"
-                             + "        },\n"
-                             + "        {\n"
-                             + "          \"name\": \"country\",\n"
-                             + "          \"type\": \"string\"\n"
-                             + "        },\n"
-                             + "        {\n"
-                             + "          \"name\": \"region\",\n"
-                             + "          \"type\": \"string\"\n"
-                             + "        },\n"
-                             + "        {\n"
-                             + "          \"name\": \"city\",\n"
-                             + "          \"type\": \"string\"\n"
-                             + "        },\n"
-                             + "        {\n"
-                             + "          \"name\": \"added\",\n"
-                             + "          \"type\": \"long\"\n"
-                             + "        },\n"
-                             + "        {\n"
-                             + "          \"name\": \"deleted\",\n"
-                             + "          \"type\": \"long\"\n"
-                             + "        },\n"
-                             + "        {\n"
-                             + "          \"name\": \"delta\",\n"
-                             + "          \"type\": \"long\"\n"
-                             + "        }\n"
-                             + "      ]\n"
-                             + "    }\n"
-                             + "  },\n"
-                             + "  \"flattenSpec\": {\n"
-                             + "    \"useFieldDiscovery\": true\n"
-                             + "  },\n"
-                             + "  \"binaryAsString\": false\n"
-                             + "}";
-    AvroStreamInputFormat inputFormat = overlord.bindings().jsonMapper().readValue(
-        avroInputFormat,
-        AvroStreamInputFormat.class
+    
+    // Create Avro schema as a Map for InlineSchemaAvroBytesDecoder
+    Map<String, Object> avroSchema = createWikipediaAvroSchemaMap();
+    
+    // Create the AvroBytesDecoder with inline schema
+    InlineSchemaAvroBytesDecoder avroBytesDecoder = overlord.bindings().jsonMapper().readValue(
+        StringUtils.format("{\"type\": \"schema_inline\", \"schema\": %s}", 
+                           overlord.bindings().jsonMapper().writeValueAsString(avroSchema)),
+        InlineSchemaAvroBytesDecoder.class
     );
+    
+    // Create JSONPathSpec for field discovery
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, null);
+    
+    // Build AvroStreamInputFormat using constructor
+    AvroStreamInputFormat inputFormat = new AvroStreamInputFormat(
+        flattenSpec,        // flattenSpec with useFieldDiscovery=true
+        avroBytesDecoder,   // avroBytesDecoder 
+        false,              // binaryAsString
+        null                // extractUnionsByType
+    );
+    
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
         o -> o.postSupervisor(supervisorSpec)
@@ -621,7 +561,12 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = overlord.bindings().jsonMapper().readValue("{\"type\": \"tsv\"}", EventSerializer.class);
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
-    DelimitedInputFormat inputFormat = new DelimitedInputFormat(List.of("timestamp", "page", "language", "user", "unpatrolled", "newPage", "robot", "anonymous", "namespace", "continent", "country", "region", "city", "added", "deleted", "delta"), null, null, false, false, 0, null);
+    DelimitedInputFormat inputFormat = new DelimitedInputFormat(
+        List.of("timestamp", "page", "language", "user", "unpatrolled", "newPage", "robot", "anonymous",
+                "namespace", "continent", "country", "region", "city", "added", "deleted", "delta"),
+        null, null, false, false, 0,
+        null
+    );
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
 
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
@@ -738,6 +683,35 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
         null, null, null, null, null, null, null, null, null, null,
         null, null, null, null, null, null, null, null, null, null
     );
+  }
+
+  private Map<String, Object> createWikipediaAvroSchemaMap()
+  {
+    Map<String, Object> schema = new HashMap<>();
+    schema.put("namespace", "org.apache.druid");
+    schema.put("name", "wikipedia");
+    schema.put("type", "record");
+    
+    List<Map<String, Object>> fields = new ArrayList<>();
+    fields.add(Map.of("name", "timestamp", "type", "string"));
+    fields.add(Map.of("name", "page", "type", "string"));
+    fields.add(Map.of("name", "language", "type", "string"));
+    fields.add(Map.of("name", "user", "type", "string"));
+    fields.add(Map.of("name", "unpatrolled", "type", "string"));
+    fields.add(Map.of("name", "newPage", "type", "string"));
+    fields.add(Map.of("name", "robot", "type", "string"));
+    fields.add(Map.of("name", "anonymous", "type", "string"));
+    fields.add(Map.of("name", "namespace", "type", "string"));
+    fields.add(Map.of("name", "continent", "type", "string"));
+    fields.add(Map.of("name", "country", "type", "string"));
+    fields.add(Map.of("name", "region", "type", "string"));
+    fields.add(Map.of("name", "city", "type", "string"));
+    fields.add(Map.of("name", "added", "type", "long"));
+    fields.add(Map.of("name", "deleted", "type", "long"));
+    fields.add(Map.of("name", "delta", "type", "long"));
+    
+    schema.put("fields", fields);
+    return schema;
   }
 
 }
