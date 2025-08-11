@@ -57,6 +57,10 @@ For tips about how to write a good release note, see [Release notes](https://git
 
 This section contains important information about new and existing features.
 
+### Java 11 support
+
+Java 11 support has been deprecated since Druid 32.0, and official support will be removed as early as Druid 35.0.0
+
 ### Hadoop-based ingestion
 
 Hadoop-based ingestion has been deprecated since Druid 32.0 and will be removed as early as Druid 35.0.0. 
