@@ -91,7 +91,7 @@ public class Larry extends MapBasedTestDataset
 
   private Map<String, Object> makeRow(String label, Object object)
   {
-    Map<String, Object> ret=new HashMap<String, Object>();
+    Map<String, Object> ret = new HashMap<String, Object>();
 
     ret.put("t", "2000-01-01");
     ret.put("label", label);
