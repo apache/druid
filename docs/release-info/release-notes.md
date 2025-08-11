@@ -24,7 +24,7 @@ title: "Release notes"
 
 <!--Replace {{DRUIDVERSION}} with the correct Druid version.-->
 
-Apache Druid 34.0.0 contains over $NUMBER_FEATURES new features, bug fixes, performance enhancements, documentation improvements, and additional test coverage from $NUMBER_OF_CONTRIBUTORS contributors.
+Apache Druid 34.0.0 contains over 270 new features, bug fixes, performance enhancements, documentation improvements, and additional test coverage from 48 contributors.
 
 <!--
 Replace {{MILESTONE}} with the correct milestone number. For example: https://github.com/apache/druid/issues?q=is%3Aclosed+milestone%3A28.0+sort%3Aupdated-desc+
