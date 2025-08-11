@@ -20,6 +20,7 @@
 package org.apache.druid.testing.tools;
 
 import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
+import org.apache.druid.java.util.common.StringUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -55,7 +56,7 @@ public class KafkaUtil
   public static CachedSchemaRegistryClient createSchemaRegistryClient(String schemaRegistryHost)
   {
     return new CachedSchemaRegistryClient(
-        String.format("http://%s", schemaRegistryHost),
+        StringUtils.format("http://%s", schemaRegistryHost),
         Integer.MAX_VALUE,
         Map.of(
             "basic.auth.credentials.source", "USER_INFO",
