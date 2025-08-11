@@ -275,10 +275,6 @@ The following Coordinator APIs are now available:
 - Added support for streaming task logs to Indexers [#18170](https://github.com/apache/druid/pull/18170)
 - Improved how MSQ task engine tasks get canceled, speeding it up and freeing up resources sooner [#18095](https://github.com/apache/druid/pull/18095)
 
-### Data management
-
-#### Other data management improvements
-
 ### Metrics and monitoring
 
 #### Metrics for Historical cloning
@@ -376,7 +372,6 @@ Additionally, MSQ task engine metrics now include the following dimensions:
 
 - The task runner log now includes the task id for a job and includes a log before a job is created [#18105](https://github.com/apache/druid/pull/18105)
 
-### Documentation improvements
 
 ## Upgrade notes and incompatible changes
 
