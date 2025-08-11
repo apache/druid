@@ -77,7 +77,6 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
@@ -942,22 +941,17 @@ public class CompactSegmentsTest
     final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
-    final List<AggregateProjectionSpec> projections = ImmutableList.of(
-        new AggregateProjectionSpec(
-            dataSource + "_projection",
-            VirtualColumns.create(
-                Granularities.toVirtualColumn(
-                    Granularities.HOUR,
-                    Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
-                )
-            ),
-            ImmutableList.of(
-                new StringDimensionSchema("bar")
-            ),
-            new AggregatorFactory[]{
-                new CountAggregatorFactory("cnt")
-            }
-        )
+    final List<AggregateProjectionSpec> projections = List.of(
+        AggregateProjectionSpec.builder(dataSource + "_projection")
+                               .virtualColumns(
+                                   Granularities.toVirtualColumn(
+                                       Granularities.HOUR,
+                                       Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                                   )
+                               )
+                               .groupingColumns(new StringDimensionSchema("bar"))
+                               .aggregators(new CountAggregatorFactory("cnt"))
+                               .build()
     );
 
     compactionConfigs.add(
@@ -999,21 +993,17 @@ public class CompactSegmentsTest
     );
 
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
-    final AggregateProjectionSpec projectionSpec = new AggregateProjectionSpec(
-        dataSource + "_projection",
-        VirtualColumns.create(
-            Granularities.toVirtualColumn(
-                Granularities.HOUR,
-                Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
-            )
-        ),
-        ImmutableList.of(
-            new StringDimensionSchema("bar")
-        ),
-        new AggregatorFactory[]{
-            new CountAggregatorFactory("cnt")
-        }
-    );
+    final AggregateProjectionSpec projectionSpec =
+        AggregateProjectionSpec.builder(dataSource + "_projection")
+                               .virtualColumns(
+                                   Granularities.toVirtualColumn(
+                                       Granularities.HOUR,
+                                       Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                                   )
+                               )
+                               .groupingColumns(new StringDimensionSchema("bar"))
+                               .aggregators(new CountAggregatorFactory("cnt"))
+                               .build();
     metadataCatalog.addSpec(
         TableId.datasource(dataSource),
         TableBuilder.datasource(dataSource, "P1D")

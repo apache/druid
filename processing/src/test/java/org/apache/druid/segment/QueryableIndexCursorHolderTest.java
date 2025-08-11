@@ -35,7 +35,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -145,7 +144,7 @@ public class QueryableIndexCursorHolderTest
   @Test
   public void testProjectionTimeBoundaryInspector()
   {
-    final DateTime startTime = DateTimes.nowUtc();
+    final DateTime startTime = Granularities.HOUR.bucketStart(DateTimes.nowUtc());
     final DimensionsSpec dims = DimensionsSpec.builder()
                                               .setDimensions(
                                                   Arrays.asList(
@@ -173,40 +172,39 @@ public class QueryableIndexCursorHolderTest
             Arrays.asList("a", "bb", 1L, 1.1, 1.1f)
         )
     );
-    IndexBuilder bob = IndexBuilder.create()
-                                   .tmpDir(tmp)
-                                   .schema(
-                                       IncrementalIndexSchema.builder()
-                                                             .withDimensionsSpec(dims)
-                                                             .withRollup(false)
-                                                             .withMinTimestamp(startTime.getMillis())
-                                                             .withProjections(
-                                                                 Collections.singletonList(
-                                                                     new AggregateProjectionSpec(
-                                                                         "ab_hourly_cd_sum_time_ordered",
-                                                                         VirtualColumns.create(
-                                                                             Granularities.toVirtualColumn(
-                                                                                 Granularities.HOUR,
-                                                                                 "__gran"
-                                                                             )
-                                                                         ),
-                                                                         Arrays.asList(
-                                                                             new LongDimensionSchema("__gran"),
-                                                                             new StringDimensionSchema("a"),
-                                                                             new StringDimensionSchema("b")
-                                                                         ),
-                                                                         new AggregatorFactory[]{
-                                                                             new LongSumAggregatorFactory(
-                                                                                 "_c_sum",
-                                                                                 "c"
-                                                                             ),
-                                                                             new DoubleSumAggregatorFactory("d", "d")
-                                                                         }
-                                                                     )
+    IncrementalIndexSchema indexSchema =
+        IncrementalIndexSchema.builder()
+                              .withDimensionsSpec(dims)
+                              .withRollup(false)
+                              .withMinTimestamp(startTime.getMillis())
+                              .withProjections(
+                                  Collections.singletonList(
+                                      AggregateProjectionSpec.builder("ab_hourly_cd_sum_time_ordered")
+                                                             .virtualColumns(
+                                                                 Granularities.toVirtualColumn(
+                                                                     Granularities.HOUR,
+                                                                     "__gran"
                                                                  )
                                                              )
+                                                             .groupingColumns(
+                                                                 new LongDimensionSchema("__gran"),
+                                                                 new StringDimensionSchema("a"),
+                                                                 new StringDimensionSchema("b")
+                                                             )
+                                                             .aggregators(
+                                                                 new LongSumAggregatorFactory(
+                                                                     "_c_sum",
+                                                                     "c"
+                                                                 ),
+                                                                 new DoubleSumAggregatorFactory("d", "d")
+                                                             )
                                                              .build()
-                                   )
+                                  )
+                              )
+                              .build();
+    IndexBuilder bob = IndexBuilder.create()
+                                   .tmpDir(tmp)
+                                   .schema(indexSchema)
                                    .rows(rows);
 
     try (QueryableIndex index = bob.buildMMappedIndex()) {

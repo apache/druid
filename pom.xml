@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>34.0.0-SNAPSHOT</version>
+    <version>35.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -185,11 +185,11 @@
 
     <modules>
         <module>processing</module>
-        <module>indexing-hadoop</module>
-        <module>indexing-service</module>
         <module>server</module>
-        <module>sql</module>
+        <module>indexing-service</module>
+        <module>indexing-hadoop</module>
         <module>services</module>
+        <module>sql</module>
         <module>integration-tests</module>
         <module>benchmarks</module>
         <module>web-console</module>
@@ -227,6 +227,7 @@
         <module>extensions-core/google-extensions</module>
         <module>extensions-core/druid-catalog</module>
         <module>extensions-core/testing-tools</module>
+        <module>extensions-core/druid-testcontainers</module>
         <!-- Community extensions -->
         <module>extensions-contrib/compressed-bigdecimal</module>
         <module>extensions-contrib/influx-extensions</module>
@@ -235,6 +236,7 @@
         <module>extensions-contrib/cloudfiles-extensions</module>
         <module>extensions-contrib/graphite-emitter</module>
         <module>extensions-contrib/distinctcount</module>
+        <module>extensions-contrib/druid-exact-count-bitmap</module>
         <module>extensions-contrib/statsd-emitter</module>
         <module>extensions-contrib/time-min-max</module>
         <module>extensions-contrib/virtual-columns</module>
@@ -1094,7 +1096,7 @@
             <dependency>
                 <groupId>org.junit</groupId>
                 <artifactId>junit-bom</artifactId>
-                <version>5.10.2</version>
+                <version>5.13.3</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -1580,7 +1582,7 @@
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>4.8.6.6</version>
+                <version>4.9.3.2</version>
                 <dependencies>
                     <!-- overwrite dependency on spotbugs if you want to specify the version of spotbugs -->
                     <dependency>
@@ -1965,7 +1967,7 @@
                     <artifactId>maven-javadoc-plugin</artifactId>
                     <configuration>
                         <!-- jdk8 started linting javadocs by default; ours are not fully compliant -->
-                        <additionalparam>-Xdoclint:none</additionalparam>
+                        <doclint>none</doclint>
 
                         <!-- HadoopFsWrapper javadocs cannot be generated due to missing annotations -->
                         <excludePackageNames>org.apache.hadoop.fs</excludePackageNames>

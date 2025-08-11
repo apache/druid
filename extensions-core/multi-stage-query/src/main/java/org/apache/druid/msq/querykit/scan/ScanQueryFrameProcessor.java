@@ -23,8 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.util.concurrent.ListenableFuture;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.FrameWithPartition;
@@ -78,6 +80,8 @@ import org.apache.druid.segment.SimpleSettableOffset;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.shim.ShimCursor;
+import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
@@ -85,6 +89,7 @@ import javax.validation.constraints.NotNull;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
@@ -104,6 +109,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   private final Closer closer = Closer.create();
 
   private Cursor cursor;
+  private ListenableFuture<DataServerQueryResult<Object[]>> dataServerQueryResultFuture;
   private Closeable cursorCloser;
   private Segment segment;
   private final SimpleSettableOffset cursorOffset = new SimpleAscendingOffset(Integer.MAX_VALUE);
@@ -196,12 +202,24 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   {
     if (cursor == null) {
       ScanQuery preparedQuery = prepareScanQueryForDataServer(query);
+
+      if (dataServerQueryResultFuture == null) {
+        dataServerQueryResultFuture =
+            dataServerQueryHandler.fetchRowsFromDataServer(
+                preparedQuery,
+                ScanQueryFrameProcessor::mappingFunction,
+                closer
+            );
+
+        // Give up the processing thread while we wait for the query to finish. This is only really asynchronous
+        // with Dart. On tasks, the IndexerDataServerQueryHandler does not return from fetchRowsFromDataServer until
+        // the response has started to come back.
+        return ReturnOrAwait.awaitAllFutures(Collections.singletonList(dataServerQueryResultFuture));
+      }
+
       final DataServerQueryResult<Object[]> dataServerQueryResult =
-          dataServerQueryHandler.fetchRowsFromDataServer(
-              preparedQuery,
-              ScanQueryFrameProcessor::mappingFunction,
-              closer
-          );
+          FutureUtils.getUncheckedImmediately(dataServerQueryResultFuture);
+      dataServerQueryResultFuture = null;
       handedOffSegments = dataServerQueryResult.getHandedOffSegments();
       if (!handedOffSegments.getDescriptors().isEmpty()) {
         log.info(
@@ -271,9 +289,14 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
 
       final Cursor nextCursor;
 
-      // If asCursor() fails, we need to close nextCursorHolder immediately.
+      // If asCursor() or asVectorCursor() fails, we need to close nextCursorHolder immediately.
       try {
-        nextCursor = nextCursorHolder.asCursor();
+        if (query.context().getVectorize().shouldVectorize(nextCursorHolder.canVectorize())) {
+          final VectorCursor vectorCursor = nextCursorHolder.asVectorCursor();
+          nextCursor = vectorCursor == null ? null : new ShimCursor(vectorCursor);
+        } else {
+          nextCursor = nextCursorHolder.asCursor();
+        }
       }
       catch (Throwable t) {
         throw CloseableUtils.closeAndWrapInCatch(t, nextCursorHolder);

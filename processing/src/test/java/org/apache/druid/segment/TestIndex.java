@@ -45,12 +45,14 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
+import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -75,6 +77,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+
+import static org.apache.druid.query.QueryRunnerTestHelper.QUALITY_CARDINALITY;
 
 /**
  *
@@ -181,16 +185,24 @@ public class TestIndex
       new DoubleMaxAggregatorFactory(DOUBLE_METRICS[2], VIRTUAL_COLUMNS.getVirtualColumns()[0].getOutputName()),
       new HyperUniquesAggregatorFactory("quality_uniques", "quality")
   };
-  public static final ImmutableList<AggregateProjectionSpec> PROJECTIONS = ImmutableList.of(
-      new AggregateProjectionSpec(
-          "index_projection",
-          VirtualColumns.create(Granularities.toVirtualColumn(Granularities.DAY, "__gran")),
-          Arrays.asList(
-              new LongDimensionSchema("__gran"),
-              new StringDimensionSchema("market")
-          ),
-          new AggregatorFactory[]{new DoubleMaxAggregatorFactory("maxQuality", "qualityLong")}
-      )
+  public static final List<AggregateProjectionSpec> PROJECTIONS = List.of(
+      AggregateProjectionSpec.builder("daily_market_maxQuality")
+                             .virtualColumns(Granularities.toVirtualColumn(Granularities.DAY, "__gran"))
+                             .groupingColumns(
+                                 new LongDimensionSchema("__gran"),
+                                 new StringDimensionSchema("market")
+                             )
+                             .aggregators(new LongMaxAggregatorFactory("maxQuality", "qualityLong"))
+                             .build(),
+      AggregateProjectionSpec.builder("daily_countAndQualityCardinalityAndMaxLongNullable")
+                             .virtualColumns(Granularities.toVirtualColumn(Granularities.DAY, "__gran"))
+                             .groupingColumns(new LongDimensionSchema("__gran"))
+                             .aggregators(
+                                 new CountAggregatorFactory("count"),
+                                 QUALITY_CARDINALITY,
+                                 new LongMaxAggregatorFactory("longNullableMax", "longNumericNull")
+                             )
+                             .build()
   );
   public static final IndexSpec INDEX_SPEC = IndexSpec.DEFAULT;
 
@@ -592,7 +604,7 @@ public class TestIndex
           int lineCount = 0;
 
           @Override
-          public boolean processLine(String line) throws IOException
+          public boolean processLine(String line)
           {
             if (!runOnce) {
               startTime.set(System.currentTimeMillis());

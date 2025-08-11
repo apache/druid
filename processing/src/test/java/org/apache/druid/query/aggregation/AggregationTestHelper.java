@@ -593,7 +593,7 @@ public class AggregationTestHelper implements Closeable
       Granularity gran,
       int maxRowCount,
       boolean rollup
-  ) throws Exception
+  )
   {
     IncrementalIndex index = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
@@ -633,7 +633,7 @@ public class AggregationTestHelper implements Closeable
       Granularity gran,
       int maxRowCount,
       boolean rollup
-  ) throws Exception
+  )
   {
     return createIncrementalIndex(
         rows,

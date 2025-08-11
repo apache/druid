@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.common.utils.IdUtilsTest;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
@@ -38,6 +39,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -45,6 +47,7 @@ import org.apache.druid.java.util.common.granularity.DurationGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -52,12 +55,10 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.hamcrest.Matchers;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -66,23 +67,21 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class DataSchemaTest extends InitializedNullHandlingTest
+class DataSchemaTest extends InitializedNullHandlingTest
 {
   private static ArbitraryGranularitySpec ARBITRARY_GRANULARITY = new ArbitraryGranularitySpec(
       Granularities.DAY,
       ImmutableList.of(Intervals.of("2014/2015"))
   );
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   @Test
-  public void testDefaultExclusions()
+  void testDefaultExclusions()
   {
     Map<String, Object> parser = jsonMapper.convertValue(
         new StringInputRowParser(
@@ -108,14 +107,14 @@ public class DataSchemaTest extends InitializedNullHandlingTest
                                   .withObjectMapper(jsonMapper)
                                   .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of("__time", "time", "col1", "col2", "metric1", "metric2"),
         schema.getDimensionsSpec().getDimensionExclusions()
     );
   }
 
   @Test
-  public void testExplicitInclude()
+  void testExplicitInclude()
   {
     Map<String, Object> parser = jsonMapper.convertValue(
         new StringInputRowParser(
@@ -145,14 +144,14 @@ public class DataSchemaTest extends InitializedNullHandlingTest
                                   .withObjectMapper(jsonMapper)
                                   .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of("__time", "dimC", "col1", "metric1", "metric2"),
         schema.getParser().getParseSpec().getDimensionsSpec().getDimensionExclusions()
     );
   }
 
   @Test
-  public void testTransformSpec()
+  void testTransformSpec()
   {
     Map<String, Object> parserMap = jsonMapper.convertValue(
         new StringInputRowParser(
@@ -198,23 +197,23 @@ public class DataSchemaTest extends InitializedNullHandlingTest
     final InputRow row1bb = parser.parseBatch(
         ByteBuffer.wrap("{\"time\":\"2000-01-01\",\"dimA\":\"foo\"}".getBytes(StandardCharsets.UTF_8))
     ).get(0);
-    Assert.assertEquals(DateTimes.of("2000-01-01"), row1bb.getTimestamp());
-    Assert.assertEquals("foo", row1bb.getRaw("dimA"));
-    Assert.assertEquals("foofoo", row1bb.getRaw("expr"));
+    Assertions.assertEquals(DateTimes.of("2000-01-01"), row1bb.getTimestamp());
+    Assertions.assertEquals("foo", row1bb.getRaw("dimA"));
+    Assertions.assertEquals("foofoo", row1bb.getRaw("expr"));
 
     final InputRow row1string = parser.parse("{\"time\":\"2000-01-01\",\"dimA\":\"foo\"}");
-    Assert.assertEquals(DateTimes.of("2000-01-01"), row1string.getTimestamp());
-    Assert.assertEquals("foo", row1string.getRaw("dimA"));
-    Assert.assertEquals("foofoo", row1string.getRaw("expr"));
+    Assertions.assertEquals(DateTimes.of("2000-01-01"), row1string.getTimestamp());
+    Assertions.assertEquals("foo", row1string.getRaw("dimA"));
+    Assertions.assertEquals("foofoo", row1string.getRaw("expr"));
 
     final InputRow row2 = parser.parseBatch(
         ByteBuffer.wrap("{\"time\":\"2000-01-01\",\"dimA\":\"x\"}".getBytes(StandardCharsets.UTF_8))
     ).get(0);
-    Assert.assertNull(row2);
+    Assertions.assertNull(row2);
   }
 
   @Test
-  public void testOverlapMetricNameAndDim()
+  void testOverlapMetricNameAndDim()
   {
     Map<String, Object> parser = jsonMapper.convertValue(
         new StringInputRowParser(
@@ -251,17 +250,19 @@ public class DataSchemaTest extends InitializedNullHandlingTest
                                   .withGranularity(ARBITRARY_GRANULARITY)
                                   .withObjectMapper(jsonMapper)
                                   .build();
-
-    expectedException.expect(DruidException.class);
-    expectedException.expectMessage(
-        "Cannot specify a column more than once: [metric1] seen in dimensions list, metricsSpec list"
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> schema.getParser()
     );
 
-    schema.getParser();
+    Assertions.assertEquals(
+        "Cannot specify a column more than once: [metric1] seen in dimensions list, metricsSpec list",
+        t.getMessage()
+    );
   }
 
   @Test
-  public void testOverlapTimeAndDimPositionZero()
+  void testOverlapTimeAndDimPositionZero()
   {
     DataSchema schema = DataSchema.builder()
                                   .withDataSource(IdUtilsTest.VALID_ID_CHARS)
@@ -282,72 +283,81 @@ public class DataSchemaTest extends InitializedNullHandlingTest
                                   .withObjectMapper(jsonMapper)
                                   .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of("__time", "dimA", "dimB"),
         schema.getDimensionsSpec().getDimensionNames()
     );
 
-    Assert.assertTrue(schema.getDimensionsSpec().isForceSegmentSortByTime());
+    Assertions.assertTrue(schema.getDimensionsSpec().isForceSegmentSortByTime());
   }
 
   @Test
-  public void testOverlapTimeAndDimPositionZeroWrongType()
+  void testOverlapTimeAndDimPositionZeroWrongType()
   {
-    expectedException.expect(DruidException.class);
-    expectedException.expectMessage("Encountered dimension[__time] with incorrect type[STRING]. Type must be 'long'.");
-
-    DataSchema.builder()
-              .withDataSource(IdUtilsTest.VALID_ID_CHARS)
-              .withTimestamp(new TimestampSpec("time", "auto", null))
-              .withDimensions(
-                  DimensionsSpec.builder()
-                                .setDimensions(
-                                    ImmutableList.of(
-                                        new StringDimensionSchema("__time"),
-                                        new StringDimensionSchema("dimA"),
-                                        new StringDimensionSchema("dimB")
-                                    )
-                                )
-                                .setDimensionExclusions(ImmutableList.of("dimC"))
-                                .build()
-              )
-              .withGranularity(ARBITRARY_GRANULARITY)
-              .withObjectMapper(jsonMapper)
-              .build();
-  }
-
-  @Test
-  public void testOverlapTimeAndDimPositionOne()
-  {
-    expectedException.expect(DruidException.class);
-    expectedException.expectMessage(
-        "Encountered dimension[__time] at position[1]. This is only supported when the dimensionsSpec "
-        + "parameter[forceSegmentSortByTime] is set to[false]. "
-        + DimensionsSpec.WARNING_NON_TIME_SORT_ORDER
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> DataSchema.builder()
+                        .withDataSource(IdUtilsTest.VALID_ID_CHARS)
+                        .withTimestamp(new TimestampSpec("time", "auto", null))
+                        .withDimensions(
+                            DimensionsSpec.builder()
+                                          .setDimensions(
+                                              ImmutableList.of(
+                                                  new StringDimensionSchema("__time"),
+                                                  new StringDimensionSchema("dimA"),
+                                                  new StringDimensionSchema("dimB")
+                                              )
+                                          )
+                                          .setDimensionExclusions(ImmutableList.of("dimC"))
+                                          .build()
+                        )
+                        .withGranularity(ARBITRARY_GRANULARITY)
+                        .withObjectMapper(jsonMapper)
+                        .build()
     );
 
-    DataSchema.builder()
-              .withDataSource(IdUtilsTest.VALID_ID_CHARS)
-              .withTimestamp(new TimestampSpec("time", "auto", null))
-              .withDimensions(
-                  DimensionsSpec.builder()
-                                .setDimensions(
-                                    ImmutableList.of(
-                                        new StringDimensionSchema("dimA"),
-                                        new LongDimensionSchema("__time"),
-                                        new StringDimensionSchema("dimB")
-                                    )
-                                )
-                                .setDimensionExclusions(ImmutableList.of("dimC"))
-                                .build()
-              )
-              .withGranularity(ARBITRARY_GRANULARITY)
-              .withObjectMapper(jsonMapper)
-              .build();
+    Assertions.assertEquals(
+        "Encountered dimension[__time] with incorrect type[STRING]. Type must be 'long'.",
+        t.getMessage()
+    );
   }
 
   @Test
-  public void testOverlapTimeAndDimPositionOne_withExplicitSortOrder()
+  void testOverlapTimeAndDimPositionOne()
+  {
+
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> DataSchema.builder()
+                        .withDataSource(IdUtilsTest.VALID_ID_CHARS)
+                        .withTimestamp(new TimestampSpec("time", "auto", null))
+                        .withDimensions(
+                            DimensionsSpec.builder()
+                                          .setDimensions(
+                                              ImmutableList.of(
+                                                  new StringDimensionSchema("dimA"),
+                                                  new LongDimensionSchema("__time"),
+                                                  new StringDimensionSchema("dimB")
+                                              )
+                                          )
+                                          .setDimensionExclusions(ImmutableList.of("dimC"))
+                                          .build()
+                        )
+                        .withGranularity(ARBITRARY_GRANULARITY)
+                        .withObjectMapper(jsonMapper)
+                        .build()
+    );
+
+    Assertions.assertEquals(
+        "Encountered dimension[__time] at position[1]. This is only supported when the dimensionsSpec "
+        + "parameter[forceSegmentSortByTime] is set to[false]. "
+        + DimensionsSpec.WARNING_NON_TIME_SORT_ORDER,
+        t.getMessage()
+    );
+  }
+
+  @Test
+  void testOverlapTimeAndDimPositionOne_withExplicitSortOrder()
   {
     DataSchema schema =
         DataSchema.builder()
@@ -370,16 +380,16 @@ public class DataSchemaTest extends InitializedNullHandlingTest
                   .withObjectMapper(jsonMapper)
                   .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of("dimA", "__time", "dimB"),
         schema.getDimensionsSpec().getDimensionNames()
     );
 
-    Assert.assertFalse(schema.getDimensionsSpec().isForceSegmentSortByTime());
+    Assertions.assertFalse(schema.getDimensionsSpec().isForceSegmentSortByTime());
   }
 
   @Test
-  public void testOverlapTimeAndDimLegacy()
+  void testOverlapTimeAndDimLegacy()
   {
     Map<String, Object> parser = jsonMapper.convertValue(
         new StringInputRowParser(
@@ -413,15 +423,19 @@ public class DataSchemaTest extends InitializedNullHandlingTest
                                   .withObjectMapper(jsonMapper)
                                   .build();
 
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> schema.getParser()
+    );
 
-    expectedException.expect(DruidException.class);
-    expectedException.expectMessage("Encountered dimension[__time] with incorrect type[STRING]. Type must be 'long'.");
-
-    schema.getParser();
+    Assertions.assertEquals(
+        "Encountered dimension[__time] with incorrect type[STRING]. Type must be 'long'.",
+        t.getMessage()
+    );
   }
 
   @Test
-  public void testDuplicateAggregators()
+  void testDuplicateAggregators()
   {
     Map<String, Object> parser = jsonMapper.convertValue(
         new StringInputRowParser(
@@ -439,29 +453,32 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    expectedException.expect(DruidException.class);
-    expectedException.expectMessage(
-        "Cannot specify a column more than once: [metric1] seen in metricsSpec list (2 occurrences); "
-        + "[metric3] seen in metricsSpec list (2 occurrences)"
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> DataSchema.builder()
+                        .withDataSource(IdUtilsTest.VALID_ID_CHARS)
+                        .withParserMap(parser)
+                        .withAggregators(
+                            new DoubleSumAggregatorFactory("metric1", "col1"),
+                            new DoubleSumAggregatorFactory("metric2", "col2"),
+                            new DoubleSumAggregatorFactory("metric1", "col3"),
+                            new DoubleSumAggregatorFactory("metric3", "col4"),
+                            new DoubleSumAggregatorFactory("metric3", "col5")
+                        )
+                        .withGranularity(ARBITRARY_GRANULARITY)
+                        .withObjectMapper(jsonMapper)
+                        .build()
     );
 
-    DataSchema schema = DataSchema.builder()
-                                  .withDataSource(IdUtilsTest.VALID_ID_CHARS)
-                                  .withParserMap(parser)
-                                  .withAggregators(
-                                      new DoubleSumAggregatorFactory("metric1", "col1"),
-                                      new DoubleSumAggregatorFactory("metric2", "col2"),
-                                      new DoubleSumAggregatorFactory("metric1", "col3"),
-                                      new DoubleSumAggregatorFactory("metric3", "col4"),
-                                      new DoubleSumAggregatorFactory("metric3", "col5")
-                                  )
-                                  .withGranularity(ARBITRARY_GRANULARITY)
-                                  .withObjectMapper(jsonMapper)
-                                  .build();
+    Assertions.assertEquals(
+        "Cannot specify a column more than once: [metric1] seen in metricsSpec list (2 occurrences); "
+        + "[metric3] seen in metricsSpec list (2 occurrences)",
+        t.getMessage()
+    );
   }
 
   @Test
-  public void testSerdeWithInvalidParserMap() throws Exception
+  void testSerdeWithInvalidParserMap() throws Exception
   {
     String jsonStr = "{"
                      + "\"dataSource\":\"" + StringEscapeUtils.escapeJson(IdUtilsTest.VALID_ID_CHARS) + "\","
@@ -481,18 +498,22 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         DataSchema.class
     );
 
-    expectedException.expect(CoreMatchers.instanceOf(IllegalArgumentException.class));
-    expectedException.expectCause(CoreMatchers.instanceOf(JsonMappingException.class));
-    expectedException.expectMessage(
-        "Cannot construct instance of `org.apache.druid.data.input.impl.StringInputRowParser`, problem: parseSpec"
+    Throwable t = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> schema.getParser()
     );
-
-    // Jackson creates a default type parser (StringInputRowParser) for an invalid type.
-    schema.getParser();
+    MatcherAssert.assertThat(
+        t.getMessage(),
+        Matchers.startsWith("Cannot construct instance of `org.apache.druid.data.input.impl.StringInputRowParser`, problem: parseSpec")
+    );
+    MatcherAssert.assertThat(
+        t.getCause(),
+        Matchers.instanceOf(JsonMappingException.class)
+    );
   }
 
   @Test
-  public void testEmptyDatasource()
+  void testEmptyDatasource()
   {
     Map<String, Object> parser = jsonMapper.convertValue(
         new StringInputRowParser(
@@ -530,7 +551,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
 
 
   @Test
-  public void testInvalidWhitespaceDatasource()
+  void testInvalidWhitespaceDatasource()
   {
     Map<String, String> invalidCharToDataSourceName = ImmutableMap.of(
         "\\t", "\tab\t",
@@ -555,8 +576,9 @@ public class DataSchemaTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testSerde() throws Exception
+  void testSerde() throws Exception
   {
+    // deserialize, then serialize, then deserialize of DataSchema.
     String jsonStr = "{"
                      + "\"dataSource\":\"" + StringEscapeUtils.escapeJson(IdUtilsTest.VALID_ID_CHARS) + "\","
                      + "\"parser\":{"
@@ -582,34 +604,66 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         DataSchema.class
     );
 
-    Assert.assertEquals(actual.getDataSource(), IdUtilsTest.VALID_ID_CHARS);
-    Assert.assertEquals(
-        actual.getParser().getParseSpec(),
+    Assertions.assertEquals(IdUtilsTest.VALID_ID_CHARS, actual.getDataSource());
+    Assertions.assertEquals(
         new JSONParseSpec(
             new TimestampSpec("xXx", null, null),
             DimensionsSpec.builder().setDimensionExclusions(Arrays.asList("__time", "metric1", "xXx", "col1")).build(),
             null,
             null,
             null
-        )
+        ),
+        actual.getParser().getParseSpec()
     );
-    Assert.assertArrayEquals(
-        actual.getAggregators(),
+    Assertions.assertArrayEquals(
         new AggregatorFactory[]{
             new DoubleSumAggregatorFactory("metric1", "col1")
-        }
+        },
+        actual.getAggregators()
     );
-    Assert.assertEquals(
-        actual.getGranularitySpec(),
+    Assertions.assertEquals(
         new ArbitraryGranularitySpec(
             new DurationGranularity(86400000, null),
             ImmutableList.of(Intervals.of("2014/2015"))
-        )
+        ),
+        actual.getGranularitySpec()
     );
+    Assertions.assertNull(actual.getProjections());
   }
 
   @Test
-  public void testSerializeWithInvalidDataSourceName() throws Exception
+  public void testSerdeWithProjections() throws Exception
+  {
+    // serialize, then deserialize of DataSchema with projections.
+    AggregateProjectionSpec projectionSpec =
+        AggregateProjectionSpec.builder("ab_count_projection")
+                               .groupingColumns(
+                                   new StringDimensionSchema("a"),
+                                   new LongDimensionSchema("b")
+                               )
+                               .aggregators(
+                                   new CountAggregatorFactory("count")
+                               )
+                               .build();
+    DataSchema original = DataSchema.builder()
+                                    .withDataSource("datasource")
+                                    .withTimestamp(new TimestampSpec(null, null, null))
+                                    .withDimensions(DimensionsSpec.EMPTY)
+                                    .withAggregators(new CountAggregatorFactory("rows"))
+                                    .withProjections(ImmutableList.of(projectionSpec))
+                                    .withGranularity(ARBITRARY_GRANULARITY)
+                                    .build();
+    DataSchema serdeResult = jsonMapper.readValue(jsonMapper.writeValueAsString(original), DataSchema.class);
+
+    Assertions.assertEquals("datasource", serdeResult.getDataSource());
+    Assertions.assertArrayEquals(new AggregatorFactory[]{new CountAggregatorFactory("rows")}, serdeResult.getAggregators());
+    Assertions.assertEquals(ImmutableList.of(projectionSpec), serdeResult.getProjections());
+    Assertions.assertEquals(ImmutableList.of("ab_count_projection"), serdeResult.getProjectionNames());
+    Assertions.assertEquals(jsonMapper.writeValueAsString(original), jsonMapper.writeValueAsString(serdeResult));
+  }
+
+  @Test
+  void testSerializeWithInvalidDataSourceName() throws Exception
   {
     // Escape backslashes to insert a tab character in the datasource name.
     Map<String, String> datasourceToErrorMsg = ImmutableMap.of(
@@ -661,12 +715,12 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         );
         continue;
       }
-      Assert.fail("Serialization of datasource " + entry.getKey() + " should have failed.");
+      Assertions.fail("Serialization of datasource " + entry.getKey() + " should have failed.");
     }
   }
 
   @Test
-  public void testSerdeWithUpdatedDataSchemaAddedField() throws IOException
+  void testSerdeWithUpdatedDataSchemaAddedField() throws IOException
   {
     Map<String, Object> parser = jsonMapper.convertValue(
         new StringInputRowParser(
@@ -695,17 +749,17 @@ public class DataSchemaTest extends InitializedNullHandlingTest
     String serialized = jsonMapper.writeValueAsString(originalSchema);
     TestModifiedDataSchema deserialized = jsonMapper.readValue(serialized, TestModifiedDataSchema.class);
 
-    Assert.assertEquals(null, deserialized.getExtra());
-    Assert.assertEquals(originalSchema.getDataSource(), deserialized.getDataSource());
-    Assert.assertEquals(originalSchema.getGranularitySpec(), deserialized.getGranularitySpec());
-    Assert.assertEquals(originalSchema.getParser().getParseSpec(), deserialized.getParser().getParseSpec());
-    Assert.assertArrayEquals(originalSchema.getAggregators(), deserialized.getAggregators());
-    Assert.assertEquals(originalSchema.getTransformSpec(), deserialized.getTransformSpec());
-    Assert.assertEquals(originalSchema.getParserMap(), deserialized.getParserMap());
+    Assertions.assertEquals(null, deserialized.getExtra());
+    Assertions.assertEquals(originalSchema.getDataSource(), deserialized.getDataSource());
+    Assertions.assertEquals(originalSchema.getGranularitySpec(), deserialized.getGranularitySpec());
+    Assertions.assertEquals(originalSchema.getParser().getParseSpec(), deserialized.getParser().getParseSpec());
+    Assertions.assertArrayEquals(originalSchema.getAggregators(), deserialized.getAggregators());
+    Assertions.assertEquals(originalSchema.getTransformSpec(), deserialized.getTransformSpec());
+    Assertions.assertEquals(originalSchema.getParserMap(), deserialized.getParserMap());
   }
 
   @Test
-  public void testSerdeWithUpdatedDataSchemaRemovedField() throws IOException
+  void testSerdeWithUpdatedDataSchemaRemovedField() throws IOException
   {
     Map<String, Object> parser = jsonMapper.convertValue(
         new StringInputRowParser(
@@ -738,16 +792,16 @@ public class DataSchemaTest extends InitializedNullHandlingTest
     String serialized = jsonMapper.writeValueAsString(originalSchema);
     DataSchema deserialized = jsonMapper.readValue(serialized, DataSchema.class);
 
-    Assert.assertEquals(originalSchema.getDataSource(), deserialized.getDataSource());
-    Assert.assertEquals(originalSchema.getGranularitySpec(), deserialized.getGranularitySpec());
-    Assert.assertEquals(originalSchema.getParser().getParseSpec(), deserialized.getParser().getParseSpec());
-    Assert.assertArrayEquals(originalSchema.getAggregators(), deserialized.getAggregators());
-    Assert.assertEquals(originalSchema.getTransformSpec(), deserialized.getTransformSpec());
-    Assert.assertEquals(originalSchema.getParserMap(), deserialized.getParserMap());
+    Assertions.assertEquals(originalSchema.getDataSource(), deserialized.getDataSource());
+    Assertions.assertEquals(originalSchema.getGranularitySpec(), deserialized.getGranularitySpec());
+    Assertions.assertEquals(originalSchema.getParser().getParseSpec(), deserialized.getParser().getParseSpec());
+    Assertions.assertArrayEquals(originalSchema.getAggregators(), deserialized.getAggregators());
+    Assertions.assertEquals(originalSchema.getTransformSpec(), deserialized.getTransformSpec());
+    Assertions.assertEquals(originalSchema.getParserMap(), deserialized.getParserMap());
   }
 
   @Test
-  public void testWithDimensionSpec()
+  void testWithDimensionSpec()
   {
     TimestampSpec tsSpec = Mockito.mock(TimestampSpec.class);
     GranularitySpec gSpec = Mockito.mock(GranularitySpec.class);
@@ -770,18 +824,18 @@ public class DataSchemaTest extends InitializedNullHandlingTest
                                      .withObjectMapper(jsonMapper)
                                      .build();
     DataSchema newSchema = oldSchema.withDimensionsSpec(newDimSpec);
-    Assert.assertSame(oldSchema.getDataSource(), newSchema.getDataSource());
-    Assert.assertSame(oldSchema.getTimestampSpec(), newSchema.getTimestampSpec());
-    Assert.assertSame(newDimSpec, newSchema.getDimensionsSpec());
-    Assert.assertSame(oldSchema.getAggregators(), newSchema.getAggregators());
-    Assert.assertSame(oldSchema.getGranularitySpec(), newSchema.getGranularitySpec());
-    Assert.assertSame(oldSchema.getTransformSpec(), newSchema.getTransformSpec());
-    Assert.assertSame(oldSchema.getParserMap(), newSchema.getParserMap());
+    Assertions.assertSame(oldSchema.getDataSource(), newSchema.getDataSource());
+    Assertions.assertSame(oldSchema.getTimestampSpec(), newSchema.getTimestampSpec());
+    Assertions.assertSame(newDimSpec, newSchema.getDimensionsSpec());
+    Assertions.assertSame(oldSchema.getAggregators(), newSchema.getAggregators());
+    Assertions.assertSame(oldSchema.getGranularitySpec(), newSchema.getGranularitySpec());
+    Assertions.assertSame(oldSchema.getTransformSpec(), newSchema.getTransformSpec());
+    Assertions.assertSame(oldSchema.getParserMap(), newSchema.getParserMap());
 
   }
 
   @Test
-  public void testCombinedDataSchemaSetsMultiValuedColumnsInfo()
+  void testCombinedDataSchemaSetsMultiValuedColumnsInfo()
   {
     Set<String> multiValuedDimensions = ImmutableSet.of("dimA");
 
@@ -800,6 +854,94 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         null,
         multiValuedDimensions
     );
-    Assert.assertEquals(ImmutableSet.of("dimA"), schema.getMultiValuedDimensions());
+    Assertions.assertEquals(ImmutableSet.of("dimA"), schema.getMultiValuedDimensions());
+  }
+
+  @Test
+  void testInvalidProjectionDupeNames()
+  {
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> DataSchema.builder()
+                        .withDataSource("dataSource")
+                        .withGranularity(
+                            new UniformGranularitySpec(
+                                Granularities.HOUR,
+                                Granularities.NONE,
+                                false,
+                                List.of(Intervals.of("2014/2015"))
+                            )
+                        )
+                        .withProjections(
+                            List.of(
+                                AggregateProjectionSpec.builder("some projection")
+                                                       .virtualColumns(
+                                                           Granularities.toVirtualColumn(Granularities.HOUR, "g")
+                                                       )
+                                                       .groupingColumns(new LongDimensionSchema("g"))
+                                                       .aggregators(new CountAggregatorFactory("count"))
+                                                       .build(),
+                                AggregateProjectionSpec.builder("some projection")
+                                                       .virtualColumns(
+                                                           Granularities.toVirtualColumn(Granularities.MINUTE, "g")
+                                                       )
+                                                       .groupingColumns(new LongDimensionSchema("g"))
+                                                       .aggregators(new CountAggregatorFactory("count"))
+                                                       .build()
+                            )
+                        )
+                        .build()
+    );
+
+    Assertions.assertEquals(
+        "projection[some projection] is already defined, projection names must be unique",
+        t.getMessage()
+    );
+  }
+
+  @Test
+  void testInvalidProjectionGranularity()
+  {
+    AggregateProjectionSpec.Builder bob = AggregateProjectionSpec.builder()
+                                                                 .groupingColumns(new LongDimensionSchema("g"))
+                                                                 .aggregators(new CountAggregatorFactory("count"));
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> DataSchema.builder()
+                        .withDataSource("dataSource")
+                        .withGranularity(
+                            new UniformGranularitySpec(
+                                Granularities.HOUR,
+                                Granularities.NONE,
+                                false,
+                                List.of(Intervals.of("2014/2015"))
+                            )
+                        )
+                        .withProjections(
+                            List.of(
+                                bob.name("ok granularity")
+                                   .virtualColumns(Granularities.toVirtualColumn(Granularities.HOUR, "g"))
+                                   .build(),
+                                bob.name("acceptable granularity")
+                                   .virtualColumns(Granularities.toVirtualColumn(Granularities.MINUTE, "g"))
+                                   .build(),
+                                AggregateProjectionSpec.builder()
+                                                       .name("not having a time column is ok too")
+                                                       .aggregators(new CountAggregatorFactory("count"))
+                                                       .build(),
+                                bob.name("bad granularity")
+                                   .virtualColumns(Granularities.toVirtualColumn(Granularities.DAY, "g"))
+                                   .build()
+                            )
+                        )
+                        .build()
+    );
+
+    Assertions.assertEquals(
+        "projection[bad granularity] has granularity[{type=period, period=P1D, timeZone=UTC, origin=null}]"
+        + " which must be finer than or equal to segment granularity[{type=period, period=PT1H, timeZone=UTC,"
+        + " origin=null}]",
+        t.getMessage()
+    );
   }
 }

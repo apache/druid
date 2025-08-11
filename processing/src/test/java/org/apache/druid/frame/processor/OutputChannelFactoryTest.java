@@ -20,6 +20,7 @@
 package org.apache.druid.frame.processor;
 
 import com.google.common.collect.Iterables;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.channel.FrameWithPartition;
@@ -72,6 +73,27 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
     WritableFrameChannel writableFrameChannel = channel.getWritableChannel();
     writableFrameChannel.writabilityFuture().get();
     writableFrameChannel.write(new FrameWithPartition(frame, 1));
+    writableFrameChannel.close();
+
+    // read back data from the channel
+    verifySingleFrameReadableChannel(
+        channel.getReadableChannel(),
+        sourceCursorFactory
+    );
+    Assert.assertEquals(frameSize, channel.getFrameMemoryAllocator().capacity());
+  }
+
+  @Test
+  public void test_openChannel_noPartition() throws IOException, ExecutionException, InterruptedException
+  {
+    OutputChannel channel = outputChannelFactory.openChannel(1);
+
+    Assert.assertEquals(1, channel.getPartitionNumber());
+
+    // write data to the channel
+    WritableFrameChannel writableFrameChannel = channel.getWritableChannel();
+    writableFrameChannel.writabilityFuture().get();
+    writableFrameChannel.write(frame);
     writableFrameChannel.close();
 
     // read back data from the channel
@@ -156,6 +178,6 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
 
     Assert.assertEquals(1, channel.getPartitionNumber());
     Assert.assertTrue(channel.getReadableChannel().isFinished());
-    Assert.assertThrows(IllegalStateException.class, channel::getWritableChannel);
+    Assert.assertThrows(DruidException.class, channel::getWritableChannel);
   }
 }

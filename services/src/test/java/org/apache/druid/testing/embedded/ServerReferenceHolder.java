@@ -19,7 +19,10 @@
 
 package org.apache.druid.testing.embedded;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
+import com.google.inject.Key;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
@@ -27,6 +30,8 @@ import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
+import org.apache.druid.guice.annotations.Global;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -35,6 +40,7 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.LatchableEmitter;
 
+import java.lang.annotation.Annotation;
 import java.util.Objects;
 
 /**
@@ -75,11 +81,22 @@ public final class ServerReferenceHolder implements ServerReferencesProvider
 
   @Inject
   @EscalatedGlobal
-  private HttpClient httpClient;
+  private HttpClient escalatedHttpClient;
+
+  @Inject
+  @Global
+  private HttpClient globalHttpClient;
 
   @Self
   @Inject
   private DruidNode selfNode;
+
+  @Inject
+  @Json
+  private ObjectMapper jsonMapper;
+
+  @Inject
+  private Injector injector;
 
   @Override
   public DruidNode selfNode()
@@ -144,6 +161,30 @@ public final class ServerReferenceHolder implements ServerReferencesProvider
   @Override
   public HttpClient escalatedHttpClient()
   {
-    return httpClient;
+    return escalatedHttpClient;
+  }
+
+  @Override
+  public HttpClient globalHttpClient()
+  {
+    return globalHttpClient;
+  }
+
+  @Override
+  public ObjectMapper jsonMapper()
+  {
+    return jsonMapper;
+  }
+
+  @Override
+  public <T> T getInstance(Class<T> clazz)
+  {
+    return injector.getInstance(clazz);
+  }
+
+  @Override
+  public <T, A extends Annotation> T getInstance(Class<T> type, Class<A> annotationType)
+  {
+    return injector.getInstance(Key.get(type, annotationType));
   }
 }

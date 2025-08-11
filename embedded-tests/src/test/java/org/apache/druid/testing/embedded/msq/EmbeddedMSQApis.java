@@ -19,7 +19,6 @@
 
 package org.apache.druid.testing.embedded.msq;
 
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.report.TaskReport;
@@ -62,8 +61,8 @@ public class EmbeddedMSQApis
    */
   public String runDartSql(String sql, Object... args)
   {
-    return FutureUtils.getUnchecked(
-        cluster.anyBroker().submitSqlQuery(
+    return cluster.callApi().onAnyBroker(
+        b -> b.submitSqlQuery(
             new ClientSqlQuery(
                 StringUtils.format(sql, args),
                 ResultFormat.CSV.name(),
@@ -73,22 +72,21 @@ public class EmbeddedMSQApis
                 Map.of(QueryContexts.ENGINE, DartSqlEngine.NAME),
                 null
             )
-        ),
-        true
+        )
     ).trim();
   }
 
   /**
    * Submits the given SQL query to any of the brokers (using {@code BrokerClient})
-   * of the cluster. Waits for it to complete, then returns the query report.
+   * of the cluster, checks that the task has started and returns the {@link SqlTaskStatus}.
    *
    * @return The result of the SQL as a single CSV string.
    */
-  public MSQTaskReportPayload runTaskSql(String sql, Object... args)
+  public SqlTaskStatus submitTaskSql(String sql, Object... args)
   {
     final SqlTaskStatus taskStatus =
-        FutureUtils.getUnchecked(
-            cluster.anyBroker().submitSqlTask(
+        cluster.callApi().onAnyBroker(
+            b -> b.submitSqlTask(
                 new ClientSqlQuery(
                     StringUtils.format(sql, args),
                     ResultFormat.CSV.name(),
@@ -98,8 +96,7 @@ public class EmbeddedMSQApis
                     null,
                     null
                 )
-            ),
-            true
+            )
         );
 
     if (taskStatus.getState() != TaskState.RUNNING) {
@@ -110,11 +107,23 @@ public class EmbeddedMSQApis
       );
     }
 
+    return taskStatus;
+  }
+
+  /**
+   * Submits the given SQL query to any of the brokers (using {@code BrokerClient})
+   * of the cluster. Waits for it to complete, then returns the query report.
+   *
+   * @return The result of the SQL as a single CSV string.
+   */
+  public MSQTaskReportPayload runTaskSqlAndGetReport(String sql, Object... args)
+  {
+    SqlTaskStatus taskStatus = submitTaskSql(sql, args);
+
     cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord);
 
-    final TaskReport.ReportMap taskReport = FutureUtils.getUnchecked(
-        cluster.leaderOverlord().taskReportAsMap(taskStatus.getTaskId()),
-        true
+    final TaskReport.ReportMap taskReport = cluster.callApi().onLeaderOverlord(
+        o -> o.taskReportAsMap(taskStatus.getTaskId())
     );
 
     final Optional<MSQTaskReport> report = taskReport.findReport(MSQTaskReport.REPORT_KEY);

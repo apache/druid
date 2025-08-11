@@ -27,24 +27,28 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
-public class AggregateProjectionSpecTest extends InitializedNullHandlingTest
+class AggregateProjectionSpecTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
 
   @Test
-  public void testSerde() throws JsonProcessingException
+  void testSerde() throws JsonProcessingException
   {
     AggregateProjectionSpec spec = new AggregateProjectionSpec(
         "some_projection",
+        new EqualityFilter("a", ColumnType.STRING, "a", null),
         VirtualColumns.create(
             Granularities.toVirtualColumn(Granularities.HOUR, "time")
         ),
@@ -60,37 +64,84 @@ public class AggregateProjectionSpecTest extends InitializedNullHandlingTest
             new LongSumAggregatorFactory("e", "e")
         }
     );
-    Assert.assertEquals(spec, JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(spec), AggregateProjectionSpec.class));
+    Assertions.assertEquals(spec, JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(spec), AggregateProjectionSpec.class));
   }
 
   @Test
-  public void testInvalidGrouping()
+  void testComputeOrdering_noOrdering()
   {
-    Throwable t = Assert.assertThrows(
+    AggregateProjectionSpec spec = new AggregateProjectionSpec(
+        "some_projection",
+        null,
+        VirtualColumns.EMPTY,
+        List.of(),
+        new AggregatorFactory[] {
+            new CountAggregatorFactory("count"),
+            new LongSumAggregatorFactory("e", "e")
+        }
+    );
+    Assertions.assertTrue(spec.getOrdering().isEmpty());
+  }
+
+  @Test
+  void testMissingName()
+  {
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> new AggregateProjectionSpec(
+            null,
+            null,
+            VirtualColumns.EMPTY,
+            List.of(new StringDimensionSchema("string")),
+            null
+        )
+    );
+
+    Assertions.assertEquals("projection name cannot be null or empty", t.getMessage());
+
+    t = Assertions.assertThrows(
+        DruidException.class,
+        () -> new AggregateProjectionSpec(
+            "",
+            null,
+            VirtualColumns.EMPTY,
+            List.of(new StringDimensionSchema("string")),
+            null
+        )
+    );
+    Assertions.assertEquals("projection name cannot be null or empty", t.getMessage());
+  }
+
+  @Test
+  void testInvalidGrouping()
+  {
+    Throwable t = Assertions.assertThrows(
         DruidException.class,
         () -> new AggregateProjectionSpec(
             "other_projection",
+            null,
             null,
             null,
             null
         )
     );
-    Assert.assertEquals("groupingColumns and aggregators must not both be null or empty", t.getMessage());
+    Assertions.assertEquals("projection[other_projection] groupingColumns and aggregators must not both be null or empty", t.getMessage());
 
-    t = Assert.assertThrows(
+    t = Assertions.assertThrows(
         DruidException.class,
         () -> new AggregateProjectionSpec(
             "other_projection",
+            null,
             null,
             Collections.emptyList(),
             null
         )
     );
-    Assert.assertEquals("groupingColumns and aggregators must not both be null or empty", t.getMessage());
+    Assertions.assertEquals("projection[other_projection] groupingColumns and aggregators must not both be null or empty", t.getMessage());
   }
 
   @Test
-  public void testEqualsAndHashcode()
+  void testEqualsAndHashcode()
   {
     EqualsVerifier.forClass(AggregateProjectionSpec.class)
                   .usingGetClass()

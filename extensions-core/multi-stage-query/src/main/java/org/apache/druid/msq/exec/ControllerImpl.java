@@ -213,6 +213,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -281,8 +282,8 @@ public class ControllerImpl implements Controller
 
   private WorkerSketchFetcher workerSketchFetcher;
 
-  // WorkerNumber -> WorkOrders which need to be retried and our determined by the controller.
-  // Map is always populated in the main controller thread by addToRetryQueue, and pruned in retryFailedTasks.
+  // WorkerNumber -> WorkOrders which need to be retried and are determined by the controller.
+  // Map is always populated in the main controller thread by addToRetryQueue and pruned in retryFailedTasks.
   private final Map<Integer, Set<WorkOrder>> workOrdersToRetry = new HashMap<>();
 
   // Time at which the query started.
@@ -299,6 +300,8 @@ public class ControllerImpl implements Controller
   private volatile SegmentLoadStatusFetcher segmentLoadWaiter;
   @Nullable
   private MSQSegmentReport segmentReport;
+
+  private final AtomicLong mainThreadId = new AtomicLong();
 
   public ControllerImpl(
       final LegacyMSQSpec querySpec,
@@ -343,8 +346,21 @@ public class ControllerImpl implements Controller
     try (final Closer closer = Closer.create()) {
       reportPayload = runInternal(queryListener, closer);
     }
+    catch (Throwable e) {
+      log.error(e, "Controller internal execution encountered exception.");
+      queryListener.onQueryComplete(makeStatusReportForException(e));
+      throw e;
+    }
     // Call onQueryComplete after Closer is fully closed, ensuring no controller-related processing is ongoing.
     queryListener.onQueryComplete(reportPayload);
+  }
+
+
+  private MSQTaskReportPayload makeStatusReportForException(Throwable e)
+  {
+    MSQErrorReport errorReport = MSQErrorReport.fromFault(queryId(), null, null, UnknownFault.forException(e));
+    MSQStatusReport statusReport = new MSQStatusReport(TaskState.FAILED, errorReport, null, null, 0, new HashMap<>(), 0, 0, null, null);
+    return new MSQTaskReportPayload(statusReport, null, null, null);
   }
 
   @Override
@@ -377,6 +393,8 @@ public class ControllerImpl implements Controller
 
     final TaskState taskStateForReport;
     final MSQErrorReport errorForReport;
+
+    mainThreadId.set(Thread.currentThread().getId());
 
     try {
       // Planning-related: convert the native query from MSQSpec into a multi-stage QueryDefinition.
@@ -414,7 +432,7 @@ public class ControllerImpl implements Controller
       exceptionEncountered = e;
     }
 
-    // Fetch final counters in separate try, in case runQueryUntilDone threw an exception.
+    // Fetch final counters in a separate try, in case runQueryUntilDone threw an exception.
     try {
       countersSnapshot = getFinalCountersSnapshot(queryKernel);
     }
@@ -731,16 +749,7 @@ public class ControllerImpl implements Controller
     workerManager = context.newWorkerManager(
         context.queryId(),
         querySpec,
-        queryKernelConfig,
-        (failedTask, fault) -> {
-          if (queryKernelConfig.isFaultTolerant() && ControllerQueryKernel.isRetriableFault(fault)) {
-            addToKernelManipulationQueue(kernel -> {
-              addToRetryQueue(kernel, failedTask.getWorkerNumber(), fault);
-            });
-          } else {
-            throw new MSQException(fault);
-          }
-        }
+        queryKernelConfig
     );
 
     if (queryKernelConfig.isFaultTolerant() && !(workerManager instanceof RetryCapableWorkerManager)) {
@@ -773,6 +782,22 @@ public class ControllerImpl implements Controller
     return queryDef;
   }
 
+  private WorkerFailureListener getWorkerFailureListener(ControllerQueryKernel controllerQueryKernel)
+  {
+    return (failedTask, fault) -> {
+      throwIfNonRetriableFault(fault);
+      if (Thread.currentThread().getId() == mainThreadId.get()) {
+        // this is called from the main controller thread, so we can directly access the kernel.
+        addToRetryQueue(controllerQueryKernel, failedTask.getWorkerNumber(), fault);
+      } else {
+        // since this is called from the task launcher thread, we need to add it to the kernel manipulation queue so that only the controller thread can manipulate the kernel.
+        addToKernelManipulationQueue(kernel -> {
+          addToRetryQueue(kernel, failedTask.getWorkerNumber(), fault);
+        });
+      }
+    };
+  }
+
   /**
    * Adds the work orders for worker to {@link ControllerImpl#workOrdersToRetry} if the {@link ControllerQueryKernel} determines that there
    * are work orders which needs reprocessing.
@@ -787,7 +812,7 @@ public class ControllerImpl implements Controller
 
     List<WorkOrder> retriableWorkOrders = kernel.getWorkInCaseWorkerEligibleForRetryElseThrow(worker, fault);
     if (!retriableWorkOrders.isEmpty()) {
-      log.info("Submitting worker[%s] for relaunch because of fault[%s]", worker, fault);
+      log.debug("Submitting worker[%s] for relaunch because of fault[%s]", worker, fault);
       retryCapableWorkerManager.submitForRelaunch(worker);
       workOrdersToRetry.compute(
           worker,
@@ -1366,7 +1391,7 @@ public class ControllerImpl implements Controller
       final boolean retryOnFailure
   )
   {
-    // Sorted copy of target worker numbers to ensure consistent iteration order.
+    // Sorted copy of target worker numbers to ensure a consistent iteration order.
     final List<Integer> workersCopy = Ordering.natural().sortedCopy(workers);
     final List<String> workerIds = getWorkerIds();
     final List<ListenableFuture<Void>> workerFutures = new ArrayList<>(workersCopy.size());
@@ -2209,7 +2234,7 @@ public class ControllerImpl implements Controller
     private final ControllerQueryKernel queryKernel;
 
     /**
-     * Return value of {@link WorkerManager#start()}. Set by {@link #startTaskLauncher()}.
+     * Return value of {@link WorkerManager#start(WorkerFailureListener)} )}. Set by {@link #startTaskLauncher()}.
      */
     private ListenableFuture<?> workerTaskLauncherFuture;
 
@@ -2420,13 +2445,13 @@ public class ControllerImpl implements Controller
       // Start tasks.
       log.debug("Query [%s] starting task launcher.", queryDef.getQueryId());
 
-      workerTaskLauncherFuture = workerManager.start();
+      workerTaskLauncherFuture = workerManager.start(getWorkerFailureListener(queryKernel));
       closer.register(() -> workerManager.stop(true));
 
       workerTaskLauncherFuture.addListener(
           () ->
               addToKernelManipulationQueue(queryKernel -> {
-                // Throw an exception in the main loop, if anything went wrong.
+                // Throw an exception in the main loop if anything went wrong.
                 FutureUtils.getUncheckedImmediately(workerTaskLauncherFuture);
               }),
           Execs.directExecutor()
@@ -2516,7 +2541,7 @@ public class ControllerImpl implements Controller
         );
 
         for (final StageId stageId : newStageIds) {
-          // Allocate segments, if this is the final stage of an ingestion.
+          // Allocate segments if this is the final stage of ingestion.
           if (MSQControllerTask.isIngestion(querySpec)
               && stageId.getStageNumber() == queryDef.getFinalStageDefinition().getStageNumber()
               && (((DataSourceMSQDestination) querySpec.getDestination()).getTerminalStageSpec() instanceof SegmentGenerationStageSpec)) {
@@ -2835,6 +2860,13 @@ public class ControllerImpl implements Controller
     }
   }
 
+  private void throwIfNonRetriableFault(MSQFault fault)
+  {
+    if (!queryKernelConfig.isFaultTolerant() || !ControllerQueryKernel.isRetriableFault(fault)) {
+      throw new MSQException(fault);
+    }
+  }
+
   static ClusterStatisticsMergeMode finalizeClusterStatisticsMergeMode(
       StageDefinition stageDef,
       ClusterStatisticsMergeMode initialMode
@@ -2928,5 +2960,11 @@ public class ControllerImpl implements Controller
   public ControllerContext getControllerContext()
   {
     return context;
+  }
+
+  @Override
+  public QueryContext getQueryContext()
+  {
+    return querySpec.getContext();
   }
 }

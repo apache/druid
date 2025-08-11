@@ -372,10 +372,11 @@ The below runtime properties need to be passed to the Job's peon process.
 druid.port=8100 (what port the peon should run on)
 druid.peon.mode=remote
 druid.service=druid/peon (for metrics reporting)
-druid.indexer.task.baseTaskDir=/druid/data (this should match the argument to the ./peon.sh run command in the PodTemplate)
 druid.indexer.runner.type=k8s
 druid.indexer.task.encapsulatedTask=true
 ```
+
+**Note**: Prior to Druid 35.0.0, you will need the `druid.indexer.task.baseTaskDir` runtime property, along with the `TASK_DIR` and `attemptId` arguments to `/peon.sh` to run your jobs. There is no need for that now as Druid will automatically configure the task directory. You can still choose to customize the target task directory by adjusting `druid.indexer.task.baseTaskDir` on the Overlord service.
 
 #### Example 1: Using a Pod Template that retrieves values from a ConfigMap 
 
@@ -398,7 +399,7 @@ template:
         - sh
         - -c
         - |
-          /peon.sh /druid/data 1
+          /peon.sh
       env:
       - name: CUSTOM_ENV_VARIABLE
         value: "hello"
@@ -492,7 +493,6 @@ data:
         druid.port=8100
         druid.service=druid/peon
         druid.server.http.numThreads=5
-        druid.indexer.task.baseTaskDir=/druid/data
         druid.indexer.runner.type=k8s
         druid.peon.mode=remote
         druid.indexer.task.encapsulatedTask=true
@@ -544,7 +544,7 @@ data:
             - sh
             - -c
             - |
-              /peon.sh /druid/data 1
+              /peon.sh
           env:
             - name: druid_port
               value: 8100
@@ -556,8 +556,6 @@ data:
               value: remote
             - name: druid_service
               value: "druid/peon"
-            - name: druid_indexer_task_baseTaskDir
-              value: /druid/data
             - name: druid_indexer_runner_type
               value: k8s
             - name: druid_indexer_task_encapsulatedTask
@@ -818,7 +816,7 @@ rules:
     resources: ["jobs"]
     verbs: ["get", "watch", "list", "delete", "create"]
   - apiGroups: [""]
-    resources: ["pods", "pods/log"]
+    resources: ["events", "pods", "pods/log"]
     verbs: ["get", "watch", "list", "delete", "create"]
 ---
 kind: RoleBinding

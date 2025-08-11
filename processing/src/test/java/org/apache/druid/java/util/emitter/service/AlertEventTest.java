@@ -19,9 +19,9 @@
 
 package org.apache.druid.java.util.emitter.service;
 
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.emitter.service.AlertEvent.Severity;
 import org.junit.Assert;
 import org.junit.Test;
@@ -167,15 +167,21 @@ public class AlertEventTest
     }
   }
 
+  @Test
+  public void test_deserializeSeverityFromString()
+  {
+    Assert.assertEquals(AlertEvent.Severity.ANOMALY, AlertEvent.Severity.fromString("anomaly"));
+    Assert.assertEquals(AlertEvent.Severity.DEPRECATED, AlertEvent.Severity.fromString("deprecated"));
+    Assert.assertEquals(AlertEvent.Severity.COMPONENT_FAILURE, AlertEvent.Severity.fromString("component-failure"));
+    Assert.assertEquals(AlertEvent.Severity.SERVICE_FAILURE, AlertEvent.Severity.fromString("service-failure"));
+    Assert.assertThrows(
+        DruidException.class,
+        () -> AlertEvent.Severity.fromString("unknown")
+    );
+  }
+
   public Map<String, Object> contents(AlertEvent a)
   {
-    return Maps.filterKeys(a.toMap(), new Predicate<>()
-    {
-      @Override
-      public boolean apply(String k)
-      {
-        return !"timestamp".equals(k);
-      }
-    });
+    return Maps.filterKeys(a.toMap(), k -> !"timestamp".equals(k));
   }
 }

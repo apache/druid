@@ -171,7 +171,7 @@ public class InputSourceSampler
 
             //keep the index of the row to be added to responseRows for further use
             final int rowIndex = responseRows.size();
-            IncrementalIndexAddResult addResult = index.add(new SamplerInputRow(row, rowIndex), true);
+            IncrementalIndexAddResult addResult = index.add(new SamplerInputRow(row, rowIndex));
             if (addResult.hasParseException()) {
               responseRows.add(new SamplerResponseRow(
                   rawColumns,

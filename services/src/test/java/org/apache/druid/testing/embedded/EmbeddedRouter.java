@@ -42,7 +42,7 @@ public class EmbeddedRouter extends EmbeddedDruidServer<EmbeddedRouter>
   }
 
   @Override
-  ServerRunnable createRunnable(LifecycleInitHandler handler)
+  protected ServerRunnable createRunnable(LifecycleInitHandler handler)
   {
     return new Router(handler);
   }

@@ -28,8 +28,7 @@ your source system and stores it in data files called [_segments_](../design/seg
 In general, segment files contain a few million rows each.
 
 For most ingestion methods, the Druid [Middle Manager](../design/middlemanager.md) processes or the
-[Indexer](../design/indexer.md) processes load your source data. The sole exception is Hadoop-based ingestion, which
-uses a Hadoop MapReduce job on YARN.
+[Indexer](../design/indexer.md) processes load your source data. 
 
 During ingestion, Druid creates segments and stores them in [deep storage](../design/deep-storage.md). Historical nodes load the segments into memory to respond to queries. For streaming ingestion, the Middle Managers and indexers can respond to queries in real-time with arriving data. For more information, see [Storage overview](../design/storage.md).
 
@@ -66,7 +65,7 @@ supervisor.
 There are three available options for batch ingestion. Batch ingestion jobs are associated with a controller task that
 runs for the duration of the job.
 
-| **Method** | [Native batch](./native-batch.md) | [SQL](../multi-stage-query/index.md) | [Hadoop-based](hadoop.md) |
+| **Method** | [Native batch](./native-batch.md) | [SQL](../multi-stage-query/index.md) | [Hadoop-based (deprecated)](hadoop.md) |
 |---|-----|--------------|------------|
 | **Controller task type** | `index_parallel` | `query_controller` | `index_hadoop` |
 | **How you submit it** | Send an `index_parallel` spec to the [Tasks API](../api-reference/tasks-api.md). | Send an [INSERT](../multi-stage-query/concepts.md#load-data-with-insert) or [REPLACE](../multi-stage-query/concepts.md#overwrite-data-with-replace) statement to the [SQL task API](../api-reference/sql-ingestion-api.md#submit-a-query). | Send an `index_hadoop` spec to the [Tasks API](../api-reference/tasks-api.md). |

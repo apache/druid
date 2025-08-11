@@ -74,7 +74,6 @@ public class Main
         PullDependencies.class,
         CreateTables.class,
         DumpSegment.class,
-        ResetCluster.class,
         ValidateSegments.class,
         ExportMetadata.class
     );

@@ -222,7 +222,7 @@ public class WorkerTaskCountStatsMonitorTest
         new WorkerTaskCountStatsMonitor(injectorForMiddleManager, ImmutableSet.of(NodeRole.MIDDLE_MANAGER));
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
-    Assert.assertEquals(5, emitter.getEvents().size());
+    Assert.assertEquals(5, emitter.getNumEmittedEvents());
     emitter.verifyValue(
         "worker/task/failed/count",
         ImmutableMap.of("category", "workerCategory", "workerVersion", "workerVersion"),
@@ -257,7 +257,7 @@ public class WorkerTaskCountStatsMonitorTest
         new WorkerTaskCountStatsMonitor(injectorForIndexer, ImmutableSet.of(NodeRole.INDEXER));
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
-    Assert.assertEquals(10, emitter.getEvents().size());
+    Assert.assertEquals(10, emitter.getNumEmittedEvents());
     emitter.verifyValue(
         "worker/task/running/count",
         ImmutableMap.of("dataSource", "wikipedia"),
@@ -317,7 +317,7 @@ public class WorkerTaskCountStatsMonitorTest
         new WorkerTaskCountStatsMonitor(injectorForMiddleManagerNullStats, ImmutableSet.of(NodeRole.MIDDLE_MANAGER));
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
-    Assert.assertEquals(0, emitter.getEvents().size());
+    Assert.assertEquals(0, emitter.getNumEmittedEvents());
   }
 
   @Test
@@ -327,6 +327,6 @@ public class WorkerTaskCountStatsMonitorTest
             new WorkerTaskCountStatsMonitor(injectorForPeon, ImmutableSet.of(NodeRole.PEON));
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
-    Assert.assertEquals(0, emitter.getEvents().size());
+    Assert.assertEquals(0, emitter.getNumEmittedEvents());
   }
 }

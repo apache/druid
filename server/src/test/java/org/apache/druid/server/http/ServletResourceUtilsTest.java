@@ -23,11 +23,18 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.rpc.HttpResponseException;
 import org.hamcrest.MatcherAssert;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.Assert;
 import org.junit.Test;
 
 import javax.ws.rs.core.Response;
+import java.nio.charset.StandardCharsets;
 
 public class ServletResourceUtilsTest
 {
@@ -60,6 +67,39 @@ public class ServletResourceUtilsTest
     MatcherAssert.assertThat(
         ((ErrorResponse) entity).getUnderlyingException(),
         DruidExceptionMatcher.invalidInput().expectMessageIs("Invalid value of [inputKey]")
+    );
+  }
+
+  @Test
+  public void test_getDefaultValueIfCauseIs404ElseThrow()
+  {
+    final StringFullResponseHolder notFoundResponseHolder = new StringFullResponseHolder(
+        new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND),
+        StandardCharsets.UTF_8
+    );
+    Assert.assertEquals(
+        "abc",
+        ServletResourceUtils.getDefaultValueIfCauseIs404ElseThrow(
+            new ISE(new HttpResponseException(notFoundResponseHolder), ""),
+            () -> "abc"
+        )
+    );
+
+    final StringFullResponseHolder badRequestResponseHolder = new StringFullResponseHolder(
+        new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST),
+        StandardCharsets.UTF_8
+    );
+    Assert.assertThrows(
+        RuntimeException.class,
+        () -> ServletResourceUtils.getDefaultValueIfCauseIs404ElseThrow(
+            new ISE(new HttpResponseException(badRequestResponseHolder), ""),
+            () -> "abc"
+        )
+    );
+
+    Assert.assertThrows(
+        RuntimeException.class,
+        () -> ServletResourceUtils.getDefaultValueIfCauseIs404ElseThrow(new ISE(""), () -> "abc")
     );
   }
 }

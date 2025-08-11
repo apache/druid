@@ -127,5 +127,10 @@ public interface CoordinatorSimulation
      * Publishes the given segments to the cluster.
      */
     void addSegments(List<DataSegment> segments);
+
+    /**
+     * Deletes the given segments from the cluster.
+     */
+    void deleteSegments(List<DataSegment> segments);
   }
 }

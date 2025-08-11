@@ -93,6 +93,7 @@ public class ResultsContextSerdeTest
         sql,
         DruidSqlParser.parse(sql, false).getMainStatement(),
         engine,
+        Collections.emptySet(),
         Collections.emptyMap(),
         null
     );

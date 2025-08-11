@@ -21,16 +21,11 @@ package org.apache.druid.msq.shuffle.output;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableNilFrameChannel;
-import org.apache.druid.frame.file.FrameFileWriter;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
-import java.nio.channels.Channels;
 
 /**
  * Reader for the case where stage output is known to be empty.
@@ -39,18 +34,11 @@ public class NilStageOutputReader implements StageOutputReader
 {
   public static final NilStageOutputReader INSTANCE = new NilStageOutputReader();
 
-  private static final byte[] EMPTY_FRAME_FILE;
-
-  static {
-    try {
-      final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      FrameFileWriter.open(Channels.newChannel(baos), null, ByteTracker.unboundedTracker()).close();
-      EMPTY_FRAME_FILE = baos.toByteArray();
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
+  /**
+   * Frame file with no frames.
+   */
+  private static final byte[] EMPTY_FRAME_FILE =
+      new byte[]{-1, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 17, 0, 0, 0, -116, 82, 73, -120};
 
   @Override
   public ListenableFuture<InputStream> readRemotelyFrom(final long offset)

@@ -104,6 +104,7 @@ describe('general', () => {
       expect(formatNumber(0)).toEqual('0');
       expect(formatNumber(5)).toEqual('5');
       expect(formatNumber(5.1)).toEqual('5.1');
+      expect(formatNumber(1 / 3)).toEqual('0.333');
     });
   });
 

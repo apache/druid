@@ -61,14 +61,14 @@ public class CgroupV2DiskMonitorTest
     final CgroupV2DiskMonitor monitor = new CgroupV2DiskMonitor(discoverer);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     Assert.assertTrue(monitor.doMonitor(emitter));
-    Assert.assertEquals(0, emitter.getEvents().size());
+    Assert.assertEquals(0, emitter.getNumEmittedEvents());
 
     emitter.flush();
 
     TestUtils.copyOrReplaceResource("/cgroupv2/io.stat-2", statFile);
 
     Assert.assertTrue(monitor.doMonitor(emitter));
-    Assert.assertEquals(4, emitter.getEvents().size());
+    Assert.assertEquals(4, emitter.getNumEmittedEvents());
     Assert.assertTrue(
         emitter
             .getEvents()

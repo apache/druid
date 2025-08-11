@@ -139,7 +139,6 @@ public class QueryFrameworkUtils
         NoopServiceEmitter.instance(),
         NoopRequestLogger.instance(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new DefaultQueryConfig(ImmutableMap.of()),
         new SqlLifecycleManager()
     );
   }
@@ -369,6 +368,7 @@ public class QueryFrameworkUtils
               engine,
               queryPlus.sql(),
               queryPlus.sqlNode(),
+              queryPlus.authContextKeys(),
               queryContext,
               hook
           );
@@ -388,6 +388,7 @@ public class QueryFrameworkUtils
               engine,
               queryPlus.sql(),
               queryPlus.sqlNode(),
+              queryPlus.authContextKeys(),
               queryContext,
               hook
           );

@@ -20,7 +20,6 @@
 package org.apache.druid.server.metrics;
 
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -34,10 +33,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
@@ -55,47 +53,54 @@ public class LatchableEmitter extends StubServiceEmitter
 
   public static final String TYPE = "latching";
 
-  /**
-   * Single-threaded executor to evaluate conditions.
-   */
-  private final ScheduledExecutorService conditionEvaluateExecutor;
   private final Set<WaitCondition> waitConditions = new HashSet<>();
-  private final ReentrantReadWriteLock eventReadWriteLock = new ReentrantReadWriteLock(true);
+
+  private final ReentrantLock eventProcessingLock = new ReentrantLock();
+
+  /**
+   * Lists of events that have already been processed by {@link #evaluateWaitConditions(Event)}.
+   */
+  private final List<Event> processedEvents = new ArrayList<>();
 
   /**
    * Creates a {@link StubServiceEmitter} that may be used in embedded tests.
    */
-  public LatchableEmitter(String service, String host, ScheduledExecutorFactory executorFactory)
+  public LatchableEmitter(String service, String host)
   {
     super(service, host);
-    this.conditionEvaluateExecutor = executorFactory.create(1, "LatchingEmitter-eval-%d");
   }
 
   @Override
   public void emit(Event event)
   {
     super.emit(event);
-    triggerConditionEvaluations();
+    evaluateWaitConditions(event);
   }
 
   @Override
   public void flush()
   {
-    // flush() or close() is typically not called in tests until the test is complete
-    // but acquire a lock all the same for the sake of completeness
-    eventReadWriteLock.writeLock().lock();
+    eventProcessingLock.lock();
     try {
       super.flush();
+      processedEvents.clear();
     }
     finally {
-      eventReadWriteLock.writeLock().unlock();
+      eventProcessingLock.unlock();
     }
   }
 
   @Override
   public void close()
   {
-    flush();
+    eventProcessingLock.lock();
+    try {
+      super.close();
+      processedEvents.clear();
+    }
+    finally {
+      eventProcessingLock.unlock();
+    }
   }
 
   /**
@@ -107,9 +112,8 @@ public class LatchableEmitter extends StubServiceEmitter
   public void waitForEvent(Predicate<Event> condition, long timeoutMillis)
   {
     final WaitCondition waitCondition = new WaitCondition(condition);
-    waitConditions.add(waitCondition);
+    registerWaitCondition(waitCondition);
 
-    triggerConditionEvaluations();
     try {
       final long awaitTime = timeoutMillis >= 0 ? timeoutMillis : Long.MAX_VALUE;
       if (!waitCondition.countDownLatch.await(awaitTime, TimeUnit.MILLISECONDS)) {
@@ -158,22 +162,12 @@ public class LatchableEmitter extends StubServiceEmitter
     );
   }
 
-  private void triggerConditionEvaluations()
-  {
-    if (conditionEvaluateExecutor == null) {
-      throw new ISE("Cannot evaluate conditions as the 'conditionEvaluateExecutor' is null.");
-    } else {
-      conditionEvaluateExecutor.submit(this::evaluateWaitConditions);
-    }
-  }
-
   /**
-   * Evaluates wait conditions. This method must be invoked on the
-   * {@link #conditionEvaluateExecutor} so that it does not block {@link #emit(Event)}.
+   * Evaluates wait conditions for the given event.
    */
-  private void evaluateWaitConditions()
+  private void evaluateWaitConditions(Event event)
   {
-    eventReadWriteLock.readLock().lock();
+    eventProcessingLock.lock();
     try {
       // Create a copy of the conditions for thread-safety
       final List<WaitCondition> conditionsToEvaluate = List.copyOf(waitConditions);
@@ -182,23 +176,45 @@ public class LatchableEmitter extends StubServiceEmitter
       }
 
       for (WaitCondition condition : conditionsToEvaluate) {
-        final int currentNumberOfEvents = getEvents().size();
-
-        // Do not use an iterator over the list to avoid concurrent modification exceptions
-        // Evaluate new events against this condition
-        for (int i = condition.processedUntil; i < currentNumberOfEvents; ++i) {
-          if (condition.predicate.test(getEvents().get(i))) {
-            condition.countDownLatch.countDown();
-          }
+        if (condition.predicate.test(event)) {
+          condition.countDownLatch.countDown();
         }
-        condition.processedUntil = currentNumberOfEvents;
       }
     }
     catch (Exception e) {
-      log.error(e, "Error while evaluating wait conditions");
+      log.error(e, "Error while evaluating wait conditions for event[%s]", event.toMap());
+      throw new ISE(e, "Error while evaluating wait conditions for event[%s]", event.toMap());
     }
     finally {
-      eventReadWriteLock.readLock().unlock();
+      processedEvents.add(event);
+      eventProcessingLock.unlock();
+    }
+  }
+
+  /**
+   * Evaluates the given new condition for all past events and then adds it to
+   * {@link #waitConditions}.
+   */
+  private void registerWaitCondition(WaitCondition condition)
+  {
+    eventProcessingLock.lock();
+    try {
+      for (Event event : processedEvents) {
+        if (condition.predicate.test(event)) {
+          condition.countDownLatch.countDown();
+          break;
+        }
+      }
+
+      if (condition.countDownLatch.getCount() > 0) {
+        waitConditions.add(condition);
+      }
+    }
+    catch (Exception e) {
+      throw new ISE(e, "Error while evaluating condition");
+    }
+    finally {
+      eventProcessingLock.unlock();
     }
   }
 
@@ -206,8 +222,6 @@ public class LatchableEmitter extends StubServiceEmitter
   {
     private final Predicate<Event> predicate;
     private final CountDownLatch countDownLatch;
-
-    private int processedUntil;
 
     private WaitCondition(Predicate<Event> predicate)
     {
@@ -221,6 +235,8 @@ public class LatchableEmitter extends StubServiceEmitter
    */
   public static class EventMatcher implements Predicate<ServiceMetricEvent>
   {
+    private String host;
+    private String service;
     private String metricName;
     private Long metricValue;
     private final Map<String, Object> dimensions = new HashMap<>();
@@ -237,9 +253,10 @@ public class LatchableEmitter extends StubServiceEmitter
     }
 
     /**
-     * Matches an event only if it has the given metric value.
+     * Matches an event only if it has a metric value equal to or greater than
+     * the given value.
      */
-    public EventMatcher hasValue(long metricValue)
+    public EventMatcher hasValueAtLeast(long metricValue)
     {
       this.metricValue = metricValue;
       return this;
@@ -254,12 +271,34 @@ public class LatchableEmitter extends StubServiceEmitter
       return this;
     }
 
+    /**
+     * Matches an event only if it has the given service name.
+     */
+    public EventMatcher hasService(String service)
+    {
+      this.service = service;
+      return this;
+    }
+
+    /**
+     * Matches an event only if it has the given host.
+     */
+    public EventMatcher hasHost(String host)
+    {
+      this.host = host;
+      return this;
+    }
+
     @Override
     public boolean test(ServiceMetricEvent event)
     {
       if (metricName != null && !event.getMetric().equals(metricName)) {
         return false;
-      } else if (metricValue != null && event.getValue().longValue() != metricValue) {
+      } else if (metricValue != null && event.getValue().longValue() < metricValue) {
+        return false;
+      } else if (service != null && !service.equals(event.getService())) {
+        return false;
+      } else if (host != null && !host.equals(event.getHost())) {
         return false;
       }
 
