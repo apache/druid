@@ -21,9 +21,18 @@ package org.apache.druid.indexer.report;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import javax.annotation.Nullable;
+import java.io.File;
+
 public interface TaskReportFileWriter
 {
   void write(String taskId, TaskReport.ReportMap reports);
 
   void setObjectMapper(ObjectMapper objectMapper);
+
+  /**
+   * Returns the reports file for the given taskId. Returns null if writer does not write reports to any file.
+   */
+  @Nullable
+  File getReportsFile(String taskId);
 }
