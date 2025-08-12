@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.indexing;
 
-import org.apache.druid.cli.CliIndexer;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.ISE;
@@ -31,7 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Production implementation of {@link ProcessingBuffersProvider} for tasks in {@link CliIndexer}.
+ * Production implementation of {@link ProcessingBuffersProvider} for tasks in {@code CliIndexer}.
  */
 public class IndexerProcessingBuffersProvider implements ProcessingBuffersProvider
 {
