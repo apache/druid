@@ -326,7 +326,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "log4j.shutdownHookEnabled": "true",
     "java.vm.vendor": "Homebrew",
     "sun.arch.data.model": "64",
-    "druid.extensions.loadList": "[\"druid-hdfs-storage\", \"druid-kafka-indexing-service\", \"druid-datasketches\", \"druid-multi-stage-query\"]",
+    "druid.extensions.loadList": "[\"druid-hdfs-storage\", \"druid-kafka-indexing-service\", \"druid-datasketches\"]",
     "java.vendor.url": "https://github.com/Homebrew/homebrew-core/issues",
     "druid.router.coordinatorServiceName": "druid/coordinator",
     "user.timezone": "UTC",

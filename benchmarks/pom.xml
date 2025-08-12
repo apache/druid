@@ -223,14 +223,14 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.druid.extensions</groupId>
-      <artifactId>druid-multi-stage-query</artifactId>
+      <groupId>org.apache.druid</groupId>
+      <artifactId>druid-services</artifactId>
       <version>${project.parent.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.druid.extensions</groupId>
-      <artifactId>druid-multi-stage-query</artifactId>
+      <groupId>org.apache.druid</groupId>
+      <artifactId>druid-services</artifactId>
       <version>${project.parent.version}</version>
       <classifier>tests</classifier>
       <scope>test</scope>

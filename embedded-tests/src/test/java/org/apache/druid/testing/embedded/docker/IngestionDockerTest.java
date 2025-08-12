@@ -64,7 +64,7 @@ public class IngestionDockerTest extends IngestionSmokeTest implements LatestIma
         .addCommonProperty(
             "druid.extensions.loadList",
             "[\"druid-s3-extensions\", \"druid-kafka-indexing-service\","
-            + "\"druid-multi-stage-query\", \"postgresql-metadata-storage\"]"
+            + "\"postgresql-metadata-storage\"]"
         );
   }
 
