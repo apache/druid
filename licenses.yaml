@@ -3887,7 +3887,7 @@ libraries:
 name: Reactive Streams
 license_category: binary
 module: java-core
-license_name: MIT No Attribution
+license_name: MIT-0
 version: 1.0.4
 license_file_path: licenses/bin/reactive-streams.MIT0
 libraries:
