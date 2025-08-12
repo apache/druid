@@ -19,7 +19,6 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.druid.data.input.AvroStreamInputRowParser;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.avro.AvroExtensionsModule;
@@ -34,7 +33,6 @@ import org.apache.druid.data.input.impl.DelimitedParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
-import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.protobuf.FileBasedProtobufBytesDecoder;
@@ -73,7 +71,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -144,7 +141,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_avroDataFormat_withParser() throws IOException
+  public void test_indexKafka_avroDataFormat_withParser() throws Exception
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new AvroEventSerializer();
@@ -152,10 +149,9 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     
     Map<String, Object> avroSchema = createWikipediaAvroSchemaMap();
     
-    InlineSchemaAvroBytesDecoder avroBytesDecoder = overlord.bindings().jsonMapper().readValue(
-        StringUtils.format("{\"type\": \"schema_inline\", \"schema\": %s}", 
-                           overlord.bindings().jsonMapper().writeValueAsString(avroSchema)),
-        InlineSchemaAvroBytesDecoder.class
+    InlineSchemaAvroBytesDecoder avroBytesDecoder = new InlineSchemaAvroBytesDecoder(
+        overlord.bindings().jsonMapper(),
+        avroSchema
     );
 
     AvroParseSpec parseSpec = new AvroParseSpec(
@@ -184,7 +180,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_avroDataFormat() throws IOException
+  public void test_indexKafka_avroDataFormat() throws Exception
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new AvroEventSerializer();
@@ -192,10 +188,9 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     
     Map<String, Object> avroSchema = createWikipediaAvroSchemaMap();
     
-    InlineSchemaAvroBytesDecoder avroBytesDecoder = overlord.bindings().jsonMapper().readValue(
-        StringUtils.format("{\"type\": \"schema_inline\", \"schema\": %s}", 
-                           overlord.bindings().jsonMapper().writeValueAsString(avroSchema)),
-        InlineSchemaAvroBytesDecoder.class
+    InlineSchemaAvroBytesDecoder avroBytesDecoder = new InlineSchemaAvroBytesDecoder(
+        overlord.bindings().jsonMapper(),
+        avroSchema
     );
     
     JSONPathSpec flattenSpec = new JSONPathSpec(true, null);
@@ -218,17 +213,19 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_avroDataFormatWithSchemaRegistry_withParser() throws JsonProcessingException
+  public void test_indexKafka_avroDataFormatWithSchemaRegistry_withParser()
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new AvroSchemaRegistryEventSerializer(StringUtils.format("%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081)));
     serializer.initialize(dataSource);
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, true);
-    SchemaRegistryBasedAvroBytesDecoder avroBytesDecoder = overlord.bindings().jsonMapper().readValue(
-        StringUtils.format("{\"type\": \"schema_registry\", \"url\": \"http://%s:%s\"}", 
-                           cluster.getEmbeddedHostname().toString(), 
-                           schemaRegistry.getContainer().getMappedPort(9081)),
-        SchemaRegistryBasedAvroBytesDecoder.class
+    SchemaRegistryBasedAvroBytesDecoder avroBytesDecoder = new SchemaRegistryBasedAvroBytesDecoder(
+        StringUtils.format("http://%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081)),
+        null,
+        null,
+        null,
+        null,
+        overlord.bindings().jsonMapper()
     );
 
     AvroParseSpec parseSpec = new AvroParseSpec(
@@ -258,17 +255,19 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_avroDataFormatWithSchemaRegistry() throws JsonProcessingException
+  public void test_indexKafka_avroDataFormatWithSchemaRegistry()
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new AvroSchemaRegistryEventSerializer(StringUtils.format("%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081)));
     serializer.initialize(dataSource);
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, true);
-    SchemaRegistryBasedAvroBytesDecoder avroBytesDecoder = overlord.bindings().jsonMapper().readValue(
-        StringUtils.format("{\"type\": \"schema_registry\", \"urls\": [\"http://%s:%s\"]}",
-                           cluster.getEmbeddedHostname().toString(),
-                           schemaRegistry.getContainer().getMappedPort(9081)),
-        SchemaRegistryBasedAvroBytesDecoder.class
+    SchemaRegistryBasedAvroBytesDecoder avroBytesDecoder = new SchemaRegistryBasedAvroBytesDecoder(
+        null,
+        null,
+        List.of(StringUtils.format("http://%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081))),
+        null,
+        null,
+        overlord.bindings().jsonMapper()
     );
     AvroStreamInputFormat inputFormat = new AvroStreamInputFormat(null, avroBytesDecoder, null, null);
 
@@ -303,7 +302,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_csvDataFormat_withParser() throws JsonProcessingException
+  public void test_indexKafka_csvDataFormat_withParser()
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new CsvEventSerializer();
@@ -333,7 +332,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_jsonDataFormat_withParser() throws JsonProcessingException
+  public void test_indexKafka_jsonDataFormat_withParser()
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new JsonEventSerializer(overlord.bindings().jsonMapper());
@@ -362,7 +361,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void test_indexKafka_jsonDataFormat() throws JsonProcessingException
+  public void test_indexKafka_jsonDataFormat()
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
 
@@ -416,7 +415,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void test_indexKafka_protobufDataFormat() throws JsonProcessingException
+  public void test_indexKafka_protobufDataFormat()
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new ProtobufEventSerializer();
@@ -703,20 +702,9 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   private DimensionsSpec createWikipediaDimensionsSpec()
   {
-    return new DimensionsSpec(List.of(
-        new StringDimensionSchema("page"),
-        new StringDimensionSchema("language"),
-        new StringDimensionSchema("user"),
-        new StringDimensionSchema("unpatrolled"),
-        new StringDimensionSchema("newPage"),
-        new StringDimensionSchema("robot"),
-        new StringDimensionSchema("anonymous"),
-        new StringDimensionSchema("namespace"),
-        new StringDimensionSchema("continent"),
-        new StringDimensionSchema("country"),
-        new StringDimensionSchema("region"),
-        new StringDimensionSchema("city")
-    ));
+    return DimensionsSpec.builder().setDefaultSchemaDimensions(
+        WIKI_DIM_LIST
+    ).build();
   }
 
 }
