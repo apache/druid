@@ -31,13 +31,14 @@ import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.rest.exceptions.RestClientException;
 import io.confluent.kafka.schemaregistry.protobuf.ProtobufSchema;
 import io.confluent.kafka.schemaregistry.protobuf.ProtobufSchemaProvider;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.utils.DynamicConfigProviderUtils;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -47,6 +48,7 @@ import java.util.Objects;
 
 public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDecoder
 {
+  public static final String DRUID_DYNAMIC_CONFIG_PROVIDER_KEY = "druid.dynamic.config.provider";
 
   private static final Logger LOGGER = new Logger(SchemaRegistryBasedProtobufBytesDecoder.class);
 
@@ -57,7 +59,6 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
   private final Map<String, Object> config;
   private final Map<String, Object> headers;
   private final ObjectMapper jsonMapper;
-  public static final String DRUID_DYNAMIC_CONFIG_PROVIDER_KEY = "druid.dynamic.config.provider";
 
   @JsonCreator
   public SchemaRegistryBasedProtobufBytesDecoder(
@@ -75,11 +76,31 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
     this.config = config;
     this.headers = headers;
     this.jsonMapper = jsonMapper;
-    if (url != null && !url.isEmpty()) {
-      this.registry = new CachedSchemaRegistryClient(Collections.singletonList(this.url), this.capacity, Collections.singletonList(new ProtobufSchemaProvider()), DynamicConfigProviderUtils.extraConfigAndSetObjectMap(config, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, this.jsonMapper), DynamicConfigProviderUtils.extraConfigAndSetStringMap(headers, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, this.jsonMapper));
-    } else {
-      this.registry = new CachedSchemaRegistryClient(this.urls, this.capacity, Collections.singletonList(new ProtobufSchemaProvider()), DynamicConfigProviderUtils.extraConfigAndSetObjectMap(config, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, this.jsonMapper), DynamicConfigProviderUtils.extraConfigAndSetStringMap(headers, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, this.jsonMapper));
+
+    if (StringUtils.isNotEmpty(this.url)) {
+      LOGGER.warn("\"url\" is deprecated, use \"urls\" instead");
     }
+
+    final var baseUrls = StringUtils.isNotEmpty(this.url) ? Collections.singletonList(this.url) : this.urls;
+    if (baseUrls == null) {
+      throw new IAE("SchemaRegistryBasedProtobufBytesDecoder requires non-null URLs");
+    }
+
+    this.registry = new CachedSchemaRegistryClient(
+        baseUrls,
+        this.capacity,
+        Collections.singletonList(new ProtobufSchemaProvider()),
+        DynamicConfigProviderUtils.extraConfigAndSetObjectMap(
+            config,
+            DRUID_DYNAMIC_CONFIG_PROVIDER_KEY,
+            this.jsonMapper
+        ),
+        DynamicConfigProviderUtils.extraConfigAndSetStringMap(
+            headers,
+            DRUID_DYNAMIC_CONFIG_PROVIDER_KEY,
+            this.jsonMapper
+        )
+    );
   }
 
   @JsonProperty
@@ -144,7 +165,11 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
     }
     catch (RestClientException e) {
       LOGGER.error(e.getMessage());
-      throw new ParseException(null, e, "Fail to get protobuf schema because of can not connect to registry or failed http request!");
+      throw new ParseException(
+          null,
+          e,
+          "Fail to get protobuf schema because of can not connect to registry or failed http request!"
+      );
     }
     catch (IOException e) {
       LOGGER.error(e.getMessage());
@@ -153,8 +178,7 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
     try {
       byte[] rawMessage = new byte[length];
       bytes.get(rawMessage, 0, length);
-      DynamicMessage message = DynamicMessage.parseFrom(descriptor, rawMessage);
-      return message;
+      return DynamicMessage.parseFrom(descriptor, rawMessage);
     }
     catch (Exception e) {
       LOGGER.error(e.getMessage());
@@ -175,10 +199,10 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
     SchemaRegistryBasedProtobufBytesDecoder that = (SchemaRegistryBasedProtobufBytesDecoder) o;
 
     return Objects.equals(url, that.url) &&
-        Objects.equals(capacity, that.capacity) &&
-        Objects.equals(urls, that.urls) &&
-        Objects.equals(config, that.config) &&
-        Objects.equals(headers, that.headers);
+           Objects.equals(capacity, that.capacity) &&
+           Objects.equals(urls, that.urls) &&
+           Objects.equals(config, that.config) &&
+           Objects.equals(headers, that.headers);
   }
 
   @Override
