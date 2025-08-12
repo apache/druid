@@ -48,11 +48,9 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.transform.TransformingInputEntityReader;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -61,8 +59,6 @@ import java.util.HashSet;
 
 public class ProtobufInputFormatTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   private TimestampSpec timestampSpec;
   private DimensionsSpec dimensionsSpec;
@@ -72,7 +68,7 @@ public class ProtobufInputFormatTest
 
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     ExpressionProcessing.initializeForTests();
@@ -121,7 +117,7 @@ public class ProtobufInputFormatTest
         NestedInputFormat.class
     );
 
-    Assert.assertEquals(inputFormat, inputFormat2);
+    Assertions.assertEquals(inputFormat, inputFormat2);
   }
 
   @Test
@@ -135,7 +131,7 @@ public class ProtobufInputFormatTest
         jsonMapper.writeValueAsString(inputFormat),
         NestedInputFormat.class
     );
-    Assert.assertEquals(inputFormat, inputFormat2);
+    Assertions.assertEquals(inputFormat, inputFormat2);
   }
 
   @Test
@@ -156,7 +152,7 @@ public class ProtobufInputFormatTest
         null
     ).read().next();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.builder()
                      .add("event")
                      .add("id")
@@ -198,7 +194,7 @@ public class ProtobufInputFormatTest
         null
     ).read().next();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.builder()
                      .add("event")
                      .add("id")
@@ -230,7 +226,7 @@ public class ProtobufInputFormatTest
         null
     ).read().next();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.builder()
                      .add("eventType")
                      .add("foobar")
@@ -300,7 +296,7 @@ public class ProtobufInputFormatTest
 
     InputRow row = transformingReader.read().next();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.builder()
                      .add("event")
                      .add("id")
@@ -314,12 +310,12 @@ public class ProtobufInputFormatTest
         row.getDimensions()
     );
 
-    Assert.assertEquals(ImmutableMap.of("bar", "baz"), row.getRaw("foo"));
-    Assert.assertEquals(
+    Assertions.assertEquals(ImmutableMap.of("bar", "baz"), row.getRaw("foo"));
+    Assertions.assertEquals(
         ImmutableList.of(ImmutableMap.of("bar", "bar0"), ImmutableMap.of("bar", "bar1")),
         row.getRaw("bar")
     );
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         new byte[]{0x01, 0x02, 0x03, 0x04},
         (byte[]) row.getRaw("someBytesColumn")
     );
@@ -367,7 +363,7 @@ public class ProtobufInputFormatTest
 
     InputRow row = transformingReader.read().next();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of(
             "someOtherId",
             "someIntColumn",
@@ -384,12 +380,12 @@ public class ProtobufInputFormatTest
         new HashSet<>(row.getDimensions())
     );
 
-    Assert.assertEquals(ImmutableMap.of("bar", "baz"), row.getRaw("foo"));
-    Assert.assertEquals(
+    Assertions.assertEquals(ImmutableMap.of("bar", "baz"), row.getRaw("foo"));
+    Assertions.assertEquals(
         ImmutableList.of(ImmutableMap.of("bar", "bar0"), ImmutableMap.of("bar", "bar1")),
         row.getRaw("bar")
     );
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         new byte[]{0x01, 0x02, 0x03, 0x04},
         (byte[]) row.getRaw("someBytesColumn")
     );

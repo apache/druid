@@ -22,14 +22,12 @@ package org.apache.druid.data.input.protobuf;
 import com.google.protobuf.Descriptors;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class FileBasedProtobufBytesDecoderTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testShortMessageType()
@@ -49,22 +47,20 @@ public class FileBasedProtobufBytesDecoderTest
     decoder.initDescriptor();
   }
 
-  @Test(expected = ParseException.class)
+  @Test
   public void testBadProto()
   {
     //configure parser with desc file
-    @SuppressWarnings("unused") // expected exception
     FileBasedProtobufBytesDecoder decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "BadName");
-    decoder.initDescriptor();
+    assertThrows(ParseException.class, decoder::initDescriptor);
   }
 
-  @Test(expected = ParseException.class)
+  @Test
   public void testMalformedDescriptorUrl()
   {
     //configure parser with non existent desc file
-    @SuppressWarnings("unused") // expected exception
     FileBasedProtobufBytesDecoder decoder = new FileBasedProtobufBytesDecoder("file:/nonexist.desc", "BadName");
-    decoder.initDescriptor();
+    assertThrows(ParseException.class, decoder::initDescriptor);
   }
 
   @Test

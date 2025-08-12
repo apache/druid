@@ -25,16 +25,18 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class InlineDescriptorProtobufBytesDecoderTest
 {
   private String descString;
 
-  @Before
+  @BeforeEach
   public void initDescriptorString() throws Exception
   {
     File descFile = new File(this.getClass()
@@ -66,31 +68,28 @@ public class InlineDescriptorProtobufBytesDecoderTest
     decoder.initDescriptor();
   }
 
-  @Test(expected = ParseException.class)
+  @Test
   public void testBadProto()
   {
-    @SuppressWarnings("unused") // expected exception
     InlineDescriptorProtobufBytesDecoder decoder = new InlineDescriptorProtobufBytesDecoder(descString, "BadName");
-    decoder.initDescriptor();
+    assertThrows(ParseException.class, decoder::initDescriptor);
   }
 
-  @Test(expected = IAE.class)
+  @Test
   public void testMalformedDescriptorBase64()
   {
-    @SuppressWarnings("unused") // expected exception
     InlineDescriptorProtobufBytesDecoder decoder = new InlineDescriptorProtobufBytesDecoder("invalidString", "BadName");
-    decoder.initDescriptor();
+    assertThrows(IAE.class, decoder::initDescriptor);
   }
 
-  @Test(expected = ParseException.class)
+  @Test
   public void testMalformedDescriptorValidBase64InvalidDescriptor()
   {
-    @SuppressWarnings("unused") // expected exception
     InlineDescriptorProtobufBytesDecoder decoder = new InlineDescriptorProtobufBytesDecoder(
         "aGVsbG8gd29ybGQ=",
         "BadName"
     );
-    decoder.initDescriptor();
+    assertThrows(ParseException.class, decoder::initDescriptor);
   }
 
   @Test

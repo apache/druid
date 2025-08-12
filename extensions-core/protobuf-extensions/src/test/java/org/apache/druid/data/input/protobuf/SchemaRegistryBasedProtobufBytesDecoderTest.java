@@ -33,9 +33,9 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.utils.DynamicConfigProviderUtils;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -50,7 +50,7 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
 {
   private SchemaRegistryClient registry;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     registry = Mockito.mock(CachedSchemaRegistryClient.class);
@@ -59,7 +59,6 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
   @Test
   public void testParse() throws Exception
   {
-
     Mockito.when(registry.getSchemaById(ArgumentMatchers.eq(1234))).thenReturn(parseProtobufSchema());
     ProtoTestEventWrapper.ProtoTestEvent event = getTestEvent();
     byte[] bytes = event.toByteArray();
@@ -68,21 +67,21 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
     // When
     DynamicMessage actual = new SchemaRegistryBasedProtobufBytesDecoder(registry).parse(bb);
     // Then
-    Assert.assertEquals(actual.getField(actual.getDescriptorForType().findFieldByName("id")), event.getId());
+    Assertions.assertEquals(actual.getField(actual.getDescriptorForType().findFieldByName("id")), event.getId());
   }
 
-  @Test(expected = ParseException.class)
+  @Test
   public void testParseCorrupted() throws Exception
   {
     Mockito.when(registry.getSchemaById(ArgumentMatchers.eq(1234))).thenReturn(parseProtobufSchema());
     byte[] bytes = getTestEvent().toByteArray();
     ByteBuffer bb = ByteBuffer.allocate(bytes.length + 6).put((byte) 0).putInt(1234).put((bytes), 5, 10);
     bb.rewind();
-    // When
-    new SchemaRegistryBasedProtobufBytesDecoder(registry).parse(bb);
+    // When & Then
+    Assertions.assertThrows(ParseException.class, () -> new SchemaRegistryBasedProtobufBytesDecoder(registry).parse(bb));
   }
 
-  @Test(expected = ParseException.class)
+  @Test
   public void testParseWrongId() throws Exception
   {
     // Given
@@ -90,8 +89,8 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
     byte[] bytes = getTestEvent().toByteArray();
     ByteBuffer bb = ByteBuffer.allocate(bytes.length + 6).put((byte) 0).putInt(1234).put((byte) 0).put(bytes);
     bb.rewind();
-    // When
-    new SchemaRegistryBasedProtobufBytesDecoder(registry).parse(bb);
+    // When & Then
+    Assertions.assertThrows(ParseException.class, () -> new SchemaRegistryBasedProtobufBytesDecoder(registry).parse(bb));
   }
 
   @Test
@@ -100,7 +99,7 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
     // Given
     SchemaRegistryBasedProtobufBytesDecoder schemaRegistryBasedProtobufBytesDecoder = new SchemaRegistryBasedProtobufBytesDecoder("http://test", null, null, null, null, null);
     // When
-    Assert.assertEquals(schemaRegistryBasedProtobufBytesDecoder.getIdentityMapCapacity(), Integer.MAX_VALUE);
+    Assertions.assertEquals(Integer.MAX_VALUE, schemaRegistryBasedProtobufBytesDecoder.getIdentityMapCapacity());
   }
 
   @Test
@@ -110,14 +109,13 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
     // Given
     SchemaRegistryBasedProtobufBytesDecoder schemaRegistryBasedProtobufBytesDecoder = new SchemaRegistryBasedProtobufBytesDecoder("http://test", capacity, null, null, null, null);
     // When
-    Assert.assertEquals(schemaRegistryBasedProtobufBytesDecoder.getIdentityMapCapacity(), capacity);
+    Assertions.assertEquals(capacity, schemaRegistryBasedProtobufBytesDecoder.getIdentityMapCapacity());
   }
 
   private ProtoTestEventWrapper.ProtoTestEvent getTestEvent()
   {
     DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
-    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputRowParserTest.buildFlatData(dateTime);
-    return event;
+    return ProtobufInputRowParserTest.buildFlatData(dateTime);
   }
 
 
@@ -130,12 +128,12 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
         new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper())
     );
     SchemaRegistryBasedProtobufBytesDecoder decoder;
-    decoder = (SchemaRegistryBasedProtobufBytesDecoder) mapper
+    decoder = mapper
         .readerFor(ProtobufBytesDecoder.class)
         .readValue(json);
 
     // Then
-    Assert.assertNotEquals(decoder.hashCode(), 0);
+    Assertions.assertNotEquals(0, decoder.hashCode());
   }
 
   @Test
@@ -147,12 +145,12 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
         new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper())
     );
     SchemaRegistryBasedProtobufBytesDecoder decoder;
-    decoder = (SchemaRegistryBasedProtobufBytesDecoder) mapper
+    decoder = mapper
         .readerFor(ProtobufBytesDecoder.class)
         .readValue(json);
 
     // Then
-    Assert.assertNotEquals(decoder.hashCode(), 0);
+    Assertions.assertNotEquals(0, decoder.hashCode());
   }
 
   @Test
@@ -164,12 +162,12 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
         new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper())
     );
     SchemaRegistryBasedProtobufBytesDecoder decoder;
-    decoder = (SchemaRegistryBasedProtobufBytesDecoder) mapper
+    decoder = mapper
         .readerFor(ProtobufBytesDecoder.class)
         .readValue(json);
 
     // Then
-    Assert.assertNotEquals(decoder.hashCode(), 0);
+    Assertions.assertNotEquals(0, decoder.hashCode());
   }
 
   @Test
@@ -181,17 +179,17 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
         new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper())
     );
     SchemaRegistryBasedProtobufBytesDecoder decoder;
-    decoder = (SchemaRegistryBasedProtobufBytesDecoder) mapper
+    decoder = mapper
         .readerFor(ProtobufBytesDecoder.class)
         .readValue(json);
 
     Map<String, String> header = DynamicConfigProviderUtils.extraConfigAndSetStringMap(decoder.getHeaders(), SchemaRegistryBasedProtobufBytesDecoder.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, new DefaultObjectMapper());
 
     // Then
-    Assert.assertEquals(3, header.size());
-    Assert.assertEquals("value.1", header.get("registry.header.prop.1"));
-    Assert.assertEquals("value.2", header.get("registry.header.prop.2"));
-    Assert.assertEquals("value.3", header.get("registry.header.prop.3"));
+    Assertions.assertEquals(3, header.size());
+    Assertions.assertEquals("value.1", header.get("registry.header.prop.1"));
+    Assertions.assertEquals("value.2", header.get("registry.header.prop.2"));
+    Assertions.assertEquals("value.3", header.get("registry.header.prop.3"));
   }
 
   @Test
@@ -203,29 +201,33 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
         new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper())
     );
     SchemaRegistryBasedProtobufBytesDecoder decoder;
-    decoder = (SchemaRegistryBasedProtobufBytesDecoder) mapper
+    decoder = mapper
         .readerFor(ProtobufBytesDecoder.class)
         .readValue(json);
 
     Map<String, ?> heaeder = DynamicConfigProviderUtils.extraConfigAndSetObjectMap(decoder.getConfig(), SchemaRegistryBasedProtobufBytesDecoder.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, new DefaultObjectMapper());
 
     // Then
-    Assert.assertEquals(3, heaeder.size());
-    Assert.assertEquals("value.1", heaeder.get("registry.config.prop.1"));
-    Assert.assertEquals("value.2", heaeder.get("registry.config.prop.2"));
-    Assert.assertEquals("value.3", heaeder.get("registry.config.prop.3"));
+    Assertions.assertEquals(3, heaeder.size());
+    Assertions.assertEquals("value.1", heaeder.get("registry.config.prop.1"));
+    Assertions.assertEquals("value.2", heaeder.get("registry.config.prop.2"));
+    Assertions.assertEquals("value.3", heaeder.get("registry.config.prop.3"));
   }
 
   private ProtobufSchema parseProtobufSchema() throws IOException
   {
-    // Given
     InputStream fin;
     fin = this.getClass().getClassLoader().getResourceAsStream("ProtoTest.proto");
+    Assertions.assertNotNull(fin);
     String protobufString = IOUtils.toString(fin, StandardCharsets.UTF_8);
 
     fin = this.getClass().getClassLoader().getResourceAsStream("google/protobuf/timestamp.proto");
+    Assertions.assertNotNull(fin);
     String timestampProtobufString = IOUtils.toString(fin, StandardCharsets.UTF_8);
-    return new ProtobufSchema(protobufString, Collections.emptyList(),
-        ImmutableMap.of("google/protobuf/timestamp.proto", timestampProtobufString), null, null);
+
+    return new ProtobufSchema(
+        protobufString, Collections.emptyList(),
+        ImmutableMap.of("google/protobuf/timestamp.proto", timestampProtobufString), null, null
+    );
   }
 }
