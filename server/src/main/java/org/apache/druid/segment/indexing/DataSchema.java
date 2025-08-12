@@ -95,6 +95,32 @@ public class DataSchema
   @Nullable
   private List<AggregateProjectionSpec> projections;
 
+  public DataSchema(
+      String dataSource,
+      @Deprecated @Nullable InputRowParser inputRowParser,
+      @Nullable TimestampSpec timestampSpec, // can be null in old task spec
+      @Nullable DimensionsSpec dimensionsSpec, // can be null in old task spec
+      AggregatorFactory[] aggregators,
+      GranularitySpec granularitySpec,
+      TransformSpec transformSpec,
+      @Nullable List<AggregateProjectionSpec> projections,
+      ObjectMapper objectMapper
+  )
+  {
+    this(
+        dataSource,
+        timestampSpec,
+        dimensionsSpec,
+        aggregators,
+        granularitySpec,
+        transformSpec,
+        projections,
+        null,
+        objectMapper
+    );
+    this.inputRowParser = inputRowParser;
+  }
+
   @JsonCreator
   public DataSchema(
       @JsonProperty("dataSource") String dataSource,

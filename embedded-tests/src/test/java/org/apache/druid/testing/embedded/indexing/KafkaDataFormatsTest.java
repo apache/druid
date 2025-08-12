@@ -31,6 +31,7 @@ import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DelimitedInputFormat;
 import org.apache.druid.data.input.impl.DelimitedParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringInputRowParser;
@@ -38,16 +39,26 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.protobuf.FileBasedProtobufBytesDecoder;
 import org.apache.druid.data.input.protobuf.ProtobufExtensionsModule;
 import org.apache.druid.data.input.protobuf.ProtobufInputFormat;
+import org.apache.druid.data.input.protobuf.ProtobufInputRowParser;
 import org.apache.druid.data.input.protobuf.SchemaRegistryBasedProtobufBytesDecoder;
+import org.apache.druid.indexer.granularity.BaseGranularitySpec;
+import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.AggregatorFactoryTest;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.TuningConfig;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -167,8 +178,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
         null
     );
 
-    Map<String, Object> parserMap = overlord.bindings().jsonMapper().convertValue(parser, Map.class);
-    KafkaSupervisorSpec supervisorSpec = createDeprectatedKafkaSupervisor(dataSource, dataSource, parserMap);
+    KafkaSupervisorSpec supervisorSpec = createKafkaSupervisorWithParser(dataSource, dataSource, parser);
 
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
         o -> o.postSupervisor(supervisorSpec)
@@ -176,6 +186,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
+    stopSupervisor(dataSource);
   }
 
   @Test
@@ -209,6 +220,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
+    stopSupervisor(dataSource);
   }
 
   @Test
@@ -241,9 +253,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
         null
     );
 
-    // Convert to map for deprecated withParserMap method
-    Map<String, Object> parserMap = overlord.bindings().jsonMapper().convertValue(parser, Map.class);
-    KafkaSupervisorSpec supervisorSpec = createDeprectatedKafkaSupervisor(dataSource, dataSource, parserMap);
+    KafkaSupervisorSpec supervisorSpec = createKafkaSupervisorWithParser(dataSource, dataSource, parser);
 
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
         o -> o.postSupervisor(supervisorSpec)
@@ -251,6 +261,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
+    stopSupervisor(dataSource);
   }
 
   @Test
@@ -279,6 +290,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
+    stopSupervisor(dataSource);
   }
 
   @Test
@@ -298,6 +310,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
+    stopSupervisor(dataSource);
   }
 
   @Test
@@ -318,9 +331,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
     StringInputRowParser parser = new StringInputRowParser(parseSpec, null);
 
-    // Convert to map for deprecated withParserMap method
-    Map<String, Object> parserMap = overlord.bindings().jsonMapper().convertValue(parser, Map.class);
-    KafkaSupervisorSpec supervisorSpec = createDeprectatedKafkaSupervisor(dataSource, dataSource, parserMap);
+    KafkaSupervisorSpec supervisorSpec = createKafkaSupervisorWithParser(dataSource, dataSource, parser);
 
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
         o -> o.postSupervisor(supervisorSpec)
@@ -328,6 +339,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
+    stopSupervisor(dataSource);
   }
 
   @Test
@@ -347,9 +359,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
     StringInputRowParser parser = new StringInputRowParser(parseSpec, null);
 
-    // Convert to map for deprecated withParserMap method
-    Map<String, Object> parserMap = overlord.bindings().jsonMapper().convertValue(parser, Map.class);
-    KafkaSupervisorSpec supervisorSpec = createDeprectatedKafkaSupervisor(dataSource, dataSource, parserMap);
+    KafkaSupervisorSpec supervisorSpec = createKafkaSupervisorWithParser(dataSource, dataSource, parser);
 
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
         o -> o.postSupervisor(supervisorSpec)
@@ -357,6 +367,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
+    stopSupervisor(dataSource);
   }
 
   @Test
@@ -376,6 +387,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
+    stopSupervisor(dataSource);
   }
 
   @Test
@@ -399,12 +411,8 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
         false
     );
 
-    // Manually create parser map for deprecated withParserMap method
-    Map<String, Object> parserMap = new HashMap<>();
-    parserMap.put("type", "protobuf");
-    parserMap.put("parseSpec", overlord.bindings().jsonMapper().convertValue(parseSpec, Map.class));
-    parserMap.put("protoBytesDecoder", overlord.bindings().jsonMapper().convertValue(protobufBytesDecoder, Map.class));
-    KafkaSupervisorSpec supervisorSpec = createDeprectatedKafkaSupervisor(dataSource, dataSource, parserMap);
+    ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, protobufBytesDecoder, null, null);
+    KafkaSupervisorSpec supervisorSpec = createKafkaSupervisorWithParser(dataSource, dataSource, parser);
 
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
         o -> o.postSupervisor(supervisorSpec)
@@ -412,6 +420,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
+    stopSupervisor(dataSource);
   }
 
   @Test
@@ -437,6 +446,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
+    stopSupervisor(dataSource);
   }
 
   @Test
@@ -464,12 +474,8 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
         false
     );
 
-    // Manually create parser map for deprecated withParserMap method
-    Map<String, Object> parserMap = new HashMap<>();
-    parserMap.put("type", "protobuf");
-    parserMap.put("parseSpec", overlord.bindings().jsonMapper().convertValue(parseSpec, Map.class));
-    parserMap.put("protoBytesDecoder", overlord.bindings().jsonMapper().convertValue(protobufBytesDecoder, Map.class));
-    KafkaSupervisorSpec supervisorSpec = createDeprectatedKafkaSupervisor(dataSource, dataSource, parserMap);
+    ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, protobufBytesDecoder, null, null);
+    KafkaSupervisorSpec supervisorSpec = createKafkaSupervisorWithParser(dataSource, dataSource, parser);
 
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
         o -> o.postSupervisor(supervisorSpec)
@@ -477,6 +483,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
+    stopSupervisor(dataSource);
   }
 
   @Test
@@ -504,6 +511,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
+    stopSupervisor(dataSource);
   }
 
   @Test
@@ -526,8 +534,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
     StringInputRowParser parser = new StringInputRowParser(parseSpec, null);
 
-    Map<String, Object> parserMap = overlord.bindings().jsonMapper().convertValue(parser, Map.class);
-    KafkaSupervisorSpec supervisorSpec = createDeprectatedKafkaSupervisor(dataSource, dataSource, parserMap);
+    KafkaSupervisorSpec supervisorSpec = createKafkaSupervisorWithParser(dataSource, dataSource, parser);
 
     final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
         o -> o.postSupervisor(supervisorSpec)
@@ -535,6 +542,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
+    stopSupervisor(dataSource);
   }
 
   @Test
@@ -561,6 +569,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
+    stopSupervisor(dataSource);
   }
 
   private void waitForDataAndVerifyIngestedEvents(String dataSource, int expectedCount)
@@ -606,18 +615,31 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     return producerRecords.size();
   }
 
-  // Uses parser which is deprcated for KafkaIndexingService
-  private KafkaSupervisorSpec createDeprectatedKafkaSupervisor(String supervisorId, String topic, Map<String, Object> parserMap)
+  /**
+   * Creates a KafkaSupervisorSpec with a parser instead of an InputFormat.
+   * <p>Parsers are deprecated for kafka indexing, but need to remain tested until they are removed.</p>
+   *
+   * @param supervisorId the ID of the supervisor
+   * @param topic        the Kafka topic to consume from
+   * @param parser       the parser map to use in the supervisor spec
+   * @return a KafkaSupervisorSpec with the provided parser map
+   */
+  private KafkaSupervisorSpec createKafkaSupervisorWithParser(String supervisorId, String topic, InputRowParser parser)
   {
     return new KafkaSupervisorSpec(
         supervisorId,
         null,
-        DataSchema.builder()
-                  .withDataSource(dataSource)
-                  .withTimestamp(new TimestampSpec("timestamp", null, null))
-                  .withDimensions(DimensionsSpec.EMPTY)
-                  .withParserMap(parserMap)
-                  .build(),
+        new DataSchema(
+            dataSource,
+            parser,
+            new TimestampSpec("timestamp", null, null),
+            DimensionsSpec.EMPTY,
+            new AggregatorFactory[]{new CountAggregatorFactory("count")},
+            new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
+            TransformSpec.NONE,
+            List.of(),
+            overlord.bindings().jsonMapper()
+        ),
         createTuningConfig(),
         new KafkaSupervisorIOConfig(
             topic,
@@ -705,6 +727,14 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     return DimensionsSpec.builder().setDefaultSchemaDimensions(
         WIKI_DIM_LIST
     ).build();
+  }
+
+  private void stopSupervisor(String supervisorId)
+  {
+    final Map<String, String> stopSupervisorResult = cluster.callApi().onLeaderOverlord(
+        o -> o.terminateSupervisor(supervisorId)
+    );
+    Assertions.assertEquals(Map.of("id", supervisorId), stopSupervisorResult);
   }
 
 }
