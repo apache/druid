@@ -4892,10 +4892,11 @@ license_name: Apache License version 2.0
 libraries:
   - org.apache.kafka: kafka-clients
 notices:
-  - kafka-clients: 'Apache Kafka Copyright 2019 The Apache Software Foundation.
+  - kafka-clients: |
+      Apache Kafka Copyright 2019 The Apache Software Foundation.
 
-This distribution has a binary dependency on jersey, which is available under
-the CDDL License. The source code of jersey can be found at https://github.com/jersey/jersey/.'
+      This distribution has a binary dependency on jersey, which is available under
+      the CDDL License. The source code of jersey can be found at https://github.com/jersey/jersey/.
 
 ---
 
