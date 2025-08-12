@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexer.report.TaskReportFileWriter;
 
+import java.io.File;
+
 public class NoopTestTaskReportFileWriter implements TaskReportFileWriter
 {
   @Override
@@ -34,5 +36,11 @@ public class NoopTestTaskReportFileWriter implements TaskReportFileWriter
   public void setObjectMapper(ObjectMapper objectMapper)
   {
 
+  }
+
+  @Override
+  public File getReportsFile(String taskId)
+  {
+    return null;
   }
 }

@@ -69,6 +69,12 @@ public class MultipleFileTaskReportFileWriter implements TaskReportFileWriter
     this.objectMapper = objectMapper;
   }
 
+  @Override
+  public File getReportsFile(String taskId)
+  {
+    return taskReportFiles.get(taskId);
+  }
+
   public void add(String taskId, File reportsFile)
   {
     taskReportFiles.put(taskId, reportsFile);
