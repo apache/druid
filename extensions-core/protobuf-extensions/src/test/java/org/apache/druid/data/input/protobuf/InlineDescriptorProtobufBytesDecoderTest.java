@@ -20,8 +20,6 @@
 package org.apache.druid.data.input.protobuf;
 
 import com.google.common.io.Files;
-import com.google.protobuf.Descriptors;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -29,7 +27,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.net.URL;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class InlineDescriptorProtobufBytesDecoderTest
@@ -39,41 +42,45 @@ public class InlineDescriptorProtobufBytesDecoderTest
   @BeforeEach
   public void initDescriptorString() throws Exception
   {
-    File descFile = new File(this.getClass()
-                                 .getClassLoader()
-                                 .getResource("prototest.desc")
-                                 .toURI());
+    final URL resource = this.getClass()
+                             .getClassLoader()
+                             .getResource("prototest.desc");
+    assertNotNull(resource);
+
+    final var descFile = new File(resource.toURI());
     descString = StringUtils.encodeBase64String(Files.toByteArray(descFile));
   }
 
   @Test
   public void testShortMessageType()
   {
-    @SuppressWarnings("unused") // expected to create parser without exception
-    InlineDescriptorProtobufBytesDecoder decoder = new InlineDescriptorProtobufBytesDecoder(
+    final var decoder = new InlineDescriptorProtobufBytesDecoder(
         descString,
         "ProtoTestEvent"
     );
-    decoder.initDescriptor();
+
+    assertDoesNotThrow(decoder::initDescriptor);
   }
 
   @Test
   public void testLongMessageType()
   {
-    @SuppressWarnings("unused") // expected to create parser without exception
-    InlineDescriptorProtobufBytesDecoder decoder = new InlineDescriptorProtobufBytesDecoder(
+    final var decoder = new InlineDescriptorProtobufBytesDecoder(
         descString,
         "prototest.ProtoTestEvent"
     );
-    decoder.initDescriptor();
+
+    assertDoesNotThrow(decoder::initDescriptor);
   }
 
   @Test
   public void testBadProto()
   {
     assertThrows(
-        ParseException.class, () -> {
+        ParseException.class,
+        () -> {
           final var decoder = new InlineDescriptorProtobufBytesDecoder(descString, "BadName");
+
           decoder.initDescriptor();
         }
     );
@@ -83,8 +90,10 @@ public class InlineDescriptorProtobufBytesDecoderTest
   public void testMalformedDescriptorBase64()
   {
     assertThrows(
-        IAE.class, () -> {
+        IAE.class,
+        () -> {
           final var decoder = new InlineDescriptorProtobufBytesDecoder("invalidString", "BadName");
+
           decoder.initDescriptor();
         }
     );
@@ -94,7 +103,8 @@ public class InlineDescriptorProtobufBytesDecoderTest
   public void testMalformedDescriptorValidBase64InvalidDescriptor()
   {
     assertThrows(
-        ParseException.class, () -> {
+        ParseException.class,
+        () -> {
           final var decoder = new InlineDescriptorProtobufBytesDecoder(
               "aGVsbG8gd29ybGQ=",
               "BadName"
@@ -105,31 +115,50 @@ public class InlineDescriptorProtobufBytesDecoderTest
     );
   }
 
+  /**
+   * For the backward compatibility, protoMessageType allows null when the desc file has only one message type.
+   */
   @Test
   public void testSingleDescriptorNoMessageType()
   {
-    // For the backward compatibility, protoMessageType allows null when the desc file has only one message type.
-    @SuppressWarnings("unused") // expected to create parser without exception
-    InlineDescriptorProtobufBytesDecoder decoder = new InlineDescriptorProtobufBytesDecoder(descString, null);
-    decoder.initDescriptor();
+    final var decoder = new InlineDescriptorProtobufBytesDecoder(descString, null);
+    assertDoesNotThrow(decoder::initDescriptor);
   }
 
   @Test
   public void testEquals()
   {
-    InlineDescriptorProtobufBytesDecoder decoder = new InlineDescriptorProtobufBytesDecoder(descString, "ProtoTestEvent");
-    decoder.initDescriptor();
-    Descriptors.Descriptor descriptorA = decoder.getDescriptor();
+    // Test basic equality
+    final var decoder1 = new InlineDescriptorProtobufBytesDecoder(
+        descString,
+        "ProtoTestEvent"
+    );
+    final var decoder2 = new InlineDescriptorProtobufBytesDecoder(
+        descString,
+        "ProtoTestEvent"
+    );
+    final var decoder3 = new InlineDescriptorProtobufBytesDecoder(
+        descString,
+        "ProtoTestEvent.Foo"
+    );
+    final var decoder4 = new InlineDescriptorProtobufBytesDecoder(
+        descString,
+        null
+    );
 
-    decoder = new InlineDescriptorProtobufBytesDecoder(descString, "ProtoTestEvent.Foo");
-    decoder.initDescriptor();
-    Descriptors.Descriptor descriptorB = decoder.getDescriptor();
+    // Symmetry: x.equals(y) == y.equals(x)
+    assertEquals(decoder1, decoder2);
+    assertEquals(decoder2, decoder1);
 
-    EqualsVerifier.forClass(InlineDescriptorProtobufBytesDecoder.class)
-                  .usingGetClass()
-                  .withIgnoredFields("descriptor")
-                  .withPrefabValues(Descriptors.Descriptor.class, descriptorA, descriptorB)
-                  .verify();
+    // Inequality tests
+    assertNotEquals(decoder1, decoder3); // different protoMessageType
+    assertNotEquals(decoder1, decoder4); // different protoMessageType (non-null vs null)
+    assertNotEquals(null, decoder1);
+
+    // HashCode consistency
+    assertEquals(decoder1.hashCode(), decoder2.hashCode());
+    assertNotEquals(decoder1.hashCode(), decoder3.hashCode());
+    assertNotEquals(decoder1.hashCode(), decoder4.hashCode());
   }
 
 }

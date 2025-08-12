@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.js.JavaScriptConfig;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -46,6 +45,9 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Objects;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ProtobufInputRowParserTest
 {
@@ -169,7 +171,7 @@ public class ProtobufInputRowParserTest
     );
     final ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, decoder, null, null);
 
-    Assertions.assertThrows(IllegalStateException.class, () -> {
+    assertThrows(IllegalStateException.class, () -> {
       parser.parseBatch(ByteBuffer.allocate(1)).get(0);
     }, "JavaScript is disabled");
   }
@@ -192,8 +194,8 @@ public class ProtobufInputRowParserTest
   private static void assertDimensionEquals(InputRow row, String dimension, Object expected)
   {
     List<String> values = row.getDimension(dimension);
-    Assertions.assertEquals(1, values.size());
-    Assertions.assertEquals(expected, values.get(0));
+    assertEquals(1, values.size());
+    assertEquals(expected, values.get(0));
   }
 
   static ProtoTestEventWrapper.ProtoTestEvent buildFlatData(DateTime dateTime)
@@ -214,7 +216,7 @@ public class ProtobufInputRowParserTest
 
   static void verifyFlatData(InputRow row, DateTime dateTime, boolean badBytesConversion)
   {
-    Assertions.assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
+    assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
 
     assertDimensionEquals(row, "id", "4711");
     assertDimensionEquals(row, "isValid", "true");
@@ -228,9 +230,9 @@ public class ProtobufInputRowParserTest
       assertDimensionEquals(row, "someBytesColumn", StringUtils.encodeBase64String(new byte[]{0x01, 0x02, 0x03, 0x04}));
     }
 
-    Assertions.assertEquals(47.11F, row.getMetric("someFloatColumn").floatValue(), 0.0);
-    Assertions.assertEquals(815.0F, row.getMetric("someIntColumn").floatValue(), 0.0);
-    Assertions.assertEquals(816.0F, row.getMetric("someLongColumn").floatValue(), 0.0);
+    assertEquals(47.11F, row.getMetric("someFloatColumn").floatValue(), 0.0);
+    assertEquals(815.0F, row.getMetric("someIntColumn").floatValue(), 0.0);
+    assertEquals(816.0F, row.getMetric("someLongColumn").floatValue(), 0.0);
   }
 
   static ProtoTestEventWrapper.ProtoTestEvent buildNestedData(DateTime dateTime)
@@ -260,7 +262,7 @@ public class ProtobufInputRowParserTest
 
   static void verifyNestedData(InputRow row, DateTime dateTime)
   {
-    Assertions.assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
+    assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
 
     assertDimensionEquals(row, "id", "4711");
     assertDimensionEquals(row, "isValid", "true");
@@ -272,9 +274,9 @@ public class ProtobufInputRowParserTest
     assertDimensionEquals(row, "bar0", "bar0");
     assertDimensionEquals(row, "someBytesColumn", StringUtils.encodeBase64String(new byte[]{0x01, 0x02, 0x03, 0x04}));
 
-    Assertions.assertEquals(47.11F, row.getMetric("someFloatColumn").floatValue(), 0.0);
-    Assertions.assertEquals(815.0F, row.getMetric("someIntColumn").floatValue(), 0.0);
-    Assertions.assertEquals(816.0F, row.getMetric("someLongColumn").floatValue(), 0.0);
+    assertEquals(47.11F, row.getMetric("someFloatColumn").floatValue(), 0.0);
+    assertEquals(815.0F, row.getMetric("someIntColumn").floatValue(), 0.0);
+    assertEquals(816.0F, row.getMetric("someLongColumn").floatValue(), 0.0);
   }
 
   static ProtoTestEventWrapper.ProtoTestEvent buildFlatDataWithComplexTimestamp(DateTime dateTime)
