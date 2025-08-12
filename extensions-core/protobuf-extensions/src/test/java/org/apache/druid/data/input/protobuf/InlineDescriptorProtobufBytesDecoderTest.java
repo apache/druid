@@ -71,25 +71,38 @@ public class InlineDescriptorProtobufBytesDecoderTest
   @Test
   public void testBadProto()
   {
-    InlineDescriptorProtobufBytesDecoder decoder = new InlineDescriptorProtobufBytesDecoder(descString, "BadName");
-    assertThrows(ParseException.class, decoder::initDescriptor);
+    assertThrows(
+        ParseException.class, () -> {
+          final var decoder = new InlineDescriptorProtobufBytesDecoder(descString, "BadName");
+          decoder.initDescriptor();
+        }
+    );
   }
 
   @Test
   public void testMalformedDescriptorBase64()
   {
-    InlineDescriptorProtobufBytesDecoder decoder = new InlineDescriptorProtobufBytesDecoder("invalidString", "BadName");
-    assertThrows(IAE.class, decoder::initDescriptor);
+    assertThrows(
+        IAE.class, () -> {
+          final var decoder = new InlineDescriptorProtobufBytesDecoder("invalidString", "BadName");
+          decoder.initDescriptor();
+        }
+    );
   }
 
   @Test
   public void testMalformedDescriptorValidBase64InvalidDescriptor()
   {
-    InlineDescriptorProtobufBytesDecoder decoder = new InlineDescriptorProtobufBytesDecoder(
-        "aGVsbG8gd29ybGQ=",
-        "BadName"
+    assertThrows(
+        ParseException.class, () -> {
+          final var decoder = new InlineDescriptorProtobufBytesDecoder(
+              "aGVsbG8gd29ybGQ=",
+              "BadName"
+          );
+
+          decoder.initDescriptor();
+        }
     );
-    assertThrows(ParseException.class, decoder::initDescriptor);
   }
 
   @Test

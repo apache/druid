@@ -50,17 +50,25 @@ public class FileBasedProtobufBytesDecoderTest
   @Test
   public void testBadProto()
   {
-    //configure parser with desc file
-    FileBasedProtobufBytesDecoder decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "BadName");
-    assertThrows(ParseException.class, decoder::initDescriptor);
+    assertThrows(
+        ParseException.class, () -> {
+          // configure parser with desc file
+          final var decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "BadName");
+          decoder.initDescriptor();
+        }
+    );
   }
 
   @Test
   public void testMalformedDescriptorUrl()
   {
-    //configure parser with non existent desc file
-    FileBasedProtobufBytesDecoder decoder = new FileBasedProtobufBytesDecoder("file:/nonexist.desc", "BadName");
-    assertThrows(ParseException.class, decoder::initDescriptor);
+    assertThrows(
+        ParseException.class, () -> {
+          // configure parser with non existent desc file
+          final var decoder = new FileBasedProtobufBytesDecoder("file:/nonexist.desc", "BadName");
+          decoder.initDescriptor();
+        }
+    );
   }
 
   @Test
