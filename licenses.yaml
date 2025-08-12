@@ -3887,9 +3887,9 @@ libraries:
 name: Reactive Streams
 license_category: binary
 module: java-core
-license_name: Creative Commons CC0
+license_name: MIT No Attribution
 version: 1.0.4
-license_file_path: licenses/bin/reactive-streams.CC0
+license_file_path: licenses/bin/reactive-streams.MIT0
 libraries:
   - org.reactivestreams: reactive-streams
 
