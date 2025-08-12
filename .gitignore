@@ -28,6 +28,7 @@ README
 .java-version
 integration-tests/gen-scripts/
 **/bin/
+!licenses/bin/
 *.hprof
 **/.ipynb_checkpoints/
 website/.yarn/
