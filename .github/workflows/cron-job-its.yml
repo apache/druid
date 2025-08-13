@@ -130,7 +130,7 @@ jobs:
           distribution: 'zulu'
           cache: maven
 
-      - name: maven build # needed to rebuild incase of maven snapshot resolution fails
+      - name: maven build # needed to rebuild in case of maven snapshot resolution fails
         run: mvn clean install -P dist -P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -Dcyclonedx.skip=true -Dweb.console.skip=true
 
       - name: security vulnerabilities check
