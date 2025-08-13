@@ -4169,7 +4169,7 @@ name: google-protobuf
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 3.24.4
+version: 3.25.8
 libraries:
   - com.google.protobuf: protobuf-java-util
 
