@@ -41,20 +41,15 @@ import org.apache.druid.data.input.protobuf.ProtobufExtensionsModule;
 import org.apache.druid.data.input.protobuf.ProtobufInputFormat;
 import org.apache.druid.data.input.protobuf.ProtobufInputRowParser;
 import org.apache.druid.data.input.protobuf.SchemaRegistryBasedProtobufBytesDecoder;
-import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -622,21 +617,16 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
    */
   private KafkaSupervisorSpec createKafkaSupervisorWithParser(String supervisorId, String topic, InputRowParser parser)
   {
+    Map<String, Object> parserMap = overlord.bindings().jsonMapper().convertValue(parser, Map.class);
     return new KafkaSupervisorSpec(
         supervisorId,
         null,
-        new DataSchema(
-            dataSource,
-            new TimestampSpec("timestamp", null, null),
-            DimensionsSpec.EMPTY,
-            new AggregatorFactory[]{new CountAggregatorFactory("count")},
-            new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
-            TransformSpec.NONE,
-            List.of(),
-            null,
-            overlord.bindings().jsonMapper(),
-            parser
-        ),
+        DataSchema.builder()
+                  .withDataSource(dataSource)
+                  .withTimestamp(new TimestampSpec("timestamp", null, null))
+                  .withDimensions(DimensionsSpec.EMPTY)
+                  .withParserMap(parserMap)
+                  .build(),
         createTuningConfig(),
         new KafkaSupervisorIOConfig(
             topic,

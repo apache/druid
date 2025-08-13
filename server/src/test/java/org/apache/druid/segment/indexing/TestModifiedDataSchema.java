@@ -58,8 +58,7 @@ public class TestModifiedDataSchema extends DataSchema
         transformSpec,
         null,
         parserMap,
-        objectMapper,
-        null
+        objectMapper
     );
     this.extra = extra;
   }
