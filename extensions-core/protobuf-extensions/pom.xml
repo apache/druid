@@ -109,11 +109,6 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>com.github.os72</groupId>
-      <artifactId>protobuf-dynamic</artifactId>
-      <version>0.9.3</version>
-    </dependency>
-    <dependency>
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
       <version>${commons-io.version}</version>

@@ -21,9 +21,8 @@ package org.apache.druid.data.input.protobuf;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.github.os72.protobuf.dynamic.DynamicSchema;
 import com.google.common.base.Preconditions;
-import com.google.protobuf.Descriptors;
+import com.google.protobuf.DescriptorProtos;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -56,20 +55,23 @@ public class InlineDescriptorProtobufBytesDecoder extends DescriptorBasedProtobu
   }
 
   @Override
-  protected DynamicSchema generateDynamicSchema()
+  protected DescriptorProtos.FileDescriptorSet generateFileDescriptorSet()
   {
     try {
       byte[] decodedDesc = StringUtils.decodeBase64String(descriptorString);
-      return DynamicSchema.parseFrom(decodedDesc);
+
+      final var descriptorSet = DescriptorProtos.FileDescriptorSet.parseFrom(decodedDesc);
+      if (descriptorSet.getFileCount() == 0) {
+        throw new ParseException(null, "No file descriptors found in the descriptor set.");
+      }
+
+      return descriptorSet;
     }
     catch (IllegalArgumentException e) {
       throw new IAE("Descriptor string does not have valid Base64 encoding.");
     }
-    catch (Descriptors.DescriptorValidationException e) {
-      throw new ParseException(null, e, "Invalid descriptor string: " + descriptorString);
-    }
     catch (IOException e) {
-      throw new ParseException(null, e, "Cannot read descriptor string: " + descriptorString);
+      throw new ParseException(descriptorString, e, "Failed to initialize descriptor");
     }
   }
 
