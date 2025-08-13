@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.protobuf;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
@@ -35,6 +36,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.js.JavaScriptConfig;
+import org.apache.druid.segment.TestHelper;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
@@ -51,6 +53,8 @@ import java.util.List;
 
 public class ProtobufInputRowParserTest
 {
+  private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
@@ -110,6 +114,24 @@ public class ProtobufInputRowParserTest
         null
     );
     decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "ProtoTestEvent");
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+
+
+    ProtobufInputRowParser originalParser = new ProtobufInputRowParser(parseSpec, decoder, null, null);
+    
+    Assert.assertEquals(parseSpec, originalParser.getParseSpec());
+    Assert.assertEquals(decoder, originalParser.getProtobufBytesDecoder());
+
+    String json = OBJECT_MAPPER.writeValueAsString(originalParser);
+    
+    ProtobufInputRowParser deserializedParser = OBJECT_MAPPER.readValue(json, ProtobufInputRowParser.class);
+
+    Assert.assertEquals(originalParser.getParseSpec(), deserializedParser.getParseSpec());
+    Assert.assertEquals(originalParser.getProtobufBytesDecoder(), deserializedParser.getProtobufBytesDecoder());
   }
 
   @Test
