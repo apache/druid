@@ -40,7 +40,7 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class KafkaResource extends TestcontainerResource<KafkaContainer>
 {
-  private static final String KAFKA_IMAGE = "apache/kafka-native:4.1.0-rc2";
+  private static final String KAFKA_IMAGE = "apache/kafka:4.0.0";
 
   private EmbeddedDruidCluster cluster;
 
