@@ -30,8 +30,8 @@ import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
@@ -42,7 +42,7 @@ public class ProtobufReaderTest
   private JSONPathSpec flattenSpec;
   private FileBasedProtobufBytesDecoder decoder;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     TimestampSpec timestampSpec = new TimestampSpec("timestamp", "iso", null);
