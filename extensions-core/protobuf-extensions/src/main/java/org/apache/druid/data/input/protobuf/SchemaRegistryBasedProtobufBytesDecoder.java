@@ -151,6 +151,25 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
     this.jsonMapper = new ObjectMapper();
   }
 
+  /**
+   * Parses a protobuf message from a ByteBuffer that follows the Confluent Schema Registry wire format.
+   *
+   * <p>The Confluent Schema Registry wire format for protobuf messages is:
+   * <pre>
+   * [magic_byte(1)] [schema_id(4)] [magic_byte(1)] [protobuf_message(n)]
+   * </pre>
+   *
+   * <p>For more details on the wire format, see:
+   * <a href="https://docs.confluent.io/platform/current/schema-registry/serdes-develop/index.html#wire-format">
+   * Confluent Schema Registry Wire Format Documentation</a>
+   *
+   * <p>This method extracts the schema ID from the bytes, uses that ID to retrieve the actual schema from the
+   * schema registry, and then parses the remaining bytes as a protobuf message using the retrieved schema.
+   *
+   * @param bytes ByteBuffer containing the Confluent Schema Registry formatted protobuf message
+   * @return DynamicMessage parsed from the protobuf bytes
+   * @throws ParseException if the schema cannot be retrieved or the message cannot be parsed
+   */
   @Override
   public DynamicMessage parse(ByteBuffer bytes)
   {

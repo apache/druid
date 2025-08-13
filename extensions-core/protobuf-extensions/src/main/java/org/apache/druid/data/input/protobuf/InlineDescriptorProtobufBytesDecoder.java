@@ -42,8 +42,10 @@ public class InlineDescriptorProtobufBytesDecoder extends DescriptorBasedProtobu
   )
   {
     super(protoMessageType);
+
     Preconditions.checkNotNull(descriptorString);
     this.descriptorString = descriptorString;
+
     initDescriptor();
   }
 

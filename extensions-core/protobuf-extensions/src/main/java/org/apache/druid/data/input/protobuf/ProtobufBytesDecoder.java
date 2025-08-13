@@ -25,6 +25,7 @@ import com.google.protobuf.DynamicMessage;
 
 import java.nio.ByteBuffer;
 
+/** Interface for decoding protobuf messages from byte buffers using different schema sources. */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = SchemaRegistryBasedProtobufBytesDecoder.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "file", value = FileBasedProtobufBytesDecoder.class),
