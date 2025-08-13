@@ -29,7 +29,6 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.net.URL;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -59,7 +58,7 @@ public class InlineDescriptorProtobufBytesDecoderTest
         "ProtoTestEvent"
     );
 
-    assertDoesNotThrow(decoder::initDescriptor);
+    assertEquals("prototest.ProtoTestEvent", decoder.getDescriptor().getFullName());
   }
 
   @Test
@@ -70,7 +69,7 @@ public class InlineDescriptorProtobufBytesDecoderTest
         "prototest.ProtoTestEvent"
     );
 
-    assertDoesNotThrow(decoder::initDescriptor);
+    assertEquals("prototest.ProtoTestEvent", decoder.getDescriptor().getFullName());
   }
 
   @Test
@@ -79,9 +78,7 @@ public class InlineDescriptorProtobufBytesDecoderTest
     assertThrows(
         ParseException.class,
         () -> {
-          final var decoder = new InlineDescriptorProtobufBytesDecoder(descString, "BadName");
-
-          decoder.initDescriptor();
+          final var ignored = new InlineDescriptorProtobufBytesDecoder(descString, "BadName");
         }
     );
   }
@@ -92,9 +89,7 @@ public class InlineDescriptorProtobufBytesDecoderTest
     assertThrows(
         IAE.class,
         () -> {
-          final var decoder = new InlineDescriptorProtobufBytesDecoder("invalidString", "BadName");
-
-          decoder.initDescriptor();
+          final var ignored = new InlineDescriptorProtobufBytesDecoder("invalidString", "BadName");
         }
     );
   }
@@ -105,12 +100,10 @@ public class InlineDescriptorProtobufBytesDecoderTest
     assertThrows(
         ParseException.class,
         () -> {
-          final var decoder = new InlineDescriptorProtobufBytesDecoder(
+          final var ignored = new InlineDescriptorProtobufBytesDecoder(
               "aGVsbG8gd29ybGQ=",
               "BadName"
           );
-
-          decoder.initDescriptor();
         }
     );
   }
@@ -122,7 +115,8 @@ public class InlineDescriptorProtobufBytesDecoderTest
   public void testSingleDescriptorNoMessageType()
   {
     final var decoder = new InlineDescriptorProtobufBytesDecoder(descString, null);
-    assertDoesNotThrow(decoder::initDescriptor);
+
+    assertEquals("google.protobuf.Timestamp", decoder.getDescriptor().getFullName());
   }
 
   @Test

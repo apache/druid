@@ -38,6 +38,8 @@ public class FileBasedProtobufBytesDecoderTest
     final var decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "ProtoTestEvent");
 
     assertDoesNotThrow(decoder::initDescriptor);
+
+    assertEquals("prototest.ProtoTestEvent", decoder.getDescriptor().getFullName());
   }
 
   /**
@@ -51,7 +53,7 @@ public class FileBasedProtobufBytesDecoderTest
         "prototest.ProtoTestEvent"
     );
 
-    assertDoesNotThrow(decoder::initDescriptor);
+    assertEquals("prototest.ProtoTestEvent", decoder.getDescriptor().getFullName());
   }
 
   @Test
@@ -60,9 +62,7 @@ public class FileBasedProtobufBytesDecoderTest
     assertThrows(
         ParseException.class,
         () -> {
-          // configure parser with desc file
-          final var decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "BadName");
-          decoder.initDescriptor();
+          final var ignored = new FileBasedProtobufBytesDecoder("prototest.desc", "BadName");
         }
     );
   }
@@ -73,9 +73,7 @@ public class FileBasedProtobufBytesDecoderTest
     assertThrows(
         ParseException.class,
         () -> {
-          // configure parser with non existent desc file
-          final var decoder = new FileBasedProtobufBytesDecoder("file:/nonexist.desc", "BadName");
-          decoder.initDescriptor();
+          final var ignored = new FileBasedProtobufBytesDecoder("file:/nonexist.desc", "BadName");
         }
     );
   }
@@ -88,7 +86,7 @@ public class FileBasedProtobufBytesDecoderTest
   {
     final var decoder = new FileBasedProtobufBytesDecoder("prototest.desc", null);
 
-    assertDoesNotThrow(decoder::initDescriptor);
+    assertEquals("google.protobuf.Timestamp", decoder.getDescriptor().getFullName());
   }
 
   @Test
