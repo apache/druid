@@ -392,14 +392,6 @@
 
    <suppress>
      <notes><![CDATA[
-     file name: protobuf-java-util-3.11.0.jar
-     ]]></notes>
-     <packageUrl regex="true">^pkg:maven/com\.google\.protobuf/protobuf\-java\-util@.*$</packageUrl>
-     <cve>CVE-2022-3171</cve>
-   </suppress>
-
-   <suppress>
-     <notes><![CDATA[
      file name: ansi-regex:5.0.0
      ]]></notes>
      <packageUrl regex="true">^pkg:npm/ansi\-regex@.*$</packageUrl>
