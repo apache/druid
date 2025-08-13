@@ -95,32 +95,6 @@ public class DataSchema
   @Nullable
   private List<AggregateProjectionSpec> projections;
 
-  public DataSchema(
-      String dataSource,
-      @Deprecated @Nullable InputRowParser inputRowParser,
-      @Nullable TimestampSpec timestampSpec, // can be null in old task spec
-      @Nullable DimensionsSpec dimensionsSpec, // can be null in old task spec
-      AggregatorFactory[] aggregators,
-      GranularitySpec granularitySpec,
-      TransformSpec transformSpec,
-      @Nullable List<AggregateProjectionSpec> projections,
-      ObjectMapper objectMapper
-  )
-  {
-    this(
-        dataSource,
-        timestampSpec,
-        dimensionsSpec,
-        aggregators,
-        granularitySpec,
-        transformSpec,
-        projections,
-        null,
-        objectMapper
-    );
-    this.inputRowParser = inputRowParser;
-  }
-
   @JsonCreator
   public DataSchema(
       @JsonProperty("dataSource") String dataSource,
@@ -131,7 +105,8 @@ public class DataSchema
       @JsonProperty("transformSpec") TransformSpec transformSpec,
       @JsonProperty("projections") @Nullable List<AggregateProjectionSpec> projections,
       @Deprecated @JsonProperty("parser") @Nullable Map<String, Object> parserMap,
-      @JacksonInject ObjectMapper objectMapper
+      @JacksonInject ObjectMapper objectMapper,
+      @Deprecated @JsonProperty("inputRowParser") @Nullable InputRowParser inputRowParser
   )
   {
     validateDatasourceName(dataSource);
@@ -156,6 +131,7 @@ public class DataSchema
     this.transformSpec = transformSpec == null ? TransformSpec.NONE : transformSpec;
     this.projections = projections;
     this.parserMap = parserMap;
+    this.inputRowParser = parserMap == null ? inputRowParser : null; // Avoid setting inputRowParser if parserMap is set. This retains Druid's existing behavior before allowing InputRowParser in constructor.
     this.objectMapper = objectMapper;
 
     // Fail-fast if there are output name collisions. Note: because of the pull-from-parser magic in getDimensionsSpec,
@@ -260,6 +236,7 @@ public class DataSchema
     return parserMap;
   }
 
+  @JsonProperty("inputRowParser")
   @Nullable
   public InputRowParser getParser()
   {
@@ -613,7 +590,8 @@ public class DataSchema
           transformSpec,
           projections,
           parserMap,
-          objectMapper
+          objectMapper,
+          null
       );
     }
   }

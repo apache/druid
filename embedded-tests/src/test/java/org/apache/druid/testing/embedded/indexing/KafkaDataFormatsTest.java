@@ -41,8 +41,6 @@ import org.apache.druid.data.input.protobuf.ProtobufExtensionsModule;
 import org.apache.druid.data.input.protobuf.ProtobufInputFormat;
 import org.apache.druid.data.input.protobuf.ProtobufInputRowParser;
 import org.apache.druid.data.input.protobuf.SchemaRegistryBasedProtobufBytesDecoder;
-import org.apache.druid.indexer.granularity.BaseGranularitySpec;
-import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
@@ -54,10 +52,8 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.AggregatorFactoryTest;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -126,7 +122,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     schemaRegistry = new KafkaSchemaRegistryResource(kafkaServer);
 
     indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
-           .addProperty("druid.worker.capacity", "10");
+           .addProperty("druid.worker.capacity", "20");
     overlord.addProperty("druid.manager.segments.useIncrementalCache", "ifSynced")
             .addProperty("druid.manager.segments.pollDuration", "PT0.1s");
     coordinator.addProperty("druid.manager.segments.useIncrementalCache", "ifSynced");
@@ -631,14 +627,15 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
         null,
         new DataSchema(
             dataSource,
-            parser,
             new TimestampSpec("timestamp", null, null),
             DimensionsSpec.EMPTY,
             new AggregatorFactory[]{new CountAggregatorFactory("count")},
             new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
             TransformSpec.NONE,
             List.of(),
-            overlord.bindings().jsonMapper()
+            null,
+            overlord.bindings().jsonMapper(),
+            parser
         ),
         createTuningConfig(),
         new KafkaSupervisorIOConfig(
