@@ -229,7 +229,7 @@ case $CMD in
     usage
     ;;
   "ci" )
-    mvn -q clean install -P dist,bundle-contrib-exts $MAVEN_IGNORE
+    mvn -q clean install -P dist,bundle-contrib-exts,include-test-tools $MAVEN_IGNORE
     ;;
   "build" )
     mvn -B clean install -P dist,bundle-contrib-exts $MAVEN_IGNORE -T1.0C $*
