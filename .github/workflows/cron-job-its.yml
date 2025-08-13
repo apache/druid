@@ -116,8 +116,6 @@ jobs:
   security_vulnerabilities:
     if: github.repository == 'apache/druid'
     name: security vulnerabilities
-    strategy:
-      fail-fast: false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
