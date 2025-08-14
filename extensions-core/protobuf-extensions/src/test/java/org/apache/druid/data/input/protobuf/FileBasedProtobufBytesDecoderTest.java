@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@SuppressWarnings("ResultOfObjectAllocationIgnored")
 public class FileBasedProtobufBytesDecoderTest
 {
   /**
@@ -61,9 +62,7 @@ public class FileBasedProtobufBytesDecoderTest
   {
     final var ex = assertThrows(
         ParseException.class,
-        () -> {
-          final var ignored = new FileBasedProtobufBytesDecoder("prototest.desc", "BadName");
-        }
+        () -> new FileBasedProtobufBytesDecoder("prototest.desc", "BadName")
     );
 
     assertEquals(
@@ -77,9 +76,7 @@ public class FileBasedProtobufBytesDecoderTest
   {
     final var ex = assertThrows(
         ParseException.class,
-        () -> {
-          final var ignored = new FileBasedProtobufBytesDecoder("file:/nonexist.desc", "BadName");
-        }
+        () -> new FileBasedProtobufBytesDecoder("file:/nonexist.desc", "BadName")
     );
 
     assertEquals(

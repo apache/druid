@@ -34,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@SuppressWarnings("ResultOfObjectAllocationIgnored")
 public class InlineDescriptorProtobufBytesDecoderTest
 {
   private String descString;
@@ -77,9 +78,7 @@ public class InlineDescriptorProtobufBytesDecoderTest
   {
     final var ex = assertThrows(
         ParseException.class,
-        () -> {
-          final var ignored = new InlineDescriptorProtobufBytesDecoder(descString, "BadName");
-        }
+        () -> new InlineDescriptorProtobufBytesDecoder(descString, "BadName")
     );
 
     assertEquals(
@@ -93,9 +92,7 @@ public class InlineDescriptorProtobufBytesDecoderTest
   {
     final var ex = assertThrows(
         IAE.class,
-        () -> {
-          final var ignored = new InlineDescriptorProtobufBytesDecoder("invalidString", "BadName");
-        }
+        () -> new InlineDescriptorProtobufBytesDecoder("invalidString", "BadName")
     );
 
     assertEquals(
@@ -109,12 +106,10 @@ public class InlineDescriptorProtobufBytesDecoderTest
   {
     final var ex = assertThrows(
         ParseException.class,
-        () -> {
-          final var ignored = new InlineDescriptorProtobufBytesDecoder(
-              "aGVsbG8gd29ybGQ=",
-              "BadName"
-          );
-        }
+        () -> new InlineDescriptorProtobufBytesDecoder(
+            "aGVsbG8gd29ybGQ=",
+            "BadName"
+        )
     );
 
     assertEquals(
