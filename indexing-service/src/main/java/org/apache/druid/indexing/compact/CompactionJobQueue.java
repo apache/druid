@@ -53,19 +53,6 @@ import java.util.PriorityQueue;
  * Iterates over all eligible compaction jobs in order of their priority.
  * A fresh instance of this class must be used in every run of the
  * {@link CompactionScheduler}.
- *
- * TODO: Remaining items:
- *  - fill timeline gaps, support realiging intervals
- *  - cancel mismatching task
- *  - pass in the engine to the template
- *  - MSQ template
- *  - invoke onTimelineUpdated - timeline will now get updated very frequently,
- *    - we don't want to recompact intervals, try to find the right thing to do.
- *    - we might have to do it via the policy
- *  - maybe use searchInterval instead of skipIntervals
- *  - how does this whole thing affect queuedIntervals
- *    - for duty, it doesn't matter
- *    - for supervisors, intervals will always be mutually exclusive
  */
 public class CompactionJobQueue
 {
@@ -164,9 +151,6 @@ public class CompactionJobQueue
         runStats.add(Stats.Compaction.SUBMITTED_TASKS, RowKey.of(Dimension.DATASOURCE, task.getDataSource()), 1);
       }
     }
-
-    // TODO: Add the skipped and the already compacted stuff determined by the DatasourceCompactibleSegmentIterator
-    //  to the stats
   }
 
   /**

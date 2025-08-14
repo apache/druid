@@ -80,7 +80,6 @@ public class CompactionConfigBasedJobTemplate extends CompactionJobTemplate
     while (segmentIterator.hasNext()) {
       final CompactionCandidate candidate = segmentIterator.next();
 
-      // TODO: choose the right engine here
       ClientCompactionTaskQuery taskPayload
           = CompactSegments.createCompactionTask(candidate, config, CompactionEngine.NATIVE);
       final Interval compactionInterval = taskPayload.getIoConfig().getInputSpec().getInterval();
