@@ -35,6 +35,7 @@ import com.google.protobuf.Int64Value;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.ListValue;
 import com.google.protobuf.Message;
+import com.google.protobuf.MessageOrBuilder;
 import com.google.protobuf.StringValue;
 import com.google.protobuf.Struct;
 import com.google.protobuf.Timestamp;
@@ -46,7 +47,6 @@ import com.google.protobuf.util.FieldMaskUtil;
 import com.google.protobuf.util.JsonFormat;
 import com.google.protobuf.util.Timestamps;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.List;
@@ -66,8 +66,15 @@ public class ProtobufConverter
       return null;
     }
 
-    final Map<Descriptors.FieldDescriptor, Object> fields = msg.getAllFields();
+    // Special handling for Struct at the top level - return the flattened form
+    if (Struct.getDescriptor().getFullName().equals(msg.getDescriptorForType().getFullName())) {
+      @SuppressWarnings("unchecked")
+      final var structMap = (Map<String, Object>) convertStruct(msg);
 
+      return structMap;
+    }
+
+    final Map<Descriptors.FieldDescriptor, Object> fields = msg.getAllFields();
     final Map<String, Object> converted = Maps.newHashMapWithExpectedSize(fields.size());
     for (Map.Entry<Descriptors.FieldDescriptor, Object> field : fields.entrySet()) {
       converted.put(field.getKey().getJsonName(), convertField(field.getKey(), field.getValue()));
@@ -99,7 +106,6 @@ public class ProtobufConverter
     }
   }
 
-  @Nonnull
   private static List<Object> convertList(Descriptors.FieldDescriptor field, List<?> value)
       throws InvalidProtocolBufferException
   {
@@ -124,10 +130,10 @@ public class ProtobufConverter
     final List<Object> elements = (List<Object>) value;
     final HashMap<String, Object> theMap = Maps.newHashMapWithExpectedSize(elements.size());
     for (Object element : elements) {
-      Message entry = (Message) element;
+      final Message entry = (Message) element;
       theMap.put(
           (String) convertSingleValue(keyField, entry.getField(keyField)),
-          convertSingleValue(valueField, entry.getField(valueField))
+          convertField(valueField, entry.getField(valueField))
       );
     }
 
@@ -156,6 +162,9 @@ public class ProtobufConverter
     }
   }
 
+  /**
+   * Similar to {@link JsonFormat.PrinterImpl#buildWellKnownTypePrinters()}.
+   */
   private static Map<String, SpecializedConverter> buildSpecializedConversions()
   {
     final Map<String, SpecializedConverter> converters = new HashMap<>();
@@ -176,10 +185,12 @@ public class ProtobufConverter
     converters.put(BytesValue.getDescriptor().getFullName(), parappaTheWrappa);
     converters.put(FloatValue.getDescriptor().getFullName(), parappaTheWrappa);
     converters.put(DoubleValue.getDescriptor().getFullName(), parappaTheWrappa);
+
     converters.put(
         Any.getDescriptor().getFullName(),
         msg -> JsonFormat.printer().print(msg) // meh
     );
+
     converters.put(
         Timestamp.getDescriptor().getFullName(),
         msg -> {
@@ -200,15 +211,7 @@ public class ProtobufConverter
     );
     converters.put(
         Struct.getDescriptor().getFullName(),
-        msg -> {
-          final Descriptors.Descriptor descriptor = msg.getDescriptorForType();
-          final Descriptors.FieldDescriptor field = descriptor.findFieldByName("fields");
-          if (field == null) {
-            throw new InvalidProtocolBufferException("Invalid Struct type.");
-          }
-          // Struct is formatted as a map object.
-          return convertSingleValue(field, msg.getField(field));
-        }
+        ProtobufConverter::convertStruct
     );
     converters.put(
         Value.getDescriptor().getFullName(),
@@ -236,6 +239,20 @@ public class ProtobufConverter
         }
     );
     return converters;
+  }
+
+  /**
+   * Similar to {@link JsonFormat.PrinterImpl#printStruct(MessageOrBuilder)}.
+   */
+  private static Object convertStruct(final Message msg) throws InvalidProtocolBufferException
+  {
+    final Descriptors.Descriptor descriptor = msg.getDescriptorForType();
+    final Descriptors.FieldDescriptor field = descriptor.findFieldByName("fields");
+    if (field == null) {
+      throw new InvalidProtocolBufferException("Invalid Struct type.");
+    }
+    // Struct is formatted as a map object.
+    return convertMap(field, msg.getField(field));
   }
 
   @FunctionalInterface
