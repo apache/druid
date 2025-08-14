@@ -65,6 +65,9 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.metadata.MetadataStorage;
 import org.apache.druid.metadata.MetadataStorageProvider;
+import org.apache.druid.msq.guice.MSQDurableStorageModule;
+import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
+import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
@@ -298,6 +301,9 @@ public class CliCoordinator extends ServerRunnable
       // the injector to get confused due to having multiple bindings for the same classes.
       modules.add(new LookupSerdeModule());
       modules.add(new SupervisorCleanupModule());
+      modules.add(new MSQIndexingModule());
+      modules.add(new MSQDurableStorageModule());
+      modules.add(new MSQExternalDataSourceModule());
     }
 
     return modules;
