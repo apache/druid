@@ -33,6 +33,7 @@ import javax.annotation.concurrent.NotThreadSafe;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -94,6 +95,12 @@ abstract class ConstantExpr<T> implements Expr
   }
 
   @Override
+  public List<Expr> getExprArgs()
+  {
+    return List.of();
+  }
+
+  @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
     return true;
@@ -130,9 +137,10 @@ abstract class ConstantExpr<T> implements Expr
   {
     return VectorProcessors.constant(value, inspector.getMaxVectorSize(), outputType);
   }
+
   /**
    * Constant expression based on a concreate ExprEval.
-   *
+   * <p>
    * Not multi-thread safe.
    */
   @NotThreadSafe

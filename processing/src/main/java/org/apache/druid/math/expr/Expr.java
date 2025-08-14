@@ -158,6 +158,8 @@ public interface Expr extends Cacheable
    */
   BindingAnalysis analyzeInputs();
 
+  List<Expr> getExprArgs();
+
   /**
    * Given an {@link InputBindingInspector}, compute what the output {@link ExpressionType} will be for this expression.
    *

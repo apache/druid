@@ -37,7 +37,8 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.joda.time.chrono.ISOChronology;
+import org.joda.time.DateTimeZone;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -163,10 +164,25 @@ public class Granularities
       expression = ColumnHolder.TIME_COLUMN_NAME;
     } else {
       PeriodGranularity period = (PeriodGranularity) granularity;
-      if (!ISOChronology.getInstanceUTC().getZone().equals(period.getTimeZone()) || period.getOrigin() != null) {
+      if (period.getOrigin() != null) {
         expression = ColumnHolder.TIME_COLUMN_NAME;
-      } else {
+      } else if (period.getTimeZone().equals(DateTimeZone.UTC)) {
         expression = TimestampFloorExprMacro.forQueryGranularity(period.getPeriod());
+      } else if (period.getPeriod().getYears() != 0 || period.getPeriod().getMonths() != 0) {
+        if (PeriodGranularity.getStandardSeconds(period.getPeriod().withYears(0).withMonths(0)).isPresent()) {
+          expression = TimestampFloorExprMacro.forQueryGranularity(Duration.standardSeconds(1).toPeriod());
+        } else {
+          // period has year & month, generally it should not have milliseconds, but this is a fallback
+          expression = ColumnHolder.TIME_COLUMN_NAME;
+        }
+      } else {
+        if (PeriodGranularity.getStandardSeconds(period.getPeriod()).isEmpty()) {
+          // period has milliseconds
+          expression = ColumnHolder.TIME_COLUMN_NAME;
+        } else {
+          int seconds = period.getUtcMappablePeriodSecondsOrThrow();
+          expression = TimestampFloorExprMacro.forQueryGranularity(Duration.standardSeconds(seconds).toPeriod());
+        }
       }
     }
 
@@ -194,15 +210,35 @@ public class Granularities
   public static Granularity fromVirtualColumn(VirtualColumn virtualColumn)
   {
     if (virtualColumn instanceof ExpressionVirtualColumn) {
-      final ExpressionVirtualColumn expressionVirtualColumn = (ExpressionVirtualColumn) virtualColumn;
-      final Expr expr = expressionVirtualColumn.getParsedExpression().get();
-      if (expr instanceof TimestampFloorExprMacro.TimestampFloorExpr) {
-        final TimestampFloorExprMacro.TimestampFloorExpr gran = (TimestampFloorExprMacro.TimestampFloorExpr) expr;
-        if (gran.getArg().getBindingIfIdentifier() != null) {
-          return gran.getGranularity();
-        }
-      }
+      return fromExpr(((ExpressionVirtualColumn) virtualColumn).getParsedExpression().get());
     }
     return null;
+  }
+
+  private static Granularity fromExpr(Expr expr)
+  {
+    String identifier = expr.getIdentifierIfIdentifier();
+    if (identifier != null) {
+      return identifier.equals(ColumnHolder.TIME_COLUMN_NAME)
+             ? Granularities.NONE
+             : null;
+    }
+
+    if (expr instanceof TimestampFloorExprMacro.TimestampFloorExpr) {
+      final TimestampFloorExprMacro.TimestampFloorExpr gran = (TimestampFloorExprMacro.TimestampFloorExpr) expr;
+      return gran.getGranularity();
+    } else if (expr.getExprArgs().isEmpty()) {
+      return Granularities.ALL;
+    } else {
+      Granularity gran = Granularities.ALL;
+      for (Expr exprArg : expr.getExprArgs()) {
+        Granularity newGran = fromExpr(exprArg);
+        if (newGran == null) {
+          return null; // cannot determine granularity
+        }
+        gran = gran.isFinerThan(newGran) ? gran : newGran;
+      }
+      return gran;
+    }
   }
 }

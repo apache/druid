@@ -41,8 +41,10 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
@@ -53,10 +55,12 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
+import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.last.LongLastAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -67,6 +71,7 @@ import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec.Direction;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
@@ -81,6 +86,8 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.Period;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -107,7 +114,10 @@ import java.util.stream.Collectors;
 public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 {
   private static final Closer CLOSER = Closer.create();
-  static final DateTime TIMESTAMP = Granularities.DAY.bucket(DateTimes.nowUtc()).getStart();
+  // Set a fixed time, when IST is 5 hours 30 minutes ahead of UTC, and PDT is 7 hours behind UTC.
+  static final DateTime UTC_MIDNIGHT = Granularities.DAY.bucket(DateTimes.of("2025-08-13")).getStart();
+  static final DateTime UTC_01H = UTC_MIDNIGHT.plusHours(1);
+  static final DateTime UTC_01H31M = UTC_MIDNIGHT.plusHours(1).plusMinutes(31);
 
   static final RowSignature ROW_SIGNATURE = RowSignature.builder()
                                                         .add("a", ColumnType.STRING)
@@ -123,49 +133,49 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     return Arrays.asList(
         new ListBasedInputRow(
             ROW_SIGNATURE,
-            TIMESTAMP,
+            UTC_MIDNIGHT,
             dimensions,
             Arrays.asList("a", "aa", 1L, 1.0, null, Map.of("x", "a", "y", 1L, "z", 1.0))
         ),
         new ListBasedInputRow(
             ROW_SIGNATURE,
-            TIMESTAMP.plusMinutes(2),
+            UTC_MIDNIGHT.plusMinutes(2),
             dimensions,
             Arrays.asList("a", "bb", 1L, 1.1, 1.1f, Map.of("x", "a", "y", 1L, "z", 1.1))
         ),
         new ListBasedInputRow(
             ROW_SIGNATURE,
-            TIMESTAMP.plusMinutes(4),
+            UTC_MIDNIGHT.plusMinutes(4),
             dimensions,
             Arrays.asList("a", "cc", 2L, 2.2, 2.2f, Map.of("x", "a", "y", 2L, "z", 2.2))
         ),
         new ListBasedInputRow(
             ROW_SIGNATURE,
-            TIMESTAMP.plusMinutes(6),
+            UTC_MIDNIGHT.plusMinutes(6),
             dimensions,
             Arrays.asList("b", "aa", 3L, 3.3, 3.3f, Map.of("x", "b", "y", 3L, "z", 3.3))
         ),
         new ListBasedInputRow(
             ROW_SIGNATURE,
-            TIMESTAMP.plusMinutes(8),
+            UTC_MIDNIGHT.plusMinutes(8),
             dimensions,
             Arrays.asList("b", "aa", 4L, 4.4, 4.4f, Map.of("x", "b", "y", 4L, "z", 4.4))
         ),
         new ListBasedInputRow(
             ROW_SIGNATURE,
-            TIMESTAMP.plusMinutes(10),
+            UTC_MIDNIGHT.plusMinutes(10),
             dimensions,
             Arrays.asList("b", "bb", 5L, 5.5, 5.5f, Map.of("x", "b", "y", 5L, "z", 5.5))
         ),
         new ListBasedInputRow(
             ROW_SIGNATURE,
-            TIMESTAMP.plusHours(1),
+            UTC_01H,
             dimensions,
             Arrays.asList("a", "aa", 1L, 1.1, 1.1f, Map.of("x", "a", "y", 1L, "z", 1.1))
         ),
         new ListBasedInputRow(
             ROW_SIGNATURE,
-            TIMESTAMP.plusHours(1).plusMinutes(1),
+            UTC_01H31M,
             dimensions,
             Arrays.asList("a", "dd", 2L, 2.2, 2.2f, Map.of("x", "a", "y", 2L, "z", 2.2))
         )
@@ -275,8 +285,18 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                              .build(),
       AggregateProjectionSpec.builder("a_concat_b_d_plus_f_sum_c")
                              .virtualColumns(
-                                 new ExpressionVirtualColumn("__vc2", "d + e", ColumnType.LONG, TestExprMacroTable.INSTANCE),
-                                 new ExpressionVirtualColumn("__vc3", "concat(a, b)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+                                 new ExpressionVirtualColumn(
+                                     "__vc2",
+                                     "d + e",
+                                     ColumnType.LONG,
+                                     TestExprMacroTable.INSTANCE
+                                 ),
+                                 new ExpressionVirtualColumn(
+                                     "__vc3",
+                                     "concat(a, b)",
+                                     ColumnType.STRING,
+                                     TestExprMacroTable.INSTANCE
+                                 )
                              )
                              .groupingColumns(new LongDimensionSchema("__vc2"), new StringDimensionSchema("__vc3"))
                              .aggregators(new LongSumAggregatorFactory("sum_c", "c"))
@@ -290,10 +310,10 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                  new LongDimensionSchema("__gran"),
                                  new StringDimensionSchema("a")
                              )
-          .aggregators(
-              new CountAggregatorFactory("chocula"),
-              new LongSumAggregatorFactory("sum_c", "sum_c")
-          )
+                             .aggregators(
+                                 new CountAggregatorFactory("chocula"),
+                                 new LongSumAggregatorFactory("sum_c", "sum_c")
+                             )
                              .build(),
       AggregateProjectionSpec.builder("afoo")
                              .virtualColumns(
@@ -305,7 +325,10 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                  )
                              )
                              .groupingColumns(new StringDimensionSchema("afoo"))
-                             .aggregators(new LongSumAggregatorFactory("sum_c", "sum_c"))
+                             .aggregators(
+                                 new LongSumAggregatorFactory("sum_c", "sum_c"),
+                                 new LongMaxAggregatorFactory("max_c", "max_c")
+                             )
                              .build()
   );
 
@@ -328,14 +351,13 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       ROLLUP_PROJECTIONS.stream()
                         .map(
                             projection ->
-                                AggregateProjectionSpec.builder(projection)
-                                                       .groupingColumns(
-                                                           projection.getGroupingColumns()
-                                                                     .stream()
-                                                                     .map(x -> new AutoTypeColumnSchema(x.getName(), null))
-                                                                     .collect(Collectors.toList())
-                                                       )
-                                                       .build()
+                                AggregateProjectionSpec
+                                    .builder(projection)
+                                    .groupingColumns(projection.getGroupingColumns()
+                                                               .stream()
+                                                               .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                               .collect(Collectors.toList()))
+                                    .build()
                         )
                         .collect(Collectors.toList());
 
@@ -366,6 +388,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                           )
                       );
     final AggregatorFactory[] rollupAggs = new AggregatorFactory[]{
+        new LongMaxAggregatorFactory("max_c", "c"),
         new LongSumAggregatorFactory("sum_c", "c"),
         new DoubleSumAggregatorFactory("sum_d", "d"),
         new FloatSumAggregatorFactory("sum_e", "e")
@@ -413,7 +436,11 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
               }
             }
             if (incremental) {
-              IncrementalIndex index = CLOSER.register(makeBuilder(dims, autoSchema, writeNullColumns).buildIncrementalIndex());
+              IncrementalIndex index = CLOSER.register(makeBuilder(
+                  dims,
+                  autoSchema,
+                  writeNullColumns
+              ).buildIncrementalIndex());
               IncrementalIndex rollupIndex = CLOSER.register(
                   makeRollupBuilder(rollupDims, rollupAggs, autoSchema).buildIncrementalIndex()
               );
@@ -427,7 +454,11 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                   autoSchema
               });
             } else {
-              QueryableIndex index = CLOSER.register(makeBuilder(dims, autoSchema, writeNullColumns).buildMMappedIndex());
+              QueryableIndex index = CLOSER.register(makeBuilder(
+                  dims,
+                  autoSchema,
+                  writeNullColumns
+              ).buildMMappedIndex());
               QueryableIndex rollupIndex = CLOSER.register(
                   makeRollupBuilder(rollupDims, rollupAggs, autoSchema).buildMMappedIndex()
               );
@@ -566,8 +597,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                     .setLimitSpec(
                         new DefaultLimitSpec(
                             Arrays.asList(
-                                new OrderByColumnSpec("a", OrderByColumnSpec.Direction.ASCENDING, StringComparators.LEXICOGRAPHIC),
-                                new OrderByColumnSpec("v0", OrderByColumnSpec.Direction.ASCENDING, StringComparators.LEXICOGRAPHIC)
+                                new OrderByColumnSpec("a", Direction.ASCENDING, StringComparators.LEXICOGRAPHIC),
+                                new OrderByColumnSpec("v0", Direction.ASCENDING, StringComparators.LEXICOGRAPHIC)
                             ),
                             10
                         )
@@ -674,8 +705,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         query,
         queryMetrics,
         List.of(
-            new Object[]{"a", 7L, Pair.of(TIMESTAMP.plusHours(1).plusMinutes(1).getMillis(), 2L)},
-            new Object[]{"b", 12L, Pair.of(TIMESTAMP.plusMinutes(10).getMillis(), 5L)}
+            new Object[]{"a", 7L, Pair.of(UTC_01H31M.getMillis(), 2L)},
+            new Object[]{"b", 12L, Pair.of(UTC_MIDNIGHT.plusMinutes(10).getMillis(), 5L)}
         )
     );
   }
@@ -702,8 +733,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         query,
         queryMetrics,
         List.of(
-            new Object[]{"a", 7L, Pair.of(TIMESTAMP.plusHours(1).plusMinutes(1).getMillis(), 2L)},
-            new Object[]{"b", 12L, Pair.of(TIMESTAMP.plusMinutes(10).getMillis(), 5L)}
+            new Object[]{"a", 7L, Pair.of(UTC_01H31M.getMillis(), 2L)},
+            new Object[]{"b", 12L, Pair.of(UTC_MIDNIGHT.plusMinutes(10).getMillis(), 5L)}
         )
     );
   }
@@ -757,7 +788,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         query,
         queryMetrics,
         Collections.singletonList(
-            new Object[]{"a", 7L, Pair.of(TIMESTAMP.plusHours(1).plusMinutes(1).getMillis(), 2L)}
+            new Object[]{"a", 7L, Pair.of(UTC_01H31M.getMillis(), 2L)}
         )
     );
   }
@@ -886,9 +917,9 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         query,
         queryMetrics,
         makeArrayResultSet(
-            new Object[]{TIMESTAMP.getMillis(), "a", 4L},
-            new Object[]{TIMESTAMP.getMillis(), "b", 12L},
-            new Object[]{TIMESTAMP.plusHours(1).getMillis(), "a", 3L}
+            new Object[]{UTC_MIDNIGHT.getMillis(), "a", 4L},
+            new Object[]{UTC_MIDNIGHT.getMillis(), "b", 12L},
+            new Object[]{UTC_01H.getMillis(), "a", 3L}
         )
     );
   }
@@ -923,15 +954,106 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         query,
         queryMetrics,
         makeArrayResultSet(
-            new Object[]{TIMESTAMP.getMillis(), "aa", 8L},
-            new Object[]{TIMESTAMP.getMillis(), "bb", 6L},
-            new Object[]{TIMESTAMP.getMillis(), "cc", 2L},
-            new Object[]{TIMESTAMP.plusHours(1).getMillis(), "aa", 1L},
-            new Object[]{TIMESTAMP.plusHours(1).getMillis(), "dd", 2L}
+            new Object[]{UTC_MIDNIGHT.getMillis(), "aa", 8L},
+            new Object[]{UTC_MIDNIGHT.getMillis(), "bb", 6L},
+            new Object[]{UTC_MIDNIGHT.getMillis(), "cc", 2L},
+            new Object[]{UTC_01H.getMillis(), "aa", 1L},
+            new Object[]{UTC_01H.getMillis(), "dd", 2L}
         )
     );
   }
 
+  @Test
+  public void testQueryGranularityFitsProjectionGranularityWithTimeZone()
+  {
+    final GroupByQuery.Builder queryBuilder =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setInterval(Intervals.ETERNITY)
+                    .addAggregator(new LongSumAggregatorFactory("c_sum", "c"));
+    final ExpectedProjectionGroupBy queryMetrics = new ExpectedProjectionGroupBy("a_hourly_c_sum_with_count_latest");
+
+    if (segmentSortedByTime) {
+      queryBuilder.addDimension("a")
+                  .setGranularity(new PeriodGranularity(
+                      new Period("PT1H"),
+                      null,
+                      DateTimeZone.forID("America/Los_Angeles")
+                  ));
+    } else {
+      queryBuilder.setGranularity(Granularities.ALL)
+                  .setDimensions(
+                      DefaultDimensionSpec.of("__gran", ColumnType.LONG),
+                      DefaultDimensionSpec.of("a")
+                  )
+                  .setVirtualColumns(new ExpressionVirtualColumn(
+                      "__gran",
+                      "timestamp_floor(__time,'PT1H',null,'America/Los_Angeles')",
+                      ColumnType.LONG,
+                      new ExprMacroTable(List.of(new TimestampFloorExprMacro()))
+                  ));
+    }
+    final GroupByQuery query = queryBuilder.build();
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, 3);
+
+    testGroupBy(
+        query,
+        queryMetrics,
+        makeArrayResultSet(
+            new Object[]{UTC_MIDNIGHT.getMillis(), "a", 4L},
+            new Object[]{UTC_MIDNIGHT.getMillis(), "b", 12L},
+            new Object[]{UTC_01H.getMillis(), "a", 3L}
+        )
+    );
+  }
+
+  @Test
+  public void testQueryGranularityDoesNotFitProjectionGranularityWithTimeZone()
+  {
+    final GroupByQuery.Builder queryBuilder =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setInterval(Intervals.ETERNITY)
+                    .addAggregator(new LongSumAggregatorFactory("c_sum", "c"));
+    final ExpectedProjectionGroupBy queryMetrics = new ExpectedProjectionGroupBy(null);
+
+    if (segmentSortedByTime) {
+      queryBuilder.addDimension("a")
+                  .setGranularity(new PeriodGranularity(
+                      new Period("PT1H"),
+                      null,
+                      DateTimeZone.forID("Asia/Kolkata")
+                  ));
+    } else {
+      queryBuilder.setGranularity(Granularities.ALL)
+                  .setDimensions(
+                      DefaultDimensionSpec.of("__gran", ColumnType.LONG),
+                      DefaultDimensionSpec.of("a")
+                  )
+                  .setVirtualColumns(new ExpressionVirtualColumn(
+                      "__gran",
+                      "timestamp_floor(__time,'PT1H',null,'Asia/Kolkata')",
+                      ColumnType.LONG,
+                      new ExprMacroTable(List.of(new TimestampFloorExprMacro()))
+                  ));
+    }
+    final GroupByQuery query = queryBuilder.build();
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, 8);
+    testGroupBy(
+        query,
+        queryMetrics,
+        makeArrayResultSet(
+            new Object[]{UTC_MIDNIGHT.minusMinutes(30).getMillis(), "a", 4L},
+            new Object[]{UTC_MIDNIGHT.minusMinutes(30).getMillis(), "b", 12L},
+            new Object[]{UTC_01H.minusMinutes(30).getMillis(), "a", 1L},
+            new Object[]{UTC_01H31M.minusMinutes(1).getMillis(), "a", 2L}
+        )
+    );
+  }
 
   @Test
   public void testQueryGranularityLargerProjectionGranularity()
@@ -963,8 +1085,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         query,
         queryMetrics,
         makeArrayResultSet(
-            new Object[]{TIMESTAMP.getMillis(), "a", 7L},
-            new Object[]{TIMESTAMP.getMillis(), "b", 12L}
+            new Object[]{UTC_MIDNIGHT.getMillis(), "a", 7L},
+            new Object[]{UTC_MIDNIGHT.getMillis(), "b", 12L}
         )
     );
   }
@@ -1076,7 +1198,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         query,
         queryMetrics,
         Collections.singletonList(
-            new Object[]{TIMESTAMP, 19L}
+            new Object[]{UTC_MIDNIGHT, 19L}
         )
     );
   }
@@ -1104,7 +1226,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         query,
         queryMetrics,
         Collections.singletonList(
-            new Object[]{TIMESTAMP, 19L}
+            new Object[]{UTC_MIDNIGHT, 19L}
         )
     );
   }
@@ -1125,7 +1247,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     final CursorBuildSpec buildSpec = TimeseriesQueryEngine.makeCursorBuildSpec(query, null);
     DruidException e = Assert.assertThrows(
         DruidException.class,
-        () -> projectionsCursorFactory.makeCursorHolder(buildSpec));
+        () -> projectionsCursorFactory.makeCursorHolder(buildSpec)
+    );
     Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
     Assert.assertEquals("Projection[b_c_sum] specified, but does not satisfy query", e.getMessage());
   }
@@ -1150,8 +1273,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         query,
         queryMetrics,
         List.of(
-            new Object[]{TIMESTAMP, 16L},
-            new Object[]{TIMESTAMP.plusHours(1), 3L}
+            new Object[]{UTC_MIDNIGHT, 16L},
+            new Object[]{UTC_01H, 3L}
         )
     );
   }
@@ -1177,7 +1300,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         query,
         queryMetrics,
         Collections.singletonList(
-            new Object[]{TIMESTAMP, 19L}
+            new Object[]{UTC_MIDNIGHT, 19L}
         )
     );
   }
@@ -1203,7 +1326,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         query,
         queryMetrics,
         Collections.singletonList(
-            new Object[]{TIMESTAMP, 19L}
+            new Object[]{UTC_MIDNIGHT, 19L}
         )
     );
   }
@@ -1230,14 +1353,14 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         query,
         queryMetrics,
         List.of(
-            new Object[]{TIMESTAMP, 1L},
-            new Object[]{TIMESTAMP.plusMinutes(2), 1L},
-            new Object[]{TIMESTAMP.plusMinutes(4), 2L},
-            new Object[]{TIMESTAMP.plusMinutes(6), 3L},
-            new Object[]{TIMESTAMP.plusMinutes(8), 4L},
-            new Object[]{TIMESTAMP.plusMinutes(10), 5L},
-            new Object[]{TIMESTAMP.plusHours(1), 1L},
-            new Object[]{TIMESTAMP.plusHours(1).plusMinutes(1), 2L}
+            new Object[]{UTC_MIDNIGHT, 1L},
+            new Object[]{UTC_MIDNIGHT.plusMinutes(2), 1L},
+            new Object[]{UTC_MIDNIGHT.plusMinutes(4), 2L},
+            new Object[]{UTC_MIDNIGHT.plusMinutes(6), 3L},
+            new Object[]{UTC_MIDNIGHT.plusMinutes(8), 4L},
+            new Object[]{UTC_MIDNIGHT.plusMinutes(10), 5L},
+            new Object[]{UTC_01H, 1L},
+            new Object[]{UTC_01H31M, 2L}
         )
     );
   }
@@ -1275,18 +1398,24 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
   @Test
   public void testProjectionSingleDimVirtualColumnRollupTable()
   {
+    final VirtualColumn vc = new ExpressionVirtualColumn(
+        "v0",
+        "concat(a, 'foo')",
+        ColumnType.STRING,
+        TestExprMacroTable.INSTANCE
+    );
     final GroupByQuery query =
         GroupByQuery.builder()
                     .setDataSource("test")
                     .setGranularity(Granularities.ALL)
                     .setInterval(Intervals.ETERNITY)
                     .addDimension("v0")
-                    .setVirtualColumns(new ExpressionVirtualColumn("v0", "concat(a, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE))
+                    .setVirtualColumns(vc)
                     .addAggregator(new LongSumAggregatorFactory("c_sum", "sum_c"))
+                    .addAggregator(new LongMaxAggregatorFactory("c_c", "max_c"))
                     .build();
 
-    final ExpectedProjectionGroupBy queryMetrics =
-        new ExpectedProjectionGroupBy("afoo");
+    final ExpectedProjectionGroupBy queryMetrics = new ExpectedProjectionGroupBy("afoo");
     final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
 
     assertCursorProjection(rollupProjectionsCursorFactory, buildSpec, queryMetrics, 2);
@@ -1297,8 +1426,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         query,
         queryMetrics,
         makeArrayResultSet(
-            new Object[]{"afoo", 7L},
-            new Object[]{"bfoo", 12L}
+            new Object[]{"afoo", 7L, 2L},
+            new Object[]{"bfoo", 12L, 5L}
         )
     );
   }
@@ -1612,7 +1741,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                            IncrementalIndexSchema.builder()
                                                  .withDimensionsSpec(dimensionsSpec)
                                                  .withRollup(false)
-                                                 .withMinTimestamp(TIMESTAMP.getMillis())
+                                                 .withMinTimestamp(UTC_MIDNIGHT.getMillis())
                                                  .withProjections(autoSchema ? AUTO_PROJECTIONS : PROJECTIONS)
                                                  .build()
                        )
@@ -1620,20 +1749,25 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                        .rows(ROWS);
   }
 
-  private static IndexBuilder makeRollupBuilder(DimensionsSpec dimensionsSpec, AggregatorFactory[] aggs, boolean autoSchema)
+  private static IndexBuilder makeRollupBuilder(
+      DimensionsSpec dimensionsSpec,
+      AggregatorFactory[] aggs,
+      boolean autoSchema
+  )
   {
     File tmp = FileUtils.createTempDir();
     CLOSER.register(tmp::delete);
     return IndexBuilder.create()
                        .tmpDir(tmp)
                        .schema(
-                           IncrementalIndexSchema.builder()
-                                                 .withDimensionsSpec(dimensionsSpec)
-                                                 .withMetrics(aggs)
-                                                 .withRollup(true)
-                                                 .withMinTimestamp(TIMESTAMP.getMillis())
-                                                 .withProjections(autoSchema ? AUTO_ROLLUP_PROJECTIONS : ROLLUP_PROJECTIONS)
-                                                 .build()
+                           IncrementalIndexSchema
+                               .builder()
+                               .withDimensionsSpec(dimensionsSpec)
+                               .withMetrics(aggs)
+                               .withRollup(true)
+                               .withMinTimestamp(UTC_MIDNIGHT.getMillis())
+                               .withProjections(autoSchema ? AUTO_ROLLUP_PROJECTIONS : ROLLUP_PROJECTIONS)
+                               .build()
                        )
                        .writeNullColumns(true)
                        .rows(ROLLUP_ROWS);

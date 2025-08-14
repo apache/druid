@@ -57,6 +57,7 @@ import java.util.List;
 import java.util.TimeZone;
 
 /**
+ *
  */
 public class QueryGranularityTest extends InitializedNullHandlingTest
 {
@@ -1044,7 +1045,7 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
     column = Granularities.toVirtualColumn(hourWithOrigin, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
     Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, column.getExpression());
     column = Granularities.toVirtualColumn(hourWithTz, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, column.getExpression());
+    Assert.assertEquals("timestamp_floor(__time,'PT1H')", column.getExpression());
     column = Granularities.toVirtualColumn(duration, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
     Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, column.getExpression());
     column = Granularities.toVirtualColumn(Granularities.NONE, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
@@ -1070,6 +1071,18 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
         ColumnType.LONG,
         TestExprMacroTable.INSTANCE
     );
+    ExpressionVirtualColumn hourlyPacificTime = new ExpressionVirtualColumn(
+        "v0",
+        "timestamp_floor(__gran, 'PT1H', null, 'America/Los_Angeles')",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+    ExpressionVirtualColumn hourlyIndianTime = new ExpressionVirtualColumn(
+        "v0",
+        "timestamp_floor(__gran, 'PT1H', null, 'Asia/Kolkata')",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
     ExpressionVirtualColumn ceilHour = new ExpressionVirtualColumn(
         "v0",
         "timestamp_ceil(__time, 'PT1M')",
@@ -1078,7 +1091,7 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
     );
     ExpressionVirtualColumn floorWithExpression = new ExpressionVirtualColumn(
         "v0",
-        "timestamp_floor(timestamp_parse(timestamp,null,'UTC'), 'PT1M')",
+        "timestamp_floor(timestamp_parse(__time,null,'UTC'), 'PT1M')",
         ColumnType.LONG,
         TestExprMacroTable.INSTANCE
     );
@@ -1097,14 +1110,53 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
     Assert.assertEquals(Granularities.HOUR, Granularities.fromVirtualColumn(hourly));
     Assert.assertEquals(Granularities.DAY, Granularities.fromVirtualColumn(day));
     Assert.assertEquals(Granularities.HOUR, Granularities.fromVirtualColumn(hourlyNonstandardTime));
-    Assert.assertNull(Granularities.fromVirtualColumn(ceilHour));
-    Assert.assertNull(Granularities.fromVirtualColumn(floorWithExpression));
+    Assert.assertEquals(
+        new PeriodGranularity(new Period("PT1H"), null, DateTimeZone.forID("America/Los_Angeles")),
+        Granularities.fromVirtualColumn(hourlyPacificTime)
+    );
+    Assert.assertEquals(
+        new PeriodGranularity(new Period("PT1H"), null, DateTimeZone.forID("Asia/Kolkata")),
+        Granularities.fromVirtualColumn(hourlyIndianTime)
+    );
+    Assert.assertEquals(Granularities.NONE, Granularities.fromVirtualColumn(ceilHour));
+    Assert.assertEquals(Granularities.MINUTE, Granularities.fromVirtualColumn(floorWithExpression));
     final DateTime origin = DateTimes.of("2012-01-02T05:00:00.000-08:00");
     final DateTimeZone tz = DateTimes.inferTzFromString("America/Los_Angeles");
     final Granularity minuteWithTz = new PeriodGranularity(new Period("PT1M"), null, tz);
     final Granularity minuteWithOrigin = new PeriodGranularity(new Period("PT1M"), origin, tz);
     Assert.assertEquals(minuteWithTz, Granularities.fromVirtualColumn(floorWithTimezone));
     Assert.assertEquals(minuteWithOrigin, Granularities.fromVirtualColumn(floorWithOriginTimezone));
+  }
+
+  @Test
+  public void testFromVirtualColumnExtra()
+  {
+    ExpressionVirtualColumn formatFloor = new ExpressionVirtualColumn(
+        "v0",
+        "timestamp_format(timestamp_floor(__time, 'PT1H', null,'America/Los_Angeles'), 'yyyy-MM-dd')",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+    Assert.assertEquals(
+        new PeriodGranularity(new Period("PT1H"), null, DateTimeZone.forID("America/Los_Angeles")),
+        Granularities.fromVirtualColumn(formatFloor)
+    );
+
+    ExpressionVirtualColumn concatFormatFloor = new ExpressionVirtualColumn(
+        "v0",
+        "concat(a, timestamp_format(timestamp_floor(__time, 'PT1H', null,'America/Los_Angeles'), 'yyyy-MM-dd'))",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+    Assert.assertNull(Granularities.fromVirtualColumn(concatFormatFloor));
+
+    ExpressionVirtualColumn concatFields = new ExpressionVirtualColumn(
+        "v0",
+        "concat(a, b)",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+    Assert.assertNull(Granularities.fromVirtualColumn(concatFields));
   }
 
   private void assertBucketStart(final Granularity granularity, final DateTime in, final DateTime expectedInProperTz)

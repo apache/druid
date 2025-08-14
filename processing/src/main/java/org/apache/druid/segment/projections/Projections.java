@@ -25,6 +25,7 @@ import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.Filter;
@@ -424,13 +425,19 @@ public class Projections
       // virtual column and underlying expression itself, but this will do for now
       final Granularity virtualGranularity = Granularities.fromVirtualColumn(queryVirtualColumn);
       if (virtualGranularity != null) {
-        if (virtualGranularity.isFinerThan(projection.getEffectiveGranularity())) {
-          return null;
-        }
         // same granularity, replace virtual column directly by remapping it to the physical column
         if (projection.getEffectiveGranularity().equals(virtualGranularity)) {
           return matchBuilder.remapColumn(queryVirtualColumn.getOutputName(), ColumnHolder.TIME_COLUMN_NAME)
                              .addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
+        } else if (virtualGranularity instanceof PeriodGranularity
+                   && projection.getEffectiveGranularity() instanceof PeriodGranularity) {
+          PeriodGranularity virtualGranularityPeriod = (PeriodGranularity) virtualGranularity;
+          PeriodGranularity projectionGranularityPeriod = (PeriodGranularity) projection.getEffectiveGranularity();
+          if (!projectionGranularityPeriod.canBeMappedTo(virtualGranularityPeriod)) {
+            return null;
+          }
+        } else if (virtualGranularity.isFinerThan(projection.getEffectiveGranularity())) {
+          return null;
         }
         return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
       } else {

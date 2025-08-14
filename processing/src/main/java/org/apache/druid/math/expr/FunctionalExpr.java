@@ -46,7 +46,7 @@ final class FunctionalExpr
  * evaluated.
  */
 @SuppressWarnings("ClassName")
-class FunctionExpr implements Expr
+ class FunctionExpr implements Expr
 {
   final Function function;
   final ImmutableList<Expr> args;
@@ -164,6 +164,12 @@ class FunctionExpr implements Expr
                           .withArrayArguments(function.getArrayInputs(args))
                           .withArrayInputs(function.hasArrayInputs())
                           .withArrayOutput(function.hasArrayOutput());
+  }
+
+  @Override
+  public List<Expr> getExprArgs()
+  {
+    return args;
   }
 
   @Override
@@ -291,6 +297,12 @@ class ApplyFunctionExpr implements Expr
   public BindingAnalysis analyzeInputs()
   {
     return bindingAnalysis;
+  }
+
+  @Override
+  public List<Expr> getExprArgs()
+  {
+    return argsExpr;
   }
 
   @Nullable
