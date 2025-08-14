@@ -280,10 +280,16 @@ public class SqlQuery
     if (contentType == null) {
       throw new HttpException(Response.Status.BAD_REQUEST, "Missing Content-Type header");
     }
-    try {
-      final MediaType requestMediaType = MediaType.valueOf(contentType);
-      if (MediaType.APPLICATION_JSON_TYPE.isCompatible(requestMediaType)) {
 
+    final MediaType requestMediaType;
+    try {
+      requestMediaType = MediaType.valueOf(contentType);
+    }
+    catch (IllegalArgumentException e) {
+      throw new HttpException(Response.Status.BAD_REQUEST, "Invalid Content-Type header: " + e.getMessage());
+    }
+    try {
+      if (MediaType.APPLICATION_JSON_TYPE.isCompatible(requestMediaType)) {
         SqlQuery sqlQuery = jsonQueryExtractor.extract();
         if (sqlQuery == null) {
           throw new HttpException(Response.Status.BAD_REQUEST, "Empty query");
@@ -310,7 +316,6 @@ public class SqlQuery
               "Unable to decode URL-Encoded SQL query: " + e.getMessage()
           );
         }
-
         return new SqlQuery(sql, null, false, false, false, null, null);
       } else {
         throw new HttpException(
@@ -340,9 +345,6 @@ public class SqlQuery
     }
     catch (IOException e) {
       throw new HttpException(Response.Status.BAD_REQUEST, "Unable to read query from request: " + e.getMessage());
-    }
-    catch (IllegalArgumentException e) {
-      throw new HttpException(Response.Status.BAD_REQUEST, "Invalid Content-Type header: " + e.getMessage());
     }
   }
 }
