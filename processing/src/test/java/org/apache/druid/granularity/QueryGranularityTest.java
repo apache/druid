@@ -1111,11 +1111,11 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
     Assert.assertEquals(Granularities.DAY, Granularities.fromVirtualColumn(day));
     Assert.assertEquals(Granularities.HOUR, Granularities.fromVirtualColumn(hourlyNonstandardTime));
     Assert.assertEquals(
-        new PeriodGranularity(new Period("PT1H"), null, DateTimeZone.forID("America/Los_Angeles")),
+        new PeriodGranularity(new Period("PT1H"), null, DateTimes.inferTzFromString("America/Los_Angeles")),
         Granularities.fromVirtualColumn(hourlyPacificTime)
     );
     Assert.assertEquals(
-        new PeriodGranularity(new Period("PT1H"), null, DateTimeZone.forID("Asia/Kolkata")),
+        new PeriodGranularity(new Period("PT1H"), null, DateTimes.inferTzFromString("Asia/Kolkata")),
         Granularities.fromVirtualColumn(hourlyIndianTime)
     );
     Assert.assertEquals(Granularities.NONE, Granularities.fromVirtualColumn(ceilHour));
@@ -1138,7 +1138,7 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
         TestExprMacroTable.INSTANCE
     );
     Assert.assertEquals(
-        new PeriodGranularity(new Period("PT1H"), null, DateTimeZone.forID("America/Los_Angeles")),
+        new PeriodGranularity(new Period("PT1H"), null, DateTimes.inferTzFromString("America/Los_Angeles")),
         Granularities.fromVirtualColumn(formatFloor)
     );
 

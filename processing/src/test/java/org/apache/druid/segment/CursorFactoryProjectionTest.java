@@ -86,7 +86,6 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -978,7 +977,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                   .setGranularity(new PeriodGranularity(
                       new Period("PT1H"),
                       null,
-                      DateTimeZone.forID("America/Los_Angeles")
+                      DateTimes.inferTzFromString("America/Los_Angeles")
                   ));
     } else {
       queryBuilder.setGranularity(Granularities.ALL)
@@ -1024,7 +1023,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                   .setGranularity(new PeriodGranularity(
                       new Period("PT1H"),
                       null,
-                      DateTimeZone.forID("Asia/Kolkata")
+                      DateTimes.inferTzFromString("Asia/Kolkata")
                   ));
     } else {
       queryBuilder.setGranularity(Granularities.ALL)

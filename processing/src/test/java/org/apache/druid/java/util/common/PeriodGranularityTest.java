@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.common;
 
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
-import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.junit.Test;
@@ -31,8 +30,8 @@ public class PeriodGranularityTest
   PeriodGranularity UTC_PT1H = new PeriodGranularity(new Period("PT1H"), null, DateTimeZone.UTC);
   PeriodGranularity UTC_PT1M = new PeriodGranularity(new Period("PT1M"), null, DateTimeZone.UTC);
 
-  DateTimeZone PACIFIC_TZ = DateTimeZone.forID("America/Los_Angeles");
-  DateTimeZone INDIAN_TZ = DateTimeZone.forID("Asia/Kolkata");
+  DateTimeZone PACIFIC_TZ = DateTimes.inferTzFromString("America/Los_Angeles");
+  DateTimeZone INDIAN_TZ = DateTimes.inferTzFromString("Asia/Kolkata");
 
   @Test
   public void testCanBeMappedTo_sameTimeZone()
@@ -89,13 +88,13 @@ public class PeriodGranularityTest
   {
     Assertions.assertFalse(new PeriodGranularity(
         new Period("PT1H"),
-        new DateTime(),
+        DateTimes.nowUtc(),
         DateTimeZone.UTC
     ).canBeMappedTo(new PeriodGranularity(new Period("PT2H"), null, DateTimeZone.UTC)));
 
     Assertions.assertFalse(UTC_PT1H.canBeMappedTo(new PeriodGranularity(
         new Period("PT1H"),
-        new DateTime(),
+        DateTimes.nowUtc(),
         DateTimeZone.UTC
     )));
   }
@@ -109,7 +108,7 @@ public class PeriodGranularityTest
     Assertions.assertTrue(pacificPT1H.canBeMappedTo(new PeriodGranularity(
         new Period("PT3H"),
         null,
-        DateTimeZone.forID("America/New_York")
+        DateTimes.inferTzFromString("America/New_York")
     )));
     Assertions.assertTrue(pacificPT1H.canBeMappedTo(new PeriodGranularity(
         new Period("P1M"),
