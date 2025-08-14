@@ -124,12 +124,6 @@ public class LambdaExpr implements Expr
   }
 
   @Override
-  public List<Expr> getExprArgs()
-  {
-    return args.stream().map(i -> (Expr) i).collect(Collectors.toList());
-  }
-
-  @Override
   public ExpressionType getOutputType(InputBindingInspector inspector)
   {
     return expr.getOutputType(inspector);

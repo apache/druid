@@ -197,6 +197,7 @@ public class Granularities
     return null;
   }
 
+  @Nullable
   private static Granularity fromExpr(Expr expr)
   {
     String identifier = expr.getIdentifierIfIdentifier();
@@ -209,15 +210,7 @@ public class Granularities
     if (expr instanceof TimestampFloorExprMacro.TimestampFloorExpr) {
       final TimestampFloorExprMacro.TimestampFloorExpr gran = (TimestampFloorExprMacro.TimestampFloorExpr) expr;
       return gran.getGranularity();
-    } else if (expr.getExprArgs().isEmpty()) {
-      return Granularities.ALL;
-    } else {
-      Granularity gran = Granularities.ALL;
-      for (Expr exprArg : expr.getExprArgs()) {
-        Granularity newGran = fromExpr(exprArg);
-        gran = gran.isFinerThan(newGran) ? gran : newGran;
-      }
-      return gran;
     }
+    return null;
   }
 }

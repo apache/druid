@@ -1121,7 +1121,7 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
         new PeriodGranularity(new Period("PT1H"), null, DateTimes.inferTzFromString("Asia/Kolkata")),
         Granularities.fromVirtualColumn(hourlyIndianTime)
     );
-    Assert.assertEquals(Granularities.NONE, Granularities.fromVirtualColumn(ceilHour));
+    Assert.assertNull(Granularities.fromVirtualColumn(ceilHour));
     Assert.assertEquals(Granularities.MINUTE, Granularities.fromVirtualColumn(floorWithExpression));
     final DateTime origin = DateTimes.of("2012-01-02T05:00:00.000-08:00");
     final DateTimeZone tz = DateTimes.inferTzFromString("America/Los_Angeles");
@@ -1134,36 +1134,13 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
   @Test
   public void testFromVirtualColumnExtra()
   {
-    ExpressionVirtualColumn formatFloor = new ExpressionVirtualColumn(
+    ExpressionVirtualColumn literalField = new ExpressionVirtualColumn(
         "v0",
-        "timestamp_format(timestamp_floor(__time, 'PT1H', null,'America/Los_Angeles'), 'yyyy-MM-dd')",
+        "a",
         ColumnType.LONG,
         TestExprMacroTable.INSTANCE
     );
-    Assert.assertEquals(
-        new PeriodGranularity(new Period("PT1H"), null, DateTimes.inferTzFromString("America/Los_Angeles")),
-        Granularities.fromVirtualColumn(formatFloor)
-    );
-
-    ExpressionVirtualColumn concatFormatFloor = new ExpressionVirtualColumn(
-        "v0",
-        "concat(a, timestamp_format(timestamp_floor(__time, 'PT1H', null,'America/Los_Angeles'), 'yyyy-MM-dd'))",
-        ColumnType.LONG,
-        TestExprMacroTable.INSTANCE
-    );
-    Assert.assertEquals(new PeriodGranularity(
-        new Period("PT1H"),
-        null,
-        DateTimes.inferTzFromString("America/Los_Angeles")
-    ), Granularities.fromVirtualColumn(concatFormatFloor));
-
-    ExpressionVirtualColumn concatFields = new ExpressionVirtualColumn(
-        "v0",
-        "concat(a, b)",
-        ColumnType.LONG,
-        TestExprMacroTable.INSTANCE
-    );
-    Assert.assertEquals(Granularities.ALL, Granularities.fromVirtualColumn(concatFields));
+    Assert.assertEquals(Granularities.ALL, Granularities.fromVirtualColumn(literalField));
   }
 
   private void assertBucketStart(final Granularity granularity, final DateTime in, final DateTime expectedInProperTz)

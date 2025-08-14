@@ -94,6 +94,7 @@ public class ExprMacroTable
    *
    * @param functionName function name
    * @param args         function arguments
+   *
    * @return expr for this function call, or null
    */
   @Nullable
@@ -118,12 +119,6 @@ public class ExprMacroTable
   public interface ExprMacroFunctionExpr extends Expr
   {
     List<Expr> getArgs();
-
-    @Override
-    default List<Expr> getExprArgs()
-    {
-      return getArgs();
-    }
   }
 
   /**
@@ -151,6 +146,12 @@ public class ExprMacroTable
     }
 
     @Override
+    public List<Expr> getArgs()
+    {
+      return args;
+    }
+
+    @Override
     public String stringify()
     {
       return StringUtils.format(
@@ -172,18 +173,6 @@ public class ExprMacroTable
     public BindingAnalysis analyzeInputs()
     {
       return analyzeInputsSupplier.get();
-    }
-
-    @Override
-    public List<Expr> getArgs()
-    {
-      return args;
-    }
-
-    @Override
-    public List<Expr> getExprArgs()
-    {
-      return args;
     }
 
     @Override

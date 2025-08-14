@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -81,12 +80,6 @@ abstract class BinaryOpExprBase implements Expr
     // currently all binary operators operate on scalar inputs
     return BindingAnalysis.collectExprs(Arrays.asList(left, right))
                           .withScalarArguments(ImmutableSet.of(left, right));
-  }
-
-  @Override
-  public List<Expr> getExprArgs()
-  {
-    return Arrays.asList(left, right);
   }
 
   @Nullable

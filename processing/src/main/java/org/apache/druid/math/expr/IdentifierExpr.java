@@ -28,7 +28,6 @@ import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -117,13 +116,6 @@ class IdentifierExpr implements Expr
   public BindingAnalysis analyzeInputs()
   {
     return new BindingAnalysis(this);
-  }
-
-  @Override
-  public List<Expr> getExprArgs()
-  {
-    // identifier has no arguments
-    return List.of();
   }
 
   @Override

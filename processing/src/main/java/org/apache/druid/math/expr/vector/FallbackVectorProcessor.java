@@ -397,12 +397,6 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
     }
 
     @Override
-    public List<Expr> getExprArgs()
-    {
-      return List.of(originalExpr);
-    }
-
-    @Override
     public boolean isLiteral()
     {
       return originalExpr.isLiteral();

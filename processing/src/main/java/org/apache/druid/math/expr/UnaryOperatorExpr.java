@@ -28,7 +28,6 @@ import org.apache.druid.math.expr.vector.VectorProcessors;
 
 import javax.annotation.Nullable;
 import java.math.BigInteger;
-import java.util.List;
 import java.util.Objects;
 
 
@@ -71,12 +70,6 @@ abstract class UnaryExpr implements Expr
   {
     // currently all unary operators only operate on scalar inputs
     return expr.analyzeInputs().withScalarArguments(ImmutableSet.of(expr));
-  }
-
-  @Override
-  public List<Expr> getExprArgs()
-  {
-    return List.of(expr);
   }
 
   @Nullable

@@ -56,19 +56,14 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
   }
 
   @VisibleForTesting
-  public static class TimestampCeilExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
+  static class TimestampCeilExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
   {
     private final Granularity granularity;
 
     TimestampCeilExpr(final TimestampCeilExprMacro macro, final List<Expr> args)
     {
       super(macro, args);
-      this.granularity = computeGranularity(this, args, InputBindings.nilBindings());
-    }
-
-    public Granularity getGranularity()
-    {
-      return granularity;
+      this.granularity = getGranularity(this, args, InputBindings.nilBindings());
     }
 
     @Nonnull
@@ -118,7 +113,7 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     }
   }
 
-  private static PeriodGranularity computeGranularity(
+  private static PeriodGranularity getGranularity(
       final Expr expr,
       final List<Expr> args,
       final Expr.ObjectBinding bindings
@@ -145,7 +140,7 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public ExprEval eval(final ObjectBinding bindings)
     {
-      final PeriodGranularity granularity = computeGranularity(this, args, bindings);
+      final PeriodGranularity granularity = getGranularity(this, args, bindings);
       long argTime = args.get(0).eval(bindings).asLong();
       long bucketStartTime = granularity.bucketStart(argTime);
       if (argTime == bucketStartTime) {
