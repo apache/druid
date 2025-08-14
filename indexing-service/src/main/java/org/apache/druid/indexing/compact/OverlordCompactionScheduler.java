@@ -24,6 +24,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.client.DataSourcesSnapshot;
+import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -92,6 +93,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
 
   private final SegmentsMetadataManager segmentManager;
   private final LocalOverlordClient overlordClient;
+  private final BrokerClient brokerClient;
   private final ServiceEmitter emitter;
   private final ObjectMapper objectMapper;
   private final TaskMaster taskMaster;
@@ -141,6 +143,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       TaskActionClientFactory taskActionClientFactory,
       DruidInputSourceFactory druidInputSourceFactory,
       ScheduledExecutorFactory executorFactory,
+      BrokerClient brokerClient,
       ServiceEmitter emitter,
       ObjectMapper objectMapper
   )
@@ -157,6 +160,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     this.shouldPollSegments = segmentManager != null
                               && !coordinatorOverlordServiceConfig.isEnabled();
     this.overlordClient = new LocalOverlordClient(taskMaster, taskQueryTool, objectMapper);
+    this.brokerClient = brokerClient;
     this.activeSupervisors = new ConcurrentHashMap<>();
     this.datasourceToCompactionSnapshot = new AtomicReference<>();
 
@@ -334,6 +338,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
         taskActionClientFactory,
         taskLockbox,
         overlordClient,
+        brokerClient,
         objectMapper
     );
     statusTracker.resetActiveDatasources(activeSupervisors.keySet());

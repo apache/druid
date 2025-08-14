@@ -21,6 +21,7 @@ package org.apache.druid.indexing.compact;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.client.DataSourcesSnapshot;
+import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.common.guava.FutureUtils;
@@ -47,8 +48,8 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 
+import javax.annotation.Nullable;
 import java.util.Map;
-import java.util.Objects;
 import java.util.PriorityQueue;
 
 /**
@@ -68,6 +69,7 @@ public class CompactionJobQueue
   private final TaskActionClientFactory taskActionClientFactory;
   private final OverlordClient overlordClient;
   private final GlobalTaskLockbox taskLockbox;
+  private final BrokerClient brokerClient;
 
   private final CompactionSnapshotBuilder snapshotBuilder;
   private final PriorityQueue<CompactionJob> queue;
@@ -82,6 +84,7 @@ public class CompactionJobQueue
       TaskActionClientFactory taskActionClientFactory,
       GlobalTaskLockbox taskLockbox,
       OverlordClient overlordClient,
+      BrokerClient brokerClient,
       ObjectMapper objectMapper
   )
   {
@@ -104,6 +107,7 @@ public class CompactionJobQueue
     this.snapshotBuilder = new CompactionSnapshotBuilder(runStats);
     this.taskActionClientFactory = taskActionClientFactory;
     this.overlordClient = overlordClient;
+    this.brokerClient = brokerClient;
     this.statusTracker = statusTracker;
     this.objectMapper = objectMapper;
     this.taskLockbox = taskLockbox;
@@ -150,11 +154,8 @@ public class CompactionJobQueue
   {
     while (!queue.isEmpty()) {
       final CompactionJob job = queue.poll();
-      final ClientTaskQuery task = Objects.requireNonNull(job.getNonNullTask());
-
       if (startJobIfPendingAndReady(job, searchPolicy)) {
-        statusTracker.onTaskSubmitted(task.getId(), job.getCandidate());
-        runStats.add(Stats.Compaction.SUBMITTED_TASKS, RowKey.of(Dimension.DATASOURCE, task.getDataSource()), 1);
+        runStats.add(Stats.Compaction.SUBMITTED_TASKS, RowKey.of(Dimension.DATASOURCE, job.getDataSource()), 1);
       }
     }
   }
@@ -220,27 +221,35 @@ public class CompactionJobQueue
 
     // Reserve task slots and try to start the task
     slotManager.reserveTaskSlots(job.getMaxRequiredTaskSlots());
-    if (startTaskIfReady(job)) {
-      snapshotBuilder.addToComplete(candidate);
-      return true;
-    } else {
+    final String taskId = startTaskIfReady(job);
+    if (taskId == null) {
       // Mark the job as skipped for now as the intervals might be locked by other tasks
       snapshotBuilder.addToSkipped(candidate);
       return false;
+    } else {
+      snapshotBuilder.addToComplete(candidate);
+      statusTracker.onTaskSubmitted(taskId, job.getCandidate());
+      return true;
     }
   }
 
   /**
    * Starts the given job if the underlying Task is able to acquire locks.
    *
-   * @return true if the Task was submitted successfully.
+   * @return Non-null taskId if the Task was submitted successfully.
    */
-  private boolean startTaskIfReady(CompactionJob job)
+  @Nullable
+  private String startTaskIfReady(CompactionJob job)
   {
     // Assume MSQ jobs to be always ready
     if (job.isMsq()) {
-      // TODO: submit the MSQ job to Broker here
-      return true;
+      try {
+        return FutureUtils.getUnchecked(brokerClient.submitSqlTask(job.getNonNullMsqQuery()), true)
+                          .getTaskId();
+      }
+      catch (Exception e) {
+        log.error(e, "Error while submitting query[%s] to Broker", job.getNonNullMsqQuery());
+      }
     }
 
     final ClientTaskQuery taskQuery = job.getNonNullTask();
@@ -252,16 +261,16 @@ public class CompactionJobQueue
       if (task.isReady(taskActionClientFactory.create(task))) {
         // Hold the locks acquired by task.isReady() as we will reacquire them anyway
         FutureUtils.getUnchecked(overlordClient.runTask(task.getId(), task), true);
-        return true;
+        return task.getId();
       } else {
         taskLockbox.unlockAll(task);
-        return false;
+        return null;
       }
     }
     catch (Exception e) {
-      log.error(e, "Error while checking readiness of task[%s]", task.getId());
+      log.error(e, "Error while submitting task[%s] to Overlord", task.getId());
       taskLockbox.unlockAll(task);
-      return false;
+      return null;
     }
   }
 

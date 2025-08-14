@@ -23,11 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.output.OutputDestination;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
-import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
-import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
-import org.joda.time.Period;
 
 import java.util.List;
 import java.util.Objects;
@@ -45,29 +41,20 @@ public class InlineCompactionJobTemplate extends CompactionJobTemplate
 {
   public static final String TYPE = "compactInline";
 
-  private final UserCompactionTaskQueryTuningConfig tuningConfig;
-  private final Granularity segmentGranularity;
+  private final CompactionStateMatcher stateMatcher;
 
   @JsonCreator
   public InlineCompactionJobTemplate(
-      @JsonProperty("tuningConfig") UserCompactionTaskQueryTuningConfig tuningConfig,
-      @JsonProperty("segmentGranularity") Granularity segmentGranularity
+      @JsonProperty("stateMatcher") CompactionStateMatcher stateMatcher
   )
   {
-    this.tuningConfig = tuningConfig;
-    this.segmentGranularity = segmentGranularity;
+    this.stateMatcher = stateMatcher;
   }
 
   @JsonProperty
-  public Granularity getSegmentGranularity()
+  public CompactionStateMatcher getStateMatcher()
   {
-    return segmentGranularity;
-  }
-
-  @JsonProperty
-  public UserCompactionTaskQueryTuningConfig getTuningConfig()
-  {
-    return tuningConfig;
+    return stateMatcher;
   }
 
   @Override
@@ -78,15 +65,9 @@ public class InlineCompactionJobTemplate extends CompactionJobTemplate
   )
   {
     final String dataSource = ensureDruidInputSource(source).getDataSource();
-    return new CompactionConfigBasedJobTemplate(
-        InlineSchemaDataSourceCompactionConfig
-            .builder()
-            .forDataSource(dataSource)
-            .withSkipOffsetFromLatest(Period.ZERO)
-            .withTuningConfig(tuningConfig)
-            .withGranularitySpec(new UserCompactionTaskGranularityConfig(segmentGranularity, null, null))
-            .build()
-    ).createCompactionJobs(source, destination, jobParams);
+    return CompactionConfigBasedJobTemplate
+        .create(dataSource, stateMatcher)
+        .createCompactionJobs(source, destination, jobParams);
   }
 
   @Override
@@ -99,14 +80,13 @@ public class InlineCompactionJobTemplate extends CompactionJobTemplate
       return false;
     }
     InlineCompactionJobTemplate that = (InlineCompactionJobTemplate) object;
-    return Objects.equals(this.tuningConfig, that.tuningConfig)
-           && Objects.equals(this.segmentGranularity, that.segmentGranularity);
+    return Objects.equals(this.stateMatcher, that.stateMatcher);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(tuningConfig, segmentGranularity);
+    return Objects.hash(stateMatcher);
   }
 
   @Override

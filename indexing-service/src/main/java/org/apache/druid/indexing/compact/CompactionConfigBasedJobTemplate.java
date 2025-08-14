@@ -31,9 +31,11 @@ import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.DataSourceCompactibleSegmentIterator;
 import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,6 +55,21 @@ public class CompactionConfigBasedJobTemplate extends CompactionJobTemplate
     this.config = config;
   }
 
+  public static CompactionConfigBasedJobTemplate create(String dataSource, CompactionStateMatcher stateMatcher)
+  {
+    return new CompactionConfigBasedJobTemplate(
+        InlineSchemaDataSourceCompactionConfig
+            .builder()
+            .forDataSource(dataSource)
+            .withSkipOffsetFromLatest(Period.ZERO)
+            .withTransformSpec(stateMatcher.getTransformSpec())
+            .withProjections(stateMatcher.getProjections())
+            .withMetricsSpec(stateMatcher.getMetricsSpec())
+            .withGranularitySpec(stateMatcher.getGranularitySpec())
+            .build()
+    );
+  }
+
   @Override
   public List<CompactionJob> createCompactionJobs(
       InputSource source,
@@ -60,18 +77,7 @@ public class CompactionConfigBasedJobTemplate extends CompactionJobTemplate
       CompactionJobParams params
   )
   {
-    validateInput(source);
-    validateOutput(destination);
-
-    final Interval searchInterval = Objects.requireNonNull(ensureDruidInputSource(source).getInterval());
-
-    final SegmentTimeline timeline = params.getTimeline(config.getDataSource());
-    final DataSourceCompactibleSegmentIterator segmentIterator = new DataSourceCompactibleSegmentIterator(
-        config,
-        timeline,
-        Intervals.complementOf(searchInterval),
-        new NewestSegmentFirstPolicy(null)
-    );
+    final DataSourceCompactibleSegmentIterator segmentIterator = getCompactibleCandidates(source, destination, params);
 
     final List<CompactionJob> jobs = new ArrayList<>();
 
@@ -99,6 +105,30 @@ public class CompactionConfigBasedJobTemplate extends CompactionJobTemplate
   public String getType()
   {
     throw new UnsupportedOperationException("This template type cannot be serialized");
+  }
+
+  /**
+   * Creates an iterator over the compactible candidate segments for the given
+   * params.
+   */
+  DataSourceCompactibleSegmentIterator getCompactibleCandidates(
+      InputSource source,
+      OutputDestination destination,
+      CompactionJobParams params
+  )
+  {
+    validateInput(source);
+    validateOutput(destination);
+
+    final Interval searchInterval = Objects.requireNonNull(ensureDruidInputSource(source).getInterval());
+
+    final SegmentTimeline timeline = params.getTimeline(config.getDataSource());
+    return new DataSourceCompactibleSegmentIterator(
+        config,
+        timeline,
+        Intervals.complementOf(searchInterval),
+        new NewestSegmentFirstPolicy(null)
+    );
   }
 
   private void validateInput(InputSource source)

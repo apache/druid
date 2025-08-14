@@ -21,6 +21,7 @@ package org.apache.druid.indexing.compact;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.ClientMSQContext;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
@@ -190,6 +191,7 @@ public class OverlordCompactionSchedulerTest
             new SegmentCacheManagerFactory(TestIndex.INDEX_IO, OBJECT_MAPPER)
         ),
         (nameFormat, numThreads) -> new WrappingScheduledExecutorService("test", executor, false),
+        Mockito.mock(BrokerClient.class),
         serviceEmitter,
         OBJECT_MAPPER
     );

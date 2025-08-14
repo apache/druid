@@ -21,6 +21,7 @@ package org.apache.druid.server.compaction;
 
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -89,6 +90,19 @@ public class CompactionCandidate
   public Interval getUmbrellaInterval()
   {
     return umbrellaInterval;
+  }
+
+  /**
+   * Interval used for the compaction task, aligned to the
+   * {@code targetSegmentGranularity}, if specified.
+   */
+  public Interval getCompactionInterval(@Nullable Granularity targetSegmentGranularity)
+  {
+    if (targetSegmentGranularity == null) {
+      return umbrellaInterval;
+    } else {
+      return JodaUtils.umbrellaInterval(targetSegmentGranularity.getIterable(umbrellaInterval));
+    }
   }
 
   public String getDataSource()

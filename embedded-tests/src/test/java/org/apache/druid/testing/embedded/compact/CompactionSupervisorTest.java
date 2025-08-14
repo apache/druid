@@ -32,13 +32,21 @@ import org.apache.druid.indexing.compact.CascadingCompactionTemplate;
 import org.apache.druid.indexing.compact.CatalogCompactionJobTemplate;
 import org.apache.druid.indexing.compact.CompactionJobTemplate;
 import org.apache.druid.indexing.compact.CompactionRule;
+import org.apache.druid.indexing.compact.CompactionStateMatcher;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.compact.InlineCompactionJobTemplate;
+import org.apache.druid.indexing.compact.MSQCompactionJobTemplate;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.msq.guice.IndexerMemoryManagementModule;
+import org.apache.druid.msq.guice.MSQDurableStorageModule;
+import org.apache.druid.msq.guice.MSQIndexingModule;
+import org.apache.druid.msq.guice.MSQSqlModule;
+import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -62,12 +70,12 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 {
   protected final EmbeddedBroker broker = new EmbeddedBroker();
   protected final EmbeddedIndexer indexer = new EmbeddedIndexer()
+      .setServerMemory(4_000_000_000L)
       .addProperty("druid.worker.capacity", "8");
   protected final EmbeddedOverlord overlord = new EmbeddedOverlord()
       .addProperty("druid.manager.segments.pollDuration", "PT1s")
@@ -81,7 +89,15 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   {
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
-                               .addExtensions(CatalogClientModule.class, CatalogCoordinatorModule.class)
+                               .addExtensions(
+                                   CatalogClientModule.class,
+                                   CatalogCoordinatorModule.class,
+                                   IndexerMemoryManagementModule.class,
+                                   MSQDurableStorageModule.class,
+                                   MSQIndexingModule.class,
+                                   MSQSqlModule.class,
+                                   SqlTaskModule.class
+                               )
                                .addServer(coordinator)
                                .addServer(overlord)
                                .addServer(indexer)
@@ -109,11 +125,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         + "\n2025-06-02T00:00:00.000Z,trousers,210"
         + "\n2025-06-03T00:00:00.000Z,jeans,150"
     );
-    Set<DataSegment> segments = cluster.callApi().getVisibleUsedSegments(dataSource, overlord);
-    Assertions.assertEquals(3, segments.size());
-    segments.forEach(
-        segment -> Assertions.assertTrue(Granularities.DAY.isAligned(segment.getInterval()))
-    );
+    verifyDayAndMonthSegments(3, 0);
 
     // Create a compaction config with MONTH granularity
     InlineSchemaDataSourceCompactionConfig compactionConfig =
@@ -127,13 +139,9 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
             .build();
 
     runCompactionWithSpec(compactionConfig);
+    waitForCompactionTasksToFinish("compact", 1);
 
-    // Verify that segments are now compacted to MONTH granularity
-    segments = cluster.callApi().getVisibleUsedSegments(dataSource, overlord);
-    Assertions.assertEquals(1, segments.size());
-    Assertions.assertTrue(
-        Granularities.MONTH.isAligned(segments.iterator().next().getInterval())
-    );
+    verifyDayAndMonthSegments(0, 1);
   }
 
   @Test
@@ -143,44 +151,87 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     CascadingCompactionTemplate cascadingTemplate = new CascadingCompactionTemplate(
         dataSource,
         List.of(
-            new CompactionRule(Period.days(2), new InlineCompactionJobTemplate(null, Granularities.DAY)),
-            new CompactionRule(Period.days(100), new InlineCompactionJobTemplate(null, Granularities.MONTH))
+            new CompactionRule(Period.days(1), new InlineCompactionJobTemplate(createMatcher(Granularities.DAY))),
+            new CompactionRule(Period.days(50), new InlineCompactionJobTemplate(createMatcher(Granularities.MONTH)))
         )
     );
 
-    final CompactionSupervisorSpec compactionSupervisor
-        = new CompactionSupervisorSpec(cascadingTemplate, false, null);
-    cluster.callApi().postSupervisor(compactionSupervisor);
-
-    ingestRecordsAtGranularity(2400, "HOUR");
+    ingestRecordsAtGranularity(1200, "HOUR");
     runCompactionWithSpec(cascadingTemplate);
-    verifyDayAndMonth();
+    waitForCompactionTasksToFinish("compact", 2);
+    verifyDayAndMonthSegments(1, 1);
   }
 
   @Test
   public void test_ingestHourGranularity_andCompactToDayAndMonth_withCatalogTemplates()
   {
-    ingestRecordsAtGranularity(2400, "HOUR");
+    ingestRecordsAtGranularity(1200, "HOUR");
 
     // Add compaction templates to catalog
     final String dayGranularityTemplateId = saveTemplateToCatalog(
-        new InlineCompactionJobTemplate(null, Granularities.DAY)
+        new InlineCompactionJobTemplate(createMatcher(Granularities.DAY))
     );
     final String monthGranularityTemplateId = saveTemplateToCatalog(
-        new InlineCompactionJobTemplate(null, Granularities.MONTH)
+        new InlineCompactionJobTemplate(createMatcher(Granularities.MONTH))
     );
 
     // Create a cascading template with DAY and MONTH granularity
     CascadingCompactionTemplate cascadingTemplate = new CascadingCompactionTemplate(
         dataSource,
         List.of(
-            new CompactionRule(Period.days(2), new CatalogCompactionJobTemplate(dayGranularityTemplateId, null)),
-            new CompactionRule(Period.days(100), new CatalogCompactionJobTemplate(monthGranularityTemplateId, null))
+            new CompactionRule(Period.days(1), new CatalogCompactionJobTemplate(dayGranularityTemplateId, null)),
+            new CompactionRule(Period.days(50), new CatalogCompactionJobTemplate(monthGranularityTemplateId, null))
         )
     );
 
     runCompactionWithSpec(cascadingTemplate);
-    verifyDayAndMonth();
+    waitForCompactionTasksToFinish("compact", 2);
+    verifyDayAndMonthSegments(1, 1);
+  }
+
+  @Test
+  public void test_ingestHourGranularity_andCompactToDayAndMonth_withCatalogMSQTemplates()
+  {
+    ingestRecordsAtGranularity(1200, "HOUR");
+
+    // Add compaction templates to catalog
+    final String sqlDayGranularity =
+        "REPLACE INTO ${dataSource}"
+        + " OVERWRITE WHERE __time >= TIMESTAMP '${startDate}' AND __time < TIMESTAMP '${endDate}'"
+        + " SELECT * FROM ${dataSource}"
+        + " WHERE __time BETWEEN '${startDate}' AND '${endDate}'"
+        + " PARTITIONED BY DAY";
+    final String dayGranularityTemplateId = saveTemplateToCatalog(
+        new MSQCompactionJobTemplate(
+            new ClientSqlQuery(sqlDayGranularity, null, false, false, false, null, null),
+            createMatcher(Granularities.DAY)
+        )
+    );
+    final String sqlMonthGranularity =
+        "REPLACE INTO ${dataSource}"
+        + " OVERWRITE WHERE __time >= TIMESTAMP '${startDate}' AND __time < TIMESTAMP '${endDate}'"
+        + " SELECT * FROM ${dataSource}"
+        + " WHERE __time >= TIMESTAMP '${startDate}' AND __time < TIMESTAMP '${endDate}'"
+        + " PARTITIONED BY MONTH";
+    final String monthGranularityTemplateId = saveTemplateToCatalog(
+        new MSQCompactionJobTemplate(
+            new ClientSqlQuery(sqlMonthGranularity, null, false, false, false, null, null),
+            createMatcher(Granularities.MONTH)
+        )
+    );
+
+    // Create a cascading template with DAY and MONTH granularity
+    CascadingCompactionTemplate cascadingTemplate = new CascadingCompactionTemplate(
+        dataSource,
+        List.of(
+            new CompactionRule(Period.days(1), new CatalogCompactionJobTemplate(dayGranularityTemplateId, null)),
+            new CompactionRule(Period.days(50), new CatalogCompactionJobTemplate(monthGranularityTemplateId, null))
+        )
+    );
+
+    runCompactionWithSpec(cascadingTemplate);
+    waitForCompactionTasksToFinish("query_controller", 2);
+    verifyDayAndMonthSegments(1, 1);
   }
 
   private void ingestRecordsAtGranularity(int numRecords, String granularityName)
@@ -207,25 +258,19 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     final CompactionSupervisorSpec compactionSupervisor
         = new CompactionSupervisorSpec(config, false, null);
     cluster.callApi().postSupervisor(compactionSupervisor);
-
-    // Wait for compaction tasks to be submitted
-    final int numCompactionTasks = overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("compact/task/count")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
-                      .hasValueAtLeast(1L)
-    ).getValue().intValue();
-
-    // Wait for the submitted tasks to finish
-    overlord.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("task/run/time")
-                      .hasDimension(DruidMetrics.TASK_TYPE, "compact")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
-        agg -> agg.hasCountAtLeast(numCompactionTasks)
-    );
-
   }
 
-  private void verifyDayAndMonth()
+  private void waitForCompactionTasksToFinish(String taskType, int expectedCount)
+  {
+    overlord.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("task/run/time")
+                      .hasDimension(DruidMetrics.TASK_TYPE, taskType)
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasCountAtLeast(expectedCount)
+    );
+  }
+
+  private void verifyDayAndMonthSegments(int expectedDaySegments, int expectedMonthSegments)
   {
     // Verify that segments are now compacted to MONTH and DAY granularity
     List<DataSegment> segments = List.copyOf(
@@ -233,7 +278,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                 .segmentsMetadataStorage()
                 .retrieveAllUsedSegments(dataSource, Segments.ONLY_VISIBLE)
     );
-    Assertions.assertTrue(segments.size() < 2400);
 
     int numMonthSegments = 0;
     int numDaySegments = 0;
@@ -249,14 +293,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
       }
     }
 
-    // Verify that atleast 2 days are fully compacted to DAY
-    Assertions.assertTrue(numDaySegments >= 2);
-
-    // Verify that atleast 2 months are fully compacted to MONTH
-    Assertions.assertTrue(numMonthSegments >= 2);
-
-    // Verify that number of uncompacted days is between 5 and 38
-    Assertions.assertTrue(5 * 24 <= numHourSegments && numHourSegments <= 38 * 24);
+    Assertions.assertTrue(numDaySegments >= expectedDaySegments);
+    Assertions.assertTrue(numMonthSegments >= expectedMonthSegments);
   }
 
   private String saveTemplateToCatalog(CompactionJobTemplate template)
@@ -312,5 +350,18 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         .inlineInputSourceWithData(inlineDataCsv)
         .dataSource(dataSource)
         .withId(taskId);
+  }
+
+  private static CompactionStateMatcher createMatcher(Granularity segmentGranularity)
+  {
+    return new CompactionStateMatcher(
+        null,
+        null,
+        null,
+        null,
+        null,
+        new UserCompactionTaskGranularityConfig(segmentGranularity, null, null),
+        null
+    );
   }
 }

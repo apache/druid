@@ -20,11 +20,9 @@
 package org.apache.druid.server.compaction;
 
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -270,7 +268,7 @@ public class CompactionStatus
     private final CompactionCandidate candidateSegments;
     private final CompactionState lastCompactionState;
     private final ClientCompactionTaskQueryTuningConfig tuningConfig;
-    private final ClientCompactionTaskGranularitySpec existingGranularitySpec;
+    private final UserCompactionTaskGranularityConfig existingGranularitySpec;
     private final UserCompactionTaskGranularityConfig configuredGranularitySpec;
 
     private Evaluator(
@@ -286,7 +284,7 @@ public class CompactionStatus
       if (lastCompactionState == null) {
         this.existingGranularitySpec = null;
       } else {
-        this.existingGranularitySpec = convertIfNotNull(
+        this.existingGranularitySpec = UserCompactionTaskGranularityConfig.from(
             lastCompactionState.getGranularitySpec()
         );
       }
@@ -493,20 +491,6 @@ public class CompactionStatus
           existingTransformSpec == null ? null : existingTransformSpec.getFilter(),
           String::valueOf
       );
-    }
-
-    @Nullable
-    private ClientCompactionTaskGranularitySpec convertIfNotNull(GranularitySpec granularitySpec)
-    {
-      if (granularitySpec == null) {
-        return null;
-      } else {
-        return new ClientCompactionTaskGranularitySpec(
-            granularitySpec.getSegmentGranularity(),
-            granularitySpec.getQueryGranularity(),
-            granularitySpec.isRollup()
-        );
-      }
     }
   }
 }
