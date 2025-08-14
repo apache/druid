@@ -119,19 +119,15 @@ public abstract class DescriptorBasedProtobufBytesDecoder implements ProtobufByt
   )
   {
     try {
-      // Build descriptors with dependency resolution
-      final var builtDescriptors = new HashMap<String, Descriptors.FileDescriptor>();
-      final var userDescriptors = new ArrayList<Descriptors.FileDescriptor>();
-
+      // Build all descriptors with dependency resolution
+      final var allDescriptors = new HashMap<String, Descriptors.FileDescriptor>();
       for (final var fileProto : descriptorSet.getFileList()) {
-        final var fileDescriptor = buildFileDescriptor(fileProto, descriptorSet, builtDescriptors);
-        userDescriptors.add(fileDescriptor);
+        buildFileDescriptor(fileProto, descriptorSet, allDescriptors);
       }
 
-      // Find the target message type - only from user descriptors, not known deps
+      // If protoMessageType has not been set, return the first message type found
       if (protoMessageType == null) {
-        // Return first message type found from user descriptors
-        for (final var fileDescriptor : userDescriptors) {
+        for (final var fileDescriptor : allDescriptors.values()) {
           if (!fileDescriptor.getMessageTypes().isEmpty()) {
             return fileDescriptor.getMessageTypes().get(0);
           }
@@ -139,17 +135,17 @@ public abstract class DescriptorBasedProtobufBytesDecoder implements ProtobufByt
         throw new ParseException(null, "No message types found in the descriptor set");
       }
 
-      // Find specific message type by name (including nested types)
-      for (final var fileDescriptor : userDescriptors) {
+      // Otherwise, find the specific message type by name
+      for (final var fileDescriptor : allDescriptors.values()) {
         final var desc = findMessageByName(fileDescriptor, protoMessageType);
         if (desc != null) {
           return desc;
         }
       }
 
-      // Collect available types for better error message
+      // Something went wrong... collect all available types for better error message
       final var availableTypes = new TreeSet<String>();
-      for (final var fileDescriptor : userDescriptors) {
+      for (final var fileDescriptor : allDescriptors.values()) {
         collectAvailableTypes(fileDescriptor, availableTypes);
       }
 
