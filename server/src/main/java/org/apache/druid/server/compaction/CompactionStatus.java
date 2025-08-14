@@ -19,12 +19,12 @@
 
 package org.apache.druid.server.compaction;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -64,6 +64,7 @@ public class CompactionStatus
    * The order of the checks must be honored while evaluating them.
    */
   private static final List<Function<Evaluator, CompactionStatus>> CHECKS = Arrays.asList(
+      Evaluator::inputBytesAreWithinLimit,
       Evaluator::segmentsHaveBeenCompactedAtLeastOnce,
       Evaluator::allCandidatesHaveSameCompactionState,
       Evaluator::partitionsSpecIsUpToDate,
@@ -115,7 +116,7 @@ public class CompactionStatus
            '}';
   }
 
-  private static CompactionStatus incomplete(String reasonFormat, Object... args)
+  public static CompactionStatus pending(String reasonFormat, Object... args)
   {
     return new CompactionStatus(State.PENDING, StringUtils.format(reasonFormat, args));
   }
@@ -141,7 +142,7 @@ public class CompactionStatus
       Function<T, String> stringFunction
   )
   {
-    return CompactionStatus.incomplete(
+    return CompactionStatus.pending(
         "'%s' mismatch: required[%s], current[%s]",
         field,
         target == null ? null : stringFunction.apply(target),
@@ -204,11 +205,10 @@ public class CompactionStatus
    */
   static CompactionStatus compute(
       CompactionCandidate candidateSegments,
-      DataSourceCompactionConfig config,
-      ObjectMapper objectMapper
+      DataSourceCompactionConfig config
   )
   {
-    final Evaluator evaluator = new Evaluator(candidateSegments, config, objectMapper);
+    final Evaluator evaluator = new Evaluator(candidateSegments, config);
     return CHECKS.stream().map(f -> f.apply(evaluator))
                  .filter(status -> !status.isComplete())
                  .findFirst().orElse(COMPLETE);
@@ -266,7 +266,6 @@ public class CompactionStatus
    */
   private static class Evaluator
   {
-    private final ObjectMapper objectMapper;
     private final DataSourceCompactionConfig compactionConfig;
     private final CompactionCandidate candidateSegments;
     private final CompactionState lastCompactionState;
@@ -276,12 +275,10 @@ public class CompactionStatus
 
     private Evaluator(
         CompactionCandidate candidateSegments,
-        DataSourceCompactionConfig compactionConfig,
-        ObjectMapper objectMapper
+        DataSourceCompactionConfig compactionConfig
     )
     {
       this.candidateSegments = candidateSegments;
-      this.objectMapper = objectMapper;
       this.lastCompactionState = candidateSegments.getSegments().get(0).getLastCompactionState();
       this.compactionConfig = compactionConfig;
       this.tuningConfig = ClientCompactionTaskQueryTuningConfig.from(compactionConfig);
@@ -290,8 +287,7 @@ public class CompactionStatus
         this.existingGranularitySpec = null;
       } else {
         this.existingGranularitySpec = convertIfNotNull(
-            lastCompactionState.getGranularitySpec(),
-            ClientCompactionTaskGranularitySpec.class
+            lastCompactionState.getGranularitySpec()
         );
       }
     }
@@ -299,7 +295,7 @@ public class CompactionStatus
     private CompactionStatus segmentsHaveBeenCompactedAtLeastOnce()
     {
       if (lastCompactionState == null) {
-        return CompactionStatus.incomplete("not compacted yet");
+        return CompactionStatus.pending("not compacted yet");
       } else {
         return COMPLETE;
       }
@@ -313,7 +309,7 @@ public class CompactionStatus
       if (allHaveSameCompactionState) {
         return COMPLETE;
       } else {
-        return CompactionStatus.incomplete("segments have different last compaction states");
+        return CompactionStatus.pending("segments have different last compaction states");
       }
     }
 
@@ -336,7 +332,7 @@ public class CompactionStatus
       return CompactionStatus.completeIfEqual(
           "indexSpec",
           Configs.valueOrDefault(tuningConfig.getIndexSpec(), IndexSpec.DEFAULT),
-          objectMapper.convertValue(lastCompactionState.getIndexSpec(), IndexSpec.class),
+          lastCompactionState.getIndexSpec(),
           String::valueOf
       );
     }
@@ -349,6 +345,19 @@ public class CompactionStatus
           lastCompactionState.getProjections(),
           String::valueOf
       );
+    }
+
+    private CompactionStatus inputBytesAreWithinLimit()
+    {
+      final long inputSegmentSize = compactionConfig.getInputSegmentSizeBytes();
+      if (candidateSegments.getTotalBytes() > inputSegmentSize) {
+        return CompactionStatus.skipped(
+            "'inputSegmentSize' exceeded: Total segment size[%d] is larger than allowed inputSegmentSize[%d]",
+            candidateSegments.getTotalBytes(), inputSegmentSize
+        );
+      } else {
+        return COMPLETE;
+      }
     }
 
     private CompactionStatus segmentGranularityIsUpToDate()
@@ -371,7 +380,7 @@ public class CompactionStatus
             segment -> !configuredSegmentGranularity.isAligned(segment.getInterval())
         );
         if (needsCompaction) {
-          return CompactionStatus.incomplete(
+          return CompactionStatus.pending(
               "segmentGranularity: segments do not align with target[%s]",
               asString(configuredSegmentGranularity)
           );
@@ -477,10 +486,7 @@ public class CompactionStatus
         return COMPLETE;
       }
 
-      CompactionTransformSpec existingTransformSpec = convertIfNotNull(
-          lastCompactionState.getTransformSpec(),
-          CompactionTransformSpec.class
-      );
+      CompactionTransformSpec existingTransformSpec = lastCompactionState.getTransformSpec();
       return CompactionStatus.completeIfEqual(
           "transformSpec filter",
           compactionConfig.getTransformSpec().getFilter(),
@@ -490,12 +496,16 @@ public class CompactionStatus
     }
 
     @Nullable
-    private <T> T convertIfNotNull(Object object, Class<T> clazz)
+    private ClientCompactionTaskGranularitySpec convertIfNotNull(GranularitySpec granularitySpec)
     {
-      if (object == null) {
+      if (granularitySpec == null) {
         return null;
       } else {
-        return objectMapper.convertValue(object, clazz);
+        return new ClientCompactionTaskGranularitySpec(
+            granularitySpec.getSegmentGranularity(),
+            granularitySpec.getQueryGranularity(),
+            granularitySpec.isRollup()
+        );
       }
     }
   }

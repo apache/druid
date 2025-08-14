@@ -48,8 +48,7 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
       CompactionCandidateSearchPolicy searchPolicy,
       Map<String, DataSourceCompactionConfig> compactionConfigs,
       Map<String, SegmentTimeline> datasourceToTimeline,
-      Map<String, List<Interval>> skipIntervals,
-      CompactionStatusTracker statusTracker
+      Map<String, List<Interval>> skipIntervals
   )
   {
     this.queue = new PriorityQueue<>(searchPolicy::compareCandidates);
@@ -70,8 +69,7 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
               compactionConfigs.get(datasource),
               timeline,
               skipIntervals.getOrDefault(datasource, Collections.emptyList()),
-              searchPolicy,
-              statusTracker
+              searchPolicy
           )
       );
       addNextItemForDatasourceToQueue(datasource);

@@ -19,14 +19,10 @@
 
 package org.apache.druid.server.compaction;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
-import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
-import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -45,7 +41,6 @@ public class CompactionStatusTracker
 {
   private static final Duration MAX_STATUS_RETAIN_DURATION = Duration.standardHours(12);
 
-  private final ObjectMapper objectMapper;
   private final ConcurrentHashMap<String, DatasourceStatus> datasourceStatuses
       = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, CompactionCandidate> submittedTaskIdToSegments
@@ -53,10 +48,8 @@ public class CompactionStatusTracker
 
   private final AtomicReference<DateTime> segmentSnapshotTime = new AtomicReference<>();
 
-  @Inject
-  public CompactionStatusTracker(ObjectMapper objectMapper)
+  public CompactionStatusTracker()
   {
-    this.objectMapper = objectMapper;
   }
 
   public void stop()
@@ -86,25 +79,17 @@ public class CompactionStatusTracker
     return submittedTaskIdToSegments.keySet();
   }
 
+  /**
+   * Checks if compaction can be started for the given {@link CompactionCandidate}.
+   * This method assumes that the given candidate is eligible for compaction
+   * based on the current compaction config/supervisor of the datasource.
+   */
   public CompactionStatus computeCompactionStatus(
       CompactionCandidate candidate,
-      DataSourceCompactionConfig config,
       CompactionCandidateSearchPolicy searchPolicy
   )
   {
-    final CompactionStatus compactionStatus = CompactionStatus.compute(candidate, config, objectMapper);
-    if (compactionStatus.isComplete()) {
-      return compactionStatus;
-    }
-
-    // Skip intervals that violate max allowed input segment size
-    final long inputSegmentSize = config.getInputSegmentSizeBytes();
-    if (candidate.getTotalBytes() > inputSegmentSize) {
-      return CompactionStatus.skipped(
-          "'inputSegmentSize' exceeded: Total segment size[%d] is larger than allowed inputSegmentSize[%d]",
-          candidate.getTotalBytes(), inputSegmentSize
-      );
-    }
+    final CompactionStatus pendingStatus = CompactionStatus.pending("not compacted yet");
 
     // Skip intervals that already have a running task
     final CompactionTaskStatus lastTaskStatus = getLatestTaskStatus(candidate);
@@ -123,11 +108,11 @@ public class CompactionStatusTracker
     }
 
     // Skip intervals that have been filtered out by the policy
-    if (!searchPolicy.isEligibleForCompaction(candidate, compactionStatus, lastTaskStatus)) {
+    if (!searchPolicy.isEligibleForCompaction(candidate, pendingStatus, lastTaskStatus)) {
       return CompactionStatus.skipped("Rejected by search policy");
     }
 
-    return compactionStatus;
+    return pendingStatus;
   }
 
   public void onCompactionStatusComputed(
@@ -143,17 +128,15 @@ public class CompactionStatusTracker
     this.segmentSnapshotTime.set(snapshotTime);
   }
 
-  public void onCompactionConfigUpdated(DruidCompactionConfig compactionConfig)
+  /**
+   * Updates the set of datasources that have compaction enabled and cleans up
+   * stale task statuses.
+   */
+  public void resetActiveDatasources(Set<String> compactionEnabledDatasources)
   {
-    final Set<String> compactionEnabledDatasources = new HashSet<>();
-    if (compactionConfig.getCompactionConfigs() != null) {
-      compactionConfig.getCompactionConfigs().forEach(config -> {
-        getOrComputeDatasourceStatus(config.getDataSource())
-            .cleanupStaleTaskStatuses();
-
-        compactionEnabledDatasources.add(config.getDataSource());
-      });
-    }
+    compactionEnabledDatasources.forEach(
+        dataSource -> getOrComputeDatasourceStatus(dataSource).cleanupStaleTaskStatuses()
+    );
 
     // Clean up state for datasources where compaction has been disabled
     final Set<String> allDatasources = new HashSet<>(datasourceStatuses.keySet());
@@ -165,12 +148,12 @@ public class CompactionStatusTracker
   }
 
   public void onTaskSubmitted(
-      ClientCompactionTaskQuery taskPayload,
+      String taskId,
       CompactionCandidate candidateSegments
   )
   {
-    submittedTaskIdToSegments.put(taskPayload.getId(), candidateSegments);
-    getOrComputeDatasourceStatus(taskPayload.getDataSource())
+    submittedTaskIdToSegments.put(taskId, candidateSegments);
+    getOrComputeDatasourceStatus(candidateSegments.getDataSource())
         .handleSubmittedTask(candidateSegments);
   }
 

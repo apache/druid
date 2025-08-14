@@ -19,21 +19,27 @@
 
 package org.apache.druid.indexing.compact;
 
+import org.apache.druid.indexing.input.DruidDatasourceDestination;
+import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
-import org.apache.druid.indexing.overlord.supervisor.Supervisor;
+import org.apache.druid.indexing.overlord.supervisor.BatchIndexingSupervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Supervisor for compaction of a single datasource.
  */
-public class CompactionSupervisor implements Supervisor
+public class CompactionSupervisor implements BatchIndexingSupervisor<CompactionJob, CompactionJobParams>
 {
   private static final Logger log = new Logger(CompactionSupervisor.class);
 
@@ -51,6 +57,11 @@ public class CompactionSupervisor implements Supervisor
     this.dataSource = supervisorSpec.getSpec().getDataSource();
   }
 
+  public CompactionSupervisorSpec getSpec()
+  {
+    return supervisorSpec;
+  }
+
   @Override
   public void start()
   {
@@ -66,7 +77,7 @@ public class CompactionSupervisor implements Supervisor
       );
     } else {
       log.info("Starting compaction for dataSource[%s].", dataSource);
-      scheduler.startCompaction(dataSource, supervisorSpec.getSpec());
+      scheduler.startCompaction(dataSource, this);
     }
   }
 
@@ -117,6 +128,27 @@ public class CompactionSupervisor implements Supervisor
   public void reset(@Nullable DataSourceMetadata dataSourceMetadata)
   {
     // do nothing
+  }
+
+  @Override
+  public boolean shouldCreateJobs(CompactionJobParams jobParams)
+  {
+    return !supervisorSpec.isSuspended();
+  }
+
+  @Override
+  public List<CompactionJob> createJobs(CompactionJobParams jobParams)
+  {
+    final Interval interval = Intervals.ETERNITY;
+    return supervisorSpec.getTemplate().createCompactionJobs(
+        // Create a DruidInputSource for this datasource
+        jobParams.getMapper().convertValue(
+            Map.of("type", "druid", "dataSource", dataSource, "interval", interval),
+            DruidInputSource.class
+        ),
+        new DruidDatasourceDestination(dataSource),
+        jobParams
+    );
   }
 
   public enum State implements SupervisorStateManager.State

@@ -27,7 +27,6 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Verify;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
@@ -95,8 +94,8 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
-import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
@@ -133,7 +132,7 @@ import java.util.stream.IntStream;
  */
 public class CompactionTask extends AbstractBatchIndexTask implements PendingSegmentAllocatingTask
 {
-  public static final String TYPE = "compact";
+  public static final String TYPE = CompactionSlotManager.COMPACTION_TASK_TYPE;
   private static final Logger log = new Logger(CompactionTask.class);
 
   /**
@@ -147,10 +146,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
    * instead of a more general approach such as new methods on the Task interface.
    */
   public static final String CTX_KEY_APPENDERATOR_TRACKING_TASK_ID = "appenderatorTrackingTaskId";
-
-  static {
-    Verify.verify(TYPE.equals(CompactSegments.COMPACTION_TASK_TYPE));
-  }
 
   private final CompactionIOConfig ioConfig;
   @Nullable

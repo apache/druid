@@ -27,6 +27,7 @@ import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 public final class Intervals
 {
@@ -96,6 +97,18 @@ public final class Intervals
     }
 
     return null;
+  }
+
+  public static List<Interval> complementOf(Interval interval)
+  {
+    if (interval.equals(Intervals.ETERNITY)) {
+      return List.of();
+    } else {
+      return List.of(
+          new Interval(DateTimes.MIN, interval.getStart()),
+          new Interval(interval.getEnd(), DateTimes.MAX)
+      );
+    }
   }
 
   private Intervals()

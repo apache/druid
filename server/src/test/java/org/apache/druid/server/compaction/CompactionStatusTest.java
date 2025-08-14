@@ -320,8 +320,7 @@ public class CompactionStatusTest
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(Collections.singletonList(segment)),
-        compactionConfig,
-        OBJECT_MAPPER
+        compactionConfig
     );
     Assert.assertTrue(status.isComplete());
   }
@@ -370,8 +369,7 @@ public class CompactionStatusTest
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(Collections.singletonList(segment)),
-        compactionConfig,
-        OBJECT_MAPPER
+        compactionConfig
     );
     Assert.assertTrue(status.isComplete());
   }
@@ -425,8 +423,7 @@ public class CompactionStatusTest
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(Collections.singletonList(segment)),
-        compactionConfig,
-        OBJECT_MAPPER
+        compactionConfig
     );
     Assert.assertFalse(status.isComplete());
   }
@@ -443,8 +440,7 @@ public class CompactionStatusTest
                      .build();
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(Collections.singletonList(segment)),
-        compactionConfig,
-        OBJECT_MAPPER
+        compactionConfig
     );
 
     Assert.assertFalse(status.isComplete());

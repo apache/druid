@@ -65,8 +65,6 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
 
   private final String dataSource;
   private final DataSourceCompactionConfig config;
-  private final CompactionStatusTracker statusTracker;
-  private final CompactionCandidateSearchPolicy searchPolicy;
 
   private final List<CompactionCandidate> compactedSegments = new ArrayList<>();
   private final List<CompactionCandidate> skippedSegments = new ArrayList<>();
@@ -83,14 +81,11 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
       DataSourceCompactionConfig config,
       SegmentTimeline timeline,
       List<Interval> skipIntervals,
-      CompactionCandidateSearchPolicy searchPolicy,
-      CompactionStatusTracker statusTracker
+      CompactionCandidateSearchPolicy searchPolicy
   )
   {
-    this.statusTracker = statusTracker;
     this.config = config;
     this.dataSource = config.getDataSource();
-    this.searchPolicy = searchPolicy;
     this.queue = new PriorityQueue<>(searchPolicy::compareCandidates);
 
     populateQueue(timeline, skipIntervals);
@@ -121,7 +116,6 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
                 CompactionStatus.skipped("Segments have partial-eternity intervals")
             );
             skippedSegments.add(candidatesWithStatus);
-            statusTracker.onCompactionStatusComputed(candidatesWithStatus, config);
             return;
           }
 
@@ -316,10 +310,8 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
       }
 
       final CompactionCandidate candidates = CompactionCandidate.from(segments);
-      final CompactionStatus compactionStatus
-          = statusTracker.computeCompactionStatus(candidates, config, searchPolicy);
+      final CompactionStatus compactionStatus = CompactionStatus.compute(candidates, config);
       final CompactionCandidate candidatesWithStatus = candidates.withCurrentStatus(compactionStatus);
-      statusTracker.onCompactionStatusComputed(candidatesWithStatus, config);
 
       if (compactionStatus.isComplete()) {
         compactedSegments.add(candidatesWithStatus);
@@ -371,7 +363,6 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
 
         final CompactionCandidate candidatesWithStatus = candidates.withCurrentStatus(reason);
         skippedSegments.add(candidatesWithStatus);
-        statusTracker.onCompactionStatusComputed(candidatesWithStatus, config);
       }
     }
 
