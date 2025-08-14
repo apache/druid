@@ -19,8 +19,13 @@
 
 package org.apache.druid.data.input.protobuf;
 
+import com.google.protobuf.Struct;
+import com.google.protobuf.Value;
+import com.google.protobuf.util.JsonFormat;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.junit.jupiter.api.Test;
+
+import java.nio.ByteBuffer;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,9 +35,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @SuppressWarnings("ResultOfObjectAllocationIgnored")
 public class FileBasedProtobufBytesDecoderTest
 {
-  /**
-   * Configure parser with desc file, and specify which file name to use.
-   */
   @Test
   public void testShortMessageType()
   {
@@ -43,9 +45,6 @@ public class FileBasedProtobufBytesDecoderTest
     assertEquals("prototest.ProtoTestEvent", decoder.getDescriptor().getFullName());
   }
 
-  /**
-   * Configure parser with desc file, and specify which file name to use
-   */
   @Test
   public void testLongMessageType()
   {
@@ -55,6 +54,49 @@ public class FileBasedProtobufBytesDecoderTest
     );
 
     assertEquals("prototest.ProtoTestEvent", decoder.getDescriptor().getFullName());
+  }
+
+  @Test
+  public void testMoreComplexProtoFile()
+  {
+    final var decoder = new FileBasedProtobufBytesDecoder(
+        "proto_nested_event.desc",
+        "ProtoNestedEvent"
+    );
+
+    assertEquals("prototest.ProtoNestedEvent", decoder.getDescriptor().getFullName());
+  }
+
+  @Test
+  public void testParsingWithMoreComplexProtoFile() throws Exception
+  {
+    // given
+    final var decoder = new FileBasedProtobufBytesDecoder(
+        "proto_nested_event.desc",
+        "ProtoNestedEvent"
+    );
+
+    final var myStruct = Struct
+        .newBuilder()
+        .putFields("key1", Value.newBuilder().setStringValue("value1").build())
+        .putFields("key2", Value.newBuilder().setNumberValue(42.0).build())
+        .build();
+
+    final var testMessage = ProtoNestedEvent
+        .newBuilder()
+        .setTimestamp(1234567890L)
+        .setName("test-event")
+        .setLog("This is a test log message")
+        .setMyStruct(myStruct)
+        .putMyMap("mapKey1", Value.newBuilder().setStringValue("mapValue1").build())
+        .putMyMap("mapKey2", Value.newBuilder().setBoolValue(true).build())
+        .build();
+
+    // when
+    final var decodedMessage = decoder.parse(ByteBuffer.wrap(testMessage.toByteArray()));
+
+    // then
+    assertEquals(JsonFormat.printer().print(testMessage), JsonFormat.printer().print(decodedMessage));
   }
 
   @Test
@@ -85,9 +127,6 @@ public class FileBasedProtobufBytesDecoderTest
     );
   }
 
-  /**
-   * For the backward compatibility, protoMessageType allows null when the desc file has only one message type.
-   */
   @Test
   public void testSingleDescriptorNoMessageType()
   {
