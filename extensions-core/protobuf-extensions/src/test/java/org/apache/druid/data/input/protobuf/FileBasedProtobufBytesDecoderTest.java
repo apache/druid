@@ -36,7 +36,7 @@ public class FileBasedProtobufBytesDecoderTest
   @Test
   public void testShortMessageType()
   {
-    final var decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "ProtoTestEvent");
+    final var decoder = new FileBasedProtobufBytesDecoder("proto_test_event.desc", "ProtoTestEvent");
 
     assertDoesNotThrow(decoder::initializeDescriptor);
 
@@ -50,7 +50,7 @@ public class FileBasedProtobufBytesDecoderTest
   public void testLongMessageType()
   {
     final var decoder = new FileBasedProtobufBytesDecoder(
-        "prototest.desc",
+        "proto_test_event.desc",
         "prototest.ProtoTestEvent"
     );
 
@@ -62,7 +62,7 @@ public class FileBasedProtobufBytesDecoderTest
   {
     final var ex = assertThrows(
         ParseException.class,
-        () -> new FileBasedProtobufBytesDecoder("prototest.desc", "BadName")
+        () -> new FileBasedProtobufBytesDecoder("proto_test_event.desc", "BadName")
     );
 
     assertEquals(
@@ -91,7 +91,7 @@ public class FileBasedProtobufBytesDecoderTest
   @Test
   public void testSingleDescriptorNoMessageType()
   {
-    final var decoder = new FileBasedProtobufBytesDecoder("prototest.desc", null);
+    final var decoder = new FileBasedProtobufBytesDecoder("proto_test_event.desc", null);
 
     assertEquals("google.protobuf.Timestamp", decoder.getDescriptor().getFullName());
   }
@@ -101,19 +101,19 @@ public class FileBasedProtobufBytesDecoderTest
   {
     // Test basic equality
     final var decoder1 = new FileBasedProtobufBytesDecoder(
-        "prototest.desc",
+        "proto_test_event.desc",
         "ProtoTestEvent"
     );
     final var decoder2 = new FileBasedProtobufBytesDecoder(
-        "prototest.desc",
+        "proto_test_event.desc",
         "ProtoTestEvent"
     );
     final var decoder3 = new FileBasedProtobufBytesDecoder(
-        "prototest.desc",
+        "proto_test_event.desc",
         "ProtoTestEvent.Foo"
     );
     final var decoder4 = new FileBasedProtobufBytesDecoder(
-        "prototest.desc",
+        "proto_test_event.desc",
         null
     );
 

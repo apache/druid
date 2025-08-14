@@ -107,7 +107,7 @@ public class ProtobufInputRowParserTest
         null,
         null
     );
-    decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "ProtoTestEvent");
+    decoder = new FileBasedProtobufBytesDecoder("proto_test_event.desc", "ProtoTestEvent");
   }
 
   @Test
@@ -180,7 +180,7 @@ public class ProtobufInputRowParserTest
   public void testOldParserConfig() throws Exception
   {
     //configure parser with desc file
-    ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, null, "prototest.desc", "ProtoTestEvent");
+    ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, null, "proto_test_event.desc", "ProtoTestEvent");
 
     //create binary of proto test event
     DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());

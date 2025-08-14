@@ -44,7 +44,7 @@ public class InlineDescriptorProtobufBytesDecoderTest
   {
     final URL resource = this.getClass()
                              .getClassLoader()
-                             .getResource("prototest.desc");
+                             .getResource("proto_test_event.desc");
     assertNotNull(resource);
 
     final var descFile = new File(resource.toURI());

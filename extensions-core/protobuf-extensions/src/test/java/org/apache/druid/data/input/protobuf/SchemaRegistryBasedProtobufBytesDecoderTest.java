@@ -221,7 +221,7 @@ public class SchemaRegistryBasedProtobufBytesDecoderTest
   private ProtobufSchema parseProtobufSchema() throws IOException
   {
     InputStream fin;
-    fin = this.getClass().getClassLoader().getResourceAsStream("ProtoTest.proto");
+    fin = this.getClass().getClassLoader().getResourceAsStream("proto_test_event.proto");
     assertNotNull(fin);
     String protobufString = IOUtils.toString(fin, StandardCharsets.UTF_8);
 
