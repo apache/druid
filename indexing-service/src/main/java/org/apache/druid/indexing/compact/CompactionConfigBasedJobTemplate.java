@@ -23,7 +23,6 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.output.OutputDestination;
 import org.apache.druid.error.InvalidInput;
-import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexing.input.DruidDatasourceDestination;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.Intervals;
@@ -81,7 +80,7 @@ public class CompactionConfigBasedJobTemplate extends CompactionJobTemplate
       final CompactionCandidate candidate = segmentIterator.next();
 
       ClientCompactionTaskQuery taskPayload
-          = CompactSegments.createCompactionTask(candidate, config, CompactionEngine.NATIVE);
+          = CompactSegments.createCompactionTask(candidate, config, params.getClusterCompactionConfig().getEngine());
       final Interval compactionInterval = taskPayload.getIoConfig().getInputSpec().getInterval();
       jobs.add(
           new CompactionJob(

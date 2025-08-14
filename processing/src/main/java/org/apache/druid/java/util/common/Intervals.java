@@ -99,9 +99,13 @@ public final class Intervals
     return null;
   }
 
+  /**
+   * @return List of intervals which when added to the given interval create
+   * {@link Intervals#ETERNITY}.
+   */
   public static List<Interval> complementOf(Interval interval)
   {
-    if (interval.equals(Intervals.ETERNITY)) {
+    if (isEternity(interval)) {
       return List.of();
     } else {
       return List.of(

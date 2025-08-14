@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
-import org.apache.druid.indexing.overlord.supervisor.BatchIndexingSupervisorSpec;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.security.ResourceAction;
@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
-public class CompactionSupervisorSpec implements BatchIndexingSupervisorSpec<CompactionJob, CompactionJobParams>
+public class CompactionSupervisorSpec implements SupervisorSpec
 {
   public static final String TYPE = "autocompact";
   public static final String ID_PREFIX = "autocompact__";
@@ -93,7 +93,9 @@ public class CompactionSupervisorSpec implements BatchIndexingSupervisorSpec<Com
     return new CompactionSupervisor(this, scheduler);
   }
 
-  @Override
+  /**
+   * @return {@link CompactionJobTemplate} used to create jobs for the supervisor.
+   */
   public CompactionJobTemplate getTemplate()
   {
     if (spec instanceof CascadingCompactionTemplate) {

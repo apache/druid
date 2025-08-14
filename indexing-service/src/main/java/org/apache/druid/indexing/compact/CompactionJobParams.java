@@ -19,8 +19,8 @@
 
 package org.apache.druid.indexing.compact;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexing.template.JobParams;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.DateTime;
 
@@ -30,17 +30,17 @@ import org.joda.time.DateTime;
 public class CompactionJobParams implements JobParams
 {
   private final DateTime scheduleStartTime;
-  private final ObjectMapper mapper;
   private final TimelineProvider timelineProvider;
+  private final ClusterCompactionConfig clusterCompactionConfig;
 
   public CompactionJobParams(
       DateTime scheduleStartTime,
-      ObjectMapper mapper,
+      ClusterCompactionConfig clusterCompactionConfig,
       TimelineProvider timelineProvider
   )
   {
-    this.mapper = mapper;
     this.scheduleStartTime = scheduleStartTime;
+    this.clusterCompactionConfig = clusterCompactionConfig;
     this.timelineProvider = timelineProvider;
   }
 
@@ -50,9 +50,9 @@ public class CompactionJobParams implements JobParams
     return scheduleStartTime;
   }
 
-  public ObjectMapper getMapper()
+  public ClusterCompactionConfig getClusterCompactionConfig()
   {
-    return mapper;
+    return clusterCompactionConfig;
   }
 
   public SegmentTimeline getTimeline(String dataSource)

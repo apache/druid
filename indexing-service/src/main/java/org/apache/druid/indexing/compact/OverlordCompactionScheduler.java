@@ -28,11 +28,13 @@ import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
+import org.apache.druid.indexing.input.DruidDatasourceDestination;
 import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
@@ -106,6 +108,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
 
   private final CompactionStatusTracker statusTracker;
   private final TaskActionClientFactory taskActionClientFactory;
+  private final DruidInputSourceFactory druidInputSourceFactory;
   private final GlobalTaskLockbox taskLockbox;
 
   /**
@@ -136,6 +139,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       CompactionStatusTracker statusTracker,
       CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig,
       TaskActionClientFactory taskActionClientFactory,
+      DruidInputSourceFactory druidInputSourceFactory,
       ScheduledExecutorFactory executorFactory,
       ServiceEmitter emitter,
       ObjectMapper objectMapper
@@ -157,6 +161,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     this.datasourceToCompactionSnapshot = new AtomicReference<>();
 
     this.taskActionClientFactory = taskActionClientFactory;
+    this.druidInputSourceFactory = druidInputSourceFactory;
     this.taskRunnerListener = new TaskRunnerListener()
     {
       @Override
@@ -321,8 +326,9 @@ public class OverlordCompactionScheduler implements CompactionScheduler
    */
   private synchronized void runCompactionDuty()
   {
+    final DataSourcesSnapshot dataSourcesSnapshot = getDatasourceSnapshot();
     final CompactionJobQueue queue = new CompactionJobQueue(
-        getDatasourceSnapshot(),
+        dataSourcesSnapshot,
         getLatestClusterConfig(),
         statusTracker,
         taskActionClientFactory,
@@ -331,7 +337,14 @@ public class OverlordCompactionScheduler implements CompactionScheduler
         objectMapper
     );
     statusTracker.resetActiveDatasources(activeSupervisors.keySet());
-    activeSupervisors.forEach((datasource, supervisor) -> queue.createAndEnqueueJobs(supervisor));
+    statusTracker.onSegmentTimelineUpdated(dataSourcesSnapshot.getSnapshotTime());
+    activeSupervisors.forEach(
+        (datasource, supervisor) -> queue.createAndEnqueueJobs(
+            supervisor,
+            druidInputSourceFactory.create(datasource, Intervals.ETERNITY),
+            new DruidDatasourceDestination(datasource)
+        )
+    );
     queue.runReadyJobs();
 
     datasourceToCompactionSnapshot.set(queue.getCompactionSnapshots());

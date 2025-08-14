@@ -26,6 +26,8 @@ import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.input.DruidDatasourceDestination;
+import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.template.BatchIndexingJob;
 import org.apache.druid.java.util.common.DateTimes;
@@ -89,7 +91,7 @@ public class CompactionJobQueue
     );
     this.jobParams = new CompactionJobParams(
         DateTimes.nowUtc(),
-        objectMapper,
+        clusterCompactionConfig,
         dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource()::get
     );
     this.slotManager = new CompactionSlotManager(
@@ -121,12 +123,16 @@ public class CompactionJobQueue
    * Creates jobs for the given {@link CompactionSupervisor} and adds them to
    * the job queue.
    */
-  public void createAndEnqueueJobs(CompactionSupervisor supervisor)
+  public void createAndEnqueueJobs(
+      CompactionSupervisor supervisor,
+      DruidInputSource source,
+      DruidDatasourceDestination destination
+  )
   {
     final String supervisorId = supervisor.getSpec().getId();
     try {
-      if (supervisor.shouldCreateJobs(jobParams)) {
-        queue.addAll(supervisor.createJobs(jobParams));
+      if (supervisor.shouldCreateJobs()) {
+        queue.addAll(supervisor.createJobs(source, destination, jobParams));
       } else {
         log.debug("Skipping job creation for supervisor[%s]", supervisorId);
       }
@@ -202,6 +208,8 @@ public class CompactionJobQueue
       case SKIPPED:
         snapshotBuilder.addToSkipped(candidate);
         return false;
+      default:
+        break;
     }
 
     // Check if enough compaction task slots are available
@@ -212,11 +220,12 @@ public class CompactionJobQueue
 
     // Reserve task slots and try to start the task
     slotManager.reserveTaskSlots(job.getMaxRequiredTaskSlots());
-    if(startTaskIfReady(job)) {
+    if (startTaskIfReady(job)) {
       snapshotBuilder.addToComplete(candidate);
       return true;
     } else {
-      snapshotBuilder.addToPending(candidate);
+      // Mark the job as skipped for now as the intervals might be locked by other tasks
+      snapshotBuilder.addToSkipped(candidate);
       return false;
     }
   }

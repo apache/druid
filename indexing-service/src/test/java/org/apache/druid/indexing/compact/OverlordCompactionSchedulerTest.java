@@ -21,10 +21,8 @@ package org.apache.druid.indexing.compact;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.ClientMSQContext;
-import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
@@ -52,7 +50,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
@@ -93,13 +90,9 @@ public class OverlordCompactionSchedulerTest
   static {
     OBJECT_MAPPER = new DefaultObjectMapper();
     OBJECT_MAPPER.registerModules(new IndexingServiceTuningConfigModule().getJacksonModules());
-    OBJECT_MAPPER.registerModules(new IndexingServiceInputSourceModule().getJacksonModules());
     OBJECT_MAPPER.setInjectableValues(
         new InjectableValues
             .Std()
-            .addValue(IndexIO.class, TestIndex.INDEX_IO)
-            .addValue(TaskConfig.class, Mockito.mock(TaskConfig.class))
-            .addValue(CoordinatorClient.class, new NoopCoordinatorClient())
             .addValue(
                 SegmentCacheManagerFactory.class,
                 new SegmentCacheManagerFactory(TestIndex.INDEX_IO, OBJECT_MAPPER)
@@ -190,6 +183,12 @@ public class OverlordCompactionSchedulerTest
         new CompactionStatusTracker(),
         coordinatorOverlordServiceConfig,
         taskActionClientFactory,
+        new DruidInputSourceFactory(
+            TestIndex.INDEX_IO,
+            Mockito.mock(TaskConfig.class),
+            new NoopCoordinatorClient(),
+            new SegmentCacheManagerFactory(TestIndex.INDEX_IO, OBJECT_MAPPER)
+        ),
         (nameFormat, numThreads) -> new WrappingScheduledExecutorService("test", executor, false),
         serviceEmitter,
         OBJECT_MAPPER
