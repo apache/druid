@@ -17,21 +17,37 @@
   ~ under the License.
   -->
 
+# Protobuf Extension
+
 This extension provides support to ingest and understand the Protobuf data format. For more details, read the [Protobuf extension docs](../../docs/development/extensions-core/protobuf.md).
 
-## Test Resources
+## Test Resources and Code Generation
 
-The `src/test/resources/` directory contains Protocol Buffer (`.proto`) files and their generated artifacts used in unit tests. For each `.proto` file, two generated files are required:
+The `src/test/resources/` directory contains Protocol Buffer (`.proto`) files used in unit tests. For each `.proto` file, we make use of two generated files:
 
-1. **Descriptor files** (`.desc`): Binary representation of the protobuf schema with all dependencies
-2. **Java wrapper classes**: Generated Java code for working with the protobuf messages
+1. **Java wrapper classes**: Generated Java code for working with the protobuf messages, automatically generated during the build process.
+2. **Descriptor files** (`.desc`): Binary representation of the protobuf schema with all dependencies, in source-control and manually generated using the process outlined below.
 
-### Prerequisites
+### Automatic Code Generation
+
+The project uses the `io.github.ascopes.protobuf-maven-plugin` to automatically generate Java wrapper classes from `.proto` files. This happens automatically when you run:
+
+```sh
+mvn generate-test-sources
+# or any lifecycle phase that includes it, like:
+mvn test
+```
+
+### Descriptor File Generation
+
+Unit tests may require manually generated **descriptor files** (`.desc`) which contain binary representations of the protobuf schema with all dependencies.
+
+#### Prerequisites
 
 - Docker installed and running
-- The `Dockerfile` in this directory creates a minimal Alpine Linux image with the correct protoc version, matching the project's Java protobuf dependency.
+- The `Dockerfile` in `src/test/resources/` creates a minimal Alpine Linux image with the correct protoc version
 
-### Build the Docker Image
+#### Build Docker Image
 
 **Important**: Run all commands from the `protobuf-extensions` project root directory.
 
@@ -40,9 +56,7 @@ The `src/test/resources/` directory contains Protocol Buffer (`.proto`) files an
 docker build -t protoc-druid src/test/resources/
 ```
 
-### Generate Descriptor Files
-
-For any `.proto` file, generate its corresponding `.desc` file:
+#### Generate Descriptor Files
 
 ```sh
 docker run --rm -v $PWD:/workspace protoc-druid protoc \
@@ -50,15 +64,4 @@ docker run --rm -v $PWD:/workspace protoc-druid protoc \
   --proto_path=/workspace/src/test/resources \
   --descriptor_set_out=/workspace/src/test/resources/your_file.desc \
   --include_imports
-```
-
-### Generate Java Wrapper Classes
-
-Generate Java classes from proto files:
-
-```sh
-docker run --rm -v $PWD:/workspace protoc-druid protoc \
-  /workspace/src/test/resources/your_file.proto \
-  --proto_path=/workspace/src/test/resources \
-  --java_out=/workspace/src/test/java
 ```
