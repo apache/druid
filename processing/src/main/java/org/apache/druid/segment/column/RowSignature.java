@@ -422,4 +422,14 @@ public class RowSignature implements ColumnInspector
     }
     return ret;
   }
+
+  public RowSignature withPrefix(String prefix)
+  {
+    Builder builder = new Builder();
+    for (String columnName : columnNames) {
+      ColumnType columnType = columnTypes.get(columnName);
+      builder.add(prefix + columnName, columnType);
+    }
+    return builder.build();
+  }
 }
