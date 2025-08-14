@@ -24,3 +24,6 @@ ENV PATH="/opt/bin:${PATH}" \
 RUN protoc --version
 
 WORKDIR /workspace
+
+# Default to shell if no command specified
+CMD ["/bin/sh"]
