@@ -65,11 +65,14 @@ public class ProtobufConverter
     if (msg == null) {
       return null;
     }
+
     final Map<Descriptors.FieldDescriptor, Object> fields = msg.getAllFields();
+
     final Map<String, Object> converted = Maps.newHashMapWithExpectedSize(fields.size());
     for (Map.Entry<Descriptors.FieldDescriptor, Object> field : fields.entrySet()) {
       converted.put(field.getKey().getJsonName(), convertField(field.getKey(), field.getValue()));
     }
+
     return converted;
   }
 
@@ -107,7 +110,6 @@ public class ProtobufConverter
     return theList;
   }
 
-  @Nullable
   private static Object convertMap(Descriptors.FieldDescriptor field, Object value)
       throws InvalidProtocolBufferException
   {
@@ -128,6 +130,7 @@ public class ProtobufConverter
           convertSingleValue(valueField, entry.getField(valueField))
       );
     }
+
     return theMap;
   }
 
