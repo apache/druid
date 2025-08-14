@@ -227,53 +227,57 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   }
 
   /**
-   * Returns true if this granularity can be mapped to the given granularity. For example:
+   * Returns true if this granularity can be mapped to the target granularity. For example:
    * <li>Period('PT1H') in UTC can be mapped to Period('P1D') in UTC</li>
    * <li>Period('PT1H') in America/Los_Angeles can be mapped to Period('PT1H') in UTC</li>
    * <li>Period('P1D') in America/Los_Angeles cannot be mapped to Period('P1D') in UTC</li>
    */
-  public boolean canBeMappedTo(PeriodGranularity gran)
+  public boolean canBeMappedTo(PeriodGranularity target)
   {
-    if (hasOrigin || gran.hasOrigin) {
+    if (hasOrigin || target.hasOrigin) {
       return false;
     }
 
-    if (getTimeZone().equals(gran.getTimeZone())) {
+    if (getTimeZone().equals(target.getTimeZone())) {
       int periodMonths = period.getYears() * 12 + period.getMonths();
-      int granMonths = gran.period.getYears() * 12 + gran.period.getMonths();
-      if (granMonths == 0 && periodMonths != 0) {
+      int targetMonths = target.period.getYears() * 12 + target.period.getMonths();
+      if (targetMonths == 0 && periodMonths != 0) {
         return false;
       }
 
-      int periodStandardSeconds = getStandardSecondsOrThrow(period.withYears(0).withMonths(0));
-      int granStandardSeconds = getStandardSecondsOrThrow(gran.period.withYears(0).withMonths(0));
-      if (granMonths != 0 && periodMonths == 0) {
-        // if gran month is set, we require it not have week/day/hour/minute/second, and period can be mapped to day
-        // this is for simplicity, it's possible some period can be mapped to gran, but we don't support it
-        return granStandardSeconds == 0 && (3600 * 24) % periodStandardSeconds == 0;
-      } else if (granMonths != 0 && periodMonths != 0) {
-        return granMonths % periodMonths == 0
-               && granStandardSeconds == 0
-               && periodStandardSeconds == 0;
-      } else {
+      long periodStandardSeconds = getStandardSecondsOrThrow(period.withYears(0).withMonths(0));
+      long targetStandardSeconds = getStandardSecondsOrThrow(target.period.withYears(0).withMonths(0));
+      if (targetMonths == 0 && periodMonths == 0) {
         // both periods have zero months
-        return granStandardSeconds % periodStandardSeconds == 0;
+        return targetStandardSeconds % periodStandardSeconds == 0;
+      }
+      // if we reach here, targetMonths != 0
+      if (periodMonths == 0) {
+        // can map if 1.target not have week/day/hour/minute/second, and 2.period can be mapped to day
+        // this is for simplicity, it's possible some period can be mapped to gran, but we don't support it
+        return targetStandardSeconds == 0 && (3600 * 24) % periodStandardSeconds == 0;
+      } else {
+        // can map if 1.target&period not have week/day/hour/minute/second, and 2.period month can be mapped to target month
+        return targetMonths % periodMonths == 0
+               && targetStandardSeconds == 0
+               && periodStandardSeconds == 0;
       }
     }
 
+    // Timezone doesn't match, we'd require periods to be in whole seconds, i.e. no years, months, or milliseconds.
     if (getStandardSeconds(period).isEmpty()) {
       return false;
     }
-    int standardSeconds = getStandardSecondsOrThrow(period);
-    // if timezone doesn't match, and both periods are in whole seconds, we'd try to map them to UTC
+    long standardSeconds = getStandardSecondsOrThrow(period);
     if (standardSeconds != getUtcMappablePeriodSecondsOrThrow()) {
       // the period cannot be mapped to UTC with the same period
       return false;
     }
-    if (gran.period.getYears() != 0 || gran.period.getMonths() != 0) {
-      return getStandardSecondsOrThrow(gran.period.withYears(0).withMonths(0)) == 0;
+    if (target.period.getYears() == 0 && target.period.getMonths() == 0) {
+      return target.getUtcMappablePeriodSecondsOrThrow() % standardSeconds == 0;
     } else {
-      return gran.getUtcMappablePeriodSecondsOrThrow() % standardSeconds == 0;
+      return getStandardSecondsOrThrow(target.period.withYears(0).withMonths(0)) == 0
+             && (3600 * 24) % standardSeconds == 0;
     }
   }
 
@@ -282,9 +286,9 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
    * <p>
    * Throws {@link DruidException} if the period cannot be mapped to whole seconds, i.e. it has years or months, or milliseconds.
    */
-  public int getUtcMappablePeriodSecondsOrThrow()
+  public long getUtcMappablePeriodSecondsOrThrow()
   {
-    int periodSeconds = PeriodGranularity.getStandardSecondsOrThrow(period);
+    long periodSeconds = PeriodGranularity.getStandardSecondsOrThrow(period);
 
     if (ISOChronology.getInstanceUTC().getZone().equals(getTimeZone())) {
       return periodSeconds;
@@ -321,11 +325,14 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   /**
    * Returns the standard whole seconds for the given period.
    * <p>
-   * Throws {@link DruidException} if the period cannot be mapped to whole seconds, i.e. it has years or months, or milliseconds.
+   * Throws {@link DruidException} if the period cannot be mapped to whole seconds, i.e. one of the following applies:
+   * <ul>
+   * <li>it has years or months
+   * <li>it has milliseconds
    */
-  public static Integer getStandardSecondsOrThrow(Period period)
+  public static Long getStandardSecondsOrThrow(Period period)
   {
-    Optional<Integer> s = getStandardSeconds(period);
+    Optional<Long> s = getStandardSeconds(period);
     if (s.isPresent()) {
       return s.get();
     } else {
@@ -336,14 +343,17 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   /**
    * Returns the standard whole seconds for the given period.
    * <p>
-   * Returns empty if the period cannot be mapped to whole seconds, i.e. it has years or months, or milliseconds.
+   * Returns empty if the period cannot be mapped to whole seconds, i.e. one of the following applies:
+   * <ul>
+   * <li>it has years or months
+   * <li>it has milliseconds
    */
-  public static Optional<Integer> getStandardSeconds(Period period)
+  public static Optional<Long> getStandardSeconds(Period period)
   {
     if (period.getYears() == 0 && period.getMonths() == 0) {
       long millis = period.toStandardDuration().getMillis();
       return millis % 1000 == 0
-             ? Optional.of((int) (millis / 1000))
+             ? Optional.of((long) (millis / 1000))
              : Optional.empty();
     }
     return Optional.empty();
