@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.expression;
 
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -41,7 +42,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
   {
     return FN_NAME + "(" + ColumnHolder.TIME_COLUMN_NAME
            + ",'" + period.getPeriod()
-           + "'," + (period.getOrigin() == null ? "null" : String.format("'%s'", period.getOrigin()))
+           + "'," + (period.getOrigin() == null ? "null" : StringUtils.format("'%s'", period.getOrigin()))
            + ",'" + period.getTimeZone()
            + "')";
   }
