@@ -1041,11 +1041,14 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
     );
 
     ExpressionVirtualColumn column = Granularities.toVirtualColumn(hour, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    Assert.assertEquals("timestamp_floor(__time,'PT1H')", column.getExpression());
+    Assert.assertEquals("timestamp_floor(__time,'PT1H',null,'UTC')", column.getExpression());
     column = Granularities.toVirtualColumn(hourWithOrigin, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, column.getExpression());
+    Assert.assertEquals(
+        "timestamp_floor(__time,'PT1H','2012-01-02T13:00:00.000Z','America/Los_Angeles')",
+        column.getExpression()
+    );
     column = Granularities.toVirtualColumn(hourWithTz, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    Assert.assertEquals("timestamp_floor(__time,'PT1H')", column.getExpression());
+    Assert.assertEquals("timestamp_floor(__time,'PT1H',null,'America/Los_Angeles')", column.getExpression());
     column = Granularities.toVirtualColumn(duration, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
     Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, column.getExpression());
     column = Granularities.toVirtualColumn(Granularities.NONE, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
@@ -1053,11 +1056,11 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
     column = Granularities.toVirtualColumn(Granularities.ALL, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
     Assert.assertNull(column);
     column = Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    Assert.assertEquals("timestamp_floor(__time,'PT1H')", column.getExpression());
+    Assert.assertEquals("timestamp_floor(__time,'PT1H',null,'UTC')", column.getExpression());
     column = Granularities.toVirtualColumn(Granularities.MINUTE, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    Assert.assertEquals("timestamp_floor(__time,'PT1M')", column.getExpression());
+    Assert.assertEquals("timestamp_floor(__time,'PT1M',null,'UTC')", column.getExpression());
     column = Granularities.toVirtualColumn(Granularities.FIFTEEN_MINUTE, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    Assert.assertEquals("timestamp_floor(__time,'PT15M')", column.getExpression());
+    Assert.assertEquals("timestamp_floor(__time,'PT15M',null,'UTC')", column.getExpression());
   }
 
   @Test
@@ -1148,7 +1151,11 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
         ColumnType.LONG,
         TestExprMacroTable.INSTANCE
     );
-    Assert.assertNull(Granularities.fromVirtualColumn(concatFormatFloor));
+    Assert.assertEquals(new PeriodGranularity(
+        new Period("PT1H"),
+        null,
+        DateTimes.inferTzFromString("America/Los_Angeles")
+    ), Granularities.fromVirtualColumn(concatFormatFloor));
 
     ExpressionVirtualColumn concatFields = new ExpressionVirtualColumn(
         "v0",
@@ -1156,7 +1163,7 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
         ColumnType.LONG,
         TestExprMacroTable.INSTANCE
     );
-    Assert.assertNull(Granularities.fromVirtualColumn(concatFields));
+    Assert.assertEquals(Granularities.ALL, Granularities.fromVirtualColumn(concatFields));
   }
 
   private void assertBucketStart(final Granularity granularity, final DateTime in, final DateTime expectedInProperTz)

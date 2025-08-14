@@ -230,10 +230,15 @@ public class AggregateProjectionSpec
       } else {
         final VirtualColumn vc = virtualColumns.getVirtualColumn(dimension.getName());
         final Granularity maybeGranularity = Granularities.fromVirtualColumn(vc);
-        if (granularity == null && maybeGranularity != null) {
+        if (maybeGranularity == null || maybeGranularity.equals(Granularities.ALL)) {
+          // no __time in inputs or not supported, skip
+          continue;
+        }
+        if (granularity == null) {
           granularity = maybeGranularity;
           timeColumnName = dimension.getName();
-        } else if (granularity != null && maybeGranularity != null && maybeGranularity.isFinerThan(granularity)) {
+        } else if (maybeGranularity.isFinerThan(granularity)) {
+          // finer is not a perfect check here, we should rather compute a compatible granularity
           granularity = maybeGranularity;
           timeColumnName = dimension.getName();
         }

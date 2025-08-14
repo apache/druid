@@ -218,6 +218,9 @@ public class AggregateProjectionMetadata
         OrderBy orderBy = ordering.get(i);
         if (orderBy.getColumnName().equals(timeColumnName)) {
           orderingWithTimeSubstitution.add(new OrderBy(ColumnHolder.TIME_COLUMN_NAME, orderBy.getOrder()));
+          if (foundTimePosition != -1) {
+            throw DruidException.defensive("projection[%s] has multiple time columns in ordering: %s", name, ordering);
+          }
           foundTimePosition = i;
           timeColumnName = groupingColumns.get(foundTimePosition);
           final VirtualColumn vc = this.virtualColumns.getVirtualColumn(groupingColumns.get(foundTimePosition));

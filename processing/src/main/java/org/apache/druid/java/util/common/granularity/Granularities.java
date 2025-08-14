@@ -37,8 +37,6 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.joda.time.DateTimeZone;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -146,10 +144,11 @@ public class Granularities
 
   /**
    * Translates a {@link Granularity} to a {@link ExpressionVirtualColumn} on {@link ColumnHolder#TIME_COLUMN_NAME} of
-   * the equivalent grouping column. If granularity is {@link #ALL}, this method returns null since we are not grouping
-   * on time. If granularity is a {@link PeriodGranularity} with UTC timezone and no origin, this method returns a
-   * virtual column with {@link TimestampFloorExprMacro.TimestampFloorExpr} of the specified period. If granularity is
-   * {@link #NONE}, or any other kind of granularity (duration, period with non-utc timezone or origin) this method
+   * the equivalent grouping column.
+   * <ul>
+   * <li>If granularity is {@link #ALL}, this method returns null since we are not grouping on time.
+   * <li>If granularity is a {@link PeriodGranularity}, we'd map it to {@link TimestampFloorExprMacro.TimestampFloorExpr}.
+   * <li>If granularity is {@link #NONE}, or any other kind of granularity (duration, period with non-utc timezone or origin) this method
    * returns a virtual column with {@link org.apache.druid.math.expr.IdentifierExpr} specifying
    * {@link ColumnHolder#TIME_COLUMN_NAME} directly.
    */
@@ -159,31 +158,14 @@ public class Granularities
     if (ALL.equals(granularity)) {
       return null;
     }
+
     final String expression;
-    if (NONE.equals(granularity) || granularity instanceof DurationGranularity) {
-      expression = ColumnHolder.TIME_COLUMN_NAME;
-    } else {
+    if (granularity instanceof PeriodGranularity) {
       PeriodGranularity period = (PeriodGranularity) granularity;
-      if (period.getOrigin() != null) {
-        expression = ColumnHolder.TIME_COLUMN_NAME;
-      } else if (period.getTimeZone().equals(DateTimeZone.UTC)) {
-        expression = TimestampFloorExprMacro.forQueryGranularity(period.getPeriod());
-      } else if (period.getPeriod().getYears() != 0 || period.getPeriod().getMonths() != 0) {
-        if (PeriodGranularity.getStandardSeconds(period.getPeriod().withYears(0).withMonths(0)).isPresent()) {
-          expression = TimestampFloorExprMacro.forQueryGranularity(Duration.standardSeconds(1).toPeriod());
-        } else {
-          // period has year & month, generally it should not have milliseconds, but this is a fallback
-          expression = ColumnHolder.TIME_COLUMN_NAME;
-        }
-      } else {
-        if (PeriodGranularity.getStandardSeconds(period.getPeriod()).isEmpty()) {
-          // period has milliseconds
-          expression = ColumnHolder.TIME_COLUMN_NAME;
-        } else {
-          int seconds = period.getUtcMappablePeriodSecondsOrThrow();
-          expression = TimestampFloorExprMacro.forQueryGranularity(Duration.standardSeconds(seconds).toPeriod());
-        }
-      }
+      expression = TimestampFloorExprMacro.forQueryGranularity(period);
+    } else {
+      // DurationGranularity or any other granularity that is not a PeriodGranularity
+      expression = ColumnHolder.TIME_COLUMN_NAME;
     }
 
     return new ExpressionVirtualColumn(
@@ -221,7 +203,7 @@ public class Granularities
     if (identifier != null) {
       return identifier.equals(ColumnHolder.TIME_COLUMN_NAME)
              ? Granularities.NONE
-             : null;
+             : Granularities.ALL;
     }
 
     if (expr instanceof TimestampFloorExprMacro.TimestampFloorExpr) {
@@ -233,9 +215,6 @@ public class Granularities
       Granularity gran = Granularities.ALL;
       for (Expr exprArg : expr.getExprArgs()) {
         Granularity newGran = fromExpr(exprArg);
-        if (newGran == null) {
-          return null; // cannot determine granularity
-        }
         gran = gran.isFinerThan(newGran) ? gran : newGran;
       }
       return gran;
