@@ -26,7 +26,6 @@ import com.google.protobuf.DescriptorProtos;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
 import javax.annotation.Nullable;
@@ -35,6 +34,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.TreeSet;
 
 /**
  * Abstract base class for protobuf bytes decoders that use Google's protobuf library directly
@@ -75,11 +75,11 @@ public abstract class DescriptorBasedProtobufBytesDecoder implements ProtobufByt
   }
 
   @VisibleForTesting
-  void initDescriptor()
+  void initializeDescriptor()
   {
     if (this.descriptor == null) {
-      final var descriptorSet = generateFileDescriptorSet();
-      this.descriptor = generateDescriptor(descriptorSet);
+      final var descriptorSet = loadFileDescriptorSet();
+      this.descriptor = buildMessageDescriptor(descriptorSet);
     }
   }
 
@@ -100,26 +100,29 @@ public abstract class DescriptorBasedProtobufBytesDecoder implements ProtobufByt
       throw new ParseException(
           null,
           e,
-          "Failed to decode protobuf messagewith the provided descriptor [%s]",
+          "Failed to decode protobuf message with the provided descriptor [%s]",
           descriptor.getFullName()
       );
     }
   }
 
-  protected abstract DescriptorProtos.FileDescriptorSet generateFileDescriptorSet();
+  /**
+   * Load the FileDescriptorSet containing protobuf schema definitions from the concrete implementation's source.
+   */
+  protected abstract DescriptorProtos.FileDescriptorSet loadFileDescriptorSet();
 
   /**
-   * Build a descriptor from a FileDescriptorSet.
+   * Build a message descriptor from a FileDescriptorSet.
    */
-  protected Descriptors.Descriptor generateDescriptor(
+  protected Descriptors.Descriptor buildMessageDescriptor(
       final DescriptorProtos.FileDescriptorSet descriptorSet
   )
   {
     try {
-      // Build descriptors with dependency resolution - let protobuf handle well-known types automatically
+      // Build descriptors with dependency resolution
       final var builtDescriptors = new HashMap<String, Descriptors.FileDescriptor>();
       final var userDescriptors = new ArrayList<Descriptors.FileDescriptor>();
-      
+
       for (final var fileProto : descriptorSet.getFileList()) {
         final var fileDescriptor = buildFileDescriptor(fileProto, descriptorSet, builtDescriptors);
         userDescriptors.add(fileDescriptor);
@@ -133,7 +136,7 @@ public abstract class DescriptorBasedProtobufBytesDecoder implements ProtobufByt
             return fileDescriptor.getMessageTypes().get(0);
           }
         }
-        throw new ParseException(null, "No message types found in the descriptor set.");
+        throw new ParseException(null, "No message types found in the descriptor set");
       }
 
       // Find specific message type by name (including nested types)
@@ -144,9 +147,17 @@ public abstract class DescriptorBasedProtobufBytesDecoder implements ProtobufByt
         }
       }
 
+      // Collect available types for better error message
+      final var availableTypes = new TreeSet<String>();
+      for (final var fileDescriptor : userDescriptors) {
+        collectAvailableTypes(fileDescriptor, availableTypes);
+      }
+
       throw new ParseException(
-          null, 
-          StringUtils.format("Protobuf message type '%s' not found in the descriptor set.", protoMessageType)
+          null,
+          "Protobuf message type [%s] not found in the descriptor set. Available types: %s",
+          protoMessageType,
+          availableTypes
       );
     }
     catch (Descriptors.DescriptorValidationException e) {
@@ -155,14 +166,17 @@ public abstract class DescriptorBasedProtobufBytesDecoder implements ProtobufByt
   }
 
   @Nullable
-  private Descriptors.Descriptor findMessageByName(final Descriptors.FileDescriptor fileDescriptor, final String messageTypeName)
+  private Descriptors.Descriptor findMessageByName(
+      final Descriptors.FileDescriptor fileDescriptor,
+      final String messageTypeName
+  )
   {
     // Try simple name match first
     for (final var messageType : fileDescriptor.getMessageTypes()) {
       if (messageType.getName().equals(messageTypeName) || messageType.getFullName().equals(messageTypeName)) {
         return messageType;
       }
-      
+
       // Try nested types (e.g., "ParentMessage.NestedMessage")
       final var nested = findNestedMessage(messageType, messageTypeName);
       if (nested != null) {
@@ -176,18 +190,19 @@ public abstract class DescriptorBasedProtobufBytesDecoder implements ProtobufByt
   private Descriptors.Descriptor findNestedMessage(final Descriptors.Descriptor parent, final String messageTypeName)
   {
     for (final var nested : parent.getNestedTypes()) {
-      if (nested.getName().equals(messageTypeName) || 
+      if (nested.getName().equals(messageTypeName) ||
           nested.getFullName().equals(messageTypeName) ||
           (parent.getName() + "." + nested.getName()).equals(messageTypeName)) {
         return nested;
       }
-      
+
       // Recursively search deeper nesting
       final var deeperNested = findNestedMessage(nested, messageTypeName);
       if (deeperNested != null) {
         return deeperNested;
       }
     }
+
     return null;
   }
 
@@ -202,7 +217,7 @@ public abstract class DescriptorBasedProtobufBytesDecoder implements ProtobufByt
       return builtDescriptors.get(fileProto.getName());
     }
 
-    // Collect dependencies from the descriptor set (protobuf library handles well-known types automatically)
+    // Collect dependencies from the descriptor set
     final var dependencies = new ArrayList<Descriptors.FileDescriptor>();
     for (final var dependencyName : fileProto.getDependencyList()) {
       // Look for the dependency in the descriptor set
@@ -215,14 +230,42 @@ public abstract class DescriptorBasedProtobufBytesDecoder implements ProtobufByt
       }
     }
 
-    // Build the file descriptor - protobuf library automatically handles well-known types
     final var fileDescriptor = Descriptors.FileDescriptor.buildFrom(
-        fileProto, 
+        fileProto,
         dependencies.toArray(new Descriptors.FileDescriptor[0])
     );
-    
+
     builtDescriptors.put(fileProto.getName(), fileDescriptor);
+
     return fileDescriptor;
+  }
+
+  private void collectAvailableTypes(
+      final Descriptors.FileDescriptor fileDescriptor,
+      final TreeSet<String> availableTypes
+  )
+  {
+    for (final var messageType : fileDescriptor.getMessageTypes()) {
+      // Add short name and full name
+      availableTypes.add(messageType.getName());
+      availableTypes.add(messageType.getFullName());
+
+      // Add nested types
+      collectNestedTypes(messageType, availableTypes);
+    }
+  }
+
+  private void collectNestedTypes(final Descriptors.Descriptor parentDescriptor, final TreeSet<String> availableTypes)
+  {
+    for (final var nestedType : parentDescriptor.getNestedTypes()) {
+      // Add different naming variations for nested types
+      availableTypes.add(nestedType.getName());
+      availableTypes.add(nestedType.getFullName());
+      availableTypes.add(parentDescriptor.getName() + "." + nestedType.getName());
+
+      // Recursively collect deeper nested types
+      collectNestedTypes(nestedType, availableTypes);
+    }
   }
 
   @Override

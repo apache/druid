@@ -37,7 +37,7 @@ public class FileBasedProtobufBytesDecoderTest
   {
     final var decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "ProtoTestEvent");
 
-    assertDoesNotThrow(decoder::initDescriptor);
+    assertDoesNotThrow(decoder::initializeDescriptor);
 
     assertEquals("prototest.ProtoTestEvent", decoder.getDescriptor().getFullName());
   }
@@ -59,22 +59,32 @@ public class FileBasedProtobufBytesDecoderTest
   @Test
   public void testBadProto()
   {
-    assertThrows(
+    final var ex = assertThrows(
         ParseException.class,
         () -> {
           final var ignored = new FileBasedProtobufBytesDecoder("prototest.desc", "BadName");
         }
+    );
+
+    assertEquals(
+        "Protobuf message type [BadName] not found in the descriptor set. Available types: [Foo, ProtoTestEvent, ProtoTestEvent.Foo, Timestamp, google.protobuf.Timestamp, prototest.ProtoTestEvent, prototest.ProtoTestEvent.Foo]",
+        ex.getMessage()
     );
   }
 
   @Test
   public void testMalformedDescriptorUrl()
   {
-    assertThrows(
+    final var ex = assertThrows(
         ParseException.class,
         () -> {
           final var ignored = new FileBasedProtobufBytesDecoder("file:/nonexist.desc", "BadName");
         }
+    );
+
+    assertEquals(
+        "Descriptor not found in class path [file:/nonexist.desc]",
+        ex.getMessage()
     );
   }
 

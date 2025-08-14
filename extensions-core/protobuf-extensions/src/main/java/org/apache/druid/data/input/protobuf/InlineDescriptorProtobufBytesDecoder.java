@@ -45,7 +45,7 @@ public class InlineDescriptorProtobufBytesDecoder extends DescriptorBasedProtobu
     Preconditions.checkNotNull(descriptorString);
     this.descriptorString = descriptorString;
 
-    initDescriptor();
+    initializeDescriptor();
   }
 
   @JsonProperty
@@ -55,20 +55,20 @@ public class InlineDescriptorProtobufBytesDecoder extends DescriptorBasedProtobu
   }
 
   @Override
-  protected DescriptorProtos.FileDescriptorSet generateFileDescriptorSet()
+  protected DescriptorProtos.FileDescriptorSet loadFileDescriptorSet()
   {
     try {
       byte[] decodedDesc = StringUtils.decodeBase64String(descriptorString);
 
       final var descriptorSet = DescriptorProtos.FileDescriptorSet.parseFrom(decodedDesc);
       if (descriptorSet.getFileCount() == 0) {
-        throw new ParseException(null, "No file descriptors found in the descriptor set.");
+        throw new ParseException(null, "No file descriptors found in the descriptor set");
       }
 
       return descriptorSet;
     }
     catch (IllegalArgumentException e) {
-      throw new IAE("Descriptor string does not have valid Base64 encoding.");
+      throw new IAE("Descriptor string does not have valid Base64 encoding");
     }
     catch (IOException e) {
       throw new ParseException(descriptorString, e, "Failed to initialize descriptor");

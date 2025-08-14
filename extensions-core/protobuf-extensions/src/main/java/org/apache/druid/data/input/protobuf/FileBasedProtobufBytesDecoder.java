@@ -44,7 +44,7 @@ public class FileBasedProtobufBytesDecoder extends DescriptorBasedProtobufBytesD
     Preconditions.checkNotNull(descriptorFilePath);
     this.descriptorFilePath = descriptorFilePath;
 
-    initDescriptor();
+    initializeDescriptor();
   }
 
   @JsonProperty("descriptor")
@@ -54,16 +54,16 @@ public class FileBasedProtobufBytesDecoder extends DescriptorBasedProtobufBytesD
   }
 
   @Override
-  protected DescriptorProtos.FileDescriptorSet generateFileDescriptorSet()
+  protected DescriptorProtos.FileDescriptorSet loadFileDescriptorSet()
   {
     try (InputStream fin = this.getClass().getClassLoader().getResourceAsStream(descriptorFilePath)) {
       if (fin == null) {
-        throw new ParseException(descriptorFilePath, "Descriptor not found in class path: %s", descriptorFilePath);
+        throw new ParseException(descriptorFilePath, "Descriptor not found in class path [%s]", descriptorFilePath);
       }
 
       final var descriptorSet = DescriptorProtos.FileDescriptorSet.parseFrom(fin);
       if (descriptorSet.getFileCount() == 0) {
-        throw new ParseException(null, "No file descriptors found in the descriptor set.");
+        throw new ParseException(null, "No file descriptors found in the descriptor set");
       }
 
       return descriptorSet;

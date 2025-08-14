@@ -51,7 +51,7 @@ public class InlineDescriptorProtobufBytesDecoderTest
   }
 
   @Test
-  public void testShortMessageType()
+  public void testUseShortMessageType()
   {
     final var decoder = new InlineDescriptorProtobufBytesDecoder(
         descString,
@@ -62,7 +62,7 @@ public class InlineDescriptorProtobufBytesDecoderTest
   }
 
   @Test
-  public void testLongMessageType()
+  public void testuseFullMessageType()
   {
     final var decoder = new InlineDescriptorProtobufBytesDecoder(
         descString,
@@ -75,29 +75,39 @@ public class InlineDescriptorProtobufBytesDecoderTest
   @Test
   public void testBadProto()
   {
-    assertThrows(
+    final var ex = assertThrows(
         ParseException.class,
         () -> {
           final var ignored = new InlineDescriptorProtobufBytesDecoder(descString, "BadName");
         }
+    );
+
+    assertEquals(
+        "Protobuf message type [BadName] not found in the descriptor set. Available types: [Foo, ProtoTestEvent, ProtoTestEvent.Foo, Timestamp, google.protobuf.Timestamp, prototest.ProtoTestEvent, prototest.ProtoTestEvent.Foo]",
+        ex.getMessage()
     );
   }
 
   @Test
   public void testMalformedDescriptorBase64()
   {
-    assertThrows(
+    final var ex = assertThrows(
         IAE.class,
         () -> {
           final var ignored = new InlineDescriptorProtobufBytesDecoder("invalidString", "BadName");
         }
+    );
+
+    assertEquals(
+        "Descriptor string does not have valid Base64 encoding",
+        ex.getMessage()
     );
   }
 
   @Test
   public void testMalformedDescriptorValidBase64InvalidDescriptor()
   {
-    assertThrows(
+    final var ex = assertThrows(
         ParseException.class,
         () -> {
           final var ignored = new InlineDescriptorProtobufBytesDecoder(
@@ -105,6 +115,11 @@ public class InlineDescriptorProtobufBytesDecoderTest
               "BadName"
           );
         }
+    );
+
+    assertEquals(
+        "Failed to initialize descriptor",
+        ex.getMessage()
     );
   }
 
@@ -154,5 +169,4 @@ public class InlineDescriptorProtobufBytesDecoderTest
     assertNotEquals(decoder1.hashCode(), decoder3.hashCode());
     assertNotEquals(decoder1.hashCode(), decoder4.hashCode());
   }
-
 }
