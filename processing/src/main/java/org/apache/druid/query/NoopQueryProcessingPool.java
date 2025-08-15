@@ -50,6 +50,16 @@ public class NoopQueryProcessingPool implements QueryProcessingPool
   }
 
   @Override
+  public <T, V> ListenableFuture<T> submitRunnerTask(
+      PrioritizedQueryRunnerCallable<T, V> task,
+      long timeout,
+      TimeUnit unit
+  )
+  {
+    throw unsupportedException();
+  }
+
+  @Override
   public <T> ListenableFuture<T> submit(Callable<T> callable)
   {
     throw unsupportedException();
