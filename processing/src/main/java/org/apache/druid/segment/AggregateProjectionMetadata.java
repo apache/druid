@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
 import com.google.common.collect.Lists;
@@ -213,16 +214,19 @@ public class AggregateProjectionMetadata
 
       int foundTimePosition = -1;
       this.orderingWithTimeSubstitution = Lists.newArrayListWithCapacity(ordering.size());
-      Granularity granularity = null;
+      Granularity granularity = Granularities.ALL;
       for (int i = 0; i < ordering.size(); i++) {
         OrderBy orderBy = ordering.get(i);
         if (orderBy.getColumnName().equals(timeColumnName)) {
           orderingWithTimeSubstitution.add(new OrderBy(ColumnHolder.TIME_COLUMN_NAME, orderBy.getOrder()));
+          if (foundTimePosition != -1) {
+            throw DruidException.defensive("projection[%s] has multiple time columns in ordering: %s", name, ordering);
+          }
           foundTimePosition = i;
           timeColumnName = groupingColumns.get(foundTimePosition);
           final VirtualColumn vc = this.virtualColumns.getVirtualColumn(groupingColumns.get(foundTimePosition));
           if (vc != null) {
-            granularity = Granularities.fromVirtualColumn(vc);
+            granularity = MoreObjects.firstNonNull(Granularities.fromVirtualColumn(vc), Granularities.ALL);
           } else {
             granularity = Granularities.NONE;
           }
@@ -232,7 +236,7 @@ public class AggregateProjectionMetadata
       }
       this.timeColumnName = timeColumnName;
       this.timeColumnPosition = foundTimePosition;
-      this.effectiveGranularity = granularity == null ? Granularities.ALL : granularity;
+      this.effectiveGranularity = granularity;
     }
 
     @JsonProperty
