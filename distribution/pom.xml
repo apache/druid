@@ -581,19 +581,5 @@
                 </plugins>
             </build>
         </profile>
-        <profile>
-            <id>include-test-tools</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <dependencies>
-                <dependency>
-                    <!-- This is needed for integration tests that use shared tooling -->
-                    <groupId>org.apache.druid.integration-tests</groupId>
-                    <artifactId>druid-it-tools</artifactId>
-                    <version>${project.parent.version}</version>
-                </dependency>
-            </dependencies>
-        </profile>
     </profiles>
 </project>
