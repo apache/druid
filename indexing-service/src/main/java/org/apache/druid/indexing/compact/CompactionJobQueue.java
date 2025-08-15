@@ -255,7 +255,10 @@ public class CompactionJobQueue
     final ClientTaskQuery taskQuery = job.getNonNullTask();
     final Task task = objectMapper.convertValue(taskQuery, Task.class);
 
-    log.info("Checking readiness of task[%s] with interval[%s]", task.getId(), job.getCompactionInterval());
+    log.debug(
+        "Checking readiness of task[%s] with interval[%s]",
+        task.getId(), job.getCandidate().getCompactionInterval()
+    );
     try {
       taskLockbox.add(task);
       if (task.isReady(taskActionClientFactory.create(task))) {

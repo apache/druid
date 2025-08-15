@@ -67,7 +67,7 @@ public class CompactionStatusTracker
     return datasourceStatuses
         .getOrDefault(candidates.getDataSource(), DatasourceStatus.EMPTY)
         .intervalToTaskStatus
-        .get(candidates.getUmbrellaInterval());
+        .get(candidates.getCompactionInterval());
   }
 
   /**
@@ -169,7 +169,7 @@ public class CompactionStatusTracker
       return;
     }
 
-    final Interval compactionInterval = candidateSegments.getUmbrellaInterval();
+    final Interval compactionInterval = candidateSegments.getCompactionInterval();
     getOrComputeDatasourceStatus(candidateSegments.getDataSource())
         .handleCompletedTask(compactionInterval, taskStatus);
   }
@@ -212,7 +212,7 @@ public class CompactionStatusTracker
 
     void handleSubmittedTask(CompactionCandidate candidateSegments)
     {
-      final Interval interval = candidateSegments.getUmbrellaInterval();
+      final Interval interval = candidateSegments.getCompactionInterval();
       final CompactionTaskStatus lastStatus = intervalToTaskStatus.get(interval);
 
       final DateTime now = DateTimes.nowUtc();

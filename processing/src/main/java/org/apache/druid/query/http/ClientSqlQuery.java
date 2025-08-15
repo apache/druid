@@ -109,19 +109,6 @@ public class ClientSqlQuery
     return parameters;
   }
 
-  public ClientSqlQuery withSql(String sql)
-  {
-    return new ClientSqlQuery(
-        sql,
-        resultFormat,
-        header,
-        typesHeader,
-        sqlTypesHeader,
-        context,
-        parameters
-    );
-  }
-
   @Override
   public boolean equals(final Object o)
   {

@@ -158,8 +158,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
     ingestRecordsAtGranularity(1200, "HOUR");
     runCompactionWithSpec(cascadingTemplate);
-    waitForCompactionTasksToFinish("compact", 2);
-    verifyDayAndMonthSegments(1, 1);
+    waitForCompactionTasksToFinish("compact", 3);
+    verifyDayAndMonthSegments(1, 2);
   }
 
   @Test
@@ -185,8 +185,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     );
 
     runCompactionWithSpec(cascadingTemplate);
-    waitForCompactionTasksToFinish("compact", 2);
-    verifyDayAndMonthSegments(1, 1);
+    waitForCompactionTasksToFinish("compact", 3);
+    verifyDayAndMonthSegments(1, 2);
   }
 
   @Test
@@ -230,8 +230,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     );
 
     runCompactionWithSpec(cascadingTemplate);
-    waitForCompactionTasksToFinish("query_controller", 2);
-    verifyDayAndMonthSegments(1, 1);
+    waitForCompactionTasksToFinish("query_controller", 4);
+    verifyDayAndMonthSegments(1, 2);
   }
 
   private void ingestRecordsAtGranularity(int numRecords, String granularityName)
@@ -281,12 +281,9 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
     int numMonthSegments = 0;
     int numDaySegments = 0;
-    int numHourSegments = 0;
 
     for (DataSegment segment : segments) {
-      if (Granularities.HOUR.isAligned(segment.getInterval())) {
-        ++numHourSegments;
-      } else if (Granularities.DAY.isAligned(segment.getInterval())) {
+      if (Granularities.DAY.isAligned(segment.getInterval())) {
         ++numDaySegments;
       } else if (Granularities.MONTH.isAligned(segment.getInterval())) {
         ++numMonthSegments;

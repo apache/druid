@@ -87,12 +87,10 @@ public class CompactionConfigBasedJobTemplate extends CompactionJobTemplate
 
       ClientCompactionTaskQuery taskPayload
           = CompactSegments.createCompactionTask(candidate, config, params.getClusterCompactionConfig().getEngine());
-      final Interval compactionInterval = taskPayload.getIoConfig().getInputSpec().getInterval();
       jobs.add(
           new CompactionJob(
               taskPayload,
               candidate,
-              compactionInterval,
               CompactionSlotManager.getMaxTaskSlotsForNativeCompactionTask(taskPayload.getTuningConfig())
           )
       );

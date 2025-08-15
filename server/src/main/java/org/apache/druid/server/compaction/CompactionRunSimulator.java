@@ -169,7 +169,7 @@ public class CompactionRunSimulator
   {
     final List<Object> row = new ArrayList<>();
     row.add(candidate.getDataSource());
-    row.add(candidate.getUmbrellaInterval());
+    row.add(candidate.getCompactionInterval());
     row.add(candidate.numSegments());
     row.add(candidate.getTotalBytes());
     row.add(CompactionSlotManager.getMaxTaskSlotsForNativeCompactionTask(tuningConfig));

@@ -29,11 +29,13 @@ import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.DataSourceCompactibleSegmentIterator;
+import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.joda.time.Interval;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -103,31 +105,44 @@ public class MSQCompactionJobTemplate extends CompactionJobTemplate
     final List<CompactionJob> jobs = new ArrayList<>();
     while (candidateIterator.hasNext()) {
       final CompactionCandidate candidate = candidateIterator.next();
-      final Interval compactionInterval = candidate.getCompactionInterval(
-          stateMatcher.getGranularitySpec() == null
-          ? null : stateMatcher.getGranularitySpec().getSegmentGranularity()
-      );
-
-      final String formattedSql = formatSql(
-          sqlTemplate.getQuery(),
-          Map.of(
-              VAR_DATASOURCE, dataSource,
-              VAR_START_DATE, compactionInterval.getStart().toString(TIMESTAMP_FORMATTER),
-              VAR_END_DATE, compactionInterval.getEnd().toString(TIMESTAMP_FORMATTER)
-          )
-      );
-
       jobs.add(
           new CompactionJob(
-              sqlTemplate.withSql(formattedSql),
+              createQueryForJob(dataSource, candidate.getCompactionInterval()),
               candidate,
-              compactionInterval,
               CompactionSlotManager.getMaxTaskSlotsForMSQCompactionTask(sqlTemplate.getContext())
           )
       );
     }
 
     return jobs;
+  }
+
+  private ClientSqlQuery createQueryForJob(String dataSource, Interval compactionInterval)
+  {
+    final String formattedSql = formatSql(
+        sqlTemplate.getQuery(),
+        Map.of(
+            VAR_DATASOURCE, dataSource,
+            VAR_START_DATE, compactionInterval.getStart().toString(TIMESTAMP_FORMATTER),
+            VAR_END_DATE, compactionInterval.getEnd().toString(TIMESTAMP_FORMATTER)
+        )
+    );
+
+    final Map<String, Object> context = new HashMap<>();
+    if (sqlTemplate.getContext() != null) {
+      context.putAll(sqlTemplate.getContext());
+    }
+    context.put(CompactSegments.STORE_COMPACTION_STATE_KEY, true);
+
+    return new ClientSqlQuery(
+        formattedSql,
+        sqlTemplate.getResultFormat(),
+        sqlTemplate.isHeader(),
+        sqlTemplate.isTypesHeader(),
+        sqlTemplate.isSqlTypesHeader(),
+        context,
+        sqlTemplate.getParameters()
+    );
   }
 
   /**

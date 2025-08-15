@@ -112,9 +112,11 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
             }
           }
           if (!partialEternitySegments.isEmpty()) {
-            CompactionCandidate candidatesWithStatus = CompactionCandidate.from(partialEternitySegments).withCurrentStatus(
-                CompactionStatus.skipped("Segments have partial-eternity intervals")
-            );
+            // Do not use the target segment granularity in the CompactionCandidate
+            // as Granularities.getIterable() will cause OOM due to the above issue
+            CompactionCandidate candidatesWithStatus = CompactionCandidate
+                .from(partialEternitySegments, null)
+                .withCurrentStatus(CompactionStatus.skipped("Segments have partial-eternity intervals"));
             skippedSegments.add(candidatesWithStatus);
             return;
           }
@@ -309,7 +311,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
         continue;
       }
 
-      final CompactionCandidate candidates = CompactionCandidate.from(segments);
+      final CompactionCandidate candidates = CompactionCandidate.from(segments, config.getSegmentGranularity());
       final CompactionStatus compactionStatus = CompactionStatus.compute(candidates, config);
       final CompactionCandidate candidatesWithStatus = candidates.withCurrentStatus(compactionStatus);
 
@@ -352,10 +354,10 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
           timeline.findNonOvershadowedObjectsInInterval(skipInterval, Partitions.ONLY_COMPLETE)
       );
       if (!CollectionUtils.isNullOrEmpty(segments)) {
-        final CompactionCandidate candidates = CompactionCandidate.from(segments);
+        final CompactionCandidate candidates = CompactionCandidate.from(segments, config.getSegmentGranularity());
 
         final CompactionStatus reason;
-        if (candidates.getUmbrellaInterval().overlaps(latestSkipInterval)) {
+        if (candidates.getCompactionInterval().overlaps(latestSkipInterval)) {
           reason = CompactionStatus.skipped("skip offset from latest[%s]", skipOffset);
         } else {
           reason = CompactionStatus.skipped("interval locked by another task");

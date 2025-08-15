@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.compaction;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
@@ -30,7 +29,6 @@ import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -51,8 +49,6 @@ import java.util.List;
 
 public class CompactionStatusTest
 {
-  private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
-
   private static final DataSegment WIKI_SEGMENT
       = DataSegment.builder()
                    .dataSource(TestDataSource.WIKI)
@@ -319,7 +315,7 @@ public class CompactionStatusTest
 
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(Collections.singletonList(segment)),
+        CompactionCandidate.from(List.of(segment), Granularities.HOUR),
         compactionConfig
     );
     Assert.assertTrue(status.isComplete());
@@ -368,7 +364,7 @@ public class CompactionStatusTest
 
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(Collections.singletonList(segment)),
+        CompactionCandidate.from(List.of(segment), Granularities.HOUR),
         compactionConfig
     );
     Assert.assertTrue(status.isComplete());
@@ -422,7 +418,7 @@ public class CompactionStatusTest
 
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(Collections.singletonList(segment)),
+        CompactionCandidate.from(List.of(segment), Granularities.HOUR),
         compactionConfig
     );
     Assert.assertFalse(status.isComplete());
@@ -439,7 +435,7 @@ public class CompactionStatusTest
                      .lastCompactionState(lastCompactionState)
                      .build();
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(Collections.singletonList(segment)),
+        CompactionCandidate.from(List.of(segment), null),
         compactionConfig
     );
 

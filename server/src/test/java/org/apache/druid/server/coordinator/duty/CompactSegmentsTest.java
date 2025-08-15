@@ -80,6 +80,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
@@ -871,8 +872,8 @@ public class CompactSegmentsTest
     // All segments is compact at the same time since we changed the segment granularity to YEAR and all segment
     // are within the same year
     Assert.assertEquals(
-        ClientCompactionIntervalSpec.fromSegments(datasourceToSegments.get(dataSource), Granularities.YEAR),
-        taskPayload.getIoConfig().getInputSpec()
+        CompactionCandidate.from(datasourceToSegments.get(dataSource), Granularities.YEAR).getCompactionInterval(),
+        taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
     ClientCompactionTaskGranularitySpec expectedGranularitySpec =
@@ -1062,8 +1063,8 @@ public class CompactSegmentsTest
     // All segments is compact at the same time since we changed the segment granularity to YEAR and all segment
     // are within the same year
     Assert.assertEquals(
-        ClientCompactionIntervalSpec.fromSegments(datasourceToSegments.get(dataSource), Granularities.YEAR),
-        taskPayload.getIoConfig().getInputSpec()
+        CompactionCandidate.from(datasourceToSegments.get(dataSource), Granularities.YEAR).getCompactionInterval(),
+        taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
     ClientCompactionTaskGranularitySpec expectedGranularitySpec =
@@ -1157,8 +1158,8 @@ public class CompactSegmentsTest
     // All segments is compact at the same time since we changed the segment granularity to YEAR and all segment
     // are within the same year
     Assert.assertEquals(
-        ClientCompactionIntervalSpec.fromSegments(datasourceToSegments.get(dataSource), Granularities.YEAR),
-        taskPayload.getIoConfig().getInputSpec()
+        CompactionCandidate.from(datasourceToSegments.get(dataSource), Granularities.YEAR).getCompactionInterval(),
+        taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
     ClientCompactionTaskGranularitySpec expectedGranularitySpec =
@@ -1398,8 +1399,8 @@ public class CompactSegmentsTest
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
 
     Assert.assertEquals(
-        ClientCompactionIntervalSpec.fromSegments(segments, Granularities.DAY),
-        taskPayload.getIoConfig().getInputSpec()
+        CompactionCandidate.from(segments, Granularities.DAY).getCompactionInterval(),
+        taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
     ClientCompactionTaskGranularitySpec expectedGranularitySpec =
@@ -1461,8 +1462,8 @@ public class CompactSegmentsTest
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
 
     Assert.assertEquals(
-        ClientCompactionIntervalSpec.fromSegments(segments, Granularities.YEAR),
-        taskPayload.getIoConfig().getInputSpec()
+        CompactionCandidate.from(segments, Granularities.YEAR).getCompactionInterval(),
+        taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
     ClientCompactionTaskGranularitySpec expectedGranularitySpec =

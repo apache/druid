@@ -23,7 +23,6 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.indexing.template.BatchIndexingJob;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.server.compaction.CompactionCandidate;
-import org.joda.time.Interval;
 
 /**
  * {@link BatchIndexingJob} to compact an interval of a datasource.
@@ -31,32 +30,27 @@ import org.joda.time.Interval;
 public class CompactionJob extends BatchIndexingJob
 {
   private final CompactionCandidate candidate;
-  private final Interval compactionInterval;
   private final int maxRequiredTaskSlots;
 
   public CompactionJob(
       ClientCompactionTaskQuery task,
       CompactionCandidate candidate,
-      Interval compactionInterval,
       int maxRequiredTaskSlots
   )
   {
     super(task, null);
     this.candidate = candidate;
-    this.compactionInterval = compactionInterval;
     this.maxRequiredTaskSlots = maxRequiredTaskSlots;
   }
 
   public CompactionJob(
       ClientSqlQuery msqQuery,
       CompactionCandidate candidate,
-      Interval compactionInterval,
       int maxRequiredTaskSlots
   )
   {
     super(null, msqQuery);
     this.candidate = candidate;
-    this.compactionInterval = compactionInterval;
     this.maxRequiredTaskSlots = maxRequiredTaskSlots;
   }
 
@@ -70,11 +64,6 @@ public class CompactionJob extends BatchIndexingJob
     return candidate;
   }
 
-  public Interval getCompactionInterval()
-  {
-    return compactionInterval;
-  }
-
   public int getMaxRequiredTaskSlots()
   {
     return maxRequiredTaskSlots;
@@ -86,7 +75,6 @@ public class CompactionJob extends BatchIndexingJob
     return "CompactionJob{" +
            super.toString() +
            ", candidate=" + candidate +
-           ", compactionInterval=" + compactionInterval +
            ", maxRequiredTaskSlots=" + maxRequiredTaskSlots +
            '}';
   }

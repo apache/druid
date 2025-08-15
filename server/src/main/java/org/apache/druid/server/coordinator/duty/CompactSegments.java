@@ -424,7 +424,7 @@ public class CompactSegments implements CoordinatorCustomDuty
       @Nullable CompactionTransformSpec transformSpec,
       @Nullable List<AggregateProjectionSpec> projectionSpecs,
       @Nullable Boolean dropExisting,
-      @Nullable Map<String, Object> context,
+      Map<String, Object> context,
       ClientCompactionRunnerInfo compactionRunner
   )
   {
@@ -437,17 +437,15 @@ public class CompactSegments implements CoordinatorCustomDuty
         "Segments must have the same dataSource"
     );
 
-    context = context == null ? new HashMap<>() : context;
     context.put("priority", compactionTaskPriority);
 
     final String taskId = IdUtils.newTaskId(TASK_ID_PREFIX, ClientCompactionTaskQuery.TYPE, dataSource, null);
-    final Granularity segmentGranularity = granularitySpec == null ? null : granularitySpec.getSegmentGranularity();
 
     return new ClientCompactionTaskQuery(
         taskId,
         dataSource,
         new ClientCompactionIOConfig(
-            ClientCompactionIntervalSpec.fromSegments(segments, segmentGranularity),
+            new ClientCompactionIntervalSpec(entry.getCompactionInterval(), null),
             dropExisting
         ),
         tuningConfig,

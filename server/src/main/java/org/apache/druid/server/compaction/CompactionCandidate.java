@@ -28,6 +28,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -38,29 +39,54 @@ public class CompactionCandidate
 {
   private final List<DataSegment> segments;
   private final Interval umbrellaInterval;
+  private final Interval compactionInterval;
   private final String dataSource;
   private final long totalBytes;
   private final int numIntervals;
 
   private final CompactionStatus currentStatus;
 
-  public static CompactionCandidate from(List<DataSegment> segments)
+  public static CompactionCandidate from(
+      List<DataSegment> segments,
+      @Nullable Granularity targetSegmentGranularity
+  )
   {
     if (segments == null || segments.isEmpty()) {
       throw InvalidInput.exception("Segments to compact must be non-empty");
-    } else {
-      return new CompactionCandidate(segments, null);
     }
+
+    final Set<Interval> segmentIntervals =
+        segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet());
+    final Interval umbrellaInterval = JodaUtils.umbrellaInterval(segmentIntervals);
+    final Interval compactionInterval =
+        targetSegmentGranularity == null
+        ? umbrellaInterval
+        : JodaUtils.umbrellaInterval(targetSegmentGranularity.getIterable(umbrellaInterval));
+
+    return new CompactionCandidate(
+        segments,
+        umbrellaInterval,
+        compactionInterval,
+        segmentIntervals.size(),
+        null
+    );
   }
 
-  private CompactionCandidate(List<DataSegment> segments, @Nullable CompactionStatus currentStatus)
+  private CompactionCandidate(
+      List<DataSegment> segments,
+      Interval umbrellaInterval,
+      Interval compactionInterval,
+      int numDistinctSegmentIntervals,
+      @Nullable CompactionStatus currentStatus
+  )
   {
     this.segments = segments;
     this.totalBytes = segments.stream().mapToLong(DataSegment::getSize).sum();
-    this.umbrellaInterval = JodaUtils.umbrellaInterval(
-        segments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
-    );
-    this.numIntervals = (int) segments.stream().map(DataSegment::getInterval).distinct().count();
+
+    this.umbrellaInterval = umbrellaInterval;
+    this.compactionInterval = compactionInterval;
+
+    this.numIntervals = numDistinctSegmentIntervals;
     this.dataSource = segments.get(0).getDataSource();
     this.currentStatus = currentStatus;
   }
@@ -93,16 +119,12 @@ public class CompactionCandidate
   }
 
   /**
-   * Interval used for the compaction task, aligned to the
-   * {@code targetSegmentGranularity}, if specified.
+   * Interval aligned to the target segment granularity used for the compaction
+   * task. This interval completely contains the {@link #umbrellaInterval}.
    */
-  public Interval getCompactionInterval(@Nullable Granularity targetSegmentGranularity)
+  public Interval getCompactionInterval()
   {
-    if (targetSegmentGranularity == null) {
-      return umbrellaInterval;
-    } else {
-      return JodaUtils.umbrellaInterval(targetSegmentGranularity.getIterable(umbrellaInterval));
-    }
+    return compactionInterval;
   }
 
   public String getDataSource()
@@ -129,7 +151,7 @@ public class CompactionCandidate
    */
   public CompactionCandidate withCurrentStatus(CompactionStatus status)
   {
-    return new CompactionCandidate(this.segments, status);
+    return new CompactionCandidate(segments, umbrellaInterval, compactionInterval, numIntervals, status);
   }
 
   @Override

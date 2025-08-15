@@ -44,7 +44,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
  * This template never needs to be deserialized as a {@code BatchIndexingJobTemplate},
@@ -100,7 +99,7 @@ public class CascadingCompactionTemplate extends CompactionJobTemplate implement
       final Interval ruleInterval = new Interval(ruleStartTime, previousRuleStartTime);
 
       allJobs.addAll(
-          createJobsUsingTemplate(rule.getTemplate(), ruleInterval, druidInputSource, destination, jobParams)
+          createJobs(rule.getTemplate(), ruleInterval, druidInputSource, destination, jobParams)
       );
 
       previousRuleStartTime = ruleStartTime;
@@ -110,13 +109,13 @@ public class CascadingCompactionTemplate extends CompactionJobTemplate implement
     final CompactionRule lastRule = rules.get(rules.size() - 1);
     final Interval lastRuleInterval = new Interval(DateTimes.MIN, previousRuleStartTime);
     allJobs.addAll(
-        createJobsUsingTemplate(lastRule.getTemplate(), lastRuleInterval, druidInputSource, destination, jobParams)
+        createJobs(lastRule.getTemplate(), lastRuleInterval, druidInputSource, destination, jobParams)
     );
 
     return allJobs;
   }
 
-  private List<CompactionJob> createJobsUsingTemplate(
+  private List<CompactionJob> createJobs(
       CompactionJobTemplate template,
       Interval searchInterval,
       DruidInputSource inputSource,
@@ -124,13 +123,7 @@ public class CascadingCompactionTemplate extends CompactionJobTemplate implement
       CompactionJobParams jobParams
   )
   {
-    // Skip jobs if they exceed the upper bound of the search interval as the
-    // corresponding candidate segments fall in the purview of a prior rule
-    return template
-        .createCompactionJobs(inputSource.withInterval(searchInterval), destination, jobParams)
-        .stream()
-        .filter(job -> !job.getCompactionInterval().getEnd().isAfter(searchInterval.getEnd()))
-        .collect(Collectors.toList());
+    return template.createCompactionJobs(inputSource.withInterval(searchInterval), destination, jobParams);
   }
 
   @Override
