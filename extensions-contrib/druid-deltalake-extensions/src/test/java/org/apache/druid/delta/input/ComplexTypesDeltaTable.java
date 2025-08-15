@@ -124,11 +124,11 @@ public class ComplexTypesDeltaTable
       new TimestampSpec("na", "posix", DateTimes.of("2024-01-01")),
       new DimensionsSpec(
           ImmutableList.of(
-              new AutoTypeColumnSchema("id", null),
-              new AutoTypeColumnSchema("array_info", null),
-              new AutoTypeColumnSchema("struct_info", null),
-              new AutoTypeColumnSchema("nested_struct_info", null),
-              new AutoTypeColumnSchema("map_info", null)
+              AutoTypeColumnSchema.of("id"),
+              AutoTypeColumnSchema.of("array_info"),
+              AutoTypeColumnSchema.of("struct_info"),
+              AutoTypeColumnSchema.of("nested_struct_info"),
+              AutoTypeColumnSchema.of("map_info")
           )
       ),
       ColumnsFilter.all()
