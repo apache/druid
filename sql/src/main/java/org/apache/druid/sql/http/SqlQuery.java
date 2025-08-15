@@ -277,26 +277,31 @@ public class SqlQuery
       ISqlQueryExtractor<String> rawQueryExtractor
   ) throws HttpException
   {
-    try {
-      if (MediaType.APPLICATION_JSON.equals(contentType)) {
+    if (contentType == null) {
+      throw new HttpException(Response.Status.BAD_REQUEST, "Missing Content-Type header");
+    }
 
+    final MediaType requestMediaType;
+    try {
+      requestMediaType = MediaType.valueOf(contentType);
+    }
+    catch (IllegalArgumentException e) {
+      throw new HttpException(Response.Status.BAD_REQUEST, "Invalid Content-Type header: " + e.getMessage());
+    }
+    try {
+      if (MediaType.APPLICATION_JSON_TYPE.isCompatible(requestMediaType)) {
         SqlQuery sqlQuery = jsonQueryExtractor.extract();
         if (sqlQuery == null) {
           throw new HttpException(Response.Status.BAD_REQUEST, "Empty query");
         }
         return sqlQuery;
-
-      } else if (MediaType.TEXT_PLAIN.equals(contentType)) {
-
+      } else if (MediaType.TEXT_PLAIN_TYPE.isCompatible(requestMediaType)) {
         String sql = rawQueryExtractor.extract().trim();
         if (sql.isEmpty()) {
           throw new HttpException(Response.Status.BAD_REQUEST, "Empty query");
         }
-
         return new SqlQuery(sql, null, false, false, false, null, null);
-
-      } else if (MediaType.APPLICATION_FORM_URLENCODED.equals(contentType)) {
-
+      } else if (MediaType.APPLICATION_FORM_URLENCODED_TYPE.isCompatible(requestMediaType)) {
         String sql = rawQueryExtractor.extract().trim();
         if (sql.isEmpty()) {
           throw new HttpException(Response.Status.BAD_REQUEST, "Empty query");
@@ -311,15 +316,13 @@ public class SqlQuery
               "Unable to decode URL-Encoded SQL query: " + e.getMessage()
           );
         }
-
         return new SqlQuery(sql, null, false, false, false, null, null);
-
       } else {
         throw new HttpException(
             Response.Status.UNSUPPORTED_MEDIA_TYPE,
             StringUtils.format(
                 "Unsupported Content-Type: %s. Only application/json, text/plain or application/x-www-form-urlencoded is supported.",
-                contentType
+                requestMediaType.toString()
             )
         );
       }

@@ -220,6 +220,17 @@ public class ITSqlQueryTest
           Assert.assertEquals(responseBody, "[{\"EXPR$0\":567}]");
         }
     );
+
+    executeQuery(
+        "application/json; charset=UTF-8",
+        "{\"query\":\"select 567\"}",
+        (request) -> {
+        },
+        (statusCode, responseBody) -> {
+          Assert.assertEquals(statusCode, 200, responseBody);
+          Assert.assertEquals(responseBody, "[{\"EXPR$0\":567}]");
+        }
+    );
   }
 
   @Test
