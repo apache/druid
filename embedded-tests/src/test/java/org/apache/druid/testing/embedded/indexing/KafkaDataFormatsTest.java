@@ -46,7 +46,6 @@ import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -69,6 +68,7 @@ import org.apache.druid.testing.tools.StreamGenerator;
 import org.apache.druid.testing.tools.WikipediaStreamEventStreamGenerator;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.joda.time.Period;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -104,20 +104,26 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedHistorical historical = new EmbeddedHistorical();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
-  private KafkaResource kafkaServer;
-  private KafkaSchemaRegistryResource schemaRegistry;
+  private final KafkaResource kafkaServer = new KafkaResource();
+  private final KafkaSchemaRegistryResource schemaRegistry = new KafkaSchemaRegistryResource(kafkaServer);
+
+  @AfterEach
+  public void afterEach() throws Exception
+  {
+    // I had an issue with tasks piling up, even when I added the supervisor stop at the end of each test.
+    // This is a workaround to ensure that the tasks are cleared before the next test runs.
+    // This is not ideal, but it works for now. Why are tasks not hard stopped when the supervisor is terminated?
+    indexer.stop();
+    indexer.start();
+  }
 
   @Override
   public EmbeddedDruidCluster createCluster()
   {
     final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper().useContainerFriendlyHostname();
 
-    kafkaServer = new KafkaResource();
-
-    schemaRegistry = new KafkaSchemaRegistryResource(kafkaServer);
-
     indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
-           .addProperty("druid.worker.capacity", "20");
+           .addProperty("druid.worker.capacity", "10");
     overlord.addProperty("druid.manager.segments.useIncrementalCache", "ifSynced")
             .addProperty("druid.manager.segments.pollDuration", "PT0.1s");
     coordinator.addProperty("druid.manager.segments.useIncrementalCache", "ifSynced");
@@ -126,10 +132,6 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
            .addExtension(AvroExtensionsModule.class)
            .useLatchableEmitter()
            .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
-           .addCommonProperty(
-               "druid.monitoring.monitors",
-               "[\"org.apache.druid.server.metrics.TaskCountStatsMonitor\"]"
-           )
            .addResource(kafkaServer)
            .addResource(schemaRegistry)
            .addServer(coordinator)
@@ -171,10 +173,8 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisorWithParser(dataSource, dataSource, parser);
 
-    final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(supervisorSpec)
-    );
-    Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
+    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
+    Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
     stopSupervisor(dataSource);
@@ -205,10 +205,8 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     );
     
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
-    final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(supervisorSpec)
-    );
-    Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
+    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
+    Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
     stopSupervisor(dataSource);
@@ -219,11 +217,11 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
   public void test_indexKafka_avroDataFormatWithSchemaRegistry_withParser()
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
-    EventSerializer serializer = new AvroSchemaRegistryEventSerializer(StringUtils.format("%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081)));
+    EventSerializer serializer = new AvroSchemaRegistryEventSerializer(schemaRegistry.getHostandPort());
     serializer.initialize(dataSource);
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, true);
     SchemaRegistryBasedAvroBytesDecoder avroBytesDecoder = new SchemaRegistryBasedAvroBytesDecoder(
-        StringUtils.format("http://%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081)),
+        schemaRegistry.getConnectURI(),
         null,
         null,
         null,
@@ -246,10 +244,8 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisorWithParser(dataSource, dataSource, parser);
 
-    final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(supervisorSpec)
-    );
-    Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
+    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
+    Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
     stopSupervisor(dataSource);
@@ -260,13 +256,13 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
   public void test_indexKafka_avroDataFormatWithSchemaRegistry()
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
-    EventSerializer serializer = new AvroSchemaRegistryEventSerializer(StringUtils.format("%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081)));
+    EventSerializer serializer = new AvroSchemaRegistryEventSerializer(schemaRegistry.getHostandPort());
     serializer.initialize(dataSource);
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, true);
     SchemaRegistryBasedAvroBytesDecoder avroBytesDecoder = new SchemaRegistryBasedAvroBytesDecoder(
         null,
         null,
-        List.of(StringUtils.format("http://%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081))),
+        List.of(schemaRegistry.getConnectURI()),
         null,
         null,
         overlord.bindings().jsonMapper()
@@ -274,11 +270,8 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     AvroStreamInputFormat inputFormat = new AvroStreamInputFormat(null, avroBytesDecoder, null, null);
 
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
-    final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(supervisorSpec)
-    );
-
-    Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
+    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
+    Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
     stopSupervisor(dataSource);
@@ -295,10 +288,8 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     CsvInputFormat inputFormat = new CsvInputFormat(WIKI_DIM_LIST, null, null, false, 0, false);
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
 
-    final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(supervisorSpec)
-    );
-    Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
+    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
+    Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
     stopSupervisor(dataSource);
@@ -324,10 +315,8 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisorWithParser(dataSource, dataSource, parser);
 
-    final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(supervisorSpec)
-    );
-    Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
+    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
+    Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
     stopSupervisor(dataSource);
@@ -352,10 +341,8 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisorWithParser(dataSource, dataSource, parser);
 
-    final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(supervisorSpec)
-    );
-    Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
+    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
+    Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
     stopSupervisor(dataSource);
@@ -372,10 +359,8 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     InputFormat inputFormat = new JsonInputFormat(null, null, null, false, null, null);
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
 
-    final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(supervisorSpec)
-    );
-    Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
+    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
+    Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
     stopSupervisor(dataSource);
@@ -390,8 +375,8 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
 
     FileBasedProtobufBytesDecoder protobufBytesDecoder = new FileBasedProtobufBytesDecoder(
-        "data/protobuf/wikipedia.desc",
-        "Wikipedia"
+        MoreResources.ProbufData.WIKI_PROTOBUF_BYTES_DECODER_RESOURCE,
+        MoreResources.ProbufData.WIKI_PROTO_MESSAGE_TYPE
     );
 
     JSONParseSpec parseSpec = new JSONParseSpec(
@@ -405,10 +390,8 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, protobufBytesDecoder, null, null);
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisorWithParser(dataSource, dataSource, parser);
 
-    final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(supervisorSpec)
-    );
-    Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
+    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
+    Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
     stopSupervisor(dataSource);
@@ -423,18 +406,16 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
 
     FileBasedProtobufBytesDecoder protobufBytesDecoder = new FileBasedProtobufBytesDecoder(
-        "data/protobuf/wikipedia.desc",
-        "Wikipedia"
+        MoreResources.ProbufData.WIKI_PROTOBUF_BYTES_DECODER_RESOURCE,
+        MoreResources.ProbufData.WIKI_PROTO_MESSAGE_TYPE
     );
 
     ProtobufInputFormat inputFormat = new ProtobufInputFormat(null, protobufBytesDecoder);
 
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
 
-    final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(supervisorSpec)
-    );
-    Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
+    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
+    Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
     stopSupervisor(dataSource);
@@ -445,11 +426,11 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
   public void test_indexKafka_protobufDataFormatWithSchemaRegistry_withParser()
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
-    EventSerializer serializer = new ProtobufSchemaRegistryEventSerializer(StringUtils.format("%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081)));
+    EventSerializer serializer = new ProtobufSchemaRegistryEventSerializer(schemaRegistry.getHostandPort());
     serializer.initialize(dataSource);
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, true);
     SchemaRegistryBasedProtobufBytesDecoder protobufBytesDecoder = new SchemaRegistryBasedProtobufBytesDecoder(
-        StringUtils.format("http://%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081)),
+        schemaRegistry.getConnectURI(),
         null,
         null,
         null,
@@ -468,10 +449,8 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, protobufBytesDecoder, null, null);
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisorWithParser(dataSource, dataSource, parser);
 
-    final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(supervisorSpec)
-    );
-    Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
+    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
+    Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
     stopSupervisor(dataSource);
@@ -482,24 +461,21 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
   public void test_indexKafka_protobufDataFormatWithSchemaRegistry()
   {
     kafkaServer.createTopicWithPartitions(dataSource, 3);
-    EventSerializer serializer = new ProtobufSchemaRegistryEventSerializer(StringUtils.format("%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081)));
+    EventSerializer serializer = new ProtobufSchemaRegistryEventSerializer(schemaRegistry.getHostandPort());
     serializer.initialize(dataSource);
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, true);
     SchemaRegistryBasedProtobufBytesDecoder protobufBytesDecoder = new SchemaRegistryBasedProtobufBytesDecoder(
         null,
         null,
-        List.of(StringUtils.format("http://%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081))),
+        List.of(schemaRegistry.getConnectURI()),
         null,
         null,
         overlord.bindings().jsonMapper()
     );
     ProtobufInputFormat inputFormat = new ProtobufInputFormat(null, protobufBytesDecoder);
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
-    final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(supervisorSpec)
-    );
-
-    Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
+    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
+    Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
     stopSupervisor(dataSource);
@@ -527,10 +503,8 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisorWithParser(dataSource, dataSource, parser);
 
-    final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(supervisorSpec)
-    );
-    Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
+    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
+    Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
     stopSupervisor(dataSource);
@@ -554,10 +528,8 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     );
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
 
-    final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(supervisorSpec)
-    );
-    Assertions.assertEquals(Map.of("id", dataSource), startSupervisorResult);
+    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
+    Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
     stopSupervisor(dataSource);
@@ -567,17 +539,18 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
   {
     // Wait for the task to succeed
     overlord.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("task/success/count")
+        event -> event.hasMetricName("task/run/time")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(1)
     );
-    // Wait for the broker to discover the realtime segments
+    // Wait for the schema cache to refresh for the datasource under test
     broker.latchableEmitter().waitForEvent(
-        event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
+        event -> event.hasMetricName("segment/schemaCache/refresh/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
 
     // Verify the count of rows ingested into the datasource so far
-    Assertions.assertEquals(StringUtils.format("%d", expectedCount), cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
+    Assertions.assertEquals(String.valueOf(expectedCount), cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
   }
 
   private int generateStreamAndPublishToKafka(String topic, EventSerializer serializer, boolean useSchemaRegistry)
@@ -587,18 +560,17 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
         EVENTS_PER_SECOND,
         CYCLE_PADDING_MS
     );
-    List<byte[]> records = streamGenerator.generate(10);
+    List<byte[]> records = streamGenerator.generateEvents(10);
 
     ArrayList<ProducerRecord<byte[], byte[]>> producerRecords = new ArrayList<>();
     for (byte[] record : records) {
       producerRecords.add(new ProducerRecord<>(topic, record));
     }
 
-
     if (useSchemaRegistry) {
-      kafkaServer.produceRecordsToTopicWithExtraProperties(
+      kafkaServer.produceRecordsToTopic(
           producerRecords,
-          Map.of("schema.registry.url", StringUtils.format("http://%s:%s", cluster.getEmbeddedHostname().toString(), schemaRegistry.getContainer().getMappedPort(9081)))
+          Map.of("schema.registry.url", schemaRegistry.getConnectURI())
       );
     } else {
       kafkaServer.produceRecordsToTopic(producerRecords);
@@ -608,12 +580,9 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
 
   /**
    * Creates a KafkaSupervisorSpec with a parser instead of an InputFormat.
-   * <p>Parsers are deprecated for kafka indexing, but need to remain tested until they are removed.</p>
-   *
-   * @param supervisorId the ID of the supervisor
-   * @param topic        the Kafka topic to consume from
-   * @param parser       the parser map to use in the supervisor spec
-   * @return a KafkaSupervisorSpec with the provided parser map
+   * <p>
+   *   Parsers are deprecated for kafka indexing, but need to remain tested until they are removed.
+   * </p>
    */
   private KafkaSupervisorSpec createKafkaSupervisorWithParser(String supervisorId, String topic, InputRowParser parser)
   {

@@ -116,8 +116,6 @@ public class ProtobufInputRowParserTest
   @Test
   public void testSerde() throws Exception
   {
-
-
     ProtobufInputRowParser originalParser = new ProtobufInputRowParser(parseSpec, decoder, null, null);
 
     assertEquals(parseSpec, originalParser.getParseSpec());

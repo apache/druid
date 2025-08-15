@@ -49,13 +49,13 @@ public abstract class SyntheticStreamGenerator implements StreamGenerator
   abstract List<Pair<String, Object>> newEvent(int row, DateTime timestamp);
 
   @Override
-  public List<byte[]> generate(int totalNumberOfSeconds)
+  public List<byte[]> generateEvents(int totalNumberOfSeconds)
   {
-    return generate(totalNumberOfSeconds, null);
+    return generateEvents(totalNumberOfSeconds, null);
   }
 
   @Override
-  public List<byte[]> generate(int totalNumberOfSeconds, DateTime overrideFirstEventTime)
+  public List<byte[]> generateEvents(int totalNumberOfSeconds, DateTime overrideFirstEventTime)
   {
     DateTime nowCeilingToSecond = DateTimes.nowUtc().secondOfDay().roundCeilingCopy();
     DateTime eventTimestamp = overrideFirstEventTime == null ? nowCeilingToSecond : overrideFirstEventTime;

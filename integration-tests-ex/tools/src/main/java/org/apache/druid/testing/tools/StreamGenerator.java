@@ -35,7 +35,22 @@ public interface StreamGenerator
    */
   long run(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds, DateTime overrrideFirstEventTime);
 
-  List<byte[]> generate(int totalNumberOfSeconds);
+  /**
+   * Generates a list of byte arrays representing events for the given number of seconds.
+   * The first event will be at the current time.
+   *
+   * @param totalNumberOfSeconds The total number of seconds to generate events for.
+   * @return A list of byte arrays, each representing an event.
+   */
+  List<byte[]> generateEvents(int totalNumberOfSeconds);
 
-  List<byte[]> generate(int totalNumberOfSeconds, DateTime overrideFirstEventTime);
+  /**
+   * Generates a list of byte arrays representing events for the given number of seconds,
+   * starting from the specified override time.
+   *
+   * @param totalNumberOfSeconds The total number of seconds to generate events for.
+   * @param overrideFirstEventTime The starting point for timestamps of events generated.
+   * @return A list of byte arrays, each representing an event.
+   */
+  List<byte[]> generateEvents(int totalNumberOfSeconds, DateTime overrideFirstEventTime);
 }

@@ -20,6 +20,8 @@
 package org.apache.druid.testing.embedded.indexing;
 
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestcontainerResource;
 import org.testcontainers.containers.GenericContainer;
 
@@ -30,7 +32,9 @@ public class KafkaSchemaRegistryResource extends TestcontainerResource<GenericCo
 {
   private static final String SCHEMA_REGISTRY_IMAGE = "confluentinc/cp-schema-registry:latest";
 
-  KafkaResource kafkaResource;
+  private final KafkaResource kafkaResource;
+  private String connectURI;
+  private String embeddedHostname;
 
   KafkaSchemaRegistryResource(KafkaResource kafkaResource)
   {
@@ -47,5 +51,38 @@ public class KafkaSchemaRegistryResource extends TestcontainerResource<GenericCo
         .withEnv("SCHEMA_REGISTRY_HOST_NAME", "schema-registry")
         .withEnv("SCHEMA_REGISTRY_LISTENERS", "http://0.0.0.0:9081")
         .withEnv("SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS", kafkaResource.getBootstrapServerUrl());
+  }
+
+  @Override
+  public void onStarted(EmbeddedDruidCluster cluster)
+  {
+    connectURI = createConnectURI(cluster);
+    embeddedHostname = cluster.getEmbeddedHostname().toString();
+  }
+
+  public String getHostandPort()
+  {
+    ensureRunning();
+    return StringUtils.format(
+        "%s:%d",
+        embeddedHostname,
+        getContainer().getMappedPort(9081)
+    );
+  }
+
+  public String getConnectURI()
+  {
+    ensureRunning();
+    return connectURI;
+  }
+
+  private String createConnectURI(EmbeddedDruidCluster cluster)
+  {
+    ensureRunning();
+    return StringUtils.format(
+        "http://%s:%d",
+        cluster.getEmbeddedHostname(),
+        getContainer().getMappedPort(9081)
+    );
   }
 }

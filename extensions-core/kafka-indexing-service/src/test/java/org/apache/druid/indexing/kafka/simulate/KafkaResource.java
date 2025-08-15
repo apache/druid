@@ -110,12 +110,12 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
     }
   }
 
-  public void produceRecordsToTopicWithExtraProperties(
+  public void produceRecordsToTopic(
       List<ProducerRecord<byte[], byte[]>> records,
-      Map<String, Object> extraProperties
+      Map<String, Object> extraProducerProperties
   )
   {
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = newProducer(extraProperties)) {
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = newProducer(extraProducerProperties)) {
       kafkaProducer.initTransactions();
       kafkaProducer.beginTransaction();
       for (ProducerRecord<byte[], byte[]> record : records) {
@@ -133,7 +133,7 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
    */
   public void produceRecordsToTopic(List<ProducerRecord<byte[], byte[]>> records)
   {
-    produceRecordsToTopicWithExtraProperties(records, null);
+    produceRecordsToTopic(records, null);
   }
 
   public Map<String, Object> producerProperties()
