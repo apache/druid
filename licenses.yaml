@@ -3619,7 +3619,7 @@ name: Protocol Buffers
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: BSD-3-Clause License
-version: 3.25.5
+version: 3.25.8
 copyright: Google, Inc.
 license_file_path: licenses/bin/protobuf-java.BSD3
 libraries:
@@ -3887,9 +3887,9 @@ libraries:
 name: Reactive Streams
 license_category: binary
 module: java-core
-license_name: Creative Commons CC0
+license_name: MIT-0
 version: 1.0.4
-license_file_path: licenses/bin/reactive-streams.CC0
+license_file_path: licenses/bin/reactive-streams.MIT0
 libraries:
   - org.reactivestreams: reactive-streams
 
@@ -4892,10 +4892,11 @@ license_name: Apache License version 2.0
 libraries:
   - org.apache.kafka: kafka-clients
 notices:
-  - kafka-clients: 'Apache Kafka Copyright 2019 The Apache Software Foundation.
+  - kafka-clients: |
+      Apache Kafka Copyright 2019 The Apache Software Foundation.
 
-This distribution has a binary dependency on jersey, which is available under
-the CDDL License. The source code of jersey can be found at https://github.com/jersey/jersey/.'
+      This distribution has a binary dependency on jersey, which is available under
+      the CDDL License. The source code of jersey can be found at https://github.com/jersey/jersey/.
 
 ---
 

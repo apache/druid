@@ -153,7 +153,7 @@ public abstract class AbstractTask implements Task
       FileUtils.mkdirp(taskDir);
       File attemptDir = Paths.get(taskDir.getAbsolutePath(), "attempt", toolbox.getAttemptId()).toFile();
       FileUtils.mkdirp(attemptDir);
-      reportsFile = new File(attemptDir, "report.json");
+      reportsFile = toolbox.getTaskReportFileWriter().getReportsFile(getId());
       statusFile = new File(attemptDir, "status.json");
       InetAddress hostName = InetAddress.getLocalHost();
       DruidNode node = toolbox.getTaskExecutorNode();

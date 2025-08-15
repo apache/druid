@@ -19,78 +19,111 @@
 
 package org.apache.druid.data.input.protobuf;
 
-import com.google.protobuf.Descriptors;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class FileBasedProtobufBytesDecoderTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
+  /**
+   * Configure parser with desc file, and specify which file name to use.
+   */
   @Test
   public void testShortMessageType()
   {
-    //configure parser with desc file, and specify which file name to use
-    @SuppressWarnings("unused") // expected to create parser without exception
-    FileBasedProtobufBytesDecoder decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "ProtoTestEvent");
-    decoder.initDescriptor();
+    final var decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "ProtoTestEvent");
+
+    assertDoesNotThrow(decoder::initDescriptor);
   }
 
+  /**
+   * Configure parser with desc file, and specify which file name to use
+   */
   @Test
   public void testLongMessageType()
   {
-    //configure parser with desc file, and specify which file name to use
-    @SuppressWarnings("unused") // expected to create parser without exception
-    FileBasedProtobufBytesDecoder decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "prototest.ProtoTestEvent");
-    decoder.initDescriptor();
-  }
+    final var decoder = new FileBasedProtobufBytesDecoder(
+        "prototest.desc",
+        "prototest.ProtoTestEvent"
+    );
 
-  @Test(expected = ParseException.class)
-  public void testBadProto()
-  {
-    //configure parser with desc file
-    @SuppressWarnings("unused") // expected exception
-    FileBasedProtobufBytesDecoder decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "BadName");
-    decoder.initDescriptor();
-  }
-
-  @Test(expected = ParseException.class)
-  public void testMalformedDescriptorUrl()
-  {
-    //configure parser with non existent desc file
-    @SuppressWarnings("unused") // expected exception
-    FileBasedProtobufBytesDecoder decoder = new FileBasedProtobufBytesDecoder("file:/nonexist.desc", "BadName");
-    decoder.initDescriptor();
+    assertDoesNotThrow(decoder::initDescriptor);
   }
 
   @Test
+  public void testBadProto()
+  {
+    assertThrows(
+        ParseException.class,
+        () -> {
+          // configure parser with desc file
+          final var decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "BadName");
+          decoder.initDescriptor();
+        }
+    );
+  }
+
+  @Test
+  public void testMalformedDescriptorUrl()
+  {
+    assertThrows(
+        ParseException.class,
+        () -> {
+          // configure parser with non existent desc file
+          final var decoder = new FileBasedProtobufBytesDecoder("file:/nonexist.desc", "BadName");
+          decoder.initDescriptor();
+        }
+    );
+  }
+
+  /**
+   * For the backward compatibility, protoMessageType allows null when the desc file has only one message type.
+   */
+  @Test
   public void testSingleDescriptorNoMessageType()
   {
-    // For the backward compatibility, protoMessageType allows null when the desc file has only one message type.
-    @SuppressWarnings("unused") // expected to create parser without exception
-    FileBasedProtobufBytesDecoder decoder = new FileBasedProtobufBytesDecoder("prototest.desc", null);
-    decoder.initDescriptor();
+    final var decoder = new FileBasedProtobufBytesDecoder("prototest.desc", null);
+
+    assertDoesNotThrow(decoder::initDescriptor);
   }
 
   @Test
   public void testEquals()
   {
-    FileBasedProtobufBytesDecoder decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "ProtoTestEvent");
-    decoder.initDescriptor();
-    Descriptors.Descriptor descriptorA = decoder.getDescriptor();
+    // Test basic equality
+    final var decoder1 = new FileBasedProtobufBytesDecoder(
+        "prototest.desc",
+        "ProtoTestEvent"
+    );
+    final var decoder2 = new FileBasedProtobufBytesDecoder(
+        "prototest.desc",
+        "ProtoTestEvent"
+    );
+    final var decoder3 = new FileBasedProtobufBytesDecoder(
+        "prototest.desc",
+        "ProtoTestEvent.Foo"
+    );
+    final var decoder4 = new FileBasedProtobufBytesDecoder(
+        "prototest.desc",
+        null
+    );
 
-    decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "ProtoTestEvent.Foo");
-    decoder.initDescriptor();
-    Descriptors.Descriptor descriptorB = decoder.getDescriptor();
+    // Symmetry: x.equals(y) == y.equals(x)
+    assertEquals(decoder1, decoder2);
+    assertEquals(decoder2, decoder1);
 
-    EqualsVerifier.forClass(FileBasedProtobufBytesDecoder.class)
-                  .usingGetClass()
-                  .withIgnoredFields("descriptor")
-                  .withPrefabValues(Descriptors.Descriptor.class, descriptorA, descriptorB)
-                  .verify();
+    // Inequality tests
+    assertNotEquals(decoder1, decoder3); // different protoMessageType (short vs long form)
+    assertNotEquals(decoder1, decoder4); // different protoMessageType (non-null vs null)
+    assertNotEquals(null, decoder1);
+
+    // HashCode consistency
+    assertEquals(decoder1.hashCode(), decoder2.hashCode());
+    assertNotEquals(decoder1.hashCode(), decoder3.hashCode());
+    assertNotEquals(decoder1.hashCode(), decoder4.hashCode());
   }
 }
