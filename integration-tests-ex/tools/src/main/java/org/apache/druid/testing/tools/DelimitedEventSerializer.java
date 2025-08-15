@@ -17,18 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.testing;
+package org.apache.druid.testing.tools;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.inject.Provider;
+import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DockerConfigProvider.class)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "docker", value = DockerConfigProvider.class),
-    @JsonSubTypes.Type(name = "configFile", value = ConfigFileConfigProvider.class)
-})
-public interface IntegrationTestingConfigProvider extends Provider<IntegrationTestingConfig>
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class DelimitedEventSerializer implements EventSerializer
 {
-  String PROPERTY_BASE = "druid.test.config";
+  public static final String TYPE = "tsv";
+
+  @Override
+  public byte[] serialize(List<Pair<String, Object>> event)
+  {
+    //noinspection ConstantConditions
+    return StringUtils.toUtf8(event.stream().map(pair -> pair.rhs.toString()).collect(Collectors.joining("\t")));
+  }
+
+  @Override
+  public void close()
+  {
+  }
 }

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing;
+package org.apache.druid.testing.tools;
 
 import javax.annotation.Nullable;
 import java.util.Map;

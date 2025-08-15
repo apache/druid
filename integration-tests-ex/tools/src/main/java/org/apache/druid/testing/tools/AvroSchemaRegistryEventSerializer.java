@@ -17,49 +17,50 @@
  * under the License.
  */
 
-package org.apache.druid.testing.utils;
+package org.apache.druid.testing.tools;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.common.collect.ImmutableMap;
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.DynamicMessage;
 import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
-import io.confluent.kafka.schemaregistry.protobuf.ProtobufSchema;
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericDatumWriter;
+import org.apache.avro.io.BinaryEncoder;
+import org.apache.avro.io.DatumWriter;
+import org.apache.avro.io.EncoderFactory;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RetryUtils;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.testing.IntegrationTestingConfig;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-public class ProtobufSchemaRegistryEventSerializer extends ProtobufEventSerializer
+public class AvroSchemaRegistryEventSerializer extends AvroEventSerializer
 {
   private static final int MAX_INITIALIZE_RETRIES = 10;
-  public static final String TYPE = "protobuf-schema-registry";
+  public static final String TYPE = "avro-schema-registry";
 
   private final IntegrationTestingConfig config;
   private final CachedSchemaRegistryClient client;
   private int schemaId = -1;
 
+  private Schema fromRegistry;
+
+  public AvroSchemaRegistryEventSerializer(
+      String schemaRegistryHost
+  )
+  {
+    this.config = null;
+    this.client = KafkaUtil.createSchemaRegistryClient(schemaRegistryHost);
+  }
 
   @JsonCreator
-  public ProtobufSchemaRegistryEventSerializer(
+  public AvroSchemaRegistryEventSerializer(
       @JacksonInject IntegrationTestingConfig config
   )
   {
     this.config = config;
-    this.client = new CachedSchemaRegistryClient(
-        StringUtils.format("http://%s", config.getSchemaRegistryHost()),
-        Integer.MAX_VALUE,
-        ImmutableMap.of(
-            "basic.auth.credentials.source", "USER_INFO",
-            "basic.auth.user.info", "druid:diurd"
-        ),
-        ImmutableMap.of()
-    );
-
+    this.client = KafkaUtil.createSchemaRegistryClient(config.getSchemaRegistryHost());
   }
 
   @Override
@@ -68,7 +69,8 @@ public class ProtobufSchemaRegistryEventSerializer extends ProtobufEventSerializ
     try {
       RetryUtils.retry(
           () -> {
-            schemaId = client.register(topic, new ProtobufSchema(ProtobufEventSerializer.SCHEMA.newMessageBuilder("Wikipedia").getDescriptorForType()));
+            schemaId = client.register(topic, AvroEventSerializer.SCHEMA);
+            fromRegistry = client.getById(schemaId);
             return 0;
           },
           (e) -> true,
@@ -81,16 +83,20 @@ public class ProtobufSchemaRegistryEventSerializer extends ProtobufEventSerializ
   }
 
   @Override
-  public byte[] serialize(List<Pair<String, Object>> event)
+  public byte[] serialize(List<Pair<String, Object>> event) throws IOException
   {
-    DynamicMessage.Builder builder = SCHEMA.newMessageBuilder("Wikipedia");
-    Descriptors.Descriptor msgDesc = builder.getDescriptorForType();
-    for (Pair<String, Object> pair : event) {
-      builder.setField(msgDesc.findFieldByName(pair.lhs), pair.rhs);
-    }
-    byte[] bytes = builder.build().toByteArray();
-    ByteBuffer bb = ByteBuffer.allocate(bytes.length + 6).put((byte) 0).putInt(schemaId).put((byte) 0).put(bytes);
-    bb.rewind();
-    return bb.array();
+    final WikipediaRecord record = new WikipediaRecord(fromRegistry);
+    event.forEach(pair -> record.put(pair.lhs, pair.rhs));
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    out.write(0x0);
+    out.write(ByteBuffer.allocate(4).putInt(schemaId).array());
+    BinaryEncoder encoder = EncoderFactory.get().directBinaryEncoder(out, null);
+    DatumWriter<Object> writer = new GenericDatumWriter<>(fromRegistry);
+    writer.write(record, encoder);
+    encoder.flush();
+    byte[] bytes = out.toByteArray();
+    out.close();
+    return bytes;
   }
 }

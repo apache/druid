@@ -22,7 +22,7 @@ package org.apache.druid.tests.query;
 import com.google.inject.Inject;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.utils.ITRetryUtil;
+import org.apache.druid.testing.tools.ITRetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
 import org.testng.annotations.BeforeMethod;

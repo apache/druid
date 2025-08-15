@@ -22,9 +22,9 @@ package org.apache.druid.tests.parallelized;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.utils.KafkaUtil;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
+import org.apache.druid.testing.tools.KafkaUtil;
 import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.tests.indexer.AbstractKafkaIndexingServiceTest;
 import org.apache.druid.tests.indexer.AbstractStreamIndexingTest;
@@ -38,7 +38,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-@Test(groups = {TestNGGroup.KAFKA_DATA_FORMAT, TestNGGroup.CDS_TASK_SCHEMA_PUBLISH_DISABLED, TestNGGroup.CDS_COORDINATOR_METADATA_QUERY_DISABLED})
+@Test(groups = {TestNGGroup.CDS_TASK_SCHEMA_PUBLISH_DISABLED, TestNGGroup.CDS_COORDINATOR_METADATA_QUERY_DISABLED})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITKafkaIndexingServiceDataFormatTest extends AbstractKafkaIndexingServiceTest
 {
@@ -54,7 +54,7 @@ public class ITKafkaIndexingServiceDataFormatTest extends AbstractKafkaIndexingS
    *                                           /parser
    * }</pre>
    *
-   * The {@code serializer} directory contains the spec of {@link org.apache.druid.testing.utils.EventSerializer} and
+   * The {@code serializer} directory contains the spec of {@link org.apache.druid.testing.tools.EventSerializer} and
    * must be present. Either {@code input_format} or {@code parser} directory should be present if {@code serializer}
    * is present.
    */

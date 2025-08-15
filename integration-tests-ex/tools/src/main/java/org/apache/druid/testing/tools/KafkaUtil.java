@@ -17,9 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.testing.utils;
+package org.apache.druid.testing.tools;
 
-import org.apache.druid.testing.IntegrationTestingConfig;
+import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
+import org.apache.druid.java.util.common.StringUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -50,5 +51,18 @@ public class KafkaUtil
       }
     }
     return theMap;
+  }
+
+  public static CachedSchemaRegistryClient createSchemaRegistryClient(String schemaRegistryHost)
+  {
+    return new CachedSchemaRegistryClient(
+        StringUtils.format("http://%s", schemaRegistryHost),
+        Integer.MAX_VALUE,
+        Map.of(
+            "basic.auth.credentials.source", "USER_INFO",
+            "basic.auth.user.info", "druid:diurd"
+        ),
+        Map.of()
+    );
   }
 }
