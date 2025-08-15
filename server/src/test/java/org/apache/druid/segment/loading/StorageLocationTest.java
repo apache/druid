@@ -72,14 +72,17 @@ class StorageLocationTest
     location.reserveWeak(entry2);
     location.reserveWeak(entry3);
     location.reserveWeak(entry4);
+    Assertions.assertEquals(100, location.currentWeakSizeBytes());
     Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry4.getId()));
     location.reserveWeak(entry5);
+    Assertions.assertEquals(100, location.currentWeakSizeBytes());
     Assertions.assertFalse(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry5.getId()));
+    Assertions.assertEquals(100, location.currentWeakSizeBytes());
   }
 
   @Test
@@ -168,6 +171,8 @@ class StorageLocationTest
     Assertions.assertFalse(location.isWeakReserved(entry2.getId()));
     Assertions.assertFalse(location.isWeakReserved(entry3.getId()));
     Assertions.assertFalse(location.isWeakReserved(entry4.getId()));
+    Assertions.assertEquals(0, location.currentSizeBytes());
+    Assertions.assertEquals(0, location.currentWeakSizeBytes());
   }
 
   @Test
@@ -189,12 +194,15 @@ class StorageLocationTest
     Assertions.assertTrue(location.reserveWeak(entry3));
     Assertions.assertTrue(location.reserveWeak(entry4));
 
+    Assertions.assertEquals(100, location.currentWeakSizeBytes());
     Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry4.getId()));
 
     Assertions.assertNotNull(closer.register(location.addWeakReservationHold(entry5.getId(), () -> entry5)));
+
+    Assertions.assertEquals(100, location.currentWeakSizeBytes());
 
     Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
@@ -232,6 +240,7 @@ class StorageLocationTest
     Assertions.assertFalse(location.isWeakReserved(entry6.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry7.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry8.getId()));
+    Assertions.assertEquals(100, location.currentWeakSizeBytes());
   }
 
   @Test
@@ -240,18 +249,18 @@ class StorageLocationTest
   {
     // free space ignored only maxSize matters
     StorageLocation locationPlain = fakeLocation(100_000, 5_000, 10_000, null);
-    Assertions.assertTrue(locationPlain.canHandle(makeSegmentEntry("2012/2013", 9_000)));
-    Assertions.assertFalse(locationPlain.canHandle(makeSegmentEntry("2012/2013", 11_000)));
+    Assertions.assertTrue(locationPlain.canHandle(makeSegmentEntry("2012/2013", 9_000)).isSuccess());
+    Assertions.assertFalse(locationPlain.canHandle(makeSegmentEntry("2012/2013", 11_000)).isSuccess());
 
     // enough space available maxSize is the limit
     StorageLocation locationFree = fakeLocation(100_000, 25_000, 10_000, 10.0);
-    Assertions.assertTrue(locationFree.canHandle(makeSegmentEntry("2012/2013", 9_000)));
-    Assertions.assertFalse(locationFree.canHandle(makeSegmentEntry("2012/2013", 11_000)));
+    Assertions.assertTrue(locationFree.canHandle(makeSegmentEntry("2012/2013", 9_000)).isSuccess());
+    Assertions.assertFalse(locationFree.canHandle(makeSegmentEntry("2012/2013", 11_000)).isSuccess());
 
     // disk almost full percentage is the limit
     StorageLocation locationFull = fakeLocation(100_000, 15_000, 10_000, 10.0);
-    Assertions.assertTrue(locationFull.canHandle(makeSegmentEntry("2012/2013", 4_000)));
-    Assertions.assertFalse(locationFull.canHandle(makeSegmentEntry("2012/2013", 6_000)));
+    Assertions.assertTrue(locationFull.canHandle(makeSegmentEntry("2012/2013", 4_000)).isSuccess());
+    Assertions.assertFalse(locationFull.canHandle(makeSegmentEntry("2012/2013", 6_000)).isSuccess());
   }
 
   @Test
@@ -259,10 +268,10 @@ class StorageLocationTest
   public void testStorageLocationRealFileSystem()
   {
     StorageLocation location = new StorageLocation(tempDir, 10_000, 100.0d);
-    Assertions.assertFalse(location.canHandle(makeSegmentEntry("2012/2013", 5_000)));
+    Assertions.assertFalse(location.canHandle(makeSegmentEntry("2012/2013", 5_000)).isSuccess());
 
     location = new StorageLocation(tempDir, 10_000, 0.0001d);
-    Assertions.assertTrue(location.canHandle(makeSegmentEntry("2012/2013", 1)));
+    Assertions.assertTrue(location.canHandle(makeSegmentEntry("2012/2013", 1)).isSuccess());
   }
 
 
@@ -362,7 +371,7 @@ class StorageLocationTest
   {
     Assertions.assertEquals(maxSize, loc.availableSizeBytes());
     for (int i = 0; i <= maxSize; ++i) {
-      Assertions.assertTrue(loc.canHandle(makeSegmentEntry("2013/2014", i)), String.valueOf(i));
+      Assertions.assertTrue(loc.canHandle(makeSegmentEntry("2013/2014", i)).isSuccess(), String.valueOf(i));
     }
   }
 

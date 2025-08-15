@@ -1137,6 +1137,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
   static File makeSegmentZip(File segmentFiles, File zipOutFile) throws IOException
   {
     TestIndex.persist(TestIndex.getIncrementalTestIndex(), IndexSpec.DEFAULT, segmentFiles);
+    FileUtils.mkdirp(zipOutFile.getParentFile());
     CompressionUtils.zip(segmentFiles, zipOutFile);
     return zipOutFile;
   }

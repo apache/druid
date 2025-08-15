@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -31,7 +30,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ScheduledExecutorService;
@@ -173,97 +171,6 @@ public class Execs
           }
         }
     );
-  }
-
-  public static ExecutorService newBlockingCached(
-      final String nameFormat,
-      int minThreads,
-      int maxThreads,
-      long keepAliveTime,
-      TimeUnit keepAliveTimeUnit,
-      final Integer priority
-  )
-  {
-    final BlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
-    if (minThreads == maxThreads) {
-      return new ThreadPoolExecutor(
-          minThreads,
-          maxThreads,
-          keepAliveTime,
-          keepAliveTimeUnit,
-          queue,
-          makeThreadFactory(nameFormat, priority),
-          (r, executor) -> {
-            if (executor.isShutdown()) {
-              throw new RejectedExecutionException("Executor is shutdown, rejecting task");
-            }
-            try {
-              executor.getQueue().put(r);
-            }
-            catch (InterruptedException e) {
-              throw new RejectedExecutionException("Got Interrupted while adding to the Queue", e);
-            }
-          }
-      );
-    }
-    return new ThreadPoolExecutor(
-        minThreads,
-        maxThreads,
-        keepAliveTime,
-        keepAliveTimeUnit,
-        queue,
-        makeThreadFactory(nameFormat, priority),
-        (r, executor) -> {
-          if (executor.isShutdown()) {
-            throw new RejectedExecutionException("Executor is shutdown, rejecting task");
-          }
-          try {
-            executor.getQueue().put(r);
-          }
-          catch (InterruptedException e) {
-            throw new RejectedExecutionException("Got Interrupted while adding to the Queue", e);
-          }
-        }
-    )
-    {
-      private int running = 0;
-
-      @Override
-      public void execute(Runnable command)
-      {
-        synchronized (this) {
-          running++;
-          growIfNeeded();
-        }
-        super.execute(command);
-      }
-
-      @Override
-      protected void afterExecute(Runnable r, Throwable t)
-      {
-        super.afterExecute(r, t);
-        synchronized (this) {
-          running--;
-          shrinkIfNeeded();
-        }
-      }
-
-      @GuardedBy("this")
-      private void growIfNeeded()
-      {
-        if (minThreads < running && running <= maxThreads) {
-          setCorePoolSize(running);
-        }
-      }
-
-      @GuardedBy("this")
-      private void shrinkIfNeeded()
-      {
-        if (running < maxThreads) {
-          setCorePoolSize(Math.max(running, minThreads));
-        }
-      }
-    };
   }
 
   public static ListeningExecutorService directExecutor()

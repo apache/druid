@@ -74,14 +74,8 @@ public class SegmentLoaderConfig
   @JsonProperty("isVirtualStorageFabric")
   private boolean isVirtualStorageFabric = false;
 
-  @JsonProperty("minVirtualStorageFabricLoadThreads")
-  private int minVirtualStorageFabricLoadThreads = runtimeInfo.getAvailableProcessors();
-
-  @JsonProperty("maxVirtualStorageFabricLoadThreads")
-  private int maxVirtualStorageFabricLoadThreads = 2 * runtimeInfo.getAvailableProcessors();
-
-  @JsonProperty("virtualStorageFabricLoadThreadKeepaliveMillis")
-  private long virtualStorageFabricLoadThreadKeepaliveMillis = TimeUnit.MINUTES.toMillis(1);
+  @JsonProperty("virtualStorageFabricLoadThreads")
+  private int virtualStorageFabricLoadThreads = 2 * runtimeInfo.getAvailableProcessors();
 
   private long combinedMaxSize = 0;
 
@@ -155,19 +149,9 @@ public class SegmentLoaderConfig
     return isVirtualStorageFabric;
   }
 
-  public int getMinVirtualStorageFabricLoadThreads()
+  public int getVirtualStorageFabricLoadThreads()
   {
-    return minVirtualStorageFabricLoadThreads;
-  }
-
-  public int getMaxVirtualStorageFabricLoadThreads()
-  {
-    return maxVirtualStorageFabricLoadThreads;
-  }
-
-  public long getVirtualStorageFabricLoadThreadKeepaliveMillis()
-  {
-    return virtualStorageFabricLoadThreadKeepaliveMillis;
+    return virtualStorageFabricLoadThreads;
   }
 
   public SegmentLoaderConfig withLocations(List<StorageLocationConfig> locations)
@@ -210,9 +194,7 @@ public class SegmentLoaderConfig
            ", infoDir=" + infoDir +
            ", statusQueueMaxSize=" + statusQueueMaxSize +
            ", useVirtualStorageFabric=" + isVirtualStorageFabric +
-           ", minVirtualStorageFabricLoadThreads=" + minVirtualStorageFabricLoadThreads +
-           ", maxVirtualStorageFabricLoadThreads=" + maxVirtualStorageFabricLoadThreads +
-           ", virtualStorageFabricLoadThreadKeepaliveMillis=" + virtualStorageFabricLoadThreadKeepaliveMillis +
+           ", virtualStorageFabricLoadThreads=" + virtualStorageFabricLoadThreads +
            ", combinedMaxSize=" + combinedMaxSize +
            '}';
   }
