@@ -50,7 +50,7 @@ public final class ProjectionFilterMatch extends TrueFilter
   @Nullable
   public static Filter rewriteFilter(Filter projectionFilter, Filter queryFilter)
   {
-    if (queryFilter.equals(projectionFilter)) {
+    if (projectionFilter.equals(queryFilter)) {
       return ProjectionFilterMatch.INSTANCE;
     }
     if (queryFilter instanceof IsBooleanFilter && ((IsBooleanFilter) queryFilter).isTrue()) {
