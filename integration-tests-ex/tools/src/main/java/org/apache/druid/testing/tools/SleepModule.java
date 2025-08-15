@@ -20,9 +20,7 @@
 package org.apache.druid.testing.tools;
 
 import com.google.inject.Binder;
-import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.sql.guice.SqlBindings;
 
 public class SleepModule implements DruidModule
 {
@@ -30,7 +28,7 @@ public class SleepModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    SqlBindings.addOperatorConversion(binder, SleepOperatorConversion.class);
-    ExpressionModule.addExprMacro(binder, SleepExprMacro.class);
+    // No-op: Sleep operator is already registered by extensions-core/testing-tools SleepModule
+    // to avoid duplicate registration conflicts
   }
 }
