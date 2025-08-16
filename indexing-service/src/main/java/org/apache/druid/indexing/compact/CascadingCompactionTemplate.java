@@ -123,7 +123,22 @@ public class CascadingCompactionTemplate extends CompactionJobTemplate implement
       CompactionJobParams jobParams
   )
   {
-    return template.createCompactionJobs(inputSource.withInterval(searchInterval), destination, jobParams);
+    final List<CompactionJob> allJobs = template.createCompactionJobs(
+        inputSource.withInterval(searchInterval),
+        destination,
+        jobParams
+    );
+
+    // Filter out jobs if they are outside the search interval
+    final List<CompactionJob> validJobs = new ArrayList<>();
+    for (CompactionJob job : allJobs) {
+      final Interval compactionInterval = job.getCandidate().getCompactionInterval();
+      if (searchInterval.contains(compactionInterval)) {
+        validJobs.add(job);
+      }
+    }
+
+    return validJobs;
   }
 
   @Override

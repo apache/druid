@@ -107,6 +107,10 @@ public final class Intervals
   {
     if (isEternity(interval)) {
       return List.of();
+    } else if (DateTimes.MIN.equals(interval.getStart())) {
+      return List.of(new Interval(interval.getEnd(), DateTimes.MAX));
+    } else if (DateTimes.MAX.equals(interval.getEnd())) {
+      return List.of(new Interval(DateTimes.MIN, interval.getStart()));
     } else {
       return List.of(
           new Interval(DateTimes.MIN, interval.getStart()),

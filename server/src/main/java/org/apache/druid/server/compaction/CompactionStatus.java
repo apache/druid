@@ -119,7 +119,12 @@ public class CompactionStatus
     return new CompactionStatus(State.PENDING, StringUtils.format(reasonFormat, args));
   }
 
-  private static <T> CompactionStatus completeIfEqual(
+  /**
+   * Computes compaction status for the given field. The status is assumed to be
+   * COMPLETE (i.e. no further compaction is required) if the configured value
+   * of the field is null or equal to the current value.
+   */
+  private static <T> CompactionStatus completeIfNullOrEqual(
       String field,
       T configured,
       T current,
@@ -212,12 +217,20 @@ public class CompactionStatus
                  .findFirst().orElse(COMPLETE);
   }
 
+  @Nullable
   static PartitionsSpec findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig tuningConfig)
   {
     final PartitionsSpec partitionsSpecFromTuningConfig = tuningConfig.getPartitionsSpec();
     if (partitionsSpecFromTuningConfig == null) {
-      final long maxTotalRows = Configs.valueOrDefault(tuningConfig.getMaxTotalRows(), Long.MAX_VALUE);
-      return new DynamicPartitionsSpec(tuningConfig.getMaxRowsPerSegment(), maxTotalRows);
+      final Long maxTotalRows = tuningConfig.getMaxTotalRows();
+      final Integer maxRowsPerSegment = tuningConfig.getMaxRowsPerSegment();
+
+      if (maxTotalRows == null && maxRowsPerSegment == null) {
+        // If not specified, return null so that partitionsSpec is not compared
+        return null;
+      } else {
+        return new DynamicPartitionsSpec(maxRowsPerSegment, maxTotalRows);
+      }
     } else if (partitionsSpecFromTuningConfig instanceof DynamicPartitionsSpec) {
       return new DynamicPartitionsSpec(
           partitionsSpecFromTuningConfig.getMaxRowsPerSegment(),
@@ -317,7 +330,7 @@ public class CompactionStatus
       if (existingPartionsSpec instanceof DimensionRangePartitionsSpec) {
         existingPartionsSpec = getEffectiveRangePartitionsSpec((DimensionRangePartitionsSpec) existingPartionsSpec);
       }
-      return CompactionStatus.completeIfEqual(
+      return CompactionStatus.completeIfNullOrEqual(
           "partitionsSpec",
           findPartitionsSpecFromConfig(tuningConfig),
           existingPartionsSpec,
@@ -327,7 +340,7 @@ public class CompactionStatus
 
     private CompactionStatus indexSpecIsUpToDate()
     {
-      return CompactionStatus.completeIfEqual(
+      return CompactionStatus.completeIfNullOrEqual(
           "indexSpec",
           Configs.valueOrDefault(tuningConfig.getIndexSpec(), IndexSpec.DEFAULT),
           lastCompactionState.getIndexSpec(),
@@ -337,7 +350,7 @@ public class CompactionStatus
 
     private CompactionStatus projectionsAreUpToDate()
     {
-      return CompactionStatus.completeIfEqual(
+      return CompactionStatus.completeIfNullOrEqual(
           "projections",
           compactionConfig.getProjections(),
           lastCompactionState.getProjections(),
@@ -400,7 +413,7 @@ public class CompactionStatus
       if (configuredGranularitySpec == null) {
         return COMPLETE;
       } else {
-        return CompactionStatus.completeIfEqual(
+        return CompactionStatus.completeIfNullOrEqual(
             "rollup",
             configuredGranularitySpec.isRollup(),
             existingGranularitySpec == null ? null : existingGranularitySpec.isRollup(),
@@ -414,7 +427,7 @@ public class CompactionStatus
       if (configuredGranularitySpec == null) {
         return COMPLETE;
       } else {
-        return CompactionStatus.completeIfEqual(
+        return CompactionStatus.completeIfNullOrEqual(
             "queryGranularity",
             configuredGranularitySpec.getQueryGranularity(),
             existingGranularitySpec == null ? null : existingGranularitySpec.getQueryGranularity(),
@@ -444,7 +457,7 @@ public class CompactionStatus
             compactionConfig.getTuningConfig() == null ? null : compactionConfig.getTuningConfig().getPartitionsSpec()
         );
         {
-          return CompactionStatus.completeIfEqual(
+          return CompactionStatus.completeIfNullOrEqual(
               "dimensionsSpec",
               configuredDimensions,
               existingDimensions,
@@ -485,7 +498,7 @@ public class CompactionStatus
       }
 
       CompactionTransformSpec existingTransformSpec = lastCompactionState.getTransformSpec();
-      return CompactionStatus.completeIfEqual(
+      return CompactionStatus.completeIfNullOrEqual(
           "transformSpec filter",
           compactionConfig.getTransformSpec().getFilter(),
           existingTransformSpec == null ? null : existingTransformSpec.getFilter(),

@@ -38,6 +38,7 @@ import org.apache.druid.indexing.compact.InlineCompactionJobTemplate;
 import org.apache.druid.indexing.compact.MSQCompactionJobTemplate;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.guice.IndexerMemoryManagementModule;
@@ -125,7 +126,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         + "\n2025-06-02T00:00:00.000Z,trousers,210"
         + "\n2025-06-03T00:00:00.000Z,jeans,150"
     );
-    verifyDayAndMonthSegments(3, 0);
+    verifyNumSegmentsWith(Granularities.DAY, 3);
 
     // Create a compaction config with MONTH granularity
     InlineSchemaDataSourceCompactionConfig compactionConfig =
@@ -141,7 +142,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     runCompactionWithSpec(compactionConfig);
     waitForCompactionTasksToFinish("compact", 1);
 
-    verifyDayAndMonthSegments(0, 1);
+    verifyNumSegmentsWith(Granularities.DAY, 0);
+    verifyNumSegmentsWith(Granularities.MONTH, 1);
   }
 
   @Test
@@ -159,7 +161,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     ingestRecordsAtGranularity(1200, "HOUR");
     runCompactionWithSpec(cascadingTemplate);
     waitForCompactionTasksToFinish("compact", 3);
-    verifyDayAndMonthSegments(1, 2);
+    verifyNumSegmentsWith(Granularities.DAY, 1);
+    verifyNumSegmentsWith(Granularities.MONTH, 2);
   }
 
   @Test
@@ -186,7 +189,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
     runCompactionWithSpec(cascadingTemplate);
     waitForCompactionTasksToFinish("compact", 3);
-    verifyDayAndMonthSegments(1, 2);
+    verifyNumSegmentsWith(Granularities.DAY, 1);
+    verifyNumSegmentsWith(Granularities.MONTH, 2);
   }
 
   @Test
@@ -197,9 +201,9 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     // Add compaction templates to catalog
     final String sqlDayGranularity =
         "REPLACE INTO ${dataSource}"
-        + " OVERWRITE WHERE __time >= TIMESTAMP '${startDate}' AND __time < TIMESTAMP '${endDate}'"
+        + " OVERWRITE WHERE __time >= TIMESTAMP '${startTimestamp}' AND __time < TIMESTAMP '${endTimestamp}'"
         + " SELECT * FROM ${dataSource}"
-        + " WHERE __time BETWEEN '${startDate}' AND '${endDate}'"
+        + " WHERE __time BETWEEN '${startTimestamp}' AND '${endTimestamp}'"
         + " PARTITIONED BY DAY";
     final String dayGranularityTemplateId = saveTemplateToCatalog(
         new MSQCompactionJobTemplate(
@@ -209,9 +213,9 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     );
     final String sqlMonthGranularity =
         "REPLACE INTO ${dataSource}"
-        + " OVERWRITE WHERE __time >= TIMESTAMP '${startDate}' AND __time < TIMESTAMP '${endDate}'"
+        + " OVERWRITE WHERE __time >= TIMESTAMP '${startTimestamp}' AND __time < TIMESTAMP '${endTimestamp}'"
         + " SELECT * FROM ${dataSource}"
-        + " WHERE __time >= TIMESTAMP '${startDate}' AND __time < TIMESTAMP '${endDate}'"
+        + " WHERE __time >= TIMESTAMP '${startTimestamp}' AND __time < TIMESTAMP '${endTimestamp}'"
         + " PARTITIONED BY MONTH";
     final String monthGranularityTemplateId = saveTemplateToCatalog(
         new MSQCompactionJobTemplate(
@@ -230,13 +234,14 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     );
 
     runCompactionWithSpec(cascadingTemplate);
-    waitForCompactionTasksToFinish("query_controller", 4);
-    verifyDayAndMonthSegments(1, 2);
+    waitForCompactionTasksToFinish("query_controller", 3);
+    verifyNumSegmentsWith(Granularities.DAY, 1);
+    verifyNumSegmentsWith(Granularities.MONTH, 2);
   }
 
   private void ingestRecordsAtGranularity(int numRecords, String granularityName)
   {
-    // Ingest data at HOUR granularity and verify
+    // Ingest data at specified granularity and verify
     Granularity granularity = Granularity.fromString(granularityName);
     runIngestionAtGranularity(
         granularityName,
@@ -270,28 +275,21 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     );
   }
 
-  private void verifyDayAndMonthSegments(int expectedDaySegments, int expectedMonthSegments)
+  private void verifyNumSegmentsWith(Granularity granularity, int numExpectedSegments)
   {
-    // Verify that segments are now compacted to MONTH and DAY granularity
-    List<DataSegment> segments = List.copyOf(
-        overlord.bindings()
-                .segmentsMetadataStorage()
-                .retrieveAllUsedSegments(dataSource, Segments.ONLY_VISIBLE)
+    long numMatchingSegments = overlord
+        .bindings()
+        .segmentsMetadataStorage()
+        .retrieveAllUsedSegments(dataSource, Segments.ONLY_VISIBLE)
+        .stream()
+        .filter(segment -> granularity.isAligned(segment.getInterval()))
+        .count();
+
+    Assertions.assertEquals(
+        numExpectedSegments,
+        (int) numMatchingSegments,
+        StringUtils.format("Segment with granularity[%s]", granularity)
     );
-
-    int numMonthSegments = 0;
-    int numDaySegments = 0;
-
-    for (DataSegment segment : segments) {
-      if (Granularities.DAY.isAligned(segment.getInterval())) {
-        ++numDaySegments;
-      } else if (Granularities.MONTH.isAligned(segment.getInterval())) {
-        ++numMonthSegments;
-      }
-    }
-
-    Assertions.assertTrue(numDaySegments >= expectedDaySegments);
-    Assertions.assertTrue(numMonthSegments >= expectedMonthSegments);
   }
 
   private String saveTemplateToCatalog(CompactionJobTemplate template)

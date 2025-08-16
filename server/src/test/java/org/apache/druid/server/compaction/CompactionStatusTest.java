@@ -41,6 +41,7 @@ import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -50,11 +51,8 @@ import java.util.List;
 public class CompactionStatusTest
 {
   private static final DataSegment WIKI_SEGMENT
-      = DataSegment.builder()
-                   .dataSource(TestDataSource.WIKI)
-                   .interval(Intervals.of("2013-01-01/PT1H"))
+      = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2013-01-01/PT1H"), "v1", 0))
                    .size(100_000_000L)
-                   .version("v1")
                    .build();
 
   @Test
@@ -62,8 +60,7 @@ public class CompactionStatusTest
   {
     final ClientCompactionTaskQueryTuningConfig tuningConfig
         = ClientCompactionTaskQueryTuningConfig.from(null);
-    Assert.assertEquals(
-        new DynamicPartitionsSpec(null, Long.MAX_VALUE),
+    Assert.assertNull(
         CompactionStatus.findPartitionsSpecFromConfig(tuningConfig)
     );
   }
@@ -195,9 +192,14 @@ public class CompactionStatusTest
   @Test
   public void testStatusWhenLastCompactionStateIsEmpty()
   {
+    final PartitionsSpec requiredPartitionsSpec = new DynamicPartitionsSpec(5_000_000, null);
     verifyCompactionStatusIsPendingBecause(
         new CompactionState(null, null, null, null, null, null, null),
-        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        InlineSchemaDataSourceCompactionConfig
+            .builder()
+            .withTuningConfig(createTuningConfig(requiredPartitionsSpec, null))
+            .forDataSource(TestDataSource.WIKI)
+            .build(),
         "'partitionsSpec' mismatch: required['dynamic' with 5,000,000 rows], current[null]"
     );
   }
@@ -205,12 +207,16 @@ public class CompactionStatusTest
   @Test
   public void testStatusOnPartitionsSpecMismatch()
   {
+    final PartitionsSpec requiredPartitionsSpec = new DynamicPartitionsSpec(5_000_000, 0L);
     final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, 0L);
 
     final CompactionState lastCompactionState
         = new CompactionState(currentPartitionsSpec, null, null, null, null, null, null);
-    final DataSourceCompactionConfig compactionConfig
-        = InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .withTuningConfig(createTuningConfig(requiredPartitionsSpec, null))
+        .forDataSource(TestDataSource.WIKI)
+        .build();
 
     verifyCompactionStatusIsPendingBecause(
         lastCompactionState,

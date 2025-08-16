@@ -54,8 +54,8 @@ public class MSQCompactionJobTemplate extends CompactionJobTemplate
   public static final String TYPE = "compactMsq";
 
   public static final String VAR_DATASOURCE = "${dataSource}";
-  public static final String VAR_START_DATE = "${startDate}";
-  public static final String VAR_END_DATE = "${endDate}";
+  public static final String VAR_START_TIMESTAMP = "${startTimestamp}";
+  public static final String VAR_END_TIMESTAMP = "${endTimestamp}";
 
   private static final DateTimeFormatter TIMESTAMP_FORMATTER =
       DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS");
@@ -123,8 +123,8 @@ public class MSQCompactionJobTemplate extends CompactionJobTemplate
         sqlTemplate.getQuery(),
         Map.of(
             VAR_DATASOURCE, dataSource,
-            VAR_START_DATE, compactionInterval.getStart().toString(TIMESTAMP_FORMATTER),
-            VAR_END_DATE, compactionInterval.getEnd().toString(TIMESTAMP_FORMATTER)
+            VAR_START_TIMESTAMP, compactionInterval.getStart().toString(TIMESTAMP_FORMATTER),
+            VAR_END_TIMESTAMP, compactionInterval.getEnd().toString(TIMESTAMP_FORMATTER)
         )
     );
 
@@ -148,7 +148,7 @@ public class MSQCompactionJobTemplate extends CompactionJobTemplate
   /**
    * Formats the given SQL by replacing the template variables.
    */
-  private static String formatSql(String sqlTemplate, Map<String, String> templateVariables)
+  public static String formatSql(String sqlTemplate, Map<String, String> templateVariables)
   {
     String sql = sqlTemplate;
     for (Map.Entry<String, String> variable : templateVariables.entrySet()) {
