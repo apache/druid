@@ -65,7 +65,6 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -82,13 +81,6 @@ public class NewestSegmentFirstPolicyTest
   private static final int DEFAULT_NUM_SEGMENTS_PER_SHARD = 4;
   private final ObjectMapper mapper = new DefaultObjectMapper();
   private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(null);
-  private CompactionStatusTracker statusTracker;
-
-  @Before
-  public void setup()
-  {
-    statusTracker = new CompactionStatusTracker(mapper);
-  }
 
   @Test
   public void testLargeOffsetAndSmallSegmentInterval()
@@ -284,8 +276,7 @@ public class NewestSegmentFirstPolicyTest
                                 .withNumPartitions(4)
             )
         ),
-        Collections.emptyMap(),
-        statusTracker
+        Collections.emptyMap()
     );
 
     assertCompactSegmentIntervals(
@@ -517,8 +508,7 @@ public class NewestSegmentFirstPolicyTest
                 Intervals.of("2017-11-15T00:00:00/2017-11-15T20:00:00"),
                 Intervals.of("2017-11-13T00:00:00/2017-11-14T01:00:00")
             )
-        ),
-        statusTracker
+        )
     );
 
     assertCompactSegmentIntervals(
@@ -557,8 +547,7 @@ public class NewestSegmentFirstPolicyTest
                 Intervals.of("2017-11-16T04:00:00/2017-11-16T10:00:00"),
                 Intervals.of("2017-11-16T14:00:00/2017-11-16T20:00:00")
             )
-        ),
-        statusTracker
+        )
     );
 
     assertCompactSegmentIntervals(
@@ -2063,8 +2052,7 @@ public class NewestSegmentFirstPolicyTest
             TestDataSource.WIKI, SegmentTimeline.forSegments(wikiSegments),
             TestDataSource.KOALA, SegmentTimeline.forSegments(koalaSegments)
         ),
-        Collections.emptyMap(),
-        statusTracker
+        Collections.emptyMap()
     );
 
     // Verify that the segments of WIKI are preferred even though they are older
@@ -2085,8 +2073,7 @@ public class NewestSegmentFirstPolicyTest
         policy,
         Collections.singletonMap(TestDataSource.WIKI, config),
         Collections.singletonMap(TestDataSource.WIKI, timeline),
-        Collections.emptyMap(),
-        statusTracker
+        Collections.emptyMap()
     );
   }
 
