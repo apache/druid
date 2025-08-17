@@ -19,6 +19,7 @@
 
 package org.apache.druid.testing.embedded.compact;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
 import org.apache.druid.catalog.model.ResolvedTable;
@@ -38,6 +39,7 @@ import org.apache.druid.indexing.compact.InlineCompactionJobTemplate;
 import org.apache.druid.indexing.compact.MSQCompactionJobTemplate;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.guice.IndexerMemoryManagementModule;
@@ -48,6 +50,7 @@ import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.rpc.UpdateResponse;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
@@ -76,8 +79,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer()
-      .setServerMemory(4_000_000_000L)
-      .addProperty("druid.worker.capacity", "8");
+      .setServerMemory(2_000_000_000L)
+      .addProperty("druid.worker.capacity", "4");
   private final EmbeddedOverlord overlord = new EmbeddedOverlord()
       .addProperty("druid.manager.segments.pollDuration", "PT1s")
       .addProperty("druid.manager.segments.useIncrementalCache", "always");
@@ -114,6 +117,37 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         o -> o.updateClusterCompactionConfig(new ClusterCompactionConfig(1.0, 10, null, true, null))
     );
     Assertions.assertTrue(updateResponse.isSuccess());
+  }
+
+  @Test
+  public void test_saveCompactionTemplateToCatalog_andQueryDefinition() throws Exception
+  {
+    final String templateId = saveTemplateToCatalog(
+        new InlineCompactionJobTemplate(createMatcher(Granularities.DAY))
+    );
+
+    final ClientSqlQuery query = new ClientSqlQuery(
+        StringUtils.format("SELECT * FROM index_template.%s", templateId),
+        "array",
+        true,
+        true,
+        true,
+        null,
+        null
+    );
+
+    final String result = cluster.callApi().onAnyBroker(b -> b.submitSqlQuery(query));
+    final List<List<String>> rows = TestHelper.JSON_MAPPER.readValue(result, new TypeReference<>() {});
+
+    Assertions.assertEquals(
+        List.of(
+            List.of("type", "payload"),
+            List.of("STRING", "COMPLEX"),
+            List.of("VARCHAR", "OTHER"),
+            List.of("compactInline", "{\"targetState\":{\"granularitySpec\":{\"segmentGranularity\":\"DAY\"}},\"type\":\"compactInline\"}")
+        ),
+        rows
+    );
   }
 
   @Test
