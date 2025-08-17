@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.output.OutputDestination;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.DateTimes;
@@ -49,7 +50,7 @@ import java.util.Objects;
  * This template never needs to be deserialized as a {@code BatchIndexingJobTemplate},
  * only as a {@link DataSourceCompactionConfig} in {@link CompactionSupervisorSpec}.
  */
-public class CascadingCompactionTemplate extends CompactionJobTemplate implements DataSourceCompactionConfig
+public class CascadingCompactionTemplate implements CompactionJobTemplate, DataSourceCompactionConfig
 {
   public static final String TYPE = "compactCascade";
 
@@ -64,6 +65,8 @@ public class CascadingCompactionTemplate extends CompactionJobTemplate implement
   {
     this.rules = rules;
     this.dataSource = Objects.requireNonNull(dataSource, "'dataSource' cannot be null");
+
+    InvalidInput.conditionalException(rules != null && !rules.isEmpty(), "'rules' cannot be empty");
   }
 
   @Override
@@ -95,7 +98,7 @@ public class CascadingCompactionTemplate extends CompactionJobTemplate implement
     DateTime previousRuleStartTime = DateTimes.MAX;
     for (int i = 0; i < rules.size() - 1; ++i) {
       final CompactionRule rule = rules.get(i);
-      final DateTime ruleStartTime = currentTime.minus(rule.getPeriod());
+      final DateTime ruleStartTime = rule.computeStartTime(currentTime, rules.get(i + 1));
       final Interval ruleInterval = new Interval(ruleStartTime, previousRuleStartTime);
 
       allJobs.addAll(

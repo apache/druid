@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
@@ -120,6 +121,12 @@ public class CompactionStateMatcher
   public List<AggregateProjectionSpec> getProjections()
   {
     return projections;
+  }
+
+  @Nullable
+  public Granularity getSegmentGranularity()
+  {
+    return granularitySpec == null ? null : granularitySpec.getSegmentGranularity();
   }
 
   @Override

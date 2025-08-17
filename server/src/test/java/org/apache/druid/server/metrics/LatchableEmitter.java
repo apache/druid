@@ -238,6 +238,7 @@ public class LatchableEmitter extends StubServiceEmitter
     private String host;
     private String service;
     private String metricName;
+    private Long minMetricValue;
     private Long metricValue;
     private final Map<String, Object> dimensions = new HashMap<>();
 
@@ -256,7 +257,16 @@ public class LatchableEmitter extends StubServiceEmitter
      * Matches an event only if it has a metric value equal to or greater than
      * the given value.
      */
-    public EventMatcher hasValueAtLeast(long metricValue)
+    public EventMatcher hasValueAtLeast(long minMetricValue)
+    {
+      this.minMetricValue = minMetricValue;
+      return this;
+    }
+
+    /**
+     * Matches an event only if it has a metric value equal to the given value.
+     */
+    public EventMatcher hasValue(long metricValue)
     {
       this.metricValue = metricValue;
       return this;
@@ -294,7 +304,9 @@ public class LatchableEmitter extends StubServiceEmitter
     {
       if (metricName != null && !event.getMetric().equals(metricName)) {
         return false;
-      } else if (metricValue != null && event.getValue().longValue() < metricValue) {
+      } else if (minMetricValue != null && event.getValue().longValue() < minMetricValue) {
+        return false;
+      } else if (metricValue != null && event.getValue().longValue() != metricValue) {
         return false;
       } else if (service != null && !service.equals(event.getService())) {
         return false;

@@ -26,6 +26,7 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.input.DruidDatasourceDestination;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.DataSourceCompactibleSegmentIterator;
@@ -37,6 +38,7 @@ import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -46,7 +48,7 @@ import java.util.Objects;
  * It is just a delegating template that uses a {@link DataSourceCompactionConfig}
  * to create compaction jobs.
  */
-public class CompactionConfigBasedJobTemplate extends CompactionJobTemplate
+public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
 {
   private final DataSourceCompactionConfig config;
 
@@ -68,6 +70,13 @@ public class CompactionConfigBasedJobTemplate extends CompactionJobTemplate
             .withGranularitySpec(stateMatcher.getGranularitySpec())
             .build()
     );
+  }
+
+  @Nullable
+  @Override
+  public Granularity getSegmentGranularity()
+  {
+    return config.getSegmentGranularity();
   }
 
   @Override
@@ -107,7 +116,8 @@ public class CompactionConfigBasedJobTemplate extends CompactionJobTemplate
 
   /**
    * Creates an iterator over the compactible candidate segments for the given
-   * params.
+   * params. Adds stats for segments that are already compacted to the
+   * {@link CompactionJobParams#getSnapshotBuilder()}.
    */
   DataSourceCompactibleSegmentIterator getCompactibleCandidates(
       InputSource source,
@@ -121,12 +131,17 @@ public class CompactionConfigBasedJobTemplate extends CompactionJobTemplate
     final Interval searchInterval = Objects.requireNonNull(ensureDruidInputSource(source).getInterval());
 
     final SegmentTimeline timeline = params.getTimeline(config.getDataSource());
-    return new DataSourceCompactibleSegmentIterator(
+    final DataSourceCompactibleSegmentIterator iterator = new DataSourceCompactibleSegmentIterator(
         config,
         timeline,
         Intervals.complementOf(searchInterval),
         new NewestSegmentFirstPolicy(null)
     );
+
+    // Collect stats for segments that are already compacted
+    iterator.getCompactedSegments().forEach(entry -> params.getSnapshotBuilder().addToComplete(entry));
+
+    return iterator;
   }
 
   private void validateInput(InputSource source)

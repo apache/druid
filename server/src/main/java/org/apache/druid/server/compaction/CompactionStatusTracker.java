@@ -48,10 +48,6 @@ public class CompactionStatusTracker
 
   private final AtomicReference<DateTime> segmentSnapshotTime = new AtomicReference<>();
 
-  public CompactionStatusTracker()
-  {
-  }
-
   public void stop()
   {
     datasourceStatuses.clear();
@@ -94,7 +90,7 @@ public class CompactionStatusTracker
     // Skip intervals that already have a running task
     final CompactionTaskStatus lastTaskStatus = getLatestTaskStatus(candidate);
     if (lastTaskStatus != null && lastTaskStatus.getState() == TaskState.RUNNING) {
-      return CompactionStatus.skipped("Task for interval is already running");
+      return CompactionStatus.running("Task for interval is already running");
     }
 
     // Skip intervals that have been recently compacted if segment timeline is not updated yet
@@ -102,7 +98,7 @@ public class CompactionStatusTracker
     if (lastTaskStatus != null
         && lastTaskStatus.getState() == TaskState.SUCCESS
         && snapshotTime != null && snapshotTime.isBefore(lastTaskStatus.getUpdatedTime())) {
-      return CompactionStatus.skipped(
+      return CompactionStatus.complete(
           "Segment timeline not updated since last compaction task succeeded"
       );
     }
@@ -115,6 +111,10 @@ public class CompactionStatusTracker
     return pendingStatus;
   }
 
+  /**
+   * Tracks the latest compaction status of the given compaction candidates.
+   * Used only by the {@link CompactionRunSimulator}.
+   */
   public void onCompactionStatusComputed(
       CompactionCandidate candidateSegments,
       DataSourceCompactionConfig config

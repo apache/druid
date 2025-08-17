@@ -25,6 +25,7 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.output.OutputDestination;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionSlotManager;
@@ -34,6 +35,7 @@ import org.joda.time.Interval;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -49,7 +51,7 @@ import java.util.Objects;
  * Compaction is triggered for an interval only if the current compaction state
  * of the underlying segments does not match with the {@link #stateMatcher}.
  */
-public class MSQCompactionJobTemplate extends CompactionJobTemplate
+public class MSQCompactionJobTemplate implements CompactionJobTemplate
 {
   public static final String TYPE = "compactMsq";
 
@@ -85,8 +87,15 @@ public class MSQCompactionJobTemplate extends CompactionJobTemplate
     return stateMatcher;
   }
 
+  @Nullable
   @Override
-  List<CompactionJob> createCompactionJobs(
+  public Granularity getSegmentGranularity()
+  {
+    return stateMatcher.getSegmentGranularity();
+  }
+
+  @Override
+  public List<CompactionJob> createCompactionJobs(
       InputSource source,
       OutputDestination destination,
       CompactionJobParams jobParams
@@ -133,6 +142,7 @@ public class MSQCompactionJobTemplate extends CompactionJobTemplate
       context.putAll(sqlTemplate.getContext());
     }
     context.put(CompactSegments.STORE_COMPACTION_STATE_KEY, true);
+    context.put(CompactSegments.COMPACTION_INTERVAL_KEY, compactionInterval);
 
     return new ClientSqlQuery(
         formattedSql,

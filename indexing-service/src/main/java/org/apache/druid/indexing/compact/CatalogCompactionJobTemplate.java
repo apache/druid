@@ -30,14 +30,16 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.output.OutputDestination;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.template.BatchIndexingJobTemplate;
+import org.apache.druid.java.util.common.granularity.Granularity;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
  * Compaction template that delegates job creation to a template stored in the
  * Druid catalog.
  */
-public class CatalogCompactionJobTemplate extends CompactionJobTemplate
+public class CatalogCompactionJobTemplate implements CompactionJobTemplate
 {
   public static final String TYPE = "compactCatalog";
 
@@ -63,6 +65,14 @@ public class CatalogCompactionJobTemplate extends CompactionJobTemplate
     return templateId;
   }
 
+  @Nullable
+  @Override
+  public Granularity getSegmentGranularity()
+  {
+    final CompactionJobTemplate delegate = getDelegate();
+    return delegate == null ? null : delegate.getSegmentGranularity();
+  }
+
   @Override
   public List<CompactionJob> createCompactionJobs(
       InputSource source,
@@ -70,16 +80,26 @@ public class CatalogCompactionJobTemplate extends CompactionJobTemplate
       CompactionJobParams params
   )
   {
+    final CompactionJobTemplate delegate = getDelegate();
+    if (delegate == null) {
+      return List.of();
+    } else {
+      return delegate.createCompactionJobs(source, target, params);
+    }
+  }
+
+  @Nullable
+  private CompactionJobTemplate getDelegate()
+  {
     final ResolvedTable resolvedTable = catalog.resolveTable(tableId);
     if (resolvedTable == null) {
-      return List.of();
+      return null;
     }
 
-    // Create jobs using the catalog template
     final BatchIndexingJobTemplate delegate
         = resolvedTable.decodeProperty(IndexingTemplateDefn.PROPERTY_PAYLOAD);
     if (delegate instanceof CompactionJobTemplate) {
-      return ((CompactionJobTemplate) delegate).createCompactionJobs(source, target, params);
+      return (CompactionJobTemplate) delegate;
     } else {
       throw InvalidInput.exception(
           "Template[%s] of type[%s] cannot be used for creating compaction tasks",

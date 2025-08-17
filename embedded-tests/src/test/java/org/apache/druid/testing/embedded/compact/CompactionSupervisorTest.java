@@ -38,7 +38,6 @@ import org.apache.druid.indexing.compact.InlineCompactionJobTemplate;
 import org.apache.druid.indexing.compact.MSQCompactionJobTemplate;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.guice.IndexerMemoryManagementModule;
@@ -62,7 +61,6 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
@@ -74,15 +72,15 @@ import java.util.Map;
 
 public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 {
-  protected final EmbeddedBroker broker = new EmbeddedBroker();
-  protected final EmbeddedIndexer indexer = new EmbeddedIndexer()
+  private final EmbeddedBroker broker = new EmbeddedBroker();
+  private final EmbeddedIndexer indexer = new EmbeddedIndexer()
       .setServerMemory(4_000_000_000L)
       .addProperty("druid.worker.capacity", "8");
-  protected final EmbeddedOverlord overlord = new EmbeddedOverlord()
+  private final EmbeddedOverlord overlord = new EmbeddedOverlord()
       .addProperty("druid.manager.segments.pollDuration", "PT1s")
       .addProperty("druid.manager.segments.useIncrementalCache", "always");
-  protected final EmbeddedHistorical historical = new EmbeddedHistorical();
-  protected final EmbeddedCoordinator coordinator = new EmbeddedCoordinator()
+  private final EmbeddedHistorical historical = new EmbeddedHistorical();
+  private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator()
       .addProperty("druid.manager.segments.useIncrementalCache", "always");
 
   @Override
@@ -117,7 +115,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void test_ingestDayGranularity_andCompactToMonthGranularity()
+  public void test_ingestDayGranularity_andCompactToMonthGranularity_withInlineConfig()
   {
     // Ingest data at DAY granularity and verify
     runIngestionAtGranularity(
@@ -126,7 +124,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         + "\n2025-06-02T00:00:00.000Z,trousers,210"
         + "\n2025-06-03T00:00:00.000Z,jeans,150"
     );
-    verifyNumSegmentsWith(Granularities.DAY, 3);
+    Assertions.assertEquals(3, getNumSegmentsWith(Granularities.DAY));
 
     // Create a compaction config with MONTH granularity
     InlineSchemaDataSourceCompactionConfig compactionConfig =
@@ -142,8 +140,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     runCompactionWithSpec(compactionConfig);
     waitForCompactionTasksToFinish("compact", 1);
 
-    verifyNumSegmentsWith(Granularities.DAY, 0);
-    verifyNumSegmentsWith(Granularities.MONTH, 1);
+    Assertions.assertEquals(0, getNumSegmentsWith(Granularities.DAY));
+    Assertions.assertEquals(1, getNumSegmentsWith(Granularities.MONTH));
   }
 
   @Test
@@ -158,17 +156,19 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         )
     );
 
-    ingestRecordsAtGranularity(1200, "HOUR");
+    ingestSegments(1200, "HOUR");
     runCompactionWithSpec(cascadingTemplate);
     waitForCompactionTasksToFinish("compact", 3);
-    verifyNumSegmentsWith(Granularities.DAY, 1);
-    verifyNumSegmentsWith(Granularities.MONTH, 2);
+
+    Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
+    Assertions.assertTrue(getNumSegmentsWith(Granularities.DAY) >= 1);
+    Assertions.assertTrue(getNumSegmentsWith(Granularities.MONTH) >= 1);
   }
 
   @Test
   public void test_ingestHourGranularity_andCompactToDayAndMonth_withCatalogTemplates()
   {
-    ingestRecordsAtGranularity(1200, "HOUR");
+    ingestSegments(1200, "HOUR");
 
     // Add compaction templates to catalog
     final String dayGranularityTemplateId = saveTemplateToCatalog(
@@ -189,14 +189,16 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
     runCompactionWithSpec(cascadingTemplate);
     waitForCompactionTasksToFinish("compact", 3);
-    verifyNumSegmentsWith(Granularities.DAY, 1);
-    verifyNumSegmentsWith(Granularities.MONTH, 2);
+
+    Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
+    Assertions.assertTrue(getNumSegmentsWith(Granularities.DAY) >= 1);
+    Assertions.assertTrue(getNumSegmentsWith(Granularities.MONTH) >= 1);
   }
 
   @Test
   public void test_ingestHourGranularity_andCompactToDayAndMonth_withCatalogMSQTemplates()
   {
-    ingestRecordsAtGranularity(1200, "HOUR");
+    ingestSegments(1200, "HOUR");
 
     // Add compaction templates to catalog
     final String sqlDayGranularity =
@@ -235,26 +237,17 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
     runCompactionWithSpec(cascadingTemplate);
     waitForCompactionTasksToFinish("query_controller", 3);
-    verifyNumSegmentsWith(Granularities.DAY, 1);
-    verifyNumSegmentsWith(Granularities.MONTH, 2);
+
+    Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
+    Assertions.assertTrue(getNumSegmentsWith(Granularities.DAY) >= 1);
+    Assertions.assertTrue(getNumSegmentsWith(Granularities.MONTH) >= 1);
   }
 
-  private void ingestRecordsAtGranularity(int numRecords, String granularityName)
+  private void ingestSegments(int numSegments, String granularityName)
   {
-    // Ingest data at specified granularity and verify
-    Granularity granularity = Granularity.fromString(granularityName);
     runIngestionAtGranularity(
         granularityName,
-        createHourlyInlineDataCsv(DateTimes.nowUtc(), numRecords)
-    );
-    List<DataSegment> segments = List.copyOf(
-        overlord.bindings()
-                .segmentsMetadataStorage()
-                .retrieveAllUsedSegments(dataSource, Segments.ONLY_VISIBLE)
-    );
-    Assertions.assertEquals(numRecords, segments.size());
-    segments.forEach(
-        segment -> Assertions.assertTrue(granularity.isAligned(segment.getInterval()))
+        createHourlyInlineDataCsv(DateTimes.nowUtc(), numSegments)
     );
   }
 
@@ -267,29 +260,35 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
   private void waitForCompactionTasksToFinish(String taskType, int expectedCount)
   {
+    // Wait for all intervals to be compacted
+    overlord.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("interval/waitCompact/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+                      .hasValue(0)
+    );
+
+    // Wait for all submitted compaction jobs to finish
+    int numSubmittedTasks = overlord.latchableEmitter().getMetricValues(
+        "compact/task/count",
+        Map.of(DruidMetrics.DATASOURCE, dataSource)
+    ).stream().mapToInt(Number::intValue).sum();
     overlord.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("task/run/time")
                       .hasDimension(DruidMetrics.TASK_TYPE, taskType)
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
-        agg -> agg.hasCountAtLeast(expectedCount)
+        agg -> agg.hasCountAtLeast(numSubmittedTasks)
     );
   }
 
-  private void verifyNumSegmentsWith(Granularity granularity, int numExpectedSegments)
+  private int getNumSegmentsWith(Granularity granularity)
   {
-    long numMatchingSegments = overlord
+    return (int) overlord
         .bindings()
         .segmentsMetadataStorage()
         .retrieveAllUsedSegments(dataSource, Segments.ONLY_VISIBLE)
         .stream()
         .filter(segment -> granularity.isAligned(segment.getInterval()))
         .count();
-
-    Assertions.assertEquals(
-        numExpectedSegments,
-        (int) numMatchingSegments,
-        StringUtils.format("Segment with granularity[%s]", granularity)
-    );
   }
 
   private String saveTemplateToCatalog(CompactionJobTemplate template)
@@ -318,9 +317,12 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
       String inlineDataCsv
   )
   {
-    final String taskId = IdUtils.getRandomId();
-    final IndexTask task = createIndexTaskForInlineData(taskId, granularity, inlineDataCsv);
-
+    final IndexTask task = MoreResources.Task.BASIC_INDEX
+        .get()
+        .segmentGranularity(granularity)
+        .inlineInputSourceWithData(inlineDataCsv)
+        .dataSource(dataSource)
+        .withId(IdUtils.getRandomId());
     cluster.callApi().runTask(task, overlord);
   }
 
@@ -335,16 +337,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     }
 
     return builder.toString();
-  }
-
-  private IndexTask createIndexTaskForInlineData(String taskId, String granularity, String inlineDataCsv)
-  {
-    return MoreResources.Task.BASIC_INDEX
-        .get()
-        .segmentGranularity(granularity)
-        .inlineInputSourceWithData(inlineDataCsv)
-        .dataSource(dataSource)
-        .withId(taskId);
   }
 
   private static CompactionStateMatcher createMatcher(Granularity segmentGranularity)

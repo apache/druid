@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.compact;
 
 import org.apache.druid.indexing.template.JobParams;
+import org.apache.druid.server.compaction.CompactionSnapshotBuilder;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.DateTime;
@@ -32,16 +33,19 @@ public class CompactionJobParams implements JobParams
   private final DateTime scheduleStartTime;
   private final TimelineProvider timelineProvider;
   private final ClusterCompactionConfig clusterCompactionConfig;
+  private final CompactionSnapshotBuilder snapshotBuilder;
 
   public CompactionJobParams(
       DateTime scheduleStartTime,
       ClusterCompactionConfig clusterCompactionConfig,
-      TimelineProvider timelineProvider
+      TimelineProvider timelineProvider,
+      CompactionSnapshotBuilder snapshotBuilder
   )
   {
     this.scheduleStartTime = scheduleStartTime;
     this.clusterCompactionConfig = clusterCompactionConfig;
     this.timelineProvider = timelineProvider;
+    this.snapshotBuilder = snapshotBuilder;
   }
 
   @Override
@@ -58,6 +62,11 @@ public class CompactionJobParams implements JobParams
   public SegmentTimeline getTimeline(String dataSource)
   {
     return timelineProvider.getTimelineForDataSource(dataSource);
+  }
+
+  public CompactionSnapshotBuilder getSnapshotBuilder()
+  {
+    return snapshotBuilder;
   }
 
   @FunctionalInterface

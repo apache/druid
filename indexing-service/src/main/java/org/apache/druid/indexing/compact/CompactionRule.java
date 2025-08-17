@@ -21,8 +21,13 @@ package org.apache.druid.indexing.compact;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.granularity.Granularity;
+import org.joda.time.DateTime;
 import org.joda.time.Period;
 
+/**
+ * A single rule used inside {@link CascadingCompactionTemplate}.
+ */
 public class CompactionRule
 {
   private final Period period;
@@ -48,5 +53,36 @@ public class CompactionRule
   public Period getPeriod()
   {
     return period;
+  }
+
+  /**
+   * Computes the start time of this rule by subtracting its period from the
+   * reference timestamp.
+   * <p>
+   * If both this rule and the {@code beforeRule} explicitly specify a target
+   * segment granularity, the start time may be adjusted to ensure that there
+   * are no uncompacted gaps left in the timeline.
+   *
+   * @param referenceTime Current time when the rules are being evaluated
+   * @param beforeRule    The rule before this one in chronological order
+   */
+  public DateTime computeStartTime(DateTime referenceTime, CompactionRule beforeRule)
+  {
+    final Granularity granularity = template.getSegmentGranularity();
+    final Granularity beforeGranularity = beforeRule.template.getSegmentGranularity();
+
+    final DateTime calculatedStartTime = referenceTime.minus(period);
+
+    if (granularity == null || beforeGranularity == null) {
+      return calculatedStartTime;
+    } else {
+      // The gap can be filled only if it is bigger than the granularity of this rule.
+      // If beforeGranularity > granularity, gap would always be smaller than both
+      final DateTime beforeRuleEffectiveEnd = beforeGranularity.bucketStart(calculatedStartTime);
+      final DateTime possibleStartTime = granularity.bucketStart(beforeRuleEffectiveEnd);
+      return possibleStartTime.isBefore(beforeRuleEffectiveEnd)
+             ? granularity.increment(possibleStartTime)
+             : possibleStartTime;
+    }
   }
 }

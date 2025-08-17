@@ -21,6 +21,7 @@ package org.apache.druid.indexing.compact;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.catalog.MapMetadataCatalog;
 import org.apache.druid.catalog.model.ResolvedTable;
@@ -35,6 +36,7 @@ import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
@@ -64,6 +66,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.segment.TestDataSource;
@@ -82,11 +85,11 @@ import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
+import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.Partitions;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -100,6 +103,7 @@ import org.mockito.Mockito;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -144,21 +148,33 @@ public class OverlordCompactionSchedulerTest
   private MapMetadataCatalog catalog;
   private OverlordCompactionScheduler scheduler;
 
+  private Map<Interval, String> submittedMsqTaskIds;
+
   @Before
   public void setUp()
   {
     dataSource = "wiki_" + IdUtils.getRandomId();
 
     final TaskRunner taskRunner = Mockito.mock(TaskRunner.class);
-    Mockito.when(taskRunner.getTotalCapacity()).thenReturn(10);
-    Mockito.when(taskRunner.getMaximumCapacityWithAutoscale()).thenReturn(10);
+    Mockito.when(taskRunner.getTotalCapacity()).thenReturn(100);
+    Mockito.when(taskRunner.getMaximumCapacityWithAutoscale()).thenReturn(100);
 
     taskQueue = Mockito.mock(TaskQueue.class);
     catalog = new MapMetadataCatalog(OBJECT_MAPPER);
 
+    submittedMsqTaskIds = new HashMap<>();
     brokerClient = Mockito.mock(BrokerClient.class);
-    Mockito.when(brokerClient.submitSqlTask(ArgumentMatchers.any(ClientSqlQuery.class)))
-           .thenReturn(Futures.immediateFuture(new SqlTaskStatus(IdUtils.getRandomId(), TaskState.RUNNING, null)));
+    Mockito.when(brokerClient.submitSqlTask(ArgumentMatchers.any(ClientSqlQuery.class))).thenAnswer(
+        arg -> {
+          final ClientSqlQuery query = arg.getArgument(0);
+          final Interval compactionInterval =
+              (Interval) query.getContext().get(CompactSegments.COMPACTION_INTERVAL_KEY);
+
+          final String taskId = IdUtils.getRandomId();
+          submittedMsqTaskIds.put(compactionInterval, taskId);
+          return Futures.immediateFuture(new SqlTaskStatus(taskId, TaskState.RUNNING, null));
+        }
+    );
 
     taskMaster = new TaskMaster(null, null);
     Assert.assertFalse(taskMaster.isHalfOrFullLeader());
@@ -179,7 +195,7 @@ public class OverlordCompactionSchedulerTest
     segmentStorage = new TestIndexerMetadataStorageCoordinator();
     segmentsMetadataManager = segmentStorage.getManager();
 
-    compactionConfig = new AtomicReference<>(new ClusterCompactionConfig(1.0, 10, null, true, null));
+    compactionConfig = new AtomicReference<>(new ClusterCompactionConfig(1.0, 100, null, true, null));
     coordinatorOverlordServiceConfig = new CoordinatorOverlordServiceConfig(false, null);
 
     taskActionClientFactory = task -> new TaskActionClient()
@@ -223,6 +239,7 @@ public class OverlordCompactionSchedulerTest
         taskLockbox,
         new TaskQueryTool(taskStorage, taskLockbox, taskMaster, null, () -> defaultWorkerConfig),
         segmentsMetadataManager,
+        new SegmentsMetadataManagerConfig(null, null, null),
         () -> DruidCompactionConfig.empty().withClusterConfig(compactionConfig.get()),
         new CompactionStatusTracker(),
         coordinatorOverlordServiceConfig,
@@ -500,8 +517,11 @@ public class OverlordCompactionSchedulerTest
     );
 
     startCompactionWithSpec(cascadingTemplate);
-    runCompactionTasks(3);
-    verifyNumSegmentsWith(Granularities.DAY, 1);
+    runCompactionTasks(12);
+
+    verifyFullyCompacted();
+    verifyNumSegmentsWith(Granularities.HOUR, 0);
+    verifyNumSegmentsWith(Granularities.DAY, 10);
     verifyNumSegmentsWith(Granularities.MONTH, 2);
   }
 
@@ -532,10 +552,12 @@ public class OverlordCompactionSchedulerTest
     );
 
     startCompactionWithSpec(cascadingTemplate);
-    runCompactionTasks(3);
+    runCompactionTasks(12);
+
+    verifyFullyCompacted();
+    verifyNumSegmentsWith(Granularities.HOUR, 0);
+    verifyNumSegmentsWith(Granularities.DAY, 10);
     verifyNumSegmentsWith(Granularities.MONTH, 2);
-    verifyNumSegmentsWith(Granularities.DAY, 1);
-    verifyNumSegmentsWith(Granularities.HOUR, 24 * (numDays - 41));
   }
 
   @Test
@@ -585,49 +607,18 @@ public class OverlordCompactionSchedulerTest
     );
 
     startCompactionWithSpec(cascadingTemplate);
+    runMSQCompactionJobs(12);
 
-    // Verify that 3 MSQ compaction jobs are submitted to the Broker
-    executor.finishNextPendingTask();
-
-    ArgumentCaptor<ClientSqlQuery> queryArgumentCaptor = ArgumentCaptor.forClass(ClientSqlQuery.class);
-    Mockito.verify(brokerClient, Mockito.times(3)).submitSqlTask(queryArgumentCaptor.capture());
-
-    final List<ClientSqlQuery> submittedJobs = queryArgumentCaptor.getAllValues();
-    Assert.assertEquals(3, submittedJobs.size());
-
-    Assert.assertEquals(
-        "REPLACE INTO wiki"
-        + " OVERWRITE WHERE __time >= TIMESTAMP '2025-03-10 00:00:00.000' AND __time < TIMESTAMP '2025-03-11 00:00:00.000'"
-        + " SELECT * FROM wiki"
-        + " WHERE __time BETWEEN '2025-03-10 00:00:00.000' AND '2025-03-11 00:00:00.000'"
-        + " PARTITIONED BY DAY",
-        submittedJobs.get(0).getQuery()
-    );
-    Assert.assertEquals(
-        "REPLACE INTO wiki"
-        + " OVERWRITE WHERE __time >= TIMESTAMP '2025-02-01 00:00:00.000' AND __time < TIMESTAMP '2025-03-01 00:00:00.000'"
-        + " SELECT * FROM wiki"
-        + " WHERE __time BETWEEN '2025-02-01 00:00:00.000' AND '2025-03-01 00:00:00.000'"
-        + " PARTITIONED BY MONTH",
-        submittedJobs.get(1).getQuery()
-    );
-    Assert.assertEquals(
-        "REPLACE INTO wiki"
-        + " OVERWRITE WHERE __time >= TIMESTAMP '2025-01-01 00:00:00.000' AND __time < TIMESTAMP '2025-02-01 00:00:00.000'"
-        + " SELECT * FROM wiki"
-        + " WHERE __time BETWEEN '2025-01-01 00:00:00.000' AND '2025-02-01 00:00:00.000'"
-        + " PARTITIONED BY MONTH",
-        submittedJobs.get(2).getQuery()
-    );
+    verifyFullyCompacted();
+    verifyNumSegmentsWith(Granularities.HOUR, 0);
+    verifyNumSegmentsWith(Granularities.DAY, 10);
+    verifyNumSegmentsWith(Granularities.MONTH, 2);
   }
 
   private void verifyNumSegmentsWith(Granularity granularity, int numExpectedSegments)
   {
-    long numMatchingSegments = segmentsMetadataManager
-        .getRecentDataSourcesSnapshot()
-        .getUsedSegmentsTimelinesPerDataSource()
-        .get(dataSource)
-        .findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE)
+    long numMatchingSegments = segmentStorage
+        .retrieveAllUsedSegments(dataSource, Segments.ONLY_VISIBLE)
         .stream()
         .filter(segment -> granularity.isAligned(segment.getInterval()))
         .count();
@@ -637,6 +628,17 @@ public class OverlordCompactionSchedulerTest
         numExpectedSegments,
         (int) numMatchingSegments
     );
+  }
+
+  private void verifyFullyCompacted()
+  {
+    runScheduledJob();
+    int numSegments = segmentStorage.retrieveAllUsedSegments(dataSource, Segments.ONLY_VISIBLE).size();
+
+    final AutoCompactionSnapshot snapshot = scheduler.getCompactionSnapshot(dataSource);
+    Assert.assertEquals(0, snapshot.getSegmentCountAwaitingCompaction());
+    Assert.assertEquals(0, snapshot.getSegmentCountSkipped());
+    Assert.assertEquals(numSegments, snapshot.getSegmentCountCompacted());
   }
 
   private void createSegments(int numSegments, Granularity granularity, DateTime firstSegmentStart)
@@ -679,7 +681,8 @@ public class OverlordCompactionSchedulerTest
 
   private void runCompactionTasks(int expectedCount)
   {
-    executor.finishNextPendingTask();
+    runScheduledJob();
+    serviceEmitter.verifySum("compact/task/count", expectedCount);
 
     ArgumentCaptor<Task> taskArgumentCaptor = ArgumentCaptor.forClass(Task.class);
     Mockito.verify(taskQueue, Mockito.times(expectedCount)).add(taskArgumentCaptor.capture());
@@ -687,17 +690,25 @@ public class OverlordCompactionSchedulerTest
     for (Task task : taskArgumentCaptor.getAllValues()) {
       Assert.assertTrue(task instanceof CompactionTask);
       Assert.assertEquals(dataSource, task.getDataSource());
-      runCompactionTask((CompactionTask) task);
+
+      final CompactionTask compactionTask = (CompactionTask) task;
+      runCompactionTask(
+          compactionTask.getId(),
+          compactionTask.getIoConfig().getInputSpec().findInterval(dataSource),
+          compactionTask.getSegmentGranularity()
+      );
     }
 
     segmentStorage.getManager().forceUpdateDataSourcesSnapshot();
   }
 
-  private void runCompactionTask(CompactionTask task)
+  private void runCompactionTask(String taskId, Interval compactionInterval, Granularity segmentGranularity)
   {
+    // Update status of task in TaskQueue
+    Mockito.when(taskQueue.getTaskStatus(taskId))
+           .thenReturn(Optional.of(TaskStatus.success(taskId)));
+
     // Determine interval and granularity and apply it to the timeline
-    final Interval compactionInterval = task.getIoConfig().getInputSpec().findInterval(dataSource);
-    final Granularity segmentGranularity = task.getSegmentGranularity();
     if (segmentGranularity == null) {
       // Nothing to do
       return;
@@ -714,6 +725,39 @@ public class OverlordCompactionSchedulerTest
           .get(0);
       segmentStorage.commitSegments(Set.of(replaceSegment), null);
     }
+  }
+
+  private void runMSQCompactionJobs(int numExpectedJobs)
+  {
+    runScheduledJob();
+    serviceEmitter.verifySum("compact/task/count", numExpectedJobs);
+
+    ArgumentCaptor<ClientSqlQuery> queryArgumentCaptor = ArgumentCaptor.forClass(ClientSqlQuery.class);
+    Mockito.verify(brokerClient, Mockito.times(numExpectedJobs))
+           .submitSqlTask(queryArgumentCaptor.capture());
+
+    for (ClientSqlQuery job : queryArgumentCaptor.getAllValues()) {
+      final String query = job.getQuery();
+
+      final Granularity segmentGranularity;
+      if (query.contains("PARTITIONED BY DAY")) {
+        segmentGranularity = Granularities.DAY;
+      } else if (query.contains("PARTITIONED BY MONTH")) {
+        segmentGranularity = Granularities.MONTH;
+      } else {
+        segmentGranularity = Granularities.HOUR;
+      }
+
+      final Interval compactionInterval =
+          (Interval) job.getContext().get(CompactSegments.COMPACTION_INTERVAL_KEY);
+      runCompactionTask(
+          submittedMsqTaskIds.get(compactionInterval),
+          compactionInterval,
+          segmentGranularity
+      );
+    }
+
+    segmentStorage.getManager().forceUpdateDataSourcesSnapshot();
   }
 
   private static CompactionStateMatcher createMatcher(Granularity segmentGranularity)

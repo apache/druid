@@ -88,6 +88,8 @@ public class CompactionJobQueue
       ObjectMapper objectMapper
   )
   {
+    this.runStats = new CoordinatorRunStats();
+    this.snapshotBuilder = new CompactionSnapshotBuilder(runStats);
     this.searchPolicy = clusterCompactionConfig.getCompactionPolicy();
     this.queue = new PriorityQueue<>(
         (o1, o2) -> searchPolicy.compareCandidates(o1.getCandidate(), o2.getCandidate())
@@ -95,7 +97,8 @@ public class CompactionJobQueue
     this.jobParams = new CompactionJobParams(
         DateTimes.nowUtc(),
         clusterCompactionConfig,
-        dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource()::get
+        dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource()::get,
+        snapshotBuilder
     );
     this.slotManager = new CompactionSlotManager(
         overlordClient,
@@ -103,8 +106,6 @@ public class CompactionJobQueue
         clusterCompactionConfig
     );
 
-    this.runStats = new CoordinatorRunStats();
-    this.snapshotBuilder = new CompactionSnapshotBuilder(runStats);
     this.taskActionClientFactory = taskActionClientFactory;
     this.overlordClient = overlordClient;
     this.brokerClient = brokerClient;
@@ -194,7 +195,7 @@ public class CompactionJobQueue
     final CompactionCandidate candidate = job.getCandidate();
     final CompactionConfigValidationResult validationResult = validateCompactionJob(job);
     if (!validationResult.isValid()) {
-      log.error("Compaction job[%s] is invalid due to reason[%s].", job, validationResult.getReason());
+      log.error("Skipping invalid compaction job[%s] due to reason[%s].", job, validationResult.getReason());
       snapshotBuilder.addToSkipped(candidate);
       return false;
     }

@@ -27,23 +27,28 @@ import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.template.BatchIndexingJob;
 import org.apache.druid.indexing.template.BatchIndexingJobTemplate;
 import org.apache.druid.indexing.template.JobParams;
+import org.apache.druid.java.util.common.granularity.Granularity;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.stream.Collectors;
 
 /**
  * Base indexing template for creating {@link CompactionJob}.
  */
-public abstract class CompactionJobTemplate implements BatchIndexingJobTemplate
+public interface CompactionJobTemplate extends BatchIndexingJobTemplate
 {
-  abstract List<CompactionJob> createCompactionJobs(
+  List<CompactionJob> createCompactionJobs(
       InputSource source,
       OutputDestination destination,
       CompactionJobParams jobParams
   );
 
+  @Nullable
+  Granularity getSegmentGranularity();
+
   @Override
-  public final List<BatchIndexingJob> createJobs(
+  default List<BatchIndexingJob> createJobs(
       InputSource source,
       OutputDestination destination,
       JobParams jobParams
@@ -64,7 +69,7 @@ public abstract class CompactionJobTemplate implements BatchIndexingJobTemplate
   /**
    * Verifies that the input source is of type {@link DruidInputSource}.
    */
-  public final DruidInputSource ensureDruidInputSource(InputSource inputSource)
+  default DruidInputSource ensureDruidInputSource(InputSource inputSource)
   {
     if (inputSource instanceof DruidInputSource) {
       return (DruidInputSource) inputSource;
@@ -76,7 +81,7 @@ public abstract class CompactionJobTemplate implements BatchIndexingJobTemplate
   /**
    * Verifies that the output destination is of type {@link DruidDatasourceDestination}.
    */
-  public final DruidDatasourceDestination ensureDruidDataSourceDestination(OutputDestination destination)
+  default DruidDatasourceDestination ensureDruidDataSourceDestination(OutputDestination destination)
   {
     if (destination instanceof DruidDatasourceDestination) {
       return (DruidDatasourceDestination) destination;

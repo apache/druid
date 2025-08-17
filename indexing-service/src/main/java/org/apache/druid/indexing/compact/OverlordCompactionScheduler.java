@@ -45,6 +45,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.server.compaction.CompactionRunSimulator;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
@@ -88,7 +89,6 @@ public class OverlordCompactionScheduler implements CompactionScheduler
 {
   private static final Logger log = new Logger(OverlordCompactionScheduler.class);
 
-  private static final long SCHEDULE_PERIOD_SECONDS = 5;
   private static final Duration METRIC_EMISSION_PERIOD = Duration.standardMinutes(5);
 
   private final SegmentsMetadataManager segmentManager;
@@ -128,6 +128,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
    * class itself.
    */
   private final boolean shouldPollSegments;
+  private final long schedulePeriodMillis;
 
   private final Stopwatch sinceStatsEmitted = Stopwatch.createUnstarted();
 
@@ -137,6 +138,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       GlobalTaskLockbox taskLockbox,
       TaskQueryTool taskQueryTool,
       SegmentsMetadataManager segmentManager,
+      SegmentsMetadataManagerConfig segmentManagerConfig,
       Supplier<DruidCompactionConfig> compactionConfigSupplier,
       CompactionStatusTracker statusTracker,
       CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig,
@@ -148,6 +150,10 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       ObjectMapper objectMapper
   )
   {
+    final long segmentPollPeriodSeconds =
+        segmentManagerConfig.getPollDuration().toStandardDuration().getMillis();
+    this.schedulePeriodMillis = Math.min(5_000, segmentPollPeriodSeconds);
+
     this.segmentManager = segmentManager;
     this.emitter = emitter;
     this.objectMapper = objectMapper;
@@ -206,7 +212,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   public void becomeLeader()
   {
     if (isLeader.compareAndSet(false, true)) {
-      scheduleOnExecutor(this::scheduledRun, SCHEDULE_PERIOD_SECONDS);
+      scheduleOnExecutor(this::scheduledRun, schedulePeriodMillis);
     }
   }
 
@@ -318,10 +324,10 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       catch (Exception e) {
         log.error(e, "Error processing compaction queue. Continuing schedule.");
       }
-      scheduleOnExecutor(this::scheduledRun, SCHEDULE_PERIOD_SECONDS);
+      scheduleOnExecutor(this::scheduledRun, schedulePeriodMillis);
     } else {
       cleanupState();
-      scheduleOnExecutor(this::scheduledRun, SCHEDULE_PERIOD_SECONDS * 4);
+      scheduleOnExecutor(this::scheduledRun, schedulePeriodMillis * 4);
     }
   }
 
@@ -366,8 +372,11 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       stats.forEachStat(this::emitStat);
       sinceStatsEmitted.restart();
     } else {
-      // Always emit number of submitted tasks
-      stats.forEachEntry(Stats.Compaction.SUBMITTED_TASKS, this::emitStat);
+      // Always emit number of submitted tasks and interval statuses
+      stats.forEachEntry(Stats.Compaction.SUBMITTED_TASKS, this::emitNonZeroStat);
+      stats.forEachEntry(Stats.Compaction.COMPACTED_INTERVALS, this::emitNonZeroStat);
+      stats.forEachEntry(Stats.Compaction.SKIPPED_INTERVALS, this::emitNonZeroStat);
+      stats.forEachEntry(Stats.Compaction.PENDING_INTERVALS, this::emitStat);
     }
   }
 
@@ -412,6 +421,13 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     }
   }
 
+  private void emitNonZeroStat(CoordinatorStat stat, RowKey rowKey, long value)
+  {
+    if (value > 0) {
+      emitStat(stat, rowKey, value);
+    }
+  }
+
   private void emitStat(CoordinatorStat stat, RowKey rowKey, long value)
   {
     if (!stat.shouldEmit()) {
@@ -448,7 +464,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     return segmentManager.getRecentDataSourcesSnapshot();
   }
 
-  private void scheduleOnExecutor(Runnable runnable, long delaySeconds)
+  private void scheduleOnExecutor(Runnable runnable, long delayMillis)
   {
     executor.schedule(
         () -> {
@@ -459,8 +475,8 @@ public class OverlordCompactionScheduler implements CompactionScheduler
             log.error(t, "Error while executing runnable");
           }
         },
-        delaySeconds,
-        TimeUnit.SECONDS
+        delayMillis,
+        TimeUnit.MILLISECONDS
     );
   }
 }

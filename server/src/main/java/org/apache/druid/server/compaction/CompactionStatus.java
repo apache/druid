@@ -191,14 +191,19 @@ public class CompactionStatus
     }
   }
 
-  static CompactionStatus skipped(String reasonFormat, Object... args)
+  public static CompactionStatus skipped(String reasonFormat, Object... args)
   {
     return new CompactionStatus(State.SKIPPED, StringUtils.format(reasonFormat, args));
   }
 
-  static CompactionStatus running(String reasonForCompaction)
+  public static CompactionStatus running(String message)
   {
-    return new CompactionStatus(State.RUNNING, reasonForCompaction);
+    return new CompactionStatus(State.RUNNING, message);
+  }
+
+  public static CompactionStatus complete(String message)
+  {
+    return new CompactionStatus(State.COMPLETE, message);
   }
 
   /**

@@ -23,8 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.output.OutputDestination;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 
@@ -37,7 +39,7 @@ import java.util.Objects;
  * change the data itself (and not just its layout) and are thus not considered
  * compaction-compatible.
  */
-public class InlineCompactionJobTemplate extends CompactionJobTemplate
+public class InlineCompactionJobTemplate implements CompactionJobTemplate
 {
   public static final String TYPE = "compactInline";
 
@@ -55,6 +57,13 @@ public class InlineCompactionJobTemplate extends CompactionJobTemplate
   public CompactionStateMatcher getStateMatcher()
   {
     return stateMatcher;
+  }
+
+  @Nullable
+  @Override
+  public Granularity getSegmentGranularity()
+  {
+    return stateMatcher.getSegmentGranularity();
   }
 
   @Override
