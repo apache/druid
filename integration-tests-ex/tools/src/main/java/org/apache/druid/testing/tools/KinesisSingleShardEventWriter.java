@@ -19,18 +19,26 @@
 
 package org.apache.druid.testing.tools;
 
-import com.google.inject.Binder;
-import org.apache.druid.guice.ExpressionModule;
-import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.sql.guice.SqlBindings;
+import java.nio.ByteBuffer;
 
-public class SleepModule implements DruidModule
+/**
+ * Writes only to a single shard
+ */
+public class KinesisSingleShardEventWriter extends KinesisEventWriter
 {
 
-  @Override
-  public void configure(Binder binder)
+  public KinesisSingleShardEventWriter(String endpoint, boolean aggregate) throws Exception
   {
-    SqlBindings.addOperatorConversion(binder, SleepOperatorConversion.class);
-    ExpressionModule.addExprMacro(binder, SleepExprMacro.class);
+    super(endpoint, aggregate);
+  }
+
+  @Override
+  public void write(String streamName, byte[] event)
+  {
+    getKinesisProducer().addUserRecord(
+        streamName,
+        "0",
+        ByteBuffer.wrap(event)
+    );
   }
 }

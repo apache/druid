@@ -20,9 +20,9 @@
 package org.apache.druid.tests.indexer;
 
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.utils.KinesisSingleShardEventWriter;
-import org.apache.druid.testing.utils.StreamEventWriter;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
+import org.apache.druid.testing.tools.KinesisSingleShardEventWriter;
+import org.apache.druid.testing.tools.StreamEventWriter;
 
 import javax.annotation.Nullable;
 
