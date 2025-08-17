@@ -19,6 +19,7 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.data.input.AvroStreamInputRowParser;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.avro.AvroExtensionsModule;
@@ -46,6 +47,7 @@ import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -68,7 +70,6 @@ import org.apache.druid.testing.tools.StreamGenerator;
 import org.apache.druid.testing.tools.WikipediaStreamEventStreamGenerator;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.joda.time.Period;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -107,16 +108,6 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
   private final KafkaResource kafkaServer = new KafkaResource();
   private final KafkaSchemaRegistryResource schemaRegistry = new KafkaSchemaRegistryResource(kafkaServer);
 
-  @AfterEach
-  public void afterEach() throws Exception
-  {
-    // I had an issue with tasks piling up, even when I added the supervisor stop at the end of each test.
-    // This is a workaround to ensure that the tasks are cleared before the next test runs.
-    // This is not ideal, but it works for now. Why are tasks not hard stopped when the supervisor is terminated?
-    indexer.stop();
-    indexer.start();
-  }
-
   @Override
   public EmbeddedDruidCluster createCluster()
   {
@@ -150,7 +141,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new AvroEventSerializer();
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
-    
+
     Map<String, Object> avroSchema = createWikipediaAvroSchemaMap();
     
     InlineSchemaAvroBytesDecoder avroBytesDecoder = new InlineSchemaAvroBytesDecoder(
@@ -177,7 +168,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(dataSource);
+    stopSupervisor(supervisorSpec);
   }
 
   @Test
@@ -209,7 +200,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(dataSource);
+    stopSupervisor(supervisorSpec);
   }
 
   @Test
@@ -248,7 +239,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(dataSource);
+    stopSupervisor(supervisorSpec);
   }
 
   @Test
@@ -274,7 +265,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(dataSource);
+    stopSupervisor(supervisorSpec);
   }
 
   @Test
@@ -292,7 +283,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(dataSource);
+    stopSupervisor(supervisorSpec);
   }
 
   @Test
@@ -319,7 +310,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(dataSource);
+    stopSupervisor(supervisorSpec);
   }
 
   @Test
@@ -345,7 +336,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(dataSource);
+    stopSupervisor(supervisorSpec);
   }
 
   @Test
@@ -363,7 +354,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(dataSource);
+    stopSupervisor(supervisorSpec);
   }
 
   @Test
@@ -394,7 +385,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(dataSource);
+    stopSupervisor(supervisorSpec);
   }
 
   @Test
@@ -418,7 +409,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(dataSource);
+    stopSupervisor(supervisorSpec);
   }
 
   @Test
@@ -453,7 +444,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(dataSource);
+    stopSupervisor(supervisorSpec);
   }
 
   @Test
@@ -478,7 +469,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(dataSource);
+    stopSupervisor(supervisorSpec);
   }
 
   @Test
@@ -507,7 +498,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(dataSource);
+    stopSupervisor(supervisorSpec);
   }
 
   @Test
@@ -532,7 +523,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(dataSource, supervisorId);
 
     waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(dataSource);
+    stopSupervisor(supervisorSpec);
   }
 
   private void waitForDataAndVerifyIngestedEvents(String dataSource, int expectedCount)
@@ -586,7 +577,10 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
    */
   private KafkaSupervisorSpec createKafkaSupervisorWithParser(String supervisorId, String topic, InputRowParser parser)
   {
-    Map<String, Object> parserMap = overlord.bindings().jsonMapper().convertValue(parser, Map.class);
+    Map<String, Object> parserMap = overlord.bindings().jsonMapper().convertValue(
+        parser,
+        new TypeReference<>() {}
+    );
     return new KafkaSupervisorSpec(
         supervisorId,
         null,
@@ -602,9 +596,11 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
             null,
             null,
             null, null,
-            Period.seconds(1),
+            Period.millis(100),
             kafkaServer.consumerProperties(),
-            null, null, null, null, null,
+            null, null, null,
+            Period.millis(10),
+            Period.millis(10),
             true,
             null, null, null, null, null, null, null, null
         ),
@@ -628,9 +624,11 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
             null,
             inputFormat,
             null, null,
-            Period.seconds(1),
+            Period.millis(100),
             kafkaServer.consumerProperties(),
-            null, null, null, null, null,
+            null, null, null,
+            Period.millis(10),
+            Period.millis(10),
             true,
             null, null, null, null, null, null, null, null
         ),
@@ -685,12 +683,8 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     ).build();
   }
 
-  private void stopSupervisor(String supervisorId)
+  private void stopSupervisor(SupervisorSpec supervisorSpec)
   {
-    final Map<String, String> stopSupervisorResult = cluster.callApi().onLeaderOverlord(
-        o -> o.terminateSupervisor(supervisorId)
-    );
-    Assertions.assertEquals(Map.of("id", supervisorId), stopSupervisorResult);
+    cluster.callApi().postSupervisor(supervisorSpec.createSuspendedSpec());
   }
-
 }
