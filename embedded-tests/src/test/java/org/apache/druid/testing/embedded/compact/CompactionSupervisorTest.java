@@ -309,7 +309,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     overlord.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("interval/waitCompact/count")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
-                      .hasValue(0)
+                      .hasValue(Matchers.equalTo(0L))
     );
 
     // Wait for all submitted compaction jobs to finish

@@ -26,9 +26,8 @@ import org.apache.druid.catalog.MetadataCatalog;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.table.IndexingTemplateDefn;
-import org.apache.druid.data.input.InputSource;
-import org.apache.druid.data.output.OutputDestination;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.template.BatchIndexingJobTemplate;
 import org.apache.druid.java.util.common.granularity.Granularity;
 
@@ -75,8 +74,7 @@ public class CatalogCompactionJobTemplate implements CompactionJobTemplate
 
   @Override
   public List<CompactionJob> createCompactionJobs(
-      InputSource source,
-      OutputDestination target,
+      DruidInputSource source,
       CompactionJobParams params
   )
   {
@@ -84,7 +82,7 @@ public class CatalogCompactionJobTemplate implements CompactionJobTemplate
     if (delegate == null) {
       return List.of();
     } else {
-      return delegate.createCompactionJobs(source, target, params);
+      return delegate.createCompactionJobs(source, params);
     }
   }
 

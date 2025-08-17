@@ -21,8 +21,7 @@ package org.apache.druid.indexing.compact;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.data.input.InputSource;
-import org.apache.druid.data.output.OutputDestination;
+import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.granularity.Granularity;
 
 import javax.annotation.Nullable;
@@ -62,15 +61,14 @@ public class InlineCompactionJobTemplate implements CompactionJobTemplate
 
   @Override
   public List<CompactionJob> createCompactionJobs(
-      InputSource source,
-      OutputDestination destination,
+      DruidInputSource source,
       CompactionJobParams jobParams
   )
   {
-    final String dataSource = ensureDruidInputSource(source).getDataSource();
+    final String dataSource = source.getDataSource();
     return CompactionConfigBasedJobTemplate
         .create(dataSource, targetState)
-        .createCompactionJobs(source, destination, jobParams);
+        .createCompactionJobs(source, jobParams);
   }
 
   @Override

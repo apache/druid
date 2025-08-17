@@ -21,9 +21,7 @@ package org.apache.druid.indexing.compact;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
-import org.apache.druid.data.output.OutputDestination;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexing.input.DruidInputSource;
@@ -99,14 +97,11 @@ public class CascadingCompactionTemplate implements CompactionJobTemplate, DataS
 
   @Override
   public List<CompactionJob> createCompactionJobs(
-      InputSource source,
-      OutputDestination destination,
+      DruidInputSource source,
       CompactionJobParams jobParams
   )
   {
     final List<CompactionJob> allJobs = new ArrayList<>();
-
-    final DruidInputSource druidInputSource = ensureDruidInputSource(source);
 
     // Include future dates in the first rule
     final DateTime currentTime = jobParams.getScheduleStartTime();
@@ -117,7 +112,7 @@ public class CascadingCompactionTemplate implements CompactionJobTemplate, DataS
       final Interval ruleInterval = new Interval(ruleStartTime, previousRuleStartTime);
 
       allJobs.addAll(
-          createJobsForSearchInterval(rule.getTemplate(), ruleInterval, druidInputSource, destination, jobParams)
+          createJobsForSearchInterval(rule.getTemplate(), ruleInterval, source, jobParams)
       );
 
       previousRuleStartTime = ruleStartTime;
@@ -127,7 +122,7 @@ public class CascadingCompactionTemplate implements CompactionJobTemplate, DataS
     final CompactionRule lastRule = rules.get(rules.size() - 1);
     final Interval lastRuleInterval = new Interval(DateTimes.MIN, previousRuleStartTime);
     allJobs.addAll(
-        createJobsForSearchInterval(lastRule.getTemplate(), lastRuleInterval, druidInputSource, destination, jobParams)
+        createJobsForSearchInterval(lastRule.getTemplate(), lastRuleInterval, source, jobParams)
     );
 
     return allJobs;
@@ -137,13 +132,11 @@ public class CascadingCompactionTemplate implements CompactionJobTemplate, DataS
       CompactionJobTemplate template,
       Interval searchInterval,
       DruidInputSource inputSource,
-      OutputDestination destination,
       CompactionJobParams jobParams
   )
   {
     final List<CompactionJob> allJobs = template.createCompactionJobs(
         inputSource.withInterval(searchInterval),
-        destination,
         jobParams
     );
 

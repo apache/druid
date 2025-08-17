@@ -43,6 +43,7 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.Resources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
+import org.hamcrest.Matchers;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Assertions;
@@ -128,7 +129,7 @@ public class HighAvailabilityTest extends EmbeddedClusterTestBase
     coordinator1.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("segment/metadataCache/used/count")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
-                      .hasValueAtLeast(10)
+                      .hasValue(Matchers.greaterThanOrEqualTo(10L))
     );
 
     // Run sys queries, switch leaders, repeat

@@ -240,9 +240,8 @@ public class LatchableEmitter extends StubServiceEmitter
     private String host;
     private String service;
     private String metricName;
-    private Long minMetricValue;
-    private Long metricValue;
-    private final Map<String, Matcher<Object>> dimensions = new HashMap<>();
+    private Matcher<Long> valueMatcher;
+    private final Map<String, Matcher<Object>> dimensionMatchers = new HashMap<>();
 
     private final AtomicReference<ServiceMetricEvent> matchingEvent = new AtomicReference<>();
 
@@ -256,21 +255,11 @@ public class LatchableEmitter extends StubServiceEmitter
     }
 
     /**
-     * Matches an event only if it has a metric value equal to or greater than
-     * the given value.
+     * Matches an event only if the metric value satisfies the given matcher.
      */
-    public EventMatcher hasValueAtLeast(long minMetricValue)
+    public EventMatcher hasValue(Matcher<Long> valueMatcher)
     {
-      this.minMetricValue = minMetricValue;
-      return this;
-    }
-
-    /**
-     * Matches an event only if it has a metric value equal to the given value.
-     */
-    public EventMatcher hasValue(long metricValue)
-    {
-      this.metricValue = metricValue;
+      this.valueMatcher = valueMatcher;
       return this;
     }
 
@@ -279,7 +268,7 @@ public class LatchableEmitter extends StubServiceEmitter
      */
     public EventMatcher hasDimension(String dimension, Object value)
     {
-      dimensions.put(dimension, Matchers.equalTo(value));
+      dimensionMatchers.put(dimension, Matchers.equalTo(value));
       return this;
     }
 
@@ -288,7 +277,7 @@ public class LatchableEmitter extends StubServiceEmitter
      */
     public EventMatcher hasDimension(String dimension, Matcher<Object> matcher)
     {
-      dimensions.put(dimension, matcher);
+      dimensionMatchers.put(dimension, matcher);
       return this;
     }
 
@@ -315,9 +304,7 @@ public class LatchableEmitter extends StubServiceEmitter
     {
       if (metricName != null && !event.getMetric().equals(metricName)) {
         return false;
-      } else if (minMetricValue != null && event.getValue().longValue() < minMetricValue) {
-        return false;
-      } else if (metricValue != null && event.getValue().longValue() != metricValue) {
+      } else if (valueMatcher != null && !valueMatcher.matches(event.getValue())) {
         return false;
       } else if (service != null && !service.equals(event.getService())) {
         return false;
@@ -325,7 +312,7 @@ public class LatchableEmitter extends StubServiceEmitter
         return false;
       }
 
-      final boolean matches = dimensions.entrySet().stream().allMatch(
+      final boolean matches = dimensionMatchers.entrySet().stream().allMatch(
           dimValue -> dimValue.getValue().matches(event.getUserDims().get(dimValue.getKey()))
       );
 

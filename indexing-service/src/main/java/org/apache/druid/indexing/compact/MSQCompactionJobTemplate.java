@@ -21,8 +21,6 @@ package org.apache.druid.indexing.compact;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.data.input.InputSource;
-import org.apache.druid.data.output.OutputDestination;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -95,19 +93,17 @@ public class MSQCompactionJobTemplate implements CompactionJobTemplate
 
   @Override
   public List<CompactionJob> createCompactionJobs(
-      InputSource source,
-      OutputDestination destination,
+      DruidInputSource source,
       CompactionJobParams jobParams
   )
   {
-    final DruidInputSource druidInputSource = ensureDruidInputSource(source);
-    final String dataSource = druidInputSource.getDataSource();
+    final String dataSource = source.getDataSource();
 
     // Identify the compactible candidate segments
     final CompactionConfigBasedJobTemplate delegate =
         CompactionConfigBasedJobTemplate.create(dataSource, targetState);
     final DataSourceCompactibleSegmentIterator candidateIterator =
-        delegate.getCompactibleCandidates(source, destination, jobParams);
+        delegate.getCompactibleCandidates(source, jobParams);
 
     // Create MSQ jobs for each candidate by interpolating the template variables
     final List<CompactionJob> jobs = new ArrayList<>();

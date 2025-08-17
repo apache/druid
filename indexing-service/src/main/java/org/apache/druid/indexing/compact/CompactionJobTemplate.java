@@ -38,12 +38,20 @@ import java.util.stream.Collectors;
  */
 public interface CompactionJobTemplate extends BatchIndexingJobTemplate
 {
+  /**
+   * Creates compaction jobs with this template for the given datasource.
+   */
   List<CompactionJob> createCompactionJobs(
-      InputSource source,
-      OutputDestination destination,
+      DruidInputSource source,
       CompactionJobParams jobParams
   );
 
+  /**
+   * Granularity of segments created upon successful compaction.
+   *
+   * @return null only if this template does not change segment granularity upon
+   * successful compaction.
+   */
   @Nullable
   Granularity getSegmentGranularity();
 
@@ -60,7 +68,17 @@ public interface CompactionJobTemplate extends BatchIndexingJobTemplate
           jobParams
       );
     }
-    return createCompactionJobs(source, destination, (CompactionJobParams) jobParams)
+
+    final DruidInputSource druidInputSource = ensureDruidInputSource(source);
+    final DruidDatasourceDestination druidDestination = ensureDruidDataSourceDestination(destination);
+    if (!druidInputSource.getDataSource().equals(druidDestination.getDataSource())) {
+      throw InvalidInput.exception(
+          "Input datasource[%s] does not match output datasource[%s]",
+          druidInputSource.getDataSource(), druidDestination.getDataSource()
+      );
+    }
+
+    return createCompactionJobs(druidInputSource, (CompactionJobParams) jobParams)
         .stream()
         .map(job -> (BatchIndexingJob) job)
         .collect(Collectors.toList());
@@ -69,7 +87,7 @@ public interface CompactionJobTemplate extends BatchIndexingJobTemplate
   /**
    * Verifies that the input source is of type {@link DruidInputSource}.
    */
-  default DruidInputSource ensureDruidInputSource(InputSource inputSource)
+  static DruidInputSource ensureDruidInputSource(InputSource inputSource)
   {
     if (inputSource instanceof DruidInputSource) {
       return (DruidInputSource) inputSource;
@@ -81,7 +99,7 @@ public interface CompactionJobTemplate extends BatchIndexingJobTemplate
   /**
    * Verifies that the output destination is of type {@link DruidDatasourceDestination}.
    */
-  default DruidDatasourceDestination ensureDruidDataSourceDestination(OutputDestination destination)
+  static DruidDatasourceDestination ensureDruidDataSourceDestination(OutputDestination destination)
   {
     if (destination instanceof DruidDatasourceDestination) {
       return (DruidDatasourceDestination) destination;

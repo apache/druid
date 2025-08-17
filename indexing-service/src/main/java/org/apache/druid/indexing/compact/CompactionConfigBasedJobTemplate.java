@@ -20,8 +20,6 @@
 package org.apache.druid.indexing.compact;
 
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
-import org.apache.druid.data.input.InputSource;
-import org.apache.druid.data.output.OutputDestination;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.input.DruidDatasourceDestination;
 import org.apache.druid.indexing.input.DruidInputSource;
@@ -81,12 +79,11 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
 
   @Override
   public List<CompactionJob> createCompactionJobs(
-      InputSource source,
-      OutputDestination destination,
+      DruidInputSource source,
       CompactionJobParams params
   )
   {
-    final DataSourceCompactibleSegmentIterator segmentIterator = getCompactibleCandidates(source, destination, params);
+    final DataSourceCompactibleSegmentIterator segmentIterator = getCompactibleCandidates(source, params);
 
     final List<CompactionJob> jobs = new ArrayList<>();
 
@@ -120,15 +117,13 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
    * {@link CompactionJobParams#getSnapshotBuilder()}.
    */
   DataSourceCompactibleSegmentIterator getCompactibleCandidates(
-      InputSource source,
-      OutputDestination destination,
+      DruidInputSource source,
       CompactionJobParams params
   )
   {
     validateInput(source);
-    validateOutput(destination);
 
-    final Interval searchInterval = Objects.requireNonNull(ensureDruidInputSource(source).getInterval());
+    final Interval searchInterval = Objects.requireNonNull(source.getInterval());
 
     final SegmentTimeline timeline = params.getTimeline(config.getDataSource());
     final DataSourceCompactibleSegmentIterator iterator = new DataSourceCompactibleSegmentIterator(
@@ -144,9 +139,8 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
     return iterator;
   }
 
-  private void validateInput(InputSource source)
+  private void validateInput(DruidInputSource druidInputSource)
   {
-    final DruidInputSource druidInputSource = ensureDruidInputSource(source);
     if (!druidInputSource.getDataSource().equals(config.getDataSource())) {
       throw InvalidInput.exception(
           "Datasource[%s] in compaction config does not match datasource[%s] in input source",
@@ -155,9 +149,8 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
     }
   }
 
-  private void validateOutput(OutputDestination destination)
+  private void validateOutput(DruidDatasourceDestination druidDestination)
   {
-    final DruidDatasourceDestination druidDestination = ensureDruidDataSourceDestination(destination);
     if (!druidDestination.getDataSource().equals(config.getDataSource())) {
       throw InvalidInput.exception(
           "Datasource[%s] in compaction config does not match datasource[%s] in output destination",
