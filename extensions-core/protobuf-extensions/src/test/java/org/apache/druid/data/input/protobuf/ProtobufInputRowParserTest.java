@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.protobuf;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
@@ -35,6 +36,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.js.JavaScriptConfig;
+import org.apache.druid.segment.TestHelper;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,6 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ProtobufInputRowParserTest
 {
+  private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
 
   private ParseSpec parseSpec;
   private ParseSpec flatParseSpec;
@@ -107,7 +110,23 @@ public class ProtobufInputRowParserTest
         null,
         null
     );
-    decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "ProtoTestEvent");
+    decoder = new FileBasedProtobufBytesDecoder("proto_test_event.desc", "ProtoTestEvent");
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    ProtobufInputRowParser originalParser = new ProtobufInputRowParser(parseSpec, decoder, null, null);
+
+    assertEquals(parseSpec, originalParser.getParseSpec());
+    assertEquals(decoder, originalParser.getProtobufBytesDecoder());
+
+    String json = OBJECT_MAPPER.writeValueAsString(originalParser);
+
+    ProtobufInputRowParser deserializedParser = OBJECT_MAPPER.readValue(json, ProtobufInputRowParser.class);
+
+    assertEquals(originalParser.getParseSpec(), deserializedParser.getParseSpec());
+    assertEquals(originalParser.getProtobufBytesDecoder(), deserializedParser.getProtobufBytesDecoder());
   }
 
   @Test
@@ -180,7 +199,7 @@ public class ProtobufInputRowParserTest
   public void testOldParserConfig() throws Exception
   {
     //configure parser with desc file
-    ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, null, "prototest.desc", "ProtoTestEvent");
+    ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, null, "proto_test_event.desc", "ProtoTestEvent");
 
     //create binary of proto test event
     DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());

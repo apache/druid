@@ -90,11 +90,11 @@ public class ProtobufInputFormatTest
             new JSONPathFieldSpec(JSONPathFieldType.PATH, "bar0", "$.bar[0].bar")
         )
     );
-    decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "ProtoTestEvent");
+    decoder = new FileBasedProtobufBytesDecoder("proto_test_event.desc", "ProtoTestEvent");
 
     File descFile = new File(this.getClass()
                                  .getClassLoader()
-                                 .getResource("prototest.desc")
+                                 .getResource("proto_test_event.desc")
                                  .toURI());
     String descString = StringUtils.encodeBase64String(Files.toByteArray(descFile));
     inlineSchemaDecoder = new InlineDescriptorProtobufBytesDecoder(descString, "ProtoTestEvent");

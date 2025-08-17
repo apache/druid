@@ -80,4 +80,10 @@ public class MoreResources
             .granularitySpec("DAY", "SECOND", true)
             .appendToExisting(false);
   }
+
+  public static class ProbufData
+  {
+    public static final String WIKI_PROTOBUF_BYTES_DECODER_RESOURCE = "data/protobuf/wikipedia.desc";
+    public static final String WIKI_PROTO_MESSAGE_TYPE = "Wikipedia";
+  }
 }

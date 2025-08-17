@@ -19,76 +19,120 @@
 
 package org.apache.druid.data.input.protobuf;
 
+import com.google.protobuf.Struct;
+import com.google.protobuf.Value;
+import com.google.protobuf.util.JsonFormat;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.junit.jupiter.api.Test;
+
+import java.nio.ByteBuffer;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@SuppressWarnings("ResultOfObjectAllocationIgnored")
 public class FileBasedProtobufBytesDecoderTest
 {
-  /**
-   * Configure parser with desc file, and specify which file name to use.
-   */
   @Test
   public void testShortMessageType()
   {
-    final var decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "ProtoTestEvent");
+    final var decoder = new FileBasedProtobufBytesDecoder("proto_test_event.desc", "ProtoTestEvent");
 
-    assertDoesNotThrow(decoder::initDescriptor);
+    assertDoesNotThrow(decoder::initializeDescriptor);
+
+    assertEquals("prototest.ProtoTestEvent", decoder.getDescriptor().getFullName());
   }
 
-  /**
-   * Configure parser with desc file, and specify which file name to use
-   */
   @Test
   public void testLongMessageType()
   {
     final var decoder = new FileBasedProtobufBytesDecoder(
-        "prototest.desc",
+        "proto_test_event.desc",
         "prototest.ProtoTestEvent"
     );
 
-    assertDoesNotThrow(decoder::initDescriptor);
+    assertEquals("prototest.ProtoTestEvent", decoder.getDescriptor().getFullName());
+  }
+
+  @Test
+  public void testMoreComplexProtoFile()
+  {
+    final var decoder = new FileBasedProtobufBytesDecoder(
+        "proto_nested_event.desc",
+        "ProtoNestedEvent"
+    );
+
+    assertEquals("prototest.ProtoNestedEvent", decoder.getDescriptor().getFullName());
+  }
+
+  @Test
+  public void testParsingWithMoreComplexProtoFile() throws Exception
+  {
+    // given
+    final var decoder = new FileBasedProtobufBytesDecoder(
+        "proto_nested_event.desc",
+        "ProtoNestedEvent"
+    );
+
+    final var myStruct = Struct
+        .newBuilder()
+        .putFields("key1", Value.newBuilder().setStringValue("value1").build())
+        .putFields("key2", Value.newBuilder().setNumberValue(42.0).build())
+        .build();
+
+    final var testMessage = ProtoNestedEvent
+        .newBuilder()
+        .setTimestamp(1234567890L)
+        .setName("test-event")
+        .setLog("This is a test log message")
+        .setMyStruct(myStruct)
+        .putMyMap("mapKey1", Value.newBuilder().setStringValue("mapValue1").build())
+        .putMyMap("mapKey2", Value.newBuilder().setBoolValue(true).build())
+        .build();
+
+    // when
+    final var decodedMessage = decoder.parse(ByteBuffer.wrap(testMessage.toByteArray()));
+
+    // then
+    assertEquals(JsonFormat.printer().print(testMessage), JsonFormat.printer().print(decodedMessage));
   }
 
   @Test
   public void testBadProto()
   {
-    assertThrows(
+    final var ex = assertThrows(
         ParseException.class,
-        () -> {
-          // configure parser with desc file
-          final var decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "BadName");
-          decoder.initDescriptor();
-        }
+        () -> new FileBasedProtobufBytesDecoder("proto_test_event.desc", "BadName")
+    );
+
+    assertEquals(
+        "Protobuf message type [BadName] not found in the descriptor set. Available types: [Foo, ProtoTestEvent, ProtoTestEvent.Foo, Timestamp, google.protobuf.Timestamp, prototest.ProtoTestEvent, prototest.ProtoTestEvent.Foo]",
+        ex.getMessage()
     );
   }
 
   @Test
   public void testMalformedDescriptorUrl()
   {
-    assertThrows(
+    final var ex = assertThrows(
         ParseException.class,
-        () -> {
-          // configure parser with non existent desc file
-          final var decoder = new FileBasedProtobufBytesDecoder("file:/nonexist.desc", "BadName");
-          decoder.initDescriptor();
-        }
+        () -> new FileBasedProtobufBytesDecoder("file:/nonexist.desc", "BadName")
+    );
+
+    assertEquals(
+        "Descriptor not found in class path [file:/nonexist.desc]",
+        ex.getMessage()
     );
   }
 
-  /**
-   * For the backward compatibility, protoMessageType allows null when the desc file has only one message type.
-   */
   @Test
   public void testSingleDescriptorNoMessageType()
   {
-    final var decoder = new FileBasedProtobufBytesDecoder("prototest.desc", null);
+    final var decoder = new FileBasedProtobufBytesDecoder("proto_test_event.desc", null);
 
-    assertDoesNotThrow(decoder::initDescriptor);
+    assertEquals("google.protobuf.Timestamp", decoder.getDescriptor().getFullName());
   }
 
   @Test
@@ -96,19 +140,19 @@ public class FileBasedProtobufBytesDecoderTest
   {
     // Test basic equality
     final var decoder1 = new FileBasedProtobufBytesDecoder(
-        "prototest.desc",
+        "proto_test_event.desc",
         "ProtoTestEvent"
     );
     final var decoder2 = new FileBasedProtobufBytesDecoder(
-        "prototest.desc",
+        "proto_test_event.desc",
         "ProtoTestEvent"
     );
     final var decoder3 = new FileBasedProtobufBytesDecoder(
-        "prototest.desc",
+        "proto_test_event.desc",
         "ProtoTestEvent.Foo"
     );
     final var decoder4 = new FileBasedProtobufBytesDecoder(
-        "prototest.desc",
+        "proto_test_event.desc",
         null
     );
 

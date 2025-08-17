@@ -69,7 +69,7 @@ public class ProtobufReaderTest
         dimensionsSpec,
         null
     );
-    decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "ProtoTestEvent");
+    decoder = new FileBasedProtobufBytesDecoder("proto_test_event.desc", "ProtoTestEvent");
   }
 
   @Test

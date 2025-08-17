@@ -22,8 +22,8 @@ package org.apache.druid.testing.utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.QueryResourceTestClient;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;

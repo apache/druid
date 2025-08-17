@@ -29,12 +29,12 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.net.URL;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@SuppressWarnings("ResultOfObjectAllocationIgnored")
 public class InlineDescriptorProtobufBytesDecoderTest
 {
   private String descString;
@@ -44,7 +44,7 @@ public class InlineDescriptorProtobufBytesDecoderTest
   {
     final URL resource = this.getClass()
                              .getClassLoader()
-                             .getResource("prototest.desc");
+                             .getResource("proto_test_event.desc");
     assertNotNull(resource);
 
     final var descFile = new File(resource.toURI());
@@ -52,66 +52,69 @@ public class InlineDescriptorProtobufBytesDecoderTest
   }
 
   @Test
-  public void testShortMessageType()
+  public void testUseShortMessageType()
   {
     final var decoder = new InlineDescriptorProtobufBytesDecoder(
         descString,
         "ProtoTestEvent"
     );
 
-    assertDoesNotThrow(decoder::initDescriptor);
+    assertEquals("prototest.ProtoTestEvent", decoder.getDescriptor().getFullName());
   }
 
   @Test
-  public void testLongMessageType()
+  public void testuseFullMessageType()
   {
     final var decoder = new InlineDescriptorProtobufBytesDecoder(
         descString,
         "prototest.ProtoTestEvent"
     );
 
-    assertDoesNotThrow(decoder::initDescriptor);
+    assertEquals("prototest.ProtoTestEvent", decoder.getDescriptor().getFullName());
   }
 
   @Test
   public void testBadProto()
   {
-    assertThrows(
+    final var ex = assertThrows(
         ParseException.class,
-        () -> {
-          final var decoder = new InlineDescriptorProtobufBytesDecoder(descString, "BadName");
+        () -> new InlineDescriptorProtobufBytesDecoder(descString, "BadName")
+    );
 
-          decoder.initDescriptor();
-        }
+    assertEquals(
+        "Protobuf message type [BadName] not found in the descriptor set. Available types: [Foo, ProtoTestEvent, ProtoTestEvent.Foo, Timestamp, google.protobuf.Timestamp, prototest.ProtoTestEvent, prototest.ProtoTestEvent.Foo]",
+        ex.getMessage()
     );
   }
 
   @Test
   public void testMalformedDescriptorBase64()
   {
-    assertThrows(
+    final var ex = assertThrows(
         IAE.class,
-        () -> {
-          final var decoder = new InlineDescriptorProtobufBytesDecoder("invalidString", "BadName");
+        () -> new InlineDescriptorProtobufBytesDecoder("invalidString", "BadName")
+    );
 
-          decoder.initDescriptor();
-        }
+    assertEquals(
+        "Descriptor string does not have valid Base64 encoding",
+        ex.getMessage()
     );
   }
 
   @Test
   public void testMalformedDescriptorValidBase64InvalidDescriptor()
   {
-    assertThrows(
+    final var ex = assertThrows(
         ParseException.class,
-        () -> {
-          final var decoder = new InlineDescriptorProtobufBytesDecoder(
-              "aGVsbG8gd29ybGQ=",
-              "BadName"
-          );
+        () -> new InlineDescriptorProtobufBytesDecoder(
+            "aGVsbG8gd29ybGQ=",
+            "BadName"
+        )
+    );
 
-          decoder.initDescriptor();
-        }
+    assertEquals(
+        "Failed to initialize descriptor",
+        ex.getMessage()
     );
   }
 
@@ -122,7 +125,8 @@ public class InlineDescriptorProtobufBytesDecoderTest
   public void testSingleDescriptorNoMessageType()
   {
     final var decoder = new InlineDescriptorProtobufBytesDecoder(descString, null);
-    assertDoesNotThrow(decoder::initDescriptor);
+
+    assertEquals("google.protobuf.Timestamp", decoder.getDescriptor().getFullName());
   }
 
   @Test
@@ -160,5 +164,4 @@ public class InlineDescriptorProtobufBytesDecoderTest
     assertNotEquals(decoder1.hashCode(), decoder3.hashCode());
     assertNotEquals(decoder1.hashCode(), decoder4.hashCode());
   }
-
 }
