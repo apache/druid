@@ -61,6 +61,8 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
+import org.hamcrest.Matcher;
+import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
@@ -138,7 +140,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
             .build();
 
     runCompactionWithSpec(compactionConfig);
-    waitForAllCompactionTasksToFinish("compact");
+    waitForAllCompactionTasksToFinish();
 
     Assertions.assertEquals(0, getNumSegmentsWith(Granularities.DAY));
     Assertions.assertEquals(1, getNumSegmentsWith(Granularities.MONTH));
@@ -156,9 +158,9 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         )
     );
 
-    ingestSegments(1200, "HOUR");
+    ingestHourSegments(1000);
     runCompactionWithSpec(cascadingTemplate);
-    waitForAllCompactionTasksToFinish("compact");
+    waitForAllCompactionTasksToFinish();
 
     Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
     Assertions.assertTrue(getNumSegmentsWith(Granularities.DAY) >= 1);
@@ -168,7 +170,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   @Test
   public void test_ingestHourGranularity_andCompactToDayAndMonth_withCatalogTemplates()
   {
-    ingestSegments(1200, "HOUR");
+    ingestHourSegments(1200);
 
     // Add compaction templates to catalog
     final String dayGranularityTemplateId = saveTemplateToCatalog(
@@ -188,7 +190,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     );
 
     runCompactionWithSpec(cascadingTemplate);
-    waitForAllCompactionTasksToFinish("compact");
+    waitForAllCompactionTasksToFinish();
 
     Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
     Assertions.assertTrue(getNumSegmentsWith(Granularities.DAY) >= 1);
@@ -198,7 +200,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   @Test
   public void test_ingestHourGranularity_andCompactToDayAndMonth_withCatalogMSQTemplates()
   {
-    ingestSegments(1200, "HOUR");
+    ingestHourSegments(1200);
 
     // Add compaction templates to catalog
     final String sqlDayGranularity =
@@ -236,17 +238,60 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     );
 
     runCompactionWithSpec(cascadingTemplate);
-    waitForAllCompactionTasksToFinish("query_controller");
+    waitForAllCompactionTasksToFinish();
 
     Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
     Assertions.assertTrue(getNumSegmentsWith(Granularities.DAY) >= 1);
     Assertions.assertTrue(getNumSegmentsWith(Granularities.MONTH) >= 1);
   }
 
-  private void ingestSegments(int numSegments, String granularityName)
+  @Test
+  public void test_ingestHourGranularity_andCompactToDayAndMonth_withMixedTemplates()
+  {
+    ingestHourSegments(1200);
+
+    // Add compaction templates to catalog
+    final String sqlDayGranularity =
+        "REPLACE INTO ${dataSource}"
+        + " OVERWRITE WHERE __time >= TIMESTAMP '${startTimestamp}' AND __time < TIMESTAMP '${endTimestamp}'"
+        + " SELECT * FROM ${dataSource}"
+        + " WHERE __time BETWEEN '${startTimestamp}' AND '${endTimestamp}'"
+        + " PARTITIONED BY DAY";
+    final MSQCompactionJobTemplate dayTemplate = new MSQCompactionJobTemplate(
+        new ClientSqlQuery(sqlDayGranularity, null, false, false, false, null, null),
+        createMatcher(Granularities.DAY)
+    );
+    final String dayTemplateId = saveTemplateToCatalog(dayTemplate);
+    final String weekTemplateId = saveTemplateToCatalog(
+        new InlineCompactionJobTemplate(createMatcher(Granularities.WEEK))
+    );
+    final InlineCompactionJobTemplate monthTemplate =
+        new InlineCompactionJobTemplate(createMatcher(Granularities.MONTH));
+
+    // Compact last 1 day to DAY, next 14 days to WEEK, then 1 more DAY, rest to MONTH
+    CascadingCompactionTemplate cascadingTemplate = new CascadingCompactionTemplate(
+        dataSource,
+        List.of(
+            new CompactionRule(Period.days(1), new CatalogCompactionJobTemplate(dayTemplateId, null)),
+            new CompactionRule(Period.days(15), new CatalogCompactionJobTemplate(weekTemplateId, null)),
+            new CompactionRule(Period.days(16), dayTemplate),
+            new CompactionRule(Period.ZERO, monthTemplate)
+        )
+    );
+
+    runCompactionWithSpec(cascadingTemplate);
+    waitForAllCompactionTasksToFinish();
+
+    Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
+    Assertions.assertTrue(getNumSegmentsWith(Granularities.DAY) >= 1);
+    Assertions.assertTrue(getNumSegmentsWith(Granularities.WEEK) >= 1);
+    Assertions.assertTrue(getNumSegmentsWith(Granularities.MONTH) >= 1);
+  }
+
+  private void ingestHourSegments(int numSegments)
   {
     runIngestionAtGranularity(
-        granularityName,
+        "HOUR",
         createHourlyInlineDataCsv(DateTimes.nowUtc(), numSegments)
     );
   }
@@ -258,7 +303,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     cluster.callApi().postSupervisor(compactionSupervisor);
   }
 
-  private void waitForAllCompactionTasksToFinish(String taskType)
+  private void waitForAllCompactionTasksToFinish()
   {
     // Wait for all intervals to be compacted
     overlord.latchableEmitter().waitForEvent(
@@ -272,9 +317,14 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         "compact/task/count",
         Map.of(DruidMetrics.DATASOURCE, dataSource)
     ).stream().mapToInt(Number::intValue).sum();
+
+    final Matcher<Object> taskTypeMatcher = Matchers.anyOf(
+        Matchers.equalTo("query_controller"),
+        Matchers.equalTo("compact")
+    );
     overlord.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("task/run/time")
-                      .hasDimension(DruidMetrics.TASK_TYPE, taskType)
+                      .hasDimension(DruidMetrics.TASK_TYPE, taskTypeMatcher)
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasCountAtLeast(numSubmittedTasks)
     );

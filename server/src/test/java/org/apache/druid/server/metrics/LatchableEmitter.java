@@ -24,6 +24,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.hamcrest.Matcher;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
@@ -240,7 +242,7 @@ public class LatchableEmitter extends StubServiceEmitter
     private String metricName;
     private Long minMetricValue;
     private Long metricValue;
-    private final Map<String, Object> dimensions = new HashMap<>();
+    private final Map<String, Matcher<Object>> dimensions = new HashMap<>();
 
     private final AtomicReference<ServiceMetricEvent> matchingEvent = new AtomicReference<>();
 
@@ -277,7 +279,16 @@ public class LatchableEmitter extends StubServiceEmitter
      */
     public EventMatcher hasDimension(String dimension, Object value)
     {
-      dimensions.put(dimension, value);
+      dimensions.put(dimension, Matchers.equalTo(value));
+      return this;
+    }
+
+    /**
+     * Matches an event if the value of the given dimension satisfies the matcher.
+     */
+    public EventMatcher hasDimension(String dimension, Matcher<Object> matcher)
+    {
+      dimensions.put(dimension, matcher);
       return this;
     }
 
@@ -315,9 +326,7 @@ public class LatchableEmitter extends StubServiceEmitter
       }
 
       final boolean matches = dimensions.entrySet().stream().allMatch(
-          dimValue -> event.getUserDims()
-                           .getOrDefault(dimValue.getKey(), "")
-                           .equals(dimValue.getValue())
+          dimValue -> dimValue.getValue().matches(event.getUserDims().get(dimValue.getKey()))
       );
 
       if (matches) {
