@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.output.OutputDestination;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -33,37 +32,32 @@ import java.util.Objects;
 /**
  * Template to create compaction jobs using inline specifications. This template
  * does not fetch any information from the Druid catalog while creating jobs.
- * <p>
- * This template does not contain all the fields supported by
- * {@link InlineSchemaDataSourceCompactionConfig} since some of those fields may
- * change the data itself (and not just its layout) and are thus not considered
- * compaction-compatible.
  */
 public class InlineCompactionJobTemplate implements CompactionJobTemplate
 {
   public static final String TYPE = "compactInline";
 
-  private final CompactionStateMatcher stateMatcher;
+  private final CompactionStateMatcher targetState;
 
   @JsonCreator
   public InlineCompactionJobTemplate(
-      @JsonProperty("stateMatcher") CompactionStateMatcher stateMatcher
+      @JsonProperty("targetState") CompactionStateMatcher targetState
   )
   {
-    this.stateMatcher = stateMatcher;
+    this.targetState = targetState;
   }
 
   @JsonProperty
-  public CompactionStateMatcher getStateMatcher()
+  public CompactionStateMatcher getTargetState()
   {
-    return stateMatcher;
+    return targetState;
   }
 
   @Nullable
   @Override
   public Granularity getSegmentGranularity()
   {
-    return stateMatcher.getSegmentGranularity();
+    return targetState.getSegmentGranularity();
   }
 
   @Override
@@ -75,7 +69,7 @@ public class InlineCompactionJobTemplate implements CompactionJobTemplate
   {
     final String dataSource = ensureDruidInputSource(source).getDataSource();
     return CompactionConfigBasedJobTemplate
-        .create(dataSource, stateMatcher)
+        .create(dataSource, targetState)
         .createCompactionJobs(source, destination, jobParams);
   }
 
@@ -89,13 +83,13 @@ public class InlineCompactionJobTemplate implements CompactionJobTemplate
       return false;
     }
     InlineCompactionJobTemplate that = (InlineCompactionJobTemplate) object;
-    return Objects.equals(this.stateMatcher, that.stateMatcher);
+    return Objects.equals(this.targetState, that.targetState);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(stateMatcher);
+    return Objects.hash(targetState);
   }
 
   @Override

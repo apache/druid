@@ -138,7 +138,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
             .build();
 
     runCompactionWithSpec(compactionConfig);
-    waitForCompactionTasksToFinish("compact", 1);
+    waitForAllCompactionTasksToFinish("compact");
 
     Assertions.assertEquals(0, getNumSegmentsWith(Granularities.DAY));
     Assertions.assertEquals(1, getNumSegmentsWith(Granularities.MONTH));
@@ -158,7 +158,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 
     ingestSegments(1200, "HOUR");
     runCompactionWithSpec(cascadingTemplate);
-    waitForCompactionTasksToFinish("compact", 3);
+    waitForAllCompactionTasksToFinish("compact");
 
     Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
     Assertions.assertTrue(getNumSegmentsWith(Granularities.DAY) >= 1);
@@ -188,7 +188,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     );
 
     runCompactionWithSpec(cascadingTemplate);
-    waitForCompactionTasksToFinish("compact", 3);
+    waitForAllCompactionTasksToFinish("compact");
 
     Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
     Assertions.assertTrue(getNumSegmentsWith(Granularities.DAY) >= 1);
@@ -236,7 +236,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     );
 
     runCompactionWithSpec(cascadingTemplate);
-    waitForCompactionTasksToFinish("query_controller", 3);
+    waitForAllCompactionTasksToFinish("query_controller");
 
     Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
     Assertions.assertTrue(getNumSegmentsWith(Granularities.DAY) >= 1);
@@ -258,7 +258,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     cluster.callApi().postSupervisor(compactionSupervisor);
   }
 
-  private void waitForCompactionTasksToFinish(String taskType, int expectedCount)
+  private void waitForAllCompactionTasksToFinish(String taskType)
   {
     // Wait for all intervals to be compacted
     overlord.latchableEmitter().waitForEvent(

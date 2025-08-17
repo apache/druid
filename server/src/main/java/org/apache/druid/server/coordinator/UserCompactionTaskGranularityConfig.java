@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -36,6 +37,7 @@ import java.util.Objects;
  * Note that this class is not the same as {@link GranularitySpec}. This class simply holds Granularity configs
  * and pass it to compaction task spec. This class does not do bucketing, group events or knows how to partition data.
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class UserCompactionTaskGranularityConfig
 {
   private final Granularity segmentGranularity;

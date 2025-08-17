@@ -47,6 +47,21 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
+ * Template to perform period-based cascading compaction. Contains a list of
+ * {@link CompactionRule} which divide the segment timeline into compactible
+ * intervals. Each rule specifies a period relative to the current time which is
+ * used to determine its applicable interval:
+ * <ul>
+ * <li>Rule 1: range = [now - p1, +inf)</li>
+ * <li>Rule 2: range = [now - p2, now - p1)</li>
+ * <li>...</li>
+ * <li>Rule n: range = (-inf, now - p(n - 1))</li>
+ * </ul>
+ *
+ * If two adjacent rules explicitly specify a segment granularity, the boundary
+ * between them may be {@linkplain CompactionRule#computeStartTime adjusted}
+ * to ensure that there are no uncompacted gaps in the timeline.
+ * <p>
  * This template never needs to be deserialized as a {@code BatchIndexingJobTemplate},
  * only as a {@link DataSourceCompactionConfig} in {@link CompactionSupervisorSpec}.
  */
@@ -102,7 +117,7 @@ public class CascadingCompactionTemplate implements CompactionJobTemplate, DataS
       final Interval ruleInterval = new Interval(ruleStartTime, previousRuleStartTime);
 
       allJobs.addAll(
-          createJobs(rule.getTemplate(), ruleInterval, druidInputSource, destination, jobParams)
+          createJobsForSearchInterval(rule.getTemplate(), ruleInterval, druidInputSource, destination, jobParams)
       );
 
       previousRuleStartTime = ruleStartTime;
@@ -112,13 +127,13 @@ public class CascadingCompactionTemplate implements CompactionJobTemplate, DataS
     final CompactionRule lastRule = rules.get(rules.size() - 1);
     final Interval lastRuleInterval = new Interval(DateTimes.MIN, previousRuleStartTime);
     allJobs.addAll(
-        createJobs(lastRule.getTemplate(), lastRuleInterval, druidInputSource, destination, jobParams)
+        createJobsForSearchInterval(lastRule.getTemplate(), lastRuleInterval, druidInputSource, destination, jobParams)
     );
 
     return allJobs;
   }
 
-  private List<CompactionJob> createJobs(
+  private List<CompactionJob> createJobsForSearchInterval(
       CompactionJobTemplate template,
       Interval searchInterval,
       DruidInputSource inputSource,

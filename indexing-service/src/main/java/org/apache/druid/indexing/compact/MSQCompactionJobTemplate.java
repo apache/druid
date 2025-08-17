@@ -43,13 +43,12 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Compaction template that creates MSQ SQL jobs using a SQL template. The
- * template provided by can contain template variables of the format
- * {@code ${variableName}} for fields such as datasource name and interval start
- * and end.
+ * Compaction template that creates MSQ SQL jobs using a templatized SQL with
+ * variables of the format {@code ${variableName}} for fields such as datasource
+ * name and start timestamp.
  * <p>
  * Compaction is triggered for an interval only if the current compaction state
- * of the underlying segments does not match with the {@link #stateMatcher}.
+ * of the underlying segments DOES NOT match with the {@link #targetState}.
  */
 public class MSQCompactionJobTemplate implements CompactionJobTemplate
 {
@@ -63,16 +62,16 @@ public class MSQCompactionJobTemplate implements CompactionJobTemplate
       DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
   private final ClientSqlQuery sqlTemplate;
-  private final CompactionStateMatcher stateMatcher;
+  private final CompactionStateMatcher targetState;
 
   @JsonCreator
   public MSQCompactionJobTemplate(
       @JsonProperty("sqlTemplate") ClientSqlQuery sqlTemplate,
-      @JsonProperty("stateMatcher") CompactionStateMatcher stateMatcher
+      @JsonProperty("targetState") CompactionStateMatcher targetState
   )
   {
     this.sqlTemplate = sqlTemplate;
-    this.stateMatcher = stateMatcher;
+    this.targetState = targetState;
   }
 
   @JsonProperty
@@ -82,16 +81,16 @@ public class MSQCompactionJobTemplate implements CompactionJobTemplate
   }
 
   @JsonProperty
-  public CompactionStateMatcher getStateMatcher()
+  public CompactionStateMatcher getTargetState()
   {
-    return stateMatcher;
+    return targetState;
   }
 
   @Nullable
   @Override
   public Granularity getSegmentGranularity()
   {
-    return stateMatcher.getSegmentGranularity();
+    return targetState.getSegmentGranularity();
   }
 
   @Override
@@ -106,7 +105,7 @@ public class MSQCompactionJobTemplate implements CompactionJobTemplate
 
     // Identify the compactible candidate segments
     final CompactionConfigBasedJobTemplate delegate =
-        CompactionConfigBasedJobTemplate.create(dataSource, stateMatcher);
+        CompactionConfigBasedJobTemplate.create(dataSource, targetState);
     final DataSourceCompactibleSegmentIterator candidateIterator =
         delegate.getCompactibleCandidates(source, destination, jobParams);
 
@@ -179,13 +178,13 @@ public class MSQCompactionJobTemplate implements CompactionJobTemplate
     }
     MSQCompactionJobTemplate that = (MSQCompactionJobTemplate) object;
     return Objects.equals(sqlTemplate, that.sqlTemplate)
-           && Objects.equals(stateMatcher, that.stateMatcher);
+           && Objects.equals(targetState, that.targetState);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(sqlTemplate, stateMatcher);
+    return Objects.hash(sqlTemplate, targetState);
   }
 
   @Override

@@ -37,12 +37,18 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Instances of this class are used to determine if an interval needs to be
- * compacted based on the current compaction state of the underlying segments.
+ * Target compacted state of segments used to determine if compaction is needed
+ * for an interval. An explicitly defined target state helps avoid superfluous
+ * compaction when only the job definition has changed.
  * <p>
- * This class is mostly a duplicate of {@code CompactionState} but allows null
- * values for all fields so that only non-null fields are used for matching.
+ * This class is mostly a duplicate of {@code CompactionState} but is kept
+ * separate to allow:
+ * <ul>
+ * <li>fields to be nullable so that only non-null fields are used for matching</li>
+ * <li>legacy "compaction-incompatible" fields to be removed</li>
+ * </ul>
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class CompactionStateMatcher
 {
   private final PartitionsSpec partitionsSpec;
@@ -116,7 +122,6 @@ public class CompactionStateMatcher
   }
 
   @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   @Nullable
   public List<AggregateProjectionSpec> getProjections()
   {
