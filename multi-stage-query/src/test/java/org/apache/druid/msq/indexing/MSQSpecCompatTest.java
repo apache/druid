@@ -203,7 +203,7 @@ public class MSQSpecCompatTest
   {
     String testMethodName = info.getTestMethod().get().getName();
     File f = ProjectPathUtils.getPathFromProjectRoot(
-        "extensions-core/multi-stage-query/src/test/resources/" + getClass().getName() + "/" + testMethodName + ".json"
+        "multi-stage-query/src/test/resources/" + getClass().getName() + "/" + testMethodName + ".json"
     );
     Path p = f.toPath();
     return p;
