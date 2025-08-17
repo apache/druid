@@ -193,18 +193,18 @@ public class ExtensionsLoader
     if (toLoad == null) {
       extensionsToLoad = rootExtensionsDir.listFiles();
     } else {
-      int i = 0;
-      extensionsToLoad = new File[toLoad.size()];
-      for (final String extensionName : toLoad) {
-        if ("druid-multi-stage-query".equals(extensionName)) {
-          log.warn(
-              "Skipping extension[druid-multi-stage-query] as it is now a core"
-              + " capability of Druid. Please remove this extension from your"
-              + " configs as it will cause services to fail in future Druid versions."
-          );
-          continue;
-        }
+      final LinkedHashSet<String> validExtensionsToLoad = new LinkedHashSet<>(toLoad);
+      if (validExtensionsToLoad.remove("druid-multi-stage-query")) {
+        log.warn(
+            "Skipping extension[druid-multi-stage-query] as it is now a core"
+            + " capability of Druid. Please remove this extension from your"
+            + " configs as it will cause services to fail in future Druid versions."
+        );
+      }
 
+      int i = 0;
+      extensionsToLoad = new File[validExtensionsToLoad.size()];
+      for (final String extensionName : validExtensionsToLoad) {
         File extensionDir = new File(extensionName);
         if (!extensionDir.isAbsolute()) {
           extensionDir = new File(rootExtensionsDir, extensionName);
