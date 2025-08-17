@@ -35,7 +35,7 @@ getConfPath()
     case "$1" in
     _common) echo $cluster_conf_base/_common ;;
     historical) echo $cluster_conf_base/data/historical ;;
-    historical-for-query-error-test) echo $cluster_conf_base/data/historical ;;
+    historical-for-query-error-test-ex) echo $cluster_conf_base/data/historical ;;
     middleManager) echo $cluster_conf_base/data/middleManager ;;
     indexer) echo $cluster_conf_base/data/indexer ;;
     coordinator) echo $cluster_conf_base/master/coordinator ;;

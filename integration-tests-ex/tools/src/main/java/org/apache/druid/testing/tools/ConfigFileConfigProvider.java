@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing;
+package org.apache.druid.testing.tools;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
