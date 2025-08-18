@@ -39,7 +39,7 @@ public class TestCatalogClient
 {
   public static class VersionResponse
   {
-    public final long version;
+    private final long version;
 
     @JsonCreator
     public VersionResponse(
@@ -66,12 +66,8 @@ public class TestCatalogClient
         table.id().name(),
         overwrite ? "?overwrite=true" : ""
     );
-    
-    final VersionResponse response = serviceClient().onLeaderCoordinator(
-        mapper -> new RequestBuilder(HttpMethod.POST, url).jsonContent(mapper, table.spec()),
-        new TypeReference<>() {}
-    );
-    return response == null ? 0 : response.version;
+
+    return postTableSpec(url, table.spec());
   }
 
   public long updateTable(TableId tableId, TableSpec tableSpec, long version)
@@ -83,11 +79,7 @@ public class TestCatalogClient
         tableId.name(),
         version > 0 ? "?version=" + version : ""
     );
-    VersionResponse response = serviceClient().onLeaderCoordinator(
-        mapper -> new RequestBuilder(HttpMethod.POST, url).jsonContent(mapper, tableSpec),
-        new TypeReference<>() {}
-    );
-    return response == null ? 0 : response.version;
+    return postTableSpec(url, tableSpec);
   }
 
   public TableMetadata readTable(TableId tableId)
@@ -123,11 +115,7 @@ public class TestCatalogClient
         tableId.schema(),
         tableId.name()
     );
-    VersionResponse response = serviceClient().onLeaderCoordinator(
-        mapper -> new RequestBuilder(HttpMethod.POST, url).jsonContent(mapper, cmd),
-        new TypeReference<>() {}
-    );
-    return response == null ? 0 : response.version;
+    return postTableSpec(url, cmd);
   }
 
   public List<String> listSchemas()
@@ -179,5 +167,14 @@ public class TestCatalogClient
         mapper -> new RequestBuilder(HttpMethod.GET, url),
         typeReference
     );
+  }
+
+  private long postTableSpec(String url, Object payload)
+  {
+    VersionResponse response = serviceClient().onLeaderCoordinator(
+        mapper -> new RequestBuilder(HttpMethod.POST, url).jsonContent(mapper, payload),
+        new TypeReference<>() {}
+    );
+    return response == null ? 0 : response.version;
   }
 }

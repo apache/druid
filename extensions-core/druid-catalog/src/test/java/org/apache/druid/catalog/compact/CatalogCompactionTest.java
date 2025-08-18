@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.catalog.embedded;
+package org.apache.druid.catalog.compact;
 
 import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
