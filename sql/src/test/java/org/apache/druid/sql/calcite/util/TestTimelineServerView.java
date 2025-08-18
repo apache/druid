@@ -39,7 +39,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -100,22 +100,26 @@ public class TestTimelineServerView implements TimelineServerView
   @Override
   public Optional<? extends TimelineLookup<String, ServerSelector>> getTimeline(TableDataSource table)
   {
+    final VersionedIntervalTimeline<String, ServerSelector> timelineLookup =
+        new VersionedIntervalTimeline<>(Comparator.naturalOrder());
+
     for (DataSegment segment : segments) {
       if (!segment.getDataSource().equals(table.getName())) {
         continue;
       }
 
-      VersionedIntervalTimeline<String, ServerSelector> timelineLookup = new VersionedIntervalTimeline<String, ServerSelector>(
-          Comparator.naturalOrder()
-      );
       TierSelectorStrategy st = new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy());
-      ServerSelector sss = new ServerSelector(segment, st, HistoricalFilter.IDENTITY_FILTER);
+      ServerSelector serverSelector = new ServerSelector(segment, st, HistoricalFilter.IDENTITY_FILTER);
 
-      PartitionChunk<ServerSelector> partitionChunk = new SingleElementPartitionChunk(sss);
+      PartitionChunk<ServerSelector> partitionChunk = segment.getShardSpec().createChunk(serverSelector);
       timelineLookup.add(segment.getInterval(), segment.getVersion(), partitionChunk);
+    }
+
+    if (timelineLookup.isEmpty()) {
+      return Optional.empty();
+    } else {
       return Optional.of(timelineLookup);
     }
-    return Optional.empty();
   }
 
   @Override
