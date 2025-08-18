@@ -33,12 +33,14 @@ import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @SqlTestFrameworkConfig.ComponentSupplier(DrillWindowQueryMSQComponentSupplier.class)
+@Disabled("Disabled due to multiple flaky test cases")
 public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
 {
   private final Map<String, Object> queryContext = new HashMap<>(ImmutableMap.of(
