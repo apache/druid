@@ -33,13 +33,12 @@ import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.server.QueryResponse;
-import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizationUtils;
-import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.HttpStatement;
@@ -81,21 +80,18 @@ public class SqlTaskResource
   private static final Logger log = new Logger(SqlTaskResource.class);
 
   private final SqlStatementFactory sqlStatementFactory;
-  private final ServerConfig serverConfig;
-  private final AuthorizerMapper authorizerMapper;
+  private final DefaultQueryConfig defaultQueryConfig;
   private final ObjectMapper jsonMapper;
 
   @Inject
   public SqlTaskResource(
       final @MultiStageQuery SqlStatementFactory sqlStatementFactory,
-      final ServerConfig serverConfig,
-      final AuthorizerMapper authorizerMapper,
+      final DefaultQueryConfig defaultQueryConfig,
       final ObjectMapper jsonMapper
   )
   {
     this.sqlStatementFactory = sqlStatementFactory;
-    this.serverConfig = serverConfig;
-    this.authorizerMapper = authorizerMapper;
+    this.defaultQueryConfig = defaultQueryConfig;
     this.jsonMapper = jsonMapper;
   }
 
@@ -131,7 +127,7 @@ public class SqlTaskResource
     final SqlQueryPlus sqlQueryPlus;
     final HttpStatement stmt;
     try {
-      sqlQueryPlus = SqlResource.makeSqlQueryPlus(sqlQuery, req);
+      sqlQueryPlus = SqlResource.makeSqlQueryPlus(sqlQuery, req, defaultQueryConfig.getContext());
       stmt = sqlStatementFactory.httpStatement(sqlQueryPlus, req);
     }
     catch (Exception e) {

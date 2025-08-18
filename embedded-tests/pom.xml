@@ -75,8 +75,20 @@
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
+      <groupId>org.apache.druid.integration-tests</groupId>
+      <artifactId>druid-it-tools</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.druid.extensions</groupId>
       <artifactId>mysql-metadata-storage</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>postgresql-metadata-storage</artifactId>
       <version>${project.parent.version}</version>
       <scope>test</scope>
     </dependency>
@@ -87,12 +99,48 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-protobuf-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-avro-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-testcontainers</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-testing-tools</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-basic-security</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>joda-time</groupId>
       <artifactId>joda-time</artifactId>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.inject</groupId>
+      <artifactId>guice</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
@@ -129,6 +177,12 @@
       <type>test-jar</type>
     </dependency>
     <dependency>
+      <groupId>org.apache.druid</groupId>
+      <artifactId>druid-indexing-service</artifactId>
+      <version>${project.parent.version}</version>
+      <type>test-jar</type>
+    </dependency>
+    <dependency>
       <groupId>org.apache.druid.extensions</groupId>
       <artifactId>druid-kafka-indexing-service</artifactId>
       <version>${project.parent.version}</version>
@@ -148,14 +202,14 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.druid</groupId>
-      <artifactId>druid-aws-common</artifactId>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-datasketches</artifactId>
       <version>${project.parent.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.druid.extensions</groupId>
-      <artifactId>druid-catalog</artifactId>
+      <groupId>org.apache.druid</groupId>
+      <artifactId>druid-aws-common</artifactId>
       <version>${project.parent.version}</version>
       <scope>test</scope>
     </dependency>
@@ -168,6 +222,12 @@
     </dependency>
 
     <!-- Non-Druid test dependencies -->
+    <dependency>
+      <groupId>org.apache.datasketches</groupId>
+      <artifactId>datasketches-java</artifactId>
+      <version>${datasketches.version}</version>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
@@ -189,8 +249,18 @@
       <artifactId>junit-jupiter-api</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-launcher</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.hamcrest</groupId>
@@ -247,6 +317,12 @@
     </dependency>
     <dependency>
       <groupId>org.testcontainers</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>${testcontainers.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
       <artifactId>kafka</artifactId>
       <version>${testcontainers.version}</version>
       <scope>test</scope>
@@ -278,6 +354,12 @@
       <artifactId>aws-java-sdk-core</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>io.confluent</groupId>
+      <artifactId>kafka-protobuf-provider</artifactId>
+      <version>6.2.12</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -290,6 +372,51 @@
           <skip>true</skip>
         </configuration>
       </plugin>
+      <!-- Do not run Docker tests except with the docker-tests profile -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <excludedGroups>docker-test</excludedGroups>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>docker-tests</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <skipTests>true</skipTests>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <configuration>
+              <groups>docker-test</groups>
+              <includes>
+                <!-- Search for Docker tests intead of just IT*/*IT -->
+                <include>*DockerTest*</include>
+              </includes>
+              <redirectTestOutputToFile>true</redirectTestOutputToFile>
+            </configuration>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>integration-test</goal>
+                  <goal>verify</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

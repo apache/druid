@@ -21,9 +21,6 @@ package org.apache.druid.segment;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.error.DruidException;
@@ -32,8 +29,9 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.projections.Projections;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -54,6 +52,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         new AggregateProjectionMetadata.Schema(
             "some_projection",
             "time",
+            new EqualityFilter("a", ColumnType.STRING, "a", null),
             VirtualColumns.create(
                 Granularities.toVirtualColumn(Granularities.HOUR, "time")
             ),
@@ -87,6 +86,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         new AggregateProjectionMetadata.Schema(
             "good",
             "theTime",
+            null,
             VirtualColumns.create(Granularities.toVirtualColumn(Granularities.HOUR, "theTime")),
             Arrays.asList("theTime", "a", "b", "c"),
             new AggregatorFactory[]{new CountAggregatorFactory("chocula")},
@@ -104,6 +104,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         new AggregateProjectionMetadata.Schema(
             "betterLessGroupingColumns",
             "theTime",
+            null,
             VirtualColumns.create(Granularities.toVirtualColumn(Granularities.HOUR, "theTime")),
             Arrays.asList("c", "d", "theTime"),
             new AggregatorFactory[]{new CountAggregatorFactory("chocula")},
@@ -120,6 +121,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         new AggregateProjectionMetadata.Schema(
             "evenBetterMoreAggs",
             "theTime",
+            null,
             VirtualColumns.create(Granularities.toVirtualColumn(Granularities.HOUR, "theTime")),
             Arrays.asList("c", "d", "theTime"),
             new AggregatorFactory[]{
@@ -138,6 +140,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
     AggregateProjectionMetadata best = new AggregateProjectionMetadata(
         new AggregateProjectionMetadata.Schema(
             "best",
+            null,
             null,
             VirtualColumns.EMPTY,
             Arrays.asList("f", "g"),
@@ -168,6 +171,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
                 null,
                 null,
                 null,
+                null,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 List.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.ascending("count"))
             ),
@@ -184,6 +188,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         () -> new AggregateProjectionMetadata(
             new AggregateProjectionMetadata.Schema(
                 "",
+                null,
                 null,
                 null,
                 null,
@@ -211,6 +216,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
                 null,
                 null,
                 null,
+                null,
                 null
             ),
             0
@@ -226,6 +232,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         () -> new AggregateProjectionMetadata(
             new AggregateProjectionMetadata.Schema(
                 "other_projection",
+                null,
                 null,
                 null,
                 Collections.emptyList(),
@@ -252,6 +259,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
                 null,
                 null,
                 null,
+                null,
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 null
             ),
@@ -268,6 +276,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         () -> new AggregateProjectionMetadata(
             new AggregateProjectionMetadata.Schema(
                 "",
+                null,
                 null,
                 null,
                 null,
@@ -293,44 +302,8 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
   void testEqualsAndHashcodeSchema()
   {
     EqualsVerifier.forClass(AggregateProjectionMetadata.Schema.class)
-                  .withIgnoredFields("orderingWithTimeSubstitution", "timeColumnPosition", "granularity")
+                  .withIgnoredFields("orderingWithTimeSubstitution", "timeColumnPosition", "effectiveGranularity")
                   .usingGetClass()
                   .verify();
-  }
-
-  @Test
-  public void testSchemaMatchSimple()
-  {
-    // arrange
-    AggregateProjectionMetadata spec = new AggregateProjectionMetadata(
-        new AggregateProjectionMetadata.Schema(
-            "some_projection",
-            null,
-            VirtualColumns.EMPTY,
-            Arrays.asList("a", "b"),
-            new AggregatorFactory[]{new LongSumAggregatorFactory("a_projection", "a")},
-            Arrays.asList(OrderBy.ascending("a"), OrderBy.ascending("b"))
-        ),
-        12345
-    );
-    CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
-                                                     .setPreferredOrdering(ImmutableList.of())
-                                                     .setAggregators(ImmutableList.of(new LongSumAggregatorFactory(
-                                                         "a",
-                                                         "a"
-                                                     )))
-                                                     .build();
-    // act & assert
-    Projections.ProjectionMatch projectionMatch = spec.getSchema()
-                                                      .matches(cursorBuildSpec, (projectionName, columnName) -> true);
-    Projections.ProjectionMatch expected = new Projections.ProjectionMatch(
-        CursorBuildSpec.builder()
-                       .setAggregators(ImmutableList.of(new LongSumAggregatorFactory("a", "a")))
-                       .setPhysicalColumns(ImmutableSet.of("a_projection"))
-                       .setPreferredOrdering(ImmutableList.of())
-                       .build(),
-        ImmutableMap.of("a", "a_projection")
-    );
-    Assertions.assertEquals(expected, projectionMatch);
   }
 }

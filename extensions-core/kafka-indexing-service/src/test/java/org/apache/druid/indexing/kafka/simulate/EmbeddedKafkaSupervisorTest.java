@@ -49,7 +49,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
@@ -91,10 +90,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     final String supervisorId = dataSource + "_supe";
     final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(supervisorId, topic);
 
-    final Map<String, String> startSupervisorResult = cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(kafkaSupervisorSpec)
-    );
-    Assertions.assertEquals(Map.of("id", supervisorId), startSupervisorResult);
+    Assertions.assertEquals(supervisorId, cluster.callApi().postSupervisor(kafkaSupervisorSpec));
 
     // Wait for the broker to discover the realtime segments
     broker.latchableEmitter().waitForEvent(
@@ -120,9 +116,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals("10", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
 
     // Suspend the supervisor and verify the state
-    cluster.callApi().onLeaderOverlord(
-        o -> o.postSupervisor(kafkaSupervisorSpec.createSuspendedSpec())
-    );
+    cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
     supervisorStatus = cluster.callApi().getSupervisorStatus(supervisorId);
     Assertions.assertTrue(supervisorStatus.isSuspended());
   }

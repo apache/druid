@@ -72,7 +72,7 @@ public class CpuSet
       output = lines.stream().map(this::parseStringRangeToIntArray).findFirst().orElse(output);
     }
     catch (RuntimeException | IOException ex) {
-      LOG.error(ex, "Unable to read %s", file);
+      LOG.noStackTrace().warn(ex, "Unable to read %s, these metrics will be skipped", file);
     }
     return output;
   }

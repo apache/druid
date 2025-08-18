@@ -22,11 +22,11 @@ package org.apache.druid.tests.indexer;
 import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.testing.IntegrationTestingConfig;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
+import org.apache.druid.testing.tools.KinesisEventWriter;
+import org.apache.druid.testing.tools.StreamEventWriter;
 import org.apache.druid.testing.utils.KinesisAdminClient;
-import org.apache.druid.testing.utils.KinesisEventWriter;
 import org.apache.druid.testing.utils.StreamAdminClient;
-import org.apache.druid.testing.utils.StreamEventWriter;
 
 import javax.annotation.Nullable;
 import java.util.List;

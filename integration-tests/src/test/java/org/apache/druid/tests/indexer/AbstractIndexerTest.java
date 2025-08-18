@@ -29,12 +29,12 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.clients.OverlordResourceTestClient;
 import org.apache.druid.testing.clients.TaskResponseObject;
+import org.apache.druid.testing.tools.ITRetryUtil;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
 import org.apache.druid.testing.utils.DataLoaderHelper;
-import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.joda.time.Interval;
@@ -211,7 +211,7 @@ public abstract class AbstractIndexerTest
 
   public static InputStream getResourceAsStream(String resource)
   {
-    return ITCompactionTaskTest.class.getResourceAsStream(resource);
+    return AbstractIndexerTest.class.getResourceAsStream(resource);
   }
 
   public static List<String> listResources(String dir) throws IOException

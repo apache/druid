@@ -32,9 +32,6 @@
   <suppress checks=".*" files="[\\/]target[\\/]generated-sources[\\/]" />
   <suppress checks=".*" files="[\\/]target[\\/]generated-test-sources[\\/]" />
 
-  <suppress checks="Indentation" files="ProtoTestEventWrapper.java" />
-  <suppress checks="Regexp" id="argumentLineBreaking" files="ProtoTestEventWrapper.java" />
-  <suppress checks="[a-zA-Z0-9]*" files="ProtoTestEventWrapper.java" />
   <suppress checks="ConstantName" files="MySubRecord.java" />
   <suppress checks="ConstantName" files="SomeAvroDatum.java" />
   <suppress checks="ConstantName" files="MyFixed.java" />
