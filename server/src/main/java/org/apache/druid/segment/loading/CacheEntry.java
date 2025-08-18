@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.loading;
 
-import java.io.File;
 import java.io.IOException;
 
 /**
@@ -44,7 +43,7 @@ public interface CacheEntry
    * location, calling this method should be a no-op. If the cache entry is mounted in a different location, this method
    * will unmount the item from the other location and mount in the new location.
    */
-  void mount(File location) throws IOException, SegmentLoadingException;
+  void mount(StorageLocation location) throws IOException, SegmentLoadingException;
 
   /**
    * Removes the physical artifacts of a cache entry from the location it is currently mounted

@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -40,6 +39,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
@@ -53,8 +53,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -66,7 +68,6 @@ import java.util.stream.Collectors;
 
 class SegmentLocalCacheManagerConcurrencyTest
 {
-  private static final int APPROX_SEGMENT_SIZE = 182100;
   private final ObjectMapper jsonMapper;
   private final String dataSource = "test_ds";
   private final String segmentVersion;
@@ -110,15 +111,16 @@ class SegmentLocalCacheManagerConcurrencyTest
     segmentsToWeakLoad = new ArrayList<>();
 
     final List<StorageLocationConfig> locations = new ArrayList<>();
-    // Each segment has the size of 182100 bytes. This segment cache is capable of storing up to 8 segments, 4 per storage location
+    // Each segment has the synthetic size of 1000 bytes. This segment cache is capable of storing up to 8 segments,
+    // 4 per storage location
     final StorageLocationConfig locationConfig = new StorageLocationConfig(
         localSegmentCacheFolder,
-        APPROX_SEGMENT_SIZE * 4,
+        4000,
         null
     );
     final StorageLocationConfig locationConfig2 = new StorageLocationConfig(
         otherLocalSegmentCacheFolder,
-        APPROX_SEGMENT_SIZE * 4,
+        4000,
         null
     );
     locations.add(locationConfig);
@@ -235,7 +237,7 @@ class SegmentLocalCacheManagerConcurrencyTest
     final File localStorageFolder = new File("local_storage_folder");
 
     final Interval interval = Intervals.of("2019-01-01/P1D");
-    makeSegmentsToLoad(9, localStorageFolder, interval, segmentsToLoad);
+    makeSegmentsToLoad(30, localStorageFolder, interval, segmentsToLoad);
 
     final List<WeakLoad> weakLoads = segmentsToLoad
         .stream()
@@ -270,13 +272,14 @@ class SegmentLocalCacheManagerConcurrencyTest
     makeSegmentsToLoad(segmentCount, localStorageFolder, interval, segmentsToWeakLoad);
 
     for (boolean sleepy : new boolean[]{true, false}) {
-      testWeakLoad(iterations, segmentCount, concurrentReads, sleepy, false);
+      testWeakLoad(iterations, segmentCount, concurrentReads, false, sleepy, false);
     }
   }
 
   @Test
   public void testAcquireSegmentOnDemandRandomSegment() throws IOException
   {
+    // moderate number of segments compared to threads, expect to have a decent hit rate
     final int segmentCount = 24;
     final int iterations = 2000;
     final int concurrentReads = 10;
@@ -287,13 +290,14 @@ class SegmentLocalCacheManagerConcurrencyTest
     makeSegmentsToLoad(segmentCount, localStorageFolder, interval, segmentsToWeakLoad);
 
     for (boolean sleepy : new boolean[]{true, false}) {
-      testWeakLoad(iterations, segmentCount, concurrentReads, sleepy, true);
+      testWeakLoad(iterations, segmentCount, concurrentReads, true, sleepy, true);
     }
   }
 
   @Test
-  public void testAcquireSegmentOnDemandRandomSegmentHighContention() throws IOException
+  public void testAcquireSegmentOnDemandRandomSegmentHighHitRate() throws IOException
   {
+    // low number of total segments so expect many cache hits and few evictions
     final int segmentCount = 10;
     final int iterations = 2000;
     final int concurrentReads = 10;
@@ -304,7 +308,25 @@ class SegmentLocalCacheManagerConcurrencyTest
     makeSegmentsToLoad(segmentCount, localStorageFolder, interval, segmentsToWeakLoad);
 
     for (boolean sleepy : new boolean[]{true, false}) {
-      testWeakLoad(iterations, segmentCount, concurrentReads, sleepy, true);
+      testWeakLoad(iterations, segmentCount, concurrentReads, true, sleepy, true);
+    }
+  }
+
+  @Test
+  public void testAcquireSegmentOnDemandRandomSegmentNoEvictions() throws IOException
+  {
+    // low number of total segments so expect many cache hits and few evictions
+    final int segmentCount = 8;
+    final int iterations = 2000;
+    final int concurrentReads = 10;
+    final File localStorageFolder = new File(tempDir, "local_storage_folder");
+
+    final Interval interval = Intervals.of("2019-01-01/P1D");
+
+    makeSegmentsToLoad(segmentCount, localStorageFolder, interval, segmentsToWeakLoad);
+
+    for (boolean sleepy : new boolean[]{true, false}) {
+      testWeakLoad(iterations, segmentCount, concurrentReads, true, sleepy, true);
     }
   }
 
@@ -322,8 +344,9 @@ class SegmentLocalCacheManagerConcurrencyTest
 
     final List<DataSegment> currentBatch = new ArrayList<>();
     for (int i = 0; i < iterations; i++) {
+      currentBatch.add(segmentsToWeakLoad.get(ThreadLocalRandom.current().nextInt(segmentCount)));
       // process batches of 10 requests at a time
-      if ((i > 0 && i % concurrentReads == 0) || (i == iterations - 1)) {
+      if (currentBatch.size() == concurrentReads) {
         final List<WeakLoad> weakLoads = currentBatch
             .stream()
             .map(segment -> new WeakLoad(virtualStorageFabricManager, segment, 0, 0, 1L, true))
@@ -333,47 +356,41 @@ class SegmentLocalCacheManagerConcurrencyTest
           futures.add(executorService.submit(weakLoad));
         }
         List<Throwable> exceptions = new ArrayList<>();
-        int success = 0;
-        int rows = 0;
         for (Future<Integer> future : futures) {
           try {
-            Integer s = future.get();
-            if (s != null) {
-              success++;
-              rows += s;
-            }
+            future.get();
           }
           catch (Throwable t) {
             exceptions.add(t);
           }
         }
+        Assertions.assertFalse(exceptions.isEmpty());
         for (Throwable t : exceptions) {
           Assertions.assertTrue(t instanceof TimeoutException || t instanceof ExecutionException, t.toString());
         }
+        Thread.sleep(20);
+        Assertions.assertEquals(0, location.getActiveWeakHolds());
+        Assertions.assertEquals(0, location2.getActiveWeakHolds());
+
         currentBatch.clear();
-        exceptions.clear();
       }
-      currentBatch.add(segmentsToWeakLoad.get(ThreadLocalRandom.current().nextInt(segmentCount)));
     }
 
-    Thread.sleep(1000);
     Assertions.assertEquals(0, location.getActiveWeakHolds());
     Assertions.assertEquals(0, location2.getActiveWeakHolds());
+    Assertions.assertTrue(4 >= location.getWeakEntryCount());
+    Assertions.assertTrue(4 >= location2.getWeakEntryCount());
     Assertions.assertTrue(4 >= location.getPath().listFiles().length);
     Assertions.assertTrue(4 >= location2.getPath().listFiles().length);
-    Assertions.assertEquals(location.getWeakEvictions(), location.getWeakUnmounts());
-    Assertions.assertEquals(location2.getWeakEvictions(), location2.getWeakUnmounts());
-    Assertions.assertEquals(location.getWeakLoads() - 4, location.getWeakUnmounts());
-    Assertions.assertEquals(location.getWeakLoads() - 4, location.getWeakEvictions());
-    Assertions.assertEquals(location2.getWeakLoads() - 4, location2.getWeakUnmounts());
-    Assertions.assertEquals(location2.getWeakLoads() - 4, location2.getWeakEvictions());
+    Assertions.assertEquals(location.getStats().getEvictionCount(), location.getStats().getUnmountCount());
+    Assertions.assertEquals(location2.getStats().getEvictionCount(), location2.getStats().getUnmountCount());
   }
 
   @Test
   public void testAcquireSegmentOnDemandRandomSegmentWithTimeoutAfterAcquire() throws IOException, InterruptedException
   {
     final int segmentCount = 24;
-    final int iterations = 2001;
+    final int iterations = 2000;
     final int concurrentReads = 10;
     final File localStorageFolder = new File(tempDir, "local_storage_folder");
 
@@ -383,56 +400,55 @@ class SegmentLocalCacheManagerConcurrencyTest
 
     final List<DataSegment> currentBatch = new ArrayList<>();
     for (int i = 0; i < iterations; i++) {
+      currentBatch.add(segmentsToWeakLoad.get(ThreadLocalRandom.current().nextInt(segmentCount)));
       // process batches of 10 requests at a time
-      if (i > 0 && i % concurrentReads == 0) {
+      if (currentBatch.size() == concurrentReads) {
         final List<WeakLoad> weakLoads = currentBatch
             .stream()
-            .map(segment -> new WeakLoad(virtualStorageFabricManager, segment, 20, 120, 1000L, false))
+            .map(segment -> new WeakLoad(virtualStorageFabricManager, segment, 20, 120, Long.MAX_VALUE, false))
             .collect(Collectors.toList());
         final List<Future<Integer>> futures = new ArrayList<>();
         for (WeakLoad weakLoad : weakLoads) {
           futures.add(executorService.submit(weakLoad));
         }
         List<Throwable> exceptions = new ArrayList<>();
-        int success = 0;
-        int rows = 0;
         for (Future<Integer> future : futures) {
           try {
-            Integer s = future.get(20L, TimeUnit.MILLISECONDS);
-            if (s != null) {
-              success++;
-              rows += s;
-            }
+            future.get(20L, TimeUnit.MILLISECONDS);
           }
           catch (Throwable t) {
             exceptions.add(t);
           }
         }
+        Assertions.assertFalse(exceptions.isEmpty());
         for (Throwable t : exceptions) {
           Assertions.assertTrue(t instanceof TimeoutException || t instanceof ExecutionException, t.toString());
         }
+        // sleep to let the threads finish
+        Thread.sleep(100);
+        Assertions.assertEquals(0, location.getActiveWeakHolds());
+        Assertions.assertEquals(0, location2.getActiveWeakHolds());
         currentBatch.clear();
-        exceptions.clear();
       }
-      currentBatch.add(segmentsToWeakLoad.get(ThreadLocalRandom.current().nextInt(segmentCount)));
     }
 
-    Thread.sleep(250);
-
-    Assertions.assertTrue(4 >= location.getPath().listFiles().length);
-    Assertions.assertTrue(4 >= location2.getPath().listFiles().length);
     Assertions.assertEquals(0, location.getActiveWeakHolds());
     Assertions.assertEquals(0, location2.getActiveWeakHolds());
-    Assertions.assertEquals(location.getWeakLoads() - 4, location.getWeakUnmounts());
-    Assertions.assertEquals(location2.getWeakLoads() - 4, location2.getWeakUnmounts());
-    Assertions.assertTrue(location.getWeakHits() >= 0);
-    Assertions.assertTrue(location2.getWeakHits() >= 0);
+    Assertions.assertTrue(4 >= location.getWeakEntryCount());
+    Assertions.assertTrue(4 >= location2.getWeakEntryCount());
+    Assertions.assertTrue(4 >= location.getPath().listFiles().length);
+    Assertions.assertTrue(4 >= location2.getPath().listFiles().length);
+    Assertions.assertEquals(location.getStats().getLoadCount() - 4, location.getStats().getUnmountCount());
+    Assertions.assertEquals(location2.getStats().getLoadCount() - 4, location2.getStats().getUnmountCount());
+    Assertions.assertTrue(location.getStats().getHitCount() >= 0);
+    Assertions.assertTrue(location2.getStats().getHitCount() >= 0);
   }
 
   private void testWeakLoad(
       int iterations,
       int segmentCount,
       int concurrentReads,
+      boolean random,
       boolean sleepy,
       boolean expectHits
   )
@@ -440,83 +456,130 @@ class SegmentLocalCacheManagerConcurrencyTest
     int totalSuccess = 0;
     int totalFailures = 0;
     final List<DataSegment> currentBatch = new ArrayList<>();
+    // start fresh
+    for (DataSegment segment : segmentsToWeakLoad) {
+      virtualStorageFabricManager.drop(segment);
+    }
+    location.resetStats();
+    location2.resetStats();
     for (int i = 0; i < iterations; i++) {
-      currentBatch.add(segmentsToWeakLoad.get(i % segmentCount));
+      int segment = random ? ThreadLocalRandom.current().nextInt(segmentCount) : i % segmentCount;
+      currentBatch.add(segmentsToWeakLoad.get(segment));
       // process batches of 10 requests at a time
       if (currentBatch.size() == concurrentReads) {
-        final List<WeakLoad> weakLoads = currentBatch
-            .stream()
-            .map(segment -> new WeakLoad(virtualStorageFabricManager, segment, 0, sleepy ? 20 : 0, 1000L, false))
-            .collect(Collectors.toList());
-        final List<Future<Integer>> futures = new ArrayList<>();
-        for (WeakLoad weakLoad : weakLoads) {
-          futures.add(executorService.submit(weakLoad));
-        }
-        List<Throwable> exceptions = new ArrayList<>();
-        int success = 0;
-        int rows = 0;
-        for (Future<Integer> future : futures) {
-          try {
-            Integer s = future.get();
-            if (s != null) {
-              success++;
-              rows += s;
-            }
-          }
-          catch (Throwable t) {
-            exceptions.add(t);
-          }
-        }
-        // cache has enough space to store 8 segments, so we should always be able to handle 8, but also sometimes more
-        Assertions.assertTrue(success >= 8);
-        Assertions.assertTrue(exceptions.size() <= 2);
-        Assertions.assertEquals(success * 1209, rows);
-        for (Throwable t : exceptions) {
-          Assertions.assertInstanceOf(SegmentLoadingException.class, t.getCause());
-          Assertions.assertTrue(t.getCause().getMessage().contains("Unable to load segment["));
-          Assertions.assertTrue(t.getCause()
-                                 .getMessage()
-                                 .contains(
-                                     "on demand, ensure enough disk space has been allocated to load all segments involved in the query"));
-        }
-        totalSuccess += success;
-        totalFailures += exceptions.size();
+
+        BatchResult result = testWeakBatch(i, currentBatch, sleepy);
+        totalSuccess += result.success;
+        totalFailures += result.exceptions.size();
         Assertions.assertEquals(
             totalSuccess,
-            location.getWeakLoads() + location.getWeakHits() + location2.getWeakLoads() + location2.getWeakHits()
+            location.getStats().getLoadCount() +
+            location.getStats().getHitCount() +
+            location2.getStats().getLoadCount() +
+            location2.getStats().getHitCount(),
+            StringUtils.format(
+                "iteration[%s] - loc1: loads[%s] hits[%s] loc2: loads[%s] hits[%s]",
+                i,
+                location.getStats().getLoadCount(),
+                location.getStats().getHitCount(),
+                location2.getStats().getLoadCount(),
+                location2.getStats().getHitCount()
+            )
         );
+
         currentBatch.clear();
-        exceptions.clear();
       }
     }
 
-    try {
-      Thread.sleep(500);
+    if (!currentBatch.isEmpty()) {
+      BatchResult result = testWeakBatch(iterations, currentBatch, sleepy);
+      totalSuccess += result.success;
+      totalFailures += result.exceptions.size();
     }
-    catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
+
+    Assertions.assertEquals(iterations, totalSuccess + totalFailures);
     Assertions.assertEquals(0, location.getActiveWeakHolds());
     Assertions.assertEquals(0, location2.getActiveWeakHolds());
     Assertions.assertEquals(4, location.getWeakEntryCount());
     Assertions.assertEquals(4, location2.getWeakEntryCount());
     Assertions.assertEquals(4, location.getPath().listFiles().length);
     Assertions.assertEquals(4, location2.getPath().listFiles().length);
-    Assertions.assertEquals(iterations, totalSuccess + totalFailures);
     Assertions.assertEquals(
         totalSuccess,
-        location.getWeakLoads() + location.getWeakHits() + location2.getWeakLoads() + location2.getWeakHits()
+        location.getStats().getLoadCount() + location.getStats().getHitCount() + location2.getStats().getLoadCount() + location2.getStats().getHitCount()
     );
-    Assertions.assertTrue(totalFailures <= location.getWeakRejections() + location2.getWeakRejections());
-    Assertions.assertEquals(location.getWeakLoads() - 4, location.getWeakUnmounts());
-    Assertions.assertEquals(location2.getWeakLoads() - 4, location2.getWeakUnmounts());
+    Assertions.assertTrue(totalFailures <= location.getStats().getRejectCount() + location2.getStats().getRejectCount());
     if (expectHits) {
-      Assertions.assertTrue(location.getWeakHits() >= 0);
-      Assertions.assertTrue(location2.getWeakHits() >= 0);
+      Assertions.assertTrue(location.getStats().getHitCount() >= 0);
+      Assertions.assertTrue(location2.getStats().getHitCount() >= 0);
     } else {
-      Assertions.assertEquals(0, location.getWeakHits());
-      Assertions.assertEquals(0, location2.getWeakHits());
+      Assertions.assertEquals(0, location.getStats().getHitCount());
+      Assertions.assertEquals(0, location2.getStats().getHitCount());
     }
+
+    Assertions.assertEquals(location.getStats().getEvictionCount(), location.getStats().getUnmountCount());
+    Assertions.assertEquals(location2.getStats().getEvictionCount(), location2.getStats().getUnmountCount());
+    Assertions.assertTrue(location.getStats().getLoadCount() >= 4);
+    Assertions.assertTrue(location2.getStats().getLoadCount() >= 4);
+    Assertions.assertEquals(location.getStats().getLoadCount() - 4, location.getStats().getEvictionCount());
+    Assertions.assertEquals(location.getStats().getLoadCount() - 4, location.getStats().getUnmountCount());
+    Assertions.assertEquals(location2.getStats().getLoadCount() - 4, location2.getStats().getEvictionCount());
+    Assertions.assertEquals(location2.getStats().getLoadCount() - 4, location2.getStats().getUnmountCount());
+  }
+
+  private BatchResult testWeakBatch(int iteration, List<DataSegment> currentBatch, boolean sleepy)
+  {
+    final List<WeakLoad> weakLoads = new ArrayList<>();
+    Set<SegmentId> segments = new HashSet<>();
+    for (DataSegment segment : currentBatch) {
+      weakLoads.add(new WeakLoad(virtualStorageFabricManager, segment, 0, sleepy ? 20 : 0, Long.MAX_VALUE, false));
+      segments.add(segment.getId());
+    }
+    final List<Future<Integer>> futures = new ArrayList<>();
+    for (WeakLoad weakLoad : weakLoads) {
+      futures.add(executorService.submit(weakLoad));
+    }
+    List<Throwable> exceptions = new ArrayList<>();
+    int success = 0;
+    int rows = 0;
+    for (Future<Integer> future : futures) {
+      try {
+        Integer s = future.get();
+        if (s != null) {
+          success++;
+          rows += s;
+        }
+      }
+      catch (Throwable t) {
+        exceptions.add(t);
+      }
+    }
+
+    // cache has enough space to store 8 segments, so we should always be able to handle 8, but also sometimes more,
+    // such as if multiple threads have the same segment
+    final int expectedSuccess = Math.min(8, segments.size());
+    // expect at most 2 failures if there are more unique segments than cache slots
+    final int maxExpectedFailures = segments.size() > 8 ? 2 : 0;
+    Assertions.assertEquals(success * 1209, rows);
+    Assertions.assertTrue(
+        expectedSuccess <= success,
+        "iteration " + iteration + " expected " + expectedSuccess + " tasks to succeed but got " + success
+    );
+    Assertions.assertTrue(
+        maxExpectedFailures >= exceptions.size(),
+        "iteration " + iteration + " expected " + maxExpectedFailures + " tasks to fail but got " + exceptions.size()
+    );
+    // we only expect SegmentLoadingException in happy path tests
+    for (Throwable t : exceptions) {
+      Assertions.assertInstanceOf(SegmentLoadingException.class, t.getCause());
+      Assertions.assertTrue(t.getCause().getMessage().contains("Unable to load segment["));
+      Assertions.assertTrue(t.getCause()
+                             .getMessage()
+                             .contains(
+                                 "on demand, ensure enough disk space has been allocated to load all segments involved in the query"));
+    }
+
+    return new BatchResult(exceptions, success, rows);
   }
 
   private void makeSegmentsToLoad(
@@ -527,6 +590,7 @@ class SegmentLocalCacheManagerConcurrencyTest
   )
       throws IOException
   {
+    segmentsToLoad.clear();
     for (int partitionId = 0; partitionId < segmentCount; partitionId++) {
       final String segmentPath = Paths.get(
           localStorageFolder.getCanonicalPath(),
@@ -543,7 +607,7 @@ class SegmentLocalCacheManagerConcurrencyTest
       SegmentLocalCacheManagerTest.makeSegmentZip(localSegmentFile, indexZip);
 
       final DataSegment segment =
-          newSegment(interval, partitionId, FileUtils.getFileSize(localSegmentFile)).withLoadSpec(
+          newSegment(interval, partitionId, 1000).withLoadSpec(
               ImmutableMap.of(
                   "type",
                   "local",
@@ -575,6 +639,20 @@ class SegmentLocalCacheManagerConcurrencyTest
                       .binaryVersion(9)
                       .size(size)
                       .build();
+  }
+
+  private static class BatchResult
+  {
+    public final List<Throwable> exceptions;
+    public final int success;
+    public final int rows;
+
+    public BatchResult(List<Throwable> exceptions, int success, int rows)
+    {
+      this.exceptions = exceptions;
+      this.success = success;
+      this.rows = rows;
+    }
   }
 
   private static class Load implements Callable<Void>
@@ -626,7 +704,6 @@ class SegmentLocalCacheManagerConcurrencyTest
     public Integer call() throws SegmentLoadingException
     {
       final Closer closer = Closer.create();
-      boolean timedOut = false;
       final AcquireSegmentAction action = closer.register(
           segmentManager.acquireSegment(segment, segment.toDescriptor())
       );
@@ -642,20 +719,16 @@ class SegmentLocalCacheManagerConcurrencyTest
         }
         return null;
       }
-      catch (ExecutionException | InterruptedException | TimeoutException e) {
-        if (e instanceof TimeoutException) {
-          timedOut = true;
-          Futures.addCallback(
-              action.getSegmentFuture(),
-              AcquireSegmentAction.releaseCallback(action),
-              Execs.directExecutor()
-          );
-        }
-        throw new RuntimeException(e);
+      catch (Throwable t) {
+        Futures.addCallback(
+            action.getSegmentFuture(),
+            AcquireSegmentAction.releaseCallback(action),
+            Execs.directExecutor()
+        );
+        throw new RuntimeException(t);
       }
       finally {
         CloseableUtils.closeAndWrapExceptions(closer);
-        Assertions.assertEquals(expectTimeout, timedOut);
       }
     }
   }

@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentReference;
@@ -36,7 +37,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
@@ -44,11 +44,12 @@ import java.util.function.Supplier;
  * This class represents an intent to acquire a reference to a {@link Segment} and then use it to do stuff, finally
  * closing when done. When an {@link AcquireSegmentAction} is created, segment cache implementations will create a
  * 'hold' to ensure it cannot be removed from the cache until this action has been closed. {@link #getSegmentFuture()}
- * will return the segment if already cached, or attempt to download from deep storage to load into the cache if not.
- * The {@link Segment} returned by the future places a separate hold on the cache until the segment itself is closed,
- * and MUST be closed when the caller is finished doing segment things with it. The caller must also call
- * {@link #close()} on this object to clean up the hold that exists while possibly loading the segment, and may do so
- * as soon as the {@link Segment} is acquired (or can do so earlier to abort the load and release the hold).
+ * actually initiates the 'action', and will return the segment if already cached, or attempt to download from deep
+ * storage to load into the cache if not. The {@link Segment} returned by the future places a separate hold on the
+ * cache until the segment itself is closed, and MUST be closed when the caller is finished doing segment things with
+ * it. The caller must also call {@link #close()} on this object to clean up the hold that exists while possibly
+ * loading the segment, and may do so as soon as the {@link Segment} is acquired (or can do so earlier to abort the
+ * load and release the hold).
  */
 public class AcquireSegmentAction implements Closeable
 {
@@ -84,15 +85,13 @@ public class AcquireSegmentAction implements Closeable
     boolean isTimeout = false;
 
     final List<SegmentReference> segmentReferences = new ArrayList<>(acquireSegmentActions.size());
+    int failCount = 0;
     for (int i = 0; i < acquireSegmentActions.size(); i++) {
       // if anything fails, want to ignore it initially so we can collect all additional futures to properly clean up
       // all references before rethrowing the error
       try {
         final AcquireSegmentAction action = acquireSegmentActions.get(i);
         final ListenableFuture<Optional<Segment>> future = futures.get(i);
-        if (isTimeout) {
-          Futures.addCallback(future, releaseCallback(action), Execs.directExecutor());
-        }
         final Optional<Segment> segment = future.get(timeoutAt - System.currentTimeMillis(), TimeUnit.MILLISECONDS)
                                                 .map(safetyNet::register);
         segmentReferences.add(
@@ -104,14 +103,16 @@ public class AcquireSegmentAction implements Closeable
         );
       }
       catch (Throwable t) {
-        if (t instanceof TimeoutException) {
-          isTimeout = true;
-          Futures.addCallback(futures.get(i), releaseCallback(acquireSegmentActions.get(i)), Execs.directExecutor());
-        }
+        // add callback to make sure everything gets cleaned up, just in case
+        Futures.addCallback(futures.get(i), releaseCallback(acquireSegmentActions.get(i)), Execs.directExecutor());
         if (failure == null) {
           failure = t;
         } else {
-          failure.addSuppressed(t);
+          failCount++;
+          // no need to get carried away, if a bunch fail this ceases to be useful
+          if (failCount <= 10) {
+            failure.addSuppressed(t);
+          }
         }
       }
     }
@@ -147,6 +148,12 @@ public class AcquireSegmentAction implements Closeable
     return segmentDescriptor;
   }
 
+  /**
+   * Get a {@link Segment} reference to an item that exists in the cache, or if necessary/possible, fetching it from
+   * deep storage. Ultimately, the reference is provided with {@link ReferenceCountedSegmentProvider#acquireReference()}
+   * either as an immediate future if the segment already exists in cache. The
+   * 'action' to fetch the segment and acquire the reference is not initiated until this method is called.
+   */
   public ListenableFuture<Optional<Segment>> getSegmentFuture()
   {
     return segmentFutureSupplier.get();

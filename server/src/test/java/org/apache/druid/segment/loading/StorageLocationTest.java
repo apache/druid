@@ -337,7 +337,7 @@ class StorageLocationTest
     StorageLocation loc = new StorageLocation(tempDir, 1000L, null);
     final TestSegmentCacheEntry entry = makeSegmentEntry("2024/2025", 10);
     loc.reserveWeak(entry);
-    entry.mount(loc.getPath());
+    entry.mount(loc);
 
     for (int i = 0; i < 1000; i++) {
       final List<Future<Boolean>> futures = new ArrayList<>();
@@ -440,7 +440,7 @@ class StorageLocationTest
     }
 
     @Override
-    public void mount(File location)
+    public void mount(StorageLocation location)
     {
       isMounted = true;
     }
@@ -483,7 +483,7 @@ class StorageLocationTest
     }
 
     @Override
-    public void mount(File location)
+    public void mount(StorageLocation location)
     {
       // do nothing
     }

@@ -401,7 +401,7 @@ public class StorageLocationSelectorStrategyTest
       }
 
       @Override
-      public void mount(File location)
+      public void mount(StorageLocation location)
       {
         isMounted = true;
       }

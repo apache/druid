@@ -457,7 +457,7 @@ public class LocalIntermediaryDataManager implements IntermediaryDataManager
     }
 
     @Override
-    public void mount(File location)
+    public void mount(StorageLocation location)
     {
       // do nothing, since we are just using StorageLocation as an accountant
     }
