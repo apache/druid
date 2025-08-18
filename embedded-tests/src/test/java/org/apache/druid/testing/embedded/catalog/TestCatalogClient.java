@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.cluster;
+package org.apache.druid.testing.embedded.catalog;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -28,11 +28,14 @@ import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.rpc.RequestBuilder;
+import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedServiceClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import java.util.List;
 
-public class CatalogClient
+public class TestCatalogClient
 {
   public static class VersionResponse
   {
@@ -47,122 +50,134 @@ public class CatalogClient
     }
   }
 
-  private final DruidClusterClient clusterClient;
+  private final EmbeddedDruidCluster cluster;
 
-  public CatalogClient(final DruidClusterClient clusterClient)
+  public TestCatalogClient(EmbeddedDruidCluster cluster)
   {
-    this.clusterClient = clusterClient;
+    this.cluster = cluster;
   }
 
   public long createTable(TableMetadata table, boolean overwrite)
   {
-    // Use action=
-    String url = StringUtils.format(
-        "%s%s/schemas/%s/tables/%s",
-        clusterClient.leadCoordinatorUrl(),
+    final String url = StringUtils.format(
+        "%s/schemas/%s/tables/%s%s",
         CatalogResource.ROOT_PATH,
         table.id().schema(),
-        table.id().name()
+        table.id().name(),
+        overwrite ? "?overwrite=true" : ""
     );
-    if (overwrite) {
-      url += "?overwrite=true";
-    }
-    VersionResponse response = clusterClient.post(url, table.spec(), VersionResponse.class);
-    return response.version;
+    
+    final VersionResponse response = serviceClient().onLeaderCoordinator(
+        mapper -> new RequestBuilder(HttpMethod.POST, url).jsonContent(mapper, table.spec()),
+        new TypeReference<>() {}
+    );
+    return response == null ? 0 : response.version;
   }
 
   public long updateTable(TableId tableId, TableSpec tableSpec, long version)
   {
     String url = StringUtils.format(
-        "%s%s/schemas/%s/tables/%s",
-        clusterClient.leadCoordinatorUrl(),
+        "%s/schemas/%s/tables/%s%s",
         CatalogResource.ROOT_PATH,
         tableId.schema(),
-        tableId.name()
+        tableId.name(),
+        version > 0 ? "?version=" + version : ""
     );
-    if (version > 0) {
-      url += "?version=" + version;
-    }
-    VersionResponse response = clusterClient.post(url, tableSpec, VersionResponse.class);
-    return response.version;
+    VersionResponse response = serviceClient().onLeaderCoordinator(
+        mapper -> new RequestBuilder(HttpMethod.POST, url).jsonContent(mapper, tableSpec),
+        new TypeReference<>() {}
+    );
+    return response == null ? 0 : response.version;
   }
 
   public TableMetadata readTable(TableId tableId)
   {
     String url = StringUtils.format(
-        "%s%s/schemas/%s/tables/%s",
-        clusterClient.leadCoordinatorUrl(),
+        "%s/schemas/%s/tables/%s",
         CatalogResource.ROOT_PATH,
         tableId.schema(),
         tableId.name()
     );
-    return clusterClient.getAs(url, TableMetadata.class);
+    return getFromCoordinator(url, new TypeReference<>() {});
   }
 
   public void dropTable(TableId tableId)
   {
     String url = StringUtils.format(
-        "%s%s/schemas/%s/tables/%s",
-        clusterClient.leadCoordinatorUrl(),
+        "%s/schemas/%s/tables/%s",
         CatalogResource.ROOT_PATH,
         tableId.schema(),
         tableId.name()
     );
-    clusterClient.send(HttpMethod.DELETE, url);
+    serviceClient().onLeaderCoordinator(
+        mapper -> new RequestBuilder(HttpMethod.DELETE, url),
+        null
+    );
   }
 
   public long editTable(TableId tableId, TableEditRequest cmd)
   {
     String url = StringUtils.format(
-        "%s%s/schemas/%s/tables/%s/edit",
-        clusterClient.leadCoordinatorUrl(),
+        "%s/schemas/%s/tables/%s/edit",
         CatalogResource.ROOT_PATH,
         tableId.schema(),
         tableId.name()
     );
-    VersionResponse response = clusterClient.post(url, cmd, VersionResponse.class);
-    return response.version;
+    VersionResponse response = serviceClient().onLeaderCoordinator(
+        mapper -> new RequestBuilder(HttpMethod.POST, url).jsonContent(mapper, cmd),
+        new TypeReference<>() {}
+    );
+    return response == null ? 0 : response.version;
   }
 
   public List<String> listSchemas()
   {
     String url = StringUtils.format(
-        "%s%s/schemas?format=name",
-        clusterClient.leadCoordinatorUrl(),
+        "%s/schemas?format=name",
         CatalogResource.ROOT_PATH
     );
-    return clusterClient.getAs(url, new TypeReference<>() {});
+    return getFromCoordinator(url, new TypeReference<>() {});
   }
 
   public List<TableId> listTables()
   {
     String url = StringUtils.format(
-        "%s%s/schemas?format=path",
-        clusterClient.leadCoordinatorUrl(),
+        "%s/schemas?format=path",
         CatalogResource.ROOT_PATH
     );
-    return clusterClient.getAs(url, new TypeReference<>() {});
+    return getFromCoordinator(url, new TypeReference<>() {});
   }
 
   public List<String> listTableNamesInSchema(String schemaName)
   {
     String url = StringUtils.format(
-        "%s%s/schemas/%s/tables?format=name",
-        clusterClient.leadCoordinatorUrl(),
+        "%s/schemas/%s/tables?format=name",
         CatalogResource.ROOT_PATH,
         schemaName
     );
-    return clusterClient.getAs(url, new TypeReference<>() {});
+    return getFromCoordinator(url, new TypeReference<>() {});
   }
 
   public List<TableMetadata> listTablesInSchema(String schemaName)
   {
     String url = StringUtils.format(
-        "%s%s/schemas/%s/tables?format=metadata",
-        clusterClient.leadCoordinatorUrl(),
+        "%s/schemas/%s/tables?format=metadata",
         CatalogResource.ROOT_PATH,
         schemaName
     );
-    return clusterClient.getAs(url, new TypeReference<>() {});
+    return getFromCoordinator(url, new TypeReference<>() {});
+  }
+  
+  private EmbeddedServiceClient serviceClient()
+  {
+    return cluster.callApi().serviceClient();
+  }
+
+  private <T> T getFromCoordinator(String url, TypeReference<T> typeReference)
+  {
+    return serviceClient().onLeaderCoordinator(
+        mapper -> new RequestBuilder(HttpMethod.GET, url),
+        typeReference
+    );
   }
 }
