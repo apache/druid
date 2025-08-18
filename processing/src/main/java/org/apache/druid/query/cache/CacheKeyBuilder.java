@@ -270,7 +270,7 @@ public class CacheKeyBuilder
   public CacheKeyBuilder appendCacheable(@Nullable Cacheable input)
   {
     byte[] cacheableToByteArray = cacheableToByteArray(input);
-    if (cacheableToByteArray == null) {
+    if (Arrays.equals(cacheableToByteArray, EMPTY_BYTES)) {
       invalidKey = true;
       return this;
     }
