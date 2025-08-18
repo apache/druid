@@ -533,12 +533,13 @@ public class SupervisorResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response specGetHistory(
       @Context final HttpServletRequest req,
-      @PathParam("id") final String id
+      @PathParam("id") final String id,
+      @QueryParam("count") final Integer count
   )
   {
     return asLeaderWithSupervisorManager(
         manager -> {
-          List<VersionedSupervisorSpec> historyForId = manager.getSupervisorHistoryForId(id);
+          List<VersionedSupervisorSpec> historyForId = manager.getSupervisorHistoryForId(id, count);
           if (!historyForId.isEmpty()) {
             final List<VersionedSupervisorSpec> authorizedHistoryForId =
                 Lists.newArrayList(

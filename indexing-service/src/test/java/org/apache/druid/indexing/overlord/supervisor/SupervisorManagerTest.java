@@ -306,6 +306,22 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
+  public void testGetSupervisorHistoryForIdWithLimit()
+  {
+    String id = "test-supervisor-1";
+    Integer limit = 5;
+    List<VersionedSupervisorSpec> supervisorHistory = ImmutableList.of();
+
+    EasyMock.expect(metadataSupervisorManager.getAllForId(id, limit)).andReturn(supervisorHistory);
+    replayAll();
+
+    List<VersionedSupervisorSpec> history = manager.getSupervisorHistoryForId(id, limit);
+    verifyAll();
+
+    Assert.assertEquals(supervisorHistory, history);
+  }
+
+  @Test
   public void testGetSupervisorStatus()
   {
     SupervisorReport<Void> report = new SupervisorReport<>("id1", DateTimes.nowUtc(), null);

@@ -36,6 +36,15 @@ public interface MetadataSupervisorManager
   List<VersionedSupervisorSpec> getAllForId(String id);
 
   /**
+   * Get supervisor history for a given supervisor ID with an optional limit
+   *
+   * @param id the supervisor ID
+   * @param limit maximum number of history entries to return (null for all entries)
+   * @return list of versioned supervisor specs for the given ID
+   */
+  List<VersionedSupervisorSpec> getAllForId(String id, Integer limit);
+
+  /**
    * Return latest supervisors (both active and terminated)
    *
    * @return latest terminated supervisors

@@ -304,6 +304,11 @@ public class SupervisorManager
     return metadataSupervisorManager.getAllForId(id);
   }
 
+  public List<VersionedSupervisorSpec> getSupervisorHistoryForId(String id, Integer limit)
+  {
+    return metadataSupervisorManager.getAllForId(id, limit);
+  }
+
   public Map<String, List<VersionedSupervisorSpec>> getSupervisorHistory()
   {
     return metadataSupervisorManager.getAll();

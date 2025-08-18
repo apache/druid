@@ -1141,6 +1141,88 @@ public class SupervisorResourceTest extends EasyMockSupport
   }
 
   @Test
+  public void testSpecGetHistoryWithLimit()
+  {
+    List<VersionedSupervisorSpec> versions = ImmutableList.of(
+        new VersionedSupervisorSpec(
+            new TestSupervisorSpec("id1", null, Collections.singletonList("datasource1")),
+            "v1"
+        ),
+        new VersionedSupervisorSpec(
+            new TestSupervisorSpec("id1", null, Collections.singletonList("datasource1")),
+            "v2"
+        ),
+        new VersionedSupervisorSpec(
+            new TestSupervisorSpec("id1", null, Collections.singletonList("datasource1")),
+            "v3"
+        )
+    );
+
+    List<VersionedSupervisorSpec> limitedVersions = ImmutableList.of(
+        new VersionedSupervisorSpec(
+            new TestSupervisorSpec("id1", null, Collections.singletonList("datasource1")),
+            "v1"
+        ),
+        new VersionedSupervisorSpec(
+            new TestSupervisorSpec("id1", null, Collections.singletonList("datasource1")),
+            "v2"
+        )
+    );
+
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(4);
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id1", 2)).andReturn(limitedVersions).times(1);
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id1", 0)).andReturn(Collections.emptyList()).times(1);
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id1", -1)).andReturn(versions).times(1);
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id1", 100)).andReturn(versions).times(1);
+    setupMockRequest();
+    replayAll();
+
+    // Test with valid limit
+    Response response = supervisorResource.specGetHistory(request, "id1", 2);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(limitedVersions, response.getEntity());
+
+    // Test with limit=0
+    response = supervisorResource.specGetHistory(request, "id1", 0);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(Collections.emptyList(), response.getEntity());
+
+    // Test with negative limit
+    response = supervisorResource.specGetHistory(request, "id1", -1);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(versions, response.getEntity());
+
+    // Test with limit larger than available history
+    response = supervisorResource.specGetHistory(request, "id1", 100);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(versions, response.getEntity());
+
+    verifyAll();
+  }
+
+  @Test
+  public void testSpecGetHistoryWithNullLimit()
+  {
+    List<VersionedSupervisorSpec> versions = ImmutableList.of(
+        new VersionedSupervisorSpec(
+            new TestSupervisorSpec("id1", null, Collections.singletonList("datasource1")),
+            "v1"
+        )
+    );
+
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(1);
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id1", null)).andReturn(versions).times(1);
+    setupMockRequest();
+    replayAll();
+
+    Response response = supervisorResource.specGetHistory(request, "id1", null);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(versions, response.getEntity());
+
+    verifyAll();
+  }
+
+  @Test
   public void testReset()
   {
     Capture<String> id1 = Capture.newInstance();

@@ -310,6 +310,66 @@ public class SQLMetadataSupervisorManagerTest
     Assert.assertTrue(actual.containsKey(supervisor1));
   }
 
+  @Test
+  public void testGetAllForIdWithLimit()
+  {
+    final String supervisor1 = "test-supervisor-1";
+    final Map<String, String> data1rev1 = ImmutableMap.of("key1-1", "value1-1-1", "key1-2", "value1-2-1");
+    final Map<String, String> data1rev2 = ImmutableMap.of("key1-1", "value1-1-2", "key1-2", "value1-2-2");
+    final Map<String, String> data1rev3 = ImmutableMap.of("key1-1", "value1-1-3", "key1-2", "value1-2-3");
+
+    Assert.assertTrue(supervisorManager.getAll().isEmpty());
+
+    // Insert 3 versions
+    supervisorManager.insert(supervisor1, new TestSupervisorSpec(supervisor1, data1rev1));
+    supervisorManager.insert(supervisor1, new TestSupervisorSpec(supervisor1, data1rev2));
+    supervisorManager.insert(supervisor1, new TestSupervisorSpec(supervisor1, data1rev3));
+
+    // Test with limit=2
+    List<VersionedSupervisorSpec> limitedResults = supervisorManager.getAllForId(supervisor1, 2);
+    Assert.assertEquals(2, limitedResults.size());
+    // Results should be in descending order (newest first)
+    Assert.assertEquals(data1rev3, ((TestSupervisorSpec) limitedResults.get(0).getSpec()).getData());
+    Assert.assertEquals(data1rev2, ((TestSupervisorSpec) limitedResults.get(1).getSpec()).getData());
+
+    // Test with limit=1
+    limitedResults = supervisorManager.getAllForId(supervisor1, 1);
+    Assert.assertEquals(1, limitedResults.size());
+    Assert.assertEquals(data1rev3, ((TestSupervisorSpec) limitedResults.get(0).getSpec()).getData());
+
+    // Test with limit=0 (should return empty list)
+    limitedResults = supervisorManager.getAllForId(supervisor1, 0);
+    Assert.assertEquals(0, limitedResults.size());
+
+    // Test with limit=null (should return all)
+    List<VersionedSupervisorSpec> allResults = supervisorManager.getAllForId(supervisor1, null);
+    Assert.assertEquals(3, allResults.size());
+
+    // Test with limit larger than available records
+    limitedResults = supervisorManager.getAllForId(supervisor1, 10);
+    Assert.assertEquals(3, limitedResults.size());
+
+    // Test with negative limit (should return all)
+    limitedResults = supervisorManager.getAllForId(supervisor1, -1);
+    Assert.assertEquals(3, limitedResults.size());
+  }
+
+  @Test
+  public void testGetAllForIdWithLimitBackwardCompatibility()
+  {
+    final String supervisor1 = "test-supervisor-1";
+    final Map<String, String> data1 = ImmutableMap.of("key1-1", "value1-1-1");
+
+    supervisorManager.insert(supervisor1, new TestSupervisorSpec(supervisor1, data1));
+
+    // Test that both methods return the same result
+    List<VersionedSupervisorSpec> withoutLimit = supervisorManager.getAllForId(supervisor1);
+    List<VersionedSupervisorSpec> withNullLimit = supervisorManager.getAllForId(supervisor1, null);
+
+    Assert.assertEquals(withoutLimit.size(), withNullLimit.size());
+    Assert.assertEquals(withoutLimit.get(0).getSpec(), withNullLimit.get(0).getSpec());
+  }
+
 
   private static class BadSupervisorSpec implements SupervisorSpec
   {
