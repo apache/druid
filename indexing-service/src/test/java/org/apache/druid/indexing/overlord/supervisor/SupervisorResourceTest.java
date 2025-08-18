@@ -990,23 +990,23 @@ public class SupervisorResourceTest extends EasyMockSupport
     );
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(3);
-    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id1")).andReturn(versions1).times(1);
-    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id2")).andReturn(versions2).times(1);
-    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id3")).andReturn(Collections.emptyList()).times(1);
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id1", null)).andReturn(versions1).times(1);
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id2", null)).andReturn(versions2).times(1);
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id3", null)).andReturn(Collections.emptyList()).times(1);
     setupMockRequest();
     replayAll();
 
-    Response response = supervisorResource.specGetHistory(request, "id1");
+    Response response = supervisorResource.specGetHistory(request, "id1", null);
 
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(versions1, response.getEntity());
 
-    response = supervisorResource.specGetHistory(request, "id2");
+    response = supervisorResource.specGetHistory(request, "id2", null);
 
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(versions2, response.getEntity());
 
-    response = supervisorResource.specGetHistory(request, "id3");
+    response = supervisorResource.specGetHistory(request, "id3", null);
 
     Assert.assertEquals(404, response.getStatus());
 
@@ -1015,7 +1015,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
     replayAll();
 
-    response = supervisorResource.specGetHistory(request, "id1");
+    response = supervisorResource.specGetHistory(request, "id1", null);
     verifyAll();
 
     Assert.assertEquals(503, response.getStatus());
@@ -1080,24 +1080,24 @@ public class SupervisorResourceTest extends EasyMockSupport
     );
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(4);
-    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id1")).andReturn(versions1).times(1);
-    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id2")).andReturn(versions2).times(1);
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id1", null)).andReturn(versions1).times(1);
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id2", null)).andReturn(versions2).times(1);
     EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id3")).andReturn(versions3).times(1);
-    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id4")).andReturn(Collections.emptyList()).times(1);
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id4", null)).andReturn(Collections.emptyList()).times(1);
     setupMockRequestForUser("notdruid");
     replayAll();
 
-    Response response = supervisorResource.specGetHistory(request, "id1");
+    Response response = supervisorResource.specGetHistory(request, "id1", null);
 
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(versions1, response.getEntity());
 
-    response = supervisorResource.specGetHistory(request, "id2");
+    response = supervisorResource.specGetHistory(request, "id2", null);
 
     // user is not authorized to access datasource2
     Assert.assertEquals(404, response.getStatus());
 
-    response = supervisorResource.specGetHistory(request, "id3");
+    response = supervisorResource.specGetHistory(request, "id3", null);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(
         ImmutableList.of(
@@ -1125,7 +1125,7 @@ public class SupervisorResourceTest extends EasyMockSupport
         response.getEntity()
     );
 
-    response = supervisorResource.specGetHistory(request, "id4");
+    response = supervisorResource.specGetHistory(request, "id4", null);
     Assert.assertEquals(404, response.getStatus());
 
 
@@ -1134,7 +1134,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
     replayAll();
 
-    response = supervisorResource.specGetHistory(request, "id1");
+    response = supervisorResource.specGetHistory(request, "id1", null);
     verifyAll();
 
     Assert.assertEquals(503, response.getStatus());
