@@ -55,7 +55,6 @@ import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.metadata.SegmentAnalyzer;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.policy.PolicyEnforcer;
@@ -66,6 +65,7 @@ import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
+import org.apache.druid.segment.loading.VirtualPlaceholderSegment;
 import org.apache.druid.server.coordination.DataSegmentAndDescriptor;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.timeline.DataSegment;
@@ -265,7 +265,7 @@ public class ServerManager implements QuerySegmentWalker
           segmentReferences.add(
               new SegmentReference(
                   descriptor,
-                  Optional.of(SegmentAnalyzer.makeVirtualPlaceholderSegment(dataSegment)),
+                  Optional.of(new VirtualPlaceholderSegment(dataSegment)),
                   AcquireSegmentAction.NOOP_CLEANUP
               )
           );
