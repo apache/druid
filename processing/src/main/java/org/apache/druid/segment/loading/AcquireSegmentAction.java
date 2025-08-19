@@ -69,7 +69,7 @@ public class AcquireSegmentAction implements Closeable
     for (AcquireSegmentAction acquireSegmentAction : acquireSegmentActions) {
       safetyNet.register(acquireSegmentAction);
       // if we haven't failed yet, keep collecing futures (we always want to collect the actions themselves though
-      // to close
+      // to close the hold)
       if (failure == null) {
         try {
           futures.add(acquireSegmentAction.getSegmentFuture());
@@ -81,8 +81,6 @@ public class AcquireSegmentAction implements Closeable
         futures.add(Futures.immediateFuture(Optional.empty()));
       }
     }
-
-    boolean isTimeout = false;
 
     final List<SegmentReference> segmentReferences = new ArrayList<>(acquireSegmentActions.size());
     int failCount = 0;

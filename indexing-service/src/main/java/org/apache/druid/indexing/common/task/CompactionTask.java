@@ -791,7 +791,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             final Closer closer = Closer.create();
             segmentCacheManager.load(dataSegment);
             closer.register(() -> segmentCacheManager.drop(dataSegment));
-            final Segment segment = closer.register(segmentCacheManager.acquireSegment(dataSegment).orElseThrow());
+            final Segment segment = closer.register(segmentCacheManager.acquireCachedSegment(dataSegment).orElseThrow());
             return new ResourceHolder<QueryableIndex>()
             {
               @Override

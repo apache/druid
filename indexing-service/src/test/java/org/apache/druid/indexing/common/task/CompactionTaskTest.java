@@ -1940,7 +1940,7 @@ public class CompactionTaskTest
       }
 
       @Override
-      public Optional<Segment> acquireSegment(DataSegment dataSegment)
+      public Optional<Segment> acquireCachedSegment(DataSegment dataSegment)
       {
         return Optional.of(
             new QueryableIndexSegment(indexIO.loadIndex(segments.get(dataSegment)), dataSegment.getId())

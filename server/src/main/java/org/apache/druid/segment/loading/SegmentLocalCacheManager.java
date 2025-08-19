@@ -275,15 +275,35 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public Optional<Segment> acquireSegment(final DataSegment dataSegment)
+  public Optional<Segment> acquireCachedSegment(final DataSegment dataSegment)
   {
     final SegmentCacheEntryIdentifier cacheEntryIdentifier = new SegmentCacheEntryIdentifier(dataSegment.getId());
     for (StorageLocation location : locations) {
-      if (location.isReserved(cacheEntryIdentifier)) {
-        final SegmentCacheEntry cacheEntry = location.getCacheEntry(cacheEntryIdentifier);
-        if (cacheEntry != null) {
-          return cacheEntry.acquireReference();
+      final SegmentCacheEntry cacheEntry = location.getStaticCacheEntry(cacheEntryIdentifier);
+      if (cacheEntry != null) {
+        return cacheEntry.acquireReference();
+      }
+      final StorageLocation.ReservationHold<SegmentCacheEntry> hold =
+          location.addWeakReservationHoldIfExists(cacheEntryIdentifier);
+      try {
+        if (hold != null) {
+
+          if (hold.getEntry().isMounted()) {
+            Optional<Segment> segment = hold.getEntry().acquireReference();
+            if (segment.isPresent()) {
+              return ReferenceCountedSegmentProvider.wrapCloseable(
+                  (ReferenceCountedSegmentProvider.LeafReference) segment.get(),
+                  hold
+              );
+            }
+          }
+
+          hold.close();
         }
+      }
+      catch (Throwable e) {
+        hold.close();
+        throw e;
       }
     }
     return Optional.empty();

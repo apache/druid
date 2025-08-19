@@ -116,7 +116,7 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
     final Closer closer = Closer.create();
     try {
       segmentCacheManager.load(dataSegment);
-      final Segment segment = closer.register(segmentCacheManager.acquireSegment(dataSegment).orElseThrow());
+      final Segment segment = closer.register(segmentCacheManager.acquireCachedSegment(dataSegment).orElseThrow());
       closer.register(() -> segmentCacheManager.drop(dataSegment));
 
       final PhysicalSegmentInspector inspector = segment.as(PhysicalSegmentInspector.class);

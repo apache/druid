@@ -124,7 +124,7 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
   }
 
   @Override
-  public Optional<Segment> acquireSegment(DataSegment dataSegment)
+  public Optional<Segment> acquireCachedSegment(DataSegment dataSegment)
   {
     if (observedSegmentsRemovedFromCache.contains(dataSegment)) {
       return Optional.empty();

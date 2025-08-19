@@ -299,7 +299,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
         .manufacturate(tempSegmentDir);
     try {
       cacheManager.load(dataSegment);
-      return cacheManager.acquireSegment(dataSegment).orElseThrow();
+      return cacheManager.acquireCachedSegment(dataSegment).orElseThrow();
     }
     catch (SegmentLoadingException e) {
       throw new RuntimeException(e);

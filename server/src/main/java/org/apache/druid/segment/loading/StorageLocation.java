@@ -121,10 +121,14 @@ public class StorageLocation
   private final AtomicReference<Stats>  stats = new AtomicReference<>();
 
   /**
-   * This lock is for all operations to traverse or modify the {@link WeakCacheEntry} double linked list, through
-   * {@link #head}, {@link #tail}, or {@link #hand}.
+   * A {@link ReentrantReadWriteLock.ReadLock} may be used for any operations to access {@link #staticCacheEntries} or
+   * {@link #weakCacheEntries}, including visiting and placing holds on weak entries.
+   * <p>
+   * A {@link ReentrantReadWriteLock.WriteLock} must be acquired for all operations to insert or remove items, including
+   * any operations which traverse or modify the {@link WeakCacheEntry} double linked list such as
+   * {@link #linkNewWeakEntry(WeakCacheEntry)} or {@link #unlinkWeakEntry(WeakCacheEntry)}, including calling
+   * {@link #canHandle(CacheEntry)} which can unlink entries
    */
-//  private final Object lock = new Object();
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
   public StorageLocation(File path, long maxSizeBytes, @Nullable Double freeSpacePercent)
@@ -150,8 +154,8 @@ public class StorageLocation
   /**
    * Exposes the {@link #lock} used by the {@link StorageLocation} to allow {@link CacheEntry#mount(StorageLocation)}
    * and {@link CacheEntry#unmount()} to synchronize operations with this location. Callers MUST pay attention to the
-   * type of lock they are using if planning to call any other methods of the location to ensure deadlocks are not
-   * possible. In other words, it is best not to call this method
+   * type of lock they are using if planning to call any other methods of this class to ensure deadlocks are not
+   * possible.
    */
   public ReadWriteLock getLock()
   {
@@ -164,6 +168,20 @@ public class StorageLocation
   public File getPath()
   {
     return path;
+  }
+
+  public <T extends CacheEntry> T getStaticCacheEntry(CacheEntryIdentifier entryId)
+  {
+    lock.readLock().lock();
+    try {
+      if (staticCacheEntries.containsKey(entryId)) {
+        return (T) staticCacheEntries.get(entryId);
+      }
+      return null;
+    }
+    finally {
+      lock.readLock().unlock();
+    }
   }
 
   /**

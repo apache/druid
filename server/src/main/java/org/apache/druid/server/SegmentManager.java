@@ -138,7 +138,7 @@ public class SegmentManager
       DataSegment dataSegment
   )
   {
-    return cacheManager.acquireSegment(dataSegment);
+    return cacheManager.acquireCachedSegment(dataSegment);
   }
 
   /**
@@ -305,7 +305,7 @@ public class SegmentManager
             );
 
             long numOfRows = 0;
-            final Optional<Segment> loadedSegment = cacheManager.acquireSegment(dataSegment);
+            final Optional<Segment> loadedSegment = cacheManager.acquireCachedSegment(dataSegment);
             if (loadedSegment.isPresent()) {
               final Segment segment = loadedSegment.get();
               final IndexedTable table = segment.as(IndexedTable.class);
@@ -372,7 +372,7 @@ public class SegmentManager
 
             if (oldSegmentRef != null) {
               try (final Closer closer = Closer.create()) {
-                final Optional<Segment> oldSegment = cacheManager.acquireSegment(oldSegmentRef);
+                final Optional<Segment> oldSegment = cacheManager.acquireCachedSegment(oldSegmentRef);
                 long numberOfRows = oldSegment.map(segment -> {
                   final PhysicalSegmentInspector countInspector = segment.as(PhysicalSegmentInspector.class);
                   if (countInspector != null) {

@@ -790,7 +790,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     final DataSegment dataSegment = TestSegmentUtils.makeSegment("foo", "v1", Intervals.of("2020/2021"));
 
     manager.bootstrap(dataSegment, SegmentLazyLoadFailCallback.NOOP);
-    Segment actualBootstrapSegment = manager.acquireSegment(dataSegment).orElse(null);
+    Segment actualBootstrapSegment = manager.acquireCachedSegment(dataSegment).orElse(null);
     Assert.assertNotNull(actualBootstrapSegment);
     Assert.assertEquals(dataSegment.getId(), actualBootstrapSegment.getId());
     Assert.assertEquals(dataSegment.getInterval(), actualBootstrapSegment.getDataInterval());
@@ -828,7 +828,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
 
     manager.load(segmentToLoad);
     Assert.assertNull(manager.getSegmentFiles(segmentToLoad));
-    Assert.assertFalse(manager.acquireSegment(segmentToLoad).isPresent());
+    Assert.assertFalse(manager.acquireCachedSegment(segmentToLoad).isPresent());
     AcquireSegmentAction segmentAction = manager.acquireSegment(
         segmentToLoad,
         segmentToLoad.toDescriptor()
@@ -890,7 +890,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
 
     manager.bootstrap(segmentToBootstrap, SegmentLazyLoadFailCallback.NOOP);
     Assert.assertNull(manager.getSegmentFiles(segmentToBootstrap));
-    Assert.assertFalse(manager.acquireSegment(segmentToBootstrap).isPresent());
+    Assert.assertFalse(manager.acquireCachedSegment(segmentToBootstrap).isPresent());
     AcquireSegmentAction segmentAction = manager.acquireSegment(
         segmentToBootstrap,
         segmentToBootstrap.toDescriptor()
@@ -1016,7 +1016,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
                                              .build();
 
     manager.load(tombstone);
-    Segment segment = manager.acquireSegment(tombstone).orElse(null);
+    Segment segment = manager.acquireCachedSegment(tombstone).orElse(null);
 
     Assert.assertEquals(tombstone.getId(), segment.getId());
     Assert.assertEquals(interval, segment.getDataInterval());

@@ -83,7 +83,7 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public Optional<Segment> acquireSegment(DataSegment dataSegment)
+  public Optional<Segment> acquireCachedSegment(DataSegment dataSegment)
   {
     throw new UnsupportedOperationException();
   }

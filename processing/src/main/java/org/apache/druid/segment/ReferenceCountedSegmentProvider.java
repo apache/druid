@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
@@ -52,6 +53,11 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
   public static Optional<Segment> unmanaged(Segment segment)
   {
     return Optional.of(new UnmanagedReference(segment));
+  }
+
+  public static Optional<Segment> wrapCloseable(LeafReference segment, Closeable closeable)
+  {
+    return Optional.of(new CloseableWrappedReference(segment, closeable));
   }
 
   public ReferenceCountedSegmentProvider(Segment baseSegment)
@@ -195,6 +201,30 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
     public void close()
     {
       // close nothing, the lifecycle of the wrapped segment isn't managed by a provider
+    }
+  }
+
+  public static final class CloseableWrappedReference extends LeafReference
+  {
+    private final Closeable closeable;
+
+    public CloseableWrappedReference(LeafReference delegate, Closeable closeable)
+    {
+      super(delegate);
+      this.closeable = closeable;
+    }
+
+    @Nullable
+    @Override
+    public <T> T as(@Nonnull Class<T> clazz)
+    {
+      return baseSegment.as(clazz);
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      CloseableUtils.closeAll(baseSegment, closeable);
     }
   }
 }
