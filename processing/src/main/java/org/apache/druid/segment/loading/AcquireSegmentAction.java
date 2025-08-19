@@ -22,21 +22,12 @@ package org.apache.druid.segment.loading;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentMapFunction;
-import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.utils.CloseableUtils;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
@@ -55,95 +46,22 @@ public class AcquireSegmentAction implements Closeable
 {
   public static final Closeable NOOP_CLEANUP = () -> {};
 
-  public static List<SegmentReference> mapAllSegments(
-      List<AcquireSegmentAction> acquireSegmentActions,
-      SegmentMapFunction segmentMapFunction,
-      long timeoutAt
-  )
+  public static AcquireSegmentAction missingSegment()
   {
-    final Closer safetyNet = Closer.create();
-    Throwable failure = null;
-
-    // getting the future kicks off any background action, so materialize them all to a list to get things started
-    final List<ListenableFuture<Optional<Segment>>> futures = new ArrayList<>(acquireSegmentActions.size());
-    for (AcquireSegmentAction acquireSegmentAction : acquireSegmentActions) {
-      safetyNet.register(acquireSegmentAction);
-      // if we haven't failed yet, keep collecing futures (we always want to collect the actions themselves though
-      // to close the hold)
-      if (failure == null) {
-        try {
-          futures.add(acquireSegmentAction.getSegmentFuture());
-        }
-        catch (Throwable t) {
-          failure = t;
-        }
-      } else {
-        futures.add(Futures.immediateFuture(Optional.empty()));
-      }
-    }
-
-    final List<SegmentReference> segmentReferences = new ArrayList<>(acquireSegmentActions.size());
-    int failCount = 0;
-    for (int i = 0; i < acquireSegmentActions.size(); i++) {
-      // if anything fails, want to ignore it initially so we can collect all additional futures to properly clean up
-      // all references before rethrowing the error
-      try {
-        final AcquireSegmentAction action = acquireSegmentActions.get(i);
-        final ListenableFuture<Optional<Segment>> future = futures.get(i);
-        final Optional<Segment> segment = future.get(timeoutAt - System.currentTimeMillis(), TimeUnit.MILLISECONDS)
-                                                .map(safetyNet::register);
-        segmentReferences.add(
-            new SegmentReference(
-                action.getDescriptor(),
-                segmentMapFunction.apply(segment),
-                action
-            )
-        );
-      }
-      catch (Throwable t) {
-        // add callback to make sure everything gets cleaned up, just in case
-        Futures.addCallback(futures.get(i), releaseCallback(acquireSegmentActions.get(i)), Execs.directExecutor());
-        if (failure == null) {
-          failure = t;
-        } else {
-          failCount++;
-          // no need to get carried away, if a bunch fail this ceases to be useful
-          if (failCount <= 10) {
-            failure.addSuppressed(t);
-          }
-        }
-      }
-    }
-    if (failure != null) {
-      throw CloseableUtils.closeAndWrapInCatch(failure, safetyNet);
-    }
-    return segmentReferences;
+    return new AcquireSegmentAction(() -> Futures.immediateFuture(Optional.empty()), NOOP_CLEANUP);
   }
 
-  public static AcquireSegmentAction missingSegment(final SegmentDescriptor descriptor)
-  {
-    return new AcquireSegmentAction(descriptor, () -> Futures.immediateFuture(Optional.empty()), NOOP_CLEANUP);
-  }
-
-  private final SegmentDescriptor segmentDescriptor;
   private final Supplier<ListenableFuture<Optional<Segment>>> segmentFutureSupplier;
   private final Closeable loadCleanup;
   private AtomicBoolean closed = new AtomicBoolean(false);
 
   public AcquireSegmentAction(
-      SegmentDescriptor segmentDescriptor,
       Supplier<ListenableFuture<Optional<Segment>>> segmentFutureSupplier,
       Closeable loadCleanup
   )
   {
-    this.segmentDescriptor = segmentDescriptor;
     this.segmentFutureSupplier = segmentFutureSupplier;
     this.loadCleanup = loadCleanup;
-  }
-
-  public SegmentDescriptor getDescriptor()
-  {
-    return segmentDescriptor;
   }
 
   /**

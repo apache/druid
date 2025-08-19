@@ -21,13 +21,17 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.client.CachingQueryRunner;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
@@ -65,6 +69,7 @@ import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
+import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.VirtualPlaceholderSegment;
 import org.apache.druid.server.coordination.DataSegmentAndDescriptor;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -79,6 +84,8 @@ import org.joda.time.Interval;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -188,13 +195,11 @@ public class ServerManager implements QuerySegmentWalker
 
   /**
    * For each {@link SegmentDescriptor}, we try to fetch a {@link DataSegment} from the supplied
-   * {@link VersionedIntervalTimeline}, then use
-   * {@link SegmentManager#acquireSegments(Iterable)} to apply {@link SegmentMapFunction}
-   * to get the segments from the cache (or loaded from deep storage if necessary) and transform the segments as
-   * appropriate for query processing into {@link SegmentReference} wrappers. The wrappers contain the
-   * {@link SegmentDescriptor} and an {@link Optional<Segment>}. If present, the {@link Segment} will be registered to
-   * the {@link Closer}. If empty, the segment was not in the timeline, not in the cache, or the map function transform
-   * was unable to be applied.
+   * {@link VersionedIntervalTimeline}, then use {@link SegmentManager#acquireSegment(DataSegment)} to obtain a
+   * 'reference' to segments in the cache (or loaded from deep storage if necessary/supported by the storage layer).
+   * For each of these segments, we then apply a {@link SegmentMapFunction} to transform  into {@link SegmentReference}
+   * wrappers. The wrappers contain the {@link SegmentDescriptor} and an {@link Optional<Segment>}, and MUST BE
+   * CLOSED to release the references when processing is complete.
    */
   protected List<SegmentReference> getAndLoadAllSegmentReferences(
       VersionedIntervalTimeline<String, DataSegment> timeline,
@@ -203,28 +208,131 @@ public class ServerManager implements QuerySegmentWalker
       final long timeout
   )
   {
-    final Iterable<DataSegmentAndDescriptor> segmentsToMap = FunctionalIterable
-        .create(segments)
-        .transform(
-            descriptor -> {
-              final PartitionChunk<DataSegment> chunk = timeline.findChunk(
-                  descriptor.getInterval(),
-                  descriptor.getVersion(),
-                  descriptor.getPartitionNumber()
-              );
+    // first we build a list of DataSegment we need to get references for, paired with the descriptor from the query
+    final List<DataSegmentAndDescriptor> segmentsToMap = new ArrayList<>();
+    for (SegmentDescriptor descriptor : segments) {
+      final PartitionChunk<DataSegment> chunk = timeline.findChunk(
+          descriptor.getInterval(),
+          descriptor.getVersion(),
+          descriptor.getPartitionNumber()
+      );
 
-              if (chunk != null) {
-                final DataSegment segment = chunk.getObject();
-                if (segment != null) {
-                  return new DataSegmentAndDescriptor(segment, descriptor);
-                }
-              }
-              return new DataSegmentAndDescriptor(null, descriptor);
-            }
-        );
-    final List<AcquireSegmentAction> loaders = segmentManager.acquireSegments(segmentsToMap);
+      if (chunk != null) {
+        segmentsToMap.add(new DataSegmentAndDescriptor(chunk.getObject(), descriptor));
+      } else {
+        segmentsToMap.add(new DataSegmentAndDescriptor(null, descriptor));
+      }
+    }
+
+    // closer to collect everything that needs cleaned up in the event of failure, if we make it out of this function,
+    // closing the segments handles everything and it is the callers responsibility
+    final Closer safetyNet = Closer.create();
+
+    // build list of acquire reference actions, this does not initiate the actions until we collect the futures. this
+    // does place a hold on any weakly held references if the cache includes segments that reside on virtual storage
+    // fabric
+    final List<AcquireSegmentAction> actions = new ArrayList<>();
+    try {
+      for (DataSegmentAndDescriptor segment : segmentsToMap) {
+        if (segment == null) {
+          actions.add(safetyNet.register(AcquireSegmentAction.missingSegment()));
+        } else {
+          actions.add(safetyNet.register(segmentManager.acquireSegment(segment.getDataSegment())));
+        }
+      }
+    }
+    catch (SegmentLoadingException e) {
+      CloseableUtils.closeAndWrapExceptions(safetyNet);
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
+                          .build(e, e.getMessage());
+    }
+    catch (Throwable t) {
+      throw CloseableUtils.closeAndWrapInCatch(t, safetyNet);
+    }
+
     long timeoutAt = System.currentTimeMillis() + timeout;
-    return AcquireSegmentAction.mapAllSegments(loaders, segmentMapFunction, timeoutAt);
+
+    Throwable failure = null;
+
+    // getting the future kicks off any background action, so materialize them all to a list to get things started
+    final List<ListenableFuture<Optional<Segment>>> futures = new ArrayList<>(actions.size());
+    for (AcquireSegmentAction acquireSegmentAction : actions) {
+      // if we haven't failed yet, keep collecing futures (we always want to collect the actions themselves though
+      // to close the hold)
+      if (failure == null) {
+        try {
+          futures.add(acquireSegmentAction.getSegmentFuture());
+        }
+        catch (Throwable t) {
+          failure = t;
+        }
+      } else {
+        futures.add(Futures.immediateFuture(Optional.empty()));
+      }
+    }
+
+    if (failure != null) {
+      for (int i = 0; i < actions.size(); i++) {
+        Futures.addCallback(futures.get(i), AcquireSegmentAction.releaseCallback(actions.get(i)), Execs.directExecutor());
+      }
+      throw DruidException.defensive(failure, "Failed to acquire segment references to process query");
+    }
+
+    final List<SegmentReference> segmentReferences = new ArrayList<>(actions.size());
+    boolean timedOut = false;
+    boolean interrupted = false;
+    for (int i = 0; i < actions.size(); i++) {
+      // if anything fails, want to ignore it initially so we can collect all additional futures to properly clean up
+      // all references before rethrowing the error
+      try {
+        final DataSegmentAndDescriptor segmentAndDescriptor = segmentsToMap.get(i);
+        final AcquireSegmentAction action = actions.get(i);
+        final ListenableFuture<Optional<Segment>> future = futures.get(i);
+        final Optional<Segment> segment = future.get(timeoutAt - System.currentTimeMillis(), TimeUnit.MILLISECONDS)
+                                                .map(safetyNet::register);
+        segmentReferences.add(
+            new SegmentReference(
+                segmentAndDescriptor.getDescriptor(),
+                segmentMapFunction.apply(segment),
+                action
+            )
+        );
+      }
+      catch (Throwable t) {
+        // add callback to make sure everything gets cleaned up, just in case
+        Futures.addCallback(futures.get(i), AcquireSegmentAction.releaseCallback(actions.get(i)), Execs.directExecutor());
+        if (t instanceof InterruptedException) {
+          interrupted = true;
+        }
+        if (t instanceof TimeoutException) {
+          timedOut = true;
+        }
+        if (failure == null) {
+          failure = t;
+        } else {
+          // no need to get carried away, if a bunch fail this ceases to be useful
+          if (failure.getSuppressed().length <= 10) {
+            failure.addSuppressed(t);
+          }
+        }
+      }
+    }
+    if (failure != null) {
+      final DruidException toThrow;
+      if (timedOut) {
+        toThrow = DruidException.forPersona(DruidException.Persona.USER)
+                                .ofCategory(DruidException.Category.TIMEOUT)
+                                .build(failure, "Failed to acquire segment references to process query");
+      } else if (interrupted) {
+        Thread.currentThread().interrupt();
+        toThrow = DruidException.defensive(failure, "Interrupted waiting for segments");
+      } else {
+        toThrow = DruidException.defensive(failure, "Failed to acquire segment references to process query");
+      }
+      throw CloseableUtils.closeInCatch(toThrow, safetyNet);
+    }
+    return segmentReferences;
   }
 
 
@@ -251,7 +359,7 @@ public class ServerManager implements QuerySegmentWalker
         segmentReferences.add(SegmentReference.missing(descriptor));
       } else {
         final DataSegment dataSegment = chunk.getObject();
-        final Optional<Segment> theSegment = segmentMapFn.apply(segmentManager.acquireSegment(dataSegment));
+        final Optional<Segment> theSegment = segmentMapFn.apply(segmentManager.acquireCachedSegment(dataSegment));
         if (theSegment.isPresent()) {
           segmentReferences.add(
               new SegmentReference(

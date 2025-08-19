@@ -37,7 +37,6 @@ import org.apache.druid.segment.join.table.ReferenceCountedIndexedTableProvider;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
-import org.apache.druid.server.coordination.DataSegmentAndDescriptor;
 import org.apache.druid.server.metrics.SegmentRowCountDistribution;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -47,7 +46,6 @@ import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -131,12 +129,9 @@ public class SegmentManager
    * Returns a {@link Segment} transformed with a {@link SegmentMapFunction}, if it is available in the cache. The
    * returned {@link Segment} must be closed when the caller is finished doing segment things. This method will not
    * download a {@link DataSegment} if it is not already present in {@link #cacheManager}, use
-   * {@link #acquireSegment(DataSegmentAndDescriptor)} or
-   * {@link #acquireSegments(Iterable)} instead.
+   * {@link #acquireSegment(DataSegment)} instead.
    */
-  public Optional<Segment> acquireSegment(
-      DataSegment dataSegment
-  )
+  public Optional<Segment> acquireCachedSegment(DataSegment dataSegment)
   {
     return cacheManager.acquireCachedSegment(dataSegment);
   }
@@ -150,49 +145,9 @@ public class SegmentManager
    * manager implementations will place a hold on this segment until the 'loadCleanup' closer is closed - typically
    * after resolving the future to acquire the reference to the actual {@link Segment} object.
    */
-  public AcquireSegmentAction acquireSegment(
-      DataSegmentAndDescriptor segmentAndDescriptor
-  ) throws SegmentLoadingException
+  public AcquireSegmentAction acquireSegment(DataSegment dataSegment) throws SegmentLoadingException
   {
-    return cacheManager.acquireSegment(
-        segmentAndDescriptor.getDataSegment(),
-        segmentAndDescriptor.getDescriptor()
-    );
-  }
-
-  /**
-   * Given a list of {@link DataSegmentAndDescriptor}, call {@link #acquireSegment(DataSegmentAndDescriptor)}
-   * on each of them to build a list of {@link AcquireSegmentAction}. Calling
-   * {@link AcquireSegmentAction#getSegmentFuture()} on any item in the list will either return immediately if the
-   * {@link Segment} is in the cache, or possibly try to fetch the segment from deep storage if not. Any
-   * {@link Segment} returned from these futures, if present, must be closed when the caller is finished doing segment
-   * things.
-   * <p>
-   * Calling this method is treated as an intent to acquire and use the segments via resolving the futures, and cache
-   * manager implementations will place a hold on all segments specified until the {@link AcquireSegmentAction} is
-   * closed. Callers will typically wait until after resolving all the futures to acquire the references to the actual
-   * {@link Segment} objects, but may do so earlier to cancel the hold. {@link Segment} objects returned by the future
-   * must also be closed separately by the caller.
-   */
-  public List<AcquireSegmentAction> acquireSegments(
-      Iterable<DataSegmentAndDescriptor> segments
-  )
-  {
-    final List<AcquireSegmentAction> actions = new ArrayList<>();
-    final Closer fail = Closer.create();
-    try {
-      for (DataSegmentAndDescriptor segmentAndDescriptor : segments) {
-        if (segmentAndDescriptor.getDataSegment() == null) {
-          actions.add(fail.register(AcquireSegmentAction.missingSegment(segmentAndDescriptor.getDescriptor())));
-        } else {
-          actions.add(fail.register(acquireSegment(segmentAndDescriptor)));
-        }
-      }
-      return actions;
-    }
-    catch (Throwable t) {
-      throw CloseableUtils.closeAndWrapInCatch(t, fail);
-    }
+    return cacheManager.acquireSegment(dataSegment);
   }
 
   /**

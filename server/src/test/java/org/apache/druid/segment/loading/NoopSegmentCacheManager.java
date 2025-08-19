@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.loading;
 
-import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
@@ -89,10 +88,7 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public AcquireSegmentAction acquireSegment(
-      DataSegment dataSegment,
-      SegmentDescriptor descriptor
-  )
+  public AcquireSegmentAction acquireSegment(DataSegment dataSegment)
   {
     throw new UnsupportedOperationException();
   }

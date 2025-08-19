@@ -795,7 +795,7 @@ class SegmentLocalCacheManagerConcurrencyTest
     {
       final Closer closer = Closer.create();
       final AcquireSegmentAction action = closer.register(
-          segmentManager.acquireSegment(segment, segment.toDescriptor())
+          segmentManager.acquireSegment(segment)
       );
       try {
         final Optional<Segment> segment =

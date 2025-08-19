@@ -829,10 +829,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     manager.load(segmentToLoad);
     Assert.assertNull(manager.getSegmentFiles(segmentToLoad));
     Assert.assertFalse(manager.acquireCachedSegment(segmentToLoad).isPresent());
-    AcquireSegmentAction segmentAction = manager.acquireSegment(
-        segmentToLoad,
-        segmentToLoad.toDescriptor()
-    );
+    AcquireSegmentAction segmentAction = manager.acquireSegment(segmentToLoad);
     Optional<Segment> theSegment = segmentAction.getSegmentFuture().get();
     Assert.assertTrue(theSegment.isPresent());
     Assert.assertNotNull(manager.getSegmentFiles(segmentToLoad));
@@ -845,10 +842,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     Assert.assertNull(manager.getSegmentFiles(segmentToLoad));
 
     // can actually load them again because load doesn't really do anything
-    AcquireSegmentAction segmentActionAfterDrop = manager.acquireSegment(
-        segmentToLoad,
-        segmentToLoad.toDescriptor()
-    );
+    AcquireSegmentAction segmentActionAfterDrop = manager.acquireSegment(segmentToLoad);
     Optional<Segment> theSegmentAfterDrop = segmentActionAfterDrop.getSegmentFuture().get();
     Assert.assertTrue(theSegmentAfterDrop.isPresent());
     Assert.assertNotNull(manager.getSegmentFiles(segmentToLoad));
@@ -891,10 +885,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     manager.bootstrap(segmentToBootstrap, SegmentLazyLoadFailCallback.NOOP);
     Assert.assertNull(manager.getSegmentFiles(segmentToBootstrap));
     Assert.assertFalse(manager.acquireCachedSegment(segmentToBootstrap).isPresent());
-    AcquireSegmentAction segmentAction = manager.acquireSegment(
-        segmentToBootstrap,
-        segmentToBootstrap.toDescriptor()
-    );
+    AcquireSegmentAction segmentAction = manager.acquireSegment(segmentToBootstrap);
     Optional<Segment> theSegment = segmentAction.getSegmentFuture().get();
     Assert.assertTrue(theSegment.isPresent());
     Assert.assertNotNull(manager.getSegmentFiles(segmentToBootstrap));
@@ -909,10 +900,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
 
     // can actually load them again because bootstrap doesn't really do anything unless the segment is already
     // present in the cache
-    AcquireSegmentAction segmentActionAfterDrop = manager.acquireSegment(
-        segmentToBootstrap,
-        segmentToBootstrap.toDescriptor()
-    );
+    AcquireSegmentAction segmentActionAfterDrop = manager.acquireSegment(segmentToBootstrap);
     Optional<Segment> theSegmentAfterDrop = segmentActionAfterDrop.getSegmentFuture().get();
     Assert.assertTrue(theSegmentAfterDrop.isPresent());
     Assert.assertNotNull(manager.getSegmentFiles(segmentToBootstrap));

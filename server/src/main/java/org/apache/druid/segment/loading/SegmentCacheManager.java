@@ -65,7 +65,7 @@ public interface SegmentCacheManager
   /**
    * Given a {@link DataSegment}, which contains the instructions for where and how to fetch a {@link Segment} from
    * deep storage, this method tries to load and subsequently serve it to callers via
-   * {@link #acquireCachedSegment(DataSegment)} or {@link #acquireSegment(DataSegment, SegmentDescriptor)}. If the segment
+   * {@link #acquireCachedSegment(DataSegment)} or {@link #acquireSegment(DataSegment)}. If the segment
    * cannot be loaded either due to error or insufficient storage space, this method throws a
    * {@link SegmentLoadingException}.
    *
@@ -112,15 +112,12 @@ public interface SegmentCacheManager
    * to be dropped until it has been closed. As such, the returned {@link Segment} must be closed when the caller is
    * finished doing segment things.
    */
-  AcquireSegmentAction acquireSegment(
-      DataSegment dataSegment,
-      SegmentDescriptor descriptor
-  ) throws SegmentLoadingException;
+  AcquireSegmentAction acquireSegment(DataSegment dataSegment) throws SegmentLoadingException;
 
   /**
    * Alternative to {@link #acquireCachedSegment(DataSegment)}, to return the {@link File} location of the segment files
    * stored in the cache, instead of a {@link Optional<Segment>}. Unlike {@link #acquireCachedSegment(DataSegment)} and
-   * {@link #acquireSegment(DataSegment, SegmentDescriptor)}, this method does not provide any protections for callers,
+   * {@link #acquireSegment(DataSegment)}, this method does not provide any protections for callers,
    * and should only be used by callers that are in control of when {@link #drop(DataSegment)} is called. This method
    * will not download the segment files from deep storage if they do not already exist in the cache, callers should use
    * {@link #load(DataSegment)} before calling this method.

@@ -83,7 +83,7 @@ public class DartDataSegmentProvider implements DataSegmentProvider
       }
 
       final DataSegment dataSegment = chunk.getObject();
-      final Optional<Segment> maybeSegment = segmentManager.acquireSegment(dataSegment);
+      final Optional<Segment> maybeSegment = segmentManager.acquireCachedSegment(dataSegment);
       if (!maybeSegment.isPresent()) {
         // Segment has disappeared before we could acquire a reference to it.
         throw segmentNotFound(segmentId);

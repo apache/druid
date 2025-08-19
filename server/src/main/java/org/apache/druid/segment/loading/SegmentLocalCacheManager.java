@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
@@ -310,13 +309,10 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public AcquireSegmentAction acquireSegment(
-      final DataSegment dataSegment,
-      final SegmentDescriptor descriptor
-  ) throws SegmentLoadingException
+  public AcquireSegmentAction acquireSegment(final DataSegment dataSegment) throws SegmentLoadingException
   {
     final SegmentCacheEntryIdentifier identifier = new SegmentCacheEntryIdentifier(dataSegment.getId());
-    final AcquireSegmentAction acquireExisting = acquireExistingSegment(descriptor, identifier);
+    final AcquireSegmentAction acquireExisting = acquireExistingSegment(identifier);
     if (acquireExisting != null) {
       return acquireExisting;
     }
@@ -324,7 +320,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     final ReferenceCountingLock lock = lock(dataSegment);
     synchronized (lock) {
       try {
-        final AcquireSegmentAction retryAcquireExisting = acquireExistingSegment(descriptor, identifier);
+        final AcquireSegmentAction retryAcquireExisting = acquireExistingSegment(identifier);
         if (retryAcquireExisting != null) {
           return retryAcquireExisting;
         }
@@ -338,7 +334,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           try {
             if (hold != null) {
               return new AcquireSegmentAction(
-                  descriptor,
                   makeOnDemandLoadSupplier(hold.getEntry(), location),
                   hold
               );
@@ -360,10 +355,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Nullable
-  private AcquireSegmentAction acquireExistingSegment(
-      SegmentDescriptor descriptor,
-      SegmentCacheEntryIdentifier identifier
-  )
+  private AcquireSegmentAction acquireExistingSegment(SegmentCacheEntryIdentifier identifier)
   {
     final Closer safetyNet =   Closer.create();
     for (StorageLocation location : locations) {
@@ -374,7 +366,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         if (hold != null) {
           if (hold.getEntry().isMounted()) {
             return new AcquireSegmentAction(
-                descriptor,
                 () -> Futures.immediateFuture(hold.getEntry().acquireReference()),
                 hold
             );
@@ -382,7 +373,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             // go ahead and mount it, someone else is probably trying this as well, but mount is done under a segment
             // lock and is a no-op if already mounted, and if we win we need it to be mounted
             return new AcquireSegmentAction(
-                descriptor,
                 makeOnDemandLoadSupplier(hold.getEntry(), location),
                 hold
             );

@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.java.util.common.MapUtils;
-import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
@@ -133,16 +132,12 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
   }
 
   @Override
-  public AcquireSegmentAction acquireSegment(
-      DataSegment dataSegment,
-      SegmentDescriptor descriptor
-  )
+  public AcquireSegmentAction acquireSegment(DataSegment dataSegment)
   {
     if (observedSegmentsRemovedFromCache.contains(dataSegment)) {
-      return AcquireSegmentAction.missingSegment(descriptor);
+      return AcquireSegmentAction.missingSegment();
     }
     return new AcquireSegmentAction(
-        descriptor,
         () -> Futures.immediateFuture(getSegmentInternal(dataSegment).acquireReference()),
         AcquireSegmentAction.NOOP_CLEANUP
     );
