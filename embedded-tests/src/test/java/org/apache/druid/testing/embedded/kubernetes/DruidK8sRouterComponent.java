@@ -36,6 +36,12 @@ public class DruidK8sRouterComponent extends DruidK8sComponent
   {
     super(namespace, druidImage, clusterName);
   }
+  
+  @Override
+  protected boolean needsSharedStorage()
+  {
+    return false; // Router doesn't need shared storage
+  }
 
   @Override
   public String getDruidServiceType()

@@ -22,10 +22,8 @@ package org.apache.druid.testing.embedded.kubernetes;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.apps.StatefulSetList;
-// import org.apache.druid.indexing.common.task.IndexTask;
-// import org.apache.druid.testing.embedded.indexing.MoreResources;
-// import org.apache.druid.testing.embedded.indexing.Resources;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.testing.embedded.TestFolder;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -50,6 +48,9 @@ public class DruidKubernetesTest extends KubernetesTestBase
 {
   private static final Logger log = new Logger(DruidKubernetesTest.class);
   private static final String DRUID_NAMESPACE = "druid";
+  private static final String DRUID_DOCKER_TEST_IMAGE = "apache/druid:docker-tests";
+  private static final String PROPERTY_TEST_IMAGE = "druid.testing.docker.image";
+  private static final String DRUID_SEGMENT_DIR = "/tmp/druid/segments";
 
   private static DruidOperatorComponent druidOperator;
   private DruidClusterComponent druidCluster;
@@ -58,8 +59,8 @@ public class DruidKubernetesTest extends KubernetesTestBase
   public static void init()
   {
     startK3SContainer();
-    
-    String localImageName = System.getProperty("druid.k8s.test.image", "your-local-druid-image:latest");
+
+    String localImageName = System.getProperty(PROPERTY_TEST_IMAGE, DRUID_DOCKER_TEST_IMAGE);
     getDeployingResource().loadLocalImage(localImageName);
     
     createNamespace(DRUID_NAMESPACE);
@@ -73,8 +74,10 @@ public class DruidKubernetesTest extends KubernetesTestBase
   public void setUp()
   {
     String clusterName = "druid-it";
-    String localImageName = System.getProperty("druid.k8s.test.image", "your-local-druid-image:latest");
-    
+    String localImageName = System.getProperty(PROPERTY_TEST_IMAGE, DRUID_DOCKER_TEST_IMAGE);
+    TestFolder testFolder = getDeployingResource().getTestFolder();
+
+    testFolder.getOrCreateFolder(DRUID_SEGMENT_DIR);
     druidCluster = new DruidClusterComponent(DRUID_NAMESPACE, localImageName, clusterName, getDeployingResource());
 
     druidCluster.addDruidService(new DruidK8sHistoricalComponent(
@@ -82,7 +85,8 @@ public class DruidKubernetesTest extends KubernetesTestBase
         localImageName,
         clusterName,
         "hot",
-        1
+        1,
+        DRUID_SEGMENT_DIR
     ));
     druidCluster.addDruidService(new DruidK8sRouterComponent(
         DRUID_NAMESPACE,
@@ -100,8 +104,6 @@ public class DruidKubernetesTest extends KubernetesTestBase
         clusterName
     ));
     
-    // Note: For now, testing with Coordinator-only setup
-    // TODO: Add Overlord and MiddleManager components for full indexing support
     addKubernetesComponent(druidCluster);
     initializeComponents();
   }
@@ -112,7 +114,7 @@ public class DruidKubernetesTest extends KubernetesTestBase
     cleanupComponents(false);
 
     try {
-      Thread.sleep(5000); // 5 seconds
+      Thread.sleep(5000);
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -202,17 +204,10 @@ public class DruidKubernetesTest extends KubernetesTestBase
   }
 
   @Test
-  @Timeout(value = 5, unit = TimeUnit.MINUTES)
+  @Timeout(value = 50, unit = TimeUnit.MINUTES)
   public void test_cluster_fullIngestionAndQuery() throws Exception
   {
-    String dataSource = "test_simple_" + UUID.randomUUID().toString().replace("-", "");
-    
-    System.out.println("\n=== Full Ingestion and Query Test ===");
-    System.out.printf("Data source: %s%n", dataSource);
-    
-    // Step 1: Submit indexing task
-    System.out.println("\n--- Step 1: Submit Indexing Task ---");
-    
+    String dataSource = "test_datasource_" + UUID.randomUUID().toString().replace("-", "");
     String taskJson = String.format("{\n" +
         "  \"type\": \"index_parallel\",\n" +
         "  \"spec\": {\n" +
@@ -251,115 +246,15 @@ public class DruidKubernetesTest extends KubernetesTestBase
         "  }\n" +
         "}", dataSource);
     
-    // Get coordinator URL for task submission
-    DruidK8sCoordinatorComponent coordinator = null;
-    for (DruidK8sComponent service : druidCluster.getDruidServices()) {
-      if (service instanceof DruidK8sCoordinatorComponent) {
-        coordinator = (DruidK8sCoordinatorComponent) service;
-        break;
-      }
-    }
-    
-    Assertions.assertNotNull(coordinator, "Coordinator service should be available");
-    
-    String coordinatorUrl = coordinator.getExternalUrl(getClient(), getDeployingResource().getK3sContainer());
-    String taskSubmissionUrl = coordinatorUrl + "/druid/indexer/v1/task";
-    
-    HttpClient httpClient = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(30))
-        .build();
-        
-    HttpRequest taskRequest = HttpRequest.newBuilder()
-        .uri(URI.create(taskSubmissionUrl))
-        .header("Content-Type", "application/json")
-        .header("Accept", "application/json")
-        .POST(HttpRequest.BodyPublishers.ofString(taskJson))
-        .timeout(Duration.ofSeconds(30))
-        .build();
-    
-    HttpResponse<String> taskResponse = httpClient.send(taskRequest, HttpResponse.BodyHandlers.ofString());
-    System.out.printf("Task submission response: %d%n", taskResponse.statusCode());
-    System.out.printf("Response body: %s%n", taskResponse.body());
-    
-    Assertions.assertEquals(200, taskResponse.statusCode(), "Task submission should return 200");
-    
-    // Extract task ID
-    String responseBody = taskResponse.body();
-    String taskId = null;
-    String[] parts = responseBody.split("\"task\":\\s*\"");
-    if (parts.length > 1) {
-      String afterTask = parts[1];
-      taskId = afterTask.split("\"")[0];
-    }
-    
-    Assertions.assertNotNull(taskId, "Should be able to extract task ID from response");
-    System.out.printf("✓ Task submitted with ID: %s%n", taskId);
-    
-    // Step 2: Wait for task to start running
-    System.out.println("\n--- Step 2: Wait for Task to Start Running ---");
-    
-    String taskStatusUrl = coordinatorUrl + "/druid/indexer/v1/task/" + taskId + "/status";
-    boolean taskStarted = false;
-    String finalStatus = null;
-    int maxAttempts = 60; // 5 minutes
-    
-    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        HttpRequest statusRequest = HttpRequest.newBuilder()
-            .uri(URI.create(taskStatusUrl))
-            .header("Accept", "application/json")
-            .GET()
-            .timeout(Duration.ofSeconds(30))
-            .build();
-        
-        HttpResponse<String> statusResponse = httpClient.send(statusRequest, HttpResponse.BodyHandlers.ofString());
-        
-        if (statusResponse.statusCode() == 200) {
-          String statusBody = statusResponse.body();
-          
-          if (statusBody.contains("\"status\":\"SUCCESS\"")) {
-            finalStatus = "SUCCESS";
-            taskStarted = true;
-            break;
-          } else if (statusBody.contains("\"status\":\"FAILED\"")) {
-            finalStatus = "FAILED";
-            System.out.printf("Task failed but continuing test: %s%n", statusBody);
-            break; // Don't fail test, just continue
-          } else if (statusBody.contains("\"status\":\"RUNNING\"")) {
-            finalStatus = "RUNNING";
-            taskStarted = true;
-            System.out.printf("✓ Task is now running (attempt %d)%n", attempt);
-            break;
-          } else if (statusBody.contains("\"status\":\"PENDING\"")) {
-            finalStatus = "PENDING";
-          }
-          
-          System.out.printf("Attempt %d - Status: %s%n", attempt, finalStatus);
-        } else {
-          System.out.printf("Status check failed with HTTP %d%n", statusResponse.statusCode());
-        }
-        
-        if (attempt < maxAttempts) {
-          Thread.sleep(5000);
-        }
-        
-      } catch (Exception e) {
-        System.out.printf("Status check attempt %d failed: %s%n", attempt, e.getMessage());
-        if (attempt < maxAttempts) {
-          Thread.sleep(5000);
-        }
-      }
-    }
-    
-    if (taskStarted) {
-      System.out.printf("✓ Task reached status: %s%n", finalStatus);
-    } else {
-      System.out.printf("⚠ Task did not start running within timeout. Final status: %s%n", finalStatus);
-    }
+    String taskId = druidCluster.submitTask(taskJson);
 
-    // Step 3: Wait for datasource to appear
-    System.out.println("\n--- Step 3: Wait for Datasource to Appear ---");
-    
+    log.debug("Task submitted with ID: %s%n", taskId);
+    druidCluster.waitUntilTaskCompletes(taskId);
+
+    HttpClient httpClient = HttpClient.newBuilder()
+                                      .connectTimeout(Duration.ofSeconds(30))
+                                      .build();
+
     DruidK8sBrokerComponent broker = null;
     for (DruidK8sComponent service : druidCluster.getDruidServices()) {
       if (service instanceof DruidK8sBrokerComponent) {
@@ -369,11 +264,11 @@ public class DruidKubernetesTest extends KubernetesTestBase
     }
     
     Assertions.assertNotNull(broker, "Broker service should be available");
-    String brokerUrl = broker.getExternalUrl(getClient(), getDeployingResource().getK3sContainer());
+    String brokerUrl = broker.getExternalUrl(getDeployingResource().getK3sContainer());
     String datasourcesUrl = brokerUrl + "/druid/v2/datasources";
     
     boolean datasourceAvailable = false;
-    for (int attempt = 1; attempt <= 20; attempt++) {
+    for (int attempt = 1; attempt <= 200; attempt++) {
       HttpRequest datasourcesRequest = HttpRequest.newBuilder()
           .uri(URI.create(datasourcesUrl))
           .header("Accept", "application/json")
@@ -385,7 +280,7 @@ public class DruidKubernetesTest extends KubernetesTestBase
       
       if (datasourcesResponse.statusCode() == 200) {
         String body = datasourcesResponse.body();
-        System.out.printf("Attempt %d - Available datasources: %s%n", attempt, body);
+        log.debug("Attempt %d - Available datasources: %s%n", attempt, body);
         
         if (body.contains(dataSource)) {
           datasourceAvailable = true;
@@ -393,17 +288,13 @@ public class DruidKubernetesTest extends KubernetesTestBase
         }
       }
       
-      if (attempt < 20) {
+      if (attempt < 200) {
         Thread.sleep(10000);
       }
     }
     
     Assertions.assertTrue(datasourceAvailable, "Datasource should appear in broker within timeout");
-    System.out.printf("✓ Datasource '%s' is now available!%n", dataSource);
-    
-    // Step 4: Query the indexed data
-    System.out.println("\n--- Step 4: Query the Indexed Data ---");
-    
+
     String queryJson = String.format("{\n" +
         "  \"queryType\": \"scan\",\n" +
         "  \"dataSource\": \"%s\",\n" +
@@ -424,8 +315,8 @@ public class DruidKubernetesTest extends KubernetesTestBase
     
     HttpResponse<String> queryResponse = httpClient.send(queryRequest, HttpResponse.BodyHandlers.ofString());
     
-    System.out.printf("Query response: %d%n", queryResponse.statusCode());
-    System.out.printf("Query results: %s%n", queryResponse.body());
+    log.debug("Query response: %d%n", queryResponse.statusCode());
+    log.debug("Query results: %s%n", queryResponse.body());
     
     Assertions.assertEquals(200, queryResponse.statusCode(), "Query should return 200");
     
@@ -463,7 +354,7 @@ public class DruidKubernetesTest extends KubernetesTestBase
     System.out.println("\n=== External URLs (accessible from localhost) ===");
     
     for (DruidK8sComponent service : druidCluster.getDruidServices()) {
-      String externalUrl = service.getExternalUrl(getClient(), getDeployingResource().getK3sContainer());
+      String externalUrl = service.getExternalUrl(getDeployingResource().getK3sContainer());
       String healthUrl = externalUrl + "/status/health";
       
       System.out.printf("%s service accessible at: %s%n", 

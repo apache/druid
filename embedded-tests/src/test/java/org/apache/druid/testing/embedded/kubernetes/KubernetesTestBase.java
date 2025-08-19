@@ -23,6 +23,7 @@ import io.fabric8.kubernetes.api.model.NamespaceBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.k8s.simulate.K3SResource;
+import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +37,7 @@ public abstract class KubernetesTestBase
   private static final Logger log = new Logger(KubernetesTestBase.class);
   
   private static final K3SResource k3sContainer = new K3SResource();
+  private static final MinIOStorageResource minIOStorage = new MinIOStorageResource();
   private static KubernetesClient client;
   private static List<ComponentEntry> components = new ArrayList<>();
 

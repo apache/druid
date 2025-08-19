@@ -23,8 +23,10 @@ import io.fabric8.kubernetes.api.model.GenericKubernetesResource;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.testing.embedded.TestFolder;
 import org.testcontainers.k3s.K3sContainer;
 
+import java.io.File;
 import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.List;
@@ -46,6 +48,7 @@ public abstract class DruidK8sComponent implements K8sComponent
   protected final String druidImage;
   protected final String clusterName;
   private Integer allocatedNodePort;
+  protected TestFolder testFolder;
 
   public static final String DRUID_34_IMAGE = "apache/druid:34.0.0";
 
@@ -54,6 +57,35 @@ public abstract class DruidK8sComponent implements K8sComponent
     this.namespace = namespace;
     this.druidImage = druidImage != null ? druidImage : DRUID_34_IMAGE;
     this.clusterName = clusterName;
+  }
+  
+  /**
+   * Set the TestFolder for shared storage across components.
+   */
+  public void setTestFolder(TestFolder testFolder)
+  {
+    this.testFolder = testFolder;
+  }
+  
+  /**
+   * Get the shared storage directory for segments and metadata.
+   */
+  protected String getSharedStorageDirectory()
+  {
+    if (testFolder == null) {
+      throw new IllegalStateException("TestFolder not initialized. Call setTestFolder() first.");
+    }
+    
+    // Create the main druid-storage directory
+    File storageDir = testFolder.getOrCreateFolder("druid-storage");
+    
+    // Create subdirectories that Druid components will need
+    testFolder.getOrCreateFolder("druid-storage/segments");
+    testFolder.getOrCreateFolder("druid-storage/segment-cache");
+    testFolder.getOrCreateFolder("druid-storage/metadata");
+    testFolder.getOrCreateFolder("druid-storage/indexing-logs");
+    
+    return storageDir.getAbsolutePath();
   }
 
   /**
@@ -137,11 +169,11 @@ public abstract class DruidK8sComponent implements K8sComponent
    * @param k3sContainer the K3s container instance
    * @return the external URL accessible from tests
    */
-  public String getExternalUrl(KubernetesClient client, K3sContainer k3sContainer)
+  public String getExternalUrl(K3sContainer k3sContainer)
   {
     int nodePort = getUniqueNodePort();
     int mappedPort = k3sContainer.getMappedPort(nodePort);
-    String host = "0.0.0.0"; // Use 0.0.0.0 for Docker on macOS
+    String host = "0.0.0.0";
     log.info("Using NodePort %d mapped to %s:%d for %s service", nodePort, host, mappedPort, getDruidServiceType());
     return String.format("http://%s:%d", host, mappedPort);
   }
@@ -220,7 +252,49 @@ public abstract class DruidK8sComponent implements K8sComponent
     )));
     nodeConfig.put("services", List.of(Map.of("spec", serviceSpec)));
 
+    // Add shared storage volume configuration
+    if (needsSharedStorage()) {
+      nodeConfig.put("volumes", createSharedStorageVolumes());
+      nodeConfig.put("volumeMounts", createSharedStorageVolumeMounts());
+    }
+
     return nodeConfig;
+  }
+  
+  /**
+   * Determine if this component needs shared storage.
+   * Override in subclasses that don't need shared storage.
+   */
+  protected boolean needsSharedStorage()
+  {
+    return true;
+  }
+  
+  /**
+   * Create shared storage volume configuration.
+   */
+  protected List<Map<String, Object>> createSharedStorageVolumes()
+  {
+    Map<String, Object> storageVolume = new HashMap<>();
+    storageVolume.put("name", "druid-shared-storage");
+    storageVolume.put("hostPath", Map.of(
+        "path", getSharedStorageDirectory(),
+        "type", "DirectoryOrCreate"
+    ));
+    
+    return List.of(storageVolume);
+  }
+  
+  /**
+   * Create shared storage volume mount configuration.
+   */
+  protected List<Map<String, Object>> createSharedStorageVolumeMounts()
+  {
+    Map<String, Object> storageMount = new HashMap<>();
+    storageMount.put("name", "druid-shared-storage");
+    storageMount.put("mountPath", "/druid/data");
+    
+    return List.of(storageMount);
   }
 
   public int getReplicas()
@@ -236,7 +310,6 @@ public abstract class DruidK8sComponent implements K8sComponent
   /**
    * Get common Druid configuration that applies to all services.
    * For the first cut, this is static
-   * 
    */
   protected String getCommonDruidProperties()
   {
@@ -256,6 +329,10 @@ public abstract class DruidK8sComponent implements K8sComponent
         "druid.metadata.storage.connector.port=1527\n" +
         "druid.metadata.storage.connector.createTables=true\n" +
         "\n" +
+        "# Shared storage configuration\n" +
+        "druid.storage.type=local\n" +
+        "druid.storage.storageDirectory=/druid/data/segments\n" +
+        "\n" +
         "# Extensions\n" +
         "druid.extensions.loadList=[\"druid-kubernetes-overlord-extensions\", \"druid-kubernetes-extensions\", \"druid-datasketches\"]\n" +
         "\n" +
@@ -264,7 +341,8 @@ public abstract class DruidK8sComponent implements K8sComponent
         "druid.selectors.coordinator.serviceName=druid/coordinator\n" +
         "\n" +
         "# Indexing logs\n" +
-        "druid.indexer.logs.type=file\n",
+        "druid.indexer.logs.type=file\n" +
+        "druid.indexer.logs.directory=/druid/data/indexing-logs\n",
         clusterName
     );
   }
@@ -350,18 +428,18 @@ public abstract class DruidK8sComponent implements K8sComponent
    */
   protected String createLog4jConfig()
   {
-    return "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\\n" +
-           "<Configuration status=\"TRACE\">\\n" +
-           "    <Appenders>\\n" +
-           "        <Console name=\"Console\" target=\"SYSTEM_OUT\">\\n" +
-           "            <JsonLayout properties=\"true\"/>\\n" +
-           "        </Console>\\n" +
-           "    </Appenders>\\n" +
-           "    <Loggers>\\n" +
-           "        <Root level=\"info\">\\n" +
-           "            <AppenderRef ref=\"Console\"/>\\n" +
-           "        </Root>\\n" +
-           "    </Loggers>\\n" +
+    return "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n" +
+           "<Configuration status=\"TRACE\">\n" +
+           "    <Appenders>\n" +
+           "        <Console name=\"Console\" target=\"SYSTEM_OUT\">\n" +
+           "            <JsonLayout properties=\"true\"/>\n" +
+           "        </Console>\n" +
+           "    </Appenders>\n" +
+           "    <Loggers>\n" +
+           "        <Root level=\"info\">\n" +
+           "            <AppenderRef ref=\"Console\"/>\n" +
+           "        </Root>\n" +
+           "    </Loggers>\n" +
            "</Configuration>";
   }
 

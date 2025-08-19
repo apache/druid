@@ -39,13 +39,15 @@ public class DruidK8sHistoricalComponent extends DruidK8sComponent
   private final String tier;
   private final int priority;
   private final long maxSize;
+  private final String storageDir;
 
-  public DruidK8sHistoricalComponent(String namespace, String druidImage, String clusterName, String tier, int priority)
+  public DruidK8sHistoricalComponent(String namespace, String druidImage, String clusterName, String tier, int priority, String storageDir)
   {
     super(namespace, druidImage, clusterName);
     this.tier = tier != null ? tier : DEFAULT_TIER;
     this.priority = priority;
     this.maxSize = DEFAULT_TIER.equals(this.tier) ? 1000000000L : 2000000000L;
+    this.storageDir = storageDir;
   }
 
 
@@ -72,6 +74,12 @@ public class DruidK8sHistoricalComponent extends DruidK8sComponent
     props.setProperty("druid.processing.numThreads", "2");
     props.setProperty("druid.segmentCache.locations", "[{\"path\":\"/druid/data/segments\",\"maxSize\":" + maxSize + "}]");
     props.setProperty("druid.server.maxSize", String.valueOf(maxSize));
+    
+    // Historical-specific configurations for segment loading
+    props.setProperty("druid.segmentCache.infoDir", "/druid/data/segment-cache");
+    props.setProperty("druid.historical.cache.useCache", "true");
+    props.setProperty("druid.historical.cache.populateCache", "true");
+    
     props.setProperty("druid.host", "druid-" + getMetadataName() + "-" + getTier());
     return props;
   }
@@ -112,16 +120,7 @@ public class DruidK8sHistoricalComponent extends DruidK8sComponent
     nodeConfig.put("livenessProbe", getLivenessProbe());
     nodeConfig.put("readinessProbe", getReadinessProbe());
 
-    Map<String, Object> volume = new HashMap<>();
-    volume.put("name", tier + "-volume");
-    volume.put("emptyDir", new HashMap<>());
-    nodeConfig.put("volumes", List.of(volume));
-
-    Map<String, Object> volumeMount = new HashMap<>();
-    volumeMount.put("mountPath", "/druid/data/segments");
-    volumeMount.put("name", tier + "-volume");
-    nodeConfig.put("volumeMounts", List.of(volumeMount));
-
+    // Remove individual volumes and volumeMounts - use shared storage from base class
     nodeConfig.put("runtime.properties", getRuntimePropertiesAsString().replace(getCommonDruidProperties(), "").trim());
     nodeConfig.put("extra.jvm.options", getJvmOptions());
     return nodeConfig;

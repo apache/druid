@@ -37,7 +37,8 @@ public class DruidK8sCoordinatorComponent extends DruidK8sComponent
 
   public DruidK8sCoordinatorComponent(String namespace, String druidImage, String clusterName)
   {
-    super(namespace, druidImage, clusterName);  }
+    super(namespace, druidImage, clusterName);
+  }
 
   @Override
   public String getDruidServiceType()
@@ -60,12 +61,19 @@ public class DruidK8sCoordinatorComponent extends DruidK8sComponent
     props.setProperty("druid.coordinator.period", "PT30S");
     props.setProperty("druid.coordinator.asOverlord.enabled", "true");
     props.setProperty("druid.coordinator.asOverlord.overlordService", "druid/overlord");
+    
+    // Segment loading configuration
+    props.setProperty("druid.coordinator.load.timeout", "PT15M");
+    props.setProperty("druid.coordinator.segment.awaitInitializationOnStart", "true");
+    
+    // Indexing/Overlord configuration
     props.setProperty("druid.indexer.queue.startDelay", "PT30S");
     props.setProperty("druid.indexer.runner.capacity", "2");
     props.setProperty("druid.indexer.runner.namespace", namespace);
     props.setProperty("druid.indexer.runner.type", "k8s");
     props.setProperty("druid.indexer.logs.type", "file");
     props.setProperty("druid.indexer.task.encapsulatedTask", "true");
+    
     props.setProperty("druid.host", "druid-" + getMetadataName() + "-" + getDruidServiceType());
     return props;
   }
@@ -92,8 +100,8 @@ public class DruidK8sCoordinatorComponent extends DruidK8sComponent
   @Override
   public Map<String, Object> getNodeConfig()
   {
-    Map<String, Object> nodeConfig = getCommonNodeConfig(); // Use common NodePort config
-    
+    Map<String, Object> nodeConfig = getCommonNodeConfig();
+
     nodeConfig.put("nodeType", "coordinator");
     nodeConfig.put("druid.port", getDruidPort());
     nodeConfig.put("replicas", getReplicas());
@@ -105,7 +113,7 @@ public class DruidK8sCoordinatorComponent extends DruidK8sComponent
     nodeConfig.put("extra.jvm.options", getJvmOptions());
     return nodeConfig;
   }
-  
+
   @Override
   public String getNodeName()
   {

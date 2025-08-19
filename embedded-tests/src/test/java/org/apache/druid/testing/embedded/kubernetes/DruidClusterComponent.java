@@ -20,13 +20,11 @@
 package org.apache.druid.testing.embedded.kubernetes;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
-import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.k8s.simulate.K3SResource;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.testing.embedded.indexing.Resources;
 import org.apache.druid.testing.utils.PortAllocator;
-import org.testcontainers.k3s.K3sContainer;
+import org.junit.jupiter.api.Assertions;
 
 import java.io.FileInputStream;
 import java.net.URI;
@@ -38,6 +36,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Component that orchestrates a complete Druid cluster deployment.
@@ -73,20 +72,24 @@ public class DruidClusterComponent implements K8sComponent
     int allocatedPort = portAllocator.allocatePort(serviceKey);
     service.setAllocatedNodePort(allocatedPort);
     
+    // Share the TestFolder from K3SResource with the DruidK8sComponent
+    if (k3sResource != null && k3sResource.getTestFolder() != null) {
+      service.setTestFolder(k3sResource.getTestFolder());
+    }
+
     druidServices.add(service);
-    log.info("Added Druid service %s with allocated NodePort %d", 
-        service.getDruidServiceType(), allocatedPort);
+    log.info(
+        "Added Druid service %s with allocated NodePort %d",
+        service.getDruidServiceType(), allocatedPort
+    );
   }
 
   @Override
   public void initialize(KubernetesClient client) throws Exception
   {
     log.info("Initializing %s...", getComponentName());
-    
     applyRBACManifests(client);
-    
     applyDruidClusterManifest(client);
-    
     log.info("%s initialization completed", getComponentName());
   }
 
@@ -94,17 +97,15 @@ public class DruidClusterComponent implements K8sComponent
   public void waitUntilReady(KubernetesClient client) throws Exception
   {
     log.info("Waiting for %s to be ready...", getComponentName());
-    
-    // Give all services 2 seconds to start up and begin service discovery
+
     log.info("Allowing 2 seconds for all Druid services to start and discover each other...");
     Thread.sleep(2000);
-    
-    // Now wait for each service to be ready (blocking calls, but after initial delay)
+
     for (DruidK8sComponent service : druidServices) {
       log.info("Waiting for Druid %s to be ready...", service.getDruidServiceType());
       service.waitUntilReady(client);
     }
-    
+
     log.info("%s is ready - all services are healthy!", getComponentName());
   }
 
@@ -113,20 +114,19 @@ public class DruidClusterComponent implements K8sComponent
   public void cleanup(KubernetesClient client)
   {
     log.info("Cleaning up %s...", getComponentName());
-    
+
     for (DruidK8sComponent service : druidServices) {
       try {
         service.cleanup(client);
         String serviceKey = service.getDruidServiceType() + "-" + clusterName;
         portAllocator.releasePort(serviceKey);
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         log.error("Error cleaning up %s: %s", service.getDruidServiceType(), e.getMessage());
       }
     }
-    
-    // Clean up RBAC resources
+
     cleanupRBACResources(client);
-    
     log.info("%s cleanup completed", getComponentName());
   }
 
@@ -142,11 +142,6 @@ public class DruidClusterComponent implements K8sComponent
     return namespace;
   }
 
-  public String getClusterName()
-  {
-    return clusterName;
-  }
-
   public List<DruidK8sComponent> getDruidServices()
   {
     return new ArrayList<>(druidServices);
@@ -155,30 +150,30 @@ public class DruidClusterComponent implements K8sComponent
   public Optional<DruidK8sComponent> getCoordinator()
   {
     return druidServices.stream()
-        .filter(service -> "coordinator".equals(service.getDruidServiceType()))
-        .findFirst();
+                        .filter(service -> "coordinator".equals(service.getDruidServiceType()))
+                        .findFirst();
   }
 
   public Optional<DruidK8sComponent> getBroker()
   {
     return druidServices.stream()
-        .filter(service -> "broker".equals(service.getDruidServiceType()))
-        .findFirst();
+                        .filter(service -> "broker".equals(service.getDruidServiceType()))
+                        .findFirst();
   }
 
   public Optional<DruidK8sComponent> getRouter()
   {
     return druidServices.stream()
-        .filter(service -> "router".equals(service.getDruidServiceType()))
-        .findFirst();
+                        .filter(service -> "router".equals(service.getDruidServiceType()))
+                        .findFirst();
   }
 
   public List<DruidK8sHistoricalComponent> getHistoricals()
   {
     return druidServices.stream()
-        .filter(service -> "historical".equals(service.getDruidServiceType()))
-        .map(service -> (DruidK8sHistoricalComponent) service)
-        .collect(java.util.stream.Collectors.toList());
+                        .filter(service -> "historical".equals(service.getDruidServiceType()))
+                        .map(service -> (DruidK8sHistoricalComponent) service)
+                        .collect(Collectors.toList());
   }
 
   /**
@@ -197,11 +192,6 @@ public class DruidClusterComponent implements K8sComponent
     return portAllocator.getServicePortMapping();
   }
 
-  public Optional<String> getCoordinatorUrl()
-  {
-    return getCoordinator().map(DruidK8sComponent::getServiceUrl);
-  }
-
   public Optional<String> getBrokerUrl()
   {
     return getBroker().map(DruidK8sComponent::getServiceUrl);
@@ -215,9 +205,9 @@ public class DruidClusterComponent implements K8sComponent
   /**
    * Get external coordinator URL for test connectivity.
    */
-  public Optional<String> getCoordinatorExternalUrl(KubernetesClient client)
+  public Optional<String> getCoordinatorExternalUrl()
   {
-    return getCoordinator().map(coordinator -> coordinator.getExternalUrl(client, k3sResource.getK3sContainer()));
+    return getCoordinator().map(coordinator -> coordinator.getExternalUrl(k3sResource.getK3sContainer()));
   }
 
   /**
@@ -225,7 +215,7 @@ public class DruidClusterComponent implements K8sComponent
    */
   public Optional<String> getBrokerExternalUrl(KubernetesClient client)
   {
-    return getBroker().map(broker -> broker.getExternalUrl(client, k3sResource.getK3sContainer()));
+    return getBroker().map(broker -> broker.getExternalUrl(k3sResource.getK3sContainer()));
   }
 
   /**
@@ -233,162 +223,58 @@ public class DruidClusterComponent implements K8sComponent
    */
   public Optional<String> getRouterExternalUrl(KubernetesClient client)
   {
-    return getRouter().map(router -> router.getExternalUrl(client, k3sResource.getK3sContainer()));
-  }
-
-  /**
-   * Submits a task to the Druid cluster and waits for it to complete successfully.
-   */
-  public boolean submitTaskAndWait(Task task, int timeoutSeconds, KubernetesClient client) throws Exception
-  {
-    String taskId = submitTask(task, client);
-    return waitForTaskToComplete(taskId, timeoutSeconds, client);
+    return getRouter().map(router -> router.getExternalUrl(k3sResource.getK3sContainer()));
   }
 
   /**
    * Submits a task to the Druid cluster.
-   * 
-   * @param task the task to submit
-   * @param client the Kubernetes client for external URL access
+   *
    * @return the task ID
-   * @throws Exception if task submission fails
    */
-  public String submitTask(Task task, KubernetesClient client) throws Exception
+  public String submitTask(String taskJson) throws Exception
   {
-    Optional<String> coordinatorUrl = getCoordinatorExternalUrl(client);
+    Optional<String> coordinatorUrl = getCoordinatorExternalUrl();
+
     if (coordinatorUrl.isEmpty()) {
-      throw new IllegalStateException("Coordinator external URL not available");
+      throw new AssertionError("Coordinator URL not found");
     }
-
-    log.info("Using coordinator URL: %s", coordinatorUrl.get());
-
-    String taskJson = TestHelper.JSON_MAPPER.writeValueAsString(task);
     String taskSubmissionUrl = coordinatorUrl.get() + "/druid/indexer/v1/task";
-    
-    // Retry task submission with fresh HttpClient for each attempt
-    HttpResponse<String> response = null;
-    Exception lastException = null;
-    
-    for (int attempt = 1; attempt <= 5; attempt++) {
-      try {
-        HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(30))
-            .build();
-            
-        HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(taskSubmissionUrl))
-            .header("Content-Type", "application/json")
-            .header("User-Agent", "DruidTest/1.0")
-            .POST(HttpRequest.BodyPublishers.ofString(taskJson))
-            .timeout(Duration.ofSeconds(60))
-            .build();
 
-        response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response == null) {
-          throw new RuntimeException("Task submission failed after 3 attempts", lastException);
-        }
-        if (response.statusCode() != 200) {
-          log.error("Task submission failed on attempt %d. Status: %d, Response: %s", attempt, response.statusCode(), response.body());
-//          throw new RuntimeException("Task submission failed. Status: " + response.statusCode()
-//                                     + ", Response: " + response.body());
-        } else {
-          log.info("Task %s submitted successfully on attempt %d", task.getId(), attempt);
-          break; // Exit loop on success
-        }
+    HttpClient httpClient = HttpClient.newBuilder()
+                                      .connectTimeout(Duration.ofSeconds(30))
+                                      .build();
 
+    HttpRequest taskRequest = HttpRequest.newBuilder()
+                                         .uri(URI.create(taskSubmissionUrl))
+                                         .header("Content-Type", "application/json")
+                                         .header("Accept", "application/json")
+                                         .POST(HttpRequest.BodyPublishers.ofString(taskJson))
+                                         .timeout(Duration.ofSeconds(30))
+                                         .build();
 
-      } catch (Exception e) {
-        lastException = e;
-        log.warn("Task submission attempt %d failed: %s", attempt, e.getMessage());
-        if (attempt < 3) {
-          Thread.sleep(2000); // Wait 2 seconds before retry
-        }
-      }
+    HttpResponse<String> taskResponse = httpClient.send(taskRequest, HttpResponse.BodyHandlers.ofString());
+    Assertions.assertEquals(200, taskResponse.statusCode());
 
+    String responseBody = taskResponse.body();
+    String taskId = null;
+    String[] parts = responseBody.split("\"task\":\\s*\"");
+    if (parts.length > 1) {
+      String afterTask = parts[1];
+      taskId = afterTask.split("\"")[0];
     }
 
-    log.info("Task %s submitted successfully", task.getId());
-    return task.getId();
-  }
-
-  /**
-   * Waits for a task to complete successfully.
-   */
-  public boolean waitForTaskToComplete(String taskId, int timeoutSeconds, KubernetesClient client) throws Exception
-  {
-    Optional<String> coordinatorUrl = getCoordinatorExternalUrl(client);
-    if (coordinatorUrl.isEmpty()) {
-      throw new IllegalStateException("Coordinator external URL not available");
-    }
-
-    String taskStatusUrl = coordinatorUrl.get() + "/druid/indexer/v1/task/" + taskId + "/status";
-    
-    boolean taskCompleted = false;
-    int waitedSeconds = 0;
-    
-    log.info("Waiting for task %s to complete (timeout: %d seconds)...", taskId, timeoutSeconds);
-    
-    while (!taskCompleted && waitedSeconds < timeoutSeconds) {
-      // Create fresh HttpClient for each status check
-      HttpClient httpClient = HttpClient.newBuilder()
-          .connectTimeout(Duration.ofSeconds(30))
-          .build();
-          
-      HttpRequest statusRequest = HttpRequest.newBuilder()
-          .uri(URI.create(taskStatusUrl))
-          .header("User-Agent", "DruidTest/1.0")
-          .GET()
-          .timeout(Duration.ofSeconds(10))
-          .build();
-
-      HttpResponse<String> statusResponse = null;
-      
-      try {
-        statusResponse = httpClient.send(statusRequest, HttpResponse.BodyHandlers.ofString());
-      } catch (Exception e) {
-        log.warn("Error checking task status (attempt will retry): %s", e.getMessage());
-        Thread.sleep(5000);
-        waitedSeconds += 5;
-        continue;
-      }
-      
-      if (statusResponse.statusCode() == 200) {
-        String responseBody = statusResponse.body();
-        if (responseBody.contains("\"status\":\"SUCCESS\"")) {
-          log.info("Task %s completed successfully", taskId);
-          taskCompleted = true;
-          break;
-        } else if (responseBody.contains("\"status\":\"FAILED\"")) {
-          throw new RuntimeException("Task " + taskId + " failed: " + responseBody);
-        }
-        
-        // Log progress every 30 seconds
-        if (waitedSeconds % 30 == 0) {
-          log.info("Task %s still running after %d seconds...", taskId, waitedSeconds);
-        }
-      } else {
-        log.warn("Failed to get task status (HTTP %d): %s", 
-            statusResponse.statusCode(), statusResponse.body());
-      }
-      
-      Thread.sleep(5000);
-      waitedSeconds += 5;
-    }
-    
-    if (!taskCompleted) {
-      log.warn("Task %s did not complete within %d seconds", taskId, timeoutSeconds);
-    }
-    
-    return taskCompleted;
+    Assertions.assertNotNull(taskId, "Should be able to extract task ID from response");
+    return taskId;
   }
 
   private void applyRBACManifests(KubernetesClient client)
   {
     try {
       client.load(new FileInputStream(Resources.getFileForResource(RBAC_MANIFEST_PATH)))
-          .inNamespace(namespace)
-          .createOrReplace();
-    } catch (Exception e) {
+            .inNamespace(namespace)
+            .createOrReplace();
+    }
+    catch (Exception e) {
       log.error("Error applying RBAC manifest %s: %s", RBAC_MANIFEST_PATH, e.getMessage());
       throw new RuntimeException("Failed to apply RBAC manifest: " + RBAC_MANIFEST_PATH, e);
     }
@@ -399,26 +285,79 @@ public class DruidClusterComponent implements K8sComponent
     try {
       client.rbac().roles().inNamespace(namespace).withName("druid-cluster").delete();
       client.rbac().roleBindings().inNamespace(namespace).withName("druid-cluster").delete();
-      
+
       log.info("Druid RBAC cleanup completed");
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       log.error("Error cleaning up RBAC resources: %s", e.getMessage());
     }
   }
-  
+
   /**
    * Apply individual Druid component manifests.
    */
   private void applyDruidClusterManifest(KubernetesClient client) throws Exception
   {
     log.info("Applying individual Druid component manifests...");
-    
+
     for (DruidK8sComponent service : druidServices) {
       log.info("Applying manifest for Druid %s...", service.getDruidServiceType());
       service.applyDruidManifest(client);
     }
-    
     log.info("Applied all Druid component manifests");
   }
-  
+
+  public void waitUntilTaskCompletes(String taskId) throws InterruptedException
+  {
+    HttpClient httpClient = HttpClient.newBuilder()
+                                      .connectTimeout(Duration.ofSeconds(30))
+                                      .build();
+
+    String taskStatusUrl = getCoordinatorExternalUrl().get() + "/druid/indexer/v1/task/" + taskId + "/status";
+    String finalStatus = "PENDING";
+    int maxAttempts = 6000;
+
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        HttpRequest statusRequest = HttpRequest.newBuilder()
+                                               .uri(URI.create(taskStatusUrl))
+                                               .header("Accept", "application/json")
+                                               .GET()
+                                               .timeout(Duration.ofSeconds(30))
+                                               .build();
+
+        HttpResponse<String> statusResponse = httpClient.send(statusRequest, HttpResponse.BodyHandlers.ofString());
+
+        if (statusResponse.statusCode() == 200) {
+          String statusBody = statusResponse.body();
+
+          if (statusBody.contains("\"status\":\"SUCCESS\"")) {
+            log.debug("Task completed successfully : %s%n", statusBody);
+            finalStatus = "SUCCESS";
+            break;
+          } else if (statusBody.contains("\"status\":\"FAILED\"")) {
+            log.debug("Task failed : %s%n", statusBody);
+            finalStatus = "FAILED";
+
+          }
+        } else {
+          log.debug("Status check failed with HTTP %d%n", statusResponse.statusCode());
+        }
+        if (attempt < maxAttempts) {
+          Thread.sleep(5000);
+        }
+      }
+      catch (Exception e) {
+        log.debug("Status check attempt %d failed: %s%n", attempt, e.getMessage());
+        if (attempt < maxAttempts) {
+          Thread.sleep(5000);
+        }
+      }
+    }
+    if (!finalStatus.equals("SUCCESS")) {
+      log.error("Task %s did not complete successfully after %d attempts", taskId, maxAttempts);
+      Assertions.fail("Task " + taskId + " did not complete successfully");
+    }
+    log.info("Final task status for task-id %s: %s", taskId, finalStatus);
+  }
 }

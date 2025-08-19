@@ -45,6 +45,8 @@ import java.time.Duration;
 import java.util.Locale;
 import java.util.Set;
 
+import static org.testcontainers.containers.BindMode.READ_WRITE;
+
 /**
  * A K3s container for use in embedded tests.
  */
@@ -94,6 +96,11 @@ public class K3SResource extends TestcontainerResource<K3sContainer>
           .withCopyFileToContainer(
               MountableFile.forHostPath(helmBinary.getAbsolutePath()),
               "/usr/local/bin/helm"
+          )
+          .withFileSystemBind(
+              testFolder.getOrCreateFolder("druid-storage").getAbsolutePath(),
+              "/druid/data",
+              READ_WRITE
           )
           .withCreateContainerCmdModifier(cmd -> {
             cmd.withPlatform("linux/amd64");
@@ -290,7 +297,7 @@ public class K3SResource extends TestcontainerResource<K3sContainer>
         log.debug("Image Load output: %s", loadOutput);
       }
       if (!loadError.isEmpty()) {
-        log.error("Image Load error: %s" , loadError);
+        log.error("Image Load error: %s", loadError);
       }
       
       if (loadExitCode != 0) {
@@ -307,5 +314,10 @@ public class K3SResource extends TestcontainerResource<K3sContainer>
       e.printStackTrace();
       throw new RuntimeException("Failed to load local Docker image: " + localImageName, e);
     }
+  }
+
+  public TestFolder getTestFolder()
+  {
+    return testFolder;
   }
 }
