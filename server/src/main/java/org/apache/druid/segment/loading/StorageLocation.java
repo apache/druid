@@ -93,7 +93,6 @@ public class StorageLocation
   private final long maxSizeBytes;
   private final long freeSpaceToKeep;
 
-
   @GuardedBy("lock")
   private final Map<CacheEntryIdentifier, CacheEntry> staticCacheEntries = new HashMap<>();
 
@@ -118,7 +117,7 @@ public class StorageLocation
 
   private final AtomicLong currWeakSizeBytes = new AtomicLong(0);
 
-  private final AtomicReference<Stats>  stats = new AtomicReference<>();
+  private final AtomicReference<Stats> stats = new AtomicReference<>();
 
   /**
    * A {@link ReentrantReadWriteLock.ReadLock} may be used for any operations to access {@link #staticCacheEntries} or
@@ -699,7 +698,7 @@ public class StorageLocation
       return reclaimHelper(sizeToReclaim - sizeFreed, droppedEntries);
     }
     if (sizeFreed >= sizeToReclaim) {
-      return new  ReclaimResult(true, sizeToReclaim, sizeFreed, droppedEntries);
+      return new ReclaimResult(true, sizeToReclaim, sizeFreed, droppedEntries);
     }
     // if we didn't free up enough space, return everything we removed to the cache
     for (WeakCacheEntry entry : droppedEntries) {

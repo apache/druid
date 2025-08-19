@@ -168,11 +168,6 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
     {
       if (isClosed.compareAndSet(false, true)) {
         referenceCloseable.close();
-      } else {
-        throw DruidException.defensive(
-            "Segment[%s] reference is already released, cannot close again",
-            baseObject.getId()
-        );
       }
     }
 

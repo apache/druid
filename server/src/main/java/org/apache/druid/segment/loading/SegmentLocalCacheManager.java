@@ -357,7 +357,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   @Nullable
   private AcquireSegmentAction acquireExistingSegment(SegmentCacheEntryIdentifier identifier)
   {
-    final Closer safetyNet =   Closer.create();
+    final Closer safetyNet = Closer.create();
     for (StorageLocation location : locations) {
       try {
         final StorageLocation.ReservationHold<SegmentCacheEntry> hold = safetyNet.register(
