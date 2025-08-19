@@ -69,52 +69,7 @@ public class RowFrameCursorFactory implements CursorFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    // Frames are not self-describing as to their sort order, so we can't determine the sort order by looking at
-    // the Frame object. We could populate this with information from the relevant ClusterBy, but that's not available
-    // at this point in the code. It could be plumbed in at some point. For now, use an empty list.
-    final List<OrderBy> ordering = Collections.emptyList();
-
-    return new CursorHolder()
-    {
-      @Nullable
-      @Override
-      public Cursor asCursor()
-      {
-        final Filter filterToUse = FrameCursorUtils.buildFilter(spec.getFilter(), spec.getInterval());
-
-        final SimpleSettableOffset baseOffset = new SimpleAscendingOffset(frame.numRows());
-
-        final ColumnSelectorFactory columnSelectorFactory =
-            spec.getVirtualColumns().wrap(
-                new FrameColumnSelectorFactory(
-                    frame,
-                    frameReader.signature(),
-                    fieldReaders,
-                    new CursorFrameRowPointer(frame, baseOffset)
-                )
-            );
-
-        final SimpleSettableOffset offset;
-        if (filterToUse == null) {
-          offset = baseOffset;
-        } else {
-          offset = new FrameFilteredOffset(baseOffset, columnSelectorFactory, filterToUse);
-        }
-
-        final FrameCursor cursor = new FrameCursor(offset, columnSelectorFactory);
-
-        // Note: if anything closeable is ever added to this Sequence, make sure to update FrameProcessors.makeCursor.
-        // Currently, it assumes that closing the Sequence does nothing.
-        return cursor;
-      }
-
-      @Nullable
-      @Override
-      public List<OrderBy> getOrdering()
-      {
-        return ordering;
-      }
-    };
+    return new RowFrameCursorHolder(spec);
   }
 
   @Override
@@ -128,5 +83,61 @@ public class RowFrameCursorFactory implements CursorFactory
   public ColumnCapabilities getColumnCapabilities(String column)
   {
     return frameReader.signature().getColumnCapabilities(column);
+  }
+
+  private class RowFrameCursorHolder implements CursorHolder
+  {
+    private final CursorBuildSpec spec;
+
+    /**
+     * Frames are not self-describing as to their sort order, so we can't determine the sort order by looking at
+     * the Frame object. We could populate this with information from the relevant ClusterBy, but that's not available
+     * at this point in the code. It could be plumbed in at some point. For now, use an empty list.
+     */
+    private final List<OrderBy> ordering = Collections.emptyList();
+
+    private RowFrameCursorHolder(CursorBuildSpec spec)
+    {
+      this.spec = spec;
+    }
+
+    @Nullable
+    @Override
+    public Cursor asCursor()
+    {
+      final Filter filterToUse = FrameCursorUtils.buildFilter(spec.getFilter(), spec.getInterval());
+
+      final SimpleSettableOffset baseOffset = new SimpleAscendingOffset(frame.numRows());
+
+      final ColumnSelectorFactory columnSelectorFactory =
+          spec.getVirtualColumns().wrap(
+              new FrameColumnSelectorFactory(
+                  frame,
+                  frameReader.signature(),
+                  fieldReaders,
+                  new CursorFrameRowPointer(frame, baseOffset)
+              )
+          );
+
+      final SimpleSettableOffset offset;
+      if (filterToUse == null) {
+        offset = baseOffset;
+      } else {
+        offset = new FrameFilteredOffset(baseOffset, columnSelectorFactory, filterToUse);
+      }
+
+      final FrameCursor cursor = new FrameCursor(offset, columnSelectorFactory);
+
+      // Note: if anything closeable is ever added to this Sequence, make sure to update FrameProcessors.makeCursor.
+      // Currently, it assumes that closing the Sequence does nothing.
+      return cursor;
+    }
+
+    @Nullable
+    @Override
+    public List<OrderBy> getOrdering()
+    {
+      return ordering;
+    }
   }
 }

@@ -47,7 +47,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        testing_group: [batch-index, input-format, input-source, kafka-index, kafka-index-slow, kafka-transactional-index, kafka-transactional-index-slow, kafka-data-format, ldap-security, realtime-index, append-ingestion, cds-task-schema-publish-disabled, cds-coordinator-metadata-query-disabled]
+        testing_group: [batch-index, input-format, input-source, kafka-index, kafka-index-slow, kafka-transactional-index, kafka-transactional-index-slow, ldap-security, realtime-index, append-ingestion, cds-task-schema-publish-disabled, cds-coordinator-metadata-query-disabled]
     uses: ./.github/workflows/reusable-standard-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:

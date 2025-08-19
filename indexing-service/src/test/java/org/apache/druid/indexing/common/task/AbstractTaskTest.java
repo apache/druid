@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.report.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -88,6 +89,7 @@ public class AbstractTaskTest
     TaskActionClient taskActionClient = mock(TaskActionClient.class);
     when(taskActionClient.submit(any())).thenReturn(TaskConfig.class);
     when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
+    when(toolbox.getTaskReportFileWriter()).thenReturn(new SingleFileTaskReportFileWriter(temporaryFolder.newFile()));
 
 
     AbstractTask task = new NoopTask("myID", null, null, 1, 0, null)
@@ -181,6 +183,7 @@ public class AbstractTaskTest
     TaskActionClient taskActionClient = mock(TaskActionClient.class);
     when(taskActionClient.submit(any())).thenReturn(TaskConfig.class);
     when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
+    when(toolbox.getTaskReportFileWriter()).thenReturn(new SingleFileTaskReportFileWriter(temporaryFolder.newFile()));
 
     TaskStatus taskStatus = TaskStatus.failure("myId", "failed");
     AbstractTask task = new NoopTask("myID", null, null, 1, 0, null)
@@ -201,6 +204,7 @@ public class AbstractTaskTest
   {
     TaskToolbox toolbox = mock(TaskToolbox.class);
     when(toolbox.getAttemptId()).thenReturn("1");
+    when(toolbox.getTaskReportFileWriter()).thenReturn(new SingleFileTaskReportFileWriter(temporaryFolder.newFile()));
 
     DruidNode node = new DruidNode("foo", "foo", false, 1, 2, true, true);
     when(toolbox.getTaskExecutorNode()).thenReturn(node);
