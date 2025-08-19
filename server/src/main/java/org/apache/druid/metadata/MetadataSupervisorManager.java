@@ -33,8 +33,6 @@ public interface MetadataSupervisorManager
 
   Map<String, List<VersionedSupervisorSpec>> getAll();
 
-  List<VersionedSupervisorSpec> getAllForId(String id);
-
   /**
    * Get supervisor history for a given supervisor ID with an optional limit
    *

@@ -1082,7 +1082,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(4);
     EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id1", null)).andReturn(versions1).times(1);
     EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id2", null)).andReturn(versions2).times(1);
-    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id3")).andReturn(versions3).times(1);
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id3", null)).andReturn(versions3).times(1);
     EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id4", null)).andReturn(Collections.emptyList()).times(1);
     setupMockRequestForUser("notdruid");
     replayAll();

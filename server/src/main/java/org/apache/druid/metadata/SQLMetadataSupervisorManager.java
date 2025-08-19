@@ -138,12 +138,6 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
   }
 
   @Override
-  public List<VersionedSupervisorSpec> getAllForId(String id)
-  {
-    return getAllForId(id, null);
-  }
-
-  @Override
   public List<VersionedSupervisorSpec> getAllForId(String id, Integer limit)
   {
     return ImmutableList.copyOf(

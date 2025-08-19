@@ -220,8 +220,8 @@ public class SQLMetadataSupervisorManagerTest
     final Map<String, String> data2rev1 = ImmutableMap.of("key2-1", "value2-1-1", "key2-2", "value2-2-1");
     final Map<String, String> data2rev2 = ImmutableMap.of("key2-3", "value2-3-2", "key2-4", "value2-4-2");
 
-    Assert.assertTrue(supervisorManager.getAllForId(supervisor1).isEmpty());
-    Assert.assertTrue(supervisorManager.getAllForId(supervisor2).isEmpty());
+    Assert.assertTrue(supervisorManager.getAllForId(supervisor1, null).isEmpty());
+    Assert.assertTrue(supervisorManager.getAllForId(supervisor2, null).isEmpty());
 
     // add 2 supervisors, with revisions
     supervisorManager.insert(supervisor1, new TestSupervisorSpec(supervisor1, data1rev1));
@@ -230,8 +230,8 @@ public class SQLMetadataSupervisorManagerTest
     supervisorManager.insert(supervisor2, new TestSupervisorSpec(supervisor2, data2rev1));
     supervisorManager.insert(supervisor2, new TestSupervisorSpec(supervisor2, data2rev2));
 
-    List<VersionedSupervisorSpec> supervisor1Specs = supervisorManager.getAllForId(supervisor1);
-    List<VersionedSupervisorSpec> supervisor2Specs = supervisorManager.getAllForId(supervisor2);
+    List<VersionedSupervisorSpec> supervisor1Specs = supervisorManager.getAllForId(supervisor1, null);
+    List<VersionedSupervisorSpec> supervisor2Specs = supervisorManager.getAllForId(supervisor2, null);
 
     Assert.assertEquals(3, supervisor1Specs.size());
     Assert.assertEquals(2, supervisor2Specs.size());
@@ -353,23 +353,6 @@ public class SQLMetadataSupervisorManagerTest
     limitedResults = supervisorManager.getAllForId(supervisor1, -1);
     Assert.assertEquals(3, limitedResults.size());
   }
-
-  @Test
-  public void testGetAllForIdWithLimitBackwardCompatibility()
-  {
-    final String supervisor1 = "test-supervisor-1";
-    final Map<String, String> data1 = ImmutableMap.of("key1-1", "value1-1-1");
-
-    supervisorManager.insert(supervisor1, new TestSupervisorSpec(supervisor1, data1));
-
-    // Test that both methods return the same result
-    List<VersionedSupervisorSpec> withoutLimit = supervisorManager.getAllForId(supervisor1);
-    List<VersionedSupervisorSpec> withNullLimit = supervisorManager.getAllForId(supervisor1, null);
-
-    Assert.assertEquals(withoutLimit.size(), withNullLimit.size());
-    Assert.assertEquals(withoutLimit.get(0).getSpec(), withNullLimit.get(0).getSpec());
-  }
-
 
   private static class BadSupervisorSpec implements SupervisorSpec
   {

@@ -299,11 +299,6 @@ public class SupervisorManager
     log.info("SupervisorManager stopped.");
   }
 
-  public List<VersionedSupervisorSpec> getSupervisorHistoryForId(String id)
-  {
-    return metadataSupervisorManager.getAllForId(id);
-  }
-
   public List<VersionedSupervisorSpec> getSupervisorHistoryForId(String id, Integer limit)
   {
     return metadataSupervisorManager.getAllForId(id, limit);
