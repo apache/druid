@@ -17,9 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.testing.utils;
+package org.apache.druid.testing.tools;
 
 import org.joda.time.DateTime;
+
+import java.util.List;
 
 public interface StreamGenerator
 {
@@ -32,4 +34,23 @@ public interface StreamGenerator
    * Runs and returns the number of messages written.
    */
   long run(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds, DateTime overrrideFirstEventTime);
+
+  /**
+   * Generates a list of byte arrays representing events for the given number of seconds.
+   * The first event will be at the current time.
+   *
+   * @param totalNumberOfSeconds The total number of seconds to generate events for.
+   * @return A list of byte arrays, each representing an event.
+   */
+  List<byte[]> generateEvents(int totalNumberOfSeconds);
+
+  /**
+   * Generates a list of byte arrays representing events for the given number of seconds,
+   * starting from the specified override time.
+   *
+   * @param totalNumberOfSeconds The total number of seconds to generate events for.
+   * @param overrideFirstEventTime The starting point for timestamps of events generated.
+   * @return A list of byte arrays, each representing an event.
+   */
+  List<byte[]> generateEvents(int totalNumberOfSeconds, DateTime overrideFirstEventTime);
 }
