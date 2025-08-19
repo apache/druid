@@ -74,10 +74,10 @@ import org.apache.druid.metadata.storage.mysql.MySQLConnectorSslConfig;
 import org.apache.druid.metadata.storage.mysql.MySQLMetadataStorageModule;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.IntegrationTestingConfigProvider;
 import org.apache.druid.testing.clients.AdminClient;
 import org.apache.druid.testing.guice.TestClient;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
+import org.apache.druid.testing.tools.IntegrationTestingConfigProvider;
 import org.apache.druid.testsEx.cluster.DruidClusterClient;
 import org.apache.druid.testsEx.cluster.MetastoreClient;
 

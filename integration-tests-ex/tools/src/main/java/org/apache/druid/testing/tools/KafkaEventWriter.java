@@ -17,10 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.testing.utils;
+package org.apache.druid.testing.tools;
 
 import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -29,6 +28,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -38,6 +38,25 @@ public class KafkaEventWriter implements StreamEventWriter
   private final KafkaProducer<String, byte[]> producer;
   private final boolean txnEnabled;
   private final List<Future<RecordMetadata>> pendingWriteRecords = new ArrayList<>();
+
+  public KafkaEventWriter(Map<String, String> properties, boolean txnEnabled)
+  {
+    this.txnEnabled = txnEnabled;
+    Properties kafkaProperties = new Properties();
+    kafkaProperties.putAll(properties);
+    kafkaProperties.setProperty("acks", "all");
+    kafkaProperties.setProperty("retries", "3");
+    kafkaProperties.setProperty("key.serializer", ByteArraySerializer.class.getName());
+    kafkaProperties.setProperty("value.serializer", ByteArraySerializer.class.getName());
+    if (txnEnabled) {
+      kafkaProperties.setProperty("enable.idempotence", "true");
+      kafkaProperties.setProperty("transactional.id", IdUtils.getRandomId());
+    }
+    this.producer = new KafkaProducer<>(kafkaProperties);
+    if (txnEnabled) {
+      producer.initTransactions();
+    }
+  }
 
   public KafkaEventWriter(IntegrationTestingConfig config, boolean txnEnabled)
   {

@@ -1,4 +1,5 @@
 ---
+id: indexer
 layout: doc_page
 title: "Indexer service"
 sidebar_label: "Indexer"
