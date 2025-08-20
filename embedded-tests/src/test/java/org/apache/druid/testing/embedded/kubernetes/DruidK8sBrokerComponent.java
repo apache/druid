@@ -20,8 +20,8 @@
 package org.apache.druid.testing.embedded.kubernetes;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
+import org.apache.druid.java.util.common.StringUtils;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
@@ -91,7 +91,7 @@ public class DruidK8sBrokerComponent extends DruidK8sComponent
     nodeConfig.put("nodeConfigMountPath", BROKER_CONFIG_MOUNT_PATH);
     nodeConfig.put("livenessProbe", getLivenessProbe());
     nodeConfig.put("readinessProbe", getReadinessProbe());
-    nodeConfig.put("runtime.properties", getRuntimePropertiesAsString().replace(getCommonDruidProperties(), "").trim());
+    nodeConfig.put("runtime.properties", StringUtils.replace(getRuntimePropertiesAsString(), getCommonDruidProperties(), "").trim());
     nodeConfig.put("extra.jvm.options", getJvmOptions());
     return nodeConfig;
   }
@@ -101,6 +101,4 @@ public class DruidK8sBrokerComponent extends DruidK8sComponent
   {
     return "broker";
   }
-
-
 }

@@ -20,9 +20,8 @@
 package org.apache.druid.testing.embedded.kubernetes;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
+import org.apache.druid.java.util.common.StringUtils;
 
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -61,11 +60,11 @@ public class DruidK8sCoordinatorComponent extends DruidK8sComponent
     props.setProperty("druid.coordinator.period", "PT30S");
     props.setProperty("druid.coordinator.asOverlord.enabled", "true");
     props.setProperty("druid.coordinator.asOverlord.overlordService", "druid/overlord");
-    
+
     // Segment loading configuration
     props.setProperty("druid.coordinator.load.timeout", "PT15M");
     props.setProperty("druid.coordinator.segment.awaitInitializationOnStart", "true");
-    
+
     // Indexing/Overlord configuration
     props.setProperty("druid.indexer.queue.startDelay", "PT30S");
     props.setProperty("druid.indexer.runner.capacity", "2");
@@ -73,7 +72,7 @@ public class DruidK8sCoordinatorComponent extends DruidK8sComponent
     props.setProperty("druid.indexer.runner.type", "k8s");
     props.setProperty("druid.indexer.logs.type", "file");
     props.setProperty("druid.indexer.task.encapsulatedTask", "true");
-    
+
     props.setProperty("druid.host", "druid-" + getMetadataName() + "-" + getDruidServiceType());
     return props;
   }
@@ -109,7 +108,7 @@ public class DruidK8sCoordinatorComponent extends DruidK8sComponent
     nodeConfig.put("nodeConfigMountPath", COORDINATOR_CONFIG_MOUNT_PATH);
     nodeConfig.put("livenessProbe", getLivenessProbe());
     nodeConfig.put("readinessProbe", getReadinessProbe());
-    nodeConfig.put("runtime.properties", getRuntimePropertiesAsString().replace(getCommonDruidProperties(), "").trim());
+    nodeConfig.put("runtime.properties", StringUtils.replace(getRuntimePropertiesAsString(), getCommonDruidProperties(), "").trim());
     nodeConfig.put("extra.jvm.options", getJvmOptions());
     return nodeConfig;
   }
@@ -125,5 +124,4 @@ public class DruidK8sCoordinatorComponent extends DruidK8sComponent
   {
     return COORDINATOR_READINESS_TIMEOUT;
   }
-
 }

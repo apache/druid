@@ -22,6 +22,7 @@ package org.apache.druid.testing.embedded.kubernetes;
 import io.fabric8.kubernetes.api.model.GenericKubernetesResource;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.embedded.TestFolder;
 import org.testcontainers.k3s.K3sContainer;
@@ -30,6 +31,7 @@ import java.io.File;
 import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
@@ -58,7 +60,7 @@ public abstract class DruidK8sComponent implements K8sComponent
     this.druidImage = druidImage != null ? druidImage : DRUID_34_IMAGE;
     this.clusterName = clusterName;
   }
-  
+
   /**
    * Set the TestFolder for shared storage across components.
    */
@@ -66,7 +68,7 @@ public abstract class DruidK8sComponent implements K8sComponent
   {
     this.testFolder = testFolder;
   }
-  
+
   /**
    * Get the shared storage directory for segments and metadata.
    */
@@ -75,16 +77,16 @@ public abstract class DruidK8sComponent implements K8sComponent
     if (testFolder == null) {
       throw new IllegalStateException("TestFolder not initialized. Call setTestFolder() first.");
     }
-    
+
     // Create the main druid-storage directory
     File storageDir = testFolder.getOrCreateFolder("druid-storage");
-    
+
     // Create subdirectories that Druid components will need
     testFolder.getOrCreateFolder("druid-storage/segments");
     testFolder.getOrCreateFolder("druid-storage/segment-cache");
     testFolder.getOrCreateFolder("druid-storage/metadata");
     testFolder.getOrCreateFolder("druid-storage/indexing-logs");
-    
+
     return storageDir.getAbsolutePath();
   }
 
@@ -123,15 +125,17 @@ public abstract class DruidK8sComponent implements K8sComponent
 
   /**
    * Get the service URL for this Druid component.
-   * 
+   *
    * @return the service URL in the format suitable for Kubernetes DNS
    */
   public String getServiceUrl()
   {
-    return String.format("http://%s.%s.svc.cluster.local:%d", 
-        getMetadataName(), 
-        namespace, 
-        getDruidPort());
+    return StringUtils.format(
+        "http://%s.%s.svc.cluster.local:%d",
+        getMetadataName(),
+        namespace,
+        getDruidPort()
+    );
   }
 
   /**
@@ -143,7 +147,7 @@ public abstract class DruidK8sComponent implements K8sComponent
     if (allocatedNodePort != null) {
       return allocatedNodePort;
     }
-    
+
     // Fallback to hardcoded ports for backward compatibility
     switch (getDruidServiceType()) {
       case "coordinator":
@@ -165,7 +169,6 @@ public abstract class DruidK8sComponent implements K8sComponent
    * Get the external URL for this Druid component accessible from tests.
    * This method uses NodePort services accessible via K3s container.
    *
-   * @param client the Kubernetes client
    * @param k3sContainer the K3s container instance
    * @return the external URL accessible from tests
    */
@@ -175,7 +178,7 @@ public abstract class DruidK8sComponent implements K8sComponent
     int mappedPort = k3sContainer.getMappedPort(nodePort);
     String host = "0.0.0.0";
     log.info("Using NodePort %d mapped to %s:%d for %s service", nodePort, host, mappedPort, getDruidServiceType());
-    return String.format("http://%s:%d", host, mappedPort);
+    return StringUtils.format("http://%s:%d", host, mappedPort);
   }
 
 
@@ -188,7 +191,7 @@ public abstract class DruidK8sComponent implements K8sComponent
 
   /**
    * Convert Properties object to string format suitable for Druid configuration.
-   * 
+   *
    * @param properties the properties to convert
    * @return the properties as a formatted string
    */
@@ -215,7 +218,7 @@ public abstract class DruidK8sComponent implements K8sComponent
 
   /**
    * Get the runtime properties as a formatted string.
-   * 
+   *
    * @return the runtime properties as a string
    */
   public String getRuntimePropertiesAsString()
@@ -225,14 +228,14 @@ public abstract class DruidK8sComponent implements K8sComponent
 
   /**
    * Get the JVM options for this service.
-   * 
+   *
    * @return the JVM options
    */
   public abstract String getJvmOptions();
-  
+
   /**
    * Get the node configuration for this service to be used in the Druid YAML.
-   * 
+   *
    * @return a map representing the node configuration
    */
   public abstract Map<String, Object> getNodeConfig();
@@ -243,13 +246,15 @@ public abstract class DruidK8sComponent implements K8sComponent
 
     Map<String, Object> serviceSpec = new HashMap<>();
     serviceSpec.put("type", "NodePort");
-    serviceSpec.put("ports", List.of(Map.of(
-        "name", "http",
-        "port", getDruidPort(),
-        "targetPort", getDruidPort(),
-        "protocol", "TCP",
-        "nodePort", getUniqueNodePort()
-    )));
+    serviceSpec.put(
+        "ports", List.of(Map.of(
+            "name", "http",
+            "port", getDruidPort(),
+            "targetPort", getDruidPort(),
+            "protocol", "TCP",
+            "nodePort", getUniqueNodePort()
+        ))
+    );
     nodeConfig.put("services", List.of(Map.of("spec", serviceSpec)));
 
     // Add shared storage volume configuration
@@ -260,7 +265,7 @@ public abstract class DruidK8sComponent implements K8sComponent
 
     return nodeConfig;
   }
-  
+
   /**
    * Determine if this component needs shared storage.
    * Override in subclasses that don't need shared storage.
@@ -269,7 +274,7 @@ public abstract class DruidK8sComponent implements K8sComponent
   {
     return true;
   }
-  
+
   /**
    * Create shared storage volume configuration.
    */
@@ -277,14 +282,16 @@ public abstract class DruidK8sComponent implements K8sComponent
   {
     Map<String, Object> storageVolume = new HashMap<>();
     storageVolume.put("name", "druid-shared-storage");
-    storageVolume.put("hostPath", Map.of(
-        "path", getSharedStorageDirectory(),
-        "type", "DirectoryOrCreate"
-    ));
-    
+    storageVolume.put(
+        "hostPath", Map.of(
+            "path", getSharedStorageDirectory(),
+            "type", "DirectoryOrCreate"
+        )
+    );
+
     return List.of(storageVolume);
   }
-  
+
   /**
    * Create shared storage volume mount configuration.
    */
@@ -293,7 +300,7 @@ public abstract class DruidK8sComponent implements K8sComponent
     Map<String, Object> storageMount = new HashMap<>();
     storageMount.put("name", "druid-shared-storage");
     storageMount.put("mountPath", "/druid/data");
-    
+
     return List.of(storageMount);
   }
 
@@ -313,35 +320,61 @@ public abstract class DruidK8sComponent implements K8sComponent
    */
   protected String getCommonDruidProperties()
   {
-    return String.format(
-        "# Zookeeper-less Druid Cluster\n" +
-        "druid.zk.service.enabled=false\n" +
-        "druid.discovery.type=k8s\n" +
-        "druid.discovery.k8s.clusterIdentifier=%s\n" +
-        "druid.serverview.type=http\n" +
-        "druid.coordinator.loadqueuepeon.type=http\n" +
-        "druid.indexer.runner.type=httpRemote\n" +
-        "\n" +
-        "# Metadata Store (Derby for testing)\n" +
-        "druid.metadata.storage.type=derby\n" +
-        "druid.metadata.storage.connector.connectURI=jdbc:derby://localhost:1527/var/druid/metadata.db;create=true\n" +
-        "druid.metadata.storage.connector.host=localhost\n" +
-        "druid.metadata.storage.connector.port=1527\n" +
-        "druid.metadata.storage.connector.createTables=true\n" +
-        "\n" +
-        "# Shared storage configuration\n" +
-        "druid.storage.type=local\n" +
-        "druid.storage.storageDirectory=/druid/data/segments\n" +
-        "\n" +
-        "# Extensions\n" +
-        "druid.extensions.loadList=[\"druid-kubernetes-overlord-extensions\", \"druid-kubernetes-extensions\", \"druid-datasketches\"]\n" +
-        "\n" +
-        "# Service discovery\n" +
-        "druid.selectors.indexing.serviceName=druid/overlord\n" +
-        "druid.selectors.coordinator.serviceName=druid/coordinator\n" +
-        "\n" +
-        "# Indexing logs\n" +
-        "druid.indexer.logs.type=file\n" +
+    return StringUtils.format(
+        "# Zookeeper-less Druid Cluster\n"
+        +
+        "druid.zk.service.enabled=false\n"
+        +
+        "druid.discovery.type=k8s\n"
+        +
+        "druid.discovery.k8s.clusterIdentifier=%s\n"
+        +
+        "druid.serverview.type=http\n"
+        +
+        "druid.coordinator.loadqueuepeon.type=http\n"
+        +
+        "druid.indexer.runner.type=httpRemote\n"
+        +
+        "\n"
+        +
+        "# Metadata Store (Derby for testing)\n"
+        +
+        "druid.metadata.storage.type=derby\n"
+        +
+        "druid.metadata.storage.connector.connectURI=jdbc:derby://localhost:1527/var/druid/metadata.db;create=true\n"
+        +
+        "druid.metadata.storage.connector.host=localhost\n"
+        +
+        "druid.metadata.storage.connector.port=1527\n"
+        +
+        "druid.metadata.storage.connector.createTables=true\n"
+        +
+        "\n"
+        +
+        "# Shared storage configuration\n"
+        +
+        "druid.storage.type=local\n"
+        +
+        "druid.storage.storageDirectory=/druid/data/segments\n"
+        +
+        "\n"
+        +
+        "# Extensions\n"
+        +
+        "druid.extensions.loadList=[\"druid-kubernetes-overlord-extensions\", \"druid-kubernetes-extensions\", \"druid-datasketches\"]\n"
+        +
+        "\n"
+        +
+        "# Service discovery\n"
+        +
+        "druid.selectors.indexing.serviceName=druid/overlord\n"
+        +
+        "druid.selectors.coordinator.serviceName=druid/coordinator\n"
+        +
+        "# Indexing logs\n"
+        +
+        "druid.indexer.logs.type=file\n"
+        +
         "druid.indexer.logs.directory=/druid/data/indexing-logs\n",
         clusterName
     );
@@ -387,29 +420,39 @@ public abstract class DruidK8sComponent implements K8sComponent
     spec.put("rollingDeploy", true);
     spec.put("defaultProbes", false);
 
-    spec.put("podLabels", Map.of(
-        "environment", "stage",
-        "release", "alpha"
-    ));
-    spec.put("podAnnotations", Map.of(
-        "dummy", "k8s_extn_needs_atleast_one_annotation"
-    ));
-
-    spec.put("securityContext", Map.of(
-        "fsGroup", 0,
-        "runAsUser", 0,
-        "runAsGroup", 0
-    ));
-    spec.put("containerSecurityContext", Map.of(
-        "privileged", true
-    ));
-
-    spec.put("services", List.of(Map.of(
-        "spec", Map.of(
-            "type", "ClusterIP",
-            "clusterIP", "None"
+    spec.put(
+        "podLabels", Map.of(
+            "environment", "stage",
+            "release", "alpha"
         )
-    )));
+    );
+    spec.put(
+        "podAnnotations", Map.of(
+            "dummy", "k8s_extn_needs_atleast_one_annotation"
+        )
+    );
+
+    spec.put(
+        "securityContext", Map.of(
+            "fsGroup", 0,
+            "runAsUser", 0,
+            "runAsGroup", 0
+        )
+    );
+    spec.put(
+        "containerSecurityContext", Map.of(
+            "privileged", true
+        )
+    );
+
+    spec.put(
+        "services", List.of(Map.of(
+            "spec", Map.of(
+                "type", "ClusterIP",
+                "clusterIP", "None"
+            )
+        ))
+    );
 
     spec.put("commonConfigMountPath", "/opt/druid/conf/druid/cluster/_common");
     spec.put("log4j.config", createLog4jConfig());
@@ -475,20 +518,20 @@ public abstract class DruidK8sComponent implements K8sComponent
     nodes.put(getNodeName(), getNodeConfig());
     spec.put("nodes", nodes);
   }
-  
+
   /**
    * Get the metadata name for this Druid custom resource.
-   * 
+   *
    * @return the metadata name
    */
   protected String getMetadataName()
   {
     return clusterName + "-" + getDruidServiceType();
   }
-  
+
   /**
    * Get the node name for this service type in the YAML configuration.
-   * 
+   *
    * @return the node name
    */
   public String getNodeName()
@@ -504,13 +547,13 @@ public abstract class DruidK8sComponent implements K8sComponent
       String componentName = getMetadataName();
 
       client.pods()
-          .inNamespace(namespace)
-          .withLabel("druid_cr", componentName)
-          .withLabel("nodeSpecUniqueStr", labelValue)
-          .waitUntilReady(getReadyTimeoutSeconds(), TimeUnit.SECONDS);
-    } catch (Exception e) {
+            .inNamespace(namespace)
+            .withLabel("druid_cr", componentName)
+            .withLabel("nodeSpecUniqueStr", labelValue)
+            .waitUntilReady(getReadyTimeoutSeconds(), TimeUnit.SECONDS);
+    }
+    catch (Exception e) {
       log.error("Timeout waiting for Druid %s to be ready", getDruidServiceType());
-      printDruidDiagnostics(client);
       throw e;
     }
   }
@@ -525,89 +568,19 @@ public abstract class DruidK8sComponent implements K8sComponent
   {
     try {
       client.genericKubernetesResources("druid.apache.org/v1alpha1", "Druid")
-          .inNamespace(namespace)
-          .withName(getMetadataName())
-          .delete();
-    } catch (Exception e) {
-      log.error("Error during %s cleanup: %s", getDruidServiceType(), e.getMessage());
+            .inNamespace(namespace)
+            .withName(getMetadataName())
+            .delete();
     }
-  }
-
-  protected void printDruidDiagnostics(KubernetesClient client)
-  {
-    try {
-      log.info("=== DRUID %s DIAGNOSTICS ===", getDruidServiceType().toUpperCase());
-      
-      // Pod status
-      log.info("--- Pod Status ---");
-      String labelValue = getDruidServiceType();
-      if ("historical".equals(getDruidServiceType())) {
-        labelValue = ((DruidK8sHistoricalComponent) this).getTier();
-      }
-      
-      String componentName = getMetadataName();
-      client.pods().inNamespace(namespace)
-          .withLabel("app.kubernetes.io/name", "druid")
-          .withLabel("druid_cr", componentName)
-          .withLabel("nodeSpecUniqueStr", labelValue)
-          .list().getItems().forEach(pod -> {
-        log.info("Pod: %s", pod.getMetadata().getName());
-        log.info("  Status: %s", pod.getStatus().getPhase());
-        
-        if (pod.getStatus().getContainerStatuses() != null) {
-          pod.getStatus().getContainerStatuses().forEach(containerStatus -> {
-            log.info("  Container: %s", containerStatus.getName());
-            log.info("    Ready: %s", containerStatus.getReady());
-            log.info("    Restart Count: %s", containerStatus.getRestartCount());
-            
-            if (containerStatus.getState() != null) {
-              if (containerStatus.getState().getWaiting() != null) {
-                log.info("    State: Waiting - %s", containerStatus.getState().getWaiting().getReason());
-              } else if (containerStatus.getState().getTerminated() != null) {
-                log.info("    State: Terminated - %s", containerStatus.getState().getTerminated().getReason());
-                log.info("    Exit Code: %s", containerStatus.getState().getTerminated().getExitCode());
-              }
-            }
-          });
-        }
-      });
-      
-      log.info("--- Recent Logs ---");
-      if ("historical".equals(getDruidServiceType())) {
-        labelValue = ((DruidK8sHistoricalComponent) this).getTier();
-      }
-      
-      client.pods().inNamespace(namespace)
-          .withLabel("app.kubernetes.io/name", "druid")
-          .withLabel("druid_cr", componentName)
-          .withLabel("nodeSpecUniqueStr", labelValue)
-          .list().getItems().forEach(pod -> {
-        try {
-          String logs = client.pods()
-              .inNamespace(namespace)
-              .withName(pod.getMetadata().getName())
-              .tailingLines(10)
-              .getLog();
-          
-          if (logs != null && !logs.trim().isEmpty()) {
-            log.info("Pod %s logs:\n%s", pod.getMetadata().getName(), logs);
-          }
-        } catch (Exception e) {
-          log.warn("Could not get logs for pod %s", pod.getMetadata().getName());
-        }
-      });
-      
-      log.info("=== END DIAGNOSTICS ===");
-      
-    } catch (Exception e) {
-      log.error("Failed to collect diagnostics: %s", e.getMessage());
+    catch (Exception e) {
+      log.error("Error during %s cleanup: %s", getDruidServiceType(), e.getMessage());
     }
   }
 
   @Override
   public String getComponentName()
   {
-    return "Druid" + getDruidServiceType().substring(0, 1).toUpperCase() + getDruidServiceType().substring(1);
+    return "Druid" + getDruidServiceType().substring(0, 1).toUpperCase(Locale.ENGLISH) + getDruidServiceType().substring(1);
   }
 
   /**

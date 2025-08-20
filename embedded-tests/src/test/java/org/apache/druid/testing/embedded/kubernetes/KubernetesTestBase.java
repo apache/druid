@@ -23,7 +23,6 @@ import io.fabric8.kubernetes.api.model.NamespaceBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.k8s.simulate.K3SResource;
-import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,9 +34,8 @@ import java.util.List;
 public abstract class KubernetesTestBase
 {
   private static final Logger log = new Logger(KubernetesTestBase.class);
-  
-  private static final K3SResource k3sContainer = new K3SResource();
-  private static final MinIOStorageResource minIOStorage = new MinIOStorageResource();
+
+  private static final K3SResource K3S_CONTAINER = new K3SResource();
   private static KubernetesClient client;
   private static List<ComponentEntry> components = new ArrayList<>();
 
@@ -81,14 +79,14 @@ public abstract class KubernetesTestBase
   protected static void startK3SContainer()
   {
     log.info("Starting K3s conatiner...");
-    k3sContainer.start();
-    client = k3sContainer.getClient();
+    K3S_CONTAINER.start();
+    client = K3S_CONTAINER.getClient();
   }
 
   protected static void stopK3SContainer()
   {
     log.info("Stopping K3s cluster...");
-    k3sContainer.stop();
+    K3S_CONTAINER.stop();
   }
 
   protected KubernetesClient getClient()
@@ -98,7 +96,7 @@ public abstract class KubernetesTestBase
 
   protected static K3SResource getDeployingResource()
   {
-    return k3sContainer;
+    return K3S_CONTAINER;
   }
 
   /**
@@ -115,7 +113,7 @@ public abstract class KubernetesTestBase
   /**
    * Add a kubernetes component to be deployed in k3s container.
    *
-   * @param component the component to add
+   * @param component         the component to add
    * @param cleanupInEachTest whether this component should be cleaned up in each test
    */
   protected static void addKubernetesComponent(K8sComponent component, boolean cleanupInEachTest)
@@ -138,7 +136,8 @@ public abstract class KubernetesTestBase
         component.initialize(client);
         component.waitUntilReady(client);
         entry.setInitialized(true);
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         log.error("Failed to initialize %s: %s", component.getComponentName(), e.getMessage());
         throw new RuntimeException("Component initialization failed", e);
       }
@@ -148,34 +147,37 @@ public abstract class KubernetesTestBase
   protected static void cleanupComponents(boolean skipStatic)
   {
     log.info("Starting cleanup with skipStatic=%s, component count=%d", skipStatic, components.size());
-    
+
     for (int i = components.size() - 1; i >= 0; i--) {
       ComponentEntry entry = components.get(i);
-      
-      log.info("Checking component %s: initialized=%s, cleanupInEachTest=%s", 
-          entry.getComponent().getComponentName(), entry.isInitialized(), entry.shouldCleanupInEachTest());
-      
+
+      log.info(
+          "Checking component %s: initialized=%s, cleanupInEachTest=%s",
+          entry.getComponent().getComponentName(), entry.isInitialized(), entry.shouldCleanupInEachTest()
+      );
+
       if (!entry.isInitialized()) {
         log.info("Skipping uninitialized component: %s", entry.getComponent().getComponentName());
         continue;
       }
-      
+
       if (!entry.shouldCleanupInEachTest() && !skipStatic) {
         log.info("Skipping static component: %s", entry.getComponent().getComponentName());
         continue;
       }
-      
+
       K8sComponent component = entry.getComponent();
       try {
         log.info("Cleaning up component: %s", component.getComponentName());
         component.cleanup(client);
         components.remove(i);
         log.info("Successfully cleaned up and removed: %s", component.getComponentName());
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         log.error("Error cleaning up %s: %s", component.getComponentName(), e.getMessage());
       }
     }
-    
+
     log.info("Cleanup completed, remaining component count=%d", components.size());
   }
 
@@ -183,11 +185,12 @@ public abstract class KubernetesTestBase
   {
     try {
       client.namespaces().resource(new NamespaceBuilder()
-          .withNewMetadata()
-          .withName(namespace)
-          .endMetadata()
-          .build()).create();
-    } catch (Exception e) {
+                                       .withNewMetadata()
+                                       .withName(namespace)
+                                       .endMetadata()
+                                       .build()).create();
+    }
+    catch (Exception e) {
       log.error("Error creating namespace %s: %s", namespace, e.getMessage());
       throw new RuntimeException("Failed to create namespace", e);
     }

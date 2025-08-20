@@ -20,6 +20,7 @@
 package org.apache.druid.testing.embedded.kubernetes;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.k8s.simulate.K3SResource;
 import org.apache.druid.testing.embedded.indexing.Resources;
@@ -71,7 +72,7 @@ public class DruidClusterComponent implements K8sComponent
     String serviceKey = service.getPodLabel();
     int allocatedPort = portAllocator.allocatePort(serviceKey);
     service.setAllocatedNodePort(allocatedPort);
-    
+
     // Share the TestFolder from K3SResource with the DruidK8sComponent
     if (k3sResource != null && k3sResource.getTestFolder() != null) {
       service.setTestFolder(k3sResource.getTestFolder());
@@ -213,7 +214,7 @@ public class DruidClusterComponent implements K8sComponent
   /**
    * Get external broker URL for test connectivity.
    */
-  public Optional<String> getBrokerExternalUrl(KubernetesClient client)
+  public Optional<String> getBrokerExternalUrl()
   {
     return getBroker().map(broker -> broker.getExternalUrl(k3sResource.getK3sContainer()));
   }
@@ -267,6 +268,41 @@ public class DruidClusterComponent implements K8sComponent
     return taskId;
   }
 
+  /**
+   * Submits a load rule task to the Druid cluster.
+   *
+   * @return the task ID
+   */
+  public void setLoadRule(String datasource, String tier, int replicants) throws Exception
+  {
+    Optional<String> coordinatorUrl = getCoordinatorExternalUrl();
+
+    if (coordinatorUrl.isEmpty()) {
+      throw new AssertionError("Coordinator URL not found");
+    }
+    String rulesUrl = coordinatorUrl.get() + "/druid/coordinator/v1/rules/" + datasource;
+
+    String ruleJson = StringUtils.format(
+        "[{\"type\":\"loadForever\",\"tieredReplicants\":{\"%s\":%d}}]",
+        tier, replicants
+    );
+
+    HttpClient httpClient = HttpClient.newBuilder()
+                                      .connectTimeout(Duration.ofSeconds(30))
+                                      .build();
+
+    HttpRequest request = HttpRequest.newBuilder()
+                                     .uri(URI.create(rulesUrl))
+                                     .header("Content-Type", "application/json")
+                                     .header("Accept", "application/json")
+                                     .POST(HttpRequest.BodyPublishers.ofString(ruleJson))
+                                     .timeout(Duration.ofSeconds(30))
+                                     .build();
+
+    HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+    Assertions.assertEquals(200, response.statusCode(), "Failed to set load rule: " + response.body());
+  }
+
   private void applyRBACManifests(KubernetesClient client)
   {
     try {
@@ -315,7 +351,7 @@ public class DruidClusterComponent implements K8sComponent
 
     String taskStatusUrl = getCoordinatorExternalUrl().get() + "/druid/indexer/v1/task/" + taskId + "/status";
     String finalStatus = "PENDING";
-    int maxAttempts = 6000;
+    int maxAttempts = 60;
 
     for (int attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
@@ -338,7 +374,7 @@ public class DruidClusterComponent implements K8sComponent
           } else if (statusBody.contains("\"status\":\"FAILED\"")) {
             log.debug("Task failed : %s%n", statusBody);
             finalStatus = "FAILED";
-
+            break;
           }
         } else {
           log.debug("Status check failed with HTTP %d%n", statusResponse.statusCode());
@@ -354,7 +390,7 @@ public class DruidClusterComponent implements K8sComponent
         }
       }
     }
-    if (!finalStatus.equals("SUCCESS")) {
+    if (!"SUCCESS".equals(finalStatus)) {
       log.error("Task %s did not complete successfully after %d attempts", taskId, maxAttempts);
       Assertions.fail("Task " + taskId + " did not complete successfully");
     }

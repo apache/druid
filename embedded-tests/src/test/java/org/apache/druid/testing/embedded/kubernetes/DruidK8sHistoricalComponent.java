@@ -20,10 +20,8 @@
 package org.apache.druid.testing.embedded.kubernetes;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
-import org.jetbrains.annotations.NotNull;
+import org.apache.druid.java.util.common.StringUtils;
 
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -41,7 +39,14 @@ public class DruidK8sHistoricalComponent extends DruidK8sComponent
   private final long maxSize;
   private final String storageDir;
 
-  public DruidK8sHistoricalComponent(String namespace, String druidImage, String clusterName, String tier, int priority, String storageDir)
+  public DruidK8sHistoricalComponent(
+      String namespace,
+      String druidImage,
+      String clusterName,
+      String tier,
+      int priority,
+      String storageDir
+  )
   {
     super(namespace, druidImage, clusterName);
     this.tier = tier != null ? tier : DEFAULT_TIER;
@@ -72,14 +77,19 @@ public class DruidK8sHistoricalComponent extends DruidK8sComponent
     props.setProperty("druid.server.priority", String.valueOf(priority));
     props.setProperty("druid.processing.buffer.sizeBytes", "25000000");
     props.setProperty("druid.processing.numThreads", "2");
-    props.setProperty("druid.segmentCache.locations", "[{\"path\":\"/druid/data/segments\",\"maxSize\":" + maxSize + "}]");
+    props.setProperty(
+        "druid.segmentCache.locations",
+        "[{\"path\":\"" + storageDir + "\",\"maxSize\":" + maxSize + "}]"
+    );
+    props.setProperty("druid.segmentCache.numLoadingThreads", "4");
+    props.setProperty("druid.segmentCache.announceIntervalMillis", "3000");
     props.setProperty("druid.server.maxSize", String.valueOf(maxSize));
-    
+
     // Historical-specific configurations for segment loading
     props.setProperty("druid.segmentCache.infoDir", "/druid/data/segment-cache");
     props.setProperty("druid.historical.cache.useCache", "true");
     props.setProperty("druid.historical.cache.populateCache", "true");
-    
+
     props.setProperty("druid.host", "druid-" + getMetadataName() + "-" + getTier());
     return props;
   }
@@ -115,13 +125,13 @@ public class DruidK8sHistoricalComponent extends DruidK8sComponent
     nodeConfig.put("nodeType", "historical");
     nodeConfig.put("druid.port", getDruidPort());
     nodeConfig.put("replicas", getReplicas());
-    
+
     nodeConfig.put("nodeConfigMountPath", HISTORICAL_CONFIG_MOUNT_PATH);
     nodeConfig.put("livenessProbe", getLivenessProbe());
     nodeConfig.put("readinessProbe", getReadinessProbe());
 
     // Remove individual volumes and volumeMounts - use shared storage from base class
-    nodeConfig.put("runtime.properties", getRuntimePropertiesAsString().replace(getCommonDruidProperties(), "").trim());
+    nodeConfig.put("runtime.properties", StringUtils.replace(getRuntimePropertiesAsString(), getCommonDruidProperties(), "").trim());
     nodeConfig.put("extra.jvm.options", getJvmOptions());
     return nodeConfig;
   }
@@ -143,5 +153,4 @@ public class DruidK8sHistoricalComponent extends DruidK8sComponent
   {
     return "druid-" + getMetadataName() + "-" + getTier();
   }
-
 }

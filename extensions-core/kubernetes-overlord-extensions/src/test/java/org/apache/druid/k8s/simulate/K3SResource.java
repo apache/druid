@@ -86,6 +86,14 @@ public class K3SResource extends TestcontainerResource<K3sContainer>
       }
       
       File helmBinary = downloadHelm();
+      
+      // Pre-create all Druid storage directories before binding to K3S
+      File storageDir = testFolder.getOrCreateFolder("druid-storage");
+      testFolder.getOrCreateFolder("druid-storage/segments");
+      testFolder.getOrCreateFolder("druid-storage/segment-cache");
+      testFolder.getOrCreateFolder("druid-storage/metadata");
+      testFolder.getOrCreateFolder("druid-storage/indexing-logs");
+      
       Integer[] exposedPortRange = generatePortRange(30080, 30100);
       Integer[] allPorts = new Integer[exposedPortRange.length + 1];
       allPorts[0] = 6443;
@@ -98,7 +106,7 @@ public class K3SResource extends TestcontainerResource<K3sContainer>
               "/usr/local/bin/helm"
           )
           .withFileSystemBind(
-              testFolder.getOrCreateFolder("druid-storage").getAbsolutePath(),
+              storageDir.getAbsolutePath(),
               "/druid/data",
               READ_WRITE
           )
