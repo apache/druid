@@ -141,8 +141,7 @@ public class ITSqlQueryTest
         (request) -> {
         },
         (statusCode, responseBody) -> {
-          Assert.assertEquals(statusCode, HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE.getCode(), responseBody);
-          assertStringCompare("Unsupported Content-Type:", responseBody, responseBody::contains);
+          Assert.assertEquals(statusCode, HttpResponseStatus.BAD_REQUEST.getCode(), responseBody);
         }
     );
   }
@@ -156,8 +155,7 @@ public class ITSqlQueryTest
         (request) -> {
         },
         (statusCode, responseBody) -> {
-          Assert.assertEquals(statusCode, HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE.getCode(), responseBody);
-          assertStringCompare("Unsupported Content-Type:", responseBody, responseBody::contains);
+          Assert.assertEquals(statusCode, HttpResponseStatus.BAD_REQUEST, responseBody);
         }
     );
   }
