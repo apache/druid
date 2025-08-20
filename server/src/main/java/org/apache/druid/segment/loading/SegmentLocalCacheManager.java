@@ -127,31 +127,19 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     this.indexIO = indexIO;
 
     log.info("Using storage location strategy[%s].", this.strategy.getClass().getSimpleName());
-    log.info(
-        "Number of threads to load segments into page cache - on bootstrap: [%d], on download: [%d].",
-        config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap(),
-        config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload()
-    );
 
-    if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() > 0) {
-      loadOnBootstrapExec = Execs.multiThreaded(
-          config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap(),
-          "Load-SegmentsIntoPageCacheOnBootstrap-%s"
-      );
-    }
-
-    if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload() > 0) {
-      loadOnDownloadExec = Executors.newFixedThreadPool(
-          config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload(),
-          Execs.makeThreadFactory("LoadSegmentsIntoPageCacheOnDownload-%s")
-      );
-    }
 
     if (config.isVirtualStorageFabric()) {
       log.info(
           "Using virtual storage fabric mode - on demand load threads: [%d].",
           config.getVirtualStorageFabricLoadThreads()
       );
+      if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload() > 0) {
+        throw DruidException.defensive("Invalid configuration: isVirtualStorageFabric is incompatible with numThreadsToLoadSegmentsIntoPageCacheOnDownload");
+      }
+      if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() > 0) {
+        throw DruidException.defensive("Invalid configuration: isVirtualStorageFabric is incompatible with numThreadsToLoadSegmentsIntoPageCacheOnBootstrap");
+      }
       virtualStorageFabricLoadOnDemandExec =
           MoreExecutors.listeningDecorator(
               // probably replace this with virtual threads once minimum version is java 21
@@ -161,6 +149,25 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               )
           );
     } else {
+      log.info(
+          "Number of threads to load segments into page cache - on bootstrap: [%d], on download: [%d].",
+          config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap(),
+          config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload()
+      );
+
+      if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() > 0) {
+        loadOnBootstrapExec = Execs.multiThreaded(
+            config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap(),
+            "Load-SegmentsIntoPageCacheOnBootstrap-%s"
+        );
+      }
+
+      if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload() > 0) {
+        loadOnDownloadExec = Executors.newFixedThreadPool(
+            config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload(),
+            Execs.makeThreadFactory("LoadSegmentsIntoPageCacheOnDownload-%s")
+        );
+      }
       virtualStorageFabricLoadOnDemandExec = null;
     }
   }
@@ -343,10 +350,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             throw CloseableUtils.closeAndWrapInCatch(t, hold);
           }
         }
-        throw new SegmentLoadingException(
-            "Unable to load segment[%s] on demand, ensure enough disk space has been allocated to load all segments involved in the query",
-            dataSegment.getId()
-        );
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
+                            .build(
+                                "Unable to load segment[%s] on demand, ensure enough disk space has been allocated to load all segments involved in the query",
+                                dataSegment.getId()
+                            );
       }
       finally {
         unlock(dataSegment, lock);
@@ -789,7 +798,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                 mountLocation.getPath()
             );
             if (!location.equals(mountLocation)) {
-              throw new SegmentLoadingException(
+              throw DruidException.defensive(
                   "already mounted[%s] in location[%s] which is different from requested[%s]",
                   id,
                   location.getPath(),

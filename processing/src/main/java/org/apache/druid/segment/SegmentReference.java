@@ -51,8 +51,8 @@ public class SegmentReference implements Closeable
   )
   {
     this.segmentDescriptor = segmentDescriptor;
-    this.segmentReference = segmentReference.map(closer::register);
     closer.register(cleanupHold);
+    this.segmentReference = segmentReference.map(closer::register);
   }
 
   public SegmentDescriptor getSegmentDescriptor()

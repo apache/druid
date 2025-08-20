@@ -69,7 +69,6 @@ import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
-import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.VirtualPlaceholderSegment;
 import org.apache.druid.server.coordination.DataSegmentAndDescriptor;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -241,14 +240,15 @@ public class ServerManager implements QuerySegmentWalker
         }
       }
     }
-    catch (SegmentLoadingException e) {
-      CloseableUtils.closeAndWrapExceptions(safetyNet);
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
-                          .build(e, e.getMessage());
-    }
     catch (Throwable t) {
-      throw CloseableUtils.closeAndWrapInCatch(t, safetyNet);
+      throw CloseableUtils.closeInCatch(
+          t instanceof DruidException
+          ? (DruidException) t
+          : DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build(t, t.getMessage()),
+          safetyNet
+      );
     }
 
     long timeoutAt = System.currentTimeMillis() + timeout;
@@ -258,8 +258,7 @@ public class ServerManager implements QuerySegmentWalker
     // getting the future kicks off any background action, so materialize them all to a list to get things started
     final List<ListenableFuture<Optional<Segment>>> futures = new ArrayList<>(actions.size());
     for (AcquireSegmentAction acquireSegmentAction : actions) {
-      // if we haven't failed yet, keep collecing futures (we always want to collect the actions themselves though
-      // to close the hold)
+      // if we haven't failed yet, keep collecting futures
       if (failure == null) {
         try {
           futures.add(acquireSegmentAction.getSegmentFuture());
@@ -276,7 +275,14 @@ public class ServerManager implements QuerySegmentWalker
       for (int i = 0; i < futures.size(); i++) {
         Futures.addCallback(futures.get(i), AcquireSegmentAction.releaseCallback(actions.get(i)), Execs.directExecutor());
       }
-      throw DruidException.defensive(failure, "Failed to acquire segment references to process query");
+      throw CloseableUtils.closeInCatch(
+          failure instanceof DruidException
+          ? (DruidException) failure
+          : DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build(failure, "Failed to acquire segment references to process query"),
+          safetyNet
+      );
     }
 
     final List<SegmentReference> segmentReferences = new ArrayList<>(actions.size());
@@ -328,9 +334,13 @@ public class ServerManager implements QuerySegmentWalker
                                 .build(failure, "Failed to acquire segment references to process query");
       } else if (interrupted) {
         Thread.currentThread().interrupt();
-        toThrow = DruidException.defensive(failure, "Interrupted waiting for segments");
+        toThrow = DruidException.forPersona(DruidException.Persona.OPERATOR)
+                                .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                                .build(failure, "Interrupted waiting for segments");
       } else {
-        toThrow = DruidException.defensive(failure, "Failed to acquire segment references to process query");
+        toThrow = DruidException.forPersona(DruidException.Persona.OPERATOR)
+                                .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                                .build(failure, "Failed to acquire segment references to process query");
       }
       throw CloseableUtils.closeInCatch(toThrow, safetyNet);
     }

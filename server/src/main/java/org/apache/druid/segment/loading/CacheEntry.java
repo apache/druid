@@ -40,8 +40,8 @@ public interface CacheEntry
 
   /**
    * Materializes the cache entry into the assigned {@link StorageLocation}. If a cache entry is already mounted in the
-   * location, calling this method should be a no-op. If the cache entry is mounted in a different location, this method
-   * will unmount the item from the other location and mount in the new location.
+   * location, calling this method should be a no-op. It is an error condition to call this method if the cache entry
+   * is already mounted in a different location.
    */
   void mount(StorageLocation location) throws IOException, SegmentLoadingException;
 
