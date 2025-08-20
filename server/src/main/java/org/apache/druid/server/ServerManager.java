@@ -234,7 +234,7 @@ public class ServerManager implements QuerySegmentWalker
     final List<AcquireSegmentAction> actions = new ArrayList<>();
     try {
       for (DataSegmentAndDescriptor segment : segmentsToMap) {
-        if (segment == null) {
+        if (segment.getDataSegment() == null) {
           actions.add(safetyNet.register(AcquireSegmentAction.missingSegment()));
         } else {
           actions.add(safetyNet.register(segmentManager.acquireSegment(segment.getDataSegment())));
@@ -273,7 +273,7 @@ public class ServerManager implements QuerySegmentWalker
     }
 
     if (failure != null) {
-      for (int i = 0; i < actions.size(); i++) {
+      for (int i = 0; i < futures.size(); i++) {
         Futures.addCallback(futures.get(i), AcquireSegmentAction.releaseCallback(actions.get(i)), Execs.directExecutor());
       }
       throw DruidException.defensive(failure, "Failed to acquire segment references to process query");
@@ -320,7 +320,9 @@ public class ServerManager implements QuerySegmentWalker
     }
     if (failure != null) {
       final DruidException toThrow;
-      if (timedOut) {
+      if (failure instanceof DruidException) {
+        toThrow = (DruidException) failure;
+      } else if (timedOut) {
         toThrow = DruidException.forPersona(DruidException.Persona.USER)
                                 .ofCategory(DruidException.Category.TIMEOUT)
                                 .build(failure, "Failed to acquire segment references to process query");
