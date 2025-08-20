@@ -128,7 +128,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
     log.info("Using storage location strategy[%s].", this.strategy.getClass().getSimpleName());
 
-
     if (config.isVirtualStorageFabric()) {
       log.info(
           "Using virtual storage fabric mode - on demand load threads: [%d].",

@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -255,7 +256,7 @@ class SegmentLocalCacheManagerConcurrencyTest
           }
         }
     );
-    Assertions.assertInstanceOf(SegmentLoadingException.class, t.getCause());
+    Assertions.assertInstanceOf(DruidException.class, t.getCause());
     Assertions.assertTrue(t.getCause().getMessage().contains("Unable to load segment"));
     Assertions.assertTrue(t.getCause().getMessage().contains("on demand, ensure enough disk space has been allocated"));
   }
@@ -639,9 +640,9 @@ class SegmentLocalCacheManagerConcurrencyTest
         maxExpectedFailures >= exceptions.size(),
         "iteration " + iteration + " expected " + maxExpectedFailures + " tasks to fail but got " + exceptions.size()
     );
-    // we only expect SegmentLoadingException in happy path tests
+    // we only expect DruidException in happy path tests from disk space being unavailable to satisy the query
     for (Throwable t : exceptions) {
-      Assertions.assertInstanceOf(SegmentLoadingException.class, t.getCause());
+      Assertions.assertInstanceOf(DruidException.class, t.getCause());
       Assertions.assertTrue(t.getCause().getMessage().contains("Unable to load segment["));
       Assertions.assertTrue(t.getCause()
                              .getMessage()
