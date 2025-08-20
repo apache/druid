@@ -94,7 +94,7 @@ public class DimensionSchemaUtilsTest
           true,
           mode
       );
-      DimensionSchema expected = new AutoTypeColumnSchema("x", ColumnType.LONG);
+      DimensionSchema expected = new AutoTypeColumnSchema("x", ColumnType.LONG, null);
       Assert.assertEquals(expected, dimensionSchema);
 
       dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
@@ -103,7 +103,7 @@ public class DimensionSchemaUtilsTest
           true,
           mode
       );
-      expected = new AutoTypeColumnSchema("x", ColumnType.DOUBLE);
+      expected = new AutoTypeColumnSchema("x", ColumnType.DOUBLE, null);
       Assert.assertEquals(expected, dimensionSchema);
 
       dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
@@ -112,7 +112,7 @@ public class DimensionSchemaUtilsTest
           true,
           mode
       );
-      expected = new AutoTypeColumnSchema("x", ColumnType.FLOAT);
+      expected = new AutoTypeColumnSchema("x", ColumnType.FLOAT, null);
       Assert.assertEquals(expected, dimensionSchema);
 
       dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
@@ -121,7 +121,7 @@ public class DimensionSchemaUtilsTest
           true,
           mode
       );
-      expected = new AutoTypeColumnSchema("x", ColumnType.STRING);
+      expected = new AutoTypeColumnSchema("x", ColumnType.STRING, null);
       Assert.assertEquals(expected, dimensionSchema);
 
 
@@ -131,7 +131,7 @@ public class DimensionSchemaUtilsTest
           true,
           mode
       );
-      expected = new AutoTypeColumnSchema("x", ColumnType.LONG_ARRAY);
+      expected = new AutoTypeColumnSchema("x", ColumnType.LONG_ARRAY, null);
       Assert.assertEquals(expected, dimensionSchema);
 
       dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
@@ -140,7 +140,7 @@ public class DimensionSchemaUtilsTest
           true,
           mode
       );
-      expected = new AutoTypeColumnSchema("x", ColumnType.DOUBLE_ARRAY);
+      expected = new AutoTypeColumnSchema("x", ColumnType.DOUBLE_ARRAY, null);
       Assert.assertEquals(expected, dimensionSchema);
 
       dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
@@ -149,7 +149,7 @@ public class DimensionSchemaUtilsTest
           true,
           mode
       );
-      expected = new AutoTypeColumnSchema("x", ColumnType.FLOAT_ARRAY);
+      expected = new AutoTypeColumnSchema("x", ColumnType.FLOAT_ARRAY, null);
       Assert.assertEquals(expected, dimensionSchema);
 
       dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
@@ -158,7 +158,7 @@ public class DimensionSchemaUtilsTest
           true,
           mode
       );
-      expected = new AutoTypeColumnSchema("x", ColumnType.STRING_ARRAY);
+      expected = new AutoTypeColumnSchema("x", ColumnType.STRING_ARRAY, null);
       Assert.assertEquals(expected, dimensionSchema);
 
       dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
@@ -167,7 +167,7 @@ public class DimensionSchemaUtilsTest
           true,
           mode
       );
-      expected = new AutoTypeColumnSchema("x", null);
+      expected = AutoTypeColumnSchema.of("x");
       Assert.assertEquals(expected, dimensionSchema);
     }
   }
@@ -221,7 +221,7 @@ public class DimensionSchemaUtilsTest
         false,
         ArrayIngestMode.ARRAY
     );
-    DimensionSchema expected = new AutoTypeColumnSchema("x", ColumnType.STRING_ARRAY);
+    DimensionSchema expected = new AutoTypeColumnSchema("x", ColumnType.STRING_ARRAY, null);
     Assert.assertEquals(expected, dimensionSchema);
 
     dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
@@ -230,7 +230,7 @@ public class DimensionSchemaUtilsTest
         false,
         ArrayIngestMode.ARRAY
     );
-    expected = new AutoTypeColumnSchema("x", ColumnType.LONG_ARRAY);
+    expected = new AutoTypeColumnSchema("x", ColumnType.LONG_ARRAY, null);
     Assert.assertEquals(expected, dimensionSchema);
 
     dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
@@ -239,7 +239,7 @@ public class DimensionSchemaUtilsTest
         false,
         ArrayIngestMode.ARRAY
     );
-    expected = new AutoTypeColumnSchema("x", ColumnType.DOUBLE_ARRAY);
+    expected = new AutoTypeColumnSchema("x", ColumnType.DOUBLE_ARRAY, null);
     Assert.assertEquals(expected, dimensionSchema);
 
     dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
@@ -248,7 +248,7 @@ public class DimensionSchemaUtilsTest
         false,
         ArrayIngestMode.ARRAY
     );
-    expected = new AutoTypeColumnSchema("x", ColumnType.FLOAT_ARRAY);
+    expected = new AutoTypeColumnSchema("x", ColumnType.FLOAT_ARRAY, null);
     Assert.assertEquals(expected, dimensionSchema);
   }
 }

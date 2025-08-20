@@ -209,7 +209,8 @@ public class CompactionStatus
   )
   {
     final Evaluator evaluator = new Evaluator(candidateSegments, config, objectMapper);
-    return CHECKS.stream().map(f -> f.apply(evaluator))
+    return CHECKS.stream()
+                 .map(f -> f.apply(evaluator))
                  .filter(status -> !status.isComplete())
                  .findFirst().orElse(COMPLETE);
   }
@@ -232,19 +233,27 @@ public class CompactionStatus
     }
   }
 
+  @Nullable
   private static List<DimensionSchema> getNonPartitioningDimensions(
       @Nullable final List<DimensionSchema> dimensionSchemas,
-      @Nullable final PartitionsSpec partitionsSpec
+      @Nullable final PartitionsSpec partitionsSpec,
+      @Nullable final IndexSpec indexSpec
   )
   {
     if (dimensionSchemas == null || !(partitionsSpec instanceof DimensionRangePartitionsSpec)) {
-      return dimensionSchemas;
+      if (dimensionSchemas != null) {
+        return dimensionSchemas.stream()
+                               .map(dim -> dim.getEffectiveSchema(indexSpec))
+                               .collect(Collectors.toList());
+      }
+      return null;
     }
 
     final List<String> partitionsDimensions = ((DimensionRangePartitionsSpec) partitionsSpec).getPartitionDimensions();
     return dimensionSchemas.stream()
-                     .filter(dim -> !partitionsDimensions.contains(dim.getName()))
-                     .collect(Collectors.toList());
+                           .filter(dim -> !partitionsDimensions.contains(dim.getName()))
+                           .map(dim -> dim.getEffectiveSchema(indexSpec))
+                           .collect(Collectors.toList());
   }
 
   /**
@@ -430,20 +439,22 @@ public class CompactionStatus
             lastCompactionState.getDimensionsSpec() == null
             ? null
             : lastCompactionState.getDimensionsSpec().getDimensions(),
-            lastCompactionState.getPartitionsSpec()
+            lastCompactionState.getPartitionsSpec(),
+            lastCompactionState.getIndexSpec()
         );
         List<DimensionSchema> configuredDimensions = getNonPartitioningDimensions(
             compactionConfig.getDimensionsSpec().getDimensions(),
-            compactionConfig.getTuningConfig() == null ? null : compactionConfig.getTuningConfig().getPartitionsSpec()
+            compactionConfig.getTuningConfig() == null ? null : compactionConfig.getTuningConfig().getPartitionsSpec(),
+            compactionConfig.getTuningConfig() == null
+            ? IndexSpec.DEFAULT
+            : compactionConfig.getTuningConfig().getIndexSpec()
         );
-        {
-          return CompactionStatus.completeIfEqual(
-              "dimensionsSpec",
-              configuredDimensions,
-              existingDimensions,
-              String::valueOf
-          );
-        }
+        return CompactionStatus.completeIfEqual(
+            "dimensionsSpec",
+            configuredDimensions,
+            existingDimensions,
+            String::valueOf
+        );
       }
     }
 
