@@ -60,7 +60,7 @@ public abstract class DruidK8sComponent implements K8sComponent
     this.druidImage = druidImage != null ? druidImage : DRUID_34_IMAGE;
     this.clusterName = clusterName;
   }
-
+  
   /**
    * Set the TestFolder for shared storage across components.
    */

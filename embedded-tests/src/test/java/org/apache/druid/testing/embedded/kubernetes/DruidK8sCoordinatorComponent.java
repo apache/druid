@@ -33,10 +33,22 @@ public class DruidK8sCoordinatorComponent extends DruidK8sComponent
 {
   private static final String COORDINATOR_CONFIG_MOUNT_PATH = "/opt/druid/conf/druid/cluster/master/coordinator-overlord";
   private static final int COORDINATOR_READINESS_TIMEOUT = 1800;
+  private final Properties overridingProperties;
 
   public DruidK8sCoordinatorComponent(String namespace, String druidImage, String clusterName)
   {
+    this(namespace, druidImage, clusterName, new Properties());
+  }
+
+  public DruidK8sCoordinatorComponent(
+      String namespace,
+      String druidImage,
+      String clusterName,
+      Properties runtimeProperties
+  )
+  {
     super(namespace, druidImage, clusterName);
+    this.overridingProperties = runtimeProperties;
   }
 
   @Override
@@ -74,6 +86,10 @@ public class DruidK8sCoordinatorComponent extends DruidK8sComponent
     props.setProperty("druid.indexer.task.encapsulatedTask", "true");
 
     props.setProperty("druid.host", "druid-" + getMetadataName() + "-" + getDruidServiceType());
+
+    for (String key : overridingProperties.stringPropertyNames()) {
+      props.setProperty(key, overridingProperties.getProperty(key));
+    }
     return props;
   }
 
@@ -108,7 +124,10 @@ public class DruidK8sCoordinatorComponent extends DruidK8sComponent
     nodeConfig.put("nodeConfigMountPath", COORDINATOR_CONFIG_MOUNT_PATH);
     nodeConfig.put("livenessProbe", getLivenessProbe());
     nodeConfig.put("readinessProbe", getReadinessProbe());
-    nodeConfig.put("runtime.properties", StringUtils.replace(getRuntimePropertiesAsString(), getCommonDruidProperties(), "").trim());
+    nodeConfig.put(
+        "runtime.properties",
+        StringUtils.replace(getRuntimePropertiesAsString(), getCommonDruidProperties(), "").trim()
+    );
     nodeConfig.put("extra.jvm.options", getJvmOptions());
     return nodeConfig;
   }

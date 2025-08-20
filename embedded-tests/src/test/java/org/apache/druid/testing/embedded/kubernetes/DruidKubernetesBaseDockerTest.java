@@ -164,7 +164,7 @@ public class DruidKubernetesBaseDockerTest extends KubernetesTestBase implements
 
   @Test
   @Timeout(value = 10, unit = TimeUnit.MINUTES)
-  public void test_cluster_fullIngestionAndQuery() throws Exception
+  public void test_cluster_fullIngestion() throws Exception
   {
     String dataSource = "test_datasource_" + StringUtils.replace(UUID.randomUUID().toString(), "-", "");
     druidCluster.setLoadRule(dataSource, "hot", 2);

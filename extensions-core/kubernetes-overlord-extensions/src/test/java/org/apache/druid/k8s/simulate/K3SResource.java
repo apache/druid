@@ -19,9 +19,17 @@
 
 package org.apache.druid.k8s.simulate;
 
+import com.github.dockerjava.api.DockerClient;
+import com.github.dockerjava.core.DefaultDockerClientConfig;
+import com.github.dockerjava.core.DockerClientImpl;
+import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
+import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestFolder;
@@ -30,7 +38,9 @@ import org.testcontainers.k3s.K3sContainer;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
 
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,12 +48,12 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
 import java.time.Duration;
-import java.util.Locale;
 import java.util.Set;
+import java.util.zip.GZIPInputStream;
 
 import static org.testcontainers.containers.BindMode.READ_WRITE;
 
@@ -87,7 +97,6 @@ public class K3SResource extends TestcontainerResource<K3sContainer>
       
       File helmBinary = downloadHelm();
       
-      // Pre-create all Druid storage directories before binding to K3S
       File storageDir = testFolder.getOrCreateFolder("druid-storage");
       testFolder.getOrCreateFolder("druid-storage/segments");
       testFolder.getOrCreateFolder("druid-storage/segment-cache");
@@ -157,8 +166,7 @@ public class K3SResource extends TestcontainerResource<K3sContainer>
    */
   private File downloadHelm() throws Exception
   {
-    String helmUrl = String.format(
-        Locale.ENGLISH,
+    String helmUrl = StringUtils.format(
         "https://get.helm.sh/helm-%s-%s.tar.gz",
         HELM_VERSION,
         HELM_PLATFORM
@@ -194,22 +202,8 @@ public class K3SResource extends TestcontainerResource<K3sContainer>
       inputStream.transferTo(outputStream);
     }
 
-    ProcessBuilder extractProcess = new ProcessBuilder(
-        "tar", "-xzf", tarFile.getAbsolutePath(), 
-        "-C", helmFolder.getAbsolutePath(),
-        "--strip-components=1", 
-        HELM_PLATFORM + "/helm"
-    );
+    extractTarGz(tarFile, helmFolder, HELM_PLATFORM + "/helm", "helm");
     
-    Process extract = extractProcess.start();
-    int exitCode = extract.waitFor();
-    
-    if (exitCode != 0) {
-      String error = new String(extract.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
-      throw new RuntimeException("Failed to extract Helm binary. Exit code: " + exitCode + ", Error: " + error);
-    }
-    
-    // Make executable
     Set<PosixFilePermission> permissions = Set.of(
         PosixFilePermission.OWNER_READ,
         PosixFilePermission.OWNER_WRITE,
@@ -230,6 +224,33 @@ public class K3SResource extends TestcontainerResource<K3sContainer>
     tarFile.delete();
     log.info("Helm binary downloaded and extracted to: %s", helmBinary.getAbsolutePath());
     return helmBinary;
+  }
+
+  /**
+   * Extract a specific file from a tar.gz archive.
+   */
+  private void extractTarGz(File tarGzFile, File destFolder, String sourceEntryPath, String destFileName) throws IOException
+  {
+    try (FileInputStream fis = new FileInputStream(tarGzFile);
+         BufferedInputStream bis = new BufferedInputStream(fis);
+         GZIPInputStream gis = new GZIPInputStream(bis);
+         TarArchiveInputStream tais = new TarArchiveInputStream(gis)) {
+      
+      TarArchiveEntry entry;
+      while ((entry = tais.getNextTarEntry()) != null) {
+        if (entry.getName().equals(sourceEntryPath)) {
+          File destFile = new File(destFolder, destFileName);
+          try (FileOutputStream fos = new FileOutputStream(destFile)) {
+            byte[] buffer = new byte[8192];
+            int len;
+            while ((len = tais.read(buffer)) != -1) {
+              fos.write(buffer, 0, len);
+            }
+          }
+          break;
+        }
+      }
+    }
   }
 
   /**
@@ -261,65 +282,44 @@ public class K3SResource extends TestcontainerResource<K3sContainer>
   public void loadLocalImage(String localImageName)
   {
     try {
-      String containerId = getContainer().getContainerId();
-      String tarPath = "/tmp/druid-image-" + System.currentTimeMillis() + ".tar";
+      Path tempDir = FileUtils.createTempDir("druid-k3s-image-").toPath();
+      Path tarFile = tempDir.resolve("druid-image.tar");
 
-      ProcessBuilder checkProcess = new ProcessBuilder("docker", "image", "inspect", localImageName);
-      Process check = checkProcess.start();
-      int checkExitCode = check.waitFor();
-      
-      if (checkExitCode != 0) {
-        String checkError = new String(check.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
-        log.error("Docker image inspect failed with error: %s", checkError);
-        throw new RuntimeException("Docker image does not exist: " + localImageName);
-      }
-      
-      ProcessBuilder saveProcess = new ProcessBuilder("docker", "save", "-o", tarPath, localImageName);
-      Process save = saveProcess.start();
-      int saveExitCode = save.waitFor();
-      
-      if (saveExitCode != 0) {
-        String saveError = new String(save.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
-        log.error("Docker save failed with error: %s", saveError);
-        throw new RuntimeException("Failed to save Docker image: " + localImageName);
+      DefaultDockerClientConfig config = DefaultDockerClientConfig.createDefaultConfigBuilder().build();
+      ApacheDockerHttpClient httpClient = new ApacheDockerHttpClient.Builder()
+          .dockerHost(config.getDockerHost())
+          .build();
+      DockerClient dockerClient = DockerClientImpl.getInstance(config, httpClient);
+
+      try {
+        dockerClient.inspectImageCmd(localImageName).exec();
+        log.debug("Docker image found: %s", localImageName);
+      } catch (Exception e) {
+        log.error("Docker image does not exist: %s", localImageName);
+        throw new RuntimeException("Docker image does not exist: " + localImageName, e);
       }
 
-      ProcessBuilder copyProcess = new ProcessBuilder("docker", "cp", tarPath, containerId + ":/tmp/druid-image.tar");
-      Process copy = copyProcess.start();
-      int copyExitCode = copy.waitFor();
-      
-      if (copyExitCode != 0) {
-        String copyError = new String(copy.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
-        log.error("Docker cp failed with error: %s", copyError);
-        throw new RuntimeException("Failed to copy tar file to K3s container");
+      try (FileOutputStream fos = new FileOutputStream(tarFile.toFile());
+           InputStream imageStream = dockerClient.saveImageCmd(localImageName).exec()) {
+        imageStream.transferTo(fos);
+        log.debug("Docker image saved to: %s", tarFile);
       }
 
-      ProcessBuilder loadProcess = new ProcessBuilder("docker", "exec", containerId, "ctr", "-n", "k8s.io", "images", "import", "/tmp/druid-image.tar");
-      Process load = loadProcess.start();
-      int loadExitCode = load.waitFor();
-      
-      String loadOutput = new String(load.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-      String loadError = new String(load.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
-      
-      if (!loadOutput.isEmpty()) {
-        log.debug("Image Load output: %s", loadOutput);
-      }
-      if (!loadError.isEmpty()) {
-        log.error("Image Load error: %s", loadError);
-      }
-      
-      if (loadExitCode != 0) {
-        throw new RuntimeException("Failed to load image into K3s containerd. Exit code: " + loadExitCode);
-      }
+      getContainer().copyFileToContainer(MountableFile.forHostPath(tarFile), "/tmp/druid-image.tar");
+      log.debug("Tar file copied to K3s container");
 
-      ProcessBuilder cleanupProcess = new ProcessBuilder("rm", tarPath);
-      cleanupProcess.start().waitFor();
-      ProcessBuilder cleanupK3sProcess = new ProcessBuilder("docker", "exec", containerId, "rm", "/tmp/druid-image.tar");
-      cleanupK3sProcess.start().waitFor();
+      getContainer().execInContainer("ctr", "-n", "k8s.io", "images", "import", "/tmp/druid-image.tar");
+      log.info("Image loaded into K3s containerd: %s", localImageName);
+
+      getContainer().execInContainer("rm", "/tmp/druid-image.tar");
+      Files.deleteIfExists(tarFile);
+      Files.deleteIfExists(tempDir);
+      
+      dockerClient.close();
+      httpClient.close();
     }
     catch (Exception e) {
-      log.error("Failed to load local Docker image: %s", localImageName);
-      e.printStackTrace();
+      log.error(e, "Failed to load local Docker image: %s", localImageName);
       throw new RuntimeException("Failed to load local Docker image: " + localImageName, e);
     }
   }
