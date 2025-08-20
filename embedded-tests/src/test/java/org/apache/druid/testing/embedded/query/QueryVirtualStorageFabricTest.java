@@ -78,8 +78,7 @@ class QueryVirtualStorageFabricTest extends EmbeddedClusterTestBase
   public EmbeddedDruidCluster createCluster()
   {
     historical.addProperty("druid.segmentCache.isVirtualStorageFabric", "true")
-              .addProperty("druid.segmentCache.minVirtualStorageFabricLoadThreads", String.valueOf(Runtime.getRuntime().availableProcessors()))
-              .addProperty("druid.segmentCache.maxVirtualStorageFabricLoadThreads", String.valueOf(Runtime.getRuntime().availableProcessors()))
+              .addProperty("druid.segmentCache.virtualStorageFabricLoadThreads", String.valueOf(Runtime.getRuntime().availableProcessors()))
               .addBeforeStartHook(
                   (cluster, self) -> self.addProperty(
                       "druid.segmentCache.locations",
