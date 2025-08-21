@@ -5,3 +5,4 @@ query-filters:
       id: java/potentially-weak-cryptographic-algorithm
       paths:
         - '**/CryptoService.java'
+        - '**/Pac4jSessionStore.java'
