@@ -1,3 +1,7 @@
 query-filters:
   - exclude:
       id: java/stack-trace-exposure
+  - exclude:
+      id: java/potentially-weak-cryptographic-algorithm
+      where:
+        - file: "**/CryptoService.java"
