@@ -19,8 +19,6 @@
 
 package org.apache.druid.msq.indexing;
 
-import org.apache.druid.cli.CliIndexer;
-import org.apache.druid.cli.CliPeon;
 import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -31,7 +29,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Production implementation of {@link ResourcePermissionMapper} for tasks: {@link CliIndexer} and {@link CliPeon}.
+ * Production implementation of {@link ResourcePermissionMapper} for tasks: {@code CliIndexer} and {@code CliPeon}.
  */
 public class IndexerResourcePermissionMapper implements ResourcePermissionMapper
 {

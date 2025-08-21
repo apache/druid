@@ -42,12 +42,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.storage.postgresql.PostgreSQLMetadataStorageModule;
-import org.apache.druid.msq.guice.IndexerMemoryManagementModule;
-import org.apache.druid.msq.guice.MSQDurableStorageModule;
-import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
-import org.apache.druid.msq.guice.MSQIndexingModule;
-import org.apache.druid.msq.guice.MSQSqlModule;
-import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -117,13 +111,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
             .addExtensions(
                 KafkaIndexTaskModule.class,
                 LatchableEmitterModule.class,
-                PostgreSQLMetadataStorageModule.class,
-                MSQSqlModule.class,
-                SqlTaskModule.class,
-                MSQIndexingModule.class,
-                MSQDurableStorageModule.class,
-                MSQExternalDataSourceModule.class,
-                IndexerMemoryManagementModule.class
+                PostgreSQLMetadataStorageModule.class
             )
             .addResource(new PostgreSQLMetadataResource())
             .addResource(new MinIOStorageResource())
