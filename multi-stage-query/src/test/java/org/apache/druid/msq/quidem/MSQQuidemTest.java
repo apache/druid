@@ -35,6 +35,6 @@ public class MSQQuidemTest extends DruidQuidemTestBase
   @Override
   protected File getTestRoot()
   {
-    return ProjectPathUtils.getPathFromProjectRoot("extensions-core/multi-stage-query/src/test/quidem/" + getClass().getName());
+    return ProjectPathUtils.getPathFromProjectRoot("multi-stage-query/src/test/quidem/" + getClass().getName());
   }
 }
