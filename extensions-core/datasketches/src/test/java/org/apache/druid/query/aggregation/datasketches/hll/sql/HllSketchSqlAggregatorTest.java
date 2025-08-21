@@ -233,7 +233,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   private static final ExprMacroTable MACRO_TABLE = new ExprMacroTable(
       ImmutableList.of(
           new HllPostAggExprMacros.HLLSketchEstimateExprMacro(),
-          new HllPostAggExprMacros.HllSketchEstimateWithErrorBoundExprMacro()
+          new HllPostAggExprMacros.HllSketchEstimateWithErrorBoundsExprMacro()
       )
   );
 
@@ -1021,8 +1021,18 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                     makeSketchEstimateExpression("v1", "hllsketch_dbl1"),
                     makeSketchEstimateExpression("v2", "hllsketch_l1"),
                     makeSketchEstimateExpression("v3", "hllsketch_f1"),
-                    makeSketchEstimateWithErrorBoundsExpression("v4", "hllsketch_dim1"),
-                    makeSketchEstimateWithErrorBoundsExpression("v5", "hllsketch_dim1")
+                    new ExpressionVirtualColumn(
+                        "v4",
+                        "hll_sketch_estimate_with_error_bounds(\"hllsketch_dim1\")",
+                        ColumnType.DOUBLE_ARRAY,
+                        MACRO_TABLE
+                    ),
+                    new ExpressionVirtualColumn(
+                        "v5",
+                        "hll_sketch_estimate_with_error_bounds(\"hllsketch_dim1\",2)",
+                        ColumnType.DOUBLE_ARRAY,
+                        MACRO_TABLE
+                    )
                 )
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .columns("v0", "v1", "v2", "v3", "v4", "v5")
@@ -1031,12 +1041,12 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{0.0D, 1.0D, 1.0D, 1.0D},
-            new Object[]{1.0D, 1.0D, 1.0D, 1.0D},
-            new Object[]{1.0D, 1.0D, 1.0D, 1.0D},
-            new Object[]{1.0D, 0.0D, 0.0D, 0.0D},
-            new Object[]{1.0D, 0.0D, 0.0D, 0.0D},
-            new Object[]{1.0D, 0.0D, 0.0D, 0.0D}
+            new Object[]{0.0D, 1.0D, 1.0D, 1.0D, "[0.0,0.0,0.0]", "[0.0,0.0,0.0]"},
+            new Object[]{1.0D, 1.0D, 1.0D, 1.0D, "[1.0,1.0,1.000049929250618]", "[1.0,1.0,1.0000998634873453]"},
+            new Object[]{1.0D, 1.0D, 1.0D, 1.0D, "[1.0,1.0,1.000049929250618]", "[1.0,1.0,1.0000998634873453]"},
+            new Object[]{1.0D, 0.0D, 0.0D, 0.0D, "[1.0,1.0,1.000049929250618]", "[1.0,1.0,1.0000998634873453]"},
+            new Object[]{1.0D, 0.0D, 0.0D, 0.0D, "[1.0,1.0,1.000049929250618]", "[1.0,1.0,1.0000998634873453]"},
+            new Object[]{1.0D, 0.0D, 0.0D, 0.0D, "[1.0,1.0,1.000049929250618]", "[1.0,1.0,1.0000998634873453]"}
         )
     );
   }
@@ -1367,16 +1377,6 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     return new ExpressionVirtualColumn(
         outputName,
         StringUtils.format("hll_sketch_estimate(\"%s\")", field),
-        ColumnType.DOUBLE,
-        MACRO_TABLE
-    );
-  }
-
-  private ExpressionVirtualColumn makeSketchEstimateWithErrorBoundsExpression(String outputName, String field)
-  {
-    return new ExpressionVirtualColumn(
-        outputName,
-        StringUtils.format("hll_sketch_estimate_with_error_bounds(\"%s\")", field),
         ColumnType.DOUBLE,
         MACRO_TABLE
     );

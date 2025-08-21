@@ -50,13 +50,13 @@ public class HllPostAggExprMacros
     }
   }
 
-  public static class HllSketchEstimateWithErrorBoundExprMacro implements ExprMacroTable.ExprMacro
+  public static class HllSketchEstimateWithErrorBoundsExprMacro implements ExprMacroTable.ExprMacro
   {
     @Override
     public Expr apply(List<Expr> args)
     {
       validationHelperCheckAnyOfArgumentCount(args, 1, 2);
-      return new HllSketchEstimateWithErrorBoundExpr(this, args);
+      return new HllSketchEstimateWithErrorBoundsExpr(this, args);
     }
 
     @Override
@@ -106,12 +106,12 @@ public class HllPostAggExprMacros
     }
   }
 
-  public static class HllSketchEstimateWithErrorBoundExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
+  public static class HllSketchEstimateWithErrorBoundsExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
   {
     private Expr estimateExpr;
     private Expr numStdDev;
 
-    public HllSketchEstimateWithErrorBoundExpr(HllSketchEstimateWithErrorBoundExprMacro macro, List<Expr> args)
+    public HllSketchEstimateWithErrorBoundsExpr(HllSketchEstimateWithErrorBoundsExprMacro macro, List<Expr> args)
     {
       super(macro, args);
       this.estimateExpr = args.get(0);

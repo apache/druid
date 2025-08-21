@@ -87,7 +87,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   private static final String DATA_SOURCE = "foo";
   private static final ExprMacroTable MACRO_TABLE = new ExprMacroTable(
       ImmutableList.of(
-          new ThetaPostAggMacros.ThetaSketchEstimateExprMacro()
+          new ThetaPostAggMacros.ThetaSketchEstimateExprMacro(),
+          new ThetaPostAggMacros.ThetaSketchEstimateWithErrorBoundsExprMacro()
       )
   );
 
@@ -1029,31 +1030,40 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT"
-        + " THETA_SKETCH_ESTIMATE(thetasketch_dim1)"
+        + " THETA_SKETCH_ESTIMATE(thetasketch_dim1),"
+        + " THETA_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(thetasketch_dim1, 2)"
         + " FROM foo",
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(new ExpressionVirtualColumn(
-                    "v0",
-                    "theta_sketch_estimate(\"thetasketch_dim1\")",
-                    ColumnType.DOUBLE,
-                    MACRO_TABLE
-                ))
+                .virtualColumns(
+                    new ExpressionVirtualColumn(
+                        "v0",
+                        "theta_sketch_estimate(\"thetasketch_dim1\")",
+                        ColumnType.DOUBLE,
+                        MACRO_TABLE
+                    ),
+                    new ExpressionVirtualColumn(
+                        "v1",
+                        "theta_sketch_estimate_with_error_bounds(\"thetasketch_dim1\",2)",
+                        SketchModule.THETA_SKETCH_TYPE,
+                        MACRO_TABLE
+                    )
+                )
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .columns("v0")
-                .columnTypes(ColumnType.DOUBLE)
+                .columns("v0", "v1")
+                .columnTypes(ColumnType.DOUBLE, SketchModule.THETA_SKETCH_TYPE)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{0.0D},
-            new Object[]{1.0D},
-            new Object[]{1.0D},
-            new Object[]{1.0D},
-            new Object[]{1.0D},
-            new Object[]{1.0D}
+            new Object[]{0.0D, "{\"estimate\":0.0,\"highBound\":0.0,\"lowBound\":0.0,\"numStdDev\":2}"},
+            new Object[]{1.0D, "{\"estimate\":1.0,\"highBound\":1.0,\"lowBound\":1.0,\"numStdDev\":2}"},
+            new Object[]{1.0D, "{\"estimate\":1.0,\"highBound\":1.0,\"lowBound\":1.0,\"numStdDev\":2}"},
+            new Object[]{1.0D, "{\"estimate\":1.0,\"highBound\":1.0,\"lowBound\":1.0,\"numStdDev\":2}"},
+            new Object[]{1.0D, "{\"estimate\":1.0,\"highBound\":1.0,\"lowBound\":1.0,\"numStdDev\":2}"},
+            new Object[]{1.0D, "{\"estimate\":1.0,\"highBound\":1.0,\"lowBound\":1.0,\"numStdDev\":2}"}
         )
     );
   }
