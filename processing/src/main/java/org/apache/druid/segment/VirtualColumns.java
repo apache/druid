@@ -519,20 +519,28 @@ public class VirtualColumns implements Cacheable
     return virtualColumn;
   }
 
-  private void detectCycles(VirtualColumn virtualColumn, @Nullable Set<String> columnNames)
+  /**
+   * Detects cycles in the dependencies of a {@link VirtualColumn}.
+   *
+   * @param virtualColumn virtual column to check
+   * @param visited       null on initial call. Internally, this method operates recursively, and uses this parameter
+   *                      to pass down the list of already-visited columns.
+   */
+  private void detectCycles(VirtualColumn virtualColumn, @Nullable Set<String> visited)
   {
-    // Copy columnNames to avoid modifying it
-    final Set<String> nextSet = columnNames == null
-                                ? Sets.newHashSet(virtualColumn.getOutputName())
-                                : Sets.newHashSet(columnNames);
+    // Copy "visited" to avoid modifying it
+    final Set<String> visitedCopy = visited == null
+                                    ? Sets.newHashSet(virtualColumn.getOutputName())
+                                    : Sets.newHashSet(visited);
 
     for (String columnName : virtualColumn.requiredColumns()) {
       final VirtualColumn dependency = getVirtualColumn(columnName);
       if (dependency != null) {
-        if (!nextSet.add(columnName)) {
+        if (!visitedCopy.add(columnName)) {
           throw new IAE("Self-referential column[%s]", columnName);
         }
-        detectCycles(dependency, nextSet);
+        detectCycles(dependency, visitedCopy);
+        visitedCopy.remove(columnName);
       }
     }
   }
