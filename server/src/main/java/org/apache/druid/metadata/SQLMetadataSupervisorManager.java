@@ -138,8 +138,12 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
   }
 
   @Override
-  public List<VersionedSupervisorSpec> getAllForId(String id, Integer limit)
+  public List<VersionedSupervisorSpec> getAllForId(String id, @Nullable Integer limit) throws IllegalArgumentException
   {
+    if (limit != null && limit <= 0) {
+      throw new IllegalArgumentException("Limit must be greater than zero if set");
+    }
+
     return ImmutableList.copyOf(
         dbi.withHandle(
             (HandleCallback<List<VersionedSupervisorSpec>>) handle -> {
@@ -148,7 +152,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                   getSupervisorsTable()
               );
               
-              if (limit != null && limit > 0) {
+              if (limit != null) {
                 query += " " + connector.limitClause(limit);
               }
               

@@ -1830,9 +1830,8 @@ Retrieves an audit history of specs for a single supervisor.
 #### Query parameters
 
 * `count` (optional)
-  * Maximum number of history entries to return. If not specified, returns all history entries.
   * Type: Integer
-  * Example: `count=10`
+  * Limit the number of results to the last `n` entries. Must be greater than 0 if specified.
 
 #### Responses
 

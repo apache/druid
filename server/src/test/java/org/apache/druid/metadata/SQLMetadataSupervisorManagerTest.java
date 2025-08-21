@@ -337,9 +337,13 @@ public class SQLMetadataSupervisorManagerTest
     Assert.assertEquals(1, limitedResults.size());
     Assert.assertEquals(data1rev3, ((TestSupervisorSpec) limitedResults.get(0).getSpec()).getData());
 
-    // Test with limit=0 (should return empty list)
-    limitedResults = supervisorManager.getAllForId(supervisor1, 0);
-    Assert.assertEquals(0, limitedResults.size());
+    // Test with limit=0 (should throw exception)
+    try {
+      supervisorManager.getAllForId(supervisor1, 0);
+      Assert.fail("Expected IllegalArgumentException for limit=0");
+    } catch (IllegalArgumentException e) {
+      Assert.assertEquals("Limit must be greater than zero if set", e.getMessage());
+    }
 
     // Test with limit=null (should return all)
     List<VersionedSupervisorSpec> allResults = supervisorManager.getAllForId(supervisor1, null);
@@ -349,9 +353,13 @@ public class SQLMetadataSupervisorManagerTest
     limitedResults = supervisorManager.getAllForId(supervisor1, 10);
     Assert.assertEquals(3, limitedResults.size());
 
-    // Test with negative limit (should return all)
-    limitedResults = supervisorManager.getAllForId(supervisor1, -1);
-    Assert.assertEquals(3, limitedResults.size());
+    // Test with negative limit (should throw exception)
+    try {
+      supervisorManager.getAllForId(supervisor1, -1);
+      Assert.fail("Expected IllegalArgumentException for limit=-1");
+    } catch (IllegalArgumentException e) {
+      Assert.assertEquals("Limit must be greater than zero if set", e.getMessage());
+    }
   }
 
   private static class BadSupervisorSpec implements SupervisorSpec

@@ -539,7 +539,21 @@ public class SupervisorResource
   {
     return asLeaderWithSupervisorManager(
         manager -> {
-          List<VersionedSupervisorSpec> historyForId = manager.getSupervisorHistoryForId(id, count);
+          List<VersionedSupervisorSpec> historyForId;
+          try {
+            historyForId = manager.getSupervisorHistoryForId(id, count);
+          }
+          catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                           .entity(
+                               ImmutableMap.of(
+                                   "error",
+                                   e.getMessage()
+                               )
+                           )
+                           .build();
+          }
+
           if (!historyForId.isEmpty()) {
             final List<VersionedSupervisorSpec> authorizedHistoryForId =
                 Lists.newArrayList(
