@@ -1548,8 +1548,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
                             + "SUM(foo.cnt) FROM druid.foo "
                             + "GROUP BY 1";
 
-    // ExtractionDimensionSpec cannot be vectorized
-
     testQuery(
         PLANNER_CONFIG_NO_HLL.withOverrides(
             ImmutableMap.of(
