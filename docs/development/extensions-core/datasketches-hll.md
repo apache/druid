@@ -45,7 +45,7 @@ For additional sketch types supported in Druid, see [DataSketches extension](dat
 |`lgK`|log2 of K that is the number of buckets in the sketch, parameter that controls the size and the accuracy. Must be between 4 and 21 inclusively.|no, defaults to `12`|
 |`tgtHllType`|The type of the target HLL sketch. Must be `HLL_4`, `HLL_6` or `HLL_8` |no, defaults to `HLL_4`|
 |`round`|Round off values to whole numbers. Only affects query-time behavior and is ignored at ingestion-time.|no, defaults to `false`|
-|`shouldFinalize`|Return the final double type representing the estimate rather than the intermediate sketch type itself. In addition to controlling the finalization of this aggregator, you can control whether all aggregators are finalized with the query context parameters [`finalize`](../../querying/query-context.md) and [`sqlFinalizeOuterSketches`](../../querying/sql-query-context.md).|no, defaults to `true`|
+|`shouldFinalize`|Return the final double type representing the estimate rather than the intermediate sketch type itself. In addition to controlling the finalization of this aggregator, you can control whether all aggregators are finalized with the query context parameters [`finalize`](../../querying/query-context-reference.md) and [`sqlFinalizeOuterSketches`](../../querying/sql-query-context.md).|no, defaults to `true`|
 
 :::info
  The default `lgK` value has proven to be sufficient for most use cases; expect only very negligible improvements in accuracy with `lgK` values over `16` in normal circumstances.

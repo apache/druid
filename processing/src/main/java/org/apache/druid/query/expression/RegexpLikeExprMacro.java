@@ -45,49 +45,92 @@ public class RegexpLikeExprMacro implements ExprMacroTable.ExprMacro
   public Expr apply(final List<Expr> args)
   {
     validationHelperCheckArgumentCount(args, 2);
-
-    final Expr arg = args.get(0);
-    final Expr patternExpr = args.get(1);
-
-    if (!ExprUtils.isStringLiteral(patternExpr)) {
-      throw validationFailed("pattern must be a STRING literal");
+    if (ExprUtils.isStringLiteral(args.get(1))) {
+      return new RegexpLikeExpr(args);
+    } else {
+      return new RegexpLikeDynamicExpr(args);
     }
+  }
 
-    // Precompile the pattern.
-    final Pattern pattern = Pattern.compile(
-        StringUtils.nullToEmptyNonDruidDataString((String) patternExpr.getLiteralValue())
-    );
-
-    class RegexpLikeExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
+  abstract class BaseRegexpLikeExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
+  {
+    public BaseRegexpLikeExpr(final List<Expr> args)
     {
-      private RegexpLikeExpr(List<Expr> args)
-      {
-        super(RegexpLikeExprMacro.this, args);
-      }
-
-      @Nonnull
-      @Override
-      public ExprEval eval(final ObjectBinding bindings)
-      {
-        final String s = arg.eval(bindings).asString();
-
-        if (s == null) {
-          // True nulls do not match anything. Note: this branch only executes in SQL-compatible null handling mode.
-          return ExprEval.ofLong(null);
-        } else {
-          final Matcher matcher = pattern.matcher(s);
-          return ExprEval.ofLongBoolean(matcher.find());
-        }
-      }
-
-      @Nullable
-      @Override
-      public ExpressionType getOutputType(InputBindingInspector inspector)
-      {
-        return ExpressionType.LONG;
-      }
+      super(RegexpLikeExprMacro.this, args);
     }
 
-    return new RegexpLikeExpr(args);
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(InputBindingInspector inspector)
+    {
+      return ExpressionType.LONG;
+    }
+  }
+
+  /**
+   * Expr when pattern is a literal.
+   */
+  class RegexpLikeExpr extends BaseRegexpLikeExpr
+  {
+    private final Expr arg;
+    private final Pattern pattern;
+
+    private RegexpLikeExpr(List<Expr> args)
+    {
+      super(args);
+
+      final Expr patternExpr = args.get(1);
+      if (!ExprUtils.isStringLiteral(patternExpr)) {
+        throw validationFailed("pattern must be a STRING literal");
+      }
+
+      final String patternString = (String) patternExpr.getLiteralValue();
+      this.arg = args.get(0);
+      this.pattern = Pattern.compile(StringUtils.nullToEmptyNonDruidDataString(patternString));
+    }
+
+    @Nonnull
+    @Override
+    public ExprEval<?> eval(final ObjectBinding bindings)
+    {
+      final String s = arg.eval(bindings).asString();
+      if (s == null) {
+        return ExprEval.ofLong(null);
+      } else {
+        final Matcher matcher = pattern.matcher(s);
+        return ExprEval.ofLongBoolean(matcher.find());
+      }
+    }
+  }
+
+  /**
+   * Expr when pattern is dynamic (not literal).
+   */
+  class RegexpLikeDynamicExpr extends BaseRegexpLikeExpr
+  {
+    private RegexpLikeDynamicExpr(List<Expr> args)
+    {
+      super(args);
+    }
+
+    @Nonnull
+    @Override
+    public ExprEval<?> eval(final ObjectBinding bindings)
+    {
+      final Expr patternExpr = args.get(1).eval(bindings).toExpr();
+      if (!ExprUtils.isStringLiteral(patternExpr)) {
+        throw validationFailed("pattern must be a STRING literal");
+      }
+
+      final String s = args.get(0).eval(bindings).asString();
+      if (s == null) {
+        return ExprEval.ofLong(null);
+      }
+
+      final String patternString = (String) patternExpr.getLiteralValue();
+      final Pattern pattern = Pattern.compile(StringUtils.nullToEmptyNonDruidDataString(patternString));
+      final Matcher matcher = pattern.matcher(s);
+      return ExprEval.ofLongBoolean(matcher.find());
+    }
   }
 }

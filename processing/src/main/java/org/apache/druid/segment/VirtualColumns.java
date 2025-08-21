@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -133,7 +135,7 @@ public class VirtualColumns implements Cacheable
   private final List<VirtualColumn> virtualColumns;
   private final List<String> virtualColumnNames;
   // For equivalence
-  private final Map<VirtualColumn.EquivalenceKey, VirtualColumn> equivalence;
+  private final Supplier<Map<VirtualColumn.EquivalenceKey, VirtualColumn>> equivalence;
 
   // For getVirtualColumn:
   private final Map<String, VirtualColumn> withDotSupport;
@@ -151,15 +153,21 @@ public class VirtualColumns implements Cacheable
     this.withoutDotSupport = withoutDotSupport;
     this.virtualColumnNames = new ArrayList<>(virtualColumns.size());
     this.hasNoDotColumns = withDotSupport.isEmpty();
-    this.equivalence = Maps.newHashMapWithExpectedSize(virtualColumns.size());
     for (VirtualColumn virtualColumn : virtualColumns) {
       detectCycles(virtualColumn, null);
       virtualColumnNames.add(virtualColumn.getOutputName());
-      VirtualColumn.EquivalenceKey key = virtualColumn.getEquivalanceKey();
-      if (key != null) {
-        equivalence.put(key, virtualColumn);
-      }
     }
+    this.equivalence = Suppliers.memoize(() -> {
+      final Map<VirtualColumn.EquivalenceKey, VirtualColumn> equiv =
+          Maps.newHashMapWithExpectedSize(virtualColumns.size());
+      for (VirtualColumn virtualColumn : virtualColumns) {
+        final VirtualColumn.EquivalenceKey key = virtualColumn.getEquivalanceKey();
+        if (key != null) {
+          equiv.putIfAbsent(key, virtualColumn);
+        }
+      }
+      return equiv;
+    });
   }
 
   /**
@@ -195,7 +203,7 @@ public class VirtualColumns implements Cacheable
   @Nullable
   public VirtualColumn findEquivalent(VirtualColumn virtualColumn)
   {
-    return equivalence.get(virtualColumn.getEquivalanceKey());
+    return equivalence.get().get(virtualColumn.getEquivalanceKey());
   }
 
   /**
@@ -511,20 +519,28 @@ public class VirtualColumns implements Cacheable
     return virtualColumn;
   }
 
-  private void detectCycles(VirtualColumn virtualColumn, @Nullable Set<String> columnNames)
+  /**
+   * Detects cycles in the dependencies of a {@link VirtualColumn}.
+   *
+   * @param virtualColumn virtual column to check
+   * @param visited       null on initial call. Internally, this method operates recursively, and uses this parameter
+   *                      to pass down the list of already-visited columns.
+   */
+  private void detectCycles(VirtualColumn virtualColumn, @Nullable Set<String> visited)
   {
-    // Copy columnNames to avoid modifying it
-    final Set<String> nextSet = columnNames == null
-                                ? Sets.newHashSet(virtualColumn.getOutputName())
-                                : Sets.newHashSet(columnNames);
+    // Copy "visited" to avoid modifying it
+    final Set<String> visitedCopy = visited == null
+                                    ? Sets.newHashSet(virtualColumn.getOutputName())
+                                    : Sets.newHashSet(visited);
 
     for (String columnName : virtualColumn.requiredColumns()) {
       final VirtualColumn dependency = getVirtualColumn(columnName);
       if (dependency != null) {
-        if (!nextSet.add(columnName)) {
+        if (!visitedCopy.add(columnName)) {
           throw new IAE("Self-referential column[%s]", columnName);
         }
-        detectCycles(dependency, nextSet);
+        detectCycles(dependency, visitedCopy);
+        visitedCopy.remove(columnName);
       }
     }
   }

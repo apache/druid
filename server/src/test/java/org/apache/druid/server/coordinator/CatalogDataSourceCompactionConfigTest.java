@@ -36,10 +36,8 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.junit.jupiter.api.Assertions;
@@ -53,18 +51,17 @@ public class CatalogDataSourceCompactionConfigTest
   private static final ObjectMapper MAPPER;
   private static final MapMetadataCatalog METADATA_CATALOG;
 
-  private static final AggregateProjectionSpec TEST_PROJECTION_SPEC_1 = new AggregateProjectionSpec(
-      "string_sum_long_hourly",
-      VirtualColumns.create(
-          Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
-      ),
-      ImmutableList.of(
-          new StringDimensionSchema("string")
-      ),
-      new AggregatorFactory[]{
-          new LongSumAggregatorFactory("sum_long", "long")
-      }
-  );
+  private static final AggregateProjectionSpec TEST_PROJECTION_SPEC_1 =
+      AggregateProjectionSpec.builder("string_sum_long_hourly")
+                             .virtualColumns(
+                                 Granularities.toVirtualColumn(
+                                     Granularities.HOUR,
+                                     Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                                 )
+                             )
+                             .groupingColumns(new StringDimensionSchema("string"))
+                             .aggregators(new LongSumAggregatorFactory("sum_long", "long"))
+                             .build();
 
   static {
     MAPPER = new DefaultObjectMapper();

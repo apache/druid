@@ -445,12 +445,16 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         );
       }
     } else {
-      serializer = new NestedDataColumnSerializer(
+      NestedDataColumnSerializer nestedSerializer = new NestedDataColumnSerializer(
           outputName,
           indexSpec,
           segmentWriteOutMedium,
           closer
       );
+      // need to set dictionaries before can open field writers, it is harmless that it is set again later
+      nestedSerializer.setDictionaryIdLookup(autoParent.getIdLookup());
+      nestedSerializer.setFieldsAndOpenWriters((NestedDataColumnSerializer) autoParent.serializer);
+      serializer = nestedSerializer;
     }
 
     serializer.setDictionaryIdLookup(autoParent.getIdLookup());

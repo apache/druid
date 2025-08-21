@@ -29,7 +29,6 @@ import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.security.basic.BasicAuthCommonCacheConfig;
-import org.apache.druid.security.basic.CoordinatorServiceClient;
 import org.apache.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import org.apache.druid.security.basic.authorization.entity.GroupMappingAndRoleMap;
 import org.apache.druid.security.basic.authorization.entity.UserAndRoleMap;
@@ -64,7 +63,6 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
 
   // Mocks
   private Injector injector;
-  private CoordinatorServiceClient leaderClient;
   private MockServiceClient serviceClient;
 
   private CoordinatorPollingBasicAuthorizerCacheManager manager;
@@ -80,26 +78,24 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
             .andReturn(new AuthorizerMapper(Map.of(AUTHORIZER_NAME, authorizer))).once();
 
     serviceClient = new MockServiceClient();
-    leaderClient = EasyMock.createStrictMock(CoordinatorServiceClient.class);
-    EasyMock.expect(leaderClient.getServiceClient()).andReturn(serviceClient).anyTimes();
 
     final int numRetries = 1;
     manager = new CoordinatorPollingBasicAuthorizerCacheManager(
         injector,
         new BasicAuthCommonCacheConfig(0L, 1L, temporaryFolder.newFolder().getAbsolutePath(), numRetries),
         MAPPER,
-        leaderClient
+        serviceClient
     );
   }
 
   private void replayAll()
   {
-    EasyMock.replay(injector, leaderClient);
+    EasyMock.replay(injector);
   }
 
   private void verifyAll()
   {
-    EasyMock.verify(injector, leaderClient);
+    EasyMock.verify(injector);
   }
 
   @Test

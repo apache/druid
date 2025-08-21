@@ -21,15 +21,12 @@ package org.apache.druid.data.input.protobuf;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.github.os72.protobuf.dynamic.DynamicSchema;
 import com.google.common.base.Preconditions;
-import com.google.protobuf.Descriptors;
+import com.google.protobuf.DescriptorProtos;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Objects;
 
 public class FileBasedProtobufBytesDecoder extends DescriptorBasedProtobufBytesDecoder
@@ -43,9 +40,11 @@ public class FileBasedProtobufBytesDecoder extends DescriptorBasedProtobufBytesD
   )
   {
     super(protoMessageType);
+
     Preconditions.checkNotNull(descriptorFilePath);
     this.descriptorFilePath = descriptorFilePath;
-    initDescriptor();
+
+    initializeDescriptor();
   }
 
   @JsonProperty("descriptor")
@@ -55,39 +54,22 @@ public class FileBasedProtobufBytesDecoder extends DescriptorBasedProtobufBytesD
   }
 
   @Override
-  protected DynamicSchema generateDynamicSchema()
+  protected DescriptorProtos.FileDescriptorSet loadFileDescriptorSet()
   {
-    InputStream fin;
+    try (InputStream fin = this.getClass().getClassLoader().getResourceAsStream(descriptorFilePath)) {
+      if (fin == null) {
+        throw new ParseException(descriptorFilePath, "Descriptor not found in class path [%s]", descriptorFilePath);
+      }
 
-    fin = this.getClass().getClassLoader().getResourceAsStream(descriptorFilePath);
-    if (fin == null) {
-      URL url;
-      try {
-        url = new URL(descriptorFilePath);
+      final var descriptorSet = DescriptorProtos.FileDescriptorSet.parseFrom(fin);
+      if (descriptorSet.getFileCount() == 0) {
+        throw new ParseException(null, "No file descriptors found in the descriptor set");
       }
-      catch (MalformedURLException e) {
-        throw new ParseException(
-            descriptorFilePath,
-            e,
-            "Descriptor not found in class path or malformed URL:" + descriptorFilePath
-        );
-      }
-      try {
-        fin = url.openConnection().getInputStream();
-      }
-      catch (IOException e) {
-        throw new ParseException(url.toString(), e, "Cannot read descriptor file: " + url);
-      }
-    }
 
-    try {
-      return DynamicSchema.parseFrom(fin);
-    }
-    catch (Descriptors.DescriptorValidationException e) {
-      throw new ParseException(null, e, "Invalid descriptor file: " + descriptorFilePath);
+      return descriptorSet;
     }
     catch (IOException e) {
-      throw new ParseException(null, e, "Cannot read descriptor file: " + descriptorFilePath);
+      throw new ParseException(descriptorFilePath, e, "Failed to initialize descriptor");
     }
   }
 

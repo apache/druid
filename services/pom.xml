@@ -69,6 +69,11 @@
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-multi-stage-query</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.github.rvesse</groupId>
             <artifactId>airline</artifactId>
         </dependency>
@@ -265,6 +270,11 @@
             <artifactId>druid-processing</artifactId>
             <version>${project.parent.version}</version>
             <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

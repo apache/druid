@@ -75,15 +75,18 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
         final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
         final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
 
-        fields = GenericIndexed.read(bb, GenericIndexed.STRING_STRATEGY, mapper);
-        fieldInfo = FieldTypeInfo.read(bb, fields.size());
+
 
         if (parent != null) {
+          fields = parent.fields;
+          fieldInfo = parent.fieldInfo;
           stringDictionarySupplier = parent.stringDictionarySupplier;
           longDictionarySupplier = parent.longDictionarySupplier;
           doubleDictionarySupplier = parent.doubleDictionarySupplier;
           arrayDictionarySupplier = parent.arrayDictionarySupplier;
         } else {
+          fields = GenericIndexed.read(bb, GenericIndexed.STRING_STRATEGY, mapper);
+          fieldInfo = FieldTypeInfo.read(bb, fields.size());
           final ByteBuffer stringDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
               mapper,
               columnName,

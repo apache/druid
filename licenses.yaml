@@ -3335,16 +3335,6 @@ libraries:
 
 ---
 
-name: Protocol Buffers Dynamic Schema
-license_category: binary
-module: extensions/protobuf-extensions
-license_name: Apache License version 2.0
-version: 0.9.3
-libraries:
-  - com.github.os72: protobuf-dynamic
-
----
-
 name: Gson
 license_category: binary
 module: extensions/protobuf-extensions
@@ -3629,7 +3619,7 @@ name: Protocol Buffers
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: BSD-3-Clause License
-version: 3.25.5
+version: 3.25.8
 copyright: Google, Inc.
 license_file_path: licenses/bin/protobuf-java.BSD3
 libraries:
@@ -3897,9 +3887,9 @@ libraries:
 name: Reactive Streams
 license_category: binary
 module: java-core
-license_name: Creative Commons CC0
+license_name: MIT-0
 version: 1.0.4
-license_file_path: licenses/bin/reactive-streams.CC0
+license_file_path: licenses/bin/reactive-streams.MIT0
 libraries:
   - org.reactivestreams: reactive-streams
 
@@ -4902,10 +4892,11 @@ license_name: Apache License version 2.0
 libraries:
   - org.apache.kafka: kafka-clients
 notices:
-  - kafka-clients: 'Apache Kafka Copyright 2019 The Apache Software Foundation.
+  - kafka-clients: |
+      Apache Kafka Copyright 2019 The Apache Software Foundation.
 
-This distribution has a binary dependency on jersey, which is available under
-the CDDL License. The source code of jersey can be found at https://github.com/jersey/jersey/.'
+      This distribution has a binary dependency on jersey, which is available under
+      the CDDL License. The source code of jersey can be found at https://github.com/jersey/jersey/.
 
 ---
 
@@ -5108,6 +5099,62 @@ version: 3.0.4
 license_file_path: licenses/bin/jakarta.el.EPL2
 libraries:
   - org.glassfish: jakarta.el
+
+---
+
+name: Testcontainers
+license_category: binary
+module: extensions-core/druid-testcontainers
+license_name: MIT License
+version: 1.21.3
+libraries:
+  - org.testcontainers: testcontainers
+
+---
+
+name: Junit
+license_category: binary
+module: extensions-core/druid-testcontainers
+license_name: Eclipse Public License 1.0
+version: 4.13.2
+license_file_path: licenses/bin/junit.EPL
+libraries:
+  - junit: junit
+
+---
+
+# Dependency of Testcontainers
+name: Docker Java
+license_category: binary
+module: extensions-core/druid-testcontainers
+license_name: Apache License version 2.0
+version: 3.3.4
+libraries:
+  - com.github.docker-java: docker-java-api
+  - com.github.docker-java: docker-java-transport
+  - com.github.docker-java: docker-java-transport-zerodep
+
+---
+
+# Dependency of Testcontainers
+name: Duct Tape
+license_category: binary
+module: extensions-core/druid-testcontainers
+license_name: MIT License
+version: 1.0.8
+libraries:
+  - org.rnorth.duct-tape: duct-tape
+
+---
+
+# Dependency of Testcontainers
+name: jakarta.activation
+license_category: binary
+module: extensions-core/druid-testcontainers
+license_name: Eclipse Distribution License 1.0
+version: 2.0.1
+libraries:
+  - com.sun.activation: jakarta.activation
 
 ---
 
@@ -5509,7 +5556,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Vadim Ogievetsky
-version: 1.2.0
+version: 1.2.1
 
 ---
 
@@ -5830,6 +5877,26 @@ license_file_path: licenses/bin/error-ex.MIT
 
 ---
 
+name: "es-errors"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.3.0
+license_file_path: licenses/bin/es-errors.MIT
+
+---
+
+name: "es-set-tostringtag"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 2.0.3
+license_file_path: licenses/bin/es-set-tostringtag.MIT
+
+---
+
 name: "escape-string-regexp"
 license_category: binary
 module: web-console
@@ -5887,6 +5954,46 @@ license_name: MIT License
 copyright: Raynos
 version: 1.1.2
 license_file_path: licenses/bin/function-bind.MIT
+
+---
+
+name: "get-intrinsic"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.2.4
+license_file_path: licenses/bin/get-intrinsic.MIT
+
+---
+
+name: "has-proto"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.0.3
+license_file_path: licenses/bin/has-proto.MIT
+
+---
+
+name: "has-symbols"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.0.3
+license_file_path: licenses/bin/has-symbols.MIT
+
+---
+
+name: "has-tostringtag"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.0.2
+license_file_path: licenses/bin/has-tostringtag.MIT
 
 ---
 

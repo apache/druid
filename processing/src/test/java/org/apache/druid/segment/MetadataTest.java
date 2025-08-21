@@ -99,20 +99,15 @@ public class MetadataTest extends InitializedNullHandlingTest
     AggregatorFactory[] aggs = new AggregatorFactory[]{
         new LongMaxAggregatorFactory("n", "f")
     };
-    List<AggregateProjectionMetadata> projectionSpecs = ImmutableList.of(
+    List<AggregateProjectionMetadata> projectionSpecs = List.of(
         new AggregateProjectionMetadata(
-            new AggregateProjectionMetadata.Schema(
-                "some_projection",
-                "__gran",
-                VirtualColumns.create(
-                    Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
-                ),
-                Arrays.asList("a", "b", "__gran"),
-                new AggregatorFactory[]{
-                    new LongLastAggregatorFactory("atLongLast", "d", null)
-                },
-                makeOrderBy("a", "b", "__gran")
-            ),
+            AggregateProjectionMetadata.schemaBuilder("some_projection")
+                .timeColumnName("__gran")
+                .virtualColumns(Granularities.toVirtualColumn(Granularities.HOUR, "__gran"))
+                .groupAndOrder("a", "b", "__gran")
+                .aggregators(new LongLastAggregatorFactory("atLongLast", "d", null))
+                .ordering("a", "b", "__gran")
+                .build(),
             1234
         )
     );
@@ -279,69 +274,49 @@ public class MetadataTest extends InitializedNullHandlingTest
   {
     List<AggregateProjectionMetadata> p1 = ImmutableList.of(
         new AggregateProjectionMetadata(
-            new AggregateProjectionMetadata.Schema(
-                "some_projection",
-                "__gran",
-                VirtualColumns.create(
-                    Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
-                ),
-                Arrays.asList("a", "b", "__gran"),
-                new AggregatorFactory[]{
-                    new LongLastAggregatorFactory("atLongLast", "d", null)
-                },
-                makeOrderBy("a", "b", "__gran")
-            ),
+            AggregateProjectionMetadata.schemaBuilder("some_projection")
+                                       .timeColumnName("__gran")
+                                       .virtualColumns(Granularities.toVirtualColumn(Granularities.HOUR, "__gran"))
+                                       .groupAndOrder("a", "b", "__gran")
+                                       .aggregators(new LongLastAggregatorFactory("atLongLast", "d", null))
+                                       .ordering("a", "b", "__gran")
+                                       .build(),
             654321
         )
     );
 
     List<AggregateProjectionMetadata> p2 = ImmutableList.of(
         new AggregateProjectionMetadata(
-            new AggregateProjectionMetadata.Schema(
-                "some_projection",
-                "__gran",
-                VirtualColumns.create(
-                    Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
-                ),
-                Arrays.asList("a", "b", "_gran"),
-                new AggregatorFactory[]{
-                    new LongSumAggregatorFactory("longSum", "d")
-                },
-                makeOrderBy("a", "b", "__gran")
-            ),
+            AggregateProjectionMetadata.schemaBuilder("some_projection")
+                                       .timeColumnName("__gran")
+                                       .virtualColumns(Granularities.toVirtualColumn(Granularities.HOUR, "__gran"))
+                                       .groupAndOrder("a", "b", "_gran")
+                                       .aggregators(new LongSumAggregatorFactory("longSum", "d"))
+                                       .ordering("a", "b", "_gran")
+                                       .build(),
             1234
         )
     );
 
     List<AggregateProjectionMetadata> p3 = ImmutableList.of(
         new AggregateProjectionMetadata(
-            new AggregateProjectionMetadata.Schema(
-                "some_projection",
-                "__gran",
-                VirtualColumns.create(
-                    Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
-                ),
-                Arrays.asList("a", "b", "__gran"),
-                new AggregatorFactory[]{
-                    new LongLastAggregatorFactory("atLongLast", "d", null)
-                },
-                makeOrderBy("a", "b", "__gran")
-            ),
+            AggregateProjectionMetadata.schemaBuilder("some_projection")
+                                       .timeColumnName("__gran")
+                                       .virtualColumns(Granularities.toVirtualColumn(Granularities.HOUR, "__gran"))
+                                       .groupAndOrder("a", "b", "__gran")
+                                       .aggregators(new LongLastAggregatorFactory("atLongLast", "d", null))
+                                       .ordering("a", "b", "__gran")
+                                       .build(),
             12121
         ),
         new AggregateProjectionMetadata(
-            new AggregateProjectionMetadata.Schema(
-                "some_projection2",
-                "__gran",
-                VirtualColumns.create(
-                    Granularities.toVirtualColumn(Granularities.DAY, "__gran")
-                ),
-                Arrays.asList("__gran", "a"),
-                new AggregatorFactory[]{
-                    new LongSumAggregatorFactory("longSum", "d")
-                },
-                makeOrderBy("__gran", "a")
-            ),
+            AggregateProjectionMetadata.schemaBuilder("some_projection2")
+                                       .timeColumnName("__gran")
+                                       .virtualColumns(Granularities.toVirtualColumn(Granularities.DAY, "__gran"))
+                                       .groupAndOrder("__gran", "a")
+                                       .aggregators(new LongSumAggregatorFactory("longSum", "d"))
+                                       .ordering("__gran", "a")
+                                       .build(),
             555
         )
     );

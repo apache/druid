@@ -96,16 +96,19 @@ public class QueryDriver
 
   private final ObjectMapper jsonMapper;
   private final SqlStatementFactory sqlStatementFactory;
+  private final Map<String, Object> defaultContext;
   private final QueryLifecycleFactory queryLifecycleFactory;
 
   public QueryDriver(
       final ObjectMapper jsonMapper,
       final SqlStatementFactory sqlStatementFactory,
+      final Map<String, Object> defaultContext,
       final QueryLifecycleFactory queryLifecycleFactory
   )
   {
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
     this.sqlStatementFactory = Preconditions.checkNotNull(sqlStatementFactory, "sqlStatementFactory");
+    this.defaultContext = defaultContext;
     this.queryLifecycleFactory = queryLifecycleFactory;
   }
 
@@ -267,7 +270,8 @@ public class QueryDriver
   {
     return SqlQueryPlus.builder()
                        .sql(request.getQuery())
-                       .context(translateContext(request))
+                       .systemDefaultContext(defaultContext)
+                       .queryContext(translateContext(request))
                        .sqlParameters(translateParameters(request))
                        .auth(authResult)
                        .build();

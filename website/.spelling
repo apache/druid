@@ -430,6 +430,7 @@ misconfiguration
 misconfigured
 mostAvailableSize
 multipart
+multithreading
 multitenancy
 multitenant
 MVDs
@@ -458,6 +459,7 @@ partitionsSpec
 pathParts
 PERCENT_RANK
 performant
+pipelining
 plaintext
 pluggable
 podSpec
@@ -2290,6 +2292,8 @@ MV_CONCAT
 MV_CONTAINS
 MV_FILTER_NONE
 MV_FILTER_ONLY
+MV_FILTER_REGEX
+MV_FILTER_PREFIX
 MV_LENGTH
 MV_OFFSET
 MV_OFFSET_OF
