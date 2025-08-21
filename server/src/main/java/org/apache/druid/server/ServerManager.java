@@ -420,24 +420,25 @@ public class ServerManager implements QuerySegmentWalker
           query.context().getTimeout()
       );
     }
+    closer.registerAll(segmentReferences);
+
     return FunctionalIterable
         .create(segmentReferences)
         .transform(
             ref ->
-                closer.register(ref)
-                      .getSegmentReference()
-                      .map(segment ->
-                               buildQueryRunnerForSegment(
-                                   ref.getSegmentDescriptor(),
-                                   segment,
-                                   factory,
-                                   toolChest,
-                                   cpuTimeAccumulator,
-                                   cacheKeyPrefix
-                               )
-                      ).orElse(
-                          new ReportTimelineMissingSegmentQueryRunner<>(ref.getSegmentDescriptor())
-                      )
+                ref.getSegmentReference()
+                   .map(segment ->
+                            buildQueryRunnerForSegment(
+                                ref.getSegmentDescriptor(),
+                                segment,
+                                factory,
+                                toolChest,
+                                cpuTimeAccumulator,
+                                cacheKeyPrefix
+                            )
+                   ).orElse(
+                       new ReportTimelineMissingSegmentQueryRunner<>(ref.getSegmentDescriptor())
+                   )
         );
   }
 
