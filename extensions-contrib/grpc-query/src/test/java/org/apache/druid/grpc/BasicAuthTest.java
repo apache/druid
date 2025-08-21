@@ -39,11 +39,13 @@ import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
@@ -64,11 +66,12 @@ public class BasicAuthTest extends BaseCalciteQueryTest
     SqlTestFramework sqlTestFramework = queryFramework();
     SqlTestFramework.PlannerFixture plannerFixture = sqlTestFramework.plannerFixture(
         BaseCalciteQueryTest.PLANNER_CONFIG_DEFAULT,
-        new AuthConfig()
+        AuthConfig.newBuilder().setAuthorizeQueryContextParams(true).build()
     );
     QueryDriver driver = new QueryDriver(
         sqlTestFramework.queryJsonMapper(),
         plannerFixture.statementFactory(),
+        Map.of("forbiddenKey", "system-default-value"), // systen default forbidden key, only superuser can change it
         sqlTestFramework.queryLifecycleFactory()
     );
 
@@ -196,6 +199,26 @@ public class BasicAuthTest extends BaseCalciteQueryTest
     try (TestClient client = new TestClient(TestClient.DEFAULT_HOST, "regular", "pwd")) {
       QueryResponse response = client.getQueryClient().submitQuery(request);
       assertEquals(QueryStatus.OK, response.getStatus());
+    }
+  }
+
+  @Test
+  public void testAccessToForbiddenKey()
+  {
+    QueryRequest request = QueryRequest.newBuilder()
+                                       .setQuery("SELECT * FROM foo")
+                                       .putContext("forbiddenKey", "forbiddenValue")
+                                       .setResultFormat(QueryResultFormat.CSV)
+                                       .setQueryType(QueryOuterClass.QueryType.SQL)
+                                       .build();
+
+    try (TestClient client = new TestClient(TestClient.DEFAULT_HOST, CalciteTests.TEST_SUPERUSER_NAME, "secret")) {
+      QueryResponse response = client.getQueryClient().submitQuery(request);
+      assertEquals(QueryStatus.OK, response.getStatus());
+    }
+    try (TestClient client = new TestClient(TestClient.DEFAULT_HOST, "regular", "pwd")) {
+      StatusRuntimeException e = Assert.assertThrows(StatusRuntimeException.class, () -> client.getQueryClient().submitQuery(request));
+      assertEquals(Status.PERMISSION_DENIED, e.getStatus());
     }
   }
 

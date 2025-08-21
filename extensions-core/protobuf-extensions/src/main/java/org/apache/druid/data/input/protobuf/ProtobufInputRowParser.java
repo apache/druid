@@ -80,9 +80,16 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
   }
 
   @Override
+  @JsonProperty("parseSpec")
   public ParseSpec getParseSpec()
   {
     return parseSpec;
+  }
+
+  @JsonProperty("protoBytesDecoder")
+  public ProtobufBytesDecoder getProtobufBytesDecoder()
+  {
+    return protobufBytesDecoder;
   }
 
   @Override

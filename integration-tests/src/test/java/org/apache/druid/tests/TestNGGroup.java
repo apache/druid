@@ -39,8 +39,6 @@ public class TestNGGroup
 
   public static final String TRANSACTIONAL_KAFKA_INDEX_SLOW = "kafka-transactional-index-slow";
 
-  public static final String KAFKA_DATA_FORMAT = "kafka-data-format";
-
   public static final String APPEND_INGESTION = "append-ingestion";
 
   /**
@@ -143,8 +141,6 @@ public class TestNGGroup
    * Kinesis stream endpoint for a region must also be pass to mvn with -Ddruid.test.config.streamEndpoint=<ENDPOINT>
    */
   public static final String KINESIS_DATA_FORMAT = "kinesis-data-format";
-
-  public static final String HIGH_AVAILABILTY = "high-availability";
 
   public static final String CUSTOM_COORDINATOR_DUTIES = "custom-coordinator-duties";
 

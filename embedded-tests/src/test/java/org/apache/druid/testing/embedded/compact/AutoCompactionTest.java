@@ -112,7 +112,7 @@ import java.util.stream.Collectors;
 public class AutoCompactionTest extends CompactionTestBase
 {
   private static final Logger LOG = new Logger(AutoCompactionTest.class);
-  private static final Supplier<TaskBuilder.Index> INDEX_TASK = MoreResources.Task.BASIC_INDEX;
+  private static final Supplier<TaskBuilder.Index> INDEX_TASK = MoreResources.Task.INDEX_TASK_WITH_AGGREGATORS;
 
   private static final Supplier<TaskBuilder.Index> INDEX_TASK_WITH_GRANULARITY_SPEC =
       () -> INDEX_TASK.get().dimensions("language").dynamicPartitionWithMaxRows(10);

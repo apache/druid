@@ -278,6 +278,10 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
               binder.bind(AuthorizerMapper.class).toInstance(CalciteTests.TEST_AUTHORIZER_MAPPER);
               binder.bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
               binder.install(new PolicyModule());
+              binder.bind(AuthConfig.class)
+                    .toInstance(AuthConfig.newBuilder().setAuthorizeQueryContextParams(true).build());
+              binder.bind(DefaultQueryConfig.class)
+                    .toInstance(new DefaultQueryConfig(ImmutableMap.of("forbidden-key", "system-default-value")));
               binder.bind(RequestLogger.class).toInstance(testRequestLogger);
               binder.bind(DruidSchemaCatalog.class).toInstance(rootSchema);
               for (NamedSchema schema : rootSchema.getNamedSchemas().values()) {
@@ -352,6 +356,20 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
           ),
           rows
       );
+    }
+  }
+
+  @Test
+  public void testForbiddenContextKey() throws SQLException
+  {
+    final Properties propertiesSetForbiddenKey = new Properties();
+    propertiesSetForbiddenKey.setProperty("user", "regularUserLA");
+    propertiesSetForbiddenKey.setProperty("forbidden-key", "val");
+    try (Statement stmt = DriverManager.getConnection(server.url, propertiesSetForbiddenKey).createStatement()) {
+      AvaticaSqlException e = Assert.assertThrows(AvaticaSqlException.class, () -> {
+        stmt.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
+      });
+      Assert.assertTrue(e.getMessage().contains("Remote driver error: Unauthorized"));
     }
   }
 
@@ -477,7 +495,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
               ImmutableMap.of(
                   "PLAN",
                   StringUtils.format(
-                      "[{\"query\":{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"context\":{\"sqlQueryId\":\"%s\",\"sqlStringifyArrays\":false,\"sqlTimeZone\":\"America/Los_Angeles\"}},\"signature\":[{\"name\":\"a0\",\"type\":\"LONG\"}],\"columnMappings\":[{\"queryColumn\":\"a0\",\"outputColumn\":\"cnt\"}]}]",
+                      "[{\"query\":{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"context\":{\"forbidden-key\":\"system-default-value\",\"sqlQueryId\":\"%s\",\"sqlStringifyArrays\":false,\"sqlTimeZone\":\"America/Los_Angeles\"}},\"signature\":[{\"name\":\"a0\",\"type\":\"LONG\"}],\"columnMappings\":[{\"queryColumn\":\"a0\",\"outputColumn\":\"cnt\"}]}]",
                       DUMMY_SQL_QUERY_ID
                   ),
                   "RESOURCES",
@@ -1095,6 +1113,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         makeStatementFactory(),
+        DefaultQueryConfig.NIL,
         config,
         new ErrorHandler(new ServerConfig()),
         exec,
@@ -1155,6 +1174,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         makeStatementFactory(),
+        DefaultQueryConfig.NIL,
         config,
         new ErrorHandler(new ServerConfig()),
         exec,
@@ -1709,6 +1729,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     final CountDownLatch resultsLatch = new CountDownLatch(1);
     DruidMeta druidMeta = new DruidMeta(
         makeStatementFactory(),
+        DefaultQueryConfig.NIL,
         config,
         new ErrorHandler(new ServerConfig()),
         exec,

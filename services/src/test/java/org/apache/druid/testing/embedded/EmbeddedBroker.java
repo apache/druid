@@ -37,7 +37,7 @@ public class EmbeddedBroker extends EmbeddedDruidServer<EmbeddedBroker>
 {
 
   @Override
-  ServerRunnable createRunnable(LifecycleInitHandler handler)
+  protected ServerRunnable createRunnable(LifecycleInitHandler handler)
   {
     return new Broker(handler);
   }

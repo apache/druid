@@ -30,7 +30,6 @@ import org.joda.time.DateTime;
  */
 public class SegmentMetadataEvent implements Event
 {
-  public static final String FEED = "feed";
   public static final String DATASOURCE = "dataSource";
   public static final String CREATED_TIME = "createdTime";
   public static final String START_TIME = "startTime";

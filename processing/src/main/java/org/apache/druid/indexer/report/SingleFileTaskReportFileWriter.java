@@ -68,6 +68,12 @@ public class SingleFileTaskReportFileWriter implements TaskReportFileWriter
     this.objectMapper = objectMapper;
   }
 
+  @Override
+  public File getReportsFile(String taskId)
+  {
+    return reportsFile;
+  }
+
   public static void writeReportToStream(
       final ObjectMapper objectMapper,
       final OutputStream outputStream,

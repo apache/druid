@@ -962,11 +962,17 @@ Each line can be further parsed using [`parseSpec`](#parsespec).
 
 ### Avro Hadoop Parser
 
-:::info
- You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Hadoop Parser.
+:::caution[Deprecated]
+
+Hadoop-based ingestion is deprecated. We recommend one of Druid's other supported ingestion methods, such as [SQL-based ingestion](../multi-stage-query/index.md) or [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md)
+
+You must now explicitly opt-in to using the deprecated `index_hadoop` task type. To opt-in, set `druid.indexer.task.allowHadoopTaskExecution` to `true` in your `common.runtime.properties` file. For more information, see [#18239](https://github.com/apache/druid/pull/18239)
+
 :::
 
 :::info
+You need to include [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Hadoop Parser.
+
  See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
 :::
 

@@ -39,7 +39,20 @@ public class MoreResources
    */
   public static class Task
   {
+    /**
+     * A minimal 'index' task that ingests inline data {@link Resources.InlineData#CSV_10_DAYS}
+     * using "DAY" granularity.
+     */
     public static final Supplier<TaskBuilder.Index> BASIC_INDEX =
+        () -> TaskBuilder
+            .ofTypeIndex()
+            .isoTimestampColumn("time")
+            .csvInputFormatWithColumns("time", "item", "value")
+            .inlineInputSourceWithData(Resources.InlineData.CSV_10_DAYS)
+            .segmentGranularity("DAY")
+            .dimensions();
+
+    public static final Supplier<TaskBuilder.Index> INDEX_TASK_WITH_AGGREGATORS =
         () -> TaskBuilder
             .ofTypeIndex()
             .jsonInputFormat()
@@ -66,5 +79,11 @@ public class MoreResources
             .dynamicPartitionWithMaxRows(3)
             .granularitySpec("DAY", "SECOND", true)
             .appendToExisting(false);
+  }
+
+  public static class ProbufData
+  {
+    public static final String WIKI_PROTOBUF_BYTES_DECODER_RESOURCE = "data/protobuf/wikipedia.desc";
+    public static final String WIKI_PROTO_MESSAGE_TYPE = "Wikipedia";
   }
 }

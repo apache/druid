@@ -23,6 +23,13 @@ sidebar_label: Load from Apache Hadoop
   ~ under the License.
   -->
 
+:::caution[Deprecated]
+
+Hadoop-based ingestion is deprecated. We recommend one of Druid's other supported ingestion methods, such as [SQL-based ingestion](../multi-stage-query/index.md) or [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md)
+
+You must now explicitly opt-in to using the deprecated `index_hadoop` task type. To opt-in, set `druid.indexer.task.allowHadoopTaskExecution` to `true` in your `common.runtime.properties` file. For more information, see [#18239](https://github.com/apache/druid/pull/18239)
+
+:::
 
 This tutorial shows you how to load data files into Apache Druid using a remote Hadoop cluster.
 

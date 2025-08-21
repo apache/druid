@@ -80,6 +80,11 @@
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.apache.druid.integration-tests</groupId>
+            <artifactId>druid-it-tools</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
         </dependency>
@@ -358,15 +363,6 @@
     </build>
 
     <profiles>
-        <profile>
-          <id>IT-HighAvailability</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-        <properties>
-          <it.category>HighAvailability</it.category>
-        </properties>
-        </profile>
         <profile>
           <id>IT-BatchIndex</id>
             <activation>

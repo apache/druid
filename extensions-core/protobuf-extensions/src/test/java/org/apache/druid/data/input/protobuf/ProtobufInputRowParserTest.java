@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.protobuf;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
@@ -35,31 +36,31 @@ import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.js.JavaScriptConfig;
-import org.hamcrest.CoreMatchers;
+import org.apache.druid.segment.TestHelper;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Objects;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ProtobufInputRowParserTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+  private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
 
   private ParseSpec parseSpec;
   private ParseSpec flatParseSpec;
   private ParseSpec flatParseSpecWithComplexTimestamp;
   private FileBasedProtobufBytesDecoder decoder;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     parseSpec = new JSONParseSpec(
@@ -109,7 +110,23 @@ public class ProtobufInputRowParserTest
         null,
         null
     );
-    decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "ProtoTestEvent");
+    decoder = new FileBasedProtobufBytesDecoder("proto_test_event.desc", "ProtoTestEvent");
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    ProtobufInputRowParser originalParser = new ProtobufInputRowParser(parseSpec, decoder, null, null);
+
+    assertEquals(parseSpec, originalParser.getParseSpec());
+    assertEquals(decoder, originalParser.getProtobufBytesDecoder());
+
+    String json = OBJECT_MAPPER.writeValueAsString(originalParser);
+
+    ProtobufInputRowParser deserializedParser = OBJECT_MAPPER.readValue(json, ProtobufInputRowParser.class);
+
+    assertEquals(originalParser.getParseSpec(), deserializedParser.getParseSpec());
+    assertEquals(originalParser.getProtobufBytesDecoder(), deserializedParser.getProtobufBytesDecoder());
   }
 
   @Test
@@ -173,18 +190,16 @@ public class ProtobufInputRowParserTest
     );
     final ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, decoder, null, null);
 
-    expectedException.expect(CoreMatchers.instanceOf(IllegalStateException.class));
-    expectedException.expectMessage("JavaScript is disabled");
-
-    //noinspection ResultOfMethodCallIgnored (this method call will trigger the expected exception)
-    parser.parseBatch(ByteBuffer.allocate(1)).get(0);
+    assertThrows(IllegalStateException.class, () -> {
+      parser.parseBatch(ByteBuffer.allocate(1)).get(0);
+    }, "JavaScript is disabled");
   }
 
   @Test
   public void testOldParserConfig() throws Exception
   {
     //configure parser with desc file
-    ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, null, "prototest.desc", "ProtoTestEvent");
+    ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, null, "proto_test_event.desc", "ProtoTestEvent");
 
     //create binary of proto test event
     DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
@@ -198,8 +213,8 @@ public class ProtobufInputRowParserTest
   private static void assertDimensionEquals(InputRow row, String dimension, Object expected)
   {
     List<String> values = row.getDimension(dimension);
-    Assert.assertEquals(1, values.size());
-    Assert.assertEquals(expected, values.get(0));
+    assertEquals(1, values.size());
+    assertEquals(expected, values.get(0));
   }
 
   static ProtoTestEventWrapper.ProtoTestEvent buildFlatData(DateTime dateTime)
@@ -220,7 +235,7 @@ public class ProtobufInputRowParserTest
 
   static void verifyFlatData(InputRow row, DateTime dateTime, boolean badBytesConversion)
   {
-    Assert.assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
+    assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
 
     assertDimensionEquals(row, "id", "4711");
     assertDimensionEquals(row, "isValid", "true");
@@ -229,15 +244,14 @@ public class ProtobufInputRowParserTest
     if (badBytesConversion) {
       // legacy flattener used by parser doesn't convert bytes, instead calls tostring
       // this can be removed if we update the parser to use the protobuf flattener used by the input format/reader
-      assertDimensionEquals(row, "someBytesColumn", row.getRaw("someBytesColumn").toString());
+      assertDimensionEquals(row, "someBytesColumn", Objects.requireNonNull(row.getRaw("someBytesColumn")).toString());
     } else {
       assertDimensionEquals(row, "someBytesColumn", StringUtils.encodeBase64String(new byte[]{0x01, 0x02, 0x03, 0x04}));
     }
 
-
-    Assert.assertEquals(47.11F, row.getMetric("someFloatColumn").floatValue(), 0.0);
-    Assert.assertEquals(815.0F, row.getMetric("someIntColumn").floatValue(), 0.0);
-    Assert.assertEquals(816.0F, row.getMetric("someLongColumn").floatValue(), 0.0);
+    assertEquals(47.11F, row.getMetric("someFloatColumn").floatValue(), 0.0);
+    assertEquals(815.0F, row.getMetric("someIntColumn").floatValue(), 0.0);
+    assertEquals(816.0F, row.getMetric("someLongColumn").floatValue(), 0.0);
   }
 
   static ProtoTestEventWrapper.ProtoTestEvent buildNestedData(DateTime dateTime)
@@ -267,7 +281,7 @@ public class ProtobufInputRowParserTest
 
   static void verifyNestedData(InputRow row, DateTime dateTime)
   {
-    Assert.assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
+    assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
 
     assertDimensionEquals(row, "id", "4711");
     assertDimensionEquals(row, "isValid", "true");
@@ -279,10 +293,9 @@ public class ProtobufInputRowParserTest
     assertDimensionEquals(row, "bar0", "bar0");
     assertDimensionEquals(row, "someBytesColumn", StringUtils.encodeBase64String(new byte[]{0x01, 0x02, 0x03, 0x04}));
 
-
-    Assert.assertEquals(47.11F, row.getMetric("someFloatColumn").floatValue(), 0.0);
-    Assert.assertEquals(815.0F, row.getMetric("someIntColumn").floatValue(), 0.0);
-    Assert.assertEquals(816.0F, row.getMetric("someLongColumn").floatValue(), 0.0);
+    assertEquals(47.11F, row.getMetric("someFloatColumn").floatValue(), 0.0);
+    assertEquals(815.0F, row.getMetric("someIntColumn").floatValue(), 0.0);
+    assertEquals(816.0F, row.getMetric("someLongColumn").floatValue(), 0.0);
   }
 
   static ProtoTestEventWrapper.ProtoTestEvent buildFlatDataWithComplexTimestamp(DateTime dateTime)

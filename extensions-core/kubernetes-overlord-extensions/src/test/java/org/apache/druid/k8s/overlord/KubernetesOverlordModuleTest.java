@@ -30,6 +30,7 @@ import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManagerConfig;
 import org.apache.druid.guice.ConfigModule;
 import org.apache.druid.guice.DruidGuiceExtensions;
+import org.apache.druid.guice.IndexingServiceTaskLogsModule;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -236,6 +237,7 @@ public class KubernetesOverlordModuleTest
               binder.bind(MetadataStorageConnector.class).toInstance(metadataStorageConnector);
             },
             new ConfigModule(),
+            new IndexingServiceTaskLogsModule(props),
             new KubernetesOverlordModule()
         ));
   }
