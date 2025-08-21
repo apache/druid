@@ -61,6 +61,7 @@ public class Pac4jSessionStore implements SessionStore
   private final JEESessionStore delegate = JEESessionStore.INSTANCE;
   private final CryptoService cryptoService;
 
+  @SuppressWarnings("InsecureCryptoUsage")
   public Pac4jSessionStore(String cookiePassphrase)
   {
     this.cryptoService = new CryptoService(
