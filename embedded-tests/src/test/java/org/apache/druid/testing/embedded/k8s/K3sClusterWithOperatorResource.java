@@ -251,6 +251,7 @@ public class K3sClusterWithOperatorResource extends K3sClusterResource
       );
     }
     catch (Exception e) {
+      log.error("Failed to set up Druid Operator with Helm: %s", e.getMessage());
       throw new RuntimeException("Failed to execute helm command", e);
     }
   }

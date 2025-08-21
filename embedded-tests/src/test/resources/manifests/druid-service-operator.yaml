@@ -4,7 +4,6 @@ metadata:
   name: test-cluster
 spec:
   image: ${image}
-  replicas: 1
   startScript: /druid.sh
   scalePvcSts: true
   rollingDeploy: true
@@ -27,6 +26,47 @@ spec:
   containerSecurityContext:
     privileged: true
   commonConfigMountPath: "/opt/druid/conf/druid/cluster/_common"
+  common.runtime.properties: |
+    #
+    # Zookeeper-less Druid Cluster
+    #
+    druid.zk.service.enabled=false
+    druid.discovery.type=k8s
+    druid.discovery.k8s.clusterIdentifier=druid-it
+    druid.serverview.type=http
+    druid.coordinator.loadqueuepeon.type=http
+    druid.indexer.runner.type=httpRemote
+    # Metadata Store
+    druid.metadata.storage.type=derby
+    druid.metadata.storage.connector.connectURI=jdbc:derby://localhost:1527/var/druid/metadata.db;create=true
+    druid.metadata.storage.connector.host=localhost
+    druid.metadata.storage.connector.port=1527
+    druid.metadata.storage.connector.createTables=true
+    # Deep Storage
+    druid.storage.type=s3
+    druid.storage.bucket=druid
+    druid.storage.baseKey=druid/segments
+    druid.s3.accessKey=minio
+    druid.s3.secretKey=minio123
+    druid.s3.protocol=http
+    druid.s3.enabePathStyleAccess=true
+    druid.s3.endpoint.signingRegion=us-east-1
+    druid.s3.enablePathStyleAccess=true
+    druid.s3.endpoint.url=http://myminio-hl.druid.svc.cluster.local:9000/
+    #
+    # Extensions
+    #
+    druid.extensions.loadList=["druid-kubernetes-overlord-extensions", "druid-avro-extensions", "druid-s3-extensions", "druid-hdfs-storage", "druid-kafka-indexing-service", "druid-datasketches", "druid-kubernetes-extensions"]
+    #
+    # Service discovery
+    #
+    druid.selectors.indexing.serviceName=druid/overlord
+    druid.selectors.coordinator.serviceName=druid/coordinator
+    # druid.indexer.logs.type=s3
+    druid.indexer.logs.s3Bucket=druid
+    druid.indexer.logs.s3Prefix=druid/indexing-logs
+    druid.lookup.enableLookupSyncOnStartup=false
+    druid.indexer.logs.type=file
   jvm.options: |-
     -server
     -Djava.net.preferIPv4Stack=true
