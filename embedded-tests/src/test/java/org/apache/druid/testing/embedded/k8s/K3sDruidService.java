@@ -28,6 +28,7 @@ import org.apache.druid.testing.embedded.indexing.Resources;
 
 import java.nio.file.Files;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -36,10 +37,11 @@ import java.util.Properties;
  */
 public class K3sDruidService
 {
-  private static final String MANIFEST_TEMPLATE = "manifests/druid-service.yaml";
-
   private final DruidCommand command;
   private final Properties properties;
+  private boolean isGovernedByOperator = false;
+  private String manifestTemplate = "manifests/druid-service.yaml";
+  private Map<String, String> operatorVariablesTemplate = Map.of();
 
   public K3sDruidService(DruidCommand command)
   {
@@ -48,6 +50,14 @@ public class K3sDruidService
 
     addProperty("druid.host", EmbeddedHostname.containerFriendly().toString());
     command.getDefaultProperties().forEach(properties::setProperty);
+  }
+
+  public K3sDruidService governWithOperator(Map<String, String> operatorVariables)
+  {
+    this.operatorVariablesTemplate = operatorVariables;
+    this.isGovernedByOperator = true;
+    this.manifestTemplate = "manifests/druid-service-operator.yaml";
+    return this;
   }
 
   public String getName()
@@ -67,7 +77,7 @@ public class K3sDruidService
   {
     try {
       final String template = Files.readString(
-          Resources.getFileForResource(MANIFEST_TEMPLATE).toPath()
+          Resources.getFileForResource(manifestTemplate).toPath()
       );
 
       String manifest = StringUtils.replace(template, "${service}", getName());
@@ -76,11 +86,21 @@ public class K3sDruidService
       manifest = StringUtils.replace(manifest, "${image}", druidImage);
       manifest = StringUtils.replace(manifest, "${serviceFolder}", getServicePropsFolder());
 
+      if (isGovernedByOperator) {
+        manifest = replaceOperatorVariables(manifest);
+      }
       return manifest;
     }
     catch (Exception e) {
       throw new ISE(e, "Could not create manifest for service[%s]", command);
     }
+  }
+
+  private String replaceOperatorVariables(String manifest) {
+    for (Map.Entry<String, String> entry : operatorVariablesTemplate.entrySet()) {
+      manifest = StringUtils.replace(manifest, "${" + entry.getKey() + "}", entry.getValue());
+    }
+    return manifest;
   }
 
   public Properties getProperties()

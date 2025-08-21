@@ -1,0 +1,106 @@
+apiVersion: "druid.apache.org/v1alpha1"
+kind: "Druid"
+metadata:
+  name: test-cluster
+spec:
+  image: ${image}
+  replicas: 1
+  startScript: /druid.sh
+  scalePvcSts: true
+  rollingDeploy: true
+  defaultProbes: false
+  podLabels:
+    environment: stage
+    release: alpha
+  podAnnotations:
+    dummy: k8s_extn_needs_atleast_one_annotation
+  volumes:
+    - name: mysqlconnector
+      emptyDir: { }
+  volumeMounts:
+    - name: mysqlconnector
+      mountPath: "/opt/druid/extensions/mysql-connector"
+  securityContext:
+    fsGroup: 0
+    runAsUser: 0
+    runAsGroup: 0
+  containerSecurityContext:
+    privileged: true
+  commonConfigMountPath: "/opt/druid/conf/druid/cluster/_common"
+  jvm.options: |-
+    -server
+    -Djava.net.preferIPv4Stack=true
+    -XX:MaxDirectMemorySize=10240g
+    -Duser.timezone=UTC
+    -Dfile.encoding=UTF-8
+    -Dlog4j.debug
+    -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+  log4j.config: |-
+    <?xml version="1.0" encoding="UTF-8" ?>
+    <Configuration status="TRACE">
+        <Appenders>
+            <Console name="Console" target="SYSTEM_OUT">
+                <JsonLayout properties="true"/>
+            </Console>
+        </Appenders>
+        <Loggers>
+            <Root level="info">
+                <AppenderRef ref="Console"/>
+            </Root>
+        </Loggers>
+    </Configuration>
+  env:
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    - name: POD_NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+  nodes:
+    ${node}:
+      nodeType: ${druidServiceType}
+      priorityClassName: system-cluster-critical
+      druid.port: 8088
+      services:
+        - spec:
+            type: ClusterIP
+            clusterIP: None
+      replicas: 1
+      nodeConfigMountPath: "/opt/druid/conf/druid/cluster/${serviceFolder}"
+      livenessProbe:
+        failureThreshold: 10
+        httpGet:
+          path: ${healthPath}
+          port: 8088
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 5
+      readinessProbe:
+        failureThreshold: 20
+        httpGet:
+          path: ${readinessProbePath}
+          port: 8088
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 5
+      startUpProbe:
+        failureThreshold: 20
+        httpGet:
+          path: ${healthPath}
+          port: 8088
+        initialDelaySeconds: 60
+        periodSeconds: 30
+        successThreshold: 1
+        timeoutSeconds: 10
+      volumeMounts:
+        - mountPath: /druid/data
+          name: druid-shared-storage
+      volumes:
+        - name: druid-shared-storage
+          hostPath:
+            path: /path/to/shared/storage
+            type: ${sharedStorageDir}
