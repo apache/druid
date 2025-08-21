@@ -443,20 +443,20 @@ public abstract class AggregatorFactory implements Cacheable
               mergedAggregators.put(name, aggregator.getMergingFactory(other));
             }
             catch (AggregatorFactoryNotMergeableException ex) {
+              // Aggregator with the same name can't be merged, log it and return null early
               log.warn(ex, "failed to merge aggregator factories");
-              mergedAggregators = null;
-              break;
+              return null;
             }
           } else {
             mergedAggregators.put(name, aggregator);
           }
         }
       } else {
-        mergedAggregators = null;
-        break;
+        // one of the segments being merged has unknown aggregators, return null early
+        return null;
       }
     }
 
-    return mergedAggregators == null ? null : mergedAggregators.values().toArray(new AggregatorFactory[0]);
+    return mergedAggregators.values().toArray(new AggregatorFactory[0]);
   }
 }

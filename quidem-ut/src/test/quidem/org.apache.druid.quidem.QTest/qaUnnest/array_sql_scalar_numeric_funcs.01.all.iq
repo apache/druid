@@ -1,6 +1,5 @@
-!set dartQueryId 00000000-0000-0000-0000-000000000000
 !set useApproximateCountDistinct false
-!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/array
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaUnnest/array
 !set outputformat mysql
 #-------------------------------------------------------------------------
 # TESTCASE: test_scalar_numeric_funcs TEST_ID: SEL_DATASOURCE
@@ -311,7 +310,7 @@ WHERE (s_int IN (0,
 #-------------------------------------------------------------------------
 # TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B4_C1_D2
 #-------------------------------------------------------------------------
-SELECT exp(c)+exp(c) AS col
+SELECT trunc(exp(c),11)+trunc(exp(c),11) AS col
 FROM test_unnest,
      unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
 WHERE (s_int IN (0,
@@ -320,19 +319,19 @@ WHERE (s_int IN (0,
        OR s_int IS NULL)
   AND ((exp(c)+exp(c))<99999
        OR (exp(c)+exp(c)) IS NULL);
-+------------------+
-| col              |
-+------------------+
-| 14.7781121978613 |
-| 14.7781121978613 |
-| 14.7781121978613 |
-| 5.43656365691809 |
-| 5.43656365691809 |
-| 5.43656365691809 |
-|                  |
-|                  |
-|                  |
-+------------------+
++----------------+
+| col            |
++----------------+
+| 14.77811219786 |
+| 14.77811219786 |
+| 14.77811219786 |
+|   5.4365636569 |
+|   5.4365636569 |
+|   5.4365636569 |
+|                |
+|                |
+|                |
++----------------+
 (9 rows)
 
 !ok
@@ -340,7 +339,7 @@ WHERE (s_int IN (0,
 #-------------------------------------------------------------------------
 # TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B4_C2_D2
 #-------------------------------------------------------------------------
-SELECT exp(c+c) AS col
+SELECT trunc(exp(c+c),11) AS col
 FROM test_unnest,
      unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
 WHERE (s_int IN (0,
@@ -349,19 +348,19 @@ WHERE (s_int IN (0,
        OR s_int IS NULL)
   AND (exp(c+c)<99999
        OR exp(c+c) IS NULL);
-+--------------------+
-| col                |
-+--------------------+
-| 54.598150033144236 |
-| 54.598150033144236 |
-| 54.598150033144236 |
-|   7.38905609893065 |
-|   7.38905609893065 |
-|   7.38905609893065 |
-|                    |
-|                    |
-|                    |
-+--------------------+
++----------------+
+| col            |
++----------------+
+| 54.59815003314 |
+| 54.59815003314 |
+| 54.59815003314 |
+|  7.38905609893 |
+|  7.38905609893 |
+|  7.38905609893 |
+|                |
+|                |
+|                |
++----------------+
 (9 rows)
 
 !ok
@@ -369,7 +368,7 @@ WHERE (s_int IN (0,
 #-------------------------------------------------------------------------
 # TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B4_C3_D2
 #-------------------------------------------------------------------------
-SELECT exp(c)+exp(s_int) AS col
+SELECT trunc(exp(c),11)+trunc(exp(s_int),11) AS col
 FROM test_unnest,
      unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
 WHERE (s_int IN (0,
@@ -378,19 +377,19 @@ WHERE (s_int IN (0,
        OR s_int IS NULL)
   AND ((exp(c)+exp(s_int))<99999
        OR (exp(c)+exp(s_int)) IS NULL);
-+--------------------+
-| col                |
-+--------------------+
-| 10.107337927389695 |
-| 10.107337927389695 |
-|   14.7781121978613 |
-|   5.43656365691809 |
-|                    |
-|                    |
-|                    |
-|                    |
-|                    |
-+--------------------+
++----------------+
+| col            |
++----------------+
+| 10.10733792738 |
+| 10.10733792738 |
+| 14.77811219786 |
+|   5.4365636569 |
+|                |
+|                |
+|                |
+|                |
+|                |
++----------------+
 (9 rows)
 
 !ok
@@ -398,7 +397,7 @@ WHERE (s_int IN (0,
 #-------------------------------------------------------------------------
 # TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B4_C4_D2
 #-------------------------------------------------------------------------
-SELECT exp(c+s_int) AS col
+SELECT trunc(exp(c+s_int),11) AS col
 FROM test_unnest,
      unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
 WHERE (s_int IN (0,
@@ -407,19 +406,19 @@ WHERE (s_int IN (0,
        OR s_int IS NULL)
   AND (exp(c+s_int)<99999
        OR exp(c+s_int) IS NULL);
-+--------------------+
-| col                |
-+--------------------+
-| 20.085536923187668 |
-| 20.085536923187668 |
-| 54.598150033144236 |
-|   7.38905609893065 |
-|                    |
-|                    |
-|                    |
-|                    |
-|                    |
-+--------------------+
++----------------+
+| col            |
++----------------+
+| 20.08553692318 |
+| 20.08553692318 |
+| 54.59815003314 |
+|  7.38905609893 |
+|                |
+|                |
+|                |
+|                |
+|                |
++----------------+
 (9 rows)
 
 !ok
@@ -543,7 +542,7 @@ WHERE (s_int IN (0,
 #-------------------------------------------------------------------------
 # TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B6_C1_D2
 #-------------------------------------------------------------------------
-SELECT ln(c)+ln(c) AS col
+SELECT trunc(ln(c),11)+trunc(ln(c),11) AS col
 FROM test_unnest,
      unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
 WHERE (s_int IN (0,
@@ -552,19 +551,19 @@ WHERE (s_int IN (0,
        OR s_int IS NULL)
   AND ((ln(c)+ln(c))<99999
        OR (ln(c)+ln(c)) IS NULL);
-+--------------------+
-| col                |
-+--------------------+
-|                0.0 |
-|                0.0 |
-|                0.0 |
-| 1.3862943611198906 |
-| 1.3862943611198906 |
-| 1.3862943611198906 |
-|                    |
-|                    |
-|                    |
-+--------------------+
++--------------+
+| col          |
++--------------+
+|          0.0 |
+|          0.0 |
+|          0.0 |
+| 1.3862943611 |
+| 1.3862943611 |
+| 1.3862943611 |
+|              |
+|              |
+|              |
++--------------+
 (9 rows)
 
 !ok
@@ -572,7 +571,7 @@ WHERE (s_int IN (0,
 #-------------------------------------------------------------------------
 # TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B6_C2_D2
 #-------------------------------------------------------------------------
-SELECT ln(c+c) AS col
+SELECT trunc(ln(c+c),11) AS col
 FROM test_unnest,
      unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
 WHERE (s_int IN (0,
@@ -581,19 +580,19 @@ WHERE (s_int IN (0,
        OR s_int IS NULL)
   AND (ln(c+c)<99999
        OR ln(c+c) IS NULL);
-+--------------------+
-| col                |
-+--------------------+
-| 0.6931471805599453 |
-| 0.6931471805599453 |
-| 0.6931471805599453 |
-| 1.3862943611198906 |
-| 1.3862943611198906 |
-| 1.3862943611198906 |
-|                    |
-|                    |
-|                    |
-+--------------------+
++---------------+
+| col           |
++---------------+
+| 0.69314718055 |
+| 0.69314718055 |
+| 0.69314718055 |
+| 1.38629436111 |
+| 1.38629436111 |
+| 1.38629436111 |
+|               |
+|               |
+|               |
++---------------+
 (9 rows)
 
 !ok
@@ -601,7 +600,7 @@ WHERE (s_int IN (0,
 #-------------------------------------------------------------------------
 # TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B6_C3_D2
 #-------------------------------------------------------------------------
-SELECT ln(c)+ln(s_int) AS col
+SELECT trunc(ln(c),11)+trunc(ln(s_int),11) AS col
 FROM test_unnest,
      unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
 WHERE (s_int IN (0,
@@ -610,19 +609,19 @@ WHERE (s_int IN (0,
        OR s_int IS NULL)
   AND ((ln(c)+ln(s_int))<99999
        OR (ln(c)+ln(s_int)) IS NULL);
-+--------------------+
-| col                |
-+--------------------+
-|                0.0 |
-| 0.6931471805599453 |
-| 0.6931471805599453 |
-| 1.3862943611198906 |
-|                    |
-|                    |
-|                    |
-|                    |
-|                    |
-+--------------------+
++---------------+
+| col           |
++---------------+
+|           0.0 |
+| 0.69314718055 |
+| 0.69314718055 |
+|  1.3862943611 |
+|               |
+|               |
+|               |
+|               |
+|               |
++---------------+
 (9 rows)
 
 !ok
@@ -630,7 +629,7 @@ WHERE (s_int IN (0,
 #-------------------------------------------------------------------------
 # TESTCASE: test_scalar_numeric_funcs TEST_ID: A1_B6_C4_D2
 #-------------------------------------------------------------------------
-SELECT ln(c+s_int) AS col
+SELECT trunc(ln(c+s_int),11) AS col
 FROM test_unnest,
      unnest(json_value(a_nested, '$[1]' RETURNING bigint array)) AS u(c)
 WHERE (s_int IN (0,
@@ -639,19 +638,19 @@ WHERE (s_int IN (0,
        OR s_int IS NULL)
   AND (ln(c+s_int)<99999
        OR ln(c+s_int)<99999 IS NULL);
-+--------------------+
-| col                |
-+--------------------+
-| 0.6931471805599453 |
-| 1.0986122886681098 |
-| 1.0986122886681098 |
-| 1.3862943611198906 |
-|                    |
-|                    |
-|                    |
-|                    |
-|                    |
-+--------------------+
++---------------+
+| col           |
++---------------+
+| 0.69314718055 |
+| 1.09861228866 |
+| 1.09861228866 |
+| 1.38629436111 |
+|               |
+|               |
+|               |
+|               |
+|               |
++---------------+
 (9 rows)
 
 !ok

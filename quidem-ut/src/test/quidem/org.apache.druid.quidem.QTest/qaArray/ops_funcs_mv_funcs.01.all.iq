@@ -1,0 +1,418 @@
+!set useApproximateCountDistinct false
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!set outputformat mysql
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: SEL_DATASOURCE
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM test_array;
++-----+
+| cnt |
++-----+
+|   4 |
++-----+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C1_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(a_bool, ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C2_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(json_value(a_nested, '$[0]' RETURNING boolean array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C3_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(json_value(a_nested, '$[7][0]' RETURNING boolean array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C4_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(a_int, ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C5_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(json_value(a_nested, '$[1]' RETURNING bigint array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C6_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(json_value(a_nested, '$[7][1]' RETURNING bigint array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C7_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(a_float, ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C8_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(json_value(a_nested, '$[2]' RETURNING decimal array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C9_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(json_value(a_nested, '$[7][2]' RETURNING decimal array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C10_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(a_str, ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C11_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(json_value(a_nested, '$[3]' RETURNING varchar array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C12_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(json_value(a_nested, '$[7][3]' RETURNING varchar array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C13_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(a_null, ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C14_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(json_value(a_nested, '$[4]' RETURNING varchar array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C15_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(json_value(a_nested, '$[7][4]' RETURNING varchar array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C16_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(a_empty, ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C17_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(json_value(a_nested, '$[5]' RETURNING varchar array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C18_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(json_value(a_nested, '$[7][5]' RETURNING varchar array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C19_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(a_mixed, ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C20_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(json_value(a_nested, '$[6]' RETURNING varchar array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C21_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(json_value(a_nested, '$[7][6]' RETURNING varchar array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C22_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(a_nested, ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C23_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(json_value(a_nested, '$[7]' RETURNING varchar array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B1_C24_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_only(json_value(a_nested, '$[7][7]' RETURNING varchar array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_ONLY' to arguments of type 'MV_FILTER_ONLY(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C1_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(a_bool, ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C2_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(json_value(a_nested, '$[0]' RETURNING boolean array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C3_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(json_value(a_nested, '$[7][0]' RETURNING boolean array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C4_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(a_int, ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C5_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(json_value(a_nested, '$[1]' RETURNING bigint array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C6_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(json_value(a_nested, '$[7][1]' RETURNING bigint array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C7_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(a_float, ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C8_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(json_value(a_nested, '$[2]' RETURNING decimal array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C9_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(json_value(a_nested, '$[7][2]' RETURNING decimal array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C10_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(a_str, ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C11_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(json_value(a_nested, '$[3]' RETURNING varchar array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C12_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(json_value(a_nested, '$[7][3]' RETURNING varchar array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C13_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(a_null, ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C14_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(json_value(a_nested, '$[4]' RETURNING varchar array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C15_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(json_value(a_nested, '$[7][4]' RETURNING varchar array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C16_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(a_empty, ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C17_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(json_value(a_nested, '$[5]' RETURNING varchar array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C18_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(json_value(a_nested, '$[7][5]' RETURNING varchar array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C19_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(a_mixed, ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C20_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(json_value(a_nested, '$[6]' RETURNING varchar array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C21_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(json_value(a_nested, '$[7][6]' RETURNING varchar array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C22_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(a_nested, ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C23_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(json_value(a_nested, '$[7]' RETURNING varchar array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B2_C24_D1
+#-------------------------------------------------------------------------
+SELECT mv_filter_none(json_value(a_nested, '$[7][7]' RETURNING varchar array), ARRAY[1, 2]) AS col
+FROM test_array;
+Cannot apply 'MV_FILTER_NONE' to arguments of type 'MV_FILTER_NONE(
+!error
+
+#-------------------------------------------------------------------------
+# TESTCASE: test_mv_funcs TEST_ID: A1_B3_C1_D1
+#-------------------------------------------------------------------------
+SELECT mv_length(a_bool) AS col
+FROM test_array;
++-----+
+| col |
++-----+
+|   3 |
+|   3 |
+|   3 |
+|   3 |
++-----+
+(4 rows)
+
+!ok
+

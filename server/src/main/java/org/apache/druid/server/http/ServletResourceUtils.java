@@ -26,6 +26,8 @@ import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.error.InternalServerError;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.rpc.HttpResponseException;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
@@ -88,5 +90,26 @@ public class ServletResourceUtils
           InternalServerError.exception(Throwables.getRootCause(e), "Unknown error occurred")
       );
     }
+  }
+
+  /**
+   * Returns the given default value if the root cause of the exception is an
+   * {@link HttpResponseException} with status code {@link HttpResponseStatus#NOT_FOUND}.
+   * Otherwise, re-throws the given exception wrapped in a {@link RuntimeException}.
+   */
+  public static <T> T getDefaultValueIfCauseIs404ElseThrow(
+      Exception e,
+      Supplier<T> defaultValueSupplier
+  )
+  {
+    Throwable rootCause = Throwables.getRootCause(e);
+    if (rootCause instanceof HttpResponseException) {
+      final HttpResponseException httpException = (HttpResponseException) rootCause;
+      if (httpException.getResponse().getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
+        return defaultValueSupplier.get();
+      }
+    }
+
+    throw new RuntimeException(e);
   }
 }

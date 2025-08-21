@@ -82,6 +82,7 @@ jobs:
 
       - name: Run IT
         id: run-it
+        timeout-minutes: 90
         env:
           MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }}
         run: |

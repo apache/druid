@@ -36,6 +36,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -56,6 +57,7 @@ public class DriverTest extends BaseCalciteQueryTest
     driver = new QueryDriver(
         sqlTestFramework.queryJsonMapper(),
         plannerFixture.statementFactory(),
+        Map.of(),
         sqlTestFramework.queryLifecycleFactory()
     );
   }

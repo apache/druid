@@ -22,6 +22,7 @@ package org.apache.druid.frame.field;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.error.NotYetImplemented;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.RowSignature;
@@ -33,6 +34,13 @@ import javax.annotation.Nullable;
  */
 public class DoubleArrayFieldReader extends NumericArrayFieldReader
 {
+  private final FrameType frameType;
+
+  public DoubleArrayFieldReader(FrameType frameType)
+  {
+    this.frameType = frameType;
+  }
+
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(
       Memory memory,
@@ -44,7 +52,7 @@ public class DoubleArrayFieldReader extends NumericArrayFieldReader
       private static final int FIELD_SIZE = Byte.BYTES + Double.BYTES;
       final SettableFieldPointer fieldPointer = new SettableFieldPointer();
       final ColumnValueSelector<?> columnValueSelector =
-          DoubleFieldReader.forArray().makeColumnValueSelector(memory, fieldPointer);
+          DoubleFieldReader.forArray(frameType).makeColumnValueSelector(memory, fieldPointer);
 
       @Nullable
       @Override

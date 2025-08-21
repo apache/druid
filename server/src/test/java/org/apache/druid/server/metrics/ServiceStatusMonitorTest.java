@@ -32,13 +32,15 @@ public class ServiceStatusMonitorTest
 {
 
   private ServiceStatusMonitor monitor;
+  private StubServiceEmitter emitter;
   private Map<String, Object> heartbeatTags;
-  private Supplier<Map<String, Object>> heartbeatTagsSupplier = () -> heartbeatTags;
-  private static String HEARTBEAT_METRIC_KEY = "service/heartbeat";
+  private final Supplier<Map<String, Object>> heartbeatTagsSupplier = () -> heartbeatTags;
+  private static final String HEARTBEAT_METRIC_KEY = "service/heartbeat";
 
   @Before
   public void setUp()
   {
+    emitter = new StubServiceEmitter();
     monitor = new ServiceStatusMonitor();
     heartbeatTags = new HashMap<>();
     monitor.heartbeatTagsSupplier = heartbeatTagsSupplier;
@@ -47,23 +49,18 @@ public class ServiceStatusMonitorTest
   @Test
   public void testDefaultHeartbeatReported()
   {
-    final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
-    Assert.assertEquals(1, emitter.getEvents().size());
-    Assert.assertEquals(HEARTBEAT_METRIC_KEY, emitter.getEvents().get(0).toMap().get("metric"));
-    Assert.assertEquals(1, emitter.getEvents().get(0).toMap().get("value"));
+    Assert.assertEquals(1, emitter.getNumEmittedEvents());
+    emitter.verifyValue(HEARTBEAT_METRIC_KEY, 1);
   }
 
   @Test
   public void testLeaderTag()
   {
     heartbeatTags.put("leader", 1);
-    final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
-    Assert.assertEquals(1, emitter.getEvents().size());
-    Assert.assertEquals(1, emitter.getEvents().get(0).toMap().get("leader"));
-    Assert.assertEquals(HEARTBEAT_METRIC_KEY, emitter.getEvents().get(0).toMap().get("metric"));
-    Assert.assertEquals(1, emitter.getEvents().get(0).toMap().get("value"));
+    Assert.assertEquals(1, emitter.getNumEmittedEvents());
+    emitter.verifyValue(HEARTBEAT_METRIC_KEY, Map.of("leader", 1), 1);
   }
 
   @Test
@@ -71,12 +68,8 @@ public class ServiceStatusMonitorTest
   {
     heartbeatTags.put("leader", 1);
     heartbeatTags.put("taskRunner", "http");
-    final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
-    Assert.assertEquals(1, emitter.getEvents().size());
-    Assert.assertEquals(1, emitter.getEvents().get(0).toMap().get("leader"));
-    Assert.assertEquals("http", emitter.getEvents().get(0).toMap().get("taskRunner"));
-    Assert.assertEquals(HEARTBEAT_METRIC_KEY, emitter.getEvents().get(0).toMap().get("metric"));
-    Assert.assertEquals(1, emitter.getEvents().get(0).toMap().get("value"));
+    Assert.assertEquals(1, emitter.getNumEmittedEvents());
+    emitter.verifyValue(HEARTBEAT_METRIC_KEY, Map.of("leader", 1, "taskRunner", "http"), 1);
   }
 }

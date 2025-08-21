@@ -388,6 +388,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.NO_INFORMATION_SCHEMA_SUPPORT)
   @Test
   public void testAggregatorsOnInformationSchemaColumns()
   {
@@ -2584,6 +2585,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
+  @NotYetSupported(Modes.DD_JOIN)
   @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testExactCountDistinctWithFilter2()
@@ -3328,6 +3330,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
    * This test case should be in {@link CalciteUnionQueryTest}. However, there's a bug in the test framework that
    * doesn't reset framework once the merge buffers
    */
+  @NotYetSupported(Modes.DD_UNION)
   @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testUnionAllSameTableThreeTimes()
@@ -3372,6 +3375,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.DD_UNION)
   @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testExactCountDistinctUsingSubqueryOnUnionAllTables()
@@ -6279,6 +6283,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.DD_NULL_COLUMN_ORDER)
   @Test
   public void testOrderByNullType()
   {
@@ -7137,6 +7142,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.DD_INCORRECT_RESULTS_EMPTY_STRING)
   @Test
   public void testApproxCountDistinctWhenHllDisabled()
   {
@@ -7255,6 +7261,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.DD_JOIN)
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.AGG_COL_EXCHANGE)
   @Test
   public void testMultipleExactCountDistinctWithGroupingAndOtherAggregatorsUsingJoin()
@@ -12668,6 +12675,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   // __time >= x remains in the join condition
+  @NotYetSupported(Modes.DD_JOIN)
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_FILTER_LOCATIONS)
   @Test
   public void testRequireTimeConditionPositive3()
@@ -14782,63 +14790,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.SORT_REMOVE_CONSTANT_KEYS_CONFLICT)
-  @Test
-  public void testTimeseriesQueryWithEmptyInlineDatasourceAndGranularity()
-  {
-    // TODO(gianm): this test does not actually test the below thing, b/c the timestamp_floor got baked in
-    msqIncompatible();
-    //msqCompatible();
-
-    // the SQL query contains an always FALSE filter ('bar' = 'baz'), which optimizes the query to also remove time
-    // filter. the converted query hence contains ETERNITY interval but still a MONTH granularity due to the grouping.
-    // Such a query should plan into a GroupBy query with a timestamp_floor function, instead of a timeseries
-    // with granularity MONTH, to avoid excessive materialization of time grains.
-    //
-    // See DruidQuery#canUseQueryGranularity for the relevant check.
-
-    cannotVectorize();
-
-    testQuery(
-        "SELECT TIME_FLOOR(__time, 'P1m'), max(m1) from "
-        + "(VALUES (TIMESTAMP '2000-01-01', 1.0), (TIMESTAMP '2000-01-02', 2.0)) t (__time, m1)\n"
-        + "GROUP BY 1\n"
-        + "ORDER BY 1 DESC",
-        ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(InlineDataSource.fromIterable(
-                            ImmutableList.of(
-                                new Object[]{timestamp("2000-01-01"), 1.0},
-                                // Floor to month is applied while creating inline source, so this is
-                                // 2000-01-01, not 2000-01-02.
-                                new Object[]{timestamp("2000-01-01"), 2.0}
-                            ),
-                            RowSignature.builder()
-                                        .add("EXPR$0", ColumnType.LONG)
-                                        .add("m1", ColumnType.DOUBLE)
-                                        .build()
-                        ))
-                        .setInterval(querySegmentSpec(Intervals.ETERNITY))
-                        .setGranularity(Granularities.ALL)
-                        .addDimension(new DefaultDimensionSpec("EXPR$0", "d0", ColumnType.LONG))
-                        .addAggregator(new DoubleMaxAggregatorFactory("a0", "m1"))
-                        .setLimitSpec(
-                            new DefaultLimitSpec(
-                                ImmutableList.of(
-                                    new OrderByColumnSpec("d0", Direction.DESCENDING, StringComparators.NUMERIC)
-                                ),
-                                null
-                            )
-                        )
-                        .build()
-        ),
-        ImmutableList.of(
-            new Object[]{timestamp("2000-01-01"), 2.0}
-        )
-    );
-  }
-
-
   @Test
   public void testComplexDecode()
   {
@@ -14947,6 +14898,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.DD_JOIN)
   @Test
   public void testOrderByAlongWithInternalScanQuery()
   {
@@ -14991,6 +14943,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.DD_JOIN)
   @Test
   public void testOrderByAlongWithInternalScanQueryNoDistinct()
   {
@@ -15663,6 +15616,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
+  @NotYetSupported(Modes.DD_JOIN)
   @Test
   public void testWindowingOverJoin()
   {
@@ -16129,5 +16083,53 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         DruidException.class,
         "Only SET statements can appear before the final statement in a statement list, but found non-SET statement[SELECT 1]"
     );
+  }
+
+  @Test
+  public void testSetUseApproximateCountDistinctFalse()
+  {
+    testBuilder().sql(
+        "SET useApproximateCountDistinct = FALSE;\n"
+        + "SELECT COUNT(DISTINCT dim2) FROM druid.foo"
+    ).expectedQueries(
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE1)
+                                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                                            .setGranularity(Granularities.ALL)
+                                            .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                                            .setContext(
+                                                ImmutableMap.<String, Object>builder()
+                                                            .putAll(QUERY_CONTEXT_DEFAULT)
+                                                            .put("useApproximateCountDistinct", false)
+                                                            .build()
+                                            )
+                                            .build()
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(aggregators(
+                            new FilteredAggregatorFactory(
+                                new CountAggregatorFactory("a0"),
+                                notNull("d0")
+                            )
+                        ))
+                        .setContext(
+                            ImmutableMap.<String, Object>builder()
+                                        .putAll(QUERY_CONTEXT_DEFAULT)
+                                        .put("useApproximateCountDistinct", false)
+                                        .build()
+                        )
+                        .build()
+        )
+    ).expectedResults(
+        ImmutableList.of(
+            new Object[]{3L}
+        )
+    ).run();
   }
 }

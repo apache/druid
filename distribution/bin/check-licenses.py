@@ -308,6 +308,9 @@ def build_compatible_license_names():
     compatible_licenses['The MIT License (MIT)'] = 'MIT License'
     compatible_licenses['Bouncy Castle Licence'] = 'MIT License'
     compatible_licenses['SPDX-License-Identifier: MIT'] = 'MIT License'
+    compatible_licenses['MIT'] = 'MIT License'
+
+    compatible_licenses['MIT-0'] = 'MIT No Attribution'
 
     compatible_licenses['The Go license'] = 'The Go license'
     compatible_licenses['Universal Permissive License, Version 1.0'] = 'Universal Permissive License, Version 1.0'

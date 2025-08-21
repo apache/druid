@@ -65,7 +65,7 @@ public class DeterminePartitionsJobTest
   @Parameterized.Parameters(name = "assumeGrouped={0}, "
                                    + "targetRowsPerSegment={1}, "
                                    + "maxRowsPerSegment={2}, "
-                                   + "interval={3}"
+                                   + "intervals={3}"
                                    + "expectedNumOfSegments={4}, "
                                    + "expectedNumOfShardsForEachSegment={5}, "
                                    + "expectedStartEndForEachShard={6}, "
@@ -75,11 +75,25 @@ public class DeterminePartitionsJobTest
     return Arrays.asList(
         new Object[][]{
             {
+                false,
+                1,
+                NO_MAX_ROWS_PER_SEGMENT,
+                List.of("1970-01-01T00:00:00Z/P1D"),
+                1,
+                new int[]{1},
+                new String[][][]{
+                    {
+                        {null, null}
+                    }
+                },
+                ImmutableList.of("1970010100,c.example.com,CN,100")
+            },
+            {
                 // Test partitoning by targetRowsPerSegment
                 true,
                 2,
                 NO_MAX_ROWS_PER_SEGMENT,
-                "2014-10-22T00:00:00Z/P1D",
+                List.of("2014-10-22T00:00:00Z/P1D"),
                 1,
                 new int[]{5},
                 new String[][][]{
@@ -108,7 +122,7 @@ public class DeterminePartitionsJobTest
                 true,
                 NO_TARGET_ROWS_PER_SEGMENT,
                 2,
-                "2014-10-22T00:00:00Z/P1D",
+                List.of("2014-10-22T00:00:00Z/P1D"),
                 1,
                 new int[]{5},
                 new String[][][]{
@@ -137,7 +151,7 @@ public class DeterminePartitionsJobTest
                 false,
                 NO_TARGET_ROWS_PER_SEGMENT,
                 2,
-                "2014-10-20T00:00:00Z/P1D",
+                List.of("2014-10-20T00:00:00Z/P1D"),
                 1,
                 new int[]{5},
                 new String[][][]{
@@ -176,7 +190,7 @@ public class DeterminePartitionsJobTest
                 true,
                 NO_TARGET_ROWS_PER_SEGMENT,
                 5,
-                "2014-10-20T00:00:00Z/P3D",
+                List.of("2014-10-20T00:00:00Z/P3D"),
                 3,
                 new int[]{2, 2, 2},
                 new String[][][]{
@@ -230,7 +244,7 @@ public class DeterminePartitionsJobTest
                 true,
                 NO_TARGET_ROWS_PER_SEGMENT,
                 1000,
-                "2014-10-22T00:00:00Z/P1D",
+                List.of("2014-10-22T00:00:00Z/P1D"),
                 1,
                 new int[]{1},
                 new String[][][]{
@@ -259,7 +273,7 @@ public class DeterminePartitionsJobTest
       boolean assumeGrouped,
       @Nullable Integer targetRowsPerSegment,
       Integer maxRowsPerSegment,
-      String interval,
+      List<String> intervals,
       int expectedNumOfSegments,
       int[] expectedNumOfShardsForEachSegment,
       String[][][] expectedStartEndForEachShard,
@@ -304,7 +318,7 @@ public class DeterminePartitionsJobTest
                           new UniformGranularitySpec(
                               Granularities.DAY,
                               Granularities.NONE,
-                              ImmutableList.of(Intervals.of(interval))
+                              intervals.stream().map(Intervals::of).collect(ImmutableList.toImmutableList())
                           )
                       )
                       .withObjectMapper(HadoopDruidIndexerConfig.JSON_MAPPER)

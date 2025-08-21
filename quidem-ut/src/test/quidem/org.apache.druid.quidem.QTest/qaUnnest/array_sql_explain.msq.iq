@@ -78,6 +78,7 @@ FROM test_unnest,
           "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
+          "rowBasedFrameType" : 19,
           "scanSignature" : "[{\"name\":\"j0.unnest\",\"type\":\"LONG\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
@@ -185,6 +186,7 @@ FROM
           "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
+          "rowBasedFrameType" : 19,
           "scanSignature" : "[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"s_int\",\"type\":\"LONG\"},{\"name\":\"s_null\",\"type\":\"STRING\"},{\"name\":\"a_bool\",\"type\":\"ARRAY<LONG>\"},{\"name\":\"a_int\",\"type\":\"ARRAY<LONG>\"},{\"name\":\"a_float\",\"type\":\"ARRAY<DOUBLE>\"},{\"name\":\"a_str\",\"type\":\"ARRAY<STRING>\"},{\"name\":\"a_null\",\"type\":\"ARRAY<LONG>\"},{\"name\":\"a_empty\",\"type\":\"ARRAY<LONG>\"},{\"name\":\"a_mixed\",\"type\":\"ARRAY<STRING>\"},{\"name\":\"a_nested\",\"type\":\"COMPLEX<json>\"},{\"name\":\"j0.unnest\",\"type\":\"LONG\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
@@ -333,6 +335,7 @@ GROUP BY c;
           "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
+          "rowBasedFrameType" : 19,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -419,6 +422,7 @@ GROUP BY c;
           "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
+          "rowBasedFrameType" : 19,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__

@@ -32,7 +32,7 @@ jobs:
       core: ${{ steps.filter.outputs.core || github.event_name != 'pull_request'}}
       common-extensions: ${{ steps.filter.outputs.common-extensions }}
     steps:
-      - uses: dorny/paths-filter@v3.0.0
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36
         if: github.event_name == 'pull_request'
         id: filter
         with:
@@ -47,7 +47,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        testing_group: [batch-index, input-format, input-source, perfect-rollup-parallel-batch-index, kafka-index, kafka-index-slow, kafka-transactional-index, kafka-transactional-index-slow, kafka-data-format, ldap-security, realtime-index, append-ingestion, compaction, cds-task-schema-publish-disabled, cds-coordinator-metadata-query-disabled]
+        testing_group: [batch-index, input-format, input-source, kafka-index, kafka-index-slow, kafka-transactional-index, kafka-transactional-index-slow, ldap-security, realtime-index, append-ingestion, cds-task-schema-publish-disabled, cds-coordinator-metadata-query-disabled]
     uses: ./.github/workflows/reusable-standard-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
@@ -63,7 +63,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        testing_group: [input-source, perfect-rollup-parallel-batch-index, kafka-index, append-ingestion, compaction]
+        testing_group: [input-source, kafka-index, append-ingestion]
     uses: ./.github/workflows/reusable-standard-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
@@ -78,7 +78,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        testing_group: [query, query-retry, query-error, security, high-availability, centralized-datasource-schema]
+        testing_group: [query, query-retry, query-error, security, centralized-datasource-schema]
     uses: ./.github/workflows/reusable-standard-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
@@ -101,22 +101,6 @@ jobs:
       mysql_driver: org.mariadb.jdbc.Driver
       override_config_path: ./environment-configs/test-groups/prepopulated-data
       group: query
-
-  integration-shuffle-deep-store-tests:
-    needs: changes
-    strategy:
-      fail-fast: false
-      matrix:
-        indexer: [indexer, middleManager]
-    uses: ./.github/workflows/reusable-standard-its.yml
-    if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
-    with:
-      build_jdk: 17
-      runtime_jdk: 17
-      testing_groups: -Dgroups=shuffle-deep-store
-      use_indexer: ${{ matrix.indexer }}
-      override_config_path: ./environment-configs/test-groups/shuffle-deep-store
-      group: shuffle deep store
 
   integration-custom-coordinator-duties-tests:
     needs: changes
@@ -170,13 +154,13 @@ jobs:
 
       - name: Run IT
         id: test
+        timeout-minutes: 90
         run: |
-          echo "Running mvn -B -ff install -pl '!web-console' -Pdist,bundle-contrib-exts -Pskip-static-checks,skip-tests -Dmaven.javadoc.skip=true -T1C"
+          set -x
           mvn -B -ff install -pl '!web-console' -Pdist,bundle-contrib-exts -Pskip-static-checks,skip-tests -Dmaven.javadoc.skip=true -T1C
           # Note: The above command relies on the correct version of the JARs being installed in the local m2 repository.
           # For any changes, please rebuild it using the command from the previous step (./it.sh ci).
 
-          echo "MAVEN_OPTS='-Xmx2048m' ${MVN} verify -pl integration-tests -P int-tests-config-file ${IT_TEST} ${MAVEN_SKIP} -Dpod.name=${POD_NAME} -Dpod.namespace=${POD_NAMESPACE} -Dbuild.druid.cluster=${BUILD_DRUID_CLUSTER}"
           MAVEN_OPTS='-Xmx2048m' ${MVN} verify -pl integration-tests -P int-tests-config-file ${IT_TEST} ${MAVEN_SKIP} -Dpod.name=${POD_NAME} -Dpod.namespace=${POD_NAMESPACE} -Dbuild.druid.cluster=${BUILD_DRUID_CLUSTER}
 
       - name: Debug on failure
@@ -197,6 +181,6 @@ jobs:
     with:
       build_jdk: 17
       runtime_jdk: 17
-      testing_groups: -DexcludedGroups=batch-index,input-format,input-source,perfect-rollup-parallel-batch-index,kafka-index,query,query-retry,query-error,realtime-index,security,ldap-security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion,kinesis-index,kinesis-data-format,kafka-transactional-index,kafka-index-slow,kafka-transactional-index-slow,kafka-data-format,hadoop-s3-to-s3-deep-storage,hadoop-s3-to-hdfs-deep-storage,hadoop-azure-to-azure-deep-storage,hadoop-azure-to-hdfs-deep-storage,hadoop-gcs-to-gcs-deep-storage,hadoop-gcs-to-hdfs-deep-storage,aliyun-oss-deep-storage,append-ingestion,compaction,high-availability,upgrade,shuffle-deep-store,custom-coordinator-duties,centralized-datasource-schema,cds-task-schema-publish-disabled,cds-coordinator-metadata-query-disabled
+      testing_groups: -DexcludedGroups=batch-index,input-format,input-source,kafka-index,query,query-retry,query-error,realtime-index,security,ldap-security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion,kinesis-index,kinesis-data-format,kafka-transactional-index,kafka-index-slow,kafka-transactional-index-slow,kafka-data-format,hadoop-s3-to-s3-deep-storage,hadoop-s3-to-hdfs-deep-storage,hadoop-azure-to-azure-deep-storage,hadoop-azure-to-hdfs-deep-storage,hadoop-gcs-to-gcs-deep-storage,hadoop-gcs-to-hdfs-deep-storage,aliyun-oss-deep-storage,append-ingestion,custom-coordinator-duties,centralized-datasource-schema,cds-task-schema-publish-disabled,cds-coordinator-metadata-query-disabled
       use_indexer: ${{ matrix.indexer }}
       group: other

@@ -1799,7 +1799,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testDontPullUpLookupWhenUsedByAggregation()
   {
-    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT LOOKUP(dim1, 'lookyloo121'), COUNT(LOOKUP(dim1, 'lookyloo121')) FROM druid.foo GROUP BY 1",
         ImmutableList.of(

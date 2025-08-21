@@ -42,6 +42,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -125,6 +126,7 @@ public class DruidMeta extends MetaImpl
   );
 
   private final SqlStatementFactory sqlStatementFactory;
+  private final DefaultQueryConfig defaultQueryConfig;
   private final ScheduledExecutorService exec;
   private final AvaticaServerConfig config;
   private final List<Authenticator> authenticators;
@@ -145,6 +147,7 @@ public class DruidMeta extends MetaImpl
   @Inject
   public DruidMeta(
       final @NativeQuery SqlStatementFactory sqlStatementFactory,
+      final DefaultQueryConfig defaultQueryConfig,
       final AvaticaServerConfig config,
       final ErrorHandler errorHandler,
       final AuthenticatorMapper authMapper
@@ -152,6 +155,7 @@ public class DruidMeta extends MetaImpl
   {
     this(
         sqlStatementFactory,
+        defaultQueryConfig,
         config,
         errorHandler,
         Executors.newSingleThreadScheduledExecutor(
@@ -167,6 +171,7 @@ public class DruidMeta extends MetaImpl
 
   public DruidMeta(
       final SqlStatementFactory sqlStatementFactory,
+      final DefaultQueryConfig defaultQueryConfig,
       final AvaticaServerConfig config,
       final ErrorHandler errorHandler,
       final ScheduledExecutorService exec,
@@ -176,6 +181,7 @@ public class DruidMeta extends MetaImpl
   {
     super(null);
     this.sqlStatementFactory = sqlStatementFactory;
+    this.defaultQueryConfig = defaultQueryConfig;
     this.config = config;
     this.errorHandler = errorHandler;
     this.exec = exec;
@@ -249,7 +255,7 @@ public class DruidMeta extends MetaImpl
   {
     try {
       final DruidJdbcStatement druidStatement = getDruidConnection(ch.id)
-          .createStatement(sqlStatementFactory, fetcherFactory);
+          .createStatement(sqlStatementFactory, defaultQueryConfig.getContext(), fetcherFactory);
       return new StatementHandle(ch.id, druidStatement.getStatementId(), null);
     }
     catch (Throwable t) {
@@ -271,15 +277,16 @@ public class DruidMeta extends MetaImpl
   {
     try {
       final DruidConnection druidConnection = getDruidConnection(ch.id);
-      final SqlQueryPlus sqlReq = new SqlQueryPlus(
-          sql,
-          druidConnection.sessionContext(),
-          null, // No parameters in this path
-          doAuthenticate(druidConnection)
-      );
+      final SqlQueryPlus sqlReq = SqlQueryPlus.builder()
+                                              .sql(sql)
+                                              .systemDefaultContext(defaultQueryConfig.getContext())
+                                              .queryContext(druidConnection.sessionContext())
+                                              .auth(doAuthenticate(druidConnection))
+                                              .buildJdbc();
       final DruidJdbcPreparedStatement stmt = getDruidConnection(ch.id).createPreparedStatement(
           sqlStatementFactory,
           sqlReq,
+          defaultQueryConfig.getContext(),
           maxRowCount,
           fetcherFactory
       );
@@ -350,8 +357,8 @@ public class DruidMeta extends MetaImpl
       synchronized (druidConnection) {
         final AuthenticationResult authenticationResult = doAuthenticate(druidConnection);
         final SqlQueryPlus sqlRequest = SqlQueryPlus.builder(sql)
-            .auth(authenticationResult)
-            .build();
+                                                    .auth(authenticationResult)
+                                                    .buildJdbc();
         druidStatement.execute(sqlRequest, maxRowCount);
         final ExecuteResult result = doFetch(druidStatement, maxRowsInFirstFrame);
         LOG.debug("Successfully prepared statement [%s] and started execution", druidStatement.getStatementId());

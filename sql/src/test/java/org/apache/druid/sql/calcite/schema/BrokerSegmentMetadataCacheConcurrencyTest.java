@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite.schema;
 
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -262,7 +261,10 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        new PhysicalDatasourceMetadataFactory(new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()), segmentManager),
+        new PhysicalDatasourceMetadataFactory(
+            new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
+            segmentManager
+        ),
         new NoopCoordinatorClient(),
         CentralizedDatasourceSchemaConfig.create()
     )
@@ -414,21 +416,13 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
     );
   }
 
-  private DataSegment newSegment(int partitionId)
+  private static DataSegment newSegment(int partitionId)
   {
-    return new DataSegment(
-        DATASOURCE,
-        Intervals.of("2012/2013"),
-        "version1",
-        null,
-        ImmutableList.of(),
-        ImmutableList.of(),
-        new NumberedShardSpec(partitionId, 0),
-        null,
-        1,
-        100L,
-        DataSegment.PruneSpecsHolder.DEFAULT
-    );
+    return DataSegment.builder(SegmentId.of(DATASOURCE, Intervals.of("2012/2013"), "version1", null))
+                      .shardSpec(new NumberedShardSpec(partitionId, 0))
+                      .binaryVersion(1)
+                      .size(100L)
+                      .build();
   }
 
   private QueryableIndex newQueryableIndex(int partitionId)
@@ -454,7 +448,7 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
     private final Map<String, DruidServer> serverMap = new HashMap<>();
     private final Map<String, Set<DataSegment>> segmentsMap = new HashMap<>();
     private final List<NonnullPair<ServerView.SegmentCallback, Executor>> segmentCallbacks = new ArrayList<>();
-    private final List<NonnullPair<ServerView.ServerRemovedCallback, Executor>> serverRemovedCallbacks = new ArrayList<>();
+    private final List<NonnullPair<ServerView.ServerCallback, Executor>> serverRemovedCallbacks = new ArrayList<>();
 
     private void init()
     {
@@ -493,7 +487,7 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
     }
 
     @Override
-    public void registerServerRemovedCallback(Executor exec, ServerView.ServerRemovedCallback callback)
+    public void registerServerCallback(Executor exec, ServerView.ServerCallback callback)
     {
       serverRemovedCallbacks.add(new NonnullPair<>(callback, exec));
     }

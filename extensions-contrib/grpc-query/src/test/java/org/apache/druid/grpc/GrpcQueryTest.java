@@ -46,6 +46,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 
 import static org.junit.Assert.assertEquals;
@@ -75,6 +76,7 @@ public class GrpcQueryTest extends BaseCalciteQueryTest
     QueryDriver driver = new QueryDriver(
         sqlTestFramework.queryJsonMapper(),
         plannerFixture.statementFactory(),
+        Map.of(),
         sqlTestFramework.queryLifecycleFactory()
     );
     AuthenticatorMapper authMapper = new AuthenticatorMapper(

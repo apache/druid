@@ -19,21 +19,18 @@
 
 package org.apache.druid.frame.segment;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.extraction.TimeFormatExtractionFn;
 import org.apache.druid.query.extraction.UpperExtractionFn;
-import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
@@ -48,27 +45,21 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Function;
 
 public class FrameCursorFactoryTest
 {
@@ -137,7 +128,7 @@ public class FrameCursorFactoryTest
             actualCapabilities.toColumnType()
         );
 
-        if (frameType == FrameType.COLUMNAR) {
+        if (frameType == FrameType.latestColumnar()) {
           // Columnar frames retain fine-grained hasMultipleValues information
           Assert.assertEquals(
               StringUtils.format("column [%s] hasMultipleValues", columnName),
@@ -173,11 +164,7 @@ public class FrameCursorFactoryTest
     private static final int VECTOR_SIZE = 7;
 
     private final FrameType frameType;
-    @Nullable
-    private final Filter filter;
     private final Interval interval;
-    private final VirtualColumns virtualColumns;
-    private final boolean descending;
 
     private CursorFactory queryableCursorFactory;
     private FrameSegment frameSegment;
@@ -186,93 +173,33 @@ public class FrameCursorFactoryTest
         ImmutableMap.of(QueryContexts.VECTOR_SIZE_KEY, VECTOR_SIZE)
     );
 
-    private CursorBuildSpec buildSpec;
-
     public CursorTests(
         FrameType frameType,
-        @Nullable DimFilter filter,
-        Interval interval,
-        VirtualColumns virtualColumns,
-        boolean descending
+        Interval interval
     )
     {
       this.frameType = frameType;
-      this.filter = Filters.toFilter(filter);
       this.interval = interval;
-      this.virtualColumns = virtualColumns;
-      this.descending = descending;
-      this.buildSpec =
-          CursorBuildSpec.builder()
-                         .setFilter(this.filter)
-                         .setInterval(this.interval)
-                         .setVirtualColumns(this.virtualColumns)
-                         .setPreferredOrdering(descending ? Cursors.descendingTimeOrder() : Collections.emptyList())
-                         .setQueryContext(queryContext)
-                         .build();
     }
 
-    @Parameterized.Parameters(name = "frameType = {0}, "
-                                     + "filter = {1}, "
-                                     + "interval = {2}, "
-                                     + "virtualColumns = {3}, "
-                                     + "descending = {4}")
+    @Parameterized.Parameters(
+        name = "frameType = {0}, interval = {1}"
+    )
     public static Iterable<Object[]> constructorFeeder()
     {
       final List<Object[]> constructors = new ArrayList<>();
-      final List<Interval> intervals = Arrays.asList(
+      final List<Interval> intervals = List.of(
           TestIndex.getMMappedTestIndex().getDataInterval(),
           Intervals.ETERNITY,
           Intervals.of("2011-04-01T00:00:00.000Z/2011-04-02T00:00:00.000Z"),
           Intervals.of("3001/3002")
       );
 
-      final List<Pair<DimFilter, VirtualColumns>> filtersAndVirtualColumns = new ArrayList<>();
-      filtersAndVirtualColumns.add(Pair.of(null, VirtualColumns.EMPTY));
-      filtersAndVirtualColumns.add(Pair.of(new SelectorDimFilter("quality", "automotive", null), VirtualColumns.EMPTY));
-      filtersAndVirtualColumns.add(Pair.of(
-          new SelectorDimFilter("expr", "1401", null),
-          VirtualColumns.create(
-              ImmutableList.of(
-                  new ExpressionVirtualColumn(
-                      "expr",
-                      "qualityLong + 1",
-                      ColumnType.LONG,
-                      ExprMacroTable.nil()
-                  )
-              )
-          )
-      ));
-      filtersAndVirtualColumns.add(Pair.of(new SelectorDimFilter("qualityLong", "1400", null), VirtualColumns.EMPTY));
-      filtersAndVirtualColumns.add(Pair.of(
-          new SelectorDimFilter("quality", "automotive", new UpperExtractionFn(null)),
-          VirtualColumns.EMPTY
-      ));
-      filtersAndVirtualColumns.add(Pair.of(new SelectorDimFilter(
-          ColumnHolder.TIME_COLUMN_NAME,
-          "Friday",
-          new TimeFormatExtractionFn("EEEE", null, null, null, false)
-      ), VirtualColumns.EMPTY));
-      filtersAndVirtualColumns.add(Pair.of(new SelectorDimFilter(
-          ColumnHolder.TIME_COLUMN_NAME,
-          "Friday",
-          new TimeFormatExtractionFn("EEEE", null, null, null, false)
-      ), VirtualColumns.EMPTY));
-
       for (FrameType frameType : FrameType.values()) {
-        for (Pair<DimFilter, VirtualColumns> filterVirtualColumnsPair : filtersAndVirtualColumns) {
-          for (Interval interval : intervals) {
-            for (boolean descending : Arrays.asList(false, true)) {
-              constructors.add(
-                  new Object[]{
-                      frameType,
-                      filterVirtualColumnsPair.lhs,
-                      interval,
-                      filterVirtualColumnsPair.rhs,
-                      descending
-                  }
-              );
-            }
-          }
+        for (Interval interval : intervals) {
+          constructors.add(
+              new Object[]{frameType, interval}
+          );
         }
       }
 
@@ -295,48 +222,244 @@ public class FrameCursorFactoryTest
       }
     }
 
+
     @Test
-    public void test_makeCursor()
+    public void test_fullScan()
     {
-      final RowSignature signature = frameCursorFactory.getRowSignature();
+      final CursorBuildSpec cursorSpec =
+          CursorBuildSpec.builder()
+                         .setInterval(interval)
+                         .setQueryContext(queryContext)
+                         .build();
+
+      verifyCursorFactory(cursorSpec, frameType.isColumnar());
+    }
+
+    @Test
+    public void test_fullScan_preferAscTime()
+    {
+      final CursorBuildSpec cursorSpec =
+          CursorBuildSpec.builder()
+                         .setInterval(interval)
+                         .setPreferredOrdering(Cursors.ascendingTimeOrder())
+                         .setQueryContext(queryContext)
+                         .build();
+
+      verifyCursorFactory(cursorSpec, frameType.isColumnar());
+    }
+
+    @Test
+    public void test_fullScan_preferDescTime()
+    {
+      final CursorBuildSpec cursorSpec =
+          CursorBuildSpec.builder()
+                         .setInterval(interval)
+                         .setPreferredOrdering(Cursors.descendingTimeOrder())
+                         .setQueryContext(queryContext)
+                         .build();
+
+      verifyCursorFactory(cursorSpec, frameType.isColumnar());
+    }
+
+    @Test
+    public void test_selectorFilter_stringColumn()
+    {
+      final CursorBuildSpec cursorSpec =
+          CursorBuildSpec.builder()
+                         .setInterval(interval)
+                         .setFilter(new SelectorDimFilter("quality", "automotive", null).toFilter())
+                         .setQueryContext(queryContext)
+                         .build();
+
+      verifyCursorFactory(cursorSpec, frameType.isColumnar());
+    }
+
+    @Test
+    public void test_selectorFilter_numericColumn()
+    {
+      final CursorBuildSpec cursorSpec =
+          CursorBuildSpec.builder()
+                         .setInterval(interval)
+                         .setFilter(new SelectorDimFilter("qualityLong", "1400", null).toFilter())
+                         .setQueryContext(queryContext)
+                         .build();
+
+      verifyCursorFactory(cursorSpec, frameType.isColumnar());
+    }
+
+    @Test
+    public void test_selectorFilter_expr()
+    {
+      final CursorBuildSpec cursorSpec =
+          CursorBuildSpec.builder()
+                         .setInterval(interval)
+                         .setFilter(new SelectorDimFilter("quality", "automotive", null).toFilter())
+                         .setVirtualColumns(
+                             VirtualColumns.create(
+                                 new ExpressionVirtualColumn(
+                                     "expr",
+                                     "qualityLong + 1",
+                                     ColumnType.LONG,
+                                     ExprMacroTable.nil()
+                                 )
+                             )
+                         )
+                         .setQueryContext(queryContext)
+                         .build();
+
+      verifyCursorFactory(cursorSpec, frameType.isColumnar());
+    }
+
+    @Test
+    public void test_selectorFilter_extractionFn()
+    {
+      final CursorBuildSpec cursorSpec =
+          CursorBuildSpec.builder()
+                         .setInterval(interval)
+                         .setFilter(
+                             new SelectorDimFilter(
+                                 "quality",
+                                 "automotive",
+                                 new UpperExtractionFn(null)
+                             ).toFilter()
+                         )
+                         .setQueryContext(queryContext)
+                         .build();
+
+      verifyCursorFactory(cursorSpec, frameType.isColumnar());
+    }
+
+    @Test
+    public void test_selectorFilter_timeExtractionFn()
+    {
+      final CursorBuildSpec cursorSpec =
+          CursorBuildSpec.builder()
+                         .setInterval(interval)
+                         .setFilter(
+                             new SelectorDimFilter(
+                                 ColumnHolder.TIME_COLUMN_NAME,
+                                 "Friday",
+                                 new TimeFormatExtractionFn("EEEE", null, null, null, false)
+                             ).toFilter()
+                         )
+                         .setQueryContext(queryContext)
+                         .build();
+
+      verifyCursorFactory(cursorSpec, frameType.isColumnar());
+    }
+
+    @Test
+    public void test_expr_cannotVectorize()
+    {
+      final CursorBuildSpec cursorSpec =
+          CursorBuildSpec.builder()
+                         .setInterval(interval)
+                         .setVirtualColumns(
+                             VirtualColumns.create(
+                                 new ExpressionVirtualColumn(
+                                     "expr",
+                                     "substring(quality, 1, 2)",
+                                     ColumnType.STRING,
+                                     ExprMacroTable.nil()
+                                 )
+                             )
+                         )
+                         .setQueryContext(queryContext)
+                         .build();
+
+      verifyCursorFactory(cursorSpec, false);
+    }
+
+    @Test
+    public void test_aggregator_canVectorize()
+    {
+      // Test that when an aggregator can vectorize, canVectorize returns true. This test is not actually testing
+      // that the aggregator *works*, because verifyCursorFactory doesn't try to use it.
+      final CursorBuildSpec cursorSpec =
+          CursorBuildSpec.builder()
+                         .setInterval(interval)
+                         .setAggregators(List.of(new DoubleSumAggregatorFactory("qualitySum", "qualityLong")))
+                         .setQueryContext(queryContext)
+                         .build();
+
+      verifyCursorFactory(cursorSpec, frameType.isColumnar());
+    }
+
+    @Test
+    public void test_aggregator_cannotVectorize()
+    {
+      // Test that when an aggregator cannot vectorize, canVectorize returns false. This test is not actually testing
+      // that the aggregator *works*, because verifyCursorFactory doesn't try to use it.
+      final CursorBuildSpec cursorSpec =
+          CursorBuildSpec.builder()
+                         .setInterval(interval)
+                         .setAggregators(List.of(new DoubleSumAggregatorFactory("qualitySum", "quality")))
+                         .setQueryContext(queryContext)
+                         .build();
+
+      verifyCursorFactory(cursorSpec, false);
+    }
+
+    /**
+     * Verify that the cursors (both vector and nonvector) from {@link #frameCursorFactory} and
+     * {@link #queryableCursorFactory} match.
+     */
+    private void verifyCursorFactory(final CursorBuildSpec cursorSpec, final boolean expectedCanVectorize)
+    {
+      Assert.assertEquals(
+          "expected interval (if this assertion fails, the test is likely written incorrectly)",
+          this.interval,
+          cursorSpec.getInterval()
+      );
 
       // Frame adapters don't know the order of the underlying frames, so they should ignore the "preferred ordering"
       // of the cursor build spec. We test this by passing the frameAdapter a build spec with a preferred ordering,
       // and passing the queryableAdapter the same build spec *without* a preferred ordering, and verifying they match.
-      final CursorBuildSpec queryableBuildSpec =
-          CursorBuildSpec.builder(buildSpec).setPreferredOrdering(Collections.emptyList()).build();
+      final CursorBuildSpec queryableCursorSpec =
+          CursorBuildSpec.builder(cursorSpec).setPreferredOrdering(Collections.emptyList()).build();
 
-      try (final CursorHolder queryableCursorHolder = queryableCursorFactory.makeCursorHolder(queryableBuildSpec);
-           final CursorHolder frameCursorHolder = frameCursorFactory.makeCursorHolder(buildSpec)) {
-        final Sequence<List<Object>> queryableRows =
-            FrameTestUtil.readRowsFromCursor(advanceAndReset(queryableCursorHolder.asCursor()), signature);
-        final Sequence<List<Object>> frameRows =
-            FrameTestUtil.readRowsFromCursor(advanceAndReset(frameCursorHolder.asCursor()), signature);
-        FrameTestUtil.assertRowsEqual(queryableRows, frameRows);
+      try (final CursorHolder queryableCursorHolder = queryableCursorFactory.makeCursorHolder(queryableCursorSpec);
+           final CursorHolder frameCursorHolder = frameCursorFactory.makeCursorHolder(cursorSpec)) {
+        // Frames don't know their own order, so they cannot guarantee any particular ordering.
+        Assert.assertEquals("ordering", Collections.emptyList(), frameCursorHolder.getOrdering());
+        Assert.assertEquals("canVectorize", expectedCanVectorize, frameCursorHolder.canVectorize());
+        verifyCursors(queryableCursorHolder, frameCursorHolder, frameCursorFactory.getRowSignature());
+
+        if (expectedCanVectorize) {
+          verifyVectorCursors(queryableCursorHolder, frameCursorHolder, frameCursorFactory.getRowSignature());
+        }
       }
     }
 
-    @Test
-    public void test_makeVectorCursor()
+    /**
+     * Verify that the non-vector cursors from two {@link CursorHolder} return equivalent results.
+     */
+    private static void verifyCursors(
+        final CursorHolder queryableCursorHolder,
+        final CursorHolder frameCursorHolder,
+        final RowSignature signature
+    )
     {
-      // Conditions for frames to be vectorizable.
-      Assume.assumeThat(frameType, CoreMatchers.equalTo(FrameType.COLUMNAR));
-      Assume.assumeFalse(descending);
-      assertVectorCursorsMatch(cursorFactory -> cursorFactory.makeCursorHolder(buildSpec));
+      final Sequence<List<Object>> queryableRows =
+          FrameTestUtil.readRowsFromCursor(advanceAndReset(queryableCursorHolder.asCursor()), signature);
+      final Sequence<List<Object>> frameRows =
+          FrameTestUtil.readRowsFromCursor(advanceAndReset(frameCursorHolder.asCursor()), signature);
+      FrameTestUtil.assertRowsEqual(queryableRows, frameRows);
     }
 
-    private void assertVectorCursorsMatch(final Function<CursorFactory, CursorHolder> call)
+    /**
+     * Verify that the vector cursors from two {@link CursorHolder} return equivalent results. Only call this
+     * if the holders have {@link CursorHolder#canVectorize()}.
+     */
+    private static void verifyVectorCursors(
+        final CursorHolder queryableCursorHolder,
+        final CursorHolder frameCursorHolder,
+        final RowSignature signature
+    )
     {
-      final CursorHolder cursorHolder = call.apply(queryableCursorFactory);
-      final CursorHolder frameCursorHolder = call.apply(frameCursorFactory);
-
-      Assert.assertTrue("queryable cursor is vectorizable", cursorHolder.canVectorize());
-      Assert.assertTrue("frame cursor is vectorizable", frameCursorHolder.canVectorize());
-
-      final RowSignature signature = frameCursorFactory.getRowSignature();
       final Sequence<List<Object>> queryableRows =
-          FrameTestUtil.readRowsFromVectorCursor(advanceAndReset(cursorHolder.asVectorCursor()), signature)
-                       .withBaggage(cursorHolder);
+          FrameTestUtil.readRowsFromVectorCursor(advanceAndReset(queryableCursorHolder.asVectorCursor()), signature)
+                       .withBaggage(queryableCursorHolder);
       final Sequence<List<Object>> frameRows =
           FrameTestUtil.readRowsFromVectorCursor(advanceAndReset(frameCursorHolder.asVectorCursor()), signature)
                        .withBaggage(frameCursorHolder);

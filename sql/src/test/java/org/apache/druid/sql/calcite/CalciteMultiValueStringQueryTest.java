@@ -46,6 +46,8 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
+import org.apache.druid.segment.virtual.PrefixFilteredVirtualColumn;
+import org.apache.druid.segment.virtual.RegexFilteredVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -2283,6 +2285,260 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             new Object[]{"d", false, false},
             new Object[]{"", false, false},
             new Object[]{null, false, null}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringRegexFilterScan()
+  {
+    testQuery(
+        "SELECT MV_FILTER_REGEX(dim3, '^b.*') FROM druid.numfoo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .eternityInterval()
+                .virtualColumns(
+                    new RegexFilteredVirtualColumn(
+                        "v0",
+                        DefaultDimensionSpec.of("dim3"),
+                        "^b.*"
+                    )
+                )
+                .columns("v0")
+                .columnTypes(ColumnType.STRING)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValuePrefixFilterComposed()
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT MV_LENGTH(MV_FILTER_PREFIX(dim3, 'b')), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "array_length(\"v1\")",
+                                ColumnType.LONG
+                            ),
+                            new PrefixFilteredVirtualColumn(
+                                "v1",
+                                DefaultDimensionSpec.of("dim3"),
+                                "b"
+                            )
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                OrderByColumnSpec.Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null, 4L},
+            new Object[]{1, 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValuePrefixFilterLike()
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT dim3, SUM(cnt) FROM druid.numfoo WHERE MV_FILTER_PREFIX(dim3, 'b') LIKE 'b%' GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            new PrefixFilteredVirtualColumn(
+                                "v0",
+                                DefaultDimensionSpec.of("dim3"),
+                                "b"
+                            )
+                        )
+                        .setDimFilter(new LikeDimFilter("v0", "b%", null, null))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("dim3", "d0", ColumnType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                OrderByColumnSpec.Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"b", 2L},
+            new Object[]{"a", 1L},
+            new Object[]{"c", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringPrefixFilterScan()
+  {
+    testQuery(
+        "SELECT MV_FILTER_PREFIX(dim3, 'b') FROM druid.numfoo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .eternityInterval()
+                .virtualColumns(
+                    new PrefixFilteredVirtualColumn(
+                        "v0",
+                        DefaultDimensionSpec.of("dim3"),
+                        "b"
+                    )
+                )
+                .columns("v0")
+                .columnTypes(ColumnType.STRING)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"b"},
+            new Object[]{"b"},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{null}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueRegexFilterComposed()
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT MV_LENGTH(MV_FILTER_REGEX(dim3, '^b.*')), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "array_length(\"v1\")",
+                                ColumnType.LONG
+                            ),
+                            new RegexFilteredVirtualColumn(
+                                "v1",
+                                DefaultDimensionSpec.of("dim3"),
+                                "^b.*"
+                            )
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                OrderByColumnSpec.Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null, 4L},
+            new Object[]{1, 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueRegexFilter()
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT MV_FILTER_REGEX(dim3, '^b.*'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            new RegexFilteredVirtualColumn(
+                                "v0",
+                                DefaultDimensionSpec.of("dim3"),
+                                "^b.*"
+                            )
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(new DefaultLimitSpec(
+                            ImmutableList.of(new OrderByColumnSpec(
+                                "a0",
+                                OrderByColumnSpec.Direction.DESCENDING,
+                                StringComparators.NUMERIC
+                            )),
+                            Integer.MAX_VALUE
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null, 4L},
+            new Object[]{"b", 2L}
         )
     );
   }

@@ -311,6 +311,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     alterPendingSegmentsTable(tableName);
   }
 
+  /**
+   * The {@code dataSource} column stores the supervisor ID.
+   * It has not been renamed to retain backwards compatibility.
+   * Supervisors created without an explicit supervisor id default to using the datasource name.
+   */
   public void createDataSourceTable(final String tableName)
   {
     createTable(

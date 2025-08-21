@@ -19,9 +19,10 @@
 
 package org.apache.druid.frame.read;
 
-import com.google.common.base.Preconditions;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.field.FieldReader;
 import org.apache.druid.frame.field.FieldReaders;
 import org.apache.druid.frame.key.FrameComparisonWidget;
@@ -40,41 +41,39 @@ import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Set;
 
 /**
  * Embeds the logic to read frames with a given {@link RowSignature}.
- * <p>
- * Stateless and immutable.
+ * Can be shared by multiple threads, to encourage reuse of column and field readers.
  */
 public class FrameReader
 {
   private final RowSignature signature;
 
-  // Column readers, for columnar frames.
-  private final List<FrameColumnReader> columnReaders;
+  /**
+   * Column readers, for {@link FrameType#isColumnar()}. Lazy initialized. Access with {@link #getColumnReaders()}.
+   */
+  private volatile List<FrameColumnReader> columnReaders;
 
-  // Field readers, for row-based frames.
-  private final List<FieldReader> fieldReaders;
+  /**
+   * Field readers, for {@link FrameType#isRowBased()}. The map is from {@link FrameType} to list of field readers,
+   * which is necessary because there are multiple version of {@link FrameType} for row-based frames.
+   * Lazy initialized. Access with {@link #getFieldReaders(FrameType)}.
+   */
+  @GuardedBy("fieldReaders")
+  private final EnumMap<FrameType, List<FieldReader>> fieldReaders = new EnumMap<>(FrameType.class);
 
-  private FrameReader(
-      final RowSignature signature,
-      final List<FrameColumnReader> columnReaders,
-      final List<FieldReader> fieldReaders
-  )
+  private FrameReader(final RowSignature signature)
   {
     this.signature = signature;
-    this.columnReaders = columnReaders;
-    this.fieldReaders = fieldReaders;
   }
 
   /**
    * Create a reader for frames with a given {@link RowSignature}. The signature must exactly match the frames to be
    * read, or else behavior is undefined.
-   * If the columnType is null, we store the data as {@link ColumnType#NESTED_DATA}. This can be done if we know that
-   * the data that we receive can be serded generically using the nested data. It is currently used in the brokers to
-   * store the data with unknown types into frames.
    *
    * @param signature signature used to generate the reader
    */
@@ -84,25 +83,17 @@ public class FrameReader
     // caught on the write side, but we do it again here for safety.
     final Set<String> disallowedFieldNames = FrameWriterUtils.findDisallowedFieldNames(signature);
     if (!disallowedFieldNames.isEmpty()) {
-      throw new IAE("Disallowed field names: %s", disallowedFieldNames);
+      throw new IAE("Disallowed column names[%s]", disallowedFieldNames);
     }
 
-    final List<FrameColumnReader> columnReaders = new ArrayList<>(signature.size());
-    final List<FieldReader> fieldReaders = new ArrayList<>(signature.size());
-
+    // Check that the signature does not have any null types.
     for (int columnNumber = 0; columnNumber < signature.size(); columnNumber++) {
-      final ColumnType columnType =
-          Preconditions.checkNotNull(
-              signature.getColumnType(columnNumber).orElse(null),
-              "Type for column [%s]",
-              signature.getColumnName(columnNumber)
-          );
-
-      fieldReaders.add(FieldReaders.create(signature.getColumnName(columnNumber), columnType));
-      columnReaders.add(FrameColumnReaders.create(signature.getColumnName(columnNumber), columnNumber, columnType));
+      if (!signature.getColumnType(columnNumber).isPresent()) {
+        throw DruidException.defensive("Missing type for column[%s]", signature.getColumnName(columnNumber));
+      }
     }
 
-    return new FrameReader(signature, columnReaders, fieldReaders);
+    return new FrameReader(signature);
   }
 
   public RowSignature signature()
@@ -125,14 +116,12 @@ public class FrameReader
     if (columnNumber < 0) {
       return null;
     } else {
-      switch (frame.type()) {
-        case COLUMNAR:
-          // Better than frameReader.frameSignature().getColumnCapabilities(columnName), because this method has more
-          // insight into what's actually going on with this column (nulls, multivalue, etc).
-          return columnReaders.get(columnNumber).readColumn(frame).getCapabilities();
-        default:
-          return signature.getColumnCapabilities(columnName);
+      if (frame.type().isColumnar()) {
+        // Better than frameReader.frameSignature().getColumnCapabilities(columnName), because this method has more
+        // insight into what's actually going on with this column (nulls, multivalue, etc).
+        return getColumnReaders().get(columnNumber).readColumn(frame).getCapabilities();
       }
+      return signature.getColumnCapabilities(columnName);
     }
   }
 
@@ -141,26 +130,84 @@ public class FrameReader
    */
   public CursorFactory makeCursorFactory(final Frame frame)
   {
-    switch (frame.type()) {
-      case COLUMNAR:
-        return new ColumnarFrameCursorFactory(frame, signature, columnReaders);
-      case ROW_BASED:
-        return new RowFrameCursorFactory(frame, this, fieldReaders);
-      default:
-        throw DruidException.defensive("Unrecognized frame type [%s]", frame.type());
+    if (frame.type().isColumnar()) {
+      return new ColumnarFrameCursorFactory(frame, signature, getColumnReaders());
+    } else {
+      return new RowFrameCursorFactory(frame, this, getFieldReaders(frame.type()));
     }
   }
 
   /**
    * Create a {@link FrameComparisonWidget} for the given frame.
    * <p>
-   * Only possible for frames of type {@link org.apache.druid.frame.FrameType#ROW_BASED}. The provided
-   * sortColumns must be a prefix of {@link #signature()}.
+   * Only possible for row-based frames. The provided sortColumns must be a prefix of {@link #signature()}.
    */
   public FrameComparisonWidget makeComparisonWidget(final Frame frame, final List<KeyColumn> keyColumns)
   {
     FrameWriterUtils.verifySortColumns(keyColumns, signature);
+    return FrameComparisonWidgetImpl.create(
+        frame,
+        signature,
+        keyColumns,
+        getFieldReaders(frame.type()).subList(0, keyColumns.size())
+    );
+  }
 
-    return FrameComparisonWidgetImpl.create(frame, signature, keyColumns, fieldReaders.subList(0, keyColumns.size()));
+  /**
+   * Returns readers for columnar frames, using {@link #columnReaders} as a cache.
+   */
+  private List<FrameColumnReader> getColumnReaders()
+  {
+    if (columnReaders == null) {
+      synchronized (this) {
+        if (columnReaders == null) {
+          columnReaders = makeColumnReaders(signature);
+        }
+      }
+    }
+
+    return columnReaders;
+  }
+
+  /**
+   * Returns readers for row-based frames, using {@link #fieldReaders} as a cache.
+   */
+  private List<FieldReader> getFieldReaders(final FrameType frameType)
+  {
+    synchronized (fieldReaders) {
+      return fieldReaders.computeIfAbsent(frameType, type -> makeFieldReaders(signature, type));
+    }
+  }
+
+  /**
+   * Helper used by {@link #getColumnReaders()}.
+   */
+  private static List<FrameColumnReader> makeColumnReaders(final RowSignature signature)
+  {
+    final List<FrameColumnReader> columnReaders = new ArrayList<>(signature.size());
+
+    for (int columnNumber = 0; columnNumber < signature.size(); columnNumber++) {
+      // columnType will not be missing, since it was validated in create().
+      final ColumnType columnType = signature.getColumnType(columnNumber).get();
+      columnReaders.add(FrameColumnReaders.create(signature.getColumnName(columnNumber), columnNumber, columnType));
+    }
+
+    return columnReaders;
+  }
+
+  /**
+   * Helper used by {@link #getFieldReaders(FrameType)}.
+   */
+  private static List<FieldReader> makeFieldReaders(final RowSignature signature, final FrameType frameType)
+  {
+    final List<FieldReader> fieldReaders = new ArrayList<>(signature.size());
+
+    for (int columnNumber = 0; columnNumber < signature.size(); columnNumber++) {
+      // columnType will not be missing, since it was validated in create().
+      final ColumnType columnType = signature.getColumnType(columnNumber).get();
+      fieldReaders.add(FieldReaders.create(signature.getColumnName(columnNumber), columnType, frameType));
+    }
+
+    return fieldReaders;
   }
 }

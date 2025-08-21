@@ -379,24 +379,9 @@ documentation for more information on the output of EXPLAIN PLAN.
 Request logs show the exact native query that will be run. Alternatively, to see the native query plan, set `useNativeQueryExplain` to true in the query context.
 :::
 
-## Identifiers and literals
+## SET
 
-Identifiers like datasource and column names can optionally be quoted using double quotes. To escape a double quote
-inside an identifier, use another double quote, like `"My ""very own"" identifier"`. All identifiers are case-sensitive
-and no implicit case conversions are performed.
-
-Literal strings should be quoted with single quotes, like `'foo'`. Literal strings with Unicode escapes can be written
-like `U&'fo\00F6'`, where character codes in hex are prefixed by a backslash. Literal numbers can be written in forms
-like `100` (denoting an integer), `100.0` (denoting a floating point value), or `1.0e5` (scientific notation). Literal
-timestamps can be written like `TIMESTAMP '2000-01-01 00:00:00'`. Literal intervals, used for time arithmetic, can be
-written like `INTERVAL '1' HOUR`, `INTERVAL '1 02:03' DAY TO MINUTE`, `INTERVAL '1-2' YEAR TO MONTH`, and so on.
-
-## SET statements
-
-The Druid SQL [JSON API](../api-reference/sql-api.md) supports including 0 or more `SET` statements separated by `;`
-preceding a statement to execute in the `query` string of the request. If present, these `SET` statements
-assign [SQL query context parameter values](../querying/sql-query-context.md) which only apply to the non-`SET`
-statement of the same request (subsequent requests are not affected).
+SET statements allow you to specify SQL query context parameters that modify the behavior of a Druid SQL query. You can include one or more SET statements before the main SQL query. Druid supports using SET in the Druid SQL [JSON API](../api-reference/sql-api.md) and the [web console](../operations/web-console.md). 
 
 The syntax of a `SET` statement is:
 
@@ -412,6 +397,29 @@ SET sqlTimeZone = 'America/Los_Angeles';
 SET timeout = 90000;
 SELECT some_column, COUNT(*) FROM druid.foo WHERE other_column = 'foo' GROUP BY 1 ORDER BY 2 DESC
 ```
+
+SET statements only apply to the query in the same request. Subsequent requests are not affected.
+
+SET statements work with SELECT, INSERT, and REPLACE queries.
+
+If you use the [JSON API](../api-reference/sql-api.md), you can also include query context parameters using the `context` field. If you include both, the parameter value in SET takes precedence over the parameter value in `context`.
+
+Note that you can only use SET to assign literal values, such as numbers, strings, or Booleans. To set a query context parameter to an array or JSON object, use the `context` field rather than SET.
+
+For other approaches to set the query context, see [Set query context](./query-context.md).
+
+## Identifiers and literals
+
+Identifiers like datasource and column names can optionally be quoted using double quotes. To escape a double quote
+inside an identifier, use another double quote, like `"My ""very own"" identifier"`. All identifiers are case-sensitive
+and no implicit case conversions are performed.
+
+Literal strings should be quoted with single quotes, like `'foo'`. Literal strings with Unicode escapes can be written
+like `U&'fo\00F6'`, where character codes in hex are prefixed by a backslash. Literal numbers can be written in forms
+like `100` (denoting an integer), `100.0` (denoting a floating point value), or `1.0e5` (scientific notation). Literal
+timestamps can be written like `TIMESTAMP '2000-01-01 00:00:00'`. Literal intervals, used for time arithmetic, can be
+written like `INTERVAL '1' HOUR`, `INTERVAL '1 02:03' DAY TO MINUTE`, `INTERVAL '1-2' YEAR TO MONTH`, and so on.
+
 
 ## Dynamic parameters
 

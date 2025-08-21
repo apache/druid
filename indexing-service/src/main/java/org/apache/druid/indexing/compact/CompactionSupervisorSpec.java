@@ -60,7 +60,7 @@ public class CompactionSupervisorSpec implements SupervisorSpec
     this.spec = spec;
     this.suspended = Configs.valueOrDefault(suspended, false);
     this.scheduler = scheduler;
-    this.validationResult = scheduler.validateCompactionConfig(spec);
+    this.validationResult = scheduler == null ? null : scheduler.validateCompactionConfig(spec);
   }
 
   @JsonProperty

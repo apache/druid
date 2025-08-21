@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>34.0.0-SNAPSHOT</version>
+    <version>35.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -75,7 +75,7 @@
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
         <apache.curator.version>5.8.0</apache.curator.version>
-        <apache.kafka.version>3.9.0</apache.kafka.version>
+        <apache.kafka.version>3.9.1</apache.kafka.version>
         <!-- when updating apache ranger, verify the usage of aws-bundle-sdk vs aws-logs-sdk
         and update as needed in extensions-core/druid-ranger-security/pm.xml  -->
         <apache.ranger.version>2.4.0</apache.ranger.version>
@@ -87,7 +87,7 @@
             The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
           -->
         <calcite.version>1.37.0</calcite.version>
-        <confluent.version>6.2.12</confluent.version>
+        <confluent.version>6.2.15</confluent.version>
         <cronutils.version>9.2.0</cronutils.version>
         <datasketches.version>4.2.0</datasketches.version>
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
@@ -95,22 +95,23 @@
         <dropwizard.metrics.version>4.2.22</dropwizard.metrics.version>
         <errorprone.version>2.35.1</errorprone.version>
         <fastutil.version>8.5.4</fastutil.version>
-        <guava.version>32.0.1-jre</guava.version>
+        <guava.version>32.1.3-jre</guava.version>
         <guice.version>5.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
         <jetty.version>9.4.57.v20241219</jetty.version>
         <jersey.version>1.19.4</jersey.version>
-        <jackson.version>2.12.7.20221012</jackson.version>
+        <jackson.core.version>2.18.4.1</jackson.core.version>
+        <jackson.version>2.18.4</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
         <log4j.version>2.22.1</log4j.version>
         <mysql.version>8.2.0</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
-        <netty4.version>4.1.118.Final</netty4.version>
+        <netty4.version>4.1.122.Final</netty4.version>
         <postgresql.version>42.7.2</postgresql.version>
-        <protobuf.version>3.25.5</protobuf.version>
+        <protobuf.version>3.25.8</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
-        <slf4j.version>1.7.36</slf4j.version>
+        <slf4j.version>2.0.16</slf4j.version>
         <jna.version>5.13.0</jna.version>
         <jna-platform.version>5.13.0</jna-platform.version>
         <hadoop.compile.version>3.3.6</hadoop.compile.version>
@@ -119,6 +120,7 @@
         <aws.sdk.version>1.12.784</aws.sdk.version>
         <caffeine.version>2.8.0</caffeine.version>
         <jacoco.version>0.8.12</jacoco.version>
+        <testcontainers.version>1.21.3</testcontainers.version>
         <hibernate-validator.version>6.2.5.Final</hibernate-validator.version>
         <httpclient.version>4.5.13</httpclient.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
@@ -183,11 +185,12 @@
 
     <modules>
         <module>processing</module>
-        <module>indexing-hadoop</module>
-        <module>indexing-service</module>
         <module>server</module>
-        <module>sql</module>
+        <module>indexing-service</module>
+        <module>indexing-hadoop</module>
+        <module>multi-stage-query</module>
         <module>services</module>
+        <module>sql</module>
         <module>integration-tests</module>
         <module>benchmarks</module>
         <module>web-console</module>
@@ -209,7 +212,6 @@
         <module>extensions-core/kafka-extraction-namespace</module>
         <module>extensions-core/kafka-indexing-service</module>
         <module>extensions-core/kinesis-indexing-service</module>
-        <module>extensions-core/multi-stage-query</module>
         <module>extensions-core/mysql-metadata-storage</module>
         <module>extensions-core/orc-extensions</module>
         <module>extensions-core/parquet-extensions</module>
@@ -225,6 +227,7 @@
         <module>extensions-core/google-extensions</module>
         <module>extensions-core/druid-catalog</module>
         <module>extensions-core/testing-tools</module>
+        <module>extensions-core/druid-testcontainers</module>
         <!-- Community extensions -->
         <module>extensions-contrib/compressed-bigdecimal</module>
         <module>extensions-contrib/influx-extensions</module>
@@ -233,6 +236,7 @@
         <module>extensions-contrib/cloudfiles-extensions</module>
         <module>extensions-contrib/graphite-emitter</module>
         <module>extensions-contrib/distinctcount</module>
+        <module>extensions-contrib/druid-exact-count-bitmap</module>
         <module>extensions-contrib/statsd-emitter</module>
         <module>extensions-contrib/time-min-max</module>
         <module>extensions-contrib/virtual-columns</module>
@@ -266,6 +270,7 @@
         <module>integration-tests-ex/image</module>
         <module>integration-tests-ex/cases</module>
         <module>quidem-ut</module>
+        <module>embedded-tests</module>
     </modules>
 
     <repositories>
@@ -322,7 +327,7 @@
             <dependency>
                 <groupId>commons-logging</groupId>
                 <artifactId>commons-logging</artifactId>
-                <version>1.1.1</version>
+                <version>1.3.5</version>
             </dependency>
             <dependency>
                 <groupId>commons-lang</groupId>
@@ -342,12 +347,12 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
-                <version>3.12.0</version>
+                <version>3.17.0</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-text</artifactId>
-                <version>1.10.0</version>
+                <version>1.13.1</version>
             </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
@@ -382,7 +387,7 @@
             <dependency>
                 <groupId>net.minidev</groupId>
                 <artifactId>json-smart</artifactId>
-                <version>2.4.11</version>
+                <version>2.5.2</version>
             </dependency>
 
             <!-- transitive dependency of testng
@@ -406,7 +411,7 @@
             <dependency>
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-stdlib</artifactId>
-                <version>1.6.10</version>
+                <version>1.9.25</version>
             </dependency>
             <!-- Transitive dependency of kubernetes-client-java in kubernetes-extension,
             schema-repo in avro-extensions, and com.google.caliper:caliper in druid-server
@@ -615,7 +620,7 @@
             <dependency>
                 <groupId>com.fasterxml.jackson</groupId>
                 <artifactId>jackson-bom</artifactId>
-                <version>${jackson.version}</version>
+                <version>${jackson.core.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -795,12 +800,12 @@
             <dependency>
                 <groupId>joda-time</groupId>
                 <artifactId>joda-time</artifactId>
-                <version>2.12.5</version>
+                <version>2.14.0</version>
             </dependency>
             <dependency>
                 <groupId>com.google.code.findbugs</groupId>
                 <artifactId>jsr305</artifactId>
-                <version>2.0.1</version>
+                <version>3.0.2</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.logging.log4j</groupId>
@@ -814,7 +819,7 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.logging.log4j</groupId>
-                <artifactId>log4j-slf4j-impl</artifactId>
+                <artifactId>log4j-slf4j2-impl</artifactId>
                 <version>${log4j.version}</version>
             </dependency>
             <dependency>
@@ -879,7 +884,7 @@
             <dependency>
                 <groupId>org.xerial.snappy</groupId>
                 <artifactId>snappy-java</artifactId>
-                <version>1.1.10.4</version>
+                <version>1.1.10.7</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
@@ -915,7 +920,7 @@
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpcore</artifactId>
-                <version>4.4.11</version>
+                <version>4.4.16</version>
             </dependency>
             <dependency>
                 <groupId>org.mapdb</groupId>
@@ -961,7 +966,7 @@
             <groupId>commons-beanutils</groupId>
                 <artifactId>commons-beanutils</artifactId>
                 <!-- override the transitive dependency from com.opencsv:opensv:4.6 to version 1.9.3 to address CVE-2014-0114 -->
-                <version>1.9.4</version>
+                <version>1.11.0</version>
             </dependency>
             <dependency>
                 <groupId>com.jayway.jsonpath</groupId>
@@ -986,17 +991,17 @@
             <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm</artifactId>
-                <version>9.3</version>
+                <version>9.8</version>
             </dependency>
             <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm-commons</artifactId>
-                <version>9.3</version>
+                <version>9.8</version>
             </dependency>
             <dependency>
                 <groupId>org.asynchttpclient</groupId>
                 <artifactId>async-http-client</artifactId>
-                <version>3.0.1</version>
+                <version>3.0.2</version>
             </dependency>
             <dependency>
                 <groupId>net.java.dev.jna</groupId>
@@ -1046,7 +1051,7 @@
             <dependency>
                 <groupId>org.codehaus.plexus</groupId>
                 <artifactId>plexus-utils</artifactId>
-                <version>3.0.24</version>
+                <version>3.1.0</version>
             </dependency>
             <dependency>
                 <groupId>com.github.ben-manes.caffeine</groupId>
@@ -1091,7 +1096,7 @@
             <dependency>
                 <groupId>org.junit</groupId>
                 <artifactId>junit-bom</artifactId>
-                <version>5.10.2</version>
+                <version>5.13.3</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -1277,6 +1282,11 @@
                 </exclusions>
             </dependency>
             <dependency>
+                <groupId>com.google.j2objc</groupId>
+                <artifactId>j2objc-annotations</artifactId>
+                <version>2.8</version>
+            </dependency>
+            <dependency>
                 <groupId>io.github.resilience4j</groupId>
                 <artifactId>resilience4j-bulkhead</artifactId>
                 <version>${resilience4j.version}</version>
@@ -1340,7 +1350,7 @@
             <dependency>
                 <groupId>nl.jqno.equalsverifier</groupId>
                 <artifactId>equalsverifier</artifactId>
-                <version>3.15.1</version>
+                <version>3.15.8</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -1375,7 +1385,7 @@
           <dependency>
             <groupId>org.immutables</groupId>
             <artifactId>value-annotations</artifactId>
-            <version>2.8.8</version>
+            <version>2.10.1</version>
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
@@ -1397,14 +1407,36 @@
             <dependency>
                 <groupId>org.testcontainers</groupId>
                 <artifactId>testcontainers</artifactId>
-                <version>1.16.3</version>
+                <version>${testcontainers.version}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.testcontainers</groupId>
                 <artifactId>junit-jupiter</artifactId>
-                <version>1.16.3</version>
+                <version>${testcontainers.version}</version>
                 <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.jaxrs</groupId>
+                <artifactId>jackson-jaxrs-json-provider</artifactId>
+                <version>${jackson.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>javax.xml.bind</groupId>
+                        <artifactId>jaxb-api</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.jaxrs</groupId>
+                <artifactId>jackson-jaxrs-smile-provider</artifactId>
+                <version>${jackson.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>javax.xml.bind</groupId>
+                        <artifactId>jaxb-api</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -1550,7 +1582,7 @@
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>4.8.6.6</version>
+                <version>4.9.3.2</version>
                 <dependencies>
                     <!-- overwrite dependency on spotbugs if you want to specify the version of spotbugs -->
                     <dependency>
@@ -1682,7 +1714,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <version>3.0.0</version>
                 <executions>
                     <execution>
                         <id>default-cli</id>
@@ -1702,6 +1733,10 @@
                                     <excludes>
                                         <!--LGPL licenced library-->
                                         <exclude>com.google.code.findbugs:annotations</exclude>
+                                        <!-- shouldn't be loaded alongside with log4j-slf4j2-impl -->
+                                        <exclude>org.apache.logging.log4j:log4j-slf4j-impl</exclude>
+                                        <!-- See https://github.com/apache/druid/pull/17370 -->
+                                        <exclude>javax.xml.bind:jaxb-api</exclude>
                                     </excludes>
                                 </bannedDependencies>
                             </rules>
@@ -1877,11 +1912,6 @@
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-clean-plugin</artifactId>
-                    <version>2.5</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-dependency-plugin</artifactId>
                     <version>3.3.0</version>
                     <configuration>
@@ -1892,13 +1922,7 @@
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-deploy-plugin</artifactId>
-                    <version>2.7</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-install-plugin</artifactId>
-                    <version>2.3.1</version>
                     <executions>
                         <execution>
                             <phase>package</phase>
@@ -1910,18 +1934,8 @@
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-resources-plugin</artifactId>
-                    <version>3.2.0</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-shade-plugin</artifactId>
                     <version>3.5.0</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-site-plugin</artifactId>
-                    <version>3.11.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.scala-tools</groupId>
@@ -1934,19 +1948,9 @@
                     <version>4.5.3</version>
                 </plugin>
                 <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-assembly-plugin</artifactId>
-                    <version>3.1.0</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.codehaus.mojo</groupId>
-                    <artifactId>license-maven-plugin</artifactId>
-                    <version>1.8</version>
-                </plugin>
-                <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>exec-maven-plugin</artifactId>
-                    <version>3.1.0</version>
+                    <version>3.5.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
@@ -1961,10 +1965,9 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>2.10.1</version>
                     <configuration>
                         <!-- jdk8 started linting javadocs by default; ours are not fully compliant -->
-                        <additionalparam>-Xdoclint:none</additionalparam>
+                        <doclint>none</doclint>
 
                         <!-- HadoopFsWrapper javadocs cannot be generated due to missing annotations -->
                         <excludePackageNames>org.apache.hadoop.fs</excludePackageNames>

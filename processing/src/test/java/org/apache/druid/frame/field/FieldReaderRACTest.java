@@ -51,7 +51,7 @@ public class FieldReaderRACTest extends InitializedNullHandlingTest
   {
     final QueryableIndex index = TestIndex.getMMappedTestIndex();
     final CursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
-    final Frame frame = FrameTestUtil.cursorFactoryToFrame(cursorFactory, FrameType.ROW_BASED);
+    final Frame frame = FrameTestUtil.cursorFactoryToFrame(cursorFactory, FrameType.latestRowBased());
 
     final RowSignature siggy = cursorFactory.getRowSignature();
     final RowBasedFrameRowsAndColumns rowBasedRAC = new RowBasedFrameRowsAndColumns(frame, siggy);

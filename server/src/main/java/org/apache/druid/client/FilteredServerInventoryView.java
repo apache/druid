@@ -34,5 +34,5 @@ public interface FilteredServerInventoryView extends InventoryView
       Predicate<Pair<DruidServerMetadata, DataSegment>> filter
   );
 
-  void registerServerRemovedCallback(Executor exec, ServerView.ServerRemovedCallback callback);
+  void registerServerCallback(Executor exec, ServerView.ServerCallback callback);
 }

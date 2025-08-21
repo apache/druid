@@ -641,7 +641,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
         if (0 <= dimIndex && dimIndex < dims.length) {
           final StructuredData data = (StructuredData) dims[dimIndex];
           if (data != null) {
-            final Object o = ExprEval.bestEffortOf(data.getValue()).valueOrDefault();
+            final Object o = ExprEval.bestEffortOf(data.getValue()).value();
             return o;
           }
         }

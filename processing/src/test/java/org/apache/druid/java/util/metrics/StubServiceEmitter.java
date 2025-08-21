@@ -24,11 +24,14 @@ import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
  * Test implementation of {@link ServiceEmitter} that collects emitted metrics
@@ -36,9 +39,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifier
 {
-  private final List<Event> events = new ArrayList<>();
-  private final List<AlertEvent> alertEvents = new ArrayList<>();
-  private final ConcurrentHashMap<String, List<ServiceMetricEventSnapshot>> metricEvents = new ConcurrentHashMap<>();
+  private final Queue<Event> events = new ConcurrentLinkedDeque<>();
+  private final Queue<AlertEvent> alertEvents = new ConcurrentLinkedDeque<>();
+  private final ConcurrentHashMap<String, Queue<ServiceMetricEvent>> metricEvents = new ConcurrentHashMap<>();
 
   public StubServiceEmitter()
   {
@@ -55,8 +58,8 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
   {
     if (event instanceof ServiceMetricEvent) {
       ServiceMetricEvent metricEvent = (ServiceMetricEvent) event;
-      metricEvents.computeIfAbsent(metricEvent.getMetric(), name -> new ArrayList<>())
-                  .add(new ServiceMetricEventSnapshot(metricEvent));
+      metricEvents.computeIfAbsent(metricEvent.getMetric(), name -> new ConcurrentLinkedDeque<>())
+                  .add(metricEvent);
     } else if (event instanceof AlertEvent) {
       alertEvents.add((AlertEvent) event);
     }
@@ -68,17 +71,23 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
    */
   public List<Event> getEvents()
   {
-    return events;
+    return new ArrayList<>(events);
+  }
+
+  public int getNumEmittedEvents()
+  {
+    return events.size();
   }
 
   /**
-   * Gets all the metric events emitted since the previous {@link #flush()}.
+   * Gets all the metric events emitted for the given metric name since the previous {@link #flush()}.
    *
-   * @return Map from metric name to list of events emitted for that metric.
+   * @return List of events emitted for the given metric.
    */
-  public Map<String, List<ServiceMetricEventSnapshot>> getMetricEvents()
+  public List<ServiceMetricEvent> getMetricEvents(String metricName)
   {
-    return metricEvents;
+    final Queue<ServiceMetricEvent> metricEventQueue = metricEvents.get(metricName);
+    return metricEventQueue == null ? List.of() : List.copyOf(metricEventQueue);
   }
 
   /**
@@ -86,7 +95,7 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
    */
   public List<AlertEvent> getAlerts()
   {
-    return alertEvents;
+    return new ArrayList<>(alertEvents);
   }
 
   @Override
@@ -96,18 +105,18 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
   )
   {
     final List<Number> values = new ArrayList<>();
-    final List<ServiceMetricEventSnapshot> events =
-        metricEvents.getOrDefault(metricName, Collections.emptyList());
+    final Queue<ServiceMetricEvent> events =
+        metricEvents.getOrDefault(metricName, new ArrayDeque<>());
     final Map<String, Object> filters =
         dimensionFilters == null ? Collections.emptyMap() : dimensionFilters;
-    for (ServiceMetricEventSnapshot event : events) {
+    for (ServiceMetricEvent event : events) {
       final Map<String, Object> userDims = event.getUserDims();
       boolean match = filters.keySet().stream()
                              .map(d -> filters.get(d).equals(userDims.get(d)))
                              .reduce((a, b) -> a && b)
                              .orElse(true);
       if (match) {
-        values.add(event.getMetricEvent().getValue());
+        values.add(event.getValue());
       }
     }
 
@@ -130,33 +139,5 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
   @Override
   public void close()
   {
-  }
-
-  /**
-   * Helper class to encapsulate a ServiceMetricEvent and its user dimensions.
-   * Since {@link StubServiceEmitter} doesn't actually emit metrics and saves the emitted metrics in-memory,
-   * this helper class saves a copy of {@link ServiceMetricEvent#userDims} of emitted metrics
-   * via {@link ServiceMetricEvent#getUserDims()} as it can get mutated.
-   */
-  public static class ServiceMetricEventSnapshot
-  {
-    private final ServiceMetricEvent metricEvent;
-    private final Map<String, Object> userDims;
-
-    public ServiceMetricEventSnapshot(ServiceMetricEvent metricEvent)
-    {
-      this.metricEvent = metricEvent;
-      this.userDims = metricEvent.getUserDims();
-    }
-
-    public ServiceMetricEvent getMetricEvent()
-    {
-      return metricEvent;
-    }
-
-    public Map<String, Object> getUserDims()
-    {
-      return userDims;
-    }
   }
 }

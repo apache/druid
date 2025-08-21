@@ -130,7 +130,7 @@ public class IndexMergerV9 implements IndexMerger
 
   private File makeIndexFiles(
       final List<IndexableAdapter> adapters,
-      final @Nullable AggregatorFactory[] metricAggs,
+      final @Nullable Metadata segmentMetadata,
       final File outDir,
       final ProgressIndicator progress,
       final List<String> mergedDimensionsWithTime, // has both explicit and implicit dimensions, as well as __time
@@ -144,43 +144,11 @@ public class IndexMergerV9 implements IndexMerger
     progress.start();
     progress.progress();
 
-    List<Metadata> metadataList = Lists.transform(adapters, IndexableAdapter::getMetadata);
-
     // Merged dimensions without __time.
     List<String> mergedDimensions =
         mergedDimensionsWithTime.stream()
                                 .filter(dim -> !ColumnHolder.TIME_COLUMN_NAME.equals(dim))
                                 .collect(Collectors.toList());
-
-    Metadata segmentMetadata;
-    if (metricAggs != null) {
-      AggregatorFactory[] combiningMetricAggs = new AggregatorFactory[metricAggs.length];
-      for (int i = 0; i < metricAggs.length; i++) {
-        combiningMetricAggs[i] = metricAggs[i].getCombiningFactory();
-      }
-      segmentMetadata = Metadata.merge(
-          metadataList,
-          combiningMetricAggs
-      );
-    } else {
-      segmentMetadata = Metadata.merge(
-          metadataList,
-          null
-      );
-    }
-
-    if (segmentMetadata != null
-        && segmentMetadata.getOrdering() != null
-        && segmentMetadata.getOrdering()
-                          .stream()
-                          .noneMatch(orderBy -> ColumnHolder.TIME_COLUMN_NAME.equals(orderBy.getColumnName()))) {
-      throw DruidException.defensive(
-          "sortOrder[%s] must include[%s]",
-          segmentMetadata.getOrdering(),
-          ColumnHolder.TIME_COLUMN_NAME
-      );
-    }
-
     Closer closer = Closer.create();
     try {
       final FileSmoosher v9Smoosher = new FileSmoosher(outDir);
@@ -302,8 +270,12 @@ public class IndexMergerV9 implements IndexMerger
 
       progress.stopSection(section);
 
-      if (segmentMetadata != null && !CollectionUtils.isNullOrEmpty(segmentMetadata.getProjections())) {
-        segmentMetadata = makeProjections(
+      // Recompute the projections.
+      final Metadata finalMetadata;
+      if (segmentMetadata == null || CollectionUtils.isNullOrEmpty(segmentMetadata.getProjections())) {
+        finalMetadata = segmentMetadata;
+      } else {
+        finalMetadata = makeProjections(
             v9Smoosher,
             segmentMetadata.getProjections(),
             adapters,
@@ -330,7 +302,7 @@ public class IndexMergerV9 implements IndexMerger
           mergers,
           dimensionsSpecInspector
       );
-      makeMetadataBinary(v9Smoosher, progress, segmentMetadata);
+      makeMetadataBinary(v9Smoosher, progress, finalMetadata);
 
       v9Smoosher.close();
       progress.stop();
@@ -677,6 +649,7 @@ public class IndexMergerV9 implements IndexMerger
   {
     makeMetricsColumns(v9Smoosher, progress, mergedMetrics, metricsTypes, metWriters, indexSpec, "");
   }
+
   private void makeMetricsColumns(
       final FileSmoosher v9Smoosher,
       final ProgressIndicator progress,
@@ -1145,6 +1118,9 @@ public class IndexMergerV9 implements IndexMerger
     );
   }
 
+  /**
+   * The indexes here must have the same {@link Metadata}, otherwise an error would be thrown.
+   */
   @Override
   public File merge(
       List<IndexableAdapter> indexes,
@@ -1377,9 +1353,28 @@ public class IndexMergerV9 implements IndexMerger
       rowMergerFn = MergingRowIterator::new;
     }
 
+    List<Metadata> metadataList = Lists.transform(indexes, IndexableAdapter::getMetadata);
+    AggregatorFactory[] combiningMetricAggs = new AggregatorFactory[sortedMetricAggs.length];
+    for (int i = 0; i < sortedMetricAggs.length; i++) {
+      combiningMetricAggs[i] = sortedMetricAggs[i].getCombiningFactory();
+    }
+    final Metadata segmentMetadata = Metadata.merge(metadataList, combiningMetricAggs);
+
+    if (segmentMetadata != null
+        && segmentMetadata.getOrdering() != null
+        && segmentMetadata.getOrdering()
+                          .stream()
+                          .noneMatch(orderBy -> ColumnHolder.TIME_COLUMN_NAME.equals(orderBy.getColumnName()))) {
+      throw DruidException.defensive(
+          "sortOrder[%s] must include[%s]",
+          segmentMetadata.getOrdering(),
+          ColumnHolder.TIME_COLUMN_NAME
+      );
+    }
+
     return makeIndexFiles(
         indexes,
-        sortedMetricAggs,
+        segmentMetadata,
         outDir,
         progress,
         mergedDimensionsWithTime,

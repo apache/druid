@@ -32,6 +32,8 @@ import { AutoForm, FormJsonSelector, JsonInput } from '../../components';
 import type { LookupSpec } from '../../druid-models';
 import { isLookupInvalid, LOOKUP_FIELDS } from '../../druid-models';
 
+import { LOOKUP_COMPLETIONS } from './lookup-completions';
+
 import './lookup-edit-dialog.scss';
 
 export interface LookupEditDialogProps {
@@ -143,6 +145,7 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
             onChange={m => onChange('spec', m)}
             setError={setJsonError}
             issueWithValue={spec => AutoForm.issueWithModel(spec, LOOKUP_FIELDS)}
+            jsonCompletions={LOOKUP_COMPLETIONS}
           />
         )}
       </div>

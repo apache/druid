@@ -19,8 +19,6 @@
 
 package org.apache.druid.sql;
 
-import org.apache.druid.sql.http.SqlQuery;
-
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -44,11 +42,11 @@ public class SqlStatementFactory
   }
 
   public HttpStatement httpStatement(
-      final SqlQuery sqlQuery,
+      final SqlQueryPlus sqlQueryPlus,
       final HttpServletRequest req
   )
   {
-    return new HttpStatement(lifecycleToolbox, sqlQuery, req);
+    return new HttpStatement(lifecycleToolbox, sqlQueryPlus, req);
   }
 
   public DirectStatement directStatement(final SqlQueryPlus sqlRequest)

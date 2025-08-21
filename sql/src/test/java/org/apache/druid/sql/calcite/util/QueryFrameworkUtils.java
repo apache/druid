@@ -139,7 +139,6 @@ public class QueryFrameworkUtils
         NoopServiceEmitter.instance(),
         NoopRequestLogger.instance(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new DefaultQueryConfig(ImmutableMap.of()),
         new SqlLifecycleManager()
     );
   }
@@ -368,9 +367,10 @@ public class QueryFrameworkUtils
           return plannerFactory.createPlanner(
               engine,
               queryPlus.sql(),
+              queryPlus.sqlNode(),
+              queryPlus.authContextKeys(),
               queryContext,
-              hook,
-              true
+              hook
           );
         }
       };
@@ -387,9 +387,10 @@ public class QueryFrameworkUtils
           return plannerFactory.createPlanner(
               engine,
               queryPlus.sql(),
+              queryPlus.sqlNode(),
+              queryPlus.authContextKeys(),
               queryContext,
-              hook,
-              true
+              hook
           );
         }
 

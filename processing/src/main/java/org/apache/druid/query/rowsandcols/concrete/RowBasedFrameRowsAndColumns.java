@@ -21,7 +21,6 @@ package org.apache.druid.query.rowsandcols.concrete;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.field.FieldReader;
 import org.apache.druid.frame.field.FieldReaders;
 import org.apache.druid.query.rowsandcols.column.Column;
@@ -34,7 +33,7 @@ public class RowBasedFrameRowsAndColumns extends AbstractFrameRowsAndColumns
 {
   public RowBasedFrameRowsAndColumns(Frame frame, RowSignature signature)
   {
-    super(FrameType.ROW_BASED.ensureType(frame), signature);
+    super(frame.ensureRowBased(), signature);
   }
 
   @Nullable
@@ -57,7 +56,7 @@ public class RowBasedFrameRowsAndColumns extends AbstractFrameRowsAndColumns
                 )
             );
 
-        final FieldReader reader = FieldReaders.create(name, columnType);
+        final FieldReader reader = FieldReaders.create(name, columnType, frame.type());
         colCache.put(name, reader.makeRACColumn(frame, signature, name));
       }
     }

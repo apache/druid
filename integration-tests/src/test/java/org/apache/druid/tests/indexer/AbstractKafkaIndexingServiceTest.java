@@ -23,12 +23,12 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.testing.IntegrationTestingConfig;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
+import org.apache.druid.testing.tools.KafkaEventWriter;
+import org.apache.druid.testing.tools.KafkaUtil;
+import org.apache.druid.testing.tools.StreamEventWriter;
 import org.apache.druid.testing.utils.KafkaAdminClient;
-import org.apache.druid.testing.utils.KafkaEventWriter;
-import org.apache.druid.testing.utils.KafkaUtil;
 import org.apache.druid.testing.utils.StreamAdminClient;
-import org.apache.druid.testing.utils.StreamEventWriter;
 
 import java.util.List;
 import java.util.Map;
@@ -51,6 +51,7 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
 
   @Override
   Function<String, String> generateStreamIngestionPropsTransform(
+      String supervisorId,
       String streamName,
       String fullDatasourceName,
       String parserType,
@@ -68,6 +69,11 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
     KafkaUtil.addPropertiesFromTestConfig(config, consumerProperties);
     return spec -> {
       try {
+        spec = StringUtils.replace(
+            spec,
+            "%%SUPERVISOR_ID%%",
+            supervisorId
+        );
         spec = StringUtils.replace(
             spec,
             "%%DATASOURCE%%",
