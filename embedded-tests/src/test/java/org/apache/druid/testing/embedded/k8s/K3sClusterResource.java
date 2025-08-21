@@ -32,7 +32,6 @@ import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import io.fabric8.kubernetes.client.KubernetesClientTimeoutException;
 import io.fabric8.kubernetes.client.dsl.PodResource;
 import io.fabric8.kubernetes.client.utils.Serialization;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -105,22 +104,11 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
 
   /**
    * Uses the Docker test image specified by the system property
-   * {@link DruidContainerResource#PROPERTY_TEST_IMAGE} for this container.
+   * {@link DruidContainerResource#PROPERTY_TEST_IMAGE} for the Druid pods.
    */
   public K3sClusterResource usingTestImage()
   {
-    final String imageName = System.getProperty(DruidContainerResource.PROPERTY_TEST_IMAGE);
-    InvalidInput.conditionalException(
-        imageName != null,
-        StringUtils.format(
-            "System property[%s] must be set while running Docker tests locally"
-            + " to specify which Druid image to use. Update your run configuration"
-            + " to include '-D%s=<your-test-image>'.",
-            DruidContainerResource.PROPERTY_TEST_IMAGE,
-            DruidContainerResource.PROPERTY_TEST_IMAGE
-        )
-    );
-    return usingDruidImage(imageName);
+    return usingDruidImage(DruidContainerResource.getTestDruidImageName());
   }
 
   @Override
