@@ -71,6 +71,7 @@ public class HllSketchModule implements DruidModule
     SqlBindings.addOperatorConversion(binder, HllSketchToStringOperatorConversion.class);
 
     ExpressionModule.addExprMacro(binder, HllPostAggExprMacros.HLLSketchEstimateExprMacro.class);
+    ExpressionModule.addExprMacro(binder, HllPostAggExprMacros.HllSketchEstimateWithErrorBoundExprMacro.class);
     SqlBindings.addApproxCountDistinctChoice(
         binder,
         HllSketchApproxCountDistinctSqlAggregator.NAME,

@@ -232,7 +232,8 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
   private static final ExprMacroTable MACRO_TABLE = new ExprMacroTable(
       ImmutableList.of(
-          new HllPostAggExprMacros.HLLSketchEstimateExprMacro()
+          new HllPostAggExprMacros.HLLSketchEstimateExprMacro(),
+          new HllPostAggExprMacros.HllSketchEstimateWithErrorBoundExprMacro()
       )
   );
 
@@ -1007,7 +1008,9 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
         + " HLL_SKETCH_ESTIMATE(hllsketch_dim1),"
         + " HLL_SKETCH_ESTIMATE(hllsketch_dbl1),"
         + " HLL_SKETCH_ESTIMATE(hllsketch_l1),"
-        + " HLL_SKETCH_ESTIMATE(hllsketch_f1)"
+        + " HLL_SKETCH_ESTIMATE(hllsketch_f1),"
+        + " HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(hllsketch_dim1),"
+        + " HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(hllsketch_dim1, 2)"
         + " FROM druid.foo",
         ImmutableList.of(
             newScanQueryBuilder()
@@ -1017,11 +1020,13 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                     makeSketchEstimateExpression("v0", "hllsketch_dim1"),
                     makeSketchEstimateExpression("v1", "hllsketch_dbl1"),
                     makeSketchEstimateExpression("v2", "hllsketch_l1"),
-                    makeSketchEstimateExpression("v3", "hllsketch_f1")
+                    makeSketchEstimateExpression("v3", "hllsketch_f1"),
+                    makeSketchEstimateWithErrorBoundsExpression("v4", "hllsketch_dim1"),
+                    makeSketchEstimateWithErrorBoundsExpression("v5", "hllsketch_dim1")
                 )
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .columns("v0", "v1", "v2", "v3")
-                .columnTypes(ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.DOUBLE)
+                .columns("v0", "v1", "v2", "v3", "v4", "v5")
+                .columnTypes(ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.DOUBLE_ARRAY, ColumnType.DOUBLE_ARRAY)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
@@ -1362,6 +1367,16 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     return new ExpressionVirtualColumn(
         outputName,
         StringUtils.format("hll_sketch_estimate(\"%s\")", field),
+        ColumnType.DOUBLE,
+        MACRO_TABLE
+    );
+  }
+
+  private ExpressionVirtualColumn makeSketchEstimateWithErrorBoundsExpression(String outputName, String field)
+  {
+    return new ExpressionVirtualColumn(
+        outputName,
+        StringUtils.format("hll_sketch_estimate_with_error_bounds(\"%s\")", field),
         ColumnType.DOUBLE,
         MACRO_TABLE
     );
