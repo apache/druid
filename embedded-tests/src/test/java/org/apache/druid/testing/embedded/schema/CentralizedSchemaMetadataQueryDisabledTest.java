@@ -22,6 +22,7 @@ package org.apache.druid.testing.embedded.schema;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.compact.CompactionSparseColumnTest;
 import org.apache.druid.testing.embedded.compact.CompactionTaskTest;
+import org.apache.druid.testing.embedded.indexing.KafkaDataFormatsTest;
 import org.junit.jupiter.api.Nested;
 
 /**
@@ -58,6 +59,16 @@ public class CentralizedSchemaMetadataQueryDisabledTest
   {
     @Override
     protected EmbeddedDruidCluster createCluster()
+    {
+      return configureCluster(super.createCluster());
+    }
+  }
+
+  @Nested
+  public class KafkaDataFormats extends KafkaDataFormatsTest
+  {
+    @Override
+    public EmbeddedDruidCluster createCluster()
     {
       return configureCluster(super.createCluster());
     }
