@@ -1017,7 +1017,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   {
     final Map<String, Object> queryContext = QueryContexts.override(
         QUERY_CONTEXT_DEFAULT,
-        ImmutableMap.of(PlannerContext.CTX_SQL_USE_EXTRACTION_FNS, true)
+        Map.of(PlannerContext.CTX_SQL_USE_EXTRACTION_FNS, true)
     );
 
     testQuery(

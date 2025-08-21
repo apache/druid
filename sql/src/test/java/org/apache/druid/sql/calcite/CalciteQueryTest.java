@@ -7533,7 +7533,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           new CardinalityAggregatorFactory(
                               "a1",
                               null,
-                              dimensions(new DefaultDimensionSpec("dim2", "dim2")),
+                              dimensions(DefaultDimensionSpec.of("dim2")),
                               false,
                               true
                           ),
@@ -7541,7 +7541,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               new CardinalityAggregatorFactory(
                                   "a2",
                                   null,
-                                  dimensions(new DefaultDimensionSpec("dim2", "dim2")),
+                                  dimensions(DefaultDimensionSpec.of("dim2")),
                                   false,
                                   true
                               ),
@@ -7550,14 +7550,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           new CardinalityAggregatorFactory(
                               "a3",
                               null,
-                              dimensions(new DefaultDimensionSpec("v0", "v0")),
+                              dimensions(DefaultDimensionSpec.of("v0")),
                               false,
                               true
                           ),
                           new CardinalityAggregatorFactory(
                               "a4",
                               null,
-                              dimensions(new DefaultDimensionSpec("v1", "v1")),
+                              dimensions(DefaultDimensionSpec.of("v1")),
                               false,
                               true
                           ),
