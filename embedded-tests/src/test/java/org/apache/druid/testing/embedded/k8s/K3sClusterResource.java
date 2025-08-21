@@ -62,6 +62,9 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * {@link TestcontainerResource} to run a K3s cluster which can launch Druid pods.
+ */
 public class K3sClusterResource extends TestcontainerResource<K3sContainer>
 {
   private static final Logger log = new Logger(K3sClusterResource.class);
