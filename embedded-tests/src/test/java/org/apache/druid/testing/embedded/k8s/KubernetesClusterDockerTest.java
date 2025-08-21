@@ -26,6 +26,10 @@ import org.apache.druid.testing.embedded.indexing.IngestionSmokeTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 
+/**
+ * Runs some basic ingestion tests against latest image Druid containers running
+ * on a K3s cluster.
+ */
 public class KubernetesClusterDockerTest extends IngestionSmokeTest implements LatestImageDockerTest
 {
   @Override
