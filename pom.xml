@@ -1761,6 +1761,7 @@
                                         <exclude>org.apache.logging.log4j:log4j-slf4j-impl</exclude>
                                         <!-- See https://github.com/apache/druid/pull/17370 -->
                                         <exclude>javax.xml.bind:jaxb-api</exclude>
+                                        <exclude>org.eclipse.jetty.toolchain:jetty-servlet-api</exclude>
                                     </excludes>
                                 </bannedDependencies>
                             </rules>
