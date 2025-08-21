@@ -341,7 +341,8 @@ public class SQLMetadataSupervisorManagerTest
     try {
       supervisorManager.getAllForId(supervisor1, 0);
       Assert.fail("Expected IllegalArgumentException for limit=0");
-    } catch (IllegalArgumentException e) {
+    }
+    catch (IllegalArgumentException e) {
       Assert.assertEquals("Limit must be greater than zero if set", e.getMessage());
     }
 
@@ -357,7 +358,8 @@ public class SQLMetadataSupervisorManagerTest
     try {
       supervisorManager.getAllForId(supervisor1, -1);
       Assert.fail("Expected IllegalArgumentException for limit=-1");
-    } catch (IllegalArgumentException e) {
+    }
+    catch (IllegalArgumentException e) {
       Assert.assertEquals("Limit must be greater than zero if set", e.getMessage());
     }
   }
