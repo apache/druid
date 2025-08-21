@@ -24,7 +24,6 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
-import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.FileUtils;
@@ -43,6 +42,7 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplierDelegate;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.http.client.utils.URIBuilder;
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 
 import java.io.Closeable;
@@ -186,7 +186,7 @@ public class DruidAvaticaTestDriver implements Driver
       }
     }
 
-    protected AbstractAvaticaHandler getAvaticaHandler(final DruidMeta druidMeta)
+    protected Handler.Abstract getAvaticaHandler(final DruidMeta druidMeta)
     {
       return new DruidAvaticaJsonHandler(
           druidMeta,

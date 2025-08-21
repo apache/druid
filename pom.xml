@@ -81,7 +81,7 @@
         <apache.ranger.version>2.4.0</apache.ranger.version>
         <gson.version>2.10.1</gson.version>
         <scala.library.version>2.13.14</scala.library.version>
-        <avatica.version>1.25.0</avatica.version>
+        <avatica.version>1.26.0</avatica.version>
         <avro.version>1.11.4</avro.version>
         <!--
             The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
@@ -775,6 +775,18 @@
                 <artifactId>jetty-ee8-proxy</artifactId>
                 <version>${jetty.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.eclipse.jetty.ee8</groupId>
+                <artifactId>jetty-ee8-nested</artifactId>
+                <version>${jetty.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.eclipse.jetty.toolchain</groupId>
+                        <artifactId>jetty-servlet-api</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-rewrite</artifactId>

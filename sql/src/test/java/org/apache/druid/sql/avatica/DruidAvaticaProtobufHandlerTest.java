@@ -19,9 +19,9 @@
 
 package org.apache.druid.sql.avatica;
 
-import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.DruidNode;
+import org.eclipse.jetty.server.Handler;
 
 public class DruidAvaticaProtobufHandlerTest extends DruidAvaticaHandlerTest
 {
@@ -35,7 +35,7 @@ public class DruidAvaticaProtobufHandlerTest extends DruidAvaticaHandlerTest
   }
 
   @Override
-  protected AbstractAvaticaHandler getAvaticaHandler(final DruidMeta druidMeta)
+  protected Handler.Abstract getAvaticaHandler(final DruidMeta druidMeta)
   {
     return new DruidAvaticaProtobufHandler(
             druidMeta,
