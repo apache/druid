@@ -735,6 +735,13 @@
     ]]></notes>
     <vulnerabilityName>CVE-2024-45772</vulnerabilityName>
   </suppress>
+  <suppress>
+    <!-- No available fixed version yet-->
+    <notes><![CDATA[
+    file name: icu4j-73.2.jar
+    ]]></notes>
+    <vulnerabilityName>CVE-2025-5222</vulnerabilityName>
+  </suppress>
 
   <suppress>
     <notes><![CDATA[
