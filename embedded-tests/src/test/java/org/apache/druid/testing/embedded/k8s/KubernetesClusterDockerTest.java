@@ -26,7 +26,7 @@ import org.apache.druid.testing.embedded.indexing.IngestionSmokeTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 
-public class KubernetesClusterTest extends IngestionSmokeTest implements LatestImageDockerTest
+public class KubernetesClusterDockerTest extends IngestionSmokeTest implements LatestImageDockerTest
 {
   @Override
   protected EmbeddedDruidCluster addServers(EmbeddedDruidCluster cluster)
