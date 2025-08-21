@@ -131,7 +131,6 @@ services:
         ipv4_address: 172.172.172.6
     entrypoint: >
       /bin/sh -c "
-      sleep 30;
       /usr/bin/mc alias set s3 http://minio:9000 ${AWS_ACCESS_KEY_ID} ${AWS_SECRET_ACCESS_KEY};
       /usr/bin/mc mb s3/${DRUID_CLOUD_BUCKET};
       /usr/bin/mc anonymous set public s3/${DRUID_CLOUD_BUCKET};
