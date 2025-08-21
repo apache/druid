@@ -659,24 +659,6 @@
     <cve>CVE-2023-36415</cve>
   </suppress>
   <suppress>
-    <!-- Used in Pac4j. Pac4j versions (such as v5.7.3) corresponding
-    to the safe nimbus-jose-jwt v9.37.2 are incompatible with druid as they don't support JDK 8
-    https://www.pac4j.org/docs/alldocs.html -->
-
-    <notes><![CDATA[
-   file name: nimbus-jose-jwt-8.22.1.jar
-   ]]></notes>
-    <cve>CVE-2023-52428</cve>
-  </suppress>
-  <suppress>
-    <!-- Used in Azure dependencies.
-    Current latest version of Azure BOM (1.2.21) still uses 9.30.2, whereas bug resolved in 9.37.2 -->
-    <notes><![CDATA[
-   file name: nimbus-jose-jwt-9.30.2.jar
-   ]]></notes>
-    <cve>CVE-2023-52428</cve>
-  </suppress>
-  <suppress>
     <!-- Legit issues but currently use the latest ranger-plugins-audit jar v2.4.0 -->
     <notes><![CDATA[
      file name: solr-solrj-8.11.2.jar

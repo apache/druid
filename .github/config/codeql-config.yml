@@ -3,6 +3,3 @@ query-filters:
       id: java/stack-trace-exposure
   - exclude:
       id: java/potentially-weak-cryptographic-algorithm
-      paths:
-        - processing/src/main/java/org/apache/druid/crypto/CryptoService.java
-        - extensions-core/druid-pac4j/src/main/java/org/apache/druid/security/pac4j/Pac4jSessionStore.java
