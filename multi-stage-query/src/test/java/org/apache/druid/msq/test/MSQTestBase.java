@@ -143,7 +143,6 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
@@ -459,7 +458,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
     objectMapper = setupObjectMapper(qf.injector());
     indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
 
-    segmentCacheManager = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, objectMapper).manufacturate(newTempFolder("cacheManager"));
+    segmentCacheManager =
+        new SegmentCacheManagerFactory(indexIO, objectMapper).manufacturate(newTempFolder("cacheManager"));
     segmentManager = new MSQTestSegmentManager(segmentCacheManager);
 
     List<Module> modules = ImmutableList.of(
