@@ -212,22 +212,22 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
       }
 
       imageInputStream.transferTo(tarOutputStream);
-      log.info("Docker image[%s] saved to tar[%s].", localImageName, tarFile);
+      log.info("Saved Docker image[%s] to tar[%s].", localImageName, tarFile);
 
+      final String imagePathInContainer = "/tmp/druid-image.tar";
       getContainer().copyFileToContainer(
           MountableFile.forHostPath(tarFile.getAbsolutePath()),
-          "/tmp/druid-image.tar"
+          imagePathInContainer
       );
 
-      getContainer().execInContainer("ctr", "-n", "k8s.io", "images", "import", "/tmp/druid-image.tar");
+      getContainer().execInContainer("ctr", "-n", "k8s.io", "images", "import", imagePathInContainer);
       log.info("Image[%s] loaded into K3s containerd", localImageName);
 
-      getContainer().execInContainer("rm", "/tmp/druid-image.tar");
-
+      getContainer().execInContainer("rm", imagePathInContainer);
       FileUtils.deleteDirectory(tempDir);
     }
     catch (Exception e) {
-      throw new ISE("Failed to load local Docker image[%s]" + localImageName, e);
+      throw new ISE(e, "Failed to load local Docker image[%s]", localImageName);
     }
   }
 
