@@ -26,18 +26,16 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchEstimateWithErrorBounds;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchHolder;
+import org.apache.druid.query.aggregation.datasketches.theta.SketchModule;
 
 import javax.annotation.Nullable;
 import java.util.List;
-
-import static org.apache.druid.query.aggregation.datasketches.theta.SketchModule.MERGE_TYPE;
-import static org.apache.druid.query.aggregation.datasketches.theta.SketchModule.THETA_SKETCH_TYPE;
 
 public class ThetaPostAggMacros
 {
   public static final String THETA_SKETCH_ESTIMATE = "theta_sketch_estimate";
   public static final String THETA_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS = "theta_sketch_estimate_with_error_bounds";
-  public static final ExpressionType THETA_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS_TYPE = ExpressionType.fromColumnType(MERGE_TYPE);
+  public static final ExpressionType THETA_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS_TYPE = ExpressionType.fromColumnType(SketchModule.MERGE_TYPE);
 
   public static class ThetaSketchEstimateExprMacro implements ExprMacroTable.ExprMacro
   {
