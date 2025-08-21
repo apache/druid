@@ -24,17 +24,7 @@ import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.msq.dart.guice.DartControllerMemoryManagementModule;
-import org.apache.druid.msq.dart.guice.DartControllerModule;
-import org.apache.druid.msq.dart.guice.DartWorkerMemoryManagementModule;
-import org.apache.druid.msq.dart.guice.DartWorkerModule;
 import org.apache.druid.msq.exec.OutputChannelMode;
-import org.apache.druid.msq.guice.IndexerMemoryManagementModule;
-import org.apache.druid.msq.guice.MSQDurableStorageModule;
-import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
-import org.apache.druid.msq.guice.MSQIndexingModule;
-import org.apache.druid.msq.guice.MSQSqlModule;
-import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.report.MSQStagesReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
@@ -101,19 +91,7 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
     return EmbeddedDruidCluster
         .withEmbeddedDerbyAndZookeeper()
         .useLatchableEmitter()
-        .addExtensions(
-            DartControllerModule.class,
-            DartWorkerModule.class,
-            DartControllerMemoryManagementModule.class,
-            DartWorkerMemoryManagementModule.class,
-            IndexerMemoryManagementModule.class,
-            MSQDurableStorageModule.class,
-            MSQIndexingModule.class,
-            MSQSqlModule.class,
-            SqlTaskModule.class,
-            MSQExternalDataSourceModule.class,
-            S3StorageConnectorModule.class
-        )
+        .addExtensions(S3StorageConnectorModule.class)
         .addResource(storageResource)
         .addResource(msqStorageResource)
         .addServer(coordinator)
