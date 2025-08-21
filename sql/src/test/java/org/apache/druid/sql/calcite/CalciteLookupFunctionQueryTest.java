@@ -151,8 +151,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterInLookupOfConcat()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("LOOKUP(CONCAT(dim1, 'a', dim2), 'lookyloo') IN ('xa', 'xabc')"),
         QUERY_CONTEXT,
@@ -175,8 +173,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterScalarInArrayLookupOfConcat()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("SCALAR_IN_ARRAY(LOOKUP(CONCAT(dim1, 'a', dim2), 'lookyloo'), ARRAY['xa', 'xabc'])"),
         QUERY_CONTEXT,
@@ -213,7 +209,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterInConcatOfLookup()
   {
-    cannotVectorize();
 
     // One optimize call is needed for each "IN" value, because this expression is decomposed into a sequence of
     // [(LOOKUP(dim1, 'lookyloo') = 'xabc' AND dim1 = 'abc') OR ...]. They can't be collected and combined.
@@ -254,8 +249,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterInConcatOfLookupOfConcat()
   {
-    cannotVectorize();
-
     // One optimize call is needed for each "IN" value, because this expression is decomposed into a sequence of
     // [(LOOKUP(dim1, 'lookyloo') = 'xabc' AND dim1 = 'abc') OR ...]. They can't be collected and combined.
 
@@ -364,8 +357,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterMultipleIsNotDistinctFrom()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') IS NOT DISTINCT FROM 'xabc' OR "
                            + "LOOKUP(dim1, 'lookyloo') IS NOT DISTINCT FROM 'x6' OR "
@@ -379,8 +370,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterIn()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') IN ('xabc', 'x6', 'nonexistent')"),
         QUERY_CONTEXT,
@@ -392,8 +381,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterScalarInArray()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("SCALAR_IN_ARRAY(LOOKUP(dim1, 'lookyloo'), ARRAY['xabc', 'x6', 'nonexistent'])"),
         QUERY_CONTEXT,
@@ -405,7 +392,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterInOverScalarInArrayThreshold()
   {
-    cannotVectorize();
 
     // Set inFunctionThreshold = 1 to cause the IN to be converted to SCALAR_IN_ARRAY.
     final ImmutableMap<String, Object> queryContext =
@@ -426,7 +412,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterInOverMaxSize()
   {
-    cannotVectorize();
 
     // Set sqlReverseLookupThreshold = 1 to stop the LOOKUP call from being reversed.
     final ImmutableMap<String, Object> queryContext =
@@ -450,7 +435,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterInOverMaxSize2()
   {
-    cannotVectorize();
 
     // Set inSubQueryThreshold = 1 to stop the LOOKUP call from being reversed.
     final ImmutableMap<String, Object> queryContext =
@@ -474,8 +458,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterInOrIsNull()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql(
             "LOOKUP(dim1, 'lookyloo') IN ('xabc', 'x6', 'nonexistent') OR LOOKUP(dim1, 'lookyloo') IS NULL"),
@@ -494,8 +476,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterInAndIsNotNull()
   {
-    cannotVectorize();
-
     // Ideally we'd be able to eliminate "AND LOOKUP(dim1, 'lookyloo') IS NOT NULL", because it's implied by
     // "LOOKUP(dim1, 'lookyloo') IN ('xabc', 'x6', 'nonexistent')". We're not currently able to do that.
 
@@ -517,8 +497,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterInOrIsNullInjective()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql(
             "LOOKUP(dim1, 'lookyloo121') IN ('xabc', 'x6', 'nonexistent') OR LOOKUP(dim1, 'lookyloo121') IS NULL"),
@@ -533,8 +511,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterNotInAndIsNotNull()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql(
             "LOOKUP(dim1, 'lookyloo') NOT IN ('x6', 'nonexistent') AND LOOKUP(dim1, 'lookyloo') IS NOT NULL"),
@@ -554,8 +530,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterInIsNotTrueAndIsNotNull()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql(
             "(LOOKUP(dim1, 'lookyloo') IN ('xabc', 'x6', 'nonexistent')) IS NOT TRUE "
@@ -575,8 +549,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterNotInAndIsNotNullInjective()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql(
             "LOOKUP(dim1, 'lookyloo121') NOT IN ('xabc', 'xdef', 'nonexistent') "
@@ -595,8 +567,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterNotInOrIsNull()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql(
             "LOOKUP(dim1, 'lookyloo') NOT IN ('x6', 'nonexistent') OR LOOKUP(dim1, 'lookyloo') IS NULL"),
@@ -621,8 +591,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterInIsNotTrueOrIsNull()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql(
             "(LOOKUP(dim1, 'lookyloo') IN ('x6', 'nonexistent')) IS NOT TRUE OR LOOKUP(dim1, 'lookyloo') IS NULL"),
@@ -644,8 +612,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterNotIn()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') NOT IN ('x6', 'nonexistent')"),
         QUERY_CONTEXT,
@@ -660,8 +626,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterInIsNotTrue()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') IN ('x6', 'nonexistent') IS NOT TRUE"),
         QUERY_CONTEXT,
@@ -678,8 +642,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterNotInInjective()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo121') NOT IN ('xabc', 'xdef', 'nonexistent')"),
         QUERY_CONTEXT,
@@ -691,8 +653,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterNotInWithReplaceMissingValue()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo', 'xyzzy') NOT IN ('xabc', 'x6', 'nonexistent')"),
         QUERY_CONTEXT,
@@ -704,8 +664,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterInIsNotTrueWithReplaceMissingValue()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo', 'xyzzy') IN ('xabc', 'x6', 'nonexistent') IS NOT TRUE"),
         QUERY_CONTEXT,
@@ -717,8 +675,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterMvContains()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("MV_CONTAINS(LOOKUP(dim1, 'lookyloo'), 'xabc')"),
         QUERY_CONTEXT,
@@ -757,8 +713,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterMvOverlap()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("MV_OVERLAP(lookup(dim1, 'lookyloo'), ARRAY['xabc', 'x6', 'nonexistent'])"),
         QUERY_CONTEXT,
@@ -788,8 +742,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterMvOverlapNullInjective()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("MV_OVERLAP(lookup(dim1, 'lookyloo121'), ARRAY['xabc', 'x6', 'nonexistent', NULL])"),
         QUERY_CONTEXT,
@@ -821,8 +773,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterMvContainsIsNotTrue()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("MV_CONTAINS(lookup(dim1, 'lookyloo'), 'xabc') IS NOT TRUE"),
         QUERY_CONTEXT,
@@ -836,8 +786,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterNotMvContainsInjective()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("NOT MV_CONTAINS(LOOKUP(dim1, 'lookyloo121'), 'xabc')"),
         QUERY_CONTEXT,
@@ -864,8 +812,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterMvOverlapIsNotTrue()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("MV_OVERLAP(lookup(dim1, 'lookyloo'), ARRAY['xabc', 'x6', 'nonexistent']) IS NOT TRUE"),
         QUERY_CONTEXT,
@@ -879,8 +825,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterNotMvOverlapInjective()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("NOT MV_OVERLAP(lookup(dim1, 'lookyloo121'), ARRAY['xabc', 'x6', 'nonexistent'])"),
         QUERY_CONTEXT,
@@ -892,7 +836,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterMultipleIsDistinctFrom()
   {
-    cannotVectorize();
 
     // One optimize call is needed for each "IS DISTINCT FROM", because "x IS DISTINCT FROM y" is sugar for
     // "(x = y) IS NOT TRUE", and ReverseLookupRule doesn't peek into the "IS NOT TRUE" calls nested beneatth
@@ -925,8 +868,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterIsNull()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') IS NULL"),
         QUERY_CONTEXT,
@@ -954,8 +895,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterIsNotNull()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') IS NOT NULL"),
         QUERY_CONTEXT,
@@ -970,8 +909,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterIsNotNullInjective()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo121') IS NOT NULL"),
         QUERY_CONTEXT,
@@ -988,8 +925,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterNotEquals()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') <> 'x6'"),
         QUERY_CONTEXT,
@@ -1004,8 +939,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterNotEqualsInjective()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo121') <> 'xabc'"),
         QUERY_CONTEXT,
@@ -1017,8 +950,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterEqualsIsNotTrue()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') = 'x6' IS NOT TRUE"),
         QUERY_CONTEXT,
@@ -1035,8 +966,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterEqualsIsNotTrueInjective()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo121') = 'xabc' IS NOT TRUE"),
         QUERY_CONTEXT,
@@ -1050,8 +979,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterIsDistinctFrom()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') IS DISTINCT FROM 'x6'"),
         QUERY_CONTEXT,
@@ -1068,8 +995,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterIsDistinctFromReplaceMissingValueWithSameLiteral()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo', 'x6') IS DISTINCT FROM 'x6'"),
         QUERY_CONTEXT,
@@ -1084,8 +1009,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterNotEquals2()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("NOT (LOOKUP(dim1, 'lookyloo') = 'x6' OR cnt = 2)"),
         QUERY_CONTEXT,
@@ -1103,8 +1026,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterEqualsIsNotTrue2()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("(LOOKUP(dim1, 'lookyloo') = 'x6' OR cnt = 2) IS NOT TRUE"),
         QUERY_CONTEXT,
@@ -1124,8 +1045,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterNotEquals2Injective()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("NOT (LOOKUP(dim1, 'lookyloo121') = 'xdef' OR cnt = 2)"),
         QUERY_CONTEXT,
@@ -1143,8 +1062,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterCoalesceSameLiteral()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("COALESCE(LOOKUP(dim1, 'lookyloo'), 'x6') = 'x6'"),
         QUERY_CONTEXT,
@@ -1172,8 +1089,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterInCoalesceSameLiteral()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("COALESCE(LOOKUP(dim1, 'lookyloo'), 'x6') IN ('xa', 'xabc', 'x6')"),
         QUERY_CONTEXT,
@@ -1191,8 +1106,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterInCoalesceSameLiteralInjective()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("COALESCE(LOOKUP(dim1, 'lookyloo121'), 'x2') IN ('xabc', 'xdef', 'x2')"),
         QUERY_CONTEXT,
@@ -1240,8 +1153,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterCoalesceSameLiteralNotEquals()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("COALESCE(LOOKUP(dim1, 'lookyloo'), 'x6') <> 'x6'"),
         QUERY_CONTEXT,
@@ -1256,8 +1167,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterCoalesceSameLiteralNotEqualsInjective()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("COALESCE(LOOKUP(dim1, 'lookyloo121'), 'xabc') <> 'xabc'"),
         QUERY_CONTEXT,
@@ -1302,8 +1211,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterCoalesceCastBigintDifferentLiteral()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("COALESCE(CAST(LOOKUP(dim1, 'lookyloo') AS BIGINT), 1) = 6"),
         QUERY_CONTEXT,
@@ -1318,8 +1225,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterMvContainsCoalesceDifferentLiteral()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("MV_CONTAINS(COALESCE(LOOKUP(dim1, 'lookyloo'), 'xyzzy'), 'x6')"),
         QUERY_CONTEXT,
@@ -1331,8 +1236,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterMvOverlapCoalesceDifferentLiteral()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql(
             "MV_OVERLAP(COALESCE(LOOKUP(dim1, 'lookyloo'), 'xyzzy'), ARRAY['xabc', 'x6', 'nonexistent'])"),
@@ -1345,8 +1248,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterCoalesceDifferentLiteralNotEquals()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("COALESCE(LOOKUP(dim1, 'lookyloo'), 'xyzzy') <> 'x6'"),
         QUERY_CONTEXT,
@@ -1361,8 +1262,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterCoalesceDifferentLiteralNotEqualsAlwaysTrue()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("COALESCE(LOOKUP(dim1, 'lookyloo'), 'xyzzy') <> 'nonexistent'"),
         QUERY_CONTEXT,
@@ -1377,8 +1276,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterCoalesceSameColumn()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("COALESCE(LOOKUP(dim1, 'lookyloo'), dim1) = 'x6'"),
         QUERY_CONTEXT,
@@ -1393,8 +1290,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterInCoalesceSameColumn()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("COALESCE(LOOKUP(dim1, 'lookyloo'), dim1) IN ('xabc', '10.1')"),
         QUERY_CONTEXT,
@@ -1412,8 +1307,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterCoalesceFunctionOfSameColumn()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("COALESCE(LOOKUP(dim1, 'lookyloo'), dim1 || '') = 'x6'"),
         QUERY_CONTEXT,
@@ -1428,8 +1321,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterCoalesceDifferentColumn()
   {
-    cannotVectorize();
-
     testQuery(
         buildFilterTestSql("COALESCE(LOOKUP(dim1, 'lookyloo'), dim2) = 'x6'"),
         QUERY_CONTEXT,
@@ -1465,9 +1356,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testLookupReplaceMissingValueWith()
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT\n"
         + "  LOOKUP(dim1, 'lookyloo', 'Missing_Value'),\n"
@@ -1511,7 +1399,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testLookupReplaceMissingValueWithExtractionFns()
   {
-    // Cannot vectorize due to extraction dimension specs.
     cannotVectorize();
 
     final RegisteredLookupExtractionFn extractionFn1 =
@@ -1566,9 +1453,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinctOfLookup()
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT COUNT(DISTINCT LOOKUP(dim1, 'lookyloo')) FROM foo",
         QUERY_CONTEXT,
@@ -1665,7 +1549,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
                             + "GROUP BY 1";
 
     // ExtractionDimensionSpec cannot be vectorized
-    cannotVectorize();
 
     testQuery(
         PLANNER_CONFIG_NO_HLL.withOverrides(
@@ -1894,8 +1777,6 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testPullUpLookupOneInjectiveOneNot()
   {
-    cannotVectorize();
-
     testQuery(
         "SELECT COUNT(*), LOOKUP(dim1, 'lookyloo'), LOOKUP(dim1, 'lookyloo121') FROM druid.foo GROUP BY 2, 3",
         ImmutableList.of(
