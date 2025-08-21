@@ -108,6 +108,17 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
    */
   public DruidContainerResource usingTestImage()
   {
+    return usingImage(DockerImageName.parse(getTestDruidImageName()));
+  }
+
+  /**
+   * Gets the Druid image name specified by the system property
+   * {@link #PROPERTY_TEST_IMAGE}.
+   *
+   * @throws org.apache.druid.error.DruidException if the system property is not set.
+   */
+  public static String getTestDruidImageName()
+  {
     final String imageName = System.getProperty(PROPERTY_TEST_IMAGE);
     InvalidInput.conditionalException(
         imageName != null,
@@ -118,7 +129,7 @@ public class DruidContainerResource extends TestcontainerResource<DruidContainer
             PROPERTY_TEST_IMAGE, PROPERTY_TEST_IMAGE
         )
     );
-    return usingImage(DockerImageName.parse(imageName));
+    return imageName;
   }
 
   public DruidContainerResource addProperty(String key, String value)
