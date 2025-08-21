@@ -38,12 +38,6 @@ public class K3sDruidService
 {
   private static final String MANIFEST_TEMPLATE = "manifests/druid-service.yaml";
 
-  /**
-   * Use the Druid 34 image until the K3s tests are modified to load the latest
-   * image built by CI into the K3s container.
-   */
-  private static final String DRUID_IMAGE = "apache/druid:34.0.0";
-
   private final DruidCommand command;
   private final Properties properties;
 
@@ -66,7 +60,10 @@ public class K3sDruidService
     return command;
   }
 
-  public String createManifestYaml()
+  /**
+   * Creates a manifest YAML String for this service.
+   */
+  public String createManifestYaml(String druidImage)
   {
     try {
       final String template = Files.readString(
@@ -76,7 +73,7 @@ public class K3sDruidService
       String manifest = StringUtils.replace(template, "${service}", getName());
       manifest = StringUtils.replace(manifest, "${command}", command.getName());
       manifest = StringUtils.replace(manifest, "${port}", String.valueOf(command.getExposedPorts()[0]));
-      manifest = StringUtils.replace(manifest, "${image}", DRUID_IMAGE);
+      manifest = StringUtils.replace(manifest, "${image}", druidImage);
       manifest = StringUtils.replace(manifest, "${serviceFolder}", getServicePropsFolder());
 
       return manifest;

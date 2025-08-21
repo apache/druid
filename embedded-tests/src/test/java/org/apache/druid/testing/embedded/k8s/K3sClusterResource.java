@@ -264,7 +264,7 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
    */
   private void applyManifest(K3sDruidService service)
   {
-    final String manifestYaml = service.createManifestYaml();
+    final String manifestYaml = service.createManifestYaml(druidImageName);
     log.info("Applying manifest for service[%s]: %s", service.getName(), manifestYaml);
 
     try (ByteArrayInputStream bis = new ByteArrayInputStream(manifestYaml.getBytes(StandardCharsets.UTF_8))) {
