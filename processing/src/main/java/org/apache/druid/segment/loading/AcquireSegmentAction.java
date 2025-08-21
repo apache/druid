@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Optional;
@@ -32,32 +33,36 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 /**
- * This class represents an intent to acquire a reference to a {@link Segment} and then use it to do stuff, finally
- * closing when done. When an {@link AcquireSegmentAction} is created, segment cache implementations will create a
- * 'hold' to ensure it cannot be removed from the cache until this action has been closed. {@link #getSegmentFuture()}
- * actually initiates the 'action', and will return the segment if already cached, or attempt to download from deep
- * storage to load into the cache if not. The {@link Segment} returned by the future places a separate hold on the
- * cache until the segment itself is closed, and MUST be closed when the caller is finished doing segment things with
- * it. The caller must also call {@link #close()} on this object to clean up the hold that exists while possibly
- * loading the segment, and may do so as soon as the {@link Segment} is acquired (or can do so earlier to abort the
- * load and release the hold).
+ * This class represents an intent to acquire a reference to a {@link Segment} and then use it to do stuff, and finally
+ * closing when done.
+ * <p>
+ * When an {@link AcquireSegmentAction} is created, segment cache implementations will create a
+ * 'hold' to ensure it cannot be removed from the cache until this action has been closed.
+ * <p>
+ * Calling {@link #getSegmentFuture()} is what actually initiates the 'action', and will return the segment if already
+ * cached, or attempt to download from deep storage to load into the cache if not. The {@link Segment} returned by the
+ * future places a separate hold on the cache until the segment itself is closed, and MUST be closed when the caller is
+ * finished doing segment things with it.
+ * <p>
+ * The caller must also call {@link #close()} on this object to clean up the hold that exists while possibly loading
+ * the segment, and may do so as soon as the {@link Segment} is acquired (or can do so earlier to abort the load and
+ * release the hold).
  */
 public class AcquireSegmentAction implements Closeable
 {
-  public static final Closeable NOOP_CLEANUP = () -> {};
-
   public static AcquireSegmentAction missingSegment()
   {
-    return new AcquireSegmentAction(() -> Futures.immediateFuture(Optional.empty()), NOOP_CLEANUP);
+    return new AcquireSegmentAction(() -> Futures.immediateFuture(Optional.empty()), null);
   }
 
   private final Supplier<ListenableFuture<Optional<Segment>>> segmentFutureSupplier;
+  @Nullable
   private final Closeable loadCleanup;
-  private AtomicBoolean closed = new AtomicBoolean(false);
+  private final AtomicBoolean closed = new AtomicBoolean(false);
 
   public AcquireSegmentAction(
       Supplier<ListenableFuture<Optional<Segment>>> segmentFutureSupplier,
-      Closeable loadCleanup
+      @Nullable Closeable loadCleanup
   )
   {
     this.segmentFutureSupplier = segmentFutureSupplier;
@@ -78,7 +83,7 @@ public class AcquireSegmentAction implements Closeable
   @Override
   public void close() throws IOException
   {
-    if (closed.compareAndSet(false, true)) {
+    if (loadCleanup != null && closed.compareAndSet(false, true)) {
       loadCleanup.close();
     }
   }

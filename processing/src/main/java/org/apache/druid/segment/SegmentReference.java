@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Optional;
@@ -37,7 +38,7 @@ public class SegmentReference implements Closeable
 {
   public static SegmentReference missing(SegmentDescriptor segmentDescriptor)
   {
-    return new SegmentReference(segmentDescriptor, Optional.empty(), AcquireSegmentAction.NOOP_CLEANUP);
+    return new SegmentReference(segmentDescriptor, Optional.empty(), null);
   }
 
   private final SegmentDescriptor segmentDescriptor;
@@ -47,7 +48,7 @@ public class SegmentReference implements Closeable
   public SegmentReference(
       SegmentDescriptor segmentDescriptor,
       Optional<Segment> segmentReference,
-      Closeable cleanupHold
+      @Nullable Closeable cleanupHold
   )
   {
     this.segmentDescriptor = segmentDescriptor;

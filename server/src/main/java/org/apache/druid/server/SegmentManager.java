@@ -174,7 +174,7 @@ public class SegmentManager
   public boolean hasIndexedTables(String dataSourceName)
   {
     if (dataSources.containsKey(dataSourceName)) {
-      return dataSources.get(dataSourceName).tablesLookup.size() > 0;
+      return !dataSources.get(dataSourceName).tablesLookup.isEmpty();
     }
     return false;
   }

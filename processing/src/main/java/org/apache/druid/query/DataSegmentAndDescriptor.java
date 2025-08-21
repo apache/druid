@@ -17,9 +17,8 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordination;
+package org.apache.druid.query;
 
-import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;

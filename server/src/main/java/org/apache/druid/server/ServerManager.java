@@ -39,6 +39,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BySegmentQueryRunner;
 import org.apache.druid.query.CPUTimeMetricQueryRunner;
+import org.apache.druid.query.DataSegmentAndDescriptor;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.MetricsEmittingQueryRunner;
@@ -70,7 +71,6 @@ import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.VirtualPlaceholderSegment;
-import org.apache.druid.server.coordination.DataSegmentAndDescriptor;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -194,13 +194,12 @@ public class ServerManager implements QuerySegmentWalker
 
   /**
    * For each {@link SegmentDescriptor}, we try to fetch a {@link DataSegment} from the supplied
-   * {@link VersionedIntervalTimeline}, then use {@link SegmentManager#acquireSegment(DataSegment)} to obtain a
-   * 'reference' to segments in the cache (or loaded from deep storage if necessary/supported by the storage layer).
-   * For each of these segments, we then apply a {@link SegmentMapFunction} to transform  into {@link SegmentReference}
+   * {@link VersionedIntervalTimeline} to build a list of {@link DataSegmentAndDescriptor} and then hand off to
+   * {@link #getSegmentReferences(List, SegmentMapFunction, long)} to transform  into {@link SegmentReference}
    * wrappers. The wrappers contain the {@link SegmentDescriptor} and an {@link Optional<Segment>}, and MUST BE
    * CLOSED to release the references when processing is complete.
    */
-  protected List<SegmentReference> getAndLoadAllSegmentReferences(
+  protected List<SegmentReference> getSegmentReferences(
       VersionedIntervalTimeline<String, DataSegment> timeline,
       Iterable<SegmentDescriptor> segments,
       SegmentMapFunction segmentMapFunction,
@@ -223,6 +222,23 @@ public class ServerManager implements QuerySegmentWalker
       }
     }
 
+    return getSegmentReferences(segmentsToMap, segmentMapFunction, timeout);
+  }
+
+  /**
+   * Given a list of {@link DataSegmentAndDescriptor}, uses {@link SegmentManager#acquireSegment(DataSegment)} for each
+   * to obtain a 'reference' to segments in the cache (or loaded from deep storage if necessary/supported by the
+   * storage layer).
+   * <p>
+   * For each of these segments, we then apply a {@link SegmentMapFunction} to prepare for processing. The returned
+   * {@link SegmentReference} MUST BE CLOSED to release the reference.
+   */
+  private List<SegmentReference> getSegmentReferences(
+      List<DataSegmentAndDescriptor> segmentsToMap,
+      SegmentMapFunction segmentMapFunction,
+      long timeout
+  )
+  {
     // closer to collect everything that needs cleaned up in the event of failure, if we make it out of this function,
     // closing the segments handles everything and it is the callers responsibility
     final Closer safetyNet = Closer.create();
@@ -377,7 +393,7 @@ public class ServerManager implements QuerySegmentWalker
               new SegmentReference(
                   descriptor,
                   theSegment,
-                  AcquireSegmentAction.NOOP_CLEANUP
+                  null
               )
           );
         } else {
@@ -386,7 +402,7 @@ public class ServerManager implements QuerySegmentWalker
               new SegmentReference(
                   descriptor,
                   Optional.of(new VirtualPlaceholderSegment(dataSegment)),
-                  AcquireSegmentAction.NOOP_CLEANUP
+                  null
               )
           );
         }
@@ -413,7 +429,7 @@ public class ServerManager implements QuerySegmentWalker
     if (query instanceof SegmentMetadataQuery) {
       segmentReferences = getSegmentMetadataSegmentReferences(timeline, specs, segmentMapFn);
     } else {
-      segmentReferences = getAndLoadAllSegmentReferences(
+      segmentReferences = getSegmentReferences(
           timeline,
           specs,
           segmentMapFn,

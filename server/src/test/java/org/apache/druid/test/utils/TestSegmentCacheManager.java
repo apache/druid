@@ -139,7 +139,7 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
     }
     return new AcquireSegmentAction(
         () -> Futures.immediateFuture(getSegmentInternal(dataSegment).acquireReference()),
-        AcquireSegmentAction.NOOP_CLEANUP
+        null
     );
   }
 
