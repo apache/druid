@@ -74,9 +74,11 @@ public class RegexpExtractOperatorConversion implements SqlOperatorConversion
                                  ? plannerContext.parseExpression(inputExpressions.get(2).getExpression())
                                  : null;
 
-          if (arg.isSimpleExtraction() && patternExpr.isLiteral() && (indexExpr == null || indexExpr.isLiteral())) {
+          if (arg.isSimpleExtraction()
+              && patternExpr.isLiteral()
+              && (indexExpr == null || indexExpr.isLiteral())
+              && plannerContext.isUseExtractionFns()) {
             final String pattern = (String) patternExpr.getLiteralValue();
-
 
             try {
               return arg.getSimpleExtraction().cascade(
