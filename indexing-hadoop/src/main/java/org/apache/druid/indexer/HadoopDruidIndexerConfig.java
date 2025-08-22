@@ -35,13 +35,15 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.guice.LocalDataStorageDruidModule;
+import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.guice.StorageNodeModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionBasedPartitionsSpec;
 import org.apache.druid.indexer.path.PathSpec;
-import org.apache.druid.initialization.Initialization;
+import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -53,6 +55,7 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.writeout.SegmentWriteOutMediumModule;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -106,20 +109,21 @@ public class HadoopDruidIndexerConfig
   public static final Properties PROPERTIES;
 
   static {
-    INJECTOR = Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(),
-        ImmutableList.of(
-            (Module) binder -> {
-              JsonConfigProvider.bindInstance(
-                  binder,
-                  Key.get(DruidNode.class, Self.class),
-                  new DruidNode("hadoop-indexer", null, false, null, null, true, false)
-              );
-              JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", HadoopKerberosConfig.class);
-            },
-            new IndexingHadoopModule()
-        )
-    );
+    Injector baseInjector = new StartupInjectorBuilder().withEmptyProperties().build();
+    INJECTOR = new CoreInjectorBuilder(baseInjector).addModules(
+        new StorageNodeModule(),
+        new SegmentWriteOutMediumModule(),
+        new LocalDataStorageDruidModule(),
+        (Module) binder -> {
+          JsonConfigProvider.bindInstance(
+              binder,
+              Key.get(DruidNode.class, Self.class),
+              new DruidNode("hadoop-indexer", null, false, null, null, true, false)
+          );
+          JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", HadoopKerberosConfig.class);
+        },
+        new IndexingHadoopModule()
+    ).build();
     JSON_MAPPER = INJECTOR.getInstance(ObjectMapper.class);
     INDEX_IO = INJECTOR.getInstance(IndexIO.class);
     INDEX_MERGER_V9 = INJECTOR.getInstance(IndexMergerV9.class);
