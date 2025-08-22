@@ -30,33 +30,35 @@ import org.junit.jupiter.api.BeforeEach;
  * Runs some basic ingestion tests against latest image Druid containers running
  * on a K3s cluster with druid-operator.
  */
-public class KubernetesClusterWithOperatorDockerTest extends IngestionSmokeTest implements LatestImageDockerTest
+public class KubernetesClusterWithOperatorDockerTest extends IngestionSmokeTest
 {
+  private static final String MANIFEST_TEMPLATE = "manifests/druid-service-operator.yaml";
+
   @Override
   protected EmbeddedDruidCluster addServers(EmbeddedDruidCluster cluster)
   {
     final K3sDruidService brokerService = new K3sDruidService(DruidCommand.Server.BROKER)
         .addProperty("druid.sql.planner.metadataRefreshPeriod", "PT1s")
+        .usingManifestTemplate(MANIFEST_TEMPLATE)
         .withDruidPort(30005);
 
     final K3sDruidService coordinatorService = new K3sDruidService(DruidCommand.Server.COORDINATOR)
         .withDruidPort(30000)
-        .governWithOperator();
+        .usingManifestTemplate(MANIFEST_TEMPLATE);
 
     final K3sDruidService overlordService = new K3sDruidService(DruidCommand.Server.OVERLORD)
         .addProperty("druid.indexer.runner.type", "k8s")
         .addProperty("druid.indexer.runner.namespace", "druid")
         .withDruidPort(30001)
-        .governWithOperator();
+        .usingManifestTemplate(MANIFEST_TEMPLATE);
 
     final K3sDruidService historicalService = new K3sDruidService(DruidCommand.Server.HISTORICAL)
         .withDruidPort(30004)
-        .governWithOperator();
+        .usingManifestTemplate(MANIFEST_TEMPLATE);
 
     final K3sDruidService router = new K3sDruidService(DruidCommand.Server.ROUTER)
         .withDruidPort(30006)
-        .governWithOperator();
-
+        .usingManifestTemplate(MANIFEST_TEMPLATE);
 
     final K3sClusterWithOperatorResource k3sCluster = new K3sClusterWithOperatorResource()
         .usingTestImage()

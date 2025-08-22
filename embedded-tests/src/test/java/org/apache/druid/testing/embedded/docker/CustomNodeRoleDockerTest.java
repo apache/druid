@@ -89,17 +89,5 @@ public class CustomNodeRoleDockerTest extends EmbeddedClusterTestBase implements
     {
       return Map.of();
     }
-
-    @Override
-    public Integer getExposedOperatorPort()
-    {
-      return 9302;
-    }
-
-    @Override
-    public Map<String, String> getOperatorConfiguration()
-    {
-      return Map.of();
-    }
   }
 }

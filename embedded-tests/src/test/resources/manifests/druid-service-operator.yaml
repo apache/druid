@@ -79,7 +79,7 @@ ${commonRuntimeProperties}
       replicas: 1
       nodeConfigMountPath: "/opt/druid/conf/druid/cluster/${serviceFolder}"
       runtime.properties: |
-        ${nodeRuntimeProperties}
+${nodeRuntimeProperties}
       livenessProbe:
         failureThreshold: 10
         httpGet:

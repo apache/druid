@@ -27,9 +27,7 @@ import org.apache.druid.testing.embedded.EmbeddedHostname;
 import org.apache.druid.testing.embedded.indexing.Resources;
 
 import java.nio.file.Files;
-import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -38,34 +36,35 @@ import java.util.Properties;
  */
 public class K3sDruidService
 {
+  private static final String KEY_COMMON_RUNTIME_PROPERTIES = "${commonRuntimeProperties}";
+  private static final String KEY_NODE_RUNTIME_PROPERTIES = "${nodeRuntimeProperties}";
+
   private final DruidCommand command;
   private final Properties properties;
-  private boolean isGovernedByOperator = false;
+  private final Properties commonProperties;
   private Integer druidPort;
   private String manifestTemplate = "manifests/druid-service.yaml";
-  private Map<String, String> customVariableTemplate = Map.of();
 
   public K3sDruidService(DruidCommand command)
   {
     this.command = command;
     this.properties = new Properties();
+    this.commonProperties = new Properties();
     this.druidPort = command.getExposedPorts()[0];
 
     addProperty("druid.host", EmbeddedHostname.containerFriendly().toString());
     command.getDefaultProperties().forEach(properties::setProperty);
   }
 
-  public K3sDruidService governWithOperator()
+  public K3sDruidService usingManifestTemplate(String manifestTemplate)
   {
-    this.customVariableTemplate = new HashMap<>();
-    this.isGovernedByOperator = true;
-    this.manifestTemplate = "manifests/druid-service-operator.yaml";
+    this.manifestTemplate = manifestTemplate;
     return this;
   }
 
   public K3sDruidService withCommonProperties(Properties commonProperties)
   {
-    this.customVariableTemplate.put("commonRuntimeProperties", buildCommonPropertiesString(commonProperties));
+    this.commonProperties.putAll(commonProperties);
     return this;
   }
 
@@ -79,16 +78,6 @@ public class K3sDruidService
   {
     return druidPort;
   }
-
-  private String buildCommonPropertiesString(Properties properties)
-  {
-    StringBuilder builder = new StringBuilder();
-    for (String key : properties.stringPropertyNames()) {
-      builder.append("    ").append(key).append("=").append(properties.getProperty(key)).append("\n");
-    }
-    return builder.toString();
-  }
-
 
   public String getName()
   {
@@ -115,10 +104,8 @@ public class K3sDruidService
       manifest = StringUtils.replace(manifest, "${port}", String.valueOf(druidPort));
       manifest = StringUtils.replace(manifest, "${image}", druidImage);
       manifest = StringUtils.replace(manifest, "${serviceFolder}", getServicePropsFolder());
-
-      if (isGovernedByOperator) {
-        manifest = replaceOperatorVariables(manifest);
-      }
+      manifest = StringUtils.replace(manifest, KEY_COMMON_RUNTIME_PROPERTIES, buildPropertiesString(commonProperties, 4));
+      manifest = StringUtils.replace(manifest, KEY_NODE_RUNTIME_PROPERTIES, buildPropertiesString(properties, 8));
       return manifest;
     }
     catch (Exception e) {
@@ -126,24 +113,17 @@ public class K3sDruidService
     }
   }
 
-  private String replaceOperatorVariables(String manifest)
+  /**
+   * Builds a properties string to be used in the manifest.yaml file supporting a uniform indentation.
+   */
+  private String buildPropertiesString(Properties properties, int indentationSpaces)
   {
-    String nodePropertiesString = prepareNodePropertiesString(this.properties);
-    manifest = StringUtils.replace(manifest, "${nodeRuntimeProperties}", nodePropertiesString);
-
-    for (Map.Entry<String, String> entry : customVariableTemplate.entrySet()) {
-      manifest = StringUtils.replace(manifest, "${" + entry.getKey() + "}", entry.getValue());
+    StringBuilder builder = new StringBuilder();
+    String indentation = " ".repeat(indentationSpaces);
+    for (String key : properties.stringPropertyNames()) {
+      builder.append(indentation).append(key).append("=").append(properties.getProperty(key)).append("\n");
     }
-    return manifest;
-  }
-
-  private String prepareNodePropertiesString(Properties nodeProperties)
-  {
-    StringBuilder sb = new StringBuilder();
-    for (String key : nodeProperties.stringPropertyNames()) {
-      sb.append("        ").append(key).append("=").append(nodeProperties.getProperty(key)).append("\n");
-    }
-    return sb.toString().trim();
+    return builder.toString();
   }
 
   public Properties getProperties()
