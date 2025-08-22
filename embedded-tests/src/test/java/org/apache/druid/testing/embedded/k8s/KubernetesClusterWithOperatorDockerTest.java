@@ -26,8 +26,6 @@ import org.apache.druid.testing.embedded.indexing.IngestionSmokeTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 
-import java.util.Map;
-
 /**
  * Runs some basic ingestion tests against latest image Druid containers running
  * on a K3s cluster with druid-operator.
@@ -38,56 +36,28 @@ public class KubernetesClusterWithOperatorDockerTest extends IngestionSmokeTest 
   protected EmbeddedDruidCluster addServers(EmbeddedDruidCluster cluster)
   {
     final K3sDruidService brokerService = new K3sDruidService(DruidCommand.Server.BROKER)
-        .governWithOperator(Map.of(K3sClusterWithOperatorResource.KEY_NODE, "brokers",
-                                   K3sClusterWithOperatorResource.KEY_DRUID_SERVICE, "broker",
-                                   K3sClusterWithOperatorResource.KEY_HEALTH_PATH, "/status/health",
-                                   K3sClusterWithOperatorResource.KEY_READINESS_PROBE_PATH, "/status/health",
-                                   K3sClusterWithOperatorResource.KEY_SHARED_STORAGE_DIR, "/druid/shared-storage"))
+        .governWithOperator()
         .addProperty("druid.sql.planner.metadataRefreshPeriod", "PT1s");
 
     // Create a K3s cluster with all the required services
     final K3sDruidService coordinatorService = new K3sDruidService(DruidCommand.Server.COORDINATOR)
-        .governWithOperator(Map.of(K3sClusterWithOperatorResource.KEY_NODE, "coordinators",
-                                   K3sClusterWithOperatorResource.KEY_DRUID_SERVICE, "coordinator",
-                                   K3sClusterWithOperatorResource.KEY_HEALTH_PATH, "/status/health",
-                                   K3sClusterWithOperatorResource.KEY_READINESS_PROBE_PATH, "/status/health",
-                                   K3sClusterWithOperatorResource.KEY_SHARED_STORAGE_DIR, "/druid/shared-storage"));
-    
+        .governWithOperator();
+
     final K3sDruidService overlordService = new K3sDruidService(DruidCommand.Server.OVERLORD)
-        .governWithOperator(Map.of(K3sClusterWithOperatorResource.KEY_NODE, "overlords",
-                                   K3sClusterWithOperatorResource.KEY_DRUID_SERVICE, "overlord",
-                                   K3sClusterWithOperatorResource.KEY_HEALTH_PATH, "/status/health",
-                                   K3sClusterWithOperatorResource.KEY_READINESS_PROBE_PATH, "/status/health",
-                                   K3sClusterWithOperatorResource.KEY_SHARED_STORAGE_DIR, "/druid/shared-storage"));
-    
+        .governWithOperator();
+
     final K3sDruidService historicalService = new K3sDruidService(DruidCommand.Server.HISTORICAL)
-        .governWithOperator(Map.of(K3sClusterWithOperatorResource.KEY_NODE, "hot",
-                                   K3sClusterWithOperatorResource.KEY_DRUID_SERVICE, "historical",
-                                   K3sClusterWithOperatorResource.KEY_HEALTH_PATH, "/status/health",
-                                   K3sClusterWithOperatorResource.KEY_READINESS_PROBE_PATH, "/status/health",
-                                   K3sClusterWithOperatorResource.KEY_SHARED_STORAGE_DIR, "/druid/shared-storage"));
-    
-    final K3sDruidService middleManagerService = new K3sDruidService(DruidCommand.Server.MIDDLE_MANAGER)
-        .governWithOperator(Map.of(K3sClusterWithOperatorResource.KEY_NODE, "middlemanagers",
-                                   K3sClusterWithOperatorResource.KEY_DRUID_SERVICE, "middleManager",
-                                   K3sClusterWithOperatorResource.KEY_HEALTH_PATH, "/status/health",
-                                   K3sClusterWithOperatorResource.KEY_READINESS_PROBE_PATH, "/status/health",
-                                   K3sClusterWithOperatorResource.KEY_SHARED_STORAGE_DIR, "/druid/shared-storage"));
-    
+        .governWithOperator();
+
     final K3sDruidService router = new K3sDruidService(DruidCommand.Server.ROUTER)
-        .governWithOperator(Map.of(K3sClusterWithOperatorResource.KEY_NODE, "routers",
-                                   K3sClusterWithOperatorResource.KEY_DRUID_SERVICE, "router",
-                                   K3sClusterWithOperatorResource.KEY_HEALTH_PATH, "/status/health",
-                                   K3sClusterWithOperatorResource.KEY_READINESS_PROBE_PATH, "/status/health",
-                                   K3sClusterWithOperatorResource.KEY_SHARED_STORAGE_DIR, "/druid/shared-storage"));
-    
+        .governWithOperator();
+
 
     final K3sClusterWithOperatorResource k3sCluster = new K3sClusterWithOperatorResource()
         .usingTestImage()
         .addService(coordinatorService)
         .addService(overlordService)
         .addService(historicalService)
-        .addService(middleManagerService)
         .addService(router)
         .addService(brokerService);
 
@@ -104,7 +74,8 @@ public class KubernetesClusterWithOperatorDockerTest extends IngestionSmokeTest 
         .addCommonProperty(
             "druid.extensions.loadList",
             "[\"druid-s3-extensions\", \"druid-kafka-indexing-service\","
-            + "\"druid-multi-stage-query\", \"postgresql-metadata-storage\"]"
+            + "\"druid-multi-stage-query\", \"postgresql-metadata-storage\","
+            + " \"druid-kubernetes-overlord-extensions\", \"druid-kubernetes-extensions\", \"druid-datasketches\"]"
         );
   }
 

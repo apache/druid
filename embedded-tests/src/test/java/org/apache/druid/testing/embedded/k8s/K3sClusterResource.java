@@ -129,6 +129,9 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
         // Druid service is discoverable with the Druid service discovery
         portBindings.add(port + ":" + port);
       }
+      Integer exposedOperatorPort = service.getCommand().getExposedOperatorPort();
+      container.addExposedPorts(exposedOperatorPort);
+      portBindings.add(exposedOperatorPort + ":" + exposedOperatorPort);
     }
 
     container.setPortBindings(portBindings);

@@ -49,6 +49,7 @@ public class K3sClusterWithOperatorResource extends K3sClusterResource
   public static final String KEY_HEALTH_PATH = "healthPath";
   public static final String KEY_READINESS_PROBE_PATH = "readinessProbePath";
   public static final String KEY_SHARED_STORAGE_DIR = "sharedStorageDir";
+  public static final String KEY_METADATA = "metadataName";
 
 
 
@@ -89,7 +90,6 @@ public class K3sClusterWithOperatorResource extends K3sClusterResource
 
     manifestFiles.forEach(this::applyManifest);
 
-    // install helm and set up the operator
     installHelm(cluster);
     setupOperatorWithHelm();
 
@@ -104,12 +104,10 @@ public class K3sClusterWithOperatorResource extends K3sClusterResource
 
     initializeDruidTestFolders(cluster.getTestFolder());
 
+    String commonPropertiesString = prepareCommonPropertiesString(commonProperties);
+    
     for (K3sDruidService druidService : services) {
-      final String serviceConfigMap = StringUtils.format(SERVICE_CONFIG_MAP, druidService.getName());
-      applyConfigMap(
-          newConfigMap(serviceConfigMap, druidService.getProperties(), "runtime.properties")
-      );
-      applyManifest(druidService);
+      applyManifest(druidService.withCommonProperties(commonPropertiesString));
     }
 
     client.pods().inNamespace(DRUID_NAMESPACE).resources().forEach(this::waitUntilPodIsReady);
@@ -122,6 +120,32 @@ public class K3sClusterWithOperatorResource extends K3sClusterResource
     testFolder.getOrCreateFolder("druid-storage/segment-cache");
     testFolder.getOrCreateFolder("druid-storage/metadata");
     testFolder.getOrCreateFolder("druid-storage/indexing-logs");
+  }
+
+  private String prepareCommonPropertiesString(Properties properties) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("druid.zk.service.enabled=false\n");
+    sb.append("    druid.discovery.type=k8s\n");
+    sb.append("    druid.discovery.k8s.clusterIdentifier=druid-it\n");
+    sb.append("    druid.serverview.type=http\n");
+    sb.append("    druid.coordinator.loadqueuepeon.type=http\n");
+    sb.append("    druid.indexer.runner.type=httpRemote\n");
+    sb.append("    druid.metadata.storage.type=derby\n");
+    sb.append("    druid.metadata.storage.connector.connectURI=jdbc:derby://localhost:1527/var/druid/metadata.db;create=true\n");
+    sb.append("    druid.metadata.storage.connector.host=localhost\n");
+    sb.append("    druid.metadata.storage.connector.port=1527\n");
+    sb.append("    druid.metadata.storage.connector.createTables=true\n");
+    sb.append("    druid.storage.type=local\n");
+    sb.append("    druid.storage.storageDirectory=/druid/data/segments\n");
+    sb.append("    druid.selectors.indexing.serviceName=druid/overlord\n");
+    sb.append("    druid.selectors.coordinator.serviceName=druid/coordinator\n");
+    sb.append("    druid.indexer.logs.type=file\n");
+    sb.append("    druid.indexer.logs.directory=/druid/data/indexing-logs\n");
+    
+    for (String key : properties.stringPropertyNames()) {
+      sb.append("    ").append(key).append("=").append(properties.getProperty(key)).append("\n");
+    }
+    return sb.toString();
   }
 
   /**

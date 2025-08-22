@@ -27,6 +27,7 @@ import org.apache.druid.testing.embedded.EmbeddedHostname;
 import org.apache.druid.testing.embedded.indexing.Resources;
 
 import java.nio.file.Files;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
@@ -48,17 +49,30 @@ public class K3sDruidService
     this.command = command;
     this.properties = new Properties();
 
-    addProperty("druid.host", EmbeddedHostname.containerFriendly().toString());
+    // Don't set druid.host here - it will be set when operator variables are available
     command.getDefaultProperties().forEach(properties::setProperty);
   }
 
-  public K3sDruidService governWithOperator(Map<String, String> operatorVariables)
+  public K3sDruidService governWithOperator()
   {
-    this.operatorVariablesTemplate = operatorVariables;
+    this.operatorVariablesTemplate = new HashMap<>(command.getOperatorConfiguration());
     this.isGovernedByOperator = true;
     this.manifestTemplate = "manifests/druid-service-operator.yaml";
     return this;
   }
+
+  public K3sDruidService withCommonProperties(String commonProperties)
+  {
+    this.operatorVariablesTemplate = new HashMap<>(this.operatorVariablesTemplate);
+    this.operatorVariablesTemplate.put("commonRuntimeProperties", commonProperties);
+    return this;
+  }
+
+  public Map<String, String> getOperatorVariablesTemplate()
+  {
+    return operatorVariablesTemplate;
+  }
+
 
   public String getName()
   {
@@ -82,7 +96,10 @@ public class K3sDruidService
 
       String manifest = StringUtils.replace(template, "${service}", getName());
       manifest = StringUtils.replace(manifest, "${command}", command.getName());
-      manifest = StringUtils.replace(manifest, "${port}", String.valueOf(command.getExposedPorts()[0]));
+      String port = isGovernedByOperator
+                           ? String.valueOf(command.getExposedOperatorPort())
+                           : String.valueOf(command.getExposedPorts()[0]);
+      manifest = StringUtils.replace(manifest, "${port}", port);
       manifest = StringUtils.replace(manifest, "${image}", druidImage);
       manifest = StringUtils.replace(manifest, "${serviceFolder}", getServicePropsFolder());
 
@@ -97,10 +114,27 @@ public class K3sDruidService
   }
 
   private String replaceOperatorVariables(String manifest) {
+    if (operatorVariablesTemplate.containsKey("metadataName")) {
+      String metadataName = operatorVariablesTemplate.get("metadataName");
+      String hostname = "druid-" + metadataName + "-" + operatorVariablesTemplate.get("node");
+      this.properties.setProperty("druid.host", hostname);
+    }
+    
+    String nodePropertiesString = prepareNodePropertiesString(this.properties);
+    manifest = StringUtils.replace(manifest, "${nodeRuntimeProperties}", nodePropertiesString);
+    
     for (Map.Entry<String, String> entry : operatorVariablesTemplate.entrySet()) {
       manifest = StringUtils.replace(manifest, "${" + entry.getKey() + "}", entry.getValue());
     }
     return manifest;
+  }
+
+  private String prepareNodePropertiesString(Properties nodeProperties) {
+    StringBuilder sb = new StringBuilder();
+    for (String key : nodeProperties.stringPropertyNames()) {
+      sb.append("        ").append(key).append("=").append(nodeProperties.getProperty(key)).append("\n");
+    }
+    return sb.toString().trim(); // Remove trailing newline
   }
 
   public Properties getProperties()

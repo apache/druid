@@ -66,7 +66,6 @@ public class IndexParallelTaskTest extends EmbeddedClusterTestBase
   private final EmbeddedHistorical historical = new EmbeddedHistorical();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
 
-
   @Override
   protected EmbeddedDruidCluster createCluster()
   {

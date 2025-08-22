@@ -36,6 +36,10 @@ public interface DruidCommand
 
   Map<String, String> getDefaultProperties();
 
+  Integer getExposedOperatorPort();
+
+  Map<String, String> getOperatorConfiguration();
+
   /**
    * Standard Druid commands to launch a server.
    *
@@ -56,6 +60,15 @@ public interface DruidCommand
             "druid.coordinator.period", "PT0.5S",
             "druid.manager.segments.pollDuration", "PT0.1S"
         ),
+        30000,
+        Map.of(
+            "node", "coordinators",
+            "druidServiceType", "coordinator",
+            "healthPath", "/status/health",
+            "readinessProbePath", "/status/health",
+            "sharedStorageDir", "/druid/shared-storage",
+            "metadataName", "test-cluster-coordinator"
+        ),
         8081
     ),
 
@@ -73,6 +86,15 @@ public interface DruidCommand
             // Keep a small sync timeout so that Peons and Indexers are not stuck
             // handling a change request when Overlord has already shutdown
             "druid.indexer.runner.syncRequestTimeout", "PT1S"
+        ),
+        30001,
+        Map.of(
+            "node", "overlords",
+            "druidServiceType", "overlord",
+            "healthPath", "/status/health",
+            "readinessProbePath", "/status/health",
+            "sharedStorageDir", "/druid/shared-storage",
+            "metadataName", "test-cluster-overlord"
         ),
         8090
     ),
@@ -92,6 +114,15 @@ public interface DruidCommand
             "druid.processing.buffer.sizeBytes", "50MiB",
             "druid.processing.numMergeBuffers", "2",
             "druid.processing.numThreads", "5"
+        ),
+        30002,
+        Map.of(
+            "node", "indexers",
+            "druidServiceType", "indexer",
+            "healthPath", "/status/health",
+            "readinessProbePath", "/status/health",
+            "sharedStorageDir", "/druid/shared-storage",
+            "metadataName", "test-cluster-indexer"
         ),
         8091
     ),
@@ -113,6 +144,15 @@ public interface DruidCommand
             "druid.processing.numMergeBuffers", "2",
             "druid.processing.numThreads", "5"
         ),
+        30003,
+        Map.of(
+            "node", "middlemanagers",
+            "druidServiceType", "middleManager",
+            "healthPath", "/status/health",
+            "readinessProbePath", "/status/health",
+            "sharedStorageDir", "/druid/shared-storage",
+            "metadataName", "test-cluster-middle-manager"
+        ),
         8091, 8100, 8101
     ),
 
@@ -128,6 +168,15 @@ public interface DruidCommand
             "druid.processing.buffer.sizeBytes", "10MiB",
             "druid.processing.numMergeBuffers", "2",
             "druid.processing.numThreads", "5"
+        ),
+        30004,
+        Map.of(
+            "node", "hot",
+            "druidServiceType", "historical",
+            "healthPath", "/status/health",
+            "readinessProbePath", "/status/health",
+            "sharedStorageDir", "/druid/shared-storage",
+            "metadataName", "test-cluster-historical"
         ),
         8083
     ),
@@ -145,6 +194,15 @@ public interface DruidCommand
             "druid.processing.numMergeBuffers", "2",
             "druid.processing.numThreads", "5"
         ),
+        30005,
+        Map.of(
+            "node", "brokers",
+            "druidServiceType", "broker",
+            "healthPath", "/status/health",
+            "readinessProbePath", "/status/health",
+            "sharedStorageDir", "/druid/shared-storage",
+            "metadataName", "test-cluster-broker"
+        ),
         8082
     ),
 
@@ -156,6 +214,15 @@ public interface DruidCommand
         "router",
         "-Xms128m -Xmx128m",
         Map.of("druid.router.managementProxy.enabled", "true"),
+        30006,
+        Map.of(
+            "node", "routers",
+            "druidServiceType", "router",
+            "healthPath", "/status/health",
+            "readinessProbePath", "/status/health",
+            "sharedStorageDir", "/druid/shared-storage",
+            "metadataName", "test-cluster-router"
+        ),
         8888
     );
 
@@ -163,13 +230,24 @@ public interface DruidCommand
     private final String javaOpts;
     private final Integer[] exposedPorts;
     private final Map<String, String> defaultProperties;
+    private final Integer exposedOperatorPort;
+    private final Map<String, String> operatorConfiguration;
 
-    Server(String name, String javaOpts, Map<String, String> defaultProperties, Integer... exposedPorts)
+    Server(
+        String name,
+        String javaOpts,
+        Map<String, String> defaultProperties,
+        Integer exposedOperatorPort,
+        Map<String, String> operatorConfiguration,
+        Integer... exposedPorts
+    )
     {
       this.name = name;
       this.javaOpts = javaOpts;
       this.defaultProperties = defaultProperties;
+      this.exposedOperatorPort = exposedOperatorPort;
       this.exposedPorts = exposedPorts;
+      this.operatorConfiguration = operatorConfiguration;
     }
 
     @Override
@@ -194,6 +272,18 @@ public interface DruidCommand
     public Map<String, String> getDefaultProperties()
     {
       return defaultProperties;
+    }
+
+    @Override
+    public Integer getExposedOperatorPort()
+    {
+      return exposedOperatorPort;
+    }
+
+    @Override
+    public Map<String, String> getOperatorConfiguration()
+    {
+      return operatorConfiguration;
     }
   }
 }
