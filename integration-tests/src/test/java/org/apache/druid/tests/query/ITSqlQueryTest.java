@@ -155,7 +155,7 @@ public class ITSqlQueryTest
         (request) -> {
         },
         (statusCode, responseBody) -> {
-          Assert.assertEquals(statusCode, HttpResponseStatus.BAD_REQUEST, responseBody);
+          Assert.assertEquals(statusCode, HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE, responseBody);
         }
     );
   }
