@@ -199,6 +199,7 @@
     <cve>CVE-2023-25194</cve>
     <cve>CVE-2024-31141</cve>
     <cve>CVE-2025-27818</cve> <!-- not fixed in any version of ranger dependency. I don't think it is exploitable in Druid within this extension -->
+    <cve>CVE-2025-27819</cve>
   </suppress>
 
   <suppress>
@@ -670,7 +671,16 @@
     <cve>CVE-2023-50291</cve>
     <cve>CVE-2023-50298</cve>
     <cve>CVE-2023-50386</cve>
+    <cve>CVE-2024-45216</cve>
     <cve>CVE-2023-50292</cve>
+    <cve>CVE-2023-50293</cve>
+  </suppress>
+  <suppress>
+    <!-- Due to ranger-plugins jar v2.6.0 -->
+    <notes><![CDATA[
+     file name: solr-solrj-8.11.3.jar
+     ]]></notes>
+    <cve>CVE-2024-45217</cve>
   </suppress>
   <suppress>
     <!-- Transitive dependency from Apache Hadoop Common, which does not have a fix that can be upgraded to yet -->
