@@ -36,7 +36,6 @@ public interface DruidCommand
 
   Map<String, String> getDefaultProperties();
 
-
   /**
    * Standard Druid commands to launch a server.
    *
@@ -165,12 +164,7 @@ public interface DruidCommand
     private final Integer[] exposedPorts;
     private final Map<String, String> defaultProperties;
 
-    Server(
-        String name,
-        String javaOpts,
-        Map<String, String> defaultProperties,
-        Integer... exposedPorts
-    )
+    Server(String name, String javaOpts, Map<String, String> defaultProperties, Integer... exposedPorts)
     {
       this.name = name;
       this.javaOpts = javaOpts;
@@ -201,6 +195,5 @@ public interface DruidCommand
     {
       return defaultProperties;
     }
-
   }
 }
