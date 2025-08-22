@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.druid.testing.embedded.k8s;
 
 import io.fabric8.kubernetes.client.Config;
@@ -44,14 +63,6 @@ public class K3sClusterWithOperatorResource extends K3sClusterResource
   private static final String HELM_PLATFORM = "linux-amd64";
   private static final String HELM_MOUNT_PATH = "/usr/local/bin/helm";
 
-  public static final String KEY_NODE = "node";
-  public static final String KEY_DRUID_SERVICE = "druidServiceType";
-  public static final String KEY_HEALTH_PATH = "healthPath";
-  public static final String KEY_READINESS_PROBE_PATH = "readinessProbePath";
-  public static final String KEY_SHARED_STORAGE_DIR = "sharedStorageDir";
-  public static final String KEY_METADATA = "metadataName";
-
-
 
   public K3sClusterWithOperatorResource()
   {
@@ -60,11 +71,13 @@ public class K3sClusterWithOperatorResource extends K3sClusterResource
     manifestFiles.add(Resources.getFileForResource(OPERATOR_NAMESPACE_MANIFEST));
   }
 
+  @Override
   public K3sClusterWithOperatorResource usingTestImage()
   {
     return usingDruidImage(DruidContainerResource.getTestDruidImageName());
   }
 
+  @Override
   public K3sClusterWithOperatorResource usingDruidImage(String druidImageName)
   {
     this.druidImageName = druidImageName;
