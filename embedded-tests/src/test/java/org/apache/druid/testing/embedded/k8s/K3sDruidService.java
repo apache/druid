@@ -175,4 +175,8 @@ public class K3sDruidService
         throw new IAE("Unsupported command[%s]", server);
     }
   }
+  public String getServiceDiscoveryPath()
+  {
+    return EmbeddedHostname.containerFriendly().toString() + ":" + command.getExposedOperatorPort();
+  }
 }

@@ -117,7 +117,7 @@ public class K3sClusterWithOperatorResource extends K3sClusterResource
 
     initializeDruidTestFolders(cluster.getTestFolder());
 
-    String commonPropertiesString = prepareCommonPropertiesString(commonProperties);
+    String commonPropertiesString = prepareCommonPropertiesString(commonProperties, cluster.getTestFolder());
     
     for (K3sDruidService druidService : services) {
       applyManifest(druidService.withCommonProperties(commonPropertiesString));
@@ -135,21 +135,15 @@ public class K3sClusterWithOperatorResource extends K3sClusterResource
     testFolder.getOrCreateFolder("druid-storage/indexing-logs");
   }
 
-  private String prepareCommonPropertiesString(Properties properties) {
+  private String prepareCommonPropertiesString(Properties properties, TestFolder testFolder) {
     StringBuilder sb = new StringBuilder();
-    sb.append("druid.zk.service.enabled=false\n");
-    sb.append("    druid.discovery.type=k8s\n");
-    sb.append("    druid.discovery.k8s.clusterIdentifier=druid-it\n");
-    sb.append("    druid.serverview.type=http\n");
-    sb.append("    druid.coordinator.loadqueuepeon.type=http\n");
-    sb.append("    druid.indexer.runner.type=httpRemote\n");
-    sb.append("    druid.metadata.storage.type=derby\n");
+    sb.append("druid.metadata.storage.type=derby\n");
     sb.append("    druid.metadata.storage.connector.connectURI=jdbc:derby://localhost:1527/var/druid/metadata.db;create=true\n");
     sb.append("    druid.metadata.storage.connector.host=localhost\n");
     sb.append("    druid.metadata.storage.connector.port=1527\n");
     sb.append("    druid.metadata.storage.connector.createTables=true\n");
     sb.append("    druid.storage.type=local\n");
-    sb.append("    druid.storage.storageDirectory=/druid/data/segments\n");
+    sb.append("    druid.storage.storageDirectory=" + testFolder.getOrCreateFolder("druid-storage/segments").getAbsolutePath() + "\n");
     sb.append("    druid.selectors.indexing.serviceName=druid/overlord\n");
     sb.append("    druid.selectors.coordinator.serviceName=druid/coordinator\n");
     sb.append("    druid.indexer.logs.type=file\n");
