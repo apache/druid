@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -88,33 +89,20 @@ public class AcquireSegmentAction implements Closeable
     }
   }
 
-  public static FutureCallback<Optional<Segment>> releaseCallback(final AcquireSegmentAction action)
+  public static FutureCallback<Optional<Segment>> releaseCallback()
   {
     return new FutureCallback<>()
     {
       @Override
       public void onSuccess(Optional<Segment> result)
       {
-        if (result.isPresent()) {
-          try {
-            result.get().close();
-            action.close();
-          }
-          catch (IOException e) {
-            throw new RuntimeException(e);
-          }
-        }
+        result.ifPresent(CloseableUtils::closeAndWrapExceptions);
       }
 
       @Override
       public void onFailure(Throwable t)
       {
-        try {
-          action.close();
-        }
-        catch (IOException e) {
-          throw new RuntimeException(e);
-        }
+        // do nothing
       }
     };
   }

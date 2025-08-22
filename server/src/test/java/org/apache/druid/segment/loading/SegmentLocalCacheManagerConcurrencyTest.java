@@ -813,7 +813,7 @@ class SegmentLocalCacheManagerConcurrencyTest
       catch (Throwable t) {
         Futures.addCallback(
             action.getSegmentFuture(),
-            AcquireSegmentAction.releaseCallback(action),
+            AcquireSegmentAction.releaseCallback(),
             Execs.directExecutor()
         );
         throw new RuntimeException(t);

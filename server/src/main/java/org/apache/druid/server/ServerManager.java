@@ -289,7 +289,7 @@ public class ServerManager implements QuerySegmentWalker
 
     if (failure != null) {
       for (int i = 0; i < futures.size(); i++) {
-        Futures.addCallback(futures.get(i), AcquireSegmentAction.releaseCallback(actions.get(i)), Execs.directExecutor());
+        Futures.addCallback(futures.get(i), AcquireSegmentAction.releaseCallback(), Execs.directExecutor());
       }
       throw CloseableUtils.closeInCatch(
           failure instanceof DruidException
@@ -305,25 +305,34 @@ public class ServerManager implements QuerySegmentWalker
     boolean timedOut = false;
     boolean interrupted = false;
     for (int i = 0; i < actions.size(); i++) {
-      // if anything fails, want to ignore it initially so we can collect all additional futures to properly clean up
-      // all references before rethrowing the error
       try {
+        if (failure != null) {
+          Futures.addCallback(futures.get(i), AcquireSegmentAction.releaseCallback(), Execs.directExecutor());
+          continue;
+        }
         final DataSegmentAndDescriptor segmentAndDescriptor = segmentsToMap.get(i);
         final AcquireSegmentAction action = actions.get(i);
         final ListenableFuture<Optional<Segment>> future = futures.get(i);
-        final Optional<Segment> segment = future.get(timeoutAt - System.currentTimeMillis(), TimeUnit.MILLISECONDS)
-                                                .map(safetyNet::register);
-        segmentReferences.add(
-            new SegmentReference(
-                segmentAndDescriptor.getDescriptor(),
-                segmentMapFunction.apply(segment),
-                action
-            )
-        );
+        final Optional<Segment> segment = future.get(timeoutAt - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
+        try {
+          final Optional<Segment> mappedSegment = segmentMapFunction.apply(segment).map(safetyNet::register);
+          segmentReferences.add(
+              new SegmentReference(
+                  segmentAndDescriptor.getDescriptor(),
+                  mappedSegment,
+                  action
+              )
+          );
+        }
+        catch (Throwable t) {
+          // if applying the mapFn failed, attach the base segment to the closer and rethrow
+          segment.ifPresent(safetyNet::register);
+          throw t;
+        }
       }
       catch (Throwable t) {
         // add callback to make sure everything gets cleaned up, just in case
-        Futures.addCallback(futures.get(i), AcquireSegmentAction.releaseCallback(actions.get(i)), Execs.directExecutor());
+        Futures.addCallback(futures.get(i), AcquireSegmentAction.releaseCallback(), Execs.directExecutor());
         if (t instanceof InterruptedException) {
           interrupted = true;
         }
