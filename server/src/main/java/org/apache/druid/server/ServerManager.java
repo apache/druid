@@ -233,14 +233,14 @@ public class ServerManager implements QuerySegmentWalker
    * For each of these segments, we then apply a {@link SegmentMapFunction} to prepare for processing. The returned
    * {@link SegmentReference} MUST BE CLOSED to release the reference.
    */
-  private List<SegmentReference> getSegmentReferences(
+  private ArrayList<SegmentReference> getSegmentReferences(
       List<DataSegmentAndDescriptor> segmentsToMap,
       SegmentMapFunction segmentMapFunction,
       long timeout
   )
   {
     // closer to collect everything that needs cleaned up in the event of failure, if we make it out of this function,
-    // closing the segments handles everything and it is the callers responsibility
+    // closing the segment reference handles everything and it is the callers responsibility
     final Closer safetyNet = Closer.create();
 
     // build list of acquire reference actions, this does not initiate the actions until we collect the futures. this
@@ -288,8 +288,8 @@ public class ServerManager implements QuerySegmentWalker
     }
 
     if (failure != null) {
-      for (int i = 0; i < futures.size(); i++) {
-        Futures.addCallback(futures.get(i), AcquireSegmentAction.releaseCallback(), Execs.directExecutor());
+      for (ListenableFuture<Optional<Segment>> future : futures) {
+        Futures.addCallback(future, AcquireSegmentAction.releaseCallback(), Execs.directExecutor());
       }
       throw CloseableUtils.closeInCatch(
           failure instanceof DruidException
@@ -301,7 +301,7 @@ public class ServerManager implements QuerySegmentWalker
       );
     }
 
-    final List<SegmentReference> segmentReferences = new ArrayList<>(actions.size());
+    final ArrayList<SegmentReference> segmentReferences = new ArrayList<>(actions.size());
     boolean timedOut = false;
     boolean interrupted = false;
     for (int i = 0; i < actions.size(); i++) {
