@@ -36,22 +36,25 @@ public class KubernetesClusterWithOperatorDockerTest extends IngestionSmokeTest 
   protected EmbeddedDruidCluster addServers(EmbeddedDruidCluster cluster)
   {
     final K3sDruidService brokerService = new K3sDruidService(DruidCommand.Server.BROKER)
-        .governWithOperator()
-        .addProperty("druid.sql.planner.metadataRefreshPeriod", "PT1s");
+        .addProperty("druid.sql.planner.metadataRefreshPeriod", "PT1s")
+        .withDruidPort(30005);
 
-    // Create a K3s cluster with all the required services
     final K3sDruidService coordinatorService = new K3sDruidService(DruidCommand.Server.COORDINATOR)
+        .withDruidPort(30000)
         .governWithOperator();
 
     final K3sDruidService overlordService = new K3sDruidService(DruidCommand.Server.OVERLORD)
         .addProperty("druid.indexer.runner.type", "k8s")
         .addProperty("druid.indexer.runner.namespace", "druid")
+        .withDruidPort(30001)
         .governWithOperator();
 
     final K3sDruidService historicalService = new K3sDruidService(DruidCommand.Server.HISTORICAL)
+        .withDruidPort(30004)
         .governWithOperator();
 
     final K3sDruidService router = new K3sDruidService(DruidCommand.Server.ROUTER)
+        .withDruidPort(30006)
         .governWithOperator();
 
 

@@ -1,7 +1,7 @@
 apiVersion: "druid.apache.org/v1alpha1"
 kind: "Druid"
 metadata:
-  name: ${metadataName}
+  name: test-cluster-${service}
 spec:
   image: ${image}
   startScript: /druid.sh
@@ -27,7 +27,7 @@ spec:
     privileged: true
   commonConfigMountPath: "/opt/druid/conf/druid/cluster/_common"
   common.runtime.properties: |
-    ${commonRuntimeProperties}
+${commonRuntimeProperties}
   jvm.options: |-
     -server
     -Djava.net.preferIPv4Stack=true
@@ -64,8 +64,8 @@ spec:
         fieldRef:
           fieldPath: metadata.namespace
   nodes:
-    ${node}:
-      nodeType: ${druidServiceType}
+    ${service}s:
+      nodeType: ${service}
       priorityClassName: system-cluster-critical
       druid.port: ${port}
       services:
@@ -83,7 +83,7 @@ spec:
       livenessProbe:
         failureThreshold: 10
         httpGet:
-          path: ${healthPath}
+          path: /status/health
           port: ${port}
         initialDelaySeconds: 5
         periodSeconds: 10
@@ -92,7 +92,7 @@ spec:
       readinessProbe:
         failureThreshold: 20
         httpGet:
-          path: ${readinessProbePath}
+          path: /status/health
           port: ${port}
         initialDelaySeconds: 5
         periodSeconds: 10
@@ -101,7 +101,7 @@ spec:
       startUpProbe:
         failureThreshold: 20
         httpGet:
-          path: ${healthPath}
+          path: /status/health
           port: ${port}
         initialDelaySeconds: 60
         periodSeconds: 30
@@ -113,5 +113,5 @@ spec:
       volumes:
         - name: druid-shared-storage
           hostPath:
-            path: ${sharedStorageDir}
+            path: /druid/shared-storage
             type: DirectoryOrCreate

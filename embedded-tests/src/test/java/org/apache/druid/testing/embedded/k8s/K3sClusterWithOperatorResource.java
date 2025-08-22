@@ -19,14 +19,11 @@
 
 package org.apache.druid.testing.embedded.k8s;
 
-import io.fabric8.kubernetes.client.Config;
-import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.embedded.TestFolder;
 import org.apache.druid.testing.embedded.docker.DruidContainerResource;
 import org.apache.druid.testing.embedded.indexing.Resources;
 import org.testcontainers.containers.Container;
@@ -80,79 +77,49 @@ public class K3sClusterWithOperatorResource extends K3sClusterResource
   @Override
   public K3sClusterWithOperatorResource usingDruidImage(String druidImageName)
   {
-    this.druidImageName = druidImageName;
+    super.usingDruidImage(druidImageName);
     return this;
   }
 
   @Override
   public K3sClusterWithOperatorResource addService(K3sDruidService service)
   {
-    services.add(service);
+    super.addService(service);
     return this;
   }
 
   @Override
   public void onStarted(EmbeddedDruidCluster cluster)
   {
-    client = new KubernetesClientBuilder()
-        .withConfig(Config.fromKubeconfig(getContainer().getKubeConfigYaml()))
-        .build();
-    closer.register(client);
-
-    loadLocalDockerImageIntoContainer(druidImageName, cluster.getTestFolder());
-
-    manifestFiles.forEach(this::applyManifest);
-
+    super.loadImageAndApplyClusterManifests(cluster);
     installHelm(cluster);
     setupOperatorWithHelm();
-
-    client.pods().inNamespace(OPERATOR_NAMESPACE).resources().forEach(this::waitUntilPodIsReady);
-
-    final Properties commonProperties = new Properties();
-    commonProperties.putAll(cluster.getCommonProperties());
-    commonProperties.remove("druid.extensions.modulesForEmbeddedTests");
-    applyConfigMap(
-        newConfigMap(COMMON_CONFIG_MAP, commonProperties, "common.runtime.properties")
-    );
-
-    initializeDruidTestFolders(cluster.getTestFolder());
-
-    String commonPropertiesString = prepareCommonPropertiesString(commonProperties, cluster.getTestFolder());
-    
-    for (K3sDruidService druidService : services) {
-      applyManifest(druidService.withCommonProperties(commonPropertiesString));
-    }
-
-    client.pods().inNamespace(DRUID_NAMESPACE).resources().forEach(this::waitUntilPodIsReady);
-    services.forEach(this::waitUntilServiceIsHealthy);
+    super.waitUntilPodsAreReady(OPERATOR_NAMESPACE);
+    Properties clusterCommon = super.injectClusterCommonPropertiesToConfigMap(cluster);
+    Properties yamlCommonProperties = getCombinedCommonProperties(clusterCommon);
+    initializeDruidServices(yamlCommonProperties);
   }
 
-  private void initializeDruidTestFolders(TestFolder testFolder) {
-    testFolder.getOrCreateFolder("druid-storage");
-    testFolder.getOrCreateFolder("druid-storage/segments");
-    testFolder.getOrCreateFolder("druid-storage/segment-cache");
-    testFolder.getOrCreateFolder("druid-storage/metadata");
-    testFolder.getOrCreateFolder("druid-storage/indexing-logs");
+  private void initializeDruidServices(Properties properties)
+  {
+    for (K3sDruidService druidService : getServices()) {
+      applyManifest(druidService.withCommonProperties(properties));
+    }
+
+    waitUntilPodsAreReady(DRUID_NAMESPACE);
+    super.waitUntilServicesAreHealthy();
   }
 
-  private String prepareCommonPropertiesString(Properties properties, TestFolder testFolder) {
-    StringBuilder sb = new StringBuilder();
-    sb.append("druid.metadata.storage.type=derby\n");
-    sb.append("    druid.metadata.storage.connector.connectURI=jdbc:derby://localhost:1527/var/druid/metadata.db;create=true\n");
-    sb.append("    druid.metadata.storage.connector.host=localhost\n");
-    sb.append("    druid.metadata.storage.connector.port=1527\n");
-    sb.append("    druid.metadata.storage.connector.createTables=true\n");
-    sb.append("    druid.storage.type=local\n");
-    sb.append("    druid.storage.storageDirectory=" + testFolder.getOrCreateFolder("druid-storage/segments").getAbsolutePath() + "\n");
-    sb.append("    druid.selectors.indexing.serviceName=druid/overlord\n");
-    sb.append("    druid.selectors.coordinator.serviceName=druid/coordinator\n");
-    sb.append("    druid.indexer.logs.type=file\n");
-    sb.append("    druid.indexer.logs.directory=/druid/data/indexing-logs\n");
-    
-    for (String key : properties.stringPropertyNames()) {
-      sb.append("    ").append(key).append("=").append(properties.getProperty(key)).append("\n");
-    }
-    return sb.toString();
+ private Properties getCombinedCommonProperties(Properties properties)
+  {
+    Properties defaults = new Properties();
+    defaults.setProperty("druid.metadata.storage.type", "derby");
+    defaults.setProperty("druid.metadata.storage.connector.connectURI", "jdbc:derby://localhost:1527/var/druid/metadata.db;create=true");
+    defaults.setProperty("druid.metadata.storage.connector.host", "localhost");
+    defaults.setProperty("druid.metadata.storage.connector.port", "1527");
+    defaults.setProperty("druid.metadata.storage.connector.createTables", "true");
+    defaults.putAll(properties);
+    return defaults;
   }
 
   /**
@@ -265,6 +232,9 @@ public class K3sClusterWithOperatorResource extends K3sClusterResource
     }
   }
 
+  /**
+   * Updates helm repository and installs the druid operator chart in the K3s cluster.
+   */
   private void setupOperatorWithHelm()
   {
     try {
@@ -287,6 +257,9 @@ public class K3sClusterWithOperatorResource extends K3sClusterResource
     }
   }
 
+  /**
+   * Executes a Helm command in the K3s cluster container.
+   */
   private void executeHelmCommand(String... args) throws Exception
   {
     String[] fullCommand = new String[args.length + 3];

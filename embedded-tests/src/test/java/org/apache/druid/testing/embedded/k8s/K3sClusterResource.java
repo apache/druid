@@ -74,18 +74,18 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   public static final String DRUID_NAMESPACE = "druid";
   private static final String NAMESPACE_MANIFEST = "manifests/druid-namespace.yaml";
 
-  protected static final String COMMON_CONFIG_MAP = "druid-common-props";
-  protected static final String SERVICE_CONFIG_MAP = "druid-%s-props";
+  private static final String COMMON_CONFIG_MAP = "druid-common-props";
+  private static final String SERVICE_CONFIG_MAP = "druid-%s-props";
 
   public static final long POD_READY_TIMEOUT_SECONDS = 300;
 
   protected final List<File> manifestFiles = new ArrayList<>();
-  protected final List<K3sDruidService> services = new ArrayList<>();
+  private final List<K3sDruidService> services = new ArrayList<>();
 
-  protected KubernetesClient client;
-  protected String druidImageName;
+  private KubernetesClient client;
+  private String druidImageName;
 
-  protected final Closer closer = Closer.create();
+  private final Closer closer = Closer.create();
 
   public K3sClusterResource()
   {
@@ -129,9 +129,9 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
         // Druid service is discoverable with the Druid service discovery
         portBindings.add(port + ":" + port);
       }
-      Integer exposedOperatorPort = service.getCommand().getExposedOperatorPort();
-      container.addExposedPorts(exposedOperatorPort);
-      portBindings.add(exposedOperatorPort + ":" + exposedOperatorPort);
+      Integer exposedPort = service.getDruidPort();
+      container.addExposedPorts(exposedPort);
+      portBindings.add(exposedPort + ":" + exposedPort);
     }
 
     container.setPortBindings(portBindings);
@@ -141,24 +141,13 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   @Override
   public void onStarted(EmbeddedDruidCluster cluster)
   {
-    client = new KubernetesClientBuilder()
-        .withConfig(Config.fromKubeconfig(getContainer().getKubeConfigYaml()))
-        .build();
-    closer.register(client);
+    loadImageAndApplyClusterManifests(cluster);
+    injectClusterCommonPropertiesToConfigMap(cluster);
+    initializeDruidServices();
+  }
 
-    loadLocalDockerImageIntoContainer(druidImageName, cluster.getTestFolder());
-
-    manifestFiles.forEach(this::applyManifest);
-
-    // Create common config map
-    final Properties commonProperties = new Properties();
-    commonProperties.putAll(cluster.getCommonProperties());
-    commonProperties.remove("druid.extensions.modulesForEmbeddedTests");
-    applyConfigMap(
-        newConfigMap(COMMON_CONFIG_MAP, commonProperties, "common.runtime.properties")
-    );
-
-    // Create config maps and manifests for each service
+  private void initializeDruidServices()
+  {
     for (K3sDruidService druidService : services) {
       final String serviceConfigMap = StringUtils.format(SERVICE_CONFIG_MAP, druidService.getName());
       applyConfigMap(
@@ -167,9 +156,46 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
       applyManifest(druidService);
     }
 
-    // Wait for all pods to be ready and services to be healthy
-    client.pods().inNamespace(DRUID_NAMESPACE).resources().forEach(this::waitUntilPodIsReady);
+    waitUntilPodsAreReady(DRUID_NAMESPACE);
+    waitUntilServicesAreHealthy();
+  }
+
+  protected void waitUntilServicesAreHealthy()
+  {
     services.forEach(this::waitUntilServiceIsHealthy);
+  }
+
+  protected List<K3sDruidService> getServices()
+  {
+    return services;
+  }
+
+  protected Properties injectClusterCommonPropertiesToConfigMap(EmbeddedDruidCluster cluster)
+  {
+    final Properties commonProperties = new Properties();
+    commonProperties.putAll(cluster.getCommonProperties());
+    commonProperties.remove("druid.extensions.modulesForEmbeddedTests");
+    applyConfigMap(
+        newConfigMap(COMMON_CONFIG_MAP, commonProperties, "common.runtime.properties")
+    );
+    return commonProperties;
+  }
+
+  protected void loadImageAndApplyClusterManifests(EmbeddedDruidCluster cluster)
+  {
+    client = new KubernetesClientBuilder()
+        .withConfig(Config.fromKubeconfig(getContainer().getKubeConfigYaml()))
+        .build();
+    closer.register(client);
+
+    loadLocalDockerImageIntoContainer(druidImageName, cluster.getTestFolder());
+
+    manifestFiles.forEach(this::applyManifest);
+  }
+
+  protected void waitUntilPodsAreReady(String namespace)
+  {
+    client.pods().inNamespace(namespace).resources().forEach(this::waitUntilPodIsReady);
   }
 
   @Override
@@ -189,7 +215,7 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
    * image does not exist in the host Docker, the image will be pulled by the
    * K3s container itself.
    */
-  protected void loadLocalDockerImageIntoContainer(String localImageName, TestFolder testFolder)
+  private void loadLocalDockerImageIntoContainer(String localImageName, TestFolder testFolder)
   {
     ensureRunning();
 
@@ -245,7 +271,7 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
     }
   }
 
-  protected void applyConfigMap(ConfigMap configMap)
+  private void applyConfigMap(ConfigMap configMap)
   {
     client.configMaps()
           .inNamespace(DRUID_NAMESPACE)
@@ -273,7 +299,7 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   /**
    * Applies a YAML manifest file to the K3s container.
    */
-  protected void applyManifest(File manifest)
+  private void applyManifest(File manifest)
   {
     try (FileInputStream fis = new FileInputStream(manifest)) {
       client.load(fis).inNamespace(DRUID_NAMESPACE).serverSideApply();
@@ -287,7 +313,7 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   /**
    * Waits for the given pod to be ready.
    */
-  protected void waitUntilPodIsReady(PodResource pod)
+  private void waitUntilPodIsReady(PodResource pod)
   {
     try {
       pod.waitUntilCondition(
@@ -308,7 +334,7 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   /**
    * Polls the health check endpoint of the given service until it is healthy.
    */
-  protected void waitUntilServiceIsHealthy(K3sDruidService service)
+  private void waitUntilServiceIsHealthy(K3sDruidService service)
   {
     final URL url;
     try {
@@ -337,7 +363,7 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   /**
    * Creates a new {@link ConfigMap} that can be applied to the K3s cluster.
    */
-  protected static ConfigMap newConfigMap(String name, Properties properties, String fileName)
+  private static ConfigMap newConfigMap(String name, Properties properties, String fileName)
   {
     try {
       // Serialize the properties

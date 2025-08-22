@@ -41,36 +41,52 @@ public class K3sDruidService
   private final DruidCommand command;
   private final Properties properties;
   private boolean isGovernedByOperator = false;
+  private Integer druidPort;
   private String manifestTemplate = "manifests/druid-service.yaml";
-  private Map<String, String> operatorVariablesTemplate = Map.of();
+  private Map<String, String> customVariableTemplate = Map.of();
 
   public K3sDruidService(DruidCommand command)
   {
     this.command = command;
     this.properties = new Properties();
+    this.druidPort = command.getExposedPorts()[0];
 
-    // Don't set druid.host here - it will be set when operator variables are available
+    addProperty("druid.host", EmbeddedHostname.containerFriendly().toString());
     command.getDefaultProperties().forEach(properties::setProperty);
   }
 
   public K3sDruidService governWithOperator()
   {
-    this.operatorVariablesTemplate = new HashMap<>(command.getOperatorConfiguration());
+    this.customVariableTemplate = new HashMap<>();
     this.isGovernedByOperator = true;
     this.manifestTemplate = "manifests/druid-service-operator.yaml";
     return this;
   }
 
-  public K3sDruidService withCommonProperties(String commonProperties)
+  public K3sDruidService withCommonProperties(Properties commonProperties)
   {
-    this.operatorVariablesTemplate = new HashMap<>(this.operatorVariablesTemplate);
-    this.operatorVariablesTemplate.put("commonRuntimeProperties", commonProperties);
+    this.customVariableTemplate.put("commonRuntimeProperties", buildCommonPropertiesString(commonProperties));
     return this;
   }
 
-  public Map<String, String> getOperatorVariablesTemplate()
+  public K3sDruidService withDruidPort(Integer druidPort)
   {
-    return operatorVariablesTemplate;
+    this.druidPort = druidPort;
+    return this;
+  }
+
+  public Integer getDruidPort()
+  {
+    return druidPort;
+  }
+
+  private String buildCommonPropertiesString(Properties properties)
+  {
+    StringBuilder builder = new StringBuilder();
+    for (String key : properties.stringPropertyNames()) {
+      builder.append("    ").append(key).append("=").append(properties.getProperty(key)).append("\n");
+    }
+    return builder.toString();
   }
 
 
@@ -96,10 +112,7 @@ public class K3sDruidService
 
       String manifest = StringUtils.replace(template, "${service}", getName());
       manifest = StringUtils.replace(manifest, "${command}", command.getName());
-      String port = isGovernedByOperator
-                    ? String.valueOf(command.getExposedOperatorPort())
-                    : String.valueOf(command.getExposedPorts()[0]);
-      manifest = StringUtils.replace(manifest, "${port}", port);
+      manifest = StringUtils.replace(manifest, "${port}", String.valueOf(druidPort));
       manifest = StringUtils.replace(manifest, "${image}", druidImage);
       manifest = StringUtils.replace(manifest, "${serviceFolder}", getServicePropsFolder());
 
@@ -115,13 +128,10 @@ public class K3sDruidService
 
   private String replaceOperatorVariables(String manifest)
   {
-    String hostname = EmbeddedHostname.containerFriendly().toString();
-    this.properties.setProperty("druid.host", hostname);
-
     String nodePropertiesString = prepareNodePropertiesString(this.properties);
     manifest = StringUtils.replace(manifest, "${nodeRuntimeProperties}", nodePropertiesString);
 
-    for (Map.Entry<String, String> entry : operatorVariablesTemplate.entrySet()) {
+    for (Map.Entry<String, String> entry : customVariableTemplate.entrySet()) {
       manifest = StringUtils.replace(manifest, "${" + entry.getKey() + "}", entry.getValue());
     }
     return manifest;
@@ -133,7 +143,7 @@ public class K3sDruidService
     for (String key : nodeProperties.stringPropertyNames()) {
       sb.append("        ").append(key).append("=").append(nodeProperties.getProperty(key)).append("\n");
     }
-    return sb.toString().trim(); // Remove trailing newline
+    return sb.toString().trim();
   }
 
   public Properties getProperties()
@@ -175,8 +185,9 @@ public class K3sDruidService
         throw new IAE("Unsupported command[%s]", server);
     }
   }
+
   public String getServiceDiscoveryPath()
   {
-    return EmbeddedHostname.containerFriendly().toString() + ":" + command.getExposedOperatorPort();
+    return EmbeddedHostname.containerFriendly().toString() + ":" + druidPort;
   }
 }
