@@ -79,7 +79,7 @@ public class StandardResponseHeaderFilterHolder implements ServletFilterHolder
         if (proxyResponse instanceof org.eclipse.jetty.server.Response) {
           ((org.eclipse.jetty.server.Response) proxyResponse).getHeaders().remove(headerName);
         } else if (proxyResponse instanceof org.eclipse.jetty.ee8.nested.Response) {
-          ((org.eclipse.jetty.ee8.nested.Response) proxyResponse).setHeader(headerName, "");
+          ((org.eclipse.jetty.ee8.nested.Response) proxyResponse).getHttpFields().remove(headerName);
         }
       }
     }
