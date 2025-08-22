@@ -26,7 +26,6 @@ import com.google.inject.servlet.GuiceFilter;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.AllowHttpMethodsResourceFilter;
-import org.eclipse.jetty.ee8.nested.ContextHandler;
 import org.eclipse.jetty.ee8.servlet.FilterHolder;
 import org.eclipse.jetty.ee8.servlet.FilterMapping;
 import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
@@ -47,7 +46,7 @@ public class JettyServerInitUtils
 {
   private static final String[] GZIP_METHODS = new String[]{HttpMethod.GET, HttpMethod.POST};
 
-  public static GzipHandler wrapWithDefaultGzipHandler(final ContextHandler handler, int inflateBufferSize, int compressionLevel)
+  public static GzipHandler wrapWithDefaultGzipHandler(final ServletContextHandler handler, int inflateBufferSize, int compressionLevel)
   {
     GzipHandler gzipHandler = new GzipHandler();
     gzipHandler.setMinGzipSize(0);
