@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.DynamicConfigProvider;
@@ -80,6 +81,8 @@ public class KafkaEmitterConfig
   private final Map<String, String> kafkaProducerConfig;
   @JsonProperty("producer.hiddenProperties")
   private final DynamicConfigProvider<String> kafkaProducerSecrets;
+  @Nullable @JsonProperty("producer.shutdownTimeout")
+  private final Long shutdownTimeout;
 
   @JsonCreator
   public KafkaEmitterConfig(
@@ -92,7 +95,8 @@ public class KafkaEmitterConfig
       @Nullable @JsonProperty("clusterName") String clusterName,
       @Nullable @JsonProperty("extra.dimensions") Map<String, String> extraDimensions,
       @JsonProperty("producer.config") @Nullable Map<String, String> kafkaProducerConfig,
-      @JsonProperty("producer.hiddenProperties") @Nullable DynamicConfigProvider<String> kafkaProducerSecrets
+      @JsonProperty("producer.hiddenProperties") @Nullable DynamicConfigProvider<String> kafkaProducerSecrets,
+      @JsonProperty("producer.shutdownTimeout") @Nullable Long shutdownTimeout
   )
   {
     this.eventTypes = maybeUpdateEventTypes(eventTypes, requestTopic);
@@ -138,6 +142,7 @@ public class KafkaEmitterConfig
     this.extraDimensions = extraDimensions;
     this.kafkaProducerConfig = kafkaProducerConfig == null ? ImmutableMap.of() : kafkaProducerConfig;
     this.kafkaProducerSecrets = kafkaProducerSecrets == null ? new MapStringDynamicConfigProvider(ImmutableMap.of()) : kafkaProducerSecrets;
+    this.shutdownTimeout = Configs.valueOrDefault(shutdownTimeout, Long.MAX_VALUE);
   }
 
   @Nonnull
@@ -217,6 +222,12 @@ public class KafkaEmitterConfig
     return kafkaProducerSecrets;
   }
 
+  @JsonProperty
+  public Long getShutdownTimeout()
+  {
+    return shutdownTimeout;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -259,6 +270,9 @@ public class KafkaEmitterConfig
     if (!getKafkaProducerConfig().equals(that.getKafkaProducerConfig())) {
       return false;
     }
+    if (!getShutdownTimeout().equals(that.getShutdownTimeout())) {
+      return false;
+    }
     return getKafkaProducerSecrets().getConfig().equals(that.getKafkaProducerSecrets().getConfig());
   }
 
@@ -274,6 +288,7 @@ public class KafkaEmitterConfig
     result = 31 * result + (getClusterName() != null ? getClusterName().hashCode() : 0);
     result = 31 * result + (getExtraDimensions() != null ? getExtraDimensions().hashCode() : 0);
     result = 31 * result + getKafkaProducerConfig().hashCode();
+    result = 31 * result + getShutdownTimeout().hashCode();
     result = 31 * result + getKafkaProducerSecrets().getConfig().hashCode();
     return result;
   }
@@ -292,6 +307,7 @@ public class KafkaEmitterConfig
            ", extra.dimensions='" + extraDimensions + '\'' +
            ", producer.config=" + kafkaProducerConfig + '\'' +
            ", producer.hiddenProperties=" + kafkaProducerSecrets +
+           ", producer.shutdownTimeout=" + shutdownTimeout +
            '}';
   }
 }
