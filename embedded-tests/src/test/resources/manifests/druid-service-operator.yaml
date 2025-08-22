@@ -38,15 +38,19 @@ spec:
     -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
   log4j.config: |-
     <?xml version="1.0" encoding="UTF-8" ?>
-    <Configuration status="TRACE">
+    <Configuration status="WARN">
         <Appenders>
             <Console name="Console" target="SYSTEM_OUT">
-                <JsonLayout properties="true"/>
+                <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
             </Console>
+            <File name="FileAppender" fileName="/druid/data/logs/druid.log">
+                <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+            </File>
         </Appenders>
         <Loggers>
             <Root level="info">
                 <AppenderRef ref="Console"/>
+                <AppenderRef ref="FileAppender"/>
             </Root>
         </Loggers>
     </Configuration>
@@ -63,14 +67,14 @@ spec:
     ${node}:
       nodeType: ${druidServiceType}
       priorityClassName: system-cluster-critical
-      druid.port: 8088
+      druid.port: ${port}
       services:
         - spec:
             type: NodePort
             ports:
               - name: http
-                port: 8088
-                targetPort: 8088
+                port: ${port}
+                targetPort: ${port}
                 nodePort: ${port}
       replicas: 1
       nodeConfigMountPath: "/opt/druid/conf/druid/cluster/${serviceFolder}"
@@ -80,7 +84,7 @@ spec:
         failureThreshold: 10
         httpGet:
           path: ${healthPath}
-          port: 8088
+          port: ${port}
         initialDelaySeconds: 5
         periodSeconds: 10
         successThreshold: 1
@@ -89,7 +93,7 @@ spec:
         failureThreshold: 20
         httpGet:
           path: ${readinessProbePath}
-          port: 8088
+          port: ${port}
         initialDelaySeconds: 5
         periodSeconds: 10
         successThreshold: 1
@@ -98,7 +102,7 @@ spec:
         failureThreshold: 20
         httpGet:
           path: ${healthPath}
-          port: 8088
+          port: ${port}
         initialDelaySeconds: 60
         periodSeconds: 30
         successThreshold: 1

@@ -44,6 +44,8 @@ public class KubernetesClusterWithOperatorDockerTest extends IngestionSmokeTest 
         .governWithOperator();
 
     final K3sDruidService overlordService = new K3sDruidService(DruidCommand.Server.OVERLORD)
+        .addProperty("druid.indexer.runner.type", "k8s")
+        .addProperty("druid.indexer.runner.namespace", "druid")
         .governWithOperator();
 
     final K3sDruidService historicalService = new K3sDruidService(DruidCommand.Server.HISTORICAL)

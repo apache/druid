@@ -97,8 +97,8 @@ public class K3sDruidService
       String manifest = StringUtils.replace(template, "${service}", getName());
       manifest = StringUtils.replace(manifest, "${command}", command.getName());
       String port = isGovernedByOperator
-                           ? String.valueOf(command.getExposedOperatorPort())
-                           : String.valueOf(command.getExposedPorts()[0]);
+                    ? String.valueOf(command.getExposedOperatorPort())
+                    : String.valueOf(command.getExposedPorts()[0]);
       manifest = StringUtils.replace(manifest, "${port}", port);
       manifest = StringUtils.replace(manifest, "${image}", druidImage);
       manifest = StringUtils.replace(manifest, "${serviceFolder}", getServicePropsFolder());
@@ -113,23 +113,22 @@ public class K3sDruidService
     }
   }
 
-  private String replaceOperatorVariables(String manifest) {
-    if (operatorVariablesTemplate.containsKey("metadataName")) {
-      String metadataName = operatorVariablesTemplate.get("metadataName");
-      String hostname = "druid-" + metadataName + "-" + operatorVariablesTemplate.get("node");
-      this.properties.setProperty("druid.host", hostname);
-    }
-    
+  private String replaceOperatorVariables(String manifest)
+  {
+    String hostname = EmbeddedHostname.containerFriendly().toString();
+    this.properties.setProperty("druid.host", hostname);
+
     String nodePropertiesString = prepareNodePropertiesString(this.properties);
     manifest = StringUtils.replace(manifest, "${nodeRuntimeProperties}", nodePropertiesString);
-    
+
     for (Map.Entry<String, String> entry : operatorVariablesTemplate.entrySet()) {
       manifest = StringUtils.replace(manifest, "${" + entry.getKey() + "}", entry.getValue());
     }
     return manifest;
   }
 
-  private String prepareNodePropertiesString(Properties nodeProperties) {
+  private String prepareNodePropertiesString(Properties nodeProperties)
+  {
     StringBuilder sb = new StringBuilder();
     for (String key : nodeProperties.stringPropertyNames()) {
       sb.append("        ").append(key).append("=").append(nodeProperties.getProperty(key)).append("\n");
@@ -153,7 +152,7 @@ public class K3sDruidService
     return StringUtils.format(
         "http://%s:%s/status/health",
         EmbeddedHostname.containerFriendly().toString(),
-        command.getExposedPorts()[0]
+        isGovernedByOperator ? command.getExposedOperatorPort() : command.getExposedPorts()[0]
     );
   }
 
