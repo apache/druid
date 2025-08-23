@@ -35,8 +35,10 @@ import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.sql.calcite.util.datasets.InputSourceBasedTestDataset;
 import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.stream.Collectors;
 
 /**
  * Utility class to create {@link TestDataSet} from fake indexing tasks.
@@ -53,7 +55,7 @@ public class FakeIndexTaskUtil
       om.registerSubtypes(new NamedType(ResourceInputSource.class, "classpath"));
       FakeIndexTask indexTask = om.readValue(src, FakeIndexTask.class);
       FakeIngestionSpec spec = indexTask.spec;
-      InputSource inputSource = relativizeLocalInputSource(
+      InputSource inputSource = resolveLocalInputSource(
           spec.getIOConfig().inputSource, ProjectPathUtils.PROJECT_ROOT
       );
       TestDataSet dataset = new InputSourceBasedTestDataset(
@@ -68,22 +70,27 @@ public class FakeIndexTaskUtil
     }
   }
 
-  private static InputSource relativizeLocalInputSource(InputSource inputSource, File projectRoot)
+  private static InputSource resolveLocalInputSource(InputSource inputSource, File projectRoot)
   {
     if (!(inputSource instanceof LocalInputSource)) {
       return inputSource;
     }
     LocalInputSource localInputSource = (LocalInputSource) inputSource;
-    if (localInputSource.getBaseDir().isAbsolute()) {
-      return inputSource;
-    }
-    File newBaseDir = projectRoot.toPath().resolve(localInputSource.getBaseDir().toPath()).toFile();
     return new LocalInputSource(
-        newBaseDir,
+        resolveFile(projectRoot, localInputSource.getBaseDir()),
         localInputSource.getFilter(),
-        localInputSource.getFiles(),
+        localInputSource.getFiles().stream().map(f -> resolveFile(projectRoot, f)).collect(Collectors.toList()),
         localInputSource.getSystemFields()
     );
+  }
+
+  private static File resolveFile(File projectRoot, @Nullable File file)
+  {
+    if (file == null || file.isAbsolute()) {
+      return file;
+    } else {
+      return projectRoot.toPath().resolve(file.toPath()).toFile();
+    }
   }
 
   static class FakeIndexTask
