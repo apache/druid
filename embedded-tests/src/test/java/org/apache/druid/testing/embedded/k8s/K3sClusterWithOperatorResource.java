@@ -30,6 +30,7 @@ import org.testcontainers.containers.Container;
 import org.testcontainers.utility.MountableFile;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -39,6 +40,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.attribute.PosixFilePermission;
 import java.time.Duration;
@@ -69,26 +71,6 @@ public class K3sClusterWithOperatorResource extends K3sClusterResource
   }
 
   @Override
-  public K3sClusterWithOperatorResource usingTestImage()
-  {
-    return usingDruidImage(DruidContainerResource.getTestDruidImageName());
-  }
-
-  @Override
-  public K3sClusterWithOperatorResource usingDruidImage(String druidImageName)
-  {
-    super.usingDruidImage(druidImageName);
-    return this;
-  }
-
-  @Override
-  public K3sClusterWithOperatorResource addService(K3sDruidService service)
-  {
-    super.addService(service);
-    return this;
-  }
-
-  @Override
   public void onStarted(EmbeddedDruidCluster cluster)
   {
     super.loadImageAndApplyClusterManifests(cluster);
@@ -113,10 +95,6 @@ public class K3sClusterWithOperatorResource extends K3sClusterResource
  private Properties getCombinedCommonProperties(Properties properties)
   {
     Properties defaults = new Properties();
-    defaults.setProperty("druid.metadata.storage.type", "derby");
-    defaults.setProperty("druid.metadata.storage.connector.connectURI", "jdbc:derby://localhost:1527/var/druid/metadata.db;create=true");
-    defaults.setProperty("druid.metadata.storage.connector.host", "localhost");
-    defaults.setProperty("druid.metadata.storage.connector.port", "1527");
     defaults.setProperty("druid.metadata.storage.connector.createTables", "true");
     defaults.putAll(properties);
     return defaults;
@@ -282,5 +260,35 @@ public class K3sClusterWithOperatorResource extends K3sClusterResource
       log.error("Exception executing helm command: %s", e.getMessage());
       throw e;
     }
+  }
+
+  @Override
+  public void applyManifest(K3sDruidService service)
+  {
+    String manifestYaml = service.createManifestYaml(druidImageName);
+    manifestYaml = StringUtils.replace(
+        manifestYaml,
+        "${commonRuntimeProperties}",
+        buildPropertiesString(service.getCommonProperties(), 4)
+    );
+    manifestYaml = StringUtils.replace(
+        manifestYaml,
+        "${nodeRuntimeProperties}",
+        buildPropertiesString(service.getRuntimeProperties(), 8)
+    );
+    super.loadYamlInCluster(service, manifestYaml);
+  }
+
+  /**
+   * Builds a properties string to be used in the manifest.yaml file supporting a uniform indentation.
+   */
+  private String buildPropertiesString(Properties properties, int indentationSpaces)
+  {
+    StringBuilder builder = new StringBuilder();
+    String indentation = " ".repeat(indentationSpaces);
+    for (String key : properties.stringPropertyNames()) {
+      builder.append(indentation).append(key).append("=").append(properties.getProperty(key)).append("\n");
+    }
+    return builder.toString();
   }
 }

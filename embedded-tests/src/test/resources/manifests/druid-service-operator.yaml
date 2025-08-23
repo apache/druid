@@ -16,9 +16,6 @@ spec:
   volumes:
     - name: mysqlconnector
       emptyDir: { }
-  volumeMounts:
-    - name: mysqlconnector
-      mountPath: "/opt/druid/extensions/mysql-connector"
   securityContext:
     fsGroup: 0
     runAsUser: 0

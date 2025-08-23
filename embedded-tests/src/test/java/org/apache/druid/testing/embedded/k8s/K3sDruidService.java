@@ -36,13 +36,10 @@ import java.util.Properties;
  */
 public class K3sDruidService
 {
-  private static final String KEY_COMMON_RUNTIME_PROPERTIES = "${commonRuntimeProperties}";
-  private static final String KEY_NODE_RUNTIME_PROPERTIES = "${nodeRuntimeProperties}";
-
   private final DruidCommand command;
   private final Properties properties;
   private final Properties commonProperties;
-  private Integer druidPort;
+  private int servicePort;
   private String manifestTemplate = "manifests/druid-service.yaml";
 
   public K3sDruidService(DruidCommand command)
@@ -50,7 +47,7 @@ public class K3sDruidService
     this.command = command;
     this.properties = new Properties();
     this.commonProperties = new Properties();
-    this.druidPort = command.getExposedPorts()[0];
+    this.servicePort = command.getExposedPorts()[0];
 
     addProperty("druid.host", EmbeddedHostname.containerFriendly().toString());
     command.getDefaultProperties().forEach(properties::setProperty);
@@ -68,15 +65,25 @@ public class K3sDruidService
     return this;
   }
 
-  public K3sDruidService withDruidPort(Integer druidPort)
+  public K3sDruidService usingPort(int port)
   {
-    this.druidPort = druidPort;
+    this.servicePort = port;
     return this;
   }
 
-  public Integer getDruidPort()
+  public int getServicePort()
   {
-    return druidPort;
+    return servicePort;
+  }
+
+  public Properties getCommonProperties()
+  {
+    return commonProperties;
+  }
+
+  public Properties getRuntimeProperties()
+  {
+    return properties;
   }
 
   public String getName()
@@ -101,29 +108,14 @@ public class K3sDruidService
 
       String manifest = StringUtils.replace(template, "${service}", getName());
       manifest = StringUtils.replace(manifest, "${command}", command.getName());
-      manifest = StringUtils.replace(manifest, "${port}", String.valueOf(druidPort));
+      manifest = StringUtils.replace(manifest, "${port}", String.valueOf(servicePort));
       manifest = StringUtils.replace(manifest, "${image}", druidImage);
       manifest = StringUtils.replace(manifest, "${serviceFolder}", getServicePropsFolder());
-      manifest = StringUtils.replace(manifest, KEY_COMMON_RUNTIME_PROPERTIES, buildPropertiesString(commonProperties, 4));
-      manifest = StringUtils.replace(manifest, KEY_NODE_RUNTIME_PROPERTIES, buildPropertiesString(properties, 8));
       return manifest;
     }
     catch (Exception e) {
       throw new ISE(e, "Could not create manifest for service[%s]", command);
     }
-  }
-
-  /**
-   * Builds a properties string to be used in the manifest.yaml file supporting a uniform indentation.
-   */
-  private String buildPropertiesString(Properties properties, int indentationSpaces)
-  {
-    StringBuilder builder = new StringBuilder();
-    String indentation = " ".repeat(indentationSpaces);
-    for (String key : properties.stringPropertyNames()) {
-      builder.append(indentation).append(key).append("=").append(properties.getProperty(key)).append("\n");
-    }
-    return builder.toString();
   }
 
   public Properties getProperties()
@@ -142,7 +134,7 @@ public class K3sDruidService
     return StringUtils.format(
         "http://%s:%s/status/health",
         EmbeddedHostname.containerFriendly().toString(),
-        isGovernedByOperator ? command.getExposedOperatorPort() : command.getExposedPorts()[0]
+        String.valueOf(servicePort)
     );
   }
 
@@ -164,10 +156,5 @@ public class K3sDruidService
       default:
         throw new IAE("Unsupported command[%s]", server);
     }
-  }
-
-  public String getServiceDiscoveryPath()
-  {
-    return EmbeddedHostname.containerFriendly().toString() + ":" + druidPort;
   }
 }

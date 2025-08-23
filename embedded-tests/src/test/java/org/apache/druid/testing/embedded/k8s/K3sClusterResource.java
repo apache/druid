@@ -83,7 +83,7 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   private final List<K3sDruidService> services = new ArrayList<>();
 
   private KubernetesClient client;
-  private String druidImageName;
+  protected String druidImageName;
 
   private final Closer closer = Closer.create();
 
@@ -129,9 +129,9 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
         // Druid service is discoverable with the Druid service discovery
         portBindings.add(port + ":" + port);
       }
-      Integer exposedPort = service.getDruidPort();
-      container.addExposedPorts(exposedPort);
-      portBindings.add(exposedPort + ":" + exposedPort);
+      int servicePort = service.getServicePort();
+      container.addExposedPorts(servicePort);
+      portBindings.add(servicePort + ":" + servicePort);
     }
 
     container.setPortBindings(portBindings);
@@ -141,6 +141,7 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   @Override
   public void onStarted(EmbeddedDruidCluster cluster)
   {
+    initKubernetesClient();
     loadImageAndApplyClusterManifests(cluster);
     injectClusterCommonPropertiesToConfigMap(cluster);
     initializeDruidServices();
@@ -183,14 +184,17 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
 
   protected void loadImageAndApplyClusterManifests(EmbeddedDruidCluster cluster)
   {
+    initKubernetesClient();
+    loadLocalDockerImageIntoContainer(druidImageName, cluster.getTestFolder());
+    manifestFiles.forEach(this::applyManifest);
+  }
+
+  private void initKubernetesClient()
+  {
     client = new KubernetesClientBuilder()
         .withConfig(Config.fromKubeconfig(getContainer().getKubeConfigYaml()))
         .build();
     closer.register(client);
-
-    loadLocalDockerImageIntoContainer(druidImageName, cluster.getTestFolder());
-
-    manifestFiles.forEach(this::applyManifest);
   }
 
   protected void waitUntilPodsAreReady(String namespace)
@@ -286,7 +290,11 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   {
     final String manifestYaml = service.createManifestYaml(druidImageName);
     log.info("Applying manifest for service[%s]: %s", service.getName(), manifestYaml);
+    loadYamlInCluster(service, manifestYaml);
+  }
 
+  protected void loadYamlInCluster(K3sDruidService service, String manifestYaml)
+  {
     try (ByteArrayInputStream bis = new ByteArrayInputStream(manifestYaml.getBytes(StandardCharsets.UTF_8))) {
       client.load(bis).inNamespace(DRUID_NAMESPACE).serverSideApply();
       log.info("Applied manifest for service[%s]", service.getName());

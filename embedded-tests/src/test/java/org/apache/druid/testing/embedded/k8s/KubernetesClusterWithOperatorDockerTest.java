@@ -30,7 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
  * Runs some basic ingestion tests against latest image Druid containers running
  * on a K3s cluster with druid-operator.
  */
-public class KubernetesClusterWithOperatorDockerTest extends IngestionSmokeTest
+public class KubernetesClusterWithOperatorDockerTest extends IngestionSmokeTest implements LatestImageDockerTest
 {
   private static final String MANIFEST_TEMPLATE = "manifests/druid-service-operator.yaml";
 
@@ -40,27 +40,27 @@ public class KubernetesClusterWithOperatorDockerTest extends IngestionSmokeTest
     final K3sDruidService brokerService = new K3sDruidService(DruidCommand.Server.BROKER)
         .addProperty("druid.sql.planner.metadataRefreshPeriod", "PT1s")
         .usingManifestTemplate(MANIFEST_TEMPLATE)
-        .withDruidPort(30005);
+        .usingPort(30005);
 
     final K3sDruidService coordinatorService = new K3sDruidService(DruidCommand.Server.COORDINATOR)
-        .withDruidPort(30000)
+        .usingPort(30000)
         .usingManifestTemplate(MANIFEST_TEMPLATE);
 
     final K3sDruidService overlordService = new K3sDruidService(DruidCommand.Server.OVERLORD)
         .addProperty("druid.indexer.runner.type", "k8s")
         .addProperty("druid.indexer.runner.namespace", "druid")
-        .withDruidPort(30001)
+        .usingPort(30001)
         .usingManifestTemplate(MANIFEST_TEMPLATE);
 
     final K3sDruidService historicalService = new K3sDruidService(DruidCommand.Server.HISTORICAL)
-        .withDruidPort(30004)
+        .usingPort(30004)
         .usingManifestTemplate(MANIFEST_TEMPLATE);
 
     final K3sDruidService router = new K3sDruidService(DruidCommand.Server.ROUTER)
-        .withDruidPort(30006)
+        .usingPort(30006)
         .usingManifestTemplate(MANIFEST_TEMPLATE);
 
-    final K3sClusterWithOperatorResource k3sCluster = new K3sClusterWithOperatorResource()
+    final K3sClusterResource k3sCluster = new K3sClusterWithOperatorResource()
         .usingTestImage()
         .addService(coordinatorService)
         .addService(overlordService)
@@ -81,8 +81,7 @@ public class KubernetesClusterWithOperatorDockerTest extends IngestionSmokeTest
         .addCommonProperty(
             "druid.extensions.loadList",
             "[\"druid-s3-extensions\", \"druid-kafka-indexing-service\","
-            + "\"druid-multi-stage-query\", \"postgresql-metadata-storage\","
-            + " \"druid-kubernetes-overlord-extensions\", \"druid-kubernetes-extensions\", \"druid-datasketches\"]"
+            + "\"druid-multi-stage-query\", \"postgresql-metadata-storage\", \"druid-kubernetes-overlord-extensions\"]"
         );
   }
 
