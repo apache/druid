@@ -171,7 +171,7 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
     return services;
   }
 
-  protected Properties injectClusterCommonPropertiesToConfigMap(EmbeddedDruidCluster cluster)
+  protected void injectClusterCommonPropertiesToConfigMap(EmbeddedDruidCluster cluster)
   {
     final Properties commonProperties = new Properties();
     commonProperties.putAll(cluster.getCommonProperties());
@@ -179,7 +179,6 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
     applyConfigMap(
         newConfigMap(COMMON_CONFIG_MAP, commonProperties, "common.runtime.properties")
     );
-    return commonProperties;
   }
 
   protected void loadImageAndApplyClusterManifests(EmbeddedDruidCluster cluster)

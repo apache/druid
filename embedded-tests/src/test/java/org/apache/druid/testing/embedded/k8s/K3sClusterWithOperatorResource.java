@@ -77,8 +77,8 @@ public class K3sClusterWithOperatorResource extends K3sClusterResource
     installHelm(cluster);
     setupOperatorWithHelm();
     super.waitUntilPodsAreReady(OPERATOR_NAMESPACE);
-    Properties clusterCommon = super.injectClusterCommonPropertiesToConfigMap(cluster);
-    Properties yamlCommonProperties = getCombinedCommonProperties(clusterCommon);
+    super.injectClusterCommonPropertiesToConfigMap(cluster);
+    Properties yamlCommonProperties = getCombinedCommonProperties(cluster.getCommonProperties());
     initializeDruidServices(yamlCommonProperties);
   }
 
