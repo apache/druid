@@ -19,6 +19,7 @@
 
 package org.apache.druid.server;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -249,9 +250,9 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
     }
   }
 
-  public SpecificSegmentsQuerySegmentWalker add(TestDataSet dataset, File tmpDir)
+  public SpecificSegmentsQuerySegmentWalker add(TestDataSet dataset, ObjectMapper jsonMapper, File tmpDir)
   {
-    QueryableIndex indexNumericDims = dataset.makeIndex(tmpDir);
+    QueryableIndex indexNumericDims = dataset.makeIndex(jsonMapper, tmpDir);
     return add(
         DataSegment.builder()
             .dataSource(dataset.getName())
