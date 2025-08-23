@@ -24,13 +24,11 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.embedded.docker.DruidContainerResource;
 import org.apache.druid.testing.embedded.indexing.Resources;
 import org.testcontainers.containers.Container;
 import org.testcontainers.utility.MountableFile;
 
 import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -40,7 +38,6 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.attribute.PosixFilePermission;
 import java.time.Duration;
@@ -92,7 +89,7 @@ public class K3sClusterWithOperatorResource extends K3sClusterResource
     super.waitUntilServicesAreHealthy();
   }
 
- private Properties getCombinedCommonProperties(Properties properties)
+  private Properties getCombinedCommonProperties(Properties properties)
   {
     Properties defaults = new Properties();
     defaults.setProperty("druid.metadata.storage.connector.createTables", "true");
