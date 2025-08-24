@@ -57,6 +57,9 @@ public class KubernetesClusterWithOperatorDockerTest extends IngestionSmokeTest 
         .addService(brokerService);
 
     // Add an EmbeddedOverlord and EmbeddedBroker to use their client and mapper bindings.
+    overlord.addProperty("druid.plaintextPort", "7090");
+    broker.addProperty("druid.plaintextPort", "7082");
+    
     return cluster
         .useContainerFriendlyHostname()
         .addResource(k3sCluster)
