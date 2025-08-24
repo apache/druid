@@ -1,0 +1,31 @@
+# permissions for end users to edit druids.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: druid-editor-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: druid-operator
+    app.kubernetes.io/part-of: druid-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: druid-editor-role
+rules:
+- apiGroups:
+  - druid.apache.org
+  resources:
+  - druids
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - druid.apache.org
+  resources:
+  - druids/status
+  verbs:
+  - get

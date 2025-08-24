@@ -1,0 +1,362 @@
+apiVersion: "druid.apache.org/v1alpha1"
+kind: "Druid"
+metadata:
+  name: tiny-cluster
+spec:
+  image: apache/druid:28.0.0
+  # Optionally specify image for all nodes. Can be specify on nodes also
+  # imagePullSecrets:
+  # - name: tutu
+  startScript: /druid.sh
+  scalePvcSts: true
+  rollingDeploy: true
+  defaultProbes: false
+  podLabels:
+    environment: stage
+    release: alpha
+  podAnnotations:
+    dummy: k8s_extn_needs_atleast_one_annotation
+  additionalContainer:
+  - containerName: mysqlconnector 
+    runAsInit: true
+    image: apache/druid:27.0.0
+    command:
+    - "sh"
+    - "-c"
+    - "wget -O /tmp/mysql-connector-j-8.0.32.tar.gz https://downloads.mysql.com/archives/get/p/3/file/mysql-connector-j-8.0.32.tar.gz && cd /tmp && tar -xf /tmp/mysql-connector-j-8.0.32.tar.gz && cp /tmp/mysql-connector-j-8.0.32/mysql-connector-j-8.0.32.jar /opt/druid/extensions/mysql-connector/mysql-connector-java.jar"
+    volumeMounts:
+    - name: mysqlconnector
+      mountPath: "/opt/druid/extensions/mysql-connector"
+  volumes:
+  - name: mysqlconnector
+    emptyDir: {} 
+  volumeMounts:
+  - name: mysqlconnector
+    mountPath: "/opt/druid/extensions/mysql-connector"
+  securityContext:
+    fsGroup: 0
+    runAsUser: 0
+    runAsGroup: 0
+  containerSecurityContext:
+    privileged: true
+  services:
+    - spec:
+        type: ClusterIP
+        clusterIP: None
+  commonConfigMountPath: "/opt/druid/conf/druid/cluster/_common"
+  jvm.options: |-
+    -server
+    -XX:MaxDirectMemorySize=10240g
+    -Duser.timezone=UTC
+    -Dfile.encoding=UTF-8
+    -Dlog4j.debug
+    -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+  log4j.config: |-
+    <?xml version="1.0" encoding="UTF-8" ?>
+    <Configuration status="TRACE">
+        <Appenders>
+            <Http name="Http" url="https://demo.parseable.com/api/v1/ingest" method="POST">
+              <Property name="Authorization" value="Basic YWRtaW46YWRtaW4=" />
+              <Property name="X-P-Stream" value="druide2e" />
+              <Property name="Accept" value="application/json" />
+              <Property name="X-Java-Runtime" value="$${java:runtime}" />
+              <JsonLayout properties="true"/>
+            </Http>
+        </Appenders>
+        <Loggers>
+            <Root level="info">
+                <AppenderRef ref="Http"/>
+            </Root>
+        </Loggers>
+    </Configuration>
+  common.runtime.properties: |
+    #
+    # Zookeeper-less Druid Cluster
+    #
+    druid.zk.service.enabled=false
+    druid.discovery.type=k8s
+    druid.discovery.k8s.clusterIdentifier=druid-it
+    druid.serverview.type=http
+    druid.coordinator.loadqueuepeon.type=http
+    druid.indexer.runner.type=httpRemote
+    # Metadata Store
+    druid.metadata.storage.type=derby
+    druid.metadata.storage.connector.connectURI=jdbc:derby://localhost:1527/var/druid/metadata.db;create=true
+    druid.metadata.storage.connector.host=localhost
+    druid.metadata.storage.connector.port=1527
+    druid.metadata.storage.connector.createTables=true
+    # Deep Storage
+    druid.storage.type=s3
+    druid.storage.bucket=druid
+    druid.storage.baseKey=druid/segments
+    druid.s3.accessKey=minio
+    druid.s3.secretKey=minio123
+    druid.s3.protocol=http
+    druid.s3.enabePathStyleAccess=true
+    druid.s3.endpoint.signingRegion=us-east-1
+    druid.s3.enablePathStyleAccess=true
+    druid.s3.endpoint.url=http://myminio-hl.druid.svc.cluster.local:9000/
+    #
+    # Extensions
+    #
+    druid.extensions.loadList=["druid-kubernetes-overlord-extensions", "druid-avro-extensions", "druid-s3-extensions", "druid-hdfs-storage", "druid-kafka-indexing-service", "druid-datasketches", "druid-kubernetes-extensions"]
+    #
+    # Service discovery
+    #
+    druid.selectors.indexing.serviceName=druid/overlord
+    druid.selectors.coordinator.serviceName=druid/coordinator
+    druid.indexer.logs.type=s3
+    druid.indexer.logs.s3Bucket=druid
+    druid.indexer.logs.s3Prefix=druid/indexing-logs
+    druid.lookup.enableLookupSyncOnStartup=false
+  env:
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    - name: POD_NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+
+  nodes:
+    brokers:
+      # Optionally specify for running broker as Deployment
+      kind: Deployment
+      nodeType: "broker"
+      # Optionally specify for broker nodes
+      # imagePullSecrets:
+      # - name: tutu
+      priorityClassName: system-cluster-critical 
+      druid.port: 8088
+      services:
+        - spec:
+            type: ClusterIP
+            clusterIP: None
+      nodeConfigMountPath: "/opt/druid/conf/druid/cluster/query/broker"
+      replicas: 1
+      runtime.properties: |
+        druid.service=druid/broker
+        # HTTP server threads
+        druid.broker.http.numConnections=5
+        druid.server.http.numThreads=40
+        # Processing threads and buffers
+        druid.processing.buffer.sizeBytes=25000000
+        druid.sql.enable=true
+      extra.jvm.options: |-
+        -Xmx512m
+        -Xms512m
+
+    coordinators:
+      # Optionally specify for running coordinator as Deployment
+      kind: Deployment
+      nodeType: "coordinator"
+      druid.port: 8088
+      services:
+        - spec:
+            type: ClusterIP
+            clusterIP: None
+      nodeConfigMountPath: "/opt/druid/conf/druid/cluster/master/coordinator-overlord"
+      replicas: 1
+      runtime.properties: |
+        druid.service=druid/coordinator
+        # HTTP server threads
+        druid.coordinator.startDelay=PT30S
+        druid.coordinator.period=PT30S
+        # Configure this coordinator to also run as Overlord
+        druid.coordinator.asOverlord.enabled=true
+        druid.coordinator.asOverlord.overlordService=druid/overlord
+        druid.indexer.queue.startDelay=PT30S
+        druid.indexer.runner.capacity: 2
+        druid.indexer.runner.namespace: druid
+        druid.indexer.runner.type: k8s
+        druid.indexer.task.encapsulatedTask: true
+      extra.jvm.options: |-
+        -Xmx800m
+        -Xms800m
+
+    hot:
+      nodeType: "historical"
+      druid.port: 8088
+      resources:
+        requests:
+          memory: "1.5Mi"
+          cpu: "1"
+      services:
+        - spec:
+            type: ClusterIP
+            clusterIP: None
+      nodeConfigMountPath: "/opt/druid/conf/druid/cluster/data/historical"
+      replicas: 1
+      livenessProbe:
+        failureThreshold: 10
+        httpGet:
+          path: /status/health
+          port: 8088
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 5
+      readinessProbe:
+        failureThreshold: 20
+        httpGet:
+          path: /druid/historical/v1/loadstatus
+          port: 8088
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 5
+      startUpProbe:
+        failureThreshold: 20
+        httpGet:
+          path: /druid/historical/v1/loadstatus
+          port: 8088
+        initialDelaySeconds: 60
+        periodSeconds: 30
+        successThreshold: 1
+        timeoutSeconds: 10
+      volumeMounts:
+      - mountPath: /druid/data/segments
+        name: hot-volume
+      volumeClaimTemplates:
+       - metadata:
+           name: hot-volume
+         spec:
+           accessModes:
+           - ReadWriteOnce
+           resources:
+             requests:
+               storage: 5Gi
+           storageClassName: standard
+      runtime.properties: |
+        druid.service=druid/hot
+        druid.server.tier=hot
+        druid.server.priority=1
+        druid.processing.buffer.sizeBytes=25000000
+        druid.processing.numThreads=2
+        # Segment storage
+        druid.segmentCache.locations=[{"path":"/druid/data/segments","maxSize":1000000000}]
+        druid.server.maxSize=1000000000
+      extra.jvm.options: |-
+        -Xmx512m
+        -Xms512m
+    
+    cold:
+      nodeType: "historical"
+      druid.port: 8088
+      resources:
+        requests:
+          memory: "0.5Mi"
+          cpu: "0.5"
+      services:
+        - spec:
+            type: ClusterIP
+            clusterIP: None
+      nodeConfigMountPath: "/opt/druid/conf/druid/cluster/data/historical"
+      replicas: 1
+      livenessProbe:
+        failureThreshold: 10
+        httpGet:
+          path: /status/health
+          port: 8088
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 5
+      readinessProbe:
+        failureThreshold: 20
+        httpGet:
+          path: /druid/historical/v1/loadstatus
+          port: 8088
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 5
+      startUpProbe:
+        failureThreshold: 20
+        httpGet:
+          path: /druid/historical/v1/loadstatus
+          port: 8088
+        initialDelaySeconds: 60
+        periodSeconds: 30
+        successThreshold: 1
+        timeoutSeconds: 10
+      volumeMounts:
+      - mountPath: /druid/data/segments
+        name: cold-volume
+      volumeClaimTemplates:
+       - metadata:
+           name: cold-volume
+         spec:
+           accessModes:
+           - ReadWriteOnce
+           resources:
+             requests:
+               storage: 5Gi
+           storageClassName: standard
+      runtime.properties: |
+        druid.service=druid/cold
+        druid.server.tier=cold
+        druid.server.priority=0
+        druid.processing.buffer.sizeBytes=25000000
+        druid.processing.numThreads=2
+        # Segment storage
+        druid.segmentCache.locations=[{"path":"/druid/data/segments","maxSize":2000000000}]
+        druid.server.maxSize=2000000000
+      extra.jvm.options: |-
+        -Xmx512m
+        -Xms512m
+
+    routers:
+      nodeType: "router"
+      druid.port: 8088
+      kind: Deployment
+      services:
+        - spec:
+            type: ClusterIP
+            clusterIP: None
+      nodeConfigMountPath: "/opt/druid/conf/druid/cluster/query/router"
+      replicas: 1
+      runtime.properties: |
+        druid.service=druid/router
+        # HTTP proxy
+        druid.router.http.numConnections=50
+        druid.router.http.readTimeout=PT5M
+        druid.router.http.numMaxThreads=100
+        druid.server.http.numThreads=100
+        # Service discovery
+        druid.router.defaultBrokerServiceName=druid/broker
+        druid.router.coordinatorServiceName=druid/coordinator
+        # Management proxy to coordinator / overlord: required for unified web console.
+        druid.router.managementProxy.enabled=true
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: druid-cluster
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - configmaps
+  verbs:
+  - '*'
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["get", "watch", "list", "delete", "create"]
+- apiGroups: [""]
+  resources: ["pods", "pods/log"]
+  verbs: ["get", "watch", "list", "delete", "create"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: druid-cluster
+subjects:
+- kind: ServiceAccount
+  name: default
+roleRef:
+  kind: Role
+  name: druid-cluster
+  apiGroup: rbac.authorization.k8s.io

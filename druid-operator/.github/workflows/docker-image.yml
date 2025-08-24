@@ -1,0 +1,22 @@
+name: Druid Operator
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Run Kubebuilder smoke and unit tests
+      run: make test
+    - name: Run helm lint
+      run: make helm-lint
+    - name: Run helm template
+      run: make helm-template
+    - name: Run e2e tests
+      run: make e2e

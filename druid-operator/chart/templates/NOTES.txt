@@ -1,0 +1,1 @@
+Refer to https://github.com/datainfrahq/druid-operator/blob/master/docs/README.md to get started.

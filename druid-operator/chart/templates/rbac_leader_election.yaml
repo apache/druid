@@ -1,0 +1,62 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    {{- include "druid-operator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: druid-operator
+    app.kubernetes.io/part-of: druid-operator
+  name: {{ include "druid-operator.fullname" . }}-leader-election-role
+  namespace: {{ .Release.Namespace }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    {{- include "druid-operator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: druid-operator
+    app.kubernetes.io/part-of: druid-operator
+  name: {{ include "druid-operator.fullname" . }}-leader-election-rolebinding
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "druid-operator.fullname" . }}-leader-election-role
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "druid-operator.fullname" . }}
+    namespace: {{ .Release.Namespace }}

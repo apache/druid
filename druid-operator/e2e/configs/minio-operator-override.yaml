@@ -1,0 +1,7 @@
+operator:
+  replicaCount: 1
+  env:
+    - name: MINIO_OPERATOR_TLS_ENABLE
+      value: "off"
+    - name: MINIO_CONSOLE_TLS_ENABLE
+      value: "off"

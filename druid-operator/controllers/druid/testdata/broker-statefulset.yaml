@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: druid-druid-test-brokers
+  namespace: test-namespace
+  labels:
+    app: druid
+    druid_cr: druid-test
+    nodeSpecUniqueStr: druid-druid-test-brokers
+    component: broker
+  annotations:
+    druidOpResourceHash: LXsKmbxQkX+94LkevlKDy4wemRQ=
+    kubernetes.io/cluster-scoped-annotation: "cluster"
+    kubernetes.io/node-scoped-annotation: "broker"
+    kubernetes.io/override-annotation: "node-scoped-annotation"
+spec:
+  podManagementPolicy: Parallel
+  replicas: 2
+  selector:
+    matchLabels:
+      app: druid
+      druid_cr: druid-test
+      nodeSpecUniqueStr: druid-druid-test-brokers
+      component: broker
+  serviceName: druid-druid-test-brokers
+  template:
+    metadata:
+      labels:
+        app: druid
+        druid_cr: druid-test
+        nodeSpecUniqueStr: druid-druid-test-brokers
+        component: broker
+      annotations:
+        key1: value1
+        key2: value2
+    spec:
+      tolerations: []
+      affinity: {}
+      priorityClassName: high-priority
+      containers:
+        - command:
+            - bin/run-druid.sh
+            - broker
+          image: himanshu01/druid:druid-0.12.0-1
+          name: druid-druid-test-brokers
+          env:
+            - name: configMapSHA
+              value: blah
+          ports:
+            - containerPort: 8083
+              name: random
+          readinessProbe:
+            httpGet:
+              path: /status
+              port: 8080
+          livenessProbe:
+            httpGet:
+              path: /status
+              port: 8080
+          startupProbe:
+            failureThreshold: 20
+            httpGet:
+              path: /druid/broker/v1/readiness
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: "4"
+              memory: 2Gi
+            requests:
+              cpu: "4"
+              memory: 2Gi
+          volumeMounts:
+            - mountPath: /druid/conf/druid/_common
+              readOnly: true
+              name: common-config-volume
+            - mountPath: /druid/conf/druid/broker
+              readOnly: true
+              name: nodetype-config-volume
+            - mountPath: /druid/data
+              readOnly: true
+              name: data-volume
+      securityContext:
+        fsGroup: 107
+        runAsUser: 106
+      volumes:
+        - configMap:
+            name: druid-test-druid-common-config
+          name: common-config-volume
+        - configMap:
+            name: druid-druid-test-brokers-config
+          name: nodetype-config-volume
+  volumeClaimTemplates:
+    - metadata:
+        name: data-volume
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 2Gi
+        storageClassName: gp2
