@@ -38,31 +38,16 @@ public class K3sDruidService
 {
   private final DruidCommand command;
   private final Properties properties;
-  private final Properties commonProperties;
   private int servicePort;
-  private String manifestTemplate = "manifests/druid-service.yaml";
 
   public K3sDruidService(DruidCommand command)
   {
     this.command = command;
     this.properties = new Properties();
-    this.commonProperties = new Properties();
     this.servicePort = command.getExposedPorts()[0];
 
     addProperty("druid.host", EmbeddedHostname.containerFriendly().toString());
     command.getDefaultProperties().forEach(properties::setProperty);
-  }
-
-  public K3sDruidService usingManifestTemplate(String manifestTemplate)
-  {
-    this.manifestTemplate = manifestTemplate;
-    return this;
-  }
-
-  public K3sDruidService withCommonProperties(Properties commonProperties)
-  {
-    this.commonProperties.putAll(commonProperties);
-    return this;
   }
 
   public K3sDruidService usingPort(int port)
@@ -74,11 +59,6 @@ public class K3sDruidService
   public int getServicePort()
   {
     return servicePort;
-  }
-
-  public Properties getCommonProperties()
-  {
-    return commonProperties;
   }
 
   public Properties getRuntimeProperties()
@@ -99,11 +79,11 @@ public class K3sDruidService
   /**
    * Creates a manifest YAML String for this service.
    */
-  public String createManifestYaml(String druidImage)
+  public String createManifestYaml(String manifestTemplateResource, String druidImage)
   {
     try {
       final String template = Files.readString(
-          Resources.getFileForResource(manifestTemplate).toPath()
+          Resources.getFileForResource(manifestTemplateResource).toPath()
       );
 
       String manifest = StringUtils.replace(template, "${service}", getName());
@@ -111,6 +91,7 @@ public class K3sDruidService
       manifest = StringUtils.replace(manifest, "${port}", String.valueOf(servicePort));
       manifest = StringUtils.replace(manifest, "${image}", druidImage);
       manifest = StringUtils.replace(manifest, "${serviceFolder}", getServicePropsFolder());
+
       return manifest;
     }
     catch (Exception e) {

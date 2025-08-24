@@ -40,7 +40,7 @@ ${commonRuntimeProperties}
             <Console name="Console" target="SYSTEM_OUT">
                 <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
             </Console>
-            <File name="FileAppender" fileName="/druid/data/logs/druid.log">
+            <File name="FileAppender" fileName="log/${sys:druid.node.type}.log">
                 <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
             </File>
         </Appenders>

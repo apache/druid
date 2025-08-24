@@ -73,24 +73,32 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
 
   public static final String DRUID_NAMESPACE = "druid";
   private static final String NAMESPACE_MANIFEST = "manifests/druid-namespace.yaml";
+  private static final String DEFAULT_SERVICE_MANIFEST = "manifests/druid-service.yaml";
 
   private static final String COMMON_CONFIG_MAP = "druid-common-props";
   private static final String SERVICE_CONFIG_MAP = "druid-%s-props";
 
   public static final long POD_READY_TIMEOUT_SECONDS = 300;
 
-  protected final List<File> manifestFiles = new ArrayList<>();
+  private final List<File> manifestFiles = new ArrayList<>();
   private final List<K3sDruidService> services = new ArrayList<>();
 
   private KubernetesClient client;
-  protected String druidImageName;
+  private String druidImageName;
+  private String druidManifestTemplate = DEFAULT_SERVICE_MANIFEST;
 
   private final Closer closer = Closer.create();
 
   public K3sClusterResource()
   {
     // Add the namespace manifest
-    manifestFiles.add(Resources.getFileForResource(NAMESPACE_MANIFEST));
+    addManifestResource(NAMESPACE_MANIFEST);
+  }
+
+  public K3sClusterResource addManifestResource(String manifestResourceName)
+  {
+    manifestFiles.add(Resources.getFileForResource(manifestResourceName));
+    return this;
   }
 
   public K3sClusterResource addService(K3sDruidService service)
@@ -109,9 +117,18 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
    * Uses the Docker test image specified by the system property
    * {@link DruidContainerResource#PROPERTY_TEST_IMAGE} for the Druid pods.
    */
-  public K3sClusterResource usingTestImage()
+  public K3sClusterResource usingDruidTestImage()
   {
     return usingDruidImage(DruidContainerResource.getTestDruidImageName());
+  }
+
+  /**
+   * Uses the given resource template to create manifests for Druid services.
+   */
+  public K3sClusterResource usingDruidManifestTemplate(String resourceName)
+  {
+    this.druidManifestTemplate = resourceName;
+    return this;
   }
 
   @Override
@@ -142,23 +159,23 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   public void onStarted(EmbeddedDruidCluster cluster)
   {
     initKubernetesClient();
-    loadImageAndApplyClusterManifests(cluster);
-    injectClusterCommonPropertiesToConfigMap(cluster);
-    initializeDruidServices();
+    loadLocalDockerImageIntoContainer(druidImageName, cluster.getTestFolder());
+    manifestFiles.forEach(this::applyManifest);
+    initializeDruidServices(cluster);
+    waitUntilPodsAreReady(DRUID_NAMESPACE);
+    waitUntilServicesAreHealthy();
   }
 
-  private void initializeDruidServices()
+  protected void initializeDruidServices(EmbeddedDruidCluster cluster)
   {
+    createConfigMapForCommonProperties(cluster);
     for (K3sDruidService druidService : services) {
       final String serviceConfigMap = StringUtils.format(SERVICE_CONFIG_MAP, druidService.getName());
       applyConfigMap(
           newConfigMap(serviceConfigMap, druidService.getProperties(), "runtime.properties")
       );
-      applyManifest(druidService);
+      applyManifestYaml(druidService, createManifestYaml(druidService));
     }
-
-    waitUntilPodsAreReady(DRUID_NAMESPACE);
-    waitUntilServicesAreHealthy();
   }
 
   protected void waitUntilServicesAreHealthy()
@@ -171,7 +188,7 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
     return services;
   }
 
-  protected void injectClusterCommonPropertiesToConfigMap(EmbeddedDruidCluster cluster)
+  private void createConfigMapForCommonProperties(EmbeddedDruidCluster cluster)
   {
     final Properties commonProperties = new Properties();
     commonProperties.putAll(cluster.getCommonProperties());
@@ -179,13 +196,6 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
     applyConfigMap(
         newConfigMap(COMMON_CONFIG_MAP, commonProperties, "common.runtime.properties")
     );
-  }
-
-  protected void loadImageAndApplyClusterManifests(EmbeddedDruidCluster cluster)
-  {
-    initKubernetesClient();
-    loadLocalDockerImageIntoContainer(druidImageName, cluster.getTestFolder());
-    manifestFiles.forEach(this::applyManifest);
   }
 
   private void initKubernetesClient()
@@ -283,17 +293,19 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   }
 
   /**
-   * Creates and applies the manifest for the given Druid service.
+   * Creates the manifest YAML for the given Druid service.
    */
-  protected void applyManifest(K3sDruidService service)
+  protected String createManifestYaml(K3sDruidService service)
   {
-    final String manifestYaml = service.createManifestYaml(druidImageName);
-    log.info("Applying manifest for service[%s]: %s", service.getName(), manifestYaml);
-    loadYamlInCluster(service, manifestYaml);
+    return service.createManifestYaml(druidManifestTemplate, druidImageName);
   }
 
-  protected void loadYamlInCluster(K3sDruidService service, String manifestYaml)
+  /**
+   * Applies the given service manifest YAML to the K3s cluster.
+   */
+  protected void applyManifestYaml(K3sDruidService service, String manifestYaml)
   {
+    log.info("Applying manifest for service[%s]: %s", service.getName(), manifestYaml);
     try (ByteArrayInputStream bis = new ByteArrayInputStream(manifestYaml.getBytes(StandardCharsets.UTF_8))) {
       client.load(bis).inNamespace(DRUID_NAMESPACE).serverSideApply();
       log.info("Applied manifest for service[%s]", service.getName());

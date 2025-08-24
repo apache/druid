@@ -40,7 +40,7 @@ public class KubernetesClusterDockerTest extends IngestionSmokeTest implements L
 
     // Create a K3s cluster with all the required services
     final K3sClusterResource k3sCluster = new K3sClusterResource()
-        .usingTestImage()
+        .usingDruidTestImage()
         .addService(new K3sDruidService(DruidCommand.Server.COORDINATOR))
         .addService(new K3sDruidService(DruidCommand.Server.OVERLORD))
         .addService(new K3sDruidService(DruidCommand.Server.HISTORICAL))

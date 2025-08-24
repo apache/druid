@@ -24,7 +24,6 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.embedded.indexing.Resources;
 import org.testcontainers.containers.Container;
 import org.testcontainers.utility.MountableFile;
 
@@ -63,38 +62,19 @@ public class K3sClusterWithOperatorResource extends K3sClusterResource
   public K3sClusterWithOperatorResource()
   {
     super();
-    manifestFiles.add(Resources.getFileForResource(RBAC_MANIFEST));
-    manifestFiles.add(Resources.getFileForResource(OPERATOR_NAMESPACE_MANIFEST));
+    addManifestResource(RBAC_MANIFEST);
+    addManifestResource(OPERATOR_NAMESPACE_MANIFEST);
   }
 
   @Override
-  public void onStarted(EmbeddedDruidCluster cluster)
+  protected void initializeDruidServices(EmbeddedDruidCluster cluster)
   {
-    super.loadImageAndApplyClusterManifests(cluster);
     installHelm(cluster);
     setupOperatorWithHelm();
-    super.waitUntilPodsAreReady(OPERATOR_NAMESPACE);
-    super.injectClusterCommonPropertiesToConfigMap(cluster);
-    Properties yamlCommonProperties = getCombinedCommonProperties(cluster.getCommonProperties());
-    initializeDruidServices(yamlCommonProperties);
-  }
-
-  private void initializeDruidServices(Properties properties)
-  {
+    waitUntilPodsAreReady(OPERATOR_NAMESPACE);
     for (K3sDruidService druidService : getServices()) {
-      applyManifest(druidService.withCommonProperties(properties));
+      applyManifestYaml(druidService, createManifestYaml(druidService, cluster));
     }
-
-    waitUntilPodsAreReady(DRUID_NAMESPACE);
-    super.waitUntilServicesAreHealthy();
-  }
-
-  private Properties getCombinedCommonProperties(Properties properties)
-  {
-    Properties defaults = new Properties();
-    defaults.setProperty("druid.metadata.storage.connector.createTables", "true");
-    defaults.putAll(properties);
-    return defaults;
   }
 
   /**
@@ -124,14 +104,14 @@ public class K3sClusterWithOperatorResource extends K3sClusterResource
         HELM_VERSION,
         HELM_PLATFORM
     );
-    log.debug("Downloading Helm from: %s", helmUrl);
+    log.info("Downloading Helm from URL[%s].", helmUrl);
 
     File helmFolder = cluster.getTestFolder().getOrCreateFolder("helm");
     File tarFile = new File(helmFolder, "helm.tar.gz");
     File helmBinary = new File(helmFolder, "helm");
 
     if (helmBinary.exists() && helmBinary.canExecute()) {
-      log.debug("Helm binary already exists: %s", helmBinary.getAbsolutePath());
+      log.info("Helm binary already exists at path[%s]", helmBinary.getAbsolutePath());
       return helmBinary;
     }
 
@@ -243,6 +223,7 @@ public class K3sClusterWithOperatorResource extends K3sClusterResource
     fullCommand[2] = "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml && helm " + String.join(" ", args);
 
     try {
+      log.info("Executing command[%s]", org.apache.commons.lang3.StringUtils.join(fullCommand, " "));
       Container.ExecResult result = getContainer().execInContainer(fullCommand);
 
       if (result.getExitCode() != 0) {
@@ -259,29 +240,28 @@ public class K3sClusterWithOperatorResource extends K3sClusterResource
     }
   }
 
-  @Override
-  public void applyManifest(K3sDruidService service)
+  private String createManifestYaml(K3sDruidService service, EmbeddedDruidCluster cluster)
   {
-    String manifestYaml = service.createManifestYaml(druidImageName);
+    String manifestYaml = super.createManifestYaml(service);
     manifestYaml = StringUtils.replace(
         manifestYaml,
         "${commonRuntimeProperties}",
-        buildPropertiesString(service.getCommonProperties(), 4)
+        buildPropertiesString(cluster.getCommonProperties(), 4)
     );
     manifestYaml = StringUtils.replace(
         manifestYaml,
         "${nodeRuntimeProperties}",
         buildPropertiesString(service.getRuntimeProperties(), 8)
     );
-    super.loadYamlInCluster(service, manifestYaml);
+    return manifestYaml;
   }
 
   /**
    * Builds a properties string to be used in the manifest.yaml file supporting a uniform indentation.
    */
-  private String buildPropertiesString(Properties properties, int indentationSpaces)
+  private static String buildPropertiesString(Properties properties, int indentationSpaces)
   {
-    StringBuilder builder = new StringBuilder();
+    final StringBuilder builder = new StringBuilder();
     String indentation = " ".repeat(indentationSpaces);
     for (String key : properties.stringPropertyNames()) {
       builder.append(indentation).append(key).append("=").append(properties.getProperty(key)).append("\n");

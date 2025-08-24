@@ -32,52 +32,38 @@ import org.junit.jupiter.api.BeforeEach;
  */
 public class KubernetesClusterWithOperatorDockerTest extends IngestionSmokeTest implements LatestImageDockerTest
 {
-  private static final String MANIFEST_TEMPLATE = "manifests/druid-service-operator.yaml";
+  private static final String MANIFEST_TEMPLATE = "manifests/druid-service-with-operator.yaml";
 
   @Override
   protected EmbeddedDruidCluster addServers(EmbeddedDruidCluster cluster)
   {
     final K3sDruidService brokerService = new K3sDruidService(DruidCommand.Server.BROKER)
         .addProperty("druid.sql.planner.metadataRefreshPeriod", "PT1s")
-        .usingManifestTemplate(MANIFEST_TEMPLATE)
-        .usingPort(30005);
-
-    final K3sDruidService coordinatorService = new K3sDruidService(DruidCommand.Server.COORDINATOR)
-        .usingPort(30000)
-        .usingManifestTemplate(MANIFEST_TEMPLATE);
+        .usingPort(30082);
 
     final K3sDruidService overlordService = new K3sDruidService(DruidCommand.Server.OVERLORD)
         .addProperty("druid.indexer.runner.type", "k8s")
         .addProperty("druid.indexer.runner.namespace", "druid")
-        .usingPort(30001)
-        .usingManifestTemplate(MANIFEST_TEMPLATE);
-
-    final K3sDruidService historicalService = new K3sDruidService(DruidCommand.Server.HISTORICAL)
-        .usingPort(30004)
-        .usingManifestTemplate(MANIFEST_TEMPLATE);
-
-    final K3sDruidService router = new K3sDruidService(DruidCommand.Server.ROUTER)
-        .usingPort(30006)
-        .usingManifestTemplate(MANIFEST_TEMPLATE);
+        .addProperty("druid.indexer.runner.capacity", "4")
+        .usingPort(30090);
 
     final K3sClusterResource k3sCluster = new K3sClusterWithOperatorResource()
-        .usingTestImage()
-        .addService(coordinatorService)
+        .usingDruidTestImage()
+        .usingDruidManifestTemplate(MANIFEST_TEMPLATE)
+        .addService(new K3sDruidService(DruidCommand.Server.COORDINATOR).usingPort(30081))
         .addService(overlordService)
-        .addService(historicalService)
-        .addService(router)
+        .addService(new K3sDruidService(DruidCommand.Server.HISTORICAL).usingPort(30083))
+        .addService(new K3sDruidService(DruidCommand.Server.ROUTER).usingPort(30088))
         .addService(brokerService);
 
     // Add an EmbeddedOverlord and EmbeddedBroker to use their client and mapper bindings.
-    overlord.addProperty("druid.plaintextPort", "7090");
-    broker.addProperty("druid.plaintextPort", "7082");
-
     return cluster
         .useContainerFriendlyHostname()
         .addResource(k3sCluster)
         .addServer(overlord)
         .addServer(broker)
         .addServer(eventCollector)
+        .addCommonProperty("druid.indexer.task.encapsulatedTask", "true")
         .addCommonProperty(
             "druid.extensions.loadList",
             "[\"druid-s3-extensions\", \"druid-kafka-indexing-service\","
