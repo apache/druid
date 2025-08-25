@@ -19,12 +19,7 @@
 
 package org.apache.druid.k8s.overlord.common;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import io.fabric8.kubernetes.client.KubernetesClientException;
-import io.vertx.core.http.HttpClosedException;
-
 
 public class DruidK8sConstants
 {
@@ -60,10 +55,5 @@ public class DruidK8sConstants
       // Catches exceeded quota error: https://github.com/kubernetes/kubernetes/blob/818b7ae68119c0932d7714502ce58f1b56606c8d/staging/src/k8s.io/apiserver/pkg/admission/plugin/resourcequota/controller.go#L622
       // exceeded quota: {value}, requested: {value}, used: {value}, limited: {value}
       "exceeded quota:"
-  );
-
-  public static final ImmutableMap<Class<? extends RuntimeException>, Optional<String>> TRANSITIVE_CONNECTION_POOL_EXCEPTIONS = ImmutableMap.of(
-      KubernetesClientException.class, Optional.of("Connection was closed"),
-      HttpClosedException.class, Optional.absent()
   );
 }

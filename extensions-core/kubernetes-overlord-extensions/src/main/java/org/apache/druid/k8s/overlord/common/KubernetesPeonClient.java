@@ -29,6 +29,7 @@ import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
+import io.vertx.core.http.HttpClosedException;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
@@ -307,9 +308,8 @@ public class KubernetesPeonClient
    * the method returns successfully without throwing an exception, assuming the job was
    * already submitted by a previous request.
    * <p>
-   * The retry logic only applies to transient connection pool exceptions as defined in
-   * {@link DruidK8sConstants#TRANSITIVE_CONNECTION_POOL_EXCEPTIONS}. Other exceptions
-   * will cause the method to fail immediately.
+   * The retry logic only applies to transient connection pool exceptions. Other exceptions will cause the method to
+   * fail immediately.
    *
    * @param client the Kubernetes client to use for job creation
    * @param job the Kubernetes job to create
@@ -356,10 +356,8 @@ public class KubernetesPeonClient
    * it has been scheduled and is in a ready state. The method includes retry logic to handle transient
    * connection pool exceptions that may occur during the wait operation.
    * <p>
-   * The retry logic only applies to transient connection pool exceptions as defined in
-   * {@link DruidK8sConstants#TRANSITIVE_CONNECTION_POOL_EXCEPTIONS}. The method will wait up to the
-   * specified timeout for the pod to become ready, and retry the entire wait operation if transient
-   * connection issues are encountered.
+   * The method will wait up to the specified timeout for the pod to become ready, and retry the entire wait operation
+   * if transient connection issues are encountered.
    *
    * @param client the Kubernetes client to use for pod operations
    * @param pod the pod to wait for
@@ -402,7 +400,7 @@ public class KubernetesPeonClient
    * <p>
    * The retry logic applies to:
    * <ul>
-   *   <li>Transient connection pool exceptions as defined in {@link DruidK8sConstants#TRANSITIVE_CONNECTION_POOL_EXCEPTIONS}</li>
+   *   <li>Transient connection pool exceptions</li>
    *   <li>Pod not found scenarios, except when blacklisted error messages from {@link DruidK8sConstants#BLACKLISTED_PEON_POD_ERROR_MESSAGES} are encountered</li>
    * </ul>
    *
@@ -487,17 +485,10 @@ public class KubernetesPeonClient
    */
   private boolean isRetryableTransientConnectionPoolException(Throwable e)
   {
-    for (var entry : DruidK8sConstants.TRANSITIVE_CONNECTION_POOL_EXCEPTIONS.entrySet()) {
-      Class<? extends RuntimeException> exceptionClass = entry.getKey();
-      Optional<String> messageSubstring = entry.getValue();
-      
-      if (exceptionClass.isInstance(e)) {
-        if (messageSubstring.isPresent()) {
-          return e.getMessage() != null && e.getMessage().contains(messageSubstring.get());
-        } else {
-          return true;
-        }
-      }
+    if (e instanceof KubernetesClientException) {
+      return e.getMessage() != null && e.getMessage().contains("Connection was closed");
+    } else if (e instanceof HttpClosedException) {
+      return true;
     }
     return false;
   }
