@@ -91,6 +91,8 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -1691,14 +1693,22 @@ public class ClientQuerySegmentWalkerTest
         injector,
         new CapturingWalker(
             QueryStackTests.createClusterQuerySegmentWalker(
-                ImmutableMap.<String, VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>>builder()
-                    .put(FOO, makeTimeline(FOO, FOO_INLINE))
-                    .put(BAR, makeTimeline(BAR, BAR_INLINE))
-                    .put(MULTI, makeTimeline(MULTI, MULTI_VALUE_INLINE))
-                    .put(GLOBAL, makeTimeline(GLOBAL, FOO_INLINE))
-                    .put(ARRAY, makeTimeline(ARRAY, ARRAY_INLINE))
-                    .put(ARRAY_UNKNOWN, makeTimeline(ARRAY_UNKNOWN, ARRAY_INLINE_UNKNOWN))
-                    .build(),
+                Map.of(
+                    FOO, makeTimeline(FOO),
+                    BAR, makeTimeline(BAR),
+                    MULTI, makeTimeline(MULTI),
+                    GLOBAL, makeTimeline(GLOBAL),
+                    ARRAY, makeTimeline(ARRAY),
+                    ARRAY_UNKNOWN, makeTimeline(ARRAY_UNKNOWN)
+                ),
+                Map.of(
+                    makeDataSegment(FOO), makeReferenceProvider(FOO_INLINE),
+                    makeDataSegment(BAR), makeReferenceProvider(BAR_INLINE),
+                    makeDataSegment(MULTI), makeReferenceProvider(MULTI_VALUE_INLINE),
+                    makeDataSegment(GLOBAL), makeReferenceProvider(FOO_INLINE),
+                    makeDataSegment(ARRAY), makeReferenceProvider(ARRAY_INLINE),
+                    makeDataSegment(ARRAY_UNKNOWN), makeReferenceProvider(ARRAY_INLINE_UNKNOWN)
+                ),
                 conglomerate,
                 schedulerForTest,
                 injector
@@ -1838,27 +1848,36 @@ public class ClientQuerySegmentWalkerTest
     }
   }
 
-  private static VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> makeTimeline(
-      final String name,
+  private static DataSegment makeDataSegment(String name)
+  {
+    final SegmentId segmentId = SegmentId.of(name, INTERVAL, VERSION, SHARD_SPEC);
+    return DataSegment.builder(segmentId)
+                      .shardSpec(SHARD_SPEC)
+                      .size(1L)
+                      .build();
+  }
+
+  private static ReferenceCountedSegmentProvider makeReferenceProvider(
       final InlineDataSource dataSource
   )
   {
-    final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline =
+    return ReferenceCountedSegmentProvider.of(
+        new RowBasedSegment<>(
+            Sequences.simple(dataSource.getRows()),
+            dataSource.rowAdapter(),
+            dataSource.getRowSignature()
+        )
+    );
+  }
+  private static VersionedIntervalTimeline<String, DataSegment> makeTimeline(final String name)
+  {
+    final VersionedIntervalTimeline<String, DataSegment> timeline =
         new VersionedIntervalTimeline<>(Comparator.naturalOrder());
 
     timeline.add(
         INTERVAL,
         VERSION,
-        SHARD_SPEC.createChunk(
-            ReferenceCountedSegmentProvider.wrapSegment(
-                new RowBasedSegment<>(
-                    Sequences.simple(dataSource.getRows()),
-                    dataSource.rowAdapter(),
-                    dataSource.getRowSignature()
-                ),
-                SHARD_SPEC
-            )
-        )
+        SHARD_SPEC.createChunk(makeDataSegment(name))
     );
 
     return timeline;

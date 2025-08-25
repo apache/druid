@@ -68,6 +68,7 @@ import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -562,13 +563,14 @@ public class QueryRunnerTestHelper
   {
     ExecutionVertex ev = ExecutionVertex.of(query);
     final Optional<Segment> segmentReference = ev.createSegmentMapFunction(NoopPolicyEnforcer.instance())
-                                                 .apply(ReferenceCountedSegmentProvider.wrapRootGenerationSegment(adapter));
+                                                 .apply(Optional.of(adapter));
     return makeQueryRunner(factory, segmentReference.orElseThrow(), runnerName);
   }
 
   @SuppressWarnings({"rawtypes", "unchecked"})
   public static <T> QueryRunner<T> makeFilteringQueryRunner(
-      final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline,
+      final VersionedIntervalTimeline<String, DataSegment> timeline,
+      final Map<DataSegment, ReferenceCountedSegmentProvider> referenceProviders,
       final QueryRunnerFactory<T, Query<T>> factory
   )
   {
@@ -584,7 +586,7 @@ public class QueryRunnerTestHelper
               List<Sequence<T>> sequences = new ArrayList<>();
               final Closer closer = Closer.create();
               try {
-                for (TimelineObjectHolder<String, ReferenceCountedSegmentProvider> holder : toolChest.filterSegments(
+                for (TimelineObjectHolder<String, DataSegment> holder : toolChest.filterSegments(
                     query,
                     segments
                 )) {
@@ -596,8 +598,11 @@ public class QueryRunnerTestHelper
                   final QueryPlus queryPlusRunning = queryPlus.withQuery(
                       queryPlus.getQuery().withQuerySegmentSpec(new SpecificSegmentSpec(descriptor))
                   );
+                  final ReferenceCountedSegmentProvider referenceProvider = referenceProviders.get(
+                      holder.getObject().getChunk(0).getObject()
+                  );
                   final QueryRunner<?> runner = factory.createRunner(
-                      closer.register(holder.getObject().getChunk(0).getObject().acquireReference().orElseThrow())
+                      closer.register(referenceProvider.acquireReference().orElseThrow())
                   );
                   sequences.add(runner.run(queryPlusRunning, responseContext));
                 }

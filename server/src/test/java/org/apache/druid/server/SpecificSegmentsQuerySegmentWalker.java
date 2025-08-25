@@ -79,7 +79,8 @@ import java.util.Set;
 public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, Closeable
 {
   private final QuerySegmentWalker walker;
-  private final Map<String, VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>> timelines;
+  private final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines;
+  private final Map<DataSegment, ReferenceCountedSegmentProvider> referenceProviders;
   private final List<CompleteSegment> segments = new ArrayList<>();
   private static final LookupExtractorFactoryContainerProvider LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER =
       new LookupExtractorFactoryContainerProvider()
@@ -104,7 +105,8 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
       };
 
   public static SpecificSegmentsQuerySegmentWalker createWalker(
-      final QueryRunnerFactoryConglomerate conglomerate)
+      final QueryRunnerFactoryConglomerate conglomerate
+  )
   {
     return createWalker(QueryStackTests.injectorWithLookup(), conglomerate);
   }
@@ -122,16 +124,19 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
       final QueryScheduler scheduler
   )
   {
-    Map<String, VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>> timelines = new HashMap<>();
+    Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = new HashMap<>();
+    Map<DataSegment, ReferenceCountedSegmentProvider> referenceProviders = new HashMap<>();
     NoopServiceEmitter emitter = new NoopServiceEmitter();
     ServerConfig serverConfig = new ServerConfig();
 
     return new SpecificSegmentsQuerySegmentWalker(
         timelines,
+        referenceProviders,
         QueryStackTests.createClientQuerySegmentWalker(
             injector,
             QueryStackTests.createClusterQuerySegmentWalker(
                 timelines,
+                referenceProviders,
                 conglomerate,
                 scheduler,
                 injector
@@ -179,10 +184,13 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
   }
 
   public SpecificSegmentsQuerySegmentWalker(
-      Map<String, VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>> timelines,
-      QuerySegmentWalker walker)
+      Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines,
+      Map<DataSegment, ReferenceCountedSegmentProvider> referenceProviders,
+      QuerySegmentWalker walker
+  )
   {
     this.timelines = timelines;
+    this.referenceProviders = referenceProviders;
     this.walker = walker;
   }
 
@@ -196,20 +204,17 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
     DataSegment descriptor = completeSegment.getDataSegment();
     Segment segment = completeSegment.getSegment();
 
-    final ReferenceCountedSegmentProvider referenceCountingSegment =
-        ReferenceCountedSegmentProvider.wrapSegment(
-            segment,
-            descriptor.getShardSpec()
-        );
-    final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline = timelines.computeIfAbsent(
+    final ReferenceCountedSegmentProvider referenceCountingSegment = ReferenceCountedSegmentProvider.of(segment);
+    final VersionedIntervalTimeline<String, DataSegment> timeline = timelines.computeIfAbsent(
         descriptor.getDataSource(),
         datasource -> new VersionedIntervalTimeline<>(Ordering.natural())
     );
     timeline.add(
         descriptor.getInterval(),
         descriptor.getVersion(),
-        descriptor.getShardSpec().createChunk(referenceCountingSegment)
+        descriptor.getShardSpec().createChunk(descriptor)
     );
+    referenceProviders.put(descriptor, referenceCountingSegment);
     segments.add(completeSegment);
     return this;
   }
