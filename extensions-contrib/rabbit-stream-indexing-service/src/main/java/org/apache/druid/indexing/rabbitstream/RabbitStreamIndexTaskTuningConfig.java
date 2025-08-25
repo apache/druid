@@ -100,7 +100,8 @@ public class RabbitStreamIndexTaskTuningConfig extends SeekableStreamIndexTaskTu
         maxParseExceptions,
         maxSavedParseExceptions,
         numPersistThreads,
-        maxColumnsToMerge
+        maxColumnsToMerge,
+        false
     );
 
     this.recordBufferSize = recordBufferSize;

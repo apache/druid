@@ -68,7 +68,8 @@ public class Appenderators
       PolicyEnforcer policyEnforcer,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      TaskLockCallback taskLockCallback
   )
   {
     return new StreamAppenderator(
@@ -99,7 +100,8 @@ public class Appenderators
         cache,
         rowIngestionMeters,
         parseExceptionHandler,
-        centralizedDatasourceSchemaConfig
+        centralizedDatasourceSchemaConfig,
+        taskLockCallback
     );
   }
 

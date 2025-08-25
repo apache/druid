@@ -250,7 +250,10 @@ public class StreamAppenderatorTester implements AutoCloseable
           policyEnforcer,
           rowIngestionMeters,
           new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-          centralizedDatasourceSchemaConfig
+          centralizedDatasourceSchemaConfig,
+          new TaskLockCallback()
+          {
+          }
       );
     } else {
       SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
@@ -292,7 +295,9 @@ public class StreamAppenderatorTester implements AutoCloseable
           NoopPolicyEnforcer.instance(),
           rowIngestionMeters,
           new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-          centralizedDatasourceSchemaConfig
+          centralizedDatasourceSchemaConfig,
+          new TaskLockCallback()
+          {}
       );
     }
   }

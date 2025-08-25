@@ -97,6 +97,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -202,6 +203,7 @@ public class StreamAppenderator implements Appenderator
   private final SegmentLoaderConfig segmentLoaderConfig;
   private ScheduledExecutorService exec;
   private final FingerprintGenerator fingerprintGenerator;
+  private final TaskLockCallback taskLockCallback;
 
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
@@ -227,7 +229,8 @@ public class StreamAppenderator implements Appenderator
       Cache cache,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      TaskLockCallback taskLockCallback
   )
   {
     this.segmentLoaderConfig = segmentLoaderConfig;
@@ -255,6 +258,7 @@ public class StreamAppenderator implements Appenderator
         Execs.makeThreadFactory("StreamAppenderSegmentRemoval-%s")
     );
     this.fingerprintGenerator = new FingerprintGenerator(objectMapper);
+    this.taskLockCallback = taskLockCallback;
   }
 
   @VisibleForTesting
@@ -1525,6 +1529,10 @@ public class StreamAppenderator implements Appenderator
                 removeDirectory(computePersistDir(identifier));
               }
 
+              if (tuningConfig.shouldReleaseLockOnHandoff()) {
+                unlockIntervalIfApplicable(sink);
+              }
+
               log.info("Dropped segment[%s].", identifier);
             };
 
@@ -1557,6 +1565,22 @@ public class StreamAppenderator implements Appenderator
         // starting to abandon segments
         persistExecutor
     );
+  }
+
+  private void unlockIntervalIfApplicable(Sink abandonedSink)
+  {
+    Interval abandonedInterval = abandonedSink.getInterval();
+    boolean isIntervalActive = sinks.entrySet().stream()
+                                    .anyMatch(entry -> {
+                                      Sink sink = entry.getValue();
+                                      return !Objects.equals(sink, abandonedSink)
+                                             && sink.isWritable()
+                                             && sink.getInterval().equals(abandonedInterval);
+                                    });
+    if (!isIntervalActive) {
+      taskLockCallback.releaseLock(abandonedInterval);
+    }
+    log.info("implement this.");
   }
 
   private Committed readCommit() throws IOException
