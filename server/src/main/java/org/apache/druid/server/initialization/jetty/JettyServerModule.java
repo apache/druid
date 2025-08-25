@@ -61,6 +61,7 @@ import org.apache.druid.server.security.TLSCertificateChecker;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.ForwardedRequestCustomizer;
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.http.UriCompliance;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.Request;
@@ -223,6 +224,7 @@ public class JettyServerModule extends JerseyServletModule
     if (node.isEnablePlaintextPort()) {
       log.info("Creating http connector with port [%d]", node.getPlaintextPort());
       HttpConfiguration httpConfiguration = new HttpConfiguration();
+      httpConfiguration.setUriCompliance(UriCompliance.from(config.getUriCompliance()));
       if (config.isEnableForwardedRequestCustomizer()) {
         httpConfiguration.addCustomizer(new ForwardedRequestCustomizer());
       }
@@ -307,6 +309,7 @@ public class JettyServerModule extends JerseyServletModule
       }
 
       final HttpConfiguration httpsConfiguration = new HttpConfiguration();
+      httpsConfiguration.setUriCompliance(UriCompliance.from(config.getUriCompliance()));
       if (config.isEnableForwardedRequestCustomizer()) {
         httpsConfiguration.addCustomizer(new ForwardedRequestCustomizer());
       }
