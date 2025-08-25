@@ -822,6 +822,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(recordSupplier.isOffsetAvailable(EasyMock.anyObject(), EasyMock.anyObject()))
             .andReturn(true)
             .anyTimes();
+    EasyMock.expect(recordSupplier.getEarliestSequenceNumber(EasyMock.anyObject()))
+            .andReturn("0")
+            .anyTimes();
     EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
     replayAll();
@@ -1910,7 +1913,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(SUPERVISOR_ID)).andReturn(
         true
     );
-    taskQueue.shutdown("task1", "DataSourceMetadata is not found while reset");
+    taskQueue.shutdown("task1", "Offset of all partitions has been reset %s", "manually");
     EasyMock.expectLastCall();
     replayAll();
 
@@ -1969,7 +1972,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         true
     );
 
-    taskQueue.shutdown("task1", "DataSourceMetadata is updated while reset offsets is called");
+    taskQueue.shutdown("task1", "Offset of partition [%s] has been reset to [%s] by the user", "0", "1000");
     EasyMock.expectLastCall();
 
     replayAll();
@@ -2105,10 +2108,10 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             expectedOffsets
         )
     ))).andReturn(true);
-    taskQueue.shutdown("task1", "DataSourceMetadata is updated while reset offsets is called");
+    taskQueue.shutdown("task1", "Offset of partition [%s] has been reset to [%s] by the user", "0", "10");
     EasyMock.expectLastCall();
 
-    taskQueue.shutdown("task2", "DataSourceMetadata is updated while reset offsets is called");
+    taskQueue.shutdown("task2", "Offset of partition [%s] has been reset to [%s] by the user", "1", "8");
     EasyMock.expectLastCall();
 
     replayAll();
@@ -2176,10 +2179,10 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             expectedOffsets
         )
     ))).andReturn(true);
-    taskQueue.shutdown("task1", "DataSourceMetadata is updated while reset offsets is called");
+    taskQueue.shutdown("task1", "Offset of partition [%s] has been reset to [%s] by the user", "0", "10");
     EasyMock.expectLastCall();
 
-    taskQueue.shutdown("task2", "DataSourceMetadata is updated while reset offsets is called");
+    taskQueue.shutdown("task2", "Offset of partition [%s] has been reset to [%s] by the user", "1", "8");
     EasyMock.expectLastCall();
 
     replayAll();
@@ -2321,7 +2324,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             expectedOffsets
         )
     ))).andReturn(true);
-    taskQueue.shutdown("task1", "DataSourceMetadata is updated while reset offsets is called");
+    taskQueue.shutdown("task1", "Offset of partition [%s] has been reset to [%s] by the user", "2", "20");
     EasyMock.expectLastCall();
 
     replayAll();
