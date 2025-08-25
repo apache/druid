@@ -69,6 +69,7 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SegmentWrangler;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -857,6 +858,7 @@ public class TestDataBuilder
         forbiddenIndex
     ).add(
         TestDataSet.NUMFOO,
+        TestHelper.JSON_MAPPER,
         new File(tmpDir, "3")
     ).add(
         DataSegment.builder()
@@ -896,9 +898,11 @@ public class TestDataBuilder
         someXDatasourceIndex
     ).add(
         TestDataSet.BROADCAST,
+        TestHelper.JSON_MAPPER,
         new File(tmpDir, "3a")
     ).add(
         TestDataSet.RESTRICTED_BROADCAST,
+        TestHelper.JSON_MAPPER,
         new File(tmpDir, "3a")
     ).add(
         DataSegment.builder()
