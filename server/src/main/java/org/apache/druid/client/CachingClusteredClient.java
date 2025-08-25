@@ -473,6 +473,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
         }
         for (PartitionChunk<ServerSelector> chunk : filteredChunks) {
           ServerSelector server = chunk.getObject();
+          if (query.context().isRealtimeSegmentsOnly() && !server.isRealtimeSegment()) {
+            continue; // Skip historical segments when only realtime segments are requested
+          }
           final SegmentDescriptor segment = new SegmentDescriptor(
               holder.getInterval(),
               holder.getVersion(),
