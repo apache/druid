@@ -149,6 +149,7 @@ public class KafkaEmitterTest
         "clusterName",
         ImmutableMap.of("clusterId", "cluster-101"),
         null,
+        null,
         null
     );
 
@@ -202,6 +203,7 @@ public class KafkaEmitterTest
         null,
         ImmutableMap.of("clusterId", "cluster-101", "env", "staging"),
         null,
+        null,
         null
     );
 
@@ -251,6 +253,7 @@ public class KafkaEmitterTest
         "clusterName",
         null,
         null,
+        null,
         null
     );
 
@@ -297,6 +300,7 @@ public class KafkaEmitterTest
         "requests",
         "segment_metadata",
         "clusterName",
+        null,
         null,
         null,
         null
@@ -373,6 +377,7 @@ public class KafkaEmitterTest
         null,
         null,
         null,
+        null,
         null
     );
 
@@ -423,6 +428,7 @@ public class KafkaEmitterTest
         null,
         "cluster-102",
         ImmutableMap.of("clusterName", "cluster-101", "env", "staging"), // clusterName again, extraDimensions should take precedence
+        null,
         null,
         null
     );
@@ -517,6 +523,7 @@ public class KafkaEmitterTest
         null,
         extraDimensions,
         ImmutableMap.of(ProducerConfig.BUFFER_MEMORY_CONFIG, String.valueOf(totalBufferSize)),
+        null,
         null
     );
 
