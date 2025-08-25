@@ -24,15 +24,11 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.filter.EqualityFilter;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.filter.AndFilter;
-import org.apache.druid.segment.filter.IsBooleanFilter;
-import org.apache.druid.segment.filter.OrFilter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -217,66 +213,6 @@ class ProjectionsTest
         Map.of("c", "c_sum")
     );
     Assertions.assertEquals(expected, projectionMatch);
-  }
-
-  @Test
-  void testRewriteFilter()
-  {
-    Filter xeqfoo = new EqualityFilter("x", ColumnType.STRING, "foo", null);
-    Filter xeqfoo2 = new EqualityFilter("x", ColumnType.STRING, "foo", null);
-    Filter xeqbar = new EqualityFilter("x", ColumnType.STRING, "bar", null);
-    Filter yeqbar = new EqualityFilter("y", ColumnType.STRING, "bar", null);
-    Filter zeq123 = new EqualityFilter("z", ColumnType.LONG, 123L, null);
-
-    Filter queryFilter = xeqfoo2;
-    Assertions.assertInstanceOf(
-        ProjectionFilterMatch.class,
-        Projections.rewriteFilter(xeqfoo, queryFilter)
-    );
-
-    queryFilter = yeqbar;
-    Assertions.assertNull(Projections.rewriteFilter(xeqfoo, queryFilter));
-
-    queryFilter = new AndFilter(List.of(xeqfoo, yeqbar));
-    Assertions.assertEquals(
-        yeqbar,
-        Projections.rewriteFilter(xeqfoo, queryFilter)
-    );
-
-    queryFilter = new AndFilter(List.of(new OrFilter(List.of(xeqfoo, xeqbar)), yeqbar));
-    Assertions.assertNull(Projections.rewriteFilter(xeqfoo, queryFilter));
-
-    queryFilter = new AndFilter(List.of(new IsBooleanFilter(xeqfoo, true), yeqbar));
-    Assertions.assertEquals(yeqbar, Projections.rewriteFilter(xeqfoo, queryFilter));
-
-    queryFilter = new AndFilter(List.of(new IsBooleanFilter(xeqfoo, false), yeqbar));
-    Assertions.assertNull(Projections.rewriteFilter(xeqfoo, queryFilter));
-
-    queryFilter = new AndFilter(List.of(new AndFilter(List.of(xeqfoo, yeqbar)), zeq123));
-    Assertions.assertEquals(
-        new AndFilter(List.of(yeqbar, zeq123)),
-        Projections.rewriteFilter(xeqfoo, queryFilter)
-    );
-
-    queryFilter = new AndFilter(
-        List.of(
-            new EqualityFilter("a", ColumnType.STRING, "foo", null),
-            new EqualityFilter("b", ColumnType.STRING, "bar", null),
-            new EqualityFilter("c", ColumnType.STRING, "baz", null)
-        )
-    );
-    Assertions.assertEquals(
-        new EqualityFilter("b", ColumnType.STRING, "bar", null),
-        Projections.rewriteFilter(
-            new AndFilter(
-                List.of(
-                    new EqualityFilter("a", ColumnType.STRING, "foo", null),
-                    new EqualityFilter("c", ColumnType.STRING, "baz", null)
-                )
-            ),
-            queryFilter
-        )
-    );
   }
 
   private static class RowSignatureChecker implements Projections.PhysicalColumnChecker
