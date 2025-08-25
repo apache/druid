@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.index;
 
+import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
@@ -26,11 +27,18 @@ import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 
 public class AllTrueBitmapColumnIndex implements BitmapColumnIndex
 {
-  private final ColumnIndexSelector selector;
+  private final BitmapFactory bitmapFactory;
+  private final int numRows;
+
+  public AllTrueBitmapColumnIndex(BitmapFactory bitmapFactory, int numRows)
+  {
+    this.bitmapFactory = bitmapFactory;
+    this.numRows = numRows;
+  }
 
   public AllTrueBitmapColumnIndex(ColumnIndexSelector indexSelector)
   {
-    this.selector = indexSelector;
+    this(indexSelector.getBitmapFactory(), indexSelector.getNumRows());
   }
 
   @Override
@@ -49,8 +57,7 @@ public class AllTrueBitmapColumnIndex implements BitmapColumnIndex
   public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
   {
     return bitmapResultFactory.wrapAllTrue(
-        selector.getBitmapFactory()
-                .complement(selector.getBitmapFactory().makeEmptyImmutableBitmap(), selector.getNumRows())
+        bitmapFactory.complement(bitmapFactory.makeEmptyImmutableBitmap(), numRows)
     );
   }
 }
