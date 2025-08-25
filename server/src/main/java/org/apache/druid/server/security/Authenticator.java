@@ -22,7 +22,7 @@ package org.apache.druid.server.security;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.server.initialization.jetty.ServletFilterHolder;
-import org.eclipse.jetty.client.api.Request;
+import org.eclipse.jetty.client.Request;
 
 import javax.annotation.Nullable;
 import javax.servlet.Filter;

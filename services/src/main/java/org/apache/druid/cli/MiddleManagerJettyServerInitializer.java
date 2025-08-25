@@ -32,13 +32,13 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationUtils;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
+import org.eclipse.jetty.ee8.servlet.DefaultServlet;
+import org.eclipse.jetty.ee8.servlet.FilterHolder;
+import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee8.servlet.ServletHolder;
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.DefaultHandler;
-import org.eclipse.jetty.server.handler.HandlerList;
-import org.eclipse.jetty.servlet.DefaultServlet;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
 
 import java.util.Collections;
 import java.util.List;
@@ -96,10 +96,8 @@ class MiddleManagerJettyServerInitializer implements JettyServerInitializer
     final FilterHolder guiceFilterHolder = JettyServerInitUtils.getGuiceFilterHolder(injector);
     root.addFilter(guiceFilterHolder, "/*", null);
 
-    final HandlerList handlerList = new HandlerList();
+    final Handler.Sequence handlerList = new Handler.Sequence();
     JettyServerInitUtils.maybeAddHSTSRewriteHandler(serverConfig, handlerList);
-
-    handlerList.addHandler(JettyServerInitUtils.getJettyRequestLogHandler());
 
     handlerList.addHandler(JettyServerInitUtils.wrapWithDefaultGzipHandler(
         root,

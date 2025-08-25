@@ -106,7 +106,7 @@ public class HadoopDruidIndexerConfig
   public static final Properties PROPERTIES;
 
   static {
-    INJECTOR = Initialization.makeInjectorWithModules(
+    INJECTOR = Initialization.makeInjectorWithoutJettyModules(
         GuiceInjectors.makeStartupInjector(),
         ImmutableList.of(
             (Module) binder -> {

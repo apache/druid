@@ -56,7 +56,7 @@ public class JettyMonitoringConnectionFactory extends ContainerLifeCycle impleme
   public Connection newConnection(Connector connector, EndPoint endPoint)
   {
     final Connection connection = connectionFactory.newConnection(connector, endPoint);
-    connection.addListener(
+    connection.addEventListener(
         new Connection.Listener()
         {
           @Override
