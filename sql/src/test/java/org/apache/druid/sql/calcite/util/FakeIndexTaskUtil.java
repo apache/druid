@@ -84,6 +84,7 @@ public class FakeIndexTaskUtil
     );
   }
 
+  @Nullable
   private static File resolveFile(File projectRoot, @Nullable File file)
   {
     if (file == null || file.isAbsolute()) {
