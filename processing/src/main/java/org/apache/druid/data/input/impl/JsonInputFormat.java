@@ -174,11 +174,7 @@ public class JsonInputFormat extends NestedInputFormat
   @Override
   public long getWeightedSize(String path, long size)
   {
-    CompressionUtils.Format compressionFormat = CompressionUtils.Format.fromFileName(path);
-    if (CompressionUtils.Format.GZ == compressionFormat) {
-      return size * CompressionUtils.COMPRESSED_TEXT_WEIGHT_FACTOR;
-    }
-    return size;
+    return size * CompressionUtils.estimatedCompressionFactor(CompressionUtils.Format.fromFileName(path));
   }
 
   /**

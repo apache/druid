@@ -32,6 +32,7 @@ import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorInpu
 import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
 import org.apache.commons.compress.compressors.zstandard.ZstdCompressorInputStream;
 import org.apache.commons.compress.utils.FileNameUtils;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
@@ -120,7 +121,7 @@ public class CompressionUtils
     }
   }
 
-  public static final long COMPRESSED_TEXT_WEIGHT_FACTOR = 4L;
+  public static final int COMPRESSED_TEXT_WEIGHT_FACTOR = 4;
   private static final Logger log = new Logger(CompressionUtils.class);
   private static final int DEFAULT_RETRY_COUNT = 3;
   private static final int GZIP_BUFFER_SIZE = 8192; // Default is 512
@@ -653,6 +654,21 @@ public class CompressionUtils
       }
     } else {
       return in;
+    }
+  }
+
+  /**
+   * Returns the estimated compression factor for a given format on plain text. This is used by certain implementations
+   * of {@link InputFormat#getWeightedSize(String, long)}.
+   */
+  public static int estimatedCompressionFactor(@Nullable final Format format)
+  {
+    // The check for GZ specifically was originally added in https://github.com/apache/druid/pull/14307, and later
+    // moved here. It may make sense to expand this to other (all?) compression formats.
+    if (format == Format.GZ) {
+      return COMPRESSED_TEXT_WEIGHT_FACTOR;
+    } else {
+      return 1;
     }
   }
 }

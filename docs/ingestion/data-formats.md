@@ -168,6 +168,28 @@ For example:
 }
 ```
 
+### Lines
+
+Configure the Lines `inputFormat` to load line-oriented data where each line is treated as a single field:
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| type | String | Set value to `lines`. | yes |
+
+The Lines input format reads each line from the input as UTF-8 text, and creates a single column named `line` containing the entire line as a string.
+This is useful for reading line-oriented data in a simple form for later processing.
+
+For example:
+
+```json
+"ioConfig": {
+  "inputFormat": {
+    "type": "lines"
+  },
+  ...
+}
+```
+
 ### ORC
 
 To use the ORC input format, load the Druid Orc extension ( [`druid-orc-extensions`](../development/extensions-core/orc.md)).

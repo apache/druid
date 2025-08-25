@@ -20,65 +20,24 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.utils.CompressionUtils;
 
-import javax.annotation.Nullable;
 import java.io.File;
-import java.util.List;
-import java.util.regex.Pattern;
 
-public class RegexInputFormat implements InputFormat
+/**
+ * Input format that breaks the input on newlines, and returns a single column named {@link LinesReader#LINE_COLUMN}.
+ */
+public class LinesInputFormat implements InputFormat
 {
-  public static final String TYPE_KEY = "regex";
-
-  private final String pattern;
-  private final String listDelimiter;
-  private final List<String> columns;
-  @JsonIgnore
-  private final Supplier<Pattern> compiledPatternSupplier;
+  public static final String TYPE_KEY = "lines";
 
   @JsonCreator
-  public RegexInputFormat(
-      @JsonProperty("pattern") String pattern,
-      @JsonProperty("listDelimiter") @Nullable String listDelimiter,
-      @JsonProperty("columns") @Nullable List<String> columns
-  )
+  public LinesInputFormat()
   {
-    this.pattern = pattern;
-    this.listDelimiter = listDelimiter;
-    this.columns = columns;
-    this.compiledPatternSupplier = Suppliers.memoize(() -> Pattern.compile(pattern));
-  }
-
-  @JsonProperty
-  public String getPattern()
-  {
-    return pattern;
-  }
-
-  @Nullable
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  public String getListDelimiter()
-  {
-    return listDelimiter;
-  }
-
-  @Nullable
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  public List<String> getColumns()
-  {
-    return columns;
   }
 
   @Override
@@ -90,7 +49,7 @@ public class RegexInputFormat implements InputFormat
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
-    return new RegexReader(inputRowSchema, source, pattern, compiledPatternSupplier.get(), listDelimiter, columns);
+    return new LinesReader(inputRowSchema, source);
   }
 
   @Override
