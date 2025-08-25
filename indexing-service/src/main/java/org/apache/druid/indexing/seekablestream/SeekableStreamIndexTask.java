@@ -34,6 +34,7 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TaskLockCallbackImpl;
 import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
@@ -228,7 +229,8 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
         toolbox.getPolicyEnforcer(),
         rowIngestionMeters,
         parseExceptionHandler,
-        toolbox.getCentralizedTableSchemaConfig()
+        toolbox.getCentralizedTableSchemaConfig(),
+        new TaskLockCallbackImpl(toolbox.getTaskActionClient())
     );
   }
 

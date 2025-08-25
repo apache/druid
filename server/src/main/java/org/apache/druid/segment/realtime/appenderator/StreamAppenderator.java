@@ -203,6 +203,7 @@ public class StreamAppenderator implements Appenderator
   private final SegmentLoaderConfig segmentLoaderConfig;
   private ScheduledExecutorService exec;
   private final FingerprintGenerator fingerprintGenerator;
+  private final TaskLockCallback taskLockCallback;
 
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
@@ -228,7 +229,8 @@ public class StreamAppenderator implements Appenderator
       Cache cache,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      TaskLockCallback taskLockCallback
   )
   {
     this.segmentLoaderConfig = segmentLoaderConfig;
@@ -256,6 +258,7 @@ public class StreamAppenderator implements Appenderator
         Execs.makeThreadFactory("StreamAppenderSegmentRemoval-%s")
     );
     this.fingerprintGenerator = new FingerprintGenerator(objectMapper);
+    this.taskLockCallback = taskLockCallback;
   }
 
   @VisibleForTesting
@@ -1567,18 +1570,15 @@ public class StreamAppenderator implements Appenderator
   private void unlockIntervalIfApplicable(Sink abandonedSink)
   {
     Interval abandonedInterval = abandonedSink.getInterval();
-    boolean otherSinksUsingInterval = sinks.entrySet().stream()
-                                           .anyMatch(entry -> {
-                                             Sink sink = entry.getValue();
-                                             return !Objects.equals(sink, abandonedSink)
-                                                    && sink.isWritable()
-                                                    && sink.getInterval().equals(abandonedInterval);
-                                           });
-    if (!otherSinksUsingInterval) {
-      // TODO: need to trigger the lock release here.
-      // taskActionClient.releaseIntervalLock(abandonedInterval);
-      log.debug("releasing lock for interval[%s]", abandonedInterval);
-
+    boolean isIntervalActive = sinks.entrySet().stream()
+                                    .anyMatch(entry -> {
+                                      Sink sink = entry.getValue();
+                                      return !Objects.equals(sink, abandonedSink)
+                                             && sink.isWritable()
+                                             && sink.getInterval().equals(abandonedInterval);
+                                    });
+    if (!isIntervalActive) {
+      taskLockCallback.releaseLock(abandonedInterval);
     }
     log.info("implement this.");
   }

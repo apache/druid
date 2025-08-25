@@ -79,7 +79,8 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
       PolicyEnforcer policyEnforcer,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      TaskLockCallback taskLockCallback
   )
   {
     throw new UOE(ERROR_MSG);
