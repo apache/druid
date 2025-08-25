@@ -533,12 +533,27 @@ public class SupervisorResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response specGetHistory(
       @Context final HttpServletRequest req,
-      @PathParam("id") final String id
+      @PathParam("id") final String id,
+      @QueryParam("count") final Integer count
   )
   {
     return asLeaderWithSupervisorManager(
         manager -> {
-          List<VersionedSupervisorSpec> historyForId = manager.getSupervisorHistoryForId(id);
+          List<VersionedSupervisorSpec> historyForId;
+          try {
+            historyForId = manager.getSupervisorHistoryForId(id, count);
+          }
+          catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                           .entity(
+                               ImmutableMap.of(
+                                   "error",
+                                   e.getMessage()
+                               )
+                           )
+                           .build();
+          }
+
           if (!historyForId.isEmpty()) {
             final List<VersionedSupervisorSpec> authorizedHistoryForId =
                 Lists.newArrayList(
