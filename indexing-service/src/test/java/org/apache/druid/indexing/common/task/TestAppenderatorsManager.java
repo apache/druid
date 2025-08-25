@@ -100,7 +100,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         policyEnforcer,
         rowIngestionMeters,
         parseExceptionHandler,
-        centralizedDatasourceSchemaConfig
+        centralizedDatasourceSchemaConfig,
+        taskLockCallback
     );
     return realtimeAppenderator;
   }

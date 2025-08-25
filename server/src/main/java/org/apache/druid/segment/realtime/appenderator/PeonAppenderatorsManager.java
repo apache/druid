@@ -114,7 +114,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
           policyEnforcer,
           rowIngestionMeters,
           parseExceptionHandler,
-          centralizedDatasourceSchemaConfig
+          centralizedDatasourceSchemaConfig,
+          taskLockCallback
       );
     }
     return realtimeAppenderator;
