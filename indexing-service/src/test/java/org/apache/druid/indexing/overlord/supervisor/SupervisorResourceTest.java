@@ -1169,10 +1169,8 @@ public class SupervisorResourceTest extends EasyMockSupport
         )
     );
 
-    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(4);
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(2);
     EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id1", 2)).andReturn(limitedVersions).times(1);
-    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id1", 0)).andThrow(new IllegalArgumentException("Limit must be greater than zero if set")).times(1);
-    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id1", -1)).andThrow(new IllegalArgumentException("Limit must be greater than zero if set")).times(1);
     EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id1", 100)).andReturn(versions).times(1);
     setupMockRequest();
     replayAll();
@@ -1185,10 +1183,12 @@ public class SupervisorResourceTest extends EasyMockSupport
     // Test with limit=0 (should return 400 Bad Request)
     response = supervisorResource.specGetHistory(request, "id1", 0);
     Assert.assertEquals(400, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("error", "Count must be greater than zero if set"), response.getEntity());
 
     // Test with negative limit (should return 400 Bad Request)
     response = supervisorResource.specGetHistory(request, "id1", -1);
     Assert.assertEquals(400, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("error", "Count must be greater than zero if set"), response.getEntity());
 
     // Test with limit larger than available history
     response = supervisorResource.specGetHistory(request, "id1", 100);

@@ -537,6 +537,12 @@ public class SupervisorResource
       @QueryParam("count") final Integer count
   )
   {
+    if (count != null && count <= 0) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(ImmutableMap.of("error", "Count must be greater than zero if set"))
+                     .build();
+    }
+
     return asLeaderWithSupervisorManager(
         manager -> {
           List<VersionedSupervisorSpec> historyForId;
