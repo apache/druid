@@ -95,6 +95,20 @@ public class CoordinatorRunStats
     return statValues == null ? 0 : statValues.getLong(stat);
   }
 
+  /**
+   * Invokes the {@link StatHandler} for each value of the specified stat.
+   */
+  public void forEachEntry(CoordinatorStat stat, StatHandler handler)
+  {
+    allStats.forEach(
+        (rowKey, stats) -> stats.object2LongEntrySet().fastForEach(entry -> {
+          if (entry.getKey().equals(stat)) {
+            handler.handle(stat, rowKey, entry.getLongValue());
+          }
+        })
+    );
+  }
+
   public void forEachStat(StatHandler handler)
   {
     allStats.forEach(

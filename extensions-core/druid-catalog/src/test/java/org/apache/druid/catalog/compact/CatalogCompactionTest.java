@@ -32,6 +32,7 @@ import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.server.coordinator.CatalogDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
@@ -119,7 +120,8 @@ public class CatalogCompactionTest extends EmbeddedClusterTestBase
     // Wait for compaction to finish
     overlord.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("task/run/time")
-                      .hasDimension("taskType", "compact")
+                      .hasDimension(DruidMetrics.TASK_TYPE, "compact")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
 
     // Verify that segments are now compacted to MONTH granularity

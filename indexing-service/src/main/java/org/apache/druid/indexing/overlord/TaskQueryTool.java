@@ -160,7 +160,7 @@ public class TaskQueryTool
       // Use a dummy created time as this is not used by the caller, just needs to be non-null
       final DateTime createdTime = DateTimes.nowUtc();
 
-      final List<Task> activeTasks = taskQueue.get().getTasks();
+      final List<Task> activeTasks = taskQueue.get().getActiveTasks();
       for (Task task : activeTasks) {
         final Optional<TaskStatus> statusOptional = taskQueue.get().getTaskStatus(task.getId());
         if (statusOptional.isPresent()) {

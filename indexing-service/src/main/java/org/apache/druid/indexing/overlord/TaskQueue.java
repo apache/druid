@@ -1029,6 +1029,18 @@ public class TaskQueue
   }
 
   /**
+   * List of all active tasks currently being managed by this TaskQueue.
+   */
+  public List<Task> getActiveTasks()
+  {
+    return activeTasks.values()
+                      .stream()
+                      .filter(entry -> !entry.isComplete)
+                      .map(entry -> entry.task)
+                      .collect(Collectors.toList());
+  }
+
+  /**
    * Returns the list of currently active tasks for the given datasource.
    */
   public Map<String, Task> getActiveTasksForDatasource(String datasource)
