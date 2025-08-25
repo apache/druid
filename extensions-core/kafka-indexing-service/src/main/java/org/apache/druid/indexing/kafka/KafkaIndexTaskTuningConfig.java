@@ -53,7 +53,8 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
       @Nullable Integer maxParseExceptions,
       @Nullable Integer maxSavedParseExceptions,
       @Nullable Integer numPersistThreads,
-      @Nullable Integer maxColumnsToMerge
+      @Nullable Integer maxColumnsToMerge,
+      @Nullable Boolean shouldReleaseLockOnHandoff
   )
   {
     super(
@@ -78,7 +79,8 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         maxParseExceptions,
         maxSavedParseExceptions,
         numPersistThreads,
-        maxColumnsToMerge
+        maxColumnsToMerge,
+        shouldReleaseLockOnHandoff
     );
   }
 
@@ -103,7 +105,8 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
       @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads,
-      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge
+      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
+      @JsonProperty("shouldReleaseLockOnHandoff") @Nullable Boolean shouldReleaseLockOnHandoff
   )
   {
     this(
@@ -127,7 +130,8 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         maxParseExceptions,
         maxSavedParseExceptions,
         numPersistThreads,
-        maxColumnsToMerge
+        maxColumnsToMerge,
+        shouldReleaseLockOnHandoff
     );
   }
 
@@ -155,7 +159,8 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         getMaxParseExceptions(),
         getMaxSavedParseExceptions(),
         getNumPersistThreads(),
-        getMaxColumnsToMerge()
+        getMaxColumnsToMerge(),
+        getShouldReleaseLockOnHandoff()
     );
   }
 

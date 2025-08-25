@@ -41,6 +41,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   private static final Period DEFAULT_INTERMEDIATE_PERSIST_PERIOD = new Period("PT10M");
   private static final IndexSpec DEFAULT_INDEX_SPEC = IndexSpec.DEFAULT;
   private static final Boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = Boolean.FALSE;
+  private static final Boolean DEFAULT_SHOULD_RELEASE_LOCK_ON_HANDOFF = Boolean.FALSE;
   private static final long DEFAULT_HANDOFF_CONDITION_TIMEOUT = Duration.ofMinutes(15).toMillis();
 
   private final AppendableIndexSpec appendableIndexSpec;
@@ -68,6 +69,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
 
   private final int numPersistThreads;
   private final int maxColumnsToMerge;
+  private final boolean shouldReleaseLockOnHandoff;
 
   public SeekableStreamIndexTaskTuningConfig(
       @Nullable AppendableIndexSpec appendableIndexSpec,
@@ -91,7 +93,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
       @Nullable Integer maxParseExceptions,
       @Nullable Integer maxSavedParseExceptions,
       @Nullable Integer numPersistThreads,
-      @Nullable Integer maxColumnsToMerge
+      @Nullable Integer maxColumnsToMerge,
+      @Nullable Boolean shouldReleaseLockOnHandoff
   )
   {
     this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
@@ -146,6 +149,9 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
       this.numPersistThreads = Math.max(numPersistThreads, AppenderatorConfig.DEFAULT_NUM_PERSIST_THREADS);
     }
     this.maxColumnsToMerge = maxColumnsToMerge == null ? DEFAULT_MAX_COLUMNS_TO_MERGE : maxColumnsToMerge;
+    this.shouldReleaseLockOnHandoff = shouldReleaseLockOnHandoff == null
+                                      ? DEFAULT_SHOULD_RELEASE_LOCK_ON_HANDOFF
+                                      : shouldReleaseLockOnHandoff;
   }
 
   @Override
@@ -291,6 +297,12 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   public int getMaxColumnsToMerge()
   {
     return maxColumnsToMerge;
+  }
+
+  @JsonProperty
+  public boolean getShouldReleaseLockOnHandoff()
+  {
+    return shouldReleaseLockOnHandoff;
   }
 
   public abstract SeekableStreamIndexTaskTuningConfig withBasePersistDirectory(File dir);

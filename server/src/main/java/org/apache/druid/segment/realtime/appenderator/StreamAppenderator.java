@@ -97,6 +97,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -1525,6 +1526,10 @@ public class StreamAppenderator implements Appenderator
                 removeDirectory(computePersistDir(identifier));
               }
 
+              if (tuningConfig.shouldReleaseLockOnHandoff()) {
+                unlockIntervalIfApplicable(sink);
+              }
+
               log.info("Dropped segment[%s].", identifier);
             };
 
@@ -1557,6 +1562,25 @@ public class StreamAppenderator implements Appenderator
         // starting to abandon segments
         persistExecutor
     );
+  }
+
+  private void unlockIntervalIfApplicable(Sink abandonedSink)
+  {
+    Interval abandonedInterval = abandonedSink.getInterval();
+    boolean otherSinksUsingInterval = sinks.entrySet().stream()
+                                           .anyMatch(entry -> {
+                                             Sink sink = entry.getValue();
+                                             return !Objects.equals(sink, abandonedSink)
+                                                    && sink.isWritable()
+                                                    && sink.getInterval().equals(abandonedInterval);
+                                           });
+    if (!otherSinksUsingInterval) {
+      // TODO: need to trigger the lock release here.
+      // taskActionClient.releaseIntervalLock(abandonedInterval);
+      log.debug("releasing lock for interval[%s]", abandonedInterval);
+
+    }
+    log.info("implement this.");
   }
 
   private Committed readCommit() throws IOException

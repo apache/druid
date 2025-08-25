@@ -38,6 +38,11 @@ public interface AppenderatorConfig extends TuningConfig
 
   boolean isSkipBytesInMemoryOverheadCheck();
 
+  default boolean shouldReleaseLockOnHandoff()
+  {
+    return false;
+  }
+
   default int getNumPersistThreads()
   {
     return DEFAULT_NUM_PERSIST_THREADS;
@@ -77,4 +82,6 @@ public interface AppenderatorConfig extends TuningConfig
   {
     return IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE;
   }
+
+
 }
