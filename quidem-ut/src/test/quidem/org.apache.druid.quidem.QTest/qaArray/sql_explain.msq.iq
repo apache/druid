@@ -100,6 +100,7 @@ FROM test_array;
   "shuffle" : "globalSort",
   "output" : "localStorage",
   "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
   "sort" : true
 } ]
 !msqPlan
@@ -779,6 +780,7 @@ FROM test_array;
   "shuffle" : "globalSort",
   "output" : "localStorage",
   "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
   "sort" : true
 } ]
 !msqPlan
