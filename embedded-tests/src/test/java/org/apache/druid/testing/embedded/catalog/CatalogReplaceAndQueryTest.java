@@ -17,16 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.BackwardCompatibilityMain;
+package org.apache.druid.testing.embedded.catalog;
 
-import org.apache.druid.testsEx.categories.BackwardCompatibilityMain;
-import org.apache.druid.testsEx.config.DruidTestRunner;
-import org.apache.druid.testsEx.indexer.IndexerTest;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-
-@RunWith(DruidTestRunner.class)
-@Category(BackwardCompatibilityMain.class)
-public class ITBCMainIndexerTest extends IndexerTest
+public class CatalogReplaceAndQueryTest extends CatalogIngestAndQueryTest
 {
+  @Override
+  public String getDmlPrefixPattern()
+  {
+    return "REPLACE INTO \"%s\" OVERWRITE ALL";
+  }
 }
