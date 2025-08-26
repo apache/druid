@@ -34,6 +34,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
@@ -44,10 +45,12 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.joda.time.DateTime;
+import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -66,6 +69,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     kafkaServer = new KafkaResource();
 
     cluster.addExtension(KafkaIndexTaskModule.class)
+           .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
            .addResource(kafkaServer)
            .useLatchableEmitter()
            .addServer(new EmbeddedCoordinator())
@@ -91,6 +95,11 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(supervisorId, topic);
 
     Assertions.assertEquals(supervisorId, cluster.callApi().postSupervisor(kafkaSupervisorSpec));
+//    overlord.latchableEmitter().waitForEvent(
+//        event -> event.hasMetricName("ingest/events/processed")
+//                      .hasDimension(DruidMetrics.DATASOURCE, Collections.singletonList(dataSource))
+//    );
+//    Assertions.assertEquals(1, cluster.callApi().getLockedIntervals(List.of(new LockFilterPolicy(dataSource, 0, null, null))).size());
 
     // Wait for the broker to discover the realtime segments
     broker.latchableEmitter().waitForEvent(
@@ -119,6 +128,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
     supervisorStatus = cluster.callApi().getSupervisorStatus(supervisorId);
     Assertions.assertTrue(supervisorStatus.isSuspended());
+    Assertions.assertEquals(0, cluster.callApi().getLockedIntervals(List.of(new LockFilterPolicy(dataSource, 0, null, null))).size());
   }
 
   private KafkaSupervisorSpec createKafkaSupervisor(String supervisorId, String topic)
@@ -151,10 +161,10 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
   {
     return new KafkaSupervisorTuningConfig(
         null,
-        null, null, null,
+        10, null, null,
         1,
         null, null, null, null, null, null, null, null, null, null,
-        null, null, null, null, null, null, null, null, null, null, null
+        null, null, null, null, new Period("PT0.1S"), null, null, null, null, null, true
     );
   }
 
