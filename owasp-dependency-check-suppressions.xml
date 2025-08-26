@@ -480,6 +480,12 @@
     ]]></notes>
     <cve>CVE-2023-4586</cve>
   </suppress>
+  <suppress>
+    <notes><![CDATA[
+      file name: netty-codec-http2-4.1.122.Final.jar
+    ]]></notes>
+    <cve>CVE-2025-55163</cve>
+  </suppress>
 
   <!-- druid cassandra storage exclusions -->
   <suppress>
