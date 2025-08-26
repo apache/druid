@@ -47,6 +47,7 @@ import org.apache.druid.sql.calcite.run.SqlEngine;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -114,6 +115,22 @@ public class SqlResource
     return Response.ok(new SupportedEnginesResponse(engines)).build();
   }
 
+  @POST
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes({
+      MediaType.APPLICATION_JSON,
+      MediaType.TEXT_PLAIN,
+      MediaType.APPLICATION_FORM_URLENCODED,
+  })
+  @Nullable
+  public Response doPost(
+      @Context final HttpServletRequest req,
+      @Context final HttpContext httpContext
+  )
+  {
+    return doPost(SqlQuery.from(httpContext), req);
+  }
+
   /**
    * API to list all running queries, for all engines that supports such listings.
    *
@@ -145,17 +162,6 @@ public class SqlResource
 
     AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(request);
     return Response.ok().entity(new GetQueriesResponse(queries)).build();
-  }
-
-  @POST
-  @Produces(MediaType.APPLICATION_JSON)
-  @Nullable
-  public Response doPost(
-      @Context final HttpServletRequest req,
-      @Context final HttpContext httpContext
-  )
-  {
-    return doPost(SqlQuery.from(httpContext), req);
   }
 
   /**

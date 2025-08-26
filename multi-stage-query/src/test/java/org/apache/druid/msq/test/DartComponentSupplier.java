@@ -41,6 +41,7 @@ import org.apache.druid.msq.exec.WorkerRunRef;
 import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.guice.ServiceClientModule;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.avatica.DartDruidMeta;
 import org.apache.druid.sql.avatica.DruidMeta;
@@ -74,9 +75,10 @@ public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
   @Override
   public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
   {
-    walker.add(TestDataSet.NUMBERS, getTempDirProducer().newTempFolder("tmp_numbers"));
+    walker.add(TestDataSet.NUMBERS, TestHelper.JSON_MAPPER, getTempDirProducer().newTempFolder("tmp_numbers"));
     return super.addSegmentsToWalker(walker);
   }
+
   @Override
   public DruidModule getCoreModule()
   {

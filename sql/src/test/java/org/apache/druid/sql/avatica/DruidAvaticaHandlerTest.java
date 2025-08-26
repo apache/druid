@@ -41,6 +41,7 @@ import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchStatementException;
 import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.security.PolicyModule;
 import org.apache.druid.initialization.CoreInjectorBuilder;
@@ -269,6 +270,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     testRequestLogger = new TestRequestLogger();
 
     injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build())
+        .addModule(new LifecycleModule())
         .addModule(
             binder -> {
               binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
