@@ -676,11 +676,19 @@
     <cve>CVE-2023-50293</cve>
   </suppress>
   <suppress>
-    <!-- Due to ranger-plugins jar v2.6.0 -->
+    <!-- Due to ranger-plugins jar v2.4.0 -->
     <notes><![CDATA[
      file name: solr-solrj-8.11.3.jar
      ]]></notes>
     <cve>CVE-2024-45217</cve>
+  </suppress>
+  <suppress>
+    <!-- Due to ranger-plugins jar v2.4.0-->
+    <notes><![CDATA[
+    file name: ranger-plugins-cred-2.4.0.jar, ranger-plugin-classloader-2.4.0.jar
+    ]]></notes>
+    <vulnerabilityName>CVE-2024-55532</vulnerabilityName>
+    <vulnerabilityName>CVE-2024-45479</vulnerabilityName>
   </suppress>
   <suppress>
     <!-- Transitive dependency from Apache Hadoop Common, which does not have a fix that can be upgraded to yet -->
