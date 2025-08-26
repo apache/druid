@@ -2466,8 +2466,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
         .maxRowsInMemory(2)
         .releaseLocksOnHandoff(true)
         .taskIntervalUnlocker(mockUnlocker)
-        .build())
-    {
+        .build()) {
       final Appenderator appenderator = tester.getAppenderator();
 
       appenderator.startJob();
@@ -2523,8 +2522,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
         .maxRowsInMemory(2)
         .releaseLocksOnHandoff(true)
         .taskIntervalUnlocker(mockUnlocker)
-        .build())
-    {
+        .build()) {
       final Appenderator appenderator = tester.getAppenderator();
 
       appenderator.startJob();
