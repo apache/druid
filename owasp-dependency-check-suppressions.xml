@@ -132,7 +132,6 @@
     <cve>CVE-2025-48734</cve>
     <cve>CVE-2024-13009</cve>
     <cve>CVE-2023-52428</cve>
-    <cve>CVE-2025-48734</cve>
     <cve>CVE-2023-2976</cve> <!-- hadoop-client-runtime isn't using com.google.common.io.FileBackedOutputStream -->
     <!-- CVE from shaded dependency nimbus-jose-jwt, fixed in upcoming Hadoop release version -
     https://github.com/apache/hadoop/commit/ad49ddda0e1d9632c8c9fcdc78fca8244e1248c9 -->
