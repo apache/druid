@@ -193,7 +193,7 @@ public class SeekableStreamAppenderatorConfig implements AppenderatorConfig
   }
 
   @Override
-  public boolean releaseLocksOnHandoff()
+  public boolean getReleaseLocksOnHandoff()
   {
     return tuningConfig.getReleaseLockOnHandoff();
   }

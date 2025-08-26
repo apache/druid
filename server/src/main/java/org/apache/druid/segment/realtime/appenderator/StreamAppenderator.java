@@ -1529,7 +1529,7 @@ public class StreamAppenderator implements Appenderator
                 removeDirectory(computePersistDir(identifier));
               }
 
-              if (tuningConfig.releaseLocksOnHandoff()) {
+              if (tuningConfig.getReleaseLocksOnHandoff()) {
                 unlockIntervalIfApplicable(sink);
               }
 
@@ -1575,7 +1575,7 @@ public class StreamAppenderator implements Appenderator
                                       Sink sink = entry.getValue();
                                       return !Objects.equals(sink, abandonedSink)
                                              && sink.isWritable()
-                                             && sink.getInterval().equals(abandonedInterval);
+                                             && sink.getInterval().overlaps(abandonedInterval);
                                     });
     if (!isIntervalActive) {
       taskIntervalUnlocker.releaseLock(abandonedInterval);

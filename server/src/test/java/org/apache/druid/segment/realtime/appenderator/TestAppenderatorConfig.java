@@ -45,6 +45,7 @@ public class TestAppenderatorConfig implements AppenderatorConfig
   private final IndexSpec indexSpecForIntermediatePersists;
   @Nullable
   private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
+  private final boolean releaseLocksOnHandoff;
 
   public TestAppenderatorConfig(
       AppendableIndexSpec appendableIndexSpec,
@@ -57,7 +58,8 @@ public class TestAppenderatorConfig implements AppenderatorConfig
       Long pushTimeout,
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       Integer maxColumnsToMerge,
-      File basePersistDirectory
+      File basePersistDirectory,
+      boolean releaseLocksOnHandoff
   )
   {
     this.appendableIndexSpec = appendableIndexSpec;
@@ -74,6 +76,7 @@ public class TestAppenderatorConfig implements AppenderatorConfig
 
     this.partitionsSpec = null;
     this.indexSpecForIntermediatePersists = this.indexSpec;
+    this.releaseLocksOnHandoff = releaseLocksOnHandoff;
   }
 
   @Override
@@ -163,6 +166,12 @@ public class TestAppenderatorConfig implements AppenderatorConfig
   }
 
   @Override
+  public boolean getReleaseLocksOnHandoff()
+  {
+    return releaseLocksOnHandoff;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -180,6 +189,7 @@ public class TestAppenderatorConfig implements AppenderatorConfig
            maxPendingPersists == that.maxPendingPersists &&
            reportParseExceptions == that.reportParseExceptions &&
            pushTimeout == that.pushTimeout &&
+           releaseLocksOnHandoff == that.releaseLocksOnHandoff &&
            Objects.equals(partitionsSpec, that.partitionsSpec) &&
            Objects.equals(indexSpec, that.indexSpec) &&
            Objects.equals(indexSpecForIntermediatePersists, that.indexSpecForIntermediatePersists) &&
@@ -203,7 +213,8 @@ public class TestAppenderatorConfig implements AppenderatorConfig
         maxPendingPersists,
         reportParseExceptions,
         pushTimeout,
-        segmentWriteOutMediumFactory
+        segmentWriteOutMediumFactory,
+        releaseLocksOnHandoff
     );
   }
 
