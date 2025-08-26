@@ -80,7 +80,7 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
-      TaskLockCallback taskLockCallback
+      TaskIntervalUnlocker taskIntervalUnlocker
   )
   {
     throw new UOE(ERROR_MSG);

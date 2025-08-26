@@ -38,7 +38,7 @@ public interface AppenderatorConfig extends TuningConfig
 
   boolean isSkipBytesInMemoryOverheadCheck();
 
-  default boolean shouldReleaseLockOnHandoff()
+  default boolean releaseLocksOnHandoff()
   {
     return false;
   }

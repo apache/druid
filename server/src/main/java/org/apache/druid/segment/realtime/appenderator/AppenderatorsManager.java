@@ -90,7 +90,7 @@ public interface AppenderatorsManager
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
-      TaskLockCallback taskLockCallback
+      TaskIntervalUnlocker taskIntervalUnlocker
   );
 
   /**

@@ -23,17 +23,16 @@ import org.joda.time.Interval;
 
 /**
  * This interface provides a callback mechanism to interact with TaskLockbox for releasing interval locks when
- * the segments are handed off.
+ * the segments are handed off. We need this interface to avoid cyclic dependencues because the
+ * {@code TaskLockbox} is in druid-indexing-service module
  */
-public interface TaskLockCallback
+@FunctionalInterface
+public interface TaskIntervalUnlocker
 {
   /**
    * Releases the lock for the given interval.
    *
    * @param interval interval for which the lock needs to be released
    */
-  default void releaseLock(Interval interval)
-  {
-    throw new UnsupportedOperationException("Lock release is not implemented.");
-  }
+  void releaseLock(Interval interval);
 }

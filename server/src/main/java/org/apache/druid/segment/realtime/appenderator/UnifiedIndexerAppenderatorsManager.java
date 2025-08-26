@@ -171,7 +171,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
-      TaskLockCallback taskLockCallback
+      TaskIntervalUnlocker taskIntervalUnlocker
   )
   {
     synchronized (this) {
@@ -196,7 +196,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           rowIngestionMeters,
           parseExceptionHandler,
           centralizedDatasourceSchemaConfig,
-          taskLockCallback
+          taskIntervalUnlocker
       )
       {
         @Override

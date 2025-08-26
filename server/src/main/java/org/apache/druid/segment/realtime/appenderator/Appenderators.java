@@ -69,7 +69,7 @@ public class Appenderators
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
-      TaskLockCallback taskLockCallback
+      TaskIntervalUnlocker taskIntervalUnlocker
   )
   {
     return new StreamAppenderator(
@@ -101,7 +101,7 @@ public class Appenderators
         rowIngestionMeters,
         parseExceptionHandler,
         centralizedDatasourceSchemaConfig,
-        taskLockCallback
+        taskIntervalUnlocker
     );
   }
 

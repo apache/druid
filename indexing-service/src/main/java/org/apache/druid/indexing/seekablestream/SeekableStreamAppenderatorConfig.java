@@ -57,13 +57,11 @@ public class SeekableStreamAppenderatorConfig implements AppenderatorConfig
 
   private final SeekableStreamIndexTaskTuningConfig tuningConfig;
   private final int maxColumnsToMerge;
-  private final boolean shouldReleaseLockOnHandoff;
 
   private SeekableStreamAppenderatorConfig(SeekableStreamIndexTaskTuningConfig tuningConfig, int maxColumnsToMerge)
   {
     this.tuningConfig = tuningConfig;
     this.maxColumnsToMerge = maxColumnsToMerge;
-    this.shouldReleaseLockOnHandoff = tuningConfig.getShouldReleaseLockOnHandoff();
   }
 
   public static SeekableStreamAppenderatorConfig fromTuningConfig(
@@ -195,9 +193,9 @@ public class SeekableStreamAppenderatorConfig implements AppenderatorConfig
   }
 
   @Override
-  public boolean shouldReleaseLockOnHandoff()
+  public boolean releaseLocksOnHandoff()
   {
-    return shouldReleaseLockOnHandoff;
+    return tuningConfig.getReleaseLockOnHandoff();
   }
 
   @Override

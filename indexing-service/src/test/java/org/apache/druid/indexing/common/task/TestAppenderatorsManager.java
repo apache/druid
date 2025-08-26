@@ -45,7 +45,7 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.Appenderators;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.TaskDirectory;
-import org.apache.druid.segment.realtime.appenderator.TaskLockCallback;
+import org.apache.druid.segment.realtime.appenderator.TaskIntervalUnlocker;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.Interval;
 
@@ -77,7 +77,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
-      TaskLockCallback taskLockCallback
+      TaskIntervalUnlocker taskIntervalUnlocker
   )
   {
     realtimeAppenderator = Appenderators.createRealtime(
@@ -101,7 +101,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         rowIngestionMeters,
         parseExceptionHandler,
         centralizedDatasourceSchemaConfig,
-        taskLockCallback
+        taskIntervalUnlocker
     );
     return realtimeAppenderator;
   }

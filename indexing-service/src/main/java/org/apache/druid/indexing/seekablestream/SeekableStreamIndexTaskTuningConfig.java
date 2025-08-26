@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
@@ -69,7 +70,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
 
   private final int numPersistThreads;
   private final int maxColumnsToMerge;
-  private final boolean shouldReleaseLockOnHandoff;
+  private final boolean releaseLocksOnHandoff;
 
   public SeekableStreamIndexTaskTuningConfig(
       @Nullable AppendableIndexSpec appendableIndexSpec,
@@ -94,7 +95,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
       @Nullable Integer maxSavedParseExceptions,
       @Nullable Integer numPersistThreads,
       @Nullable Integer maxColumnsToMerge,
-      @Nullable Boolean shouldReleaseLockOnHandoff
+      @Nullable Boolean releaseLocksOnHandoff
   )
   {
     this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
@@ -149,9 +150,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
       this.numPersistThreads = Math.max(numPersistThreads, AppenderatorConfig.DEFAULT_NUM_PERSIST_THREADS);
     }
     this.maxColumnsToMerge = maxColumnsToMerge == null ? DEFAULT_MAX_COLUMNS_TO_MERGE : maxColumnsToMerge;
-    this.shouldReleaseLockOnHandoff = shouldReleaseLockOnHandoff == null
-                                      ? DEFAULT_SHOULD_RELEASE_LOCK_ON_HANDOFF
-                                      : shouldReleaseLockOnHandoff;
+    this.releaseLocksOnHandoff = Configs.valueOrDefault(releaseLocksOnHandoff, DEFAULT_SHOULD_RELEASE_LOCK_ON_HANDOFF);
   }
 
   @Override
@@ -300,9 +299,9 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   }
 
   @JsonProperty
-  public boolean getShouldReleaseLockOnHandoff()
+  public boolean getReleaseLockOnHandoff()
   {
-    return shouldReleaseLockOnHandoff;
+    return releaseLocksOnHandoff;
   }
 
   public abstract SeekableStreamIndexTaskTuningConfig withBasePersistDirectory(File dir);
@@ -331,6 +330,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
            maxSavedParseExceptions == that.maxSavedParseExceptions &&
            numPersistThreads == that.numPersistThreads &&
            maxColumnsToMerge == that.maxColumnsToMerge &&
+           releaseLocksOnHandoff == that.releaseLocksOnHandoff &&
            Objects.equals(partitionsSpec, that.partitionsSpec) &&
            Objects.equals(intermediatePersistPeriod, that.intermediatePersistPeriod) &&
            Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
@@ -364,7 +364,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
         maxParseExceptions,
         maxSavedParseExceptions,
         numPersistThreads,
-        maxColumnsToMerge
+        maxColumnsToMerge,
+        releaseLocksOnHandoff
     );
   }
 

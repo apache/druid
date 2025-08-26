@@ -203,7 +203,7 @@ public class StreamAppenderator implements Appenderator
   private final SegmentLoaderConfig segmentLoaderConfig;
   private ScheduledExecutorService exec;
   private final FingerprintGenerator fingerprintGenerator;
-  private final TaskLockCallback taskLockCallback;
+  private final TaskIntervalUnlocker taskIntervalUnlocker;
 
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
@@ -230,7 +230,7 @@ public class StreamAppenderator implements Appenderator
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
-      TaskLockCallback taskLockCallback
+      TaskIntervalUnlocker taskIntervalUnlocker
   )
   {
     this.segmentLoaderConfig = segmentLoaderConfig;
@@ -258,7 +258,7 @@ public class StreamAppenderator implements Appenderator
         Execs.makeThreadFactory("StreamAppenderSegmentRemoval-%s")
     );
     this.fingerprintGenerator = new FingerprintGenerator(objectMapper);
-    this.taskLockCallback = taskLockCallback;
+    this.taskIntervalUnlocker = taskIntervalUnlocker;
   }
 
   @VisibleForTesting
@@ -1529,7 +1529,7 @@ public class StreamAppenderator implements Appenderator
                 removeDirectory(computePersistDir(identifier));
               }
 
-              if (tuningConfig.shouldReleaseLockOnHandoff()) {
+              if (tuningConfig.releaseLocksOnHandoff()) {
                 unlockIntervalIfApplicable(sink);
               }
 
@@ -1578,7 +1578,7 @@ public class StreamAppenderator implements Appenderator
                                              && sink.getInterval().equals(abandonedInterval);
                                     });
     if (!isIntervalActive) {
-      taskLockCallback.releaseLock(abandonedInterval);
+      taskIntervalUnlocker.releaseLock(abandonedInterval);
     }
     log.info("implement this.");
   }
