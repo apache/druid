@@ -457,6 +457,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         filterFieldsForPruning = null;
       }
 
+      boolean isRealtimeSegmentOnly = query.context().isRealtimeSegmentsOnly();
       // Filter unneeded chunks based on partition dimension
       for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
         final Set<PartitionChunk<ServerSelector>> filteredChunks;
@@ -473,7 +474,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         }
         for (PartitionChunk<ServerSelector> chunk : filteredChunks) {
           ServerSelector server = chunk.getObject();
-          if (query.context().isRealtimeSegmentsOnly() && !server.isRealtimeSegment()) {
+          if (isRealtimeSegmentOnly && !server.isRealtimeSegment()) {
             continue; // Skip historical segments when only realtime segments are requested
           }
           final SegmentDescriptor segment = new SegmentDescriptor(
