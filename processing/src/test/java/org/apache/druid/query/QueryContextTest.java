@@ -434,9 +434,9 @@ public class QueryContextTest
   {
     assertFalse(QueryContext.empty().isRealtimeSegmentsOnly());
     assertTrue(
-       QueryContext
-          .of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_ONLY, true))
-          .isRealtimeSegmentsOnly()
+        QueryContext
+            .of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_ONLY, true))
+            .isRealtimeSegmentsOnly()
     );
   }
 
