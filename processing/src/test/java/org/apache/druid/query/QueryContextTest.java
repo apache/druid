@@ -430,6 +430,17 @@ public class QueryContextTest
   }
 
   @Test
+  public void testIsRealtimeSegmentsOnly()
+  {
+    assertFalse(QueryContext.empty().isRealtimeSegmentsOnly());
+    assertTrue(
+       QueryContext
+          .of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_ONLY, true))
+          .isRealtimeSegmentsOnly()
+    );
+  }
+
+  @Test
   public void testSerialization() throws Exception
   {
     final QueryContext context = QueryContext.of(
