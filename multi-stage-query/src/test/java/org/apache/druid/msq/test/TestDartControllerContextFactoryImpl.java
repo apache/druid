@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.druid.client.TimelineServerView;
@@ -31,6 +30,7 @@ import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
@@ -58,9 +58,7 @@ import java.util.concurrent.Executors;
 public class TestDartControllerContextFactoryImpl extends DartControllerContextFactoryImpl
 {
   private static final ListeningExecutorService EXECUTOR = MoreExecutors.listeningDecorator(
-      Executors.newCachedThreadPool(
-          new ThreadFactoryBuilder().setNameFormat("dart-worker-%d").build()
-      )
+      Executors.newCachedThreadPool(Execs.makeThreadFactory("dart-worker-%d"))
   );
 
   private final Map<String, WorkerRunRef> workerMap;
