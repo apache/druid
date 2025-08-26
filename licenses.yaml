@@ -697,7 +697,7 @@ name: Apache Commons Lang
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.18.0
+version: 3.17.0
 libraries:
   - org.apache.commons: commons-lang3
 notices:
@@ -1332,7 +1332,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.124.Final
+version: 4.1.122.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
