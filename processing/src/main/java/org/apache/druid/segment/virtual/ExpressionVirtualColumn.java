@@ -62,7 +62,6 @@ public class ExpressionVirtualColumn implements VirtualColumn
 
   private final String name;
   private final Expression expression;
-  private final Supplier<Expr> parsedExpression;
   private final Supplier<Expr.BindingAnalysis> expressionAnalysis;
   private final Supplier<byte[]> cacheKey;
 
@@ -111,7 +110,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
       @Nullable final ColumnType outputType
   )
   {
-    this(name, parsedExpression.toString(), outputType, () -> parsedExpression);
+    this(name, parsedExpression.stringify(), outputType, () -> parsedExpression);
   }
 
   /**
@@ -125,9 +124,12 @@ public class ExpressionVirtualColumn implements VirtualColumn
   )
   {
     this.name = Preconditions.checkNotNull(name, "name");
-    this.expression = new Expression(Preconditions.checkNotNull(expression, "expression"), outputType);
-    this.parsedExpression = parsedExpression;
-    this.expressionAnalysis = Suppliers.memoize(parsedExpression.get()::analyzeInputs);
+    this.expression = new Expression(
+        Preconditions.checkNotNull(expression, "expression"),
+        parsedExpression,
+        outputType
+    );
+    this.expressionAnalysis = Suppliers.memoize(() -> parsedExpression.get().analyzeInputs());
     this.cacheKey = makeCacheKeySupplier();
   }
 
@@ -155,7 +157,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   @VisibleForTesting
   public Supplier<Expr> getParsedExpression()
   {
-    return parsedExpression;
+    return expression.parsed;
   }
 
   @Override
@@ -166,14 +168,14 @@ public class ExpressionVirtualColumn implements VirtualColumn
   {
     if (isDirectAccess(columnSelectorFactory)) {
       return columnSelectorFactory.makeDimensionSelector(
-          dimensionSpec.withDimension(parsedExpression.get().getBindingIfIdentifier())
+          dimensionSpec.withDimension(expression.parsed.get().getBindingIfIdentifier())
       );
     }
 
     return dimensionSpec.decorate(
         ExpressionSelectors.makeDimensionSelector(
             columnSelectorFactory,
-            parsedExpression.get(),
+            expression.parsed.get(),
             dimensionSpec.getExtractionFn()
         )
     );
@@ -183,7 +185,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   public ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelectorFactory factory)
   {
     if (isDirectAccess(factory)) {
-      return factory.makeColumnValueSelector(parsedExpression.get().getBindingIfIdentifier());
+      return factory.makeColumnValueSelector(expression.parsed.get().getBindingIfIdentifier());
     }
 
     final ColumnCapabilities capabilities = capabilities(factory, name);
@@ -191,9 +193,9 @@ public class ExpressionVirtualColumn implements VirtualColumn
     // other single and multi-value STRING selectors, whose getObject is expected to produce a single STRING value
     // or List of STRING values.
     if (capabilities.is(ValueType.STRING)) {
-      return ExpressionSelectors.makeStringColumnValueSelector(factory, parsedExpression.get());
+      return ExpressionSelectors.makeStringColumnValueSelector(factory, expression.parsed.get());
     }
-    return ExpressionSelectors.makeColumnValueSelector(factory, parsedExpression.get());
+    return ExpressionSelectors.makeColumnValueSelector(factory, expression.parsed.get());
   }
 
   @Override
@@ -204,7 +206,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
       return true;
     }
 
-    final ExpressionPlan plan = ExpressionPlanner.plan(inspector, parsedExpression.get());
+    final ExpressionPlan plan = ExpressionPlanner.plan(inspector, expression.parsed.get());
     return plan.is(ExpressionPlan.Trait.VECTORIZABLE);
   }
 
@@ -216,31 +218,31 @@ public class ExpressionVirtualColumn implements VirtualColumn
   {
     if (isDirectAccess(factory)) {
       return factory.makeSingleValueDimensionSelector(
-          dimensionSpec.withDimension(parsedExpression.get().getBindingIfIdentifier())
+          dimensionSpec.withDimension(expression.parsed.get().getBindingIfIdentifier())
       );
     }
 
-    return ExpressionVectorSelectors.makeSingleValueDimensionVectorSelector(factory, parsedExpression.get());
+    return ExpressionVectorSelectors.makeSingleValueDimensionVectorSelector(factory, expression.parsed.get());
   }
 
   @Override
   public VectorValueSelector makeVectorValueSelector(String columnName, VectorColumnSelectorFactory factory)
   {
     if (isDirectAccess(factory)) {
-      return factory.makeValueSelector(parsedExpression.get().getBindingIfIdentifier());
+      return factory.makeValueSelector(expression.parsed.get().getBindingIfIdentifier());
     }
 
-    return ExpressionVectorSelectors.makeVectorValueSelector(factory, parsedExpression.get());
+    return ExpressionVectorSelectors.makeVectorValueSelector(factory, expression.parsed.get());
   }
 
   @Override
   public VectorObjectSelector makeVectorObjectSelector(String columnName, VectorColumnSelectorFactory factory)
   {
     if (isDirectAccess(factory)) {
-      return factory.makeObjectSelector(parsedExpression.get().getBindingIfIdentifier());
+      return factory.makeObjectSelector(expression.parsed.get().getBindingIfIdentifier());
     }
 
-    return ExpressionVectorSelectors.makeVectorObjectSelector(factory, parsedExpression.get(), expression.outputType);
+    return ExpressionVectorSelectors.makeVectorObjectSelector(factory, expression.parsed.get(), expression.outputType);
   }
 
   @Nullable
@@ -253,14 +255,14 @@ public class ExpressionVirtualColumn implements VirtualColumn
   {
     if (isDirectAccess(factory)) {
       return factory.makeGroupByVectorColumnSelector(
-          parsedExpression.get().getBindingIfIdentifier(),
+          expression.parsed.get().getBindingIfIdentifier(),
           deferExpressionDimensions
       );
     }
 
     return ExpressionVectorSelectors.makeGroupByVectorColumnSelector(
         factory,
-        parsedExpression.get(),
+        expression.parsed.get(),
         deferExpressionDimensions
     );
   }
@@ -295,12 +297,12 @@ public class ExpressionVirtualColumn implements VirtualColumn
   public ColumnCapabilities capabilities(ColumnInspector inspector, String columnName)
   {
     if (isDirectAccess(inspector)) {
-      return inspector.getColumnCapabilities(parsedExpression.get().getBindingIfIdentifier());
+      return inspector.getColumnCapabilities(expression.parsed.get().getBindingIfIdentifier());
     }
 
     final ColumnType outputType = expression.outputType;
 
-    final ExpressionPlan plan = ExpressionPlanner.plan(inspector, parsedExpression.get());
+    final ExpressionPlan plan = ExpressionPlanner.plan(inspector, expression.parsed.get());
     final ColumnCapabilities inferred = plan.inferColumnCapabilities(outputType);
     // if we can infer the column capabilities from the expression plan, then use that
     if (inferred != null) {
@@ -367,13 +369,14 @@ public class ExpressionVirtualColumn implements VirtualColumn
     }
     final ExpressionVirtualColumn that = (ExpressionVirtualColumn) o;
     return Objects.equals(name, that.name) &&
-           Objects.equals(expression, that.expression);
+           Objects.equals(expression.expressionString, that.expression.expressionString) &&
+           Objects.equals(expression.outputType, that.expression.outputType);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, expression);
+    return Objects.hash(name, expression.expressionString, expression.outputType);
   }
 
   @Override
@@ -391,9 +394,9 @@ public class ExpressionVirtualColumn implements VirtualColumn
    */
   private boolean isDirectAccess(final ColumnInspector inspector)
   {
-    if (parsedExpression.get().isIdentifier()) {
+    if (expression.parsed.get().isIdentifier()) {
       final ColumnCapabilities baseCapabilities =
-          inspector.getColumnCapabilities(parsedExpression.get().getBindingIfIdentifier());
+          inspector.getColumnCapabilities(expression.parsed.get().getBindingIfIdentifier());
 
       if (expression.outputType == null) {
         // No desired output type. Anything from the source is fine.
@@ -412,7 +415,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
     return Suppliers.memoize(() -> {
       CacheKeyBuilder builder = new CacheKeyBuilder(VirtualColumnCacheHelper.CACHE_TYPE_ID_EXPRESSION)
           .appendString(name)
-          .appendCacheable(parsedExpression.get());
+          .appendCacheable(expression.parsed.get());
 
       if (expression.outputType != null) {
         builder.appendString(expression.outputType.toString());
@@ -426,16 +429,20 @@ public class ExpressionVirtualColumn implements VirtualColumn
    * expressions, for example it will not currently consider something like 'a + b' equivalent to 'b + a'. This is ok
    * for current uses of this functionality, but in theory we could push down equivalence to the parsed expression
    * instead of checking for an identical string expression, it would just be a lot more expensive.
+   *
+   * Equivalence is done using {@link Expr#stringify()} to stabilize the comparisons
    */
   private static final class Expression implements EquivalenceKey
   {
     private final String expressionString;
+    private final Supplier<Expr> parsed;
     @Nullable
     private final ColumnType outputType;
 
-    private Expression(String expression, @Nullable ColumnType outputType)
+    private Expression(String expression, Supplier<Expr> parsedExpression, @Nullable ColumnType outputType)
     {
       this.expressionString = expression;
+      this.parsed = parsedExpression;
       this.outputType = outputType;
     }
 
@@ -449,20 +456,21 @@ public class ExpressionVirtualColumn implements VirtualColumn
         return false;
       }
       Expression that = (Expression) o;
-      return Objects.equals(expressionString, that.expressionString) && Objects.equals(outputType, that.outputType);
+      return Objects.equals(parsed.get().stringify(), that.parsed.get().stringify())
+             && Objects.equals(outputType, that.outputType);
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(expressionString, outputType);
+      return Objects.hash(parsed.get().stringify(), outputType);
     }
 
     @Override
     public String toString()
     {
       return "Expression{" +
-             "expression='" + expressionString + '\'' +
+             "expression='" + parsed.get().stringify() + '\'' +
              ", outputType=" + outputType +
              '}';
     }

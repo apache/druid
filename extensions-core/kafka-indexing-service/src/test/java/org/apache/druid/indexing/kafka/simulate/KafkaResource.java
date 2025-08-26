@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.kafka.simulate;
 
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
+import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestcontainerResource;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -39,17 +40,29 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class KafkaResource extends TestcontainerResource<KafkaContainer>
 {
-  public KafkaResource()
-  {
-    super();
-  }
-
   private static final String KAFKA_IMAGE = "apache/kafka:4.0.0";
+
+  private EmbeddedDruidCluster cluster;
+
+  @Override
+  public void beforeStart(EmbeddedDruidCluster cluster)
+  {
+    this.cluster = cluster;
+  }
 
   @Override
   protected KafkaContainer createContainer()
   {
-    return new KafkaContainer(KAFKA_IMAGE);
+    // The result of getBootstrapServers() is the first entry in KafkaContainer.advertisedListeners.
+    // Override getBootstrapServers() to ensure that both DruidContainers and
+    // EmbeddedDruidServers can connect to the Kafka brokers.
+    return new KafkaContainer(KAFKA_IMAGE) {
+      @Override
+      public String getBootstrapServers()
+      {
+        return cluster.getEmbeddedHostname().useInHostAndPort(super.getBootstrapServers());
+      }
+    };
   }
 
   public String getBootstrapServerUrl()
@@ -97,12 +110,12 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
     }
   }
 
-  /**
-   * Produces records to a topic of this embedded Kafka server.
-   */
-  public void produceRecordsToTopic(List<ProducerRecord<byte[], byte[]>> records)
+  public void produceRecordsToTopic(
+      List<ProducerRecord<byte[], byte[]>> records,
+      Map<String, Object> extraProducerProperties
+  )
   {
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = newProducer()) {
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = newProducer(extraProducerProperties)) {
       kafkaProducer.initTransactions();
       kafkaProducer.beginTransaction();
       for (ProducerRecord<byte[], byte[]> record : records) {
@@ -113,6 +126,14 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  /**
+   * Produces records to a topic of this embedded Kafka server.
+   */
+  public void produceRecordsToTopic(List<ProducerRecord<byte[], byte[]>> records)
+  {
+    produceRecordsToTopic(records, null);
   }
 
   public Map<String, Object> producerProperties()
@@ -139,9 +160,13 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
     return "KafkaResource";
   }
 
-  private KafkaProducer<byte[], byte[]> newProducer()
+  private KafkaProducer<byte[], byte[]> newProducer(Map<String, Object> extraProperties)
   {
-    return new KafkaProducer<>(producerProperties());
+    final Map<String, Object> producerProperties = new HashMap<>(producerProperties());
+    if (extraProperties != null) {
+      producerProperties.putAll(extraProperties);
+    }
+    return new KafkaProducer<>(producerProperties);
   }
 
   private Map<String, Object> commonClientProperties()

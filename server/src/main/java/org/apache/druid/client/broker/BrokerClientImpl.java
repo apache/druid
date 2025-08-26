@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.FullResponseHolder;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.explain.ExplainPlan;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
@@ -49,6 +50,19 @@ public class BrokerClientImpl implements BrokerClient
   {
     this.client = client;
     this.jsonMapper = jsonMapper;
+  }
+
+  @Override
+  public ListenableFuture<String> submitNativeQuery(Query<?> query)
+  {
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, "/druid/v2")
+                .jsonContent(jsonMapper, query),
+            new StringFullResponseHandler(StandardCharsets.UTF_8)
+        ),
+        FullResponseHolder::getContent
+    );
   }
 
   @Override

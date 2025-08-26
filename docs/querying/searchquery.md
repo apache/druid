@@ -67,7 +67,7 @@ There are several main parts to a search query:
 |virtualColumns|A JSON list of [virtual columns](./virtual-columns.md) available to use in `searchDimensions`.| no (default none)|
 |query|See [SearchQuerySpec](#searchqueryspec).|yes|
 |sort|An object specifying how the results of the search should be sorted.<br/>Possible types are "lexicographic" (the default sort), "alphanumeric", "strlen", and "numeric".<br/>See [Sorting Orders](./sorting-orders.md) for more details.|no|
-|context|See [Context](../querying/query-context.md)|no|
+|context|See [Context](../querying/query-context-reference.md)|no|
 
 The format of the result is:
 

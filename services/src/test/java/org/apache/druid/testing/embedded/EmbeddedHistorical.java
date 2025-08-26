@@ -51,7 +51,7 @@ public class EmbeddedHistorical extends EmbeddedDruidServer<EmbeddedHistorical>
   }
 
   @Override
-  ServerRunnable createRunnable(LifecycleInitHandler handler)
+  protected ServerRunnable createRunnable(LifecycleInitHandler handler)
   {
     return new Historical(handler);
   }

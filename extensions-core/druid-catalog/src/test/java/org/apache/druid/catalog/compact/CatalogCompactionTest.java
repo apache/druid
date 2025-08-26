@@ -26,6 +26,8 @@ import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.catalog.sync.CatalogClient;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.indexing.common.task.IndexTask;
+import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.StringUtils;
@@ -34,13 +36,11 @@ import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.server.coordinator.CatalogDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
-import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
-import org.apache.druid.testing.embedded.indexing.Resources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Period;
@@ -51,7 +51,8 @@ import java.util.List;
 
 public class CatalogCompactionTest extends EmbeddedClusterTestBase
 {
-  private final EmbeddedOverlord overlord = new EmbeddedOverlord();
+  private final EmbeddedOverlord overlord = new EmbeddedOverlord()
+      .addProperty("druid.catalog.client.maxSyncRetries", "0");
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator()
       .addProperty("druid.manager.segments.useIncrementalCache", "always");
   private final EmbeddedBroker broker = new EmbeddedBroker()
@@ -64,8 +65,8 @@ public class CatalogCompactionTest extends EmbeddedClusterTestBase
                                .useLatchableEmitter()
                                .addExtension(CatalogClientModule.class)
                                .addExtension(CatalogCoordinatorModule.class)
-                               .addServer(coordinator)
                                .addServer(overlord)
+                               .addServer(coordinator)
                                .addServer(broker)
                                .addServer(new EmbeddedIndexer())
                                .addServer(new EmbeddedHistorical());
@@ -81,7 +82,7 @@ public class CatalogCompactionTest extends EmbeddedClusterTestBase
                 .segmentsMetadataStorage()
                 .retrieveAllUsedSegments(dataSource, Segments.ONLY_VISIBLE)
     );
-    Assertions.assertEquals(10, segments.size());
+    Assertions.assertEquals(3, segments.size());
     segments.forEach(
         segment -> Assertions.assertTrue(Granularities.DAY.isAligned(segment.getInterval()))
     );
@@ -113,7 +114,7 @@ public class CatalogCompactionTest extends EmbeddedClusterTestBase
 
     final CompactionSupervisorSpec compactionSupervisor
         = new CompactionSupervisorSpec(compactionConfig, false, null);
-    cluster.callApi().onLeaderOverlord(o -> o.postSupervisor(compactionSupervisor));
+    cluster.callApi().postSupervisor(compactionSupervisor);
 
     // Wait for compaction to finish
     overlord.latchableEmitter().waitForEvent(
@@ -136,21 +137,25 @@ public class CatalogCompactionTest extends EmbeddedClusterTestBase
   private void runIngestionAtDayGranularity()
   {
     final String taskId = IdUtils.getRandomId();
-    final Object task = createIndexTaskForInlineData(
-        taskId,
-        StringUtils.replace(Resources.CSV_DATA_10_DAYS, "\n", "\\n")
-    );
+    final IndexTask task = createIndexTaskForInlineData(taskId);
 
-    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
-    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
+    cluster.callApi().runTask(task, overlord);
   }
 
-  private Object createIndexTaskForInlineData(String taskId, String inlineDataCsv)
+  private IndexTask createIndexTaskForInlineData(String taskId)
   {
-    return EmbeddedClusterApis.createTaskFromPayload(
-        taskId,
-        StringUtils.format(Resources.INDEX_TASK_PAYLOAD_WITH_INLINE_DATA, inlineDataCsv, dataSource)
-    );
+    final String inlineDataCsv =
+        "2025-06-01T00:00:00.000Z,shirt,105"
+        + "\n2025-06-02T00:00:00.000Z,trousers,210"
+        + "\n2025-06-03T00:00:00.000Z,jeans,150";
+    return TaskBuilder.ofTypeIndex()
+                      .dataSource(dataSource)
+                      .isoTimestampColumn("time")
+                      .csvInputFormatWithColumns("time", "item", "value")
+                      .inlineInputSourceWithData(inlineDataCsv)
+                      .segmentGranularity("DAY")
+                      .dimensions()
+                      .withId(taskId);
   }
 
   private void enableCompactionSupervisor()

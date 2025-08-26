@@ -21,6 +21,7 @@ package org.apache.druid.testing;
 
 import com.google.inject.Inject;
 import org.apache.druid.curator.CuratorConfig;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
 
 /**
  * We will use this instead of druid server's CuratorConfig, because CuratorConfig in

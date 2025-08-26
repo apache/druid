@@ -1,7 +1,10 @@
 ---
 id: query-context
-title: "Query context"
-sidebar_label: "Query context"
+title: "Set query context"
+sidebar_label: "Set query context"
+description: 
+  "Learn how to configure the query context
+  to customize query execution behavior and optimize performance."
 ---
 
 <!--
@@ -22,107 +25,273 @@ sidebar_label: "Query context"
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
+  
 
-The query context is used for various query configuration parameters. Query context parameters can be specified in
-the following ways:
+The query context gives you fine-grained control over how Apache Druid executes your individual queries. While the default settings in Druid work well for most queries, you can set the query context to handle specific requirements and optimize performance.
 
-- For [Druid SQL](../api-reference/sql-api.md), context parameters are provided either in a JSON object named `context` to the
-HTTP POST API, or as properties to the JDBC connection.
-- For [native queries](querying.md), context parameters are provided in a JSON object named `context`.
+Common use cases for the query context include:
+- Override default timeouts for long-running queries or complex aggregations.
+- Debug query performance by disabling caching during testing.
+- Configure SQL-specific behaviors like time zones for accurate time-based analysis.
+- Set priorities to ensure critical queries get computational resources first.
+- Adjust memory limits for queries that process large datasets.
 
-Note that setting query context will override both the default value and the runtime properties value in the format of
-`druid.query.default.context.{property_key}` (if set). 
+The way you set the query context depends on how you submit the query to Druid, whether using the web console or API.
+It also depends on whether your query is Druid SQL or a JSON-based native query.
+This guide shows you how to set the query context for each application.
 
-## General parameters
+Before you begin, identify which context parameters you need to configure in order to establish your query context as query context carriers. For available parameters and their descriptions, see [Query context reference](query-context-reference.md).
 
-Unless otherwise noted, the following parameters apply to all query types, and to both native and SQL queries.
-See [SQL query context](sql-query-context.md) for other query context parameters that are specific to Druid SQL planning.
+## Web console
 
-|Parameter          |Default                                 | Description          |
-|-------------------|----------------------------------------|----------------------|
-|`timeout`          | `druid.server.http.defaultQueryTimeout`| Query timeout in millis, beyond which unfinished queries will be cancelled. 0 timeout means `no timeout` (up to the server-side maximum query timeout, `druid.server.http.maxQueryTimeout`). To set the default timeout and maximum timeout, see [Broker configuration](../configuration/index.md#broker) |
-|`priority`         | The default priority is one of the following: <ul><li>Value of `priority` in the query context, if set</li><li>The value of the runtime property `druid.query.default.context.priority`, if set and not null</li><li>`0` if the priority is not set in the query context or runtime properties</li></ul>| Query priority. Queries with higher priority get precedence for computational resources.|
-|`lane`             | `null`                                 | Query lane, used to control usage limits on classes of queries. See [Broker configuration](../configuration/index.md#broker) for more details.|
-|`queryId`          | auto-generated                         | Unique identifier given to this query. If a query ID is set or known, this can be used to cancel the query |
-|`brokerService`    | `null`                                 | Broker service to which this query should be routed. This parameter is honored only by a broker selector strategy of type *manual*. See [Router strategies](../design/router.md#router-strategies) for more details.|
-|`useCache`         | `true`                                 | Flag indicating whether to leverage the query cache for this query. When set to false, it disables reading from the query cache for this query. When set to true, Apache Druid uses `druid.broker.cache.useCache` or `druid.historical.cache.useCache` to determine whether or not to read from the query cache |
-|`populateCache`    | `true`                                 | Flag indicating whether to save the results of the query to the query cache. Primarily used for debugging. When set to false, it disables saving the results of this query to the query cache. When set to true, Druid uses `druid.broker.cache.populateCache` or `druid.historical.cache.populateCache` to determine whether or not to save the results of this query to the query cache |
-|`useResultLevelCache`| `true`                      | Flag indicating whether to leverage the result level cache for this query. When set to false, it disables reading from the query cache for this query. When set to true, Druid uses `druid.broker.cache.useResultLevelCache` to determine whether or not to read from the result-level query cache |
-|`populateResultLevelCache`    | `true`                      | Flag indicating whether to save the results of the query to the result level cache. Primarily used for debugging. When set to false, it disables saving the results of this query to the query cache. When set to true, Druid uses `druid.broker.cache.populateResultLevelCache` to determine whether or not to save the results of this query to the result-level query cache |
-|`bySegment`        | `false`                                | Native queries only. Return "by segment" results. Primarily used for debugging, setting it to `true` returns results associated with the data segment they came from |
-|`finalize`         | `N/A`                                 | Flag indicating whether to "finalize" aggregation results. Primarily used for debugging. For instance, the `hyperUnique` aggregator returns the full HyperLogLog sketch instead of the estimated cardinality when this flag is set to `false` |
-|`maxScatterGatherBytes`| `druid.server.http.maxScatterGatherBytes` | Maximum number of bytes gathered from data processes such as Historicals and realtime processes to execute a query. This parameter can be used to further reduce `maxScatterGatherBytes` limit at query time. See [Broker configuration](../configuration/index.md#broker) for more details.|
-|`maxQueuedBytes`       | `druid.broker.http.maxQueuedBytes`        | Maximum number of bytes queued per query before exerting backpressure on the channel to the data server. Similar to `maxScatterGatherBytes`, except unlike that configuration, this one will trigger backpressure rather than query failure. Zero means disabled.|
-|`maxSubqueryRows`| `druid.server.http.maxSubqueryRows` | Upper limit on the number of rows a subquery can generate. See [Broker configuration](../configuration/index.md#broker) and [subquery guardrails](../configuration/index.md#Guardrails for materialization of subqueries) for more details.|
-|`maxSubqueryBytes`| `druid.server.http.maxSubqueryBytes` | Upper limit on the number of bytes a subquery can generate. See [Broker configuration](../configuration/index.md#broker) and [subquery guardrails](../configuration/index.md#Guardrails for materialization of subqueries) for more details.|
-|`serializeDateTimeAsLong`| `false`       | If true, DateTime is serialized as long in the result returned by Broker and the data transportation between Broker and compute process|
-|`serializeDateTimeAsLongInner`| `false`  | If true, DateTime is serialized as long in the data transportation between Broker and compute process|
-|`enableParallelMerge`|`true`|Enable parallel result merging on the Broker. Note that `druid.processing.merge.useParallelMergePool` must be enabled for this setting to be set to `true`. See [Broker configuration](../configuration/index.md#broker) for more details.|
-|`parallelMergeParallelism`|`druid.processing.merge.parallelism`|Maximum number of parallel threads to use for parallel result merging on the Broker. See [Broker configuration](../configuration/index.md#broker) for more details.|
-|`parallelMergeInitialYieldRows`|`druid.processing.merge.initialYieldNumRows`|Number of rows to yield per ForkJoinPool merge task for parallel result merging on the Broker, before forking off a new task to continue merging sequences. See [Broker configuration](../configuration/index.md#broker) for more details.|
-|`parallelMergeSmallBatchRows`|`druid.processing.merge.smallBatchNumRows`|Size of result batches to operate on in ForkJoinPool merge tasks for parallel result merging on the Broker. See [Broker configuration](../configuration/index.md#broker) for more details.|
-|`useFilterCNF`|`false`| If true, Druid will attempt to convert the query filter to Conjunctive Normal Form (CNF). During query processing, columns can be pre-filtered by intersecting the bitmap indexes of all values that match the eligible filters, often greatly reducing the raw number of rows which need to be scanned. But this effect only happens for the top level filter, or individual clauses of a top level 'and' filter. As such, filters in CNF potentially have a higher chance to utilize a large amount of bitmap indexes on string columns during pre-filtering. However, this setting should be used with great caution, as it can sometimes have a negative effect on performance, and in some cases, the act of computing CNF of a filter can be expensive. We recommend hand tuning your filters to produce an optimal form if possible, or at least verifying through experimentation that using this parameter actually improves your query performance with no ill-effects.|
-|`secondaryPartitionPruning`|`true`|Enable secondary partition pruning on the Broker. The Broker will always prune unnecessary segments from the input scan based on a filter on time intervals, but if the data is further partitioned with hash or range partitioning, this option will enable additional pruning based on a filter on secondary partition dimensions.|
-|`debug`| `false` | Flag indicating whether to enable debugging outputs for the query. When set to false, no additional logs will be produced (logs produced will be entirely dependent on your logging level). When set to true, the following addition logs will be produced:<br />- Log the stack trace of the exception (if any) produced by the query |
-|`setProcessingThreadNames`|`true`| Whether processing thread names will be set to `queryType_dataSource_intervals` while processing a query. This aids in interpreting thread dumps, and is on by default. Query overhead can be reduced slightly by setting this to `false`. This has a tiny effect in most scenarios, but can be meaningful in high-QPS, low-per-segment-processing-time scenarios. |
-|`sqlPlannerBloat`|`1000`|Calcite parameter which controls whether to merge two Project operators when inlining expressions causes complexity to increase. Implemented as a workaround to exception `There are not enough rules to produce a node with desired properties: convention=DRUID, sort=[]` thrown after rejecting the merge of two projects.|
-|`cloneQueryMode`|`excludeClones`| Indicates whether clone Historicals should be queried by brokers. Clone servers are created by the `cloneServers` Coordinator dynamic configuration. Possible values are `excludeClones`, `includeClones` and `preferClones`. `excludeClones` means that clone Historicals are not queried by the broker. `preferClones` indicates that when given a choice between the clone Historical and the original Historical which is being cloned, the broker chooses the clones. Historicals which are not involved in the cloning process will still be queried. `includeClones` means that broker queries any Historical without regarding clone status. This parameter only affects native queries. MSQ does not query Historicals directly.|
-|`realtimeSegmentsOnly` |`false`| When set to true, only query realtime segments. Historical segments are excluded. |
-## Parameters by query type
+You can configure query context parameters for both Druid SQL and native queries in the [web console](../operations/web-console.md).
 
-Some query types offer context parameters specific to that query type.
+The following steps show you how to set the query context using the web console:
 
-### TopN
+1. In the web console, select **Query** from the top-level navigation.
 
-|Parameter        |Default              | Description          |
-|-----------------|---------------------|----------------------|
-|`minTopNThreshold` | `1000`              | The top minTopNThreshold local results from each segment are returned for merging to determine the global topN. |
+   ![Query view](../assets/set-query-context-query-view.png)
 
-### Timeseries
+2. Enter the query you want to run. If you ingested the Wikipedia dataset from the [quickstart](../tutorials/index.md), you can use the following query: 
 
-|Parameter        |Default              | Description          |
-|-----------------|---------------------|----------------------|
-|`skipEmptyBuckets` | `false`             | Disable timeseries zero-filling behavior, so only buckets with results will be returned. |
+    ```sql
+    SELECT * FROM wikipedia WHERE user='BlueMoon2662'
+    ```
 
-### Join filter
+   ![Adding query](../assets/set-query-context-insert-query.png)
 
-|Parameter        |Default              | Description          |
-|-----------------|---------------------|----------------------|
-|`enableJoinFilterPushDown` | `true` | Controls whether a join query will attempt filter push down, which reduces the number of rows that have to be compared in a join operation.|
-|`enableJoinFilterRewrite` | `true` | Controls whether filter clauses that reference non-base table columns will be rewritten into filters on base table columns.|
-|`enableJoinFilterRewriteValueColumnFilters` | `false` | Controls whether Druid rewrites non-base table filters on non-key columns in the non-base table. Requires a scan of the non-base table.|
-|`enableRewriteJoinToFilter` | `true` | Controls whether a join can be pushed partial or fully to the base table as a filter at runtime.|
-|`joinFilterRewriteMaxSize` | `10000` | The maximum size of the correlated value set used for filter rewrites. Set this limit to prevent excessive memory use.| 
+3. In the menu for the engine selector, click **Edit query context**.
 
-### GroupBy
+   ![Opening context dialog](../assets/set-query-context-open-context-dialog.png)
 
-See the list of [GroupBy query context](groupbyquery.md#advanced-configurations) parameters available on the groupBy
-query page.
+4. In the **Edit query context** dialog, add your context parameters as JSON key-value pairs.
 
-## Vectorization parameters
+   For example, you can set the `sqlTimeZone` parameter to ensure that the query results reflect the specified time zone. This may differ from your local time zone when viewing the data.
 
-The GroupBy and Timeseries query types can run in _vectorized_ mode, which speeds up query execution by processing
-batches of rows at a time. Not all queries can be vectorized. In particular, vectorization currently has the following
-requirements:
+   ```json
+   {
+     "sqlTimeZone" : "America/Los_Angeles"
+   }
+   ```
 
-- All query-level filters must either be able to run on bitmap indexes or must offer vectorized row-matchers. These
-include `selector`, `bound`, `in`, `like`, `regex`, `search`, `and`, `or`, and `not`.
-- All filters in filtered aggregators must offer vectorized row-matchers.
-- All aggregators must offer vectorized implementations. These include `count`, `doubleSum`, `floatSum`, `longSum`. `longMin`,
- `longMax`, `doubleMin`, `doubleMax`, `floatMin`, `floatMax`, `longAny`, `doubleAny`, `floatAny`, `stringAny`,
- `hyperUnique`, `filtered`, `approxHistogram`, `approxHistogramFold`, and `fixedBucketsHistogram` (with numerical input). 
-- All virtual columns must offer vectorized implementations. Currently for expression virtual columns, support for vectorization is decided on a per expression basis, depending on the type of input and the functions used by the expression. See the currently supported list in the [expression documentation](math-expr.md#vectorization-support).
-- For GroupBy: All dimension specs must be "default" (no extraction functions or filtered dimension specs).
-- For GroupBy: No multi-value dimensions.
-- For Timeseries: No "descending" order.
-- Only immutable segments (not real-time).
-- Only [table datasources](datasource.md#table) (not joins, subqueries, lookups, or inline datasources).
+5. The web console validates the JSON object containing the query context parameters and highlights any syntax errors.
+   Click **Save**.
 
-Other query types (like TopN, Scan, Select, and Search) ignore the `vectorize` parameter, and will execute without
-vectorization. These query types will ignore the `vectorize` parameter even if it is set to `"force"`.
+   ![Setting the context parameters](../assets/set-query-context-set-context-parameters.png)
 
-|Parameter|Default| Description|
-|---------|-------|------------|
-|`vectorize`|`true`|Enables or disables vectorized query execution. Possible values are `false` (disabled), `true` (enabled if possible, disabled otherwise, on a per-segment basis), and `force` (enabled, and groupBy or timeseries queries that cannot be vectorized will fail). The `"force"` setting is meant to aid in testing, and is not generally useful in production (since real-time segments can never be processed with vectorized execution, any queries on real-time data will fail). This will override `druid.query.default.context.vectorize` if it's set.|
-|`vectorSize`|`512`|Sets the row batching size for a particular query. This will override `druid.query.default.context.vectorSize` if it's set.|
-|`vectorizeVirtualColumns`|`true`|Enables or disables vectorized query processing of queries with virtual columns, layered on top of `vectorize` (`vectorize` must also be set to true for a query to utilize vectorization). Possible values are `false` (disabled), `true` (enabled if possible, disabled otherwise, on a per-segment basis), and `force` (enabled, and groupBy or timeseries queries with virtual columns that cannot be vectorized will fail). The `"force"` setting is meant to aid in testing, and is not generally useful in production. This will override `druid.query.default.context.vectorizeVirtualColumns` if it's set.|
+6. Click **Run** to execute your query with the specified context parameters.
+
+   ![Running the query](../assets/set-query-context-run-the-query.png)
+
+   Compare the results of the example query with and without the query context.
+   * Without the query context, the query returns the `__time` value of `2015-09-12T00:47:53.259Z`.
+   * When you set the `sqlTimeZone` parameter, the query returns `2015-09-11T17:47:53.259-07:00`.
+
+
+## Druid SQL
+
+When using Druid SQL programmatically—such as in applications, automated scripts, or database tools—you can set the query context through various methods depending on how you submit your queries.
+
+### HTTP API
+
+When using the HTTP API, you include query context parameters in the `context` object of your JSON request. For more information on how to format Druid SQL API requests and handle responses, see [Druid SQL API](../api-reference/sql-api.md).
+
+The following example sets the `sqlTimeZone` parameter:
+
+```json
+{
+  "query": "SELECT * FROM wikipedia WHERE user = 'BlueMoon2662'",
+  "context": {
+    "sqlTimeZone": "America/Los_Angeles"
+  }
+}
+```
+
+You can set multiple context parameters in a single request:
+
+```json
+{
+  "query": "SELECT * FROM wikipedia WHERE user = 'BlueMoon2662'",
+  "context": {
+    "sqlTimeZone": "America/Los_Angeles",
+    "sqlQueryId": "request01"
+  }
+}
+```
+
+
+### JDBC driver API
+
+You can connect to Druid over JDBC and issue Druid SQL queries using the [Druid SQL JDBC driver API](../api-reference/sql-jdbc.md).
+This approach is useful when integrating Druid with BI tools or Java applications.
+When connecting to Druid through JDBC, you set query context parameters in a JDBC connection properties object.
+You supply the object when establishing the connection to Druid.
+
+The following code excerpt shows how you can configure the connection properties:
+
+```java
+String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica/";
+
+// Set the time zone to America/Los_Angeles
+Properties connectionProperties = new Properties();
+connectionProperties.setProperty("sqlTimeZone", "America/Los_Angeles");
+
+try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
+  // create and execute statements, process result sets, etc
+}
+```
+
+<details>
+<summary>View full JDBC example</summary>
+
+```java
+import java.sql.*;
+import java.util.Properties;
+
+public class JdbcDruid {
+
+    public static void main(String args[]) {
+
+        // Connect to /druid/v2/sql/avatica/ on your Broker.
+        String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica/;transparent_reconnection=true";
+
+        // The query you want to run.
+        String query = "SELECT * FROM wikipedia WHERE user = 'BlueMoon2662'";
+
+        // Set any connection context parameters you need here.
+        Properties connectionProperties = new Properties();
+        connectionProperties.setProperty("sqlTimeZone", "America/Los_Angeles");
+
+        try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
+            try (
+                final Statement statement = connection.createStatement();
+                final ResultSet rs = statement.executeQuery(query)
+            ) {
+                while (rs.next()) {
+                    // process result set
+                    Timestamp timeStamp = rs.getTimestamp("__time");
+                    System.out.println(timeStamp);
+                }
+            }
+        } catch (Exception e) {
+            System.out.println(e.toString());
+        }
+    }
+}
+```
+
+</details>
+
+### SET statements
+
+You can use the SET command to specify SQL query context parameters that modify the behavior of a Druid SQL query. Druid accepts one or more SET statements before the main SQL query. The SET command works in the both web console and the Druid SQL HTTP API.
+
+In the web console, you can write your SET statements followed by your query directly. For example:
+
+```sql
+SET sqlTimeZone = 'America/Los_Angeles';
+SELECT * FROM wikipedia WHERE user = 'BlueMoon2662';
+```
+
+You can also include your SET statements as part of the query string in your HTTP API call. For example:
+
+```bash
+curl -X POST 'http://localhost:8888/druid/v2/sql' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "query": "SET sqlTimeZone='\''America/Los_Angeles'\''; SELECT * FROM wikipedia WHERE user='\''BlueMoon2662'\''"
+}'
+```
+
+You can also combine SET statements with the `context` field. If you include both, the parameter value in SET takes precedence:
+
+```bash
+curl -X POST 'http://localhost:8888/druid/v2/sql' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "query": "SET sqlTimeZone='\''America/Los_Angeles'\''; SELECT * FROM wikipedia WHERE user='\''BlueMoon2662'\''",
+    "context": {
+      "sqlTimeZone": "UTC"
+    }
+}'
+```
+
+For more details on how to use the SET command in your SQL query, see [SET](sql.md#set).
+
+:::info
+You cannot use SET statements in JDBC connections.
+:::
+
+
+## Native queries
+
+For native queries, you can include query context parameters in a JSON object named `context` within your query or through the [web console](#web-console).
+
+The following example shows a native query that sets the `sqlTimeZone` to `America/Los_Angeles` and `queryId` to `only_query_id_test`:
+
+```json
+{
+  "queryType": "timeseries",
+  "dataSource": "wikipedia",
+  "granularity": "day",
+  "descending": true,
+  "filter": {
+    "type": "and",
+    "fields": [
+      { "type": "selector", "dimension": "countryName", "value": "Australia" },
+      { "type": "selector", "dimension": "isAnonymous", "value": "true" }
+    ]
+  },
+  "aggregations": [
+    { "type": "count", "name": "row_count" }
+  ],
+  "intervals": ["2015-09-12T00:00:00.000/2015-09-13T00:00:00.000"],
+  "context": {
+    "sqlTimeZone": "America/Los_Angeles",
+    "queryId": "only_query_id_test",
+  }
+}
+```
+
+
+## Runtime properties
+
+You can configure query context parameters globally by adding a runtime property to your configuration file.
+The property takes the following format:
+
+```properties
+druid.query.default.context.{PARAMETER}={VALUE}
+```
+
+Replace `PARAMETER` with the query context parameter and `VALUE` with its value.
+For example:
+
+```properties
+druid.query.default.context.debug=true
+```
+
+For more information, see [Configuration reference](../configuration/index.md#overriding-default-query-context-values).
+
+
+## Query context precedence
+
+For a given context query, Druid determines the final query context value to use based on the following order of precedence, from lowest to highest:
+
+1. **Built-in defaults**: Druid uses the documented default values if you don’t specify anything.
+
+2. **Runtime properties**: If you configure parameters as `druid.query.default.context.{PARAMETER}` in the configuration files, these override the built-in defaults and act as your system-wide defaults.
+
+3. **Context object in HTTP request**: Parameters passed within the JSON `context` object override both built-in defaults and runtime properties.
+
+4. **SET statements**: Parameters set in Druid SQL using `SET key=value;` take the highest precedence and override all other settings.
+
+
+## Learn more
+
+For more information, see the following topics:
+
+- [Query context reference](query-context-reference.md) for available query context parameters.
+- [SQL query context](sql-query-context.md) for SQL-specific context parameters.
+- [Multi-stage query context](../multi-stage-query/reference.md#context-parameters) for context parameters specific to SQL-based ingestion.
+- [Native queries](querying.md) for details on constructing native queries with context.
+- [SET](sql.md#set) for complete syntax and usage of SET statements.

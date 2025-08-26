@@ -180,9 +180,10 @@ export class ExploreState {
       source: this.source,
       where: this.where,
       moduleStates: this.moduleStates,
-      layout: this.layout,
     };
+    if (this.layout) value.layout = this.layout;
     if (this.showSourceQuery) value.showSourceQuery = true;
+    if (this.timezone) value.timezone = this.timezone;
     if (this.hideResources) value.hideResources = true;
     if (this.helpers.length) value.helpers = this.helpers;
     if (this.hideHelpers) value.hideHelpers = true;
