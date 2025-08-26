@@ -71,11 +71,11 @@ public class SegmentLoaderConfig
   @JsonProperty
   private int statusQueueMaxSize = 100;
 
-  @JsonProperty("isVirtualStorageFabric")
-  private boolean isVirtualStorageFabric = false;
+  @JsonProperty("virtualStorage")
+  private boolean virtualStorage = false;
 
-  @JsonProperty("virtualStorageFabricLoadThreads")
-  private int virtualStorageFabricLoadThreads = 2 * runtimeInfo.getAvailableProcessors();
+  @JsonProperty("virtualStorageLoadThreads")
+  private int virtualStorageLoadThreads = 2 * runtimeInfo.getAvailableProcessors();
 
   private long combinedMaxSize = 0;
 
@@ -144,14 +144,14 @@ public class SegmentLoaderConfig
     return combinedMaxSize;
   }
 
-  public boolean isVirtualStorageFabric()
+  public boolean isVirtualStorage()
   {
-    return isVirtualStorageFabric;
+    return virtualStorage;
   }
 
-  public int getVirtualStorageFabricLoadThreads()
+  public int getVirtualStorageLoadThreads()
   {
-    return virtualStorageFabricLoadThreads;
+    return virtualStorageLoadThreads;
   }
 
   public SegmentLoaderConfig withLocations(List<StorageLocationConfig> locations)
@@ -193,8 +193,8 @@ public class SegmentLoaderConfig
            ", numThreadsToLoadSegmentsIntoPageCacheOnBootstrap=" + numThreadsToLoadSegmentsIntoPageCacheOnBootstrap +
            ", infoDir=" + infoDir +
            ", statusQueueMaxSize=" + statusQueueMaxSize +
-           ", useVirtualStorageFabric=" + isVirtualStorageFabric +
-           ", virtualStorageFabricLoadThreads=" + virtualStorageFabricLoadThreads +
+           ", useVirtualStorageFabric=" + virtualStorage +
+           ", virtualStorageFabricLoadThreads=" + virtualStorageLoadThreads +
            ", combinedMaxSize=" + combinedMaxSize +
            '}';
   }

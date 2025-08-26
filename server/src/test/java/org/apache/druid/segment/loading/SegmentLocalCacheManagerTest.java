@@ -797,7 +797,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testGetSegmentVirtualStorageFabric() throws Exception
+  public void testGetSegmentVirtualStorage() throws Exception
   {
     final StorageLocationConfig locationConfig = new StorageLocationConfig(localSegmentCacheDir, 10000L, null);
     final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
@@ -809,7 +809,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public boolean isVirtualStorageFabric()
+      public boolean isVirtualStorage()
       {
         return true;
       }
@@ -854,7 +854,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testGetBootstrapSegmentVirtualStorageFabric() throws Exception
+  public void testGetBootstrapSegmentVirtualStorage() throws Exception
   {
     final StorageLocationConfig locationConfig = new StorageLocationConfig(localSegmentCacheDir, 10000L, null);
     final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
@@ -866,7 +866,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public boolean isVirtualStorageFabric()
+      public boolean isVirtualStorage()
       {
         return true;
       }
@@ -912,7 +912,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testGetBootstrapSegmentVirtualStorageFabricSegmentAlreadyCached() throws Exception
+  public void testGetBootstrapSegmentVirtualStorageSegmentAlreadyCached() throws Exception
   {
     final StorageLocationConfig locationConfig = new StorageLocationConfig(localSegmentCacheDir, 10000L, null);
     final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
@@ -924,7 +924,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public boolean isVirtualStorageFabric()
+      public boolean isVirtualStorage()
       {
         return true;
       }

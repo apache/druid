@@ -39,7 +39,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Empty segment with nothing but a time column, used when {@link SegmentLoaderConfig#isVirtualStorageFabric()} is true
+ * Empty segment with nothing but a time column, used when {@link SegmentLoaderConfig#isVirtualStorage()} is true
  * to create synthetic segments for {@link org.apache.druid.query.metadata.metadata.SegmentMetadataQuery} so to not
  * force download of segments from deep storage when computing the SQL schema.
  */

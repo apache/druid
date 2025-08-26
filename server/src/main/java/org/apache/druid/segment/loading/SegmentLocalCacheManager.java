@@ -107,7 +107,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   private final IndexIO indexIO;
 
-  private final ListeningExecutorService virtualStorageFabricLoadOnDemandExec;
+  private final ListeningExecutorService virtualStorageLoadOnDemandExec;
   private ExecutorService loadOnBootstrapExec = null;
   private ExecutorService loadOnDownloadExec = null;
 
@@ -128,23 +128,23 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
     log.info("Using storage location strategy[%s].", this.strategy.getClass().getSimpleName());
 
-    if (config.isVirtualStorageFabric()) {
+    if (config.isVirtualStorage()) {
       log.info(
-          "Using virtual storage fabric mode - on demand load threads: [%d].",
-          config.getVirtualStorageFabricLoadThreads()
+          "Using virtual storage mode - on demand load threads: [%d].",
+          config.getVirtualStorageLoadThreads()
       );
       if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnDownload() > 0) {
-        throw DruidException.defensive("Invalid configuration: isVirtualStorageFabric is incompatible with numThreadsToLoadSegmentsIntoPageCacheOnDownload");
+        throw DruidException.defensive("Invalid configuration: virtualStorage is incompatible with numThreadsToLoadSegmentsIntoPageCacheOnDownload");
       }
       if (config.getNumThreadsToLoadSegmentsIntoPageCacheOnBootstrap() > 0) {
-        throw DruidException.defensive("Invalid configuration: isVirtualStorageFabric is incompatible with numThreadsToLoadSegmentsIntoPageCacheOnBootstrap");
+        throw DruidException.defensive("Invalid configuration: virtualStorage is incompatible with numThreadsToLoadSegmentsIntoPageCacheOnBootstrap");
       }
-      virtualStorageFabricLoadOnDemandExec =
+      virtualStorageLoadOnDemandExec =
           MoreExecutors.listeningDecorator(
               // probably replace this with virtual threads once minimum version is java 21
               Executors.newFixedThreadPool(
-                  config.getVirtualStorageFabricLoadThreads(),
-                  Execs.makeThreadFactory("VirtualStorageFabricOnDemandLoadingThread-%s")
+                  config.getVirtualStorageLoadThreads(),
+                  Execs.makeThreadFactory("VirtualStorageOnDemandLoadingThread-%s")
               )
           );
     } else {
@@ -167,7 +167,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             Execs.makeThreadFactory("LoadSegmentsIntoPageCacheOnDownload-%s")
         );
       }
-      virtualStorageFabricLoadOnDemandExec = null;
+      virtualStorageLoadOnDemandExec = null;
     }
   }
 
@@ -220,7 +220,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             if (cacheEntry.checkExists(location.getPath())) {
               removeInfo = false;
               final boolean reserveResult;
-              if (config.isVirtualStorageFabric()) {
+              if (config.isVirtualStorage()) {
                 reserveResult = location.reserveWeak(cacheEntry);
               } else {
                 reserveResult = location.reserve(cacheEntry);
@@ -397,7 +397,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   @Override
   public void load(final DataSegment dataSegment) throws SegmentLoadingException
   {
-    if (config.isVirtualStorageFabric()) {
+    if (config.isVirtualStorage()) {
       // no-op, we'll do a load when someone asks for the segment
       return;
     }
@@ -422,7 +422,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       final SegmentLazyLoadFailCallback loadFailed
   ) throws SegmentLoadingException
   {
-    if (config.isVirtualStorageFabric()) {
+    if (config.isVirtualStorage()) {
       // during bootstrap, check if the segment exists in a location and mount it, getCachedSegments already
       // did the reserving for us
       final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(dataSegment.getId());
@@ -505,8 +505,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     if (loadOnDownloadExec != null) {
       loadOnDownloadExec.shutdown();
     }
-    if (virtualStorageFabricLoadOnDemandExec != null) {
-      virtualStorageFabricLoadOnDemandExec.shutdown();
+    if (virtualStorageLoadOnDemandExec != null) {
+      virtualStorageLoadOnDemandExec.shutdown();
     }
   }
 
@@ -575,7 +575,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   )
   {
     return Suppliers.memoize(
-        () -> virtualStorageFabricLoadOnDemandExec.submit(
+        () -> virtualStorageLoadOnDemandExec.submit(
             () -> {
               entry.mount(location);
               return entry.acquireReference();

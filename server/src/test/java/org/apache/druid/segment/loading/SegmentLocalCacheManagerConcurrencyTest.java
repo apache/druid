@@ -79,7 +79,7 @@ class SegmentLocalCacheManagerConcurrencyTest
   private File localSegmentCacheFolder;
   private File otherLocalSegmentCacheFolder;
   private SegmentLocalCacheManager manager;
-  private SegmentLocalCacheManager virtualStorageFabricManager;
+  private SegmentLocalCacheManager virtualStorageManager;
   private StorageLocation location;
   private StorageLocation location2;
   private ExecutorService executorService;
@@ -137,13 +137,13 @@ class SegmentLocalCacheManagerConcurrencyTest
       }
 
       @Override
-      public boolean isVirtualStorageFabric()
+      public boolean isVirtualStorage()
       {
         return true;
       }
 
       @Override
-      public int getVirtualStorageFabricLoadThreads()
+      public int getVirtualStorageLoadThreads()
       {
         return Runtime.getRuntime().availableProcessors();
       }
@@ -158,7 +158,7 @@ class SegmentLocalCacheManagerConcurrencyTest
         TestIndex.INDEX_IO,
         jsonMapper
     );
-    virtualStorageFabricManager = new SegmentLocalCacheManager(
+    virtualStorageManager = new SegmentLocalCacheManager(
         storageLocations,
         vsfLoaderConfig,
         new RoundRobinStorageLocationSelectorStrategy(storageLocations),
@@ -179,9 +179,9 @@ class SegmentLocalCacheManagerConcurrencyTest
       manager.drop(segment);
     }
     for (DataSegment segment : segmentsToWeakLoad) {
-      virtualStorageFabricManager.drop(segment);
+      virtualStorageManager.drop(segment);
     }
-    for (StorageLocation location : virtualStorageFabricManager.getLocations()) {
+    for (StorageLocation location : virtualStorageManager.getLocations()) {
       location.resetStats();
     }
   }
@@ -242,7 +242,7 @@ class SegmentLocalCacheManagerConcurrencyTest
 
     final List<WeakLoad> weakLoads = segmentsToLoad
         .stream()
-        .map(segment -> new WeakLoad(virtualStorageFabricManager, segment, 10, 100, 1000L, false))
+        .map(segment -> new WeakLoad(virtualStorageManager, segment, 10, 100, 1000L, false))
         .collect(Collectors.toList());
     final List<Future<Integer>> futures = new ArrayList<>();
     for (WeakLoad weakLoad : weakLoads) {
@@ -350,7 +350,7 @@ class SegmentLocalCacheManagerConcurrencyTest
       if (currentBatch.size() == concurrentReads) {
         final List<WeakLoad> weakLoads = currentBatch
             .stream()
-            .map(segment -> new WeakLoad(virtualStorageFabricManager, segment, 0, 0, 1L, true))
+            .map(segment -> new WeakLoad(virtualStorageManager, segment, 0, 0, 1L, true))
             .collect(Collectors.toList());
         final List<Future<Integer>> futures = new ArrayList<>();
         for (WeakLoad weakLoad : weakLoads) {
@@ -406,7 +406,7 @@ class SegmentLocalCacheManagerConcurrencyTest
       if (currentBatch.size() == concurrentReads) {
         final List<WeakLoad> weakLoads = currentBatch
             .stream()
-            .map(segment -> new WeakLoad(virtualStorageFabricManager, segment, 10, 100, Long.MAX_VALUE, false))
+            .map(segment -> new WeakLoad(virtualStorageManager, segment, 10, 100, Long.MAX_VALUE, false))
             .collect(Collectors.toList());
         final List<Future<Integer>> futures = new ArrayList<>();
         for (WeakLoad weakLoad : weakLoads) {
@@ -473,11 +473,11 @@ class SegmentLocalCacheManagerConcurrencyTest
           // do a weak load for at most minLoadCount segments to populate the cache (and occasionally evict stuff as we
           // progress through iterations)
           if (weakLoadCount < minLoadCount && ThreadLocalRandom.current().nextBoolean()) {
-            callables.add(new WeakLoad(virtualStorageFabricManager, segment, 0, 50, Long.MAX_VALUE, false));
+            callables.add(new WeakLoad(virtualStorageManager, segment, 0, 50, Long.MAX_VALUE, false));
             weakLoadCount++;
           } else {
             // do the rest as calls that only acquire reference to segments that are already loaded
-            callables.add(new LoadCached(virtualStorageFabricManager, segment, 50, 50));
+            callables.add(new LoadCached(virtualStorageManager, segment, 50, 50));
           }
         }
         final List<Future<Integer>> futures = new ArrayList<>();
@@ -537,7 +537,7 @@ class SegmentLocalCacheManagerConcurrencyTest
     final List<DataSegment> currentBatch = new ArrayList<>();
     // start fresh
     for (DataSegment segment : segmentsToWeakLoad) {
-      virtualStorageFabricManager.drop(segment);
+      virtualStorageManager.drop(segment);
     }
     location.resetStats();
     location2.resetStats();
@@ -603,7 +603,7 @@ class SegmentLocalCacheManagerConcurrencyTest
     final List<WeakLoad> weakLoads = new ArrayList<>();
     Set<SegmentId> segments = new HashSet<>();
     for (DataSegment segment : currentBatch) {
-      weakLoads.add(new WeakLoad(virtualStorageFabricManager, segment, 0, sleepy ? 20 : 0, Long.MAX_VALUE, false));
+      weakLoads.add(new WeakLoad(virtualStorageManager, segment, 0, sleepy ? 20 : 0, Long.MAX_VALUE, false));
       segments.add(segment.getId());
     }
     final List<Future<Integer>> futures = new ArrayList<>();
