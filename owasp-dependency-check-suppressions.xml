@@ -129,9 +129,6 @@
     <cve>CVE-2022-26612</cve>
     <!-- this one seems to apply to backend server - https://nvd.nist.gov/vuln/detail/CVE-2023-25613 -->
     <cve>CVE-2023-25613</cve>
-    <cve>CVE-2025-48734</cve>
-    <cve>CVE-2024-13009</cve>
-    <cve>CVE-2023-52428</cve>
     <cve>CVE-2023-2976</cve> <!-- hadoop-client-runtime isn't using com.google.common.io.FileBackedOutputStream -->
     <!-- CVE from shaded dependency nimbus-jose-jwt, fixed in upcoming Hadoop release version -
     https://github.com/apache/hadoop/commit/ad49ddda0e1d9632c8c9fcdc78fca8244e1248c9 -->
@@ -198,7 +195,6 @@
     <cve>CVE-2023-25194</cve>
     <cve>CVE-2024-31141</cve>
     <cve>CVE-2025-27818</cve> <!-- not fixed in any version of ranger dependency. I don't think it is exploitable in Druid within this extension -->
-    <cve>CVE-2025-27819</cve>
   </suppress>
 
   <suppress>
@@ -480,12 +476,6 @@
     ]]></notes>
     <cve>CVE-2023-4586</cve>
   </suppress>
-  <suppress>
-    <notes><![CDATA[
-      file name: netty-codec-http2-4.1.122.Final.jar
-    ]]></notes>
-    <cve>CVE-2025-55163</cve>
-  </suppress>
 
   <!-- druid cassandra storage exclusions -->
   <suppress>
@@ -676,24 +666,7 @@
     <cve>CVE-2023-50291</cve>
     <cve>CVE-2023-50298</cve>
     <cve>CVE-2023-50386</cve>
-    <cve>CVE-2024-45216</cve>
     <cve>CVE-2023-50292</cve>
-    <cve>CVE-2023-50293</cve>
-  </suppress>
-  <suppress>
-    <!-- Due to ranger-plugins jar v2.4.0 -->
-    <notes><![CDATA[
-     file name: solr-solrj-8.11.3.jar
-     ]]></notes>
-    <cve>CVE-2024-45217</cve>
-  </suppress>
-  <suppress>
-    <!-- Due to ranger-plugins jar v2.4.0-->
-    <notes><![CDATA[
-    file name: ranger-plugins-cred-2.4.0.jar, ranger-plugin-classloader-2.4.0.jar
-    ]]></notes>
-    <vulnerabilityName>CVE-2024-55532</vulnerabilityName>
-    <vulnerabilityName>CVE-2024-45479</vulnerabilityName>
   </suppress>
   <suppress>
     <!-- Transitive dependency from Apache Hadoop Common, which does not have a fix that can be upgraded to yet -->
@@ -743,13 +716,6 @@
     file name: lucene-core-8.4.0.jar
     ]]></notes>
     <vulnerabilityName>CVE-2024-45772</vulnerabilityName>
-  </suppress>
-  <suppress>
-    <!-- No available fixed version yet-->
-    <notes><![CDATA[
-    file name: icu4j-73.2.jar
-    ]]></notes>
-    <vulnerabilityName>CVE-2025-5222</vulnerabilityName>
   </suppress>
 
   <suppress>
