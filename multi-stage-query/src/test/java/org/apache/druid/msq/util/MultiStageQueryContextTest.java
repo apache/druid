@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.query.BadQueryContextException;
@@ -46,6 +47,7 @@ import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_ARRAY_INGEST_
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_FAULT_TOLERANCE;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS;
+import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MAX_FRAME_SIZE;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MAX_NUM_TASKS;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MSQ_MODE;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_REMOVE_NULL_BYTES;
@@ -341,6 +343,22 @@ public class MultiStageQueryContextTest
         MSQSelectDestination.TASKREPORT,
         MultiStageQueryContext.getSelectDestination(context)
     );
+  }
+
+  @Test
+  public void getFrameSize_unset_returnsDefaultValue()
+  {
+    Assert.assertEquals(
+        WorkerMemoryParameters.DEFAULT_FRAME_SIZE,
+        MultiStageQueryContext.getFrameSize(QueryContext.empty())
+    );
+  }
+
+  @Test
+  public void getFrameSize_set_returnsCorrectValue()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(CTX_MAX_FRAME_SIZE, 500000);
+    Assert.assertEquals(500000, MultiStageQueryContext.getFrameSize(QueryContext.of(propertyMap)));
   }
 
   private static List<String> decodeSortOrder(@Nullable final String input)

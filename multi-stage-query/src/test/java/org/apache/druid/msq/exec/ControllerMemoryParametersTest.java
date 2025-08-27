@@ -36,7 +36,8 @@ public class ControllerMemoryParametersTest
   {
     final ControllerMemoryParameters memoryParameters = ControllerMemoryParameters.createProductionInstance(
         makeMemoryIntrospector(128_000_000, 1),
-        1
+        1,
+        WorkerMemoryParameters.DEFAULT_FRAME_SIZE
     );
 
     Assert.assertEquals(101_400_000, memoryParameters.getPartitionStatisticsMaxRetainedBytes());
@@ -47,7 +48,8 @@ public class ControllerMemoryParametersTest
   {
     final ControllerMemoryParameters memoryParameters = ControllerMemoryParameters.createProductionInstance(
         makeMemoryIntrospector(256_000_000, 1),
-        100
+        100,
+        WorkerMemoryParameters.DEFAULT_FRAME_SIZE
     );
 
     Assert.assertEquals(104_800_000, memoryParameters.getPartitionStatisticsMaxRetainedBytes());
@@ -58,7 +60,8 @@ public class ControllerMemoryParametersTest
   {
     final ControllerMemoryParameters memoryParameters = ControllerMemoryParameters.createProductionInstance(
         makeMemoryIntrospector(128_000_000, 2),
-        1
+        1,
+        WorkerMemoryParameters.DEFAULT_FRAME_SIZE
     );
 
     Assert.assertEquals(50_200_000, memoryParameters.getPartitionStatisticsMaxRetainedBytes());
@@ -69,7 +72,8 @@ public class ControllerMemoryParametersTest
   {
     final ControllerMemoryParameters memoryParameters = ControllerMemoryParameters.createProductionInstance(
         makeMemoryIntrospector(1_000_000_000, 1),
-        1
+        1,
+        WorkerMemoryParameters.DEFAULT_FRAME_SIZE
     );
 
     Assert.assertEquals(300_000_000, memoryParameters.getPartitionStatisticsMaxRetainedBytes());
@@ -82,7 +86,8 @@ public class ControllerMemoryParametersTest
         MSQException.class,
         () -> ControllerMemoryParameters.createProductionInstance(
             makeMemoryIntrospector(30_000_000, 1),
-            1
+            1,
+            WorkerMemoryParameters.DEFAULT_FRAME_SIZE
         )
     );
 
@@ -98,7 +103,8 @@ public class ControllerMemoryParametersTest
   {
     final ControllerMemoryParameters memoryParameters = ControllerMemoryParameters.createProductionInstance(
         makeMemoryIntrospector(33_750_000, 1),
-        1
+        1,
+        WorkerMemoryParameters.DEFAULT_FRAME_SIZE
     );
 
     Assert.assertEquals(26_000_000, memoryParameters.getPartitionStatisticsMaxRetainedBytes());
