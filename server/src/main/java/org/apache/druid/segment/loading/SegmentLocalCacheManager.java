@@ -265,18 +265,34 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   @Override
   public void storeInfoFile(final DataSegment segment) throws IOException
   {
-    final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
-    if (!segmentInfoCacheFile.exists()) {
-      jsonMapper.writeValue(segmentInfoCacheFile, segment);
+    final ReferenceCountingLock lock = lock(segment);
+    synchronized (lock) {
+      try {
+        final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
+        if (!segmentInfoCacheFile.exists()) {
+          jsonMapper.writeValue(segmentInfoCacheFile, segment);
+        }
+      }
+      finally {
+        unlock(segment, lock);
+      }
     }
   }
 
   @Override
   public void removeInfoFile(final DataSegment segment)
   {
-    final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
-    if (!segmentInfoCacheFile.delete()) {
-      log.warn("Unable to delete cache file[%s] for segment[%s].", segmentInfoCacheFile, segment.getId());
+    final ReferenceCountingLock lock = lock(segment);
+    synchronized (lock) {
+      try {
+        final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
+        if (!segmentInfoCacheFile.delete()) {
+          log.warn("Unable to delete cache file[%s] for segment[%s].", segmentInfoCacheFile, segment.getId());
+        }
+      }
+      finally {
+        unlock(segment, lock);
+      }
     }
   }
 
