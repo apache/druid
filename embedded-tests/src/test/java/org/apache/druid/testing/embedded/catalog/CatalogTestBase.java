@@ -22,12 +22,6 @@ package org.apache.druid.testing.embedded.catalog;
 import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
 import org.apache.druid.error.ExceptionMatcher;
-import org.apache.druid.msq.guice.IndexerMemoryManagementModule;
-import org.apache.druid.msq.guice.MSQDurableStorageModule;
-import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
-import org.apache.druid.msq.guice.MSQIndexingModule;
-import org.apache.druid.msq.guice.MSQSqlModule;
-import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
@@ -62,13 +56,7 @@ public abstract class CatalogTestBase extends EmbeddedClusterTestBase
                                .useLatchableEmitter()
                                .addExtensions(
                                    CatalogClientModule.class,
-                                   CatalogCoordinatorModule.class,
-                                   MSQSqlModule.class,
-                                   MSQIndexingModule.class,
-                                   SqlTaskModule.class,
-                                   MSQDurableStorageModule.class,
-                                   MSQExternalDataSourceModule.class,
-                                   IndexerMemoryManagementModule.class
+                                   CatalogCoordinatorModule.class
                                )
                                .addServer(overlord)
                                .addServer(coordinator)
