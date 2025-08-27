@@ -845,7 +845,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
 
     // can actually load them again because load doesn't really do anything
     AcquireSegmentAction segmentActionAfterDrop = manager.acquireSegment(segmentToLoad);
-    ReferenceCountedObjectProvider<Segment> referenceProviderAfterDrop = segmentAction.getSegmentFuture().get();
+    ReferenceCountedObjectProvider<Segment> referenceProviderAfterDrop = segmentActionAfterDrop.getSegmentFuture().get();
     Optional<Segment> theSegmentAfterDrop = referenceProviderAfterDrop.acquireReference();
     Assert.assertTrue(theSegmentAfterDrop.isPresent());
     Assert.assertNotNull(manager.getSegmentFiles(segmentToLoad));
