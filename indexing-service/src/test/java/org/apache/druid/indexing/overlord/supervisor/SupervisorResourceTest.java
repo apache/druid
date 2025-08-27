@@ -1183,12 +1183,12 @@ public class SupervisorResourceTest extends EasyMockSupport
     // Test with limit=0 (should return 400 Bad Request)
     response = supervisorResource.specGetHistory(request, "id1", 0);
     Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("error", "Count must be greater than zero if set"), response.getEntity());
+    Assert.assertEquals(ImmutableMap.of("error", "Count must be greater than zero if set (count was 0)"), response.getEntity());
 
     // Test with negative limit (should return 400 Bad Request)
     response = supervisorResource.specGetHistory(request, "id1", -1);
     Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("error", "Count must be greater than zero if set"), response.getEntity());
+    Assert.assertEquals(ImmutableMap.of("error", "Count must be greater than zero if set (count was -1)"), response.getEntity());
 
     // Test with limit larger than available history
     response = supervisorResource.specGetHistory(request, "id1", 100);

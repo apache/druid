@@ -539,7 +539,7 @@ public class SupervisorResource
   {
     if (count != null && count <= 0) {
       return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.of("error", "Count must be greater than zero if set"))
+                     .entity(ImmutableMap.of("error", StringUtils.format("Count must be greater than zero if set (count was %d)", count)))
                      .build();
     }
 
