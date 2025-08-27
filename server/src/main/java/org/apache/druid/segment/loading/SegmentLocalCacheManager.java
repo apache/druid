@@ -433,6 +433,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           for (StorageLocation location : locations) {
             final SegmentCacheEntry entry = location.getCacheEntry(id);
             if (entry != null) {
+              entry.lazyLoadCallback = loadFailed;
               entry.mount(location);
             }
           }
