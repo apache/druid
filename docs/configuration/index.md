@@ -794,7 +794,7 @@ If you want to turn off the batch data segment announcer, you can add a property
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.announcer.skipSegmentAnnouncementOnZk`|Skip announcing segments to ZooKeeper. Note that the batch server view will not work if this is set to true.|false|
+|`druid.announcer.skipSegmentAnnouncementOnZk`|Skip announcing segments to ZooKeeper. Note that the batch server view will not work if this is set to true.|true|
 
 ### JavaScript
 
