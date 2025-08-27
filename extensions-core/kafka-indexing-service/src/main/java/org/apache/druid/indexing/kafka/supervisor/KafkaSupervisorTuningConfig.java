@@ -237,7 +237,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
         getMaxSavedParseExceptions(),
         getNumPersistThreads(),
         getMaxColumnsToMerge(),
-        isReleaseLockOnHandoff()
+        isReleaseLocksOnHandoff()
     );
   }
 }

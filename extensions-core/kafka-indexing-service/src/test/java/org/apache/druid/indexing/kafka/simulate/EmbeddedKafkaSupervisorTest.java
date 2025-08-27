@@ -74,7 +74,6 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     kafkaServer = new KafkaResource();
 
     cluster.addExtension(KafkaIndexTaskModule.class)
-           .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
            .addResource(kafkaServer)
            .useLatchableEmitter()
            .addServer(new EmbeddedCoordinator())
@@ -87,7 +86,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void test_runKafkaSupervisor() throws InterruptedException
+  public void test_runKafkaSupervisor()
   {
     final String topic = dataSource;
     kafkaServer.createTopicWithPartitions(topic, 2);
@@ -137,6 +136,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     );
     overlord.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("task/action/run/time")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
                       .hasDimension(DruidMetrics.TASK_ACTION_TYPE, "lockRelease"),
         agg -> agg.hasCountAtLeast(expectedSegments)
     );

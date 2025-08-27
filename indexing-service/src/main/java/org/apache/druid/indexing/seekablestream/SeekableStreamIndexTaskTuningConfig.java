@@ -299,7 +299,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   }
 
   @JsonProperty
-  public boolean isReleaseLockOnHandoff()
+  public boolean isReleaseLocksOnHandoff()
   {
     return releaseLocksOnHandoff;
   }

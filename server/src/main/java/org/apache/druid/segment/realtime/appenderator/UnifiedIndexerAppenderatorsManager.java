@@ -509,6 +509,12 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     {
       return baseConfig.getNumPersistThreads();
     }
+
+    @Override
+    public boolean isReleaseLocksOnHandoff()
+    {
+      return baseConfig.isReleaseLocksOnHandoff();
+    }
   }
 
   private IndexMerger wrapIndexMerger(IndexMerger baseMerger)
