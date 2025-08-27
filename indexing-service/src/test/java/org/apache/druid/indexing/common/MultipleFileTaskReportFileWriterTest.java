@@ -60,5 +60,7 @@ public class MultipleFileTaskReportFileWriterTest
         reportsMap,
         mapper.readValue(Files.readAllBytes(file.toPath()), new TypeReference<Map<String, TaskReport>>() {})
     );
+
+    Assert.assertEquals(file.getAbsolutePath(), writer.getReportsFile(TASK_ID).getAbsolutePath());
   }
 }

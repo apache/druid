@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.utils;
+package org.apache.druid.testing.tools;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;

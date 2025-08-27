@@ -531,7 +531,7 @@ There are common configurations that control the behavior regardless of which st
 Common properties to configure the behavior of durable storage
 
 |Parameter          | Required | Description          | Default | 
-|--|--|--|
+|--|--|--|--|
 |`druid.msq.intermediate.storage.enable`  | Yes |  Whether to enable durable storage for the cluster. Set it to true to enable durable storage. For more information about enabling durable storage, see [Durable storage](../operations/durable-storage.md). | false | 
 |`druid.msq.intermediate.storage.type` |  Yes | The type of storage to use. Set it to `s3` for S3, `azure` for Azure and `google` for Google | n/a |
 |`druid.msq.intermediate.storage.tempDir`| Yes |  Directory path on the local disk to store temporary files required while uploading and downloading the data. If the property is not configured on the indexer or middle manager, it defaults to using the task temporary directory. | n/a |
