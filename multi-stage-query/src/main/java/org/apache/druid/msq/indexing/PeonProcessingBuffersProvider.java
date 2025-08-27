@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.indexing;
 
-import org.apache.druid.cli.CliPeon;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
@@ -35,7 +34,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Production implementation of {@link ProcessingBuffersProvider} for tasks in {@link CliPeon}.
+ * Production implementation of {@link ProcessingBuffersProvider} for tasks in {@code CliPeon}.
  */
 public class PeonProcessingBuffersProvider implements ProcessingBuffersProvider
 {
