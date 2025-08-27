@@ -118,20 +118,9 @@ public interface ComplexColumn extends BaseColumn
           return vector;
         }
 
-        if (offset.isContiguous()) {
-          final int startOffset = offset.getStartOffset();
-          final int vectorSize = offset.getCurrentVectorSize();
-
-          for (int i = 0; i < vectorSize; i++) {
-            vector[i] = getRowValue(startOffset + i);
-          }
-        } else {
-          final int[] offsets = offset.getOffsets();
-          final int vectorSize = offset.getCurrentVectorSize();
-
-          for (int i = 0; i < vectorSize; i++) {
-            vector[i] = getRowValue(offsets[i]);
-          }
+        final int vectorSize = offset.getCurrentVectorSize();
+        for (int i = 0; i < vectorSize; i++) {
+          vector[i] = getRowValue(offset.getOffset(i));
         }
 
         id = offset.getId();

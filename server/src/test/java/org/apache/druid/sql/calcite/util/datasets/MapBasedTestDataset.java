@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.util.datasets;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -67,10 +68,10 @@ public abstract class MapBasedTestDataset implements TestDataSet
   }
 
   @Override
-  public final QueryableIndex makeIndex(File tmpDir)
+  public final QueryableIndex makeIndex(ObjectMapper jsonMapper, File tmpDir)
   {
     return IndexBuilder
-        .create()
+        .create(jsonMapper)
         .tmpDir(new File(tmpDir, "idx"))
         .inputTmpDir(new File(tmpDir, "input"))
         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())

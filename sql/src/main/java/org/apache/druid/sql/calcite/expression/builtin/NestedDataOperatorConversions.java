@@ -220,8 +220,11 @@ public class NestedDataOperatorConversions
       final String path = (String) pathExpr.eval(InputBindings.nilBindings()).value();
       final List<NestedPathPart> parts = extractNestedPathParts(call, path);
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
-      final DruidExpression.ExpressionGenerator builder = (args) ->
-          "json_query(" + args.get(0).getExpression() + ",'" + jsonPath + "')";
+      final DruidExpression.ExpressionGenerator builder = args -> StringUtils.format(
+          "json_query(%s,%s)",
+          args.get(0).getExpression(),
+          DruidExpression.stringLiteral(jsonPath)
+      );
       if (druidExpressions.get(0).isSimpleExtraction()) {
 
         return DruidExpression.ofVirtualColumn(
@@ -404,8 +407,12 @@ public class NestedDataOperatorConversions
       final List<NestedPathPart> parts = extractNestedPathParts(call, path);
 
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
-      final DruidExpression.ExpressionGenerator builder = (args) ->
-          "json_value(" + args.get(0).getExpression() + ",'" + jsonPath + "', '" + druidType.asTypeString() + "')";
+      final DruidExpression.ExpressionGenerator builder = args -> StringUtils.format(
+          "json_value(%s,%s, %s)",
+          args.get(0).getExpression(),
+          DruidExpression.stringLiteral(jsonPath),
+          DruidExpression.stringLiteral(druidType.asTypeString())
+      );
 
       if (druidExpressions.get(0).isSimpleExtraction()) {
 
@@ -534,8 +541,12 @@ public class NestedDataOperatorConversions
         );
       }
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
-      final DruidExpression.ExpressionGenerator builder = (args) ->
-          "json_value(" + args.get(0).getExpression() + ",'" + jsonPath + "', '" + druidType.asTypeString() + "')";
+      final DruidExpression.ExpressionGenerator builder = args -> StringUtils.format(
+          "json_value(%s,%s, %s)",
+          args.get(0).getExpression(),
+          DruidExpression.stringLiteral(jsonPath),
+          DruidExpression.stringLiteral(druidType.asTypeString())
+      );
 
       if (druidExpressions.get(0).isSimpleExtraction()) {
 
@@ -692,8 +703,11 @@ public class NestedDataOperatorConversions
       final String path = (String) pathExpr.eval(InputBindings.nilBindings()).value();
       final List<NestedPathPart> parts = extractNestedPathParts(call, path);
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
-      final DruidExpression.ExpressionGenerator builder = (args) ->
-          "json_value(" + args.get(0).getExpression() + ",'" + jsonPath + "')";
+      final DruidExpression.ExpressionGenerator builder = args -> StringUtils.format(
+          "json_value(%s,%s)",
+          args.get(0).getExpression(),
+          DruidExpression.stringLiteral(jsonPath)
+      );
 
       // STRING is the closest thing we have to ANY, though maybe someday this
       // can be replaced with a VARIANT type

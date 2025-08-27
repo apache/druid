@@ -204,7 +204,7 @@ public abstract class AbstractTask implements Task
     // isEncapsulatedTask() currently means "isK8sIngestion".
     // We don't need to push reports and status here for other ingestion methods.
     if (!toolbox.getConfig().isEncapsulatedTask()) {
-      log.debug("Not pushing task logs and reports from task.");
+      log.info("Not pushing task logs and reports from task.");
       return;
     }
 
