@@ -49,7 +49,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -92,6 +96,7 @@ public class KubernetesPeonLifecycle
   private final ObjectMapper mapper;
   private final TaskStateListener stateListener;
   private final SettableFuture<Boolean> taskStartedSuccessfullyFuture;
+  private final long logSaveTimeoutMs;
 
   @MonotonicNonNull
   private LogWatch logWatch;
@@ -104,7 +109,8 @@ public class KubernetesPeonLifecycle
       KubernetesPeonClient kubernetesClient,
       TaskLogs taskLogs,
       ObjectMapper mapper,
-      TaskStateListener stateListener
+      TaskStateListener stateListener,
+      long logSaveTimeoutMs
   )
   {
     this.task = task;
@@ -114,6 +120,7 @@ public class KubernetesPeonLifecycle
     this.mapper = mapper;
     this.stateListener = stateListener;
     this.taskStartedSuccessfullyFuture = SettableFuture.create();
+    this.logSaveTimeoutMs = logSaveTimeoutMs;
   }
 
   /**
@@ -349,6 +356,24 @@ public class KubernetesPeonLifecycle
   }
 
   protected void saveLogs()
+  {
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    try {
+      Future<?> future = executor.submit(this::doSaveLogs);
+      future.get(logSaveTimeoutMs, TimeUnit.MILLISECONDS);
+    }
+    catch (TimeoutException e) {
+      log.warn("saveLogs() timed out after %d ms for task [%s]", logSaveTimeoutMs, taskId.getOriginalTaskId());
+    }
+    catch (Exception e) {
+      log.error(e, "saveLogs() failed for task [%s]", taskId.getOriginalTaskId());
+    }
+    finally {
+      executor.shutdownNow();
+    }
+  }
+
+  private void doSaveLogs()
   {
     try {
       Path file = Files.createTempFile(taskId.getOriginalTaskId(), "log");
