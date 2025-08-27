@@ -92,7 +92,6 @@ public class Pac4jSessionStore implements SessionStore
     if (cookie != null && cookie.getValue() != null) {
       value = uncompressDecryptBase64(cookie.getValue());
     }
-    LOGGER.debug("Get from session: [%s] = [%s]", key, value);
     return Optional.ofNullable(value);
   }
 
@@ -116,7 +115,6 @@ public class Pac4jSessionStore implements SessionStore
         /* trim the profile object */
         profile = clearUserProfile(value);
       }
-      LOGGER.debug("Save in session: [%s] = [%s]", key, profile);
 
       String encryptedValue = compressEncryptBase64(profile);
       cookie = new Cookie(PAC4J_SESSION_PREFIX + key, encryptedValue);
