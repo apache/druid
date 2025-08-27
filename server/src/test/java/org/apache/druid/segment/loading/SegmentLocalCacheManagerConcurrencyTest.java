@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.Futures;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -35,6 +34,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.PhysicalSegmentInspector;
+import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
@@ -799,8 +799,12 @@ class SegmentLocalCacheManagerConcurrencyTest
           segmentManager.acquireSegment(segment)
       );
       try {
-        final Optional<Segment> segment =
-            action.getSegmentFuture().get(timeout, TimeUnit.MILLISECONDS).map(closer::register);
+        final ReferenceCountedObjectProvider<Segment> referenceProvider =
+            action.getSegmentFuture().get(timeout, TimeUnit.MILLISECONDS);
+        if (referenceProvider == null) {
+          Assertions.fail("this shouldn't happen");
+        }
+        final Optional<Segment> segment = referenceProvider.acquireReference().map(closer::register);
         if (segment.isPresent()) {
           PhysicalSegmentInspector gadget = segment.get().as(PhysicalSegmentInspector.class);
           if (delayMin >= 0 && delayMax > 0) {
@@ -811,11 +815,6 @@ class SegmentLocalCacheManagerConcurrencyTest
         return null;
       }
       catch (Throwable t) {
-        Futures.addCallback(
-            action.getSegmentFuture(),
-            AcquireSegmentAction.releaseCallback(),
-            Execs.directExecutor()
-        );
         throw new RuntimeException(t);
       }
       finally {

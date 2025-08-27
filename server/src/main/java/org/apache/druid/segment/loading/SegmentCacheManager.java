@@ -20,6 +20,7 @@
 package org.apache.druid.segment.loading;
 
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.SegmentMapFunction;
@@ -107,10 +108,11 @@ public interface SegmentCacheManager
 
   /**
    * Returns a {@link AcquireSegmentAction} for a given {@link DataSegment} and {@link SegmentDescriptor}, which returns
-   * the {@link Segment} if already present in the cache, or tries to fetch from deep storage and map if not. The
-   * {@link Segment} returned by this method is considered an open reference, cache implementations must not allow it
-   * to be dropped until it has been closed. As such, the returned {@link Segment} must be closed when the caller is
-   * finished doing segment things.
+   * a reference provider for the {@link Segment} if already present in the cache, or tries to fetch from deep storage
+   * and map if not. The {@link Segment} returned by the provider returned by this method are considered an open
+   * reference, cache implementations must not allow the segment to be dropped until it has been closed. As such, the
+   * returned {@link Segment} from {@link ReferenceCountedObjectProvider#acquireReference()} must be closed when the
+   * caller is finished doing segment things.
    */
   AcquireSegmentAction acquireSegment(DataSegment dataSegment) throws SegmentLoadingException;
 

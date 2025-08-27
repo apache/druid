@@ -138,7 +138,7 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
       return AcquireSegmentAction.missingSegment();
     }
     return new AcquireSegmentAction(
-        () -> Futures.immediateFuture(getSegmentInternal(dataSegment).acquireReference()),
+        () -> Futures.immediateFuture(getSegmentInternal(dataSegment)),
         null
     );
   }

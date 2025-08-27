@@ -31,7 +31,6 @@ import org.apache.druid.client.cache.CachePopulator;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
@@ -65,6 +64,7 @@ import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
+import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentReference;
@@ -272,7 +272,7 @@ public class ServerManager implements QuerySegmentWalker
     Throwable failure = null;
 
     // getting the future kicks off any background action, so materialize them all to a list to get things started
-    final List<ListenableFuture<Optional<Segment>>> futures = new ArrayList<>(actions.size());
+    final List<ListenableFuture<ReferenceCountedObjectProvider<Segment>>> futures = new ArrayList<>(actions.size());
     for (AcquireSegmentAction acquireSegmentAction : actions) {
       // if we haven't failed yet, keep collecting futures
       if (failure == null) {
@@ -283,14 +283,11 @@ public class ServerManager implements QuerySegmentWalker
           failure = t;
         }
       } else {
-        futures.add(Futures.immediateFuture(Optional.empty()));
+        futures.add(Futures.immediateFuture(Optional::empty));
       }
     }
 
     if (failure != null) {
-      for (ListenableFuture<Optional<Segment>> future : futures) {
-        Futures.addCallback(future, AcquireSegmentAction.releaseCallback(), Execs.directExecutor());
-      }
       throw CloseableUtils.closeInCatch(
           failure instanceof DruidException
           ? (DruidException) failure
@@ -306,14 +303,12 @@ public class ServerManager implements QuerySegmentWalker
     boolean interrupted = false;
     for (int i = 0; i < actions.size(); i++) {
       try {
-        if (failure != null) {
-          Futures.addCallback(futures.get(i), AcquireSegmentAction.releaseCallback(), Execs.directExecutor());
-          continue;
-        }
         final DataSegmentAndDescriptor segmentAndDescriptor = segmentsToMap.get(i);
         final AcquireSegmentAction action = actions.get(i);
-        final ListenableFuture<Optional<Segment>> future = futures.get(i);
-        final Optional<Segment> segment = future.get(timeoutAt - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
+        final ListenableFuture<ReferenceCountedObjectProvider<Segment>> future = futures.get(i);
+        final ReferenceCountedObjectProvider<Segment> referenceProvider =
+            future.get(timeoutAt - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
+        final Optional<Segment> segment = referenceProvider.acquireReference();
         try {
           final Optional<Segment> mappedSegment = segmentMapFunction.apply(segment).map(safetyNet::register);
           segmentReferences.add(
@@ -331,8 +326,6 @@ public class ServerManager implements QuerySegmentWalker
         }
       }
       catch (Throwable t) {
-        // add callback to make sure everything gets cleaned up, just in case
-        Futures.addCallback(futures.get(i), AcquireSegmentAction.releaseCallback(), Execs.directExecutor());
         if (t instanceof InterruptedException) {
           interrupted = true;
         }

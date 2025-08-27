@@ -19,12 +19,11 @@
 
 package org.apache.druid.segment.loading;
 
-import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -40,8 +39,9 @@ import java.util.function.Supplier;
  * When an {@link AcquireSegmentAction} is created, segment cache implementations will create a
  * 'hold' to ensure it cannot be removed from the cache until this action has been closed.
  * <p>
- * Calling {@link #getSegmentFuture()} is what actually initiates the 'action', and will return the segment if already
- * cached, or attempt to download from deep storage to load into the cache if not. The {@link Segment} returned by the
+ * Calling {@link #getSegmentFuture()} is what actually initiates the 'action', and will return a segment reference
+ * provider if already cached, or attempt to download from deep storage to load into the cache if not. The
+ * {@link Segment} returned by acquiring a reference from the {@link ReferenceCountedObjectProvider} returned by the
  * future places a separate hold on the cache until the segment itself is closed, and MUST be closed when the caller is
  * finished doing segment things with it.
  * <p>
@@ -53,16 +53,16 @@ public class AcquireSegmentAction implements Closeable
 {
   public static AcquireSegmentAction missingSegment()
   {
-    return new AcquireSegmentAction(() -> Futures.immediateFuture(Optional.empty()), null);
+    return new AcquireSegmentAction(() -> Futures.immediateFuture(Optional::empty), null);
   }
 
-  private final Supplier<ListenableFuture<Optional<Segment>>> segmentFutureSupplier;
+  private final Supplier<ListenableFuture<ReferenceCountedObjectProvider<Segment>>> segmentFutureSupplier;
   @Nullable
   private final Closeable loadCleanup;
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
   public AcquireSegmentAction(
-      Supplier<ListenableFuture<Optional<Segment>>> segmentFutureSupplier,
+      Supplier<ListenableFuture<ReferenceCountedObjectProvider<Segment>>> segmentFutureSupplier,
       @Nullable Closeable loadCleanup
   )
   {
@@ -71,12 +71,12 @@ public class AcquireSegmentAction implements Closeable
   }
 
   /**
-   * Get a {@link Segment} reference to an item that exists in the cache, or if necessary/possible, fetching it from
-   * deep storage. Ultimately, the reference is provided with {@link ReferenceCountedSegmentProvider#acquireReference()}
-   * either as an immediate future if the segment already exists in cache. The
-   * 'action' to fetch the segment and acquire the reference is not initiated until this method is called.
+   * Get a {@link ReferenceCountedObjectProvider<Segment>} to acquire a reference to an item that exists in the cache,
+   * or if necessary/possible, fetching it from deep storage. This is typically {@link ReferenceCountedSegmentProvider},
+   * either as an immediate future if the segment already exists in cache. The 'action' to fetch the segment and return
+   * the reference provider is not initiated until this method is called.
    */
-  public ListenableFuture<Optional<Segment>> getSegmentFuture()
+  public ListenableFuture<ReferenceCountedObjectProvider<Segment>> getSegmentFuture()
   {
     return segmentFutureSupplier.get();
   }
@@ -87,23 +87,5 @@ public class AcquireSegmentAction implements Closeable
     if (loadCleanup != null && closed.compareAndSet(false, true)) {
       loadCleanup.close();
     }
-  }
-
-  public static FutureCallback<Optional<Segment>> releaseCallback()
-  {
-    return new FutureCallback<>()
-    {
-      @Override
-      public void onSuccess(Optional<Segment> result)
-      {
-        result.ifPresent(CloseableUtils::closeAndWrapExceptions);
-      }
-
-      @Override
-      public void onFailure(Throwable t)
-      {
-        // do nothing
-      }
-    };
   }
 }

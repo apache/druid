@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
@@ -374,7 +375,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         if (hold != null) {
           if (hold.getEntry().isMounted()) {
             return new AcquireSegmentAction(
-                () -> Futures.immediateFuture(hold.getEntry().acquireReference()),
+                () -> Futures.immediateFuture(hold.getEntry().referenceProvider),
                 hold
             );
           } else {
@@ -569,7 +570,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return infoDir;
   }
 
-  private Supplier<ListenableFuture<Optional<Segment>>> makeOnDemandLoadSupplier(
+  private Supplier<ListenableFuture<ReferenceCountedObjectProvider<Segment>>> makeOnDemandLoadSupplier(
       final SegmentCacheEntry entry,
       final StorageLocation location
   )
@@ -578,7 +579,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         () -> virtualStorageLoadOnDemandExec.submit(
             () -> {
               entry.mount(location);
-              return entry.acquireReference();
+              return entry.referenceProvider;
             }
         )
     );
@@ -739,13 +740,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     private final SegmentCacheEntryIdentifier id;
     private final DataSegment dataSegment;
     private final String relativePathString;
-    // guarded by segment lock
     private SegmentLazyLoadFailCallback lazyLoadCallback = SegmentLazyLoadFailCallback.NOOP;
-    // guarded by segment lock
     private StorageLocation location;
-    // guarded by segment lock
     private File storageDir;
-    @GuardedBy("this")
     private ReferenceCountedSegmentProvider referenceProvider;
 
     private SegmentCacheEntry(final DataSegment dataSegment)

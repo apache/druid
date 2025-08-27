@@ -37,6 +37,7 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestHelper;
@@ -830,7 +831,8 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     Assert.assertNull(manager.getSegmentFiles(segmentToLoad));
     Assert.assertFalse(manager.acquireCachedSegment(segmentToLoad).isPresent());
     AcquireSegmentAction segmentAction = manager.acquireSegment(segmentToLoad);
-    Optional<Segment> theSegment = segmentAction.getSegmentFuture().get();
+    ReferenceCountedObjectProvider<Segment> referenceProvider = segmentAction.getSegmentFuture().get();
+    Optional<Segment> theSegment = referenceProvider.acquireReference();
     Assert.assertTrue(theSegment.isPresent());
     Assert.assertNotNull(manager.getSegmentFiles(segmentToLoad));
     Assert.assertEquals(segmentToLoad.getId(), theSegment.get().getId());
@@ -843,7 +845,8 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
 
     // can actually load them again because load doesn't really do anything
     AcquireSegmentAction segmentActionAfterDrop = manager.acquireSegment(segmentToLoad);
-    Optional<Segment> theSegmentAfterDrop = segmentActionAfterDrop.getSegmentFuture().get();
+    ReferenceCountedObjectProvider<Segment> referenceProviderAfterDrop = segmentAction.getSegmentFuture().get();
+    Optional<Segment> theSegmentAfterDrop = referenceProviderAfterDrop.acquireReference();
     Assert.assertTrue(theSegmentAfterDrop.isPresent());
     Assert.assertNotNull(manager.getSegmentFiles(segmentToLoad));
     Assert.assertEquals(segmentToLoad.getId(), theSegmentAfterDrop.get().getId());
@@ -886,7 +889,8 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     Assert.assertNull(manager.getSegmentFiles(segmentToBootstrap));
     Assert.assertFalse(manager.acquireCachedSegment(segmentToBootstrap).isPresent());
     AcquireSegmentAction segmentAction = manager.acquireSegment(segmentToBootstrap);
-    Optional<Segment> theSegment = segmentAction.getSegmentFuture().get();
+    ReferenceCountedObjectProvider<Segment> referenceProvider = segmentAction.getSegmentFuture().get();
+    Optional<Segment> theSegment = referenceProvider.acquireReference();
     Assert.assertTrue(theSegment.isPresent());
     Assert.assertNotNull(manager.getSegmentFiles(segmentToBootstrap));
     Assert.assertEquals(segmentToBootstrap.getId(), theSegment.get().getId());
@@ -901,7 +905,8 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     // can actually load them again because bootstrap doesn't really do anything unless the segment is already
     // present in the cache
     AcquireSegmentAction segmentActionAfterDrop = manager.acquireSegment(segmentToBootstrap);
-    Optional<Segment> theSegmentAfterDrop = segmentActionAfterDrop.getSegmentFuture().get();
+    ReferenceCountedObjectProvider<Segment> referenceProviderDrop = segmentActionAfterDrop.getSegmentFuture().get();
+    Optional<Segment> theSegmentAfterDrop = referenceProviderDrop.acquireReference();
     Assert.assertTrue(theSegmentAfterDrop.isPresent());
     Assert.assertNotNull(manager.getSegmentFiles(segmentToBootstrap));
     Assert.assertEquals(segmentToBootstrap.getId(), theSegmentAfterDrop.get().getId());
