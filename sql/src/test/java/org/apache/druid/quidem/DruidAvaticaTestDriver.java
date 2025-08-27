@@ -27,7 +27,6 @@ import com.google.inject.name.Named;
 import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.server.DruidNode;
@@ -46,7 +45,6 @@ import org.apache.http.client.utils.URIBuilder;
 import org.eclipse.jetty.server.Server;
 
 import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.sql.Connection;
@@ -179,6 +177,7 @@ public class DruidAvaticaTestDriver implements Driver
     {
       druidMeta.closeAllConnections();
       try {
+        druidMeta.stop();
         server.stop();
       }
       catch (Exception e) {
@@ -221,25 +220,6 @@ public class DruidAvaticaTestDriver implements Driver
       connectionModule.close();
       super.close();
     }
-  }
-
-  protected File createTempFolder(String prefix)
-  {
-    File tempDir = FileUtils.createTempDir(prefix);
-    Runtime.getRuntime().addShutdownHook(new Thread()
-    {
-      @Override
-      public void run()
-      {
-        try {
-          FileUtils.deleteDirectory(tempDir);
-        }
-        catch (IOException ex) {
-          ex.printStackTrace();
-        }
-      }
-    });
-    return tempDir;
   }
 
   private void register()

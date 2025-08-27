@@ -36,18 +36,34 @@ import java.util.Properties;
  */
 public class K3sDruidService
 {
-  private static final String MANIFEST_TEMPLATE = "manifests/druid-service.yaml";
-
   private final DruidCommand command;
   private final Properties properties;
+  private int servicePort;
 
   public K3sDruidService(DruidCommand command)
   {
     this.command = command;
     this.properties = new Properties();
+    this.servicePort = command.getExposedPorts()[0];
 
     addProperty("druid.host", EmbeddedHostname.containerFriendly().toString());
     command.getDefaultProperties().forEach(properties::setProperty);
+  }
+
+  public K3sDruidService usingPort(int port)
+  {
+    this.servicePort = port;
+    return this;
+  }
+
+  public int getServicePort()
+  {
+    return servicePort;
+  }
+
+  public Properties getRuntimeProperties()
+  {
+    return properties;
   }
 
   public String getName()
@@ -63,16 +79,16 @@ public class K3sDruidService
   /**
    * Creates a manifest YAML String for this service.
    */
-  public String createManifestYaml(String druidImage)
+  public String createManifestYaml(String manifestTemplateResource, String druidImage)
   {
     try {
       final String template = Files.readString(
-          Resources.getFileForResource(MANIFEST_TEMPLATE).toPath()
+          Resources.getFileForResource(manifestTemplateResource).toPath()
       );
 
       String manifest = StringUtils.replace(template, "${service}", getName());
       manifest = StringUtils.replace(manifest, "${command}", command.getName());
-      manifest = StringUtils.replace(manifest, "${port}", String.valueOf(command.getExposedPorts()[0]));
+      manifest = StringUtils.replace(manifest, "${port}", String.valueOf(servicePort));
       manifest = StringUtils.replace(manifest, "${image}", druidImage);
       manifest = StringUtils.replace(manifest, "${serviceFolder}", getServicePropsFolder());
 
@@ -99,7 +115,7 @@ public class K3sDruidService
     return StringUtils.format(
         "http://%s:%s/status/health",
         EmbeddedHostname.containerFriendly().toString(),
-        command.getExposedPorts()[0]
+        String.valueOf(servicePort)
     );
   }
 
