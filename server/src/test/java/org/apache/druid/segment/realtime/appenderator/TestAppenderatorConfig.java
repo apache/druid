@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
@@ -59,7 +60,7 @@ public class TestAppenderatorConfig implements AppenderatorConfig
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       Integer maxColumnsToMerge,
       File basePersistDirectory,
-      boolean releaseLocksOnHandoff
+      @Nullable Boolean releaseLocksOnHandoff
   )
   {
     this.appendableIndexSpec = appendableIndexSpec;
@@ -76,7 +77,7 @@ public class TestAppenderatorConfig implements AppenderatorConfig
 
     this.partitionsSpec = null;
     this.indexSpecForIntermediatePersists = this.indexSpec;
-    this.releaseLocksOnHandoff = releaseLocksOnHandoff;
+    this.releaseLocksOnHandoff = Configs.valueOrDefault(releaseLocksOnHandoff, false);
   }
 
   @Override
@@ -166,7 +167,7 @@ public class TestAppenderatorConfig implements AppenderatorConfig
   }
 
   @Override
-  public boolean getReleaseLocksOnHandoff()
+  public boolean isReleaseLocksOnHandoff()
   {
     return releaseLocksOnHandoff;
   }

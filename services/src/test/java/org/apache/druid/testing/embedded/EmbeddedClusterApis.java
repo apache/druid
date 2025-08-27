@@ -38,7 +38,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -373,17 +372,6 @@ public class EmbeddedClusterApis implements EmbeddedResource
     }
 
     throw new ISE("Could not find supervisor[%s]", supervisorId);
-  }
-
-  /**
-   * Fetches the currently locked intervals by tasks.
-   * 
-   * @param lockFilterPolicies List of filters for different datasources.
-   * @return Map from datasource name to list of intervals locked by tasks.
-   */
-  public Map<String, List<Interval>> getLockedIntervals(List<LockFilterPolicy> lockFilterPolicies)
-  {
-    return onLeaderOverlord(overlordClient -> overlordClient.findLockedIntervals(lockFilterPolicies));
   }
 
   // STATIC UTILITY METHODS

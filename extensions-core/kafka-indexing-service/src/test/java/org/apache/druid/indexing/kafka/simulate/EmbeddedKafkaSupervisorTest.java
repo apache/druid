@@ -46,12 +46,14 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
@@ -90,8 +92,9 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     final String topic = dataSource;
     kafkaServer.createTopicWithPartitions(topic, 2);
 
+    final int expectedSegments = 10;
     kafkaServer.produceRecordsToTopic(
-        generateRecordsForTopic(topic, 10, DateTimes.of("2025-06-01"))
+        generateRecordsForTopic(topic, expectedSegments, DateTimes.of("2025-06-01"))
     );
 
     // Submit and start a supervisor
@@ -130,10 +133,17 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     indexer.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("ingest/handoff/count")
                       .hasDimension(DruidMetrics.DATASOURCE, List.of(dataSource)),
-        agg -> agg.hasSumAtLeast(10)
+        agg -> agg.hasSumAtLeast(expectedSegments)
     );
-    Thread.sleep(5000);
-    Assertions.assertEquals(0, cluster.callApi().getLockedIntervals(List.of(new LockFilterPolicy(dataSource, 0, null, null))).size());
+    overlord.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("task/action/run/time")
+                      .hasDimension(DruidMetrics.TASK_ACTION_TYPE, "lockRelease"),
+        agg -> agg.hasCountAtLeast(expectedSegments)
+    );
+    List<LockFilterPolicy> lockFilterPolicies = List.of(new LockFilterPolicy(dataSource, 0, null, null));
+    Map<String, List<Interval>> lockedIntervals = cluster.callApi()
+                                                         .onLeaderOverlord(client -> client.findLockedIntervals(lockFilterPolicies));
+    Assertions.assertEquals(0, lockedIntervals.size());
   }
 
   private KafkaSupervisorSpec createKafkaSupervisor(String supervisorId, String topic)

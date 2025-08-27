@@ -21,6 +21,8 @@ package org.apache.druid.segment.realtime.appenderator;
 
 import org.joda.time.Interval;
 
+import java.io.IOException;
+
 /**
  * This interface provides a callback mechanism to interact with TaskLockbox for releasing interval locks when
  * the segments are handed off. We need this interface to avoid cyclic dependencues because the
@@ -31,8 +33,6 @@ public interface TaskIntervalUnlocker
 {
   /**
    * Releases the lock for the given interval.
-   *
-   * @param interval interval for which the lock needs to be released
    */
-  void releaseLock(Interval interval);
+  void releaseLock(Interval interval) throws IOException;
 }

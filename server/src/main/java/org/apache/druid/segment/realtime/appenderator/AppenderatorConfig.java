@@ -38,7 +38,10 @@ public interface AppenderatorConfig extends TuningConfig
 
   boolean isSkipBytesInMemoryOverheadCheck();
 
-  default boolean getReleaseLocksOnHandoff()
+  /**
+   * Whether the interval locks be released when handing segments have been handed off to data nodes.
+   */
+  default boolean isReleaseLocksOnHandoff()
   {
     return false;
   }
@@ -82,6 +85,4 @@ public interface AppenderatorConfig extends TuningConfig
   {
     return IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE;
   }
-
-
 }

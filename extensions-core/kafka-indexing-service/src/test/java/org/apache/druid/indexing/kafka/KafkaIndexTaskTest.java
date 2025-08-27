@@ -2912,7 +2912,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         maxSavedParseExceptions,
         null,
         null,
-        false
+        null
     );
     if (!context.containsKey(SeekableStreamSupervisor.CHECKPOINTS_CTX_KEY)) {
       final TreeMap<Integer, Map<KafkaTopicPartition, Long>> checkpoints = new TreeMap<>();

@@ -2452,10 +2452,10 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
 
   @Test
-  public void test_abandonSegment_unlockIntervalWithOverlap() throws Exception
+  public void test_dropSegment_unlocksInterval() throws Exception
   {
     final List<Interval> unlockedIntervals = new ArrayList<>();
-    final TaskIntervalUnlocker mockUnlocker = interval -> {
+    final TaskIntervalUnlocker intervalUnlocker = interval -> {
       synchronized (unlockedIntervals) {
         unlockedIntervals.add(interval);
       }
@@ -2465,14 +2465,14 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
         .basePersistDirectory(temporaryFolder.newFolder())
         .maxRowsInMemory(2)
         .releaseLocksOnHandoff(true)
-        .taskIntervalUnlocker(mockUnlocker)
+        .taskIntervalUnlocker(intervalUnlocker)
         .build()) {
       final Appenderator appenderator = tester.getAppenderator();
 
       appenderator.startJob();
 
-      final SegmentIdWithShardSpec identifier1 = si("2000-01-01T00:00/2000-01-01T01:00", "version1", 0);
-      final SegmentIdWithShardSpec identifier2 = si("2000-01-01T01:00/2000-01-01T02:00", "version1", 0);
+      final SegmentIdWithShardSpec segmentId1 = si("2000-01-01T00:00/2000-01-01T01:00", "version1", 0);
+      final SegmentIdWithShardSpec segmentId2 = si("2000-01-01T01:00/2000-01-01T02:00", "version1", 0);
 
       final InputRow row1 = new MapBasedInputRow(
           DateTimes.of("2000"),
@@ -2486,32 +2486,28 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           ImmutableMap.of("dim1", "baz", "met1", 1)
       );
 
-      appenderator.add(identifier1, row1, Suppliers.ofInstance(Committers.nil()), false);
-      appenderator.add(identifier2, row2, Suppliers.ofInstance(Committers.nil()), false);
+      appenderator.add(segmentId1, row1, Suppliers.ofInstance(Committers.nil()), false);
+      appenderator.add(segmentId2, row2, Suppliers.ofInstance(Committers.nil()), false);
 
       Assert.assertEquals(2, appenderator.getSegments().size());
 
-      synchronized (unlockedIntervals) {
-        unlockedIntervals.clear();
-      }
-
-      appenderator.drop(identifier1).get();
+      appenderator.drop(segmentId1).get();
 
       synchronized (unlockedIntervals) {
         Assert.assertEquals(1, unlockedIntervals.size());
-        Assert.assertEquals(identifier1.getInterval(), unlockedIntervals.get(0));
+        Assert.assertEquals(segmentId1.getInterval(), unlockedIntervals.get(0));
       }
 
       Assert.assertEquals(1, appenderator.getSegments().size());
-      Assert.assertTrue(appenderator.getSegments().contains(identifier2));
+      Assert.assertTrue(appenderator.getSegments().contains(segmentId2));
     }
   }
 
   @Test
-  public void test_abandonSegment_shouldNotUnlockInterval() throws Exception
+  public void test_dropSegment_skipsUnlockInterval_ifOverlappingSinkIsActive() throws Exception
   {
     final List<Interval> unlockedIntervals = new ArrayList<>();
-    final TaskIntervalUnlocker mockUnlocker = interval -> {
+    final TaskIntervalUnlocker intervalUnlocker = interval -> {
       synchronized (unlockedIntervals) {
         unlockedIntervals.add(interval);
       }
@@ -2521,14 +2517,14 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
         .basePersistDirectory(temporaryFolder.newFolder())
         .maxRowsInMemory(2)
         .releaseLocksOnHandoff(true)
-        .taskIntervalUnlocker(mockUnlocker)
+        .taskIntervalUnlocker(intervalUnlocker)
         .build()) {
       final Appenderator appenderator = tester.getAppenderator();
 
       appenderator.startJob();
 
-      final SegmentIdWithShardSpec identifier1 = si("2000-01-01T00:00/2000-01-01T01:00", "version1", 0);
-      final SegmentIdWithShardSpec identifier2 = si("2000-01-01T00:30/2000-01-01T01:30", "version2", 0);
+      final SegmentIdWithShardSpec segmentId1 = si("2000-01-01T00:00/2000-01-01T01:00", "version1", 0);
+      final SegmentIdWithShardSpec segmentId2 = si("2000-01-01T00:30/2000-01-01T01:30", "version2", 0);
 
       final InputRow row1 = new MapBasedInputRow(
           DateTimes.of("2000"),
@@ -2542,23 +2538,19 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           ImmutableMap.of("dim1", "baz", "met1", 1)
       );
 
-      appenderator.add(identifier1, row1, Suppliers.ofInstance(Committers.nil()), false);
-      appenderator.add(identifier2, row2, Suppliers.ofInstance(Committers.nil()), false);
+      appenderator.add(segmentId1, row1, Suppliers.ofInstance(Committers.nil()), false);
+      appenderator.add(segmentId2, row2, Suppliers.ofInstance(Committers.nil()), false);
 
       Assert.assertEquals(2, appenderator.getSegments().size());
 
-      synchronized (unlockedIntervals) {
-        unlockedIntervals.clear();
-      }
-
-      appenderator.drop(identifier1).get();
+      appenderator.drop(segmentId1).get();
 
       synchronized (unlockedIntervals) {
         Assert.assertEquals(0, unlockedIntervals.size());
       }
 
       Assert.assertEquals(1, appenderator.getSegments().size());
-      Assert.assertTrue(appenderator.getSegments().contains(identifier2));
+      Assert.assertTrue(appenderator.getSegments().contains(segmentId2));
     }
   }
 

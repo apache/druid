@@ -1529,7 +1529,7 @@ public class StreamAppenderator implements Appenderator
                 removeDirectory(computePersistDir(identifier));
               }
 
-              if (tuningConfig.getReleaseLocksOnHandoff()) {
+              if (tuningConfig.isReleaseLocksOnHandoff()) {
                 unlockIntervalIfApplicable(sink);
               }
 
@@ -1567,6 +1567,10 @@ public class StreamAppenderator implements Appenderator
     );
   }
 
+  /**
+   * Unlock the interval if there are more active sinks writing for this interval.
+   * The interval will be unlocked if there is no other sink writing to any overlapping intervals.
+   */
   private void unlockIntervalIfApplicable(Sink abandonedSink)
   {
     Interval abandonedInterval = abandonedSink.getInterval();
@@ -1577,10 +1581,17 @@ public class StreamAppenderator implements Appenderator
                                              && sink.isWritable()
                                              && sink.getInterval().overlaps(abandonedInterval);
                                     });
-    if (!isIntervalActive) {
-      taskIntervalUnlocker.releaseLock(abandonedInterval);
+    if (isIntervalActive) {
+      log.info("Interval[%s] is still being appended to by other sinks.", abandonedInterval);
+    } else {
+      log.info("Unlocking interval[%s] as there are no more active sinks for it.", abandonedInterval);
+      try {
+        taskIntervalUnlocker.releaseLock(abandonedInterval);
+      }
+      catch (IOException e) {
+        log.makeAlert(e, "Failed to unlock interval[%s]", abandonedInterval).emit();
+      }
     }
-    log.info("implement this.");
   }
 
   private Committed readCommit() throws IOException

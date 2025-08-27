@@ -231,12 +231,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
         parseExceptionHandler,
         toolbox.getCentralizedTableSchemaConfig(),
         interval -> {
-          try {
-            toolbox.getTaskActionClient().submit(new LockReleaseAction(interval));
-          }
-          catch (Exception e) {
-            throw new RuntimeException(e);
-          }
+          toolbox.getTaskActionClient().submit(new LockReleaseAction(interval));
         }
     );
   }

@@ -160,7 +160,7 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         getMaxSavedParseExceptions(),
         getNumPersistThreads(),
         getMaxColumnsToMerge(),
-        getReleaseLockOnHandoff()
+        isReleaseLockOnHandoff()
     );
   }
 
