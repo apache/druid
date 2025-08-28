@@ -77,7 +77,12 @@ public class TaskInfo<EntryType, StatusType>
     return task;
   }
 
-  public TaskInfo<EntryType, StatusType> withStatus(StatusType newStatus)
+  /**
+   * Returns a copy of this TaskInfo object with a new StatusType
+   * @param newStatus
+   * @return a new TaskInfo
+   */
+  public TaskInfo<EntryType, StatusType> withNewStatus(StatusType newStatus)
   {
     return new TaskInfo<>(id, createdTime, newStatus, dataSource, task);
   }

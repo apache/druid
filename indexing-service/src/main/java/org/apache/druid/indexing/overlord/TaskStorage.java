@@ -40,7 +40,7 @@ public interface TaskStorage
    *
    * @param task   task to add
    * @param status task status
-   * @return A TaskInfo object representing the task information that was committed
+   * @return a TaskInfo object representing the task information that was committed to the storage facility
    */
   TaskInfo<Task, TaskStatus> insert(Task task, TaskStatus status);
 
@@ -119,10 +119,10 @@ public interface TaskStorage
   List<Task> getActiveTasks();
 
   /**
-   * Returns a list of currently running or pending tasks as stored in the storage facility. No particular order
+   * Returns a list of currently running or pending task infos as stored in the storage facility. No particular order
    * is guaranteed, but implementations are encouraged to return tasks in ascending order of creation.
    *
-   * @return list of active tasks
+   * @return list of active task infos
    */
   List<TaskInfo<Task, TaskStatus>> getActiveTaskInfos();
 

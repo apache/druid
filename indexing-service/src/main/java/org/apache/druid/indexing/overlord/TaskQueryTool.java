@@ -104,10 +104,6 @@ public class TaskQueryTool
 
   public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource)
   {
-    final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
-    if (taskQueue.isPresent()) {
-      taskQueue.get().getActiveTasksForDatasource(dataSource);
-    }
     return storage.getTaskInfos(TaskLookup.activeTasksOnly(), dataSource);
   }
 

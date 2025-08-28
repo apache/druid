@@ -251,6 +251,7 @@ public class TaskQueue
                 }
               }
             }
+
           }
       );
       ScheduledExecutors.scheduleAtFixedRate(
@@ -574,7 +575,7 @@ public class TaskQueue
     if (added.get()) {
       taskLockbox.add(taskInfo.getTask());
     } else if (!entry.taskInfo.getTask().equals(taskInfo.getTask())) {
-      throw new ISE("Cannot add task[%s] as a different task for the same ID has already been added.", taskInfo.getId());
+      throw new ISE("Cannot add task[%s] as a different task for the same ID has already been added.", taskInfo.getTask().getId());
     }
   }
 
@@ -703,9 +704,6 @@ public class TaskQueue
         taskStatus.getId()
     );
 
-    // Always update the task status associated with this entry
-    entry.taskInfo = entry.taskInfo.withStatus(taskStatus);
-
     if (!taskStatus.isComplete()) {
       // Nothing to do for incomplete statuses.
       return;
@@ -717,6 +715,8 @@ public class TaskQueue
 
     // Mark this task as complete, so it isn't managed while being cleaned up.
     entry.isComplete = true;
+    // Update the task status associated with this entry
+    entry.taskInfo = entry.taskInfo.withNewStatus(taskStatus);
 
     final TaskLocation taskLocation = taskRunner.getTaskLocation(task.getId());
 
@@ -1027,9 +1027,9 @@ public class TaskQueue
   }
 
   /**
-   * Returns an optional TaskInfo
+   * Polls {@link #activeTasks} for the task with the corresponding {@code taskId}
    * @param taskId
-   * @return
+   * @return an optional TaskInfo
    */
   public Optional<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(String taskId)
   {
@@ -1041,7 +1041,7 @@ public class TaskQueue
   }
 
   /**
-   * List of all active and completed tasks currently being managed by this TaskQueue.
+   * List of all active and completed task infos currently being managed by this TaskQueue.
    */
   public List<TaskInfo<Task, TaskStatus>> getTaskInfos()
   {
@@ -1053,11 +1053,11 @@ public class TaskQueue
    */
   public List<Task> getTasks()
   {
-    return activeTasks.values().stream().map(entry -> entry.taskInfo.getTask()).collect(Collectors.toList());
+    return getTaskInfos().stream().map(TaskInfo::getTask).collect(Collectors.toList());
   }
 
   /**
-   * Returns the list of currently active tasks for the given datasource.
+   * Returns a map of currently active tasks for the given datasource.
    */
   public Map<String, Task> getActiveTasksForDatasource(String datasource)
   {

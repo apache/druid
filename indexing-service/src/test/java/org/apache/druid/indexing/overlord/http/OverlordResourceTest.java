@@ -131,7 +131,7 @@ public class OverlordResourceTest
     provisioningStrategy = EasyMock.createMock(ProvisioningStrategy.class);
     authConfig = EasyMock.createMock(AuthConfig.class);
     overlord = EasyMock.createStrictMock(DruidOverlord.class);
-    taskMaster = EasyMock.createStrictMock(TaskMaster.class);
+    taskMaster = EasyMock.createMock(TaskMaster.class);
     taskStorage = EasyMock.createStrictMock(TaskStorage.class);
     taskLockbox = EasyMock.createStrictMock(GlobalTaskLockbox.class);
     taskQueryTool = new TaskQueryTool(
@@ -999,21 +999,26 @@ public class OverlordResourceTest
     final Task task = NoopTask.create();
     final String taskId = task.getId();
     final TaskStatus status = TaskStatus.running(taskId);
+    final TaskInfo<Task, TaskStatus> taskInfo = new TaskInfo<>(
+        task.getId(),
+        DateTimes.of("2018-01-01"),
+        status,
+        task.getDataSource(),
+        task
+    );
 
-    EasyMock.expect(taskQueryTool.getTaskInfo(taskId))
-            .andReturn(new TaskInfo(
-                task.getId(),
-                DateTimes.of("2018-01-01"),
-                status,
-                task.getDataSource(),
-                task
-            ));
+    // Simulate in-memory queue for noop task
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
 
-    EasyMock.expect(taskQueryTool.getTaskInfo("othertask"))
-            .andReturn(null);
+    EasyMock.expect(taskQueue.getActiveTaskInfo(taskId)).andReturn(Optional.of(taskInfo));
 
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getKnownTasks())
-        .andReturn(ImmutableList.of());
+            .andReturn(ImmutableList.of(new MockTaskRunnerWorkItem(taskId))).anyTimes();
+    EasyMock.expect(taskRunner.getRunnerTaskState(taskId)).andReturn(RunnerTaskState.RUNNING);
+
+    // Simulate task storage fetch for "othertask"
+    EasyMock.expect(taskQueue.getActiveTaskInfo("othertask")).andReturn(Optional.absent());
+    EasyMock.expect(taskStorage.getTaskInfo("othertask")).andReturn(null);
 
     replayAll();
 
