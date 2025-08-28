@@ -140,7 +140,8 @@ public class DartControllerContext implements ControllerContext
     final ControllerMemoryParameters memoryParameters =
         ControllerMemoryParameters.createProductionInstance(
             memoryIntrospector,
-            workerIds.size()
+            workerIds.size(),
+            MultiStageQueryContext.getFrameSize(context)
         );
 
     final int maxConcurrentStages = MultiStageQueryContext.getMaxConcurrentStagesWithDefault(

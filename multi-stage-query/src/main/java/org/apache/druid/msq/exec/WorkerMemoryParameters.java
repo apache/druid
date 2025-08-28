@@ -41,6 +41,7 @@ import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.querykit.BroadcastJoinSegmentMapFnProcessor;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollectorImpl;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 
 import javax.annotation.Nullable;
@@ -160,7 +161,7 @@ public class WorkerMemoryParameters
     final StageDefinition stageDef = workOrder.getStageDefinition();
     return createInstance(
         memoryIntrospector,
-        DEFAULT_FRAME_SIZE,
+        MultiStageQueryContext.getFrameSize(workOrder.getWorkerContext()),
         workOrder.getInputs(),
         stageDef.getBroadcastInputNumbers(),
         stageDef.doesShuffle() ? stageDef.getShuffleSpec() : null,
