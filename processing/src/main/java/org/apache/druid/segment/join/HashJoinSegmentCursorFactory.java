@@ -24,12 +24,14 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -74,10 +76,6 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    // make a copy of CursorBuildSpec with filters removed
-    final CursorBuildSpec.CursorBuildSpecBuilder cursorBuildSpecBuilder = CursorBuildSpec.builder(spec)
-                                                                                         .setFilter(null);
-
     final Filter combinedFilter = baseFilterAnd(spec.getFilter());
 
     // for physical column tracking, we start by copying base spec physical columns
@@ -95,11 +93,14 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
 
     if (clauses.isEmpty()) {
       // if there are no clauses, we can just use the base cursor directly if we apply the combined filter
-      final CursorBuildSpec newSpec = cursorBuildSpecBuilder.setFilter(combinedFilter)
-                                                            .setPhysicalColumns(physicalColumns)
-                                                            .build();
+      final CursorBuildSpec newSpec = CursorBuildSpec.builder(spec)
+                                                     .setFilter(combinedFilter)
+                                                     .setPhysicalColumns(physicalColumns)
+                                                     .build();
       return baseCursorFactory.makeCursorHolder(newSpec);
     }
+
+    // else we need to wipe out the grouping, aggregations, and ordering
 
     return new CursorHolder()
     {
@@ -152,6 +153,20 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
             baseFilter
         );
 
+        // start with a full scan clipped to interval
+        final CursorBuildSpec.CursorBuildSpecBuilder cursorBuildSpecBuilder =
+            CursorBuildSpec.builder()
+                           .setInterval(spec.getInterval());
+
+        // retain time ordering if preferred
+        Order timeOrder = Cursors.getTimeOrdering(spec.getPreferredOrdering());
+        if (timeOrder == Order.DESCENDING) {
+          cursorBuildSpecBuilder.setPreferredOrdering(Cursors.descendingTimeOrder());
+        } else if (timeOrder == Order.ASCENDING) {
+          cursorBuildSpecBuilder.setPreferredOrdering(Cursors.ascendingTimeOrder());
+        }
+
+        // add pushdown filters if present
         if (joinFilterSplit.getBaseTableFilter().isPresent()) {
           cursorBuildSpecBuilder.setFilter(joinFilterSplit.getBaseTableFilter().get());
         }
