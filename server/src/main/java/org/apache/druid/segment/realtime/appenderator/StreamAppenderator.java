@@ -97,7 +97,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -1576,10 +1575,7 @@ public class StreamAppenderator implements Appenderator
     Interval abandonedInterval = abandonedSink.getInterval();
     boolean isIntervalActive = sinks.entrySet().stream()
                                     .anyMatch(entry -> {
-                                      Sink sink = entry.getValue();
-                                      return !Objects.equals(sink, abandonedSink)
-                                             && sink.isWritable()
-                                             && sink.getInterval().overlaps(abandonedInterval);
+                                      return entry.getValue().getInterval().overlaps(abandonedInterval);
                                     });
     if (isIntervalActive) {
       log.info("Interval[%s] is still being appended to by other sinks.", abandonedInterval);

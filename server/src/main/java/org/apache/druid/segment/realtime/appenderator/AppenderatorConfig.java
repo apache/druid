@@ -39,7 +39,7 @@ public interface AppenderatorConfig extends TuningConfig
   boolean isSkipBytesInMemoryOverheadCheck();
 
   /**
-   * Whether the interval locks be released when handing segments have been handed off to data nodes.
+   * @return true if locks should be released after segments have been handed off to Historicals.
    */
   default boolean isReleaseLocksOnHandoff()
   {

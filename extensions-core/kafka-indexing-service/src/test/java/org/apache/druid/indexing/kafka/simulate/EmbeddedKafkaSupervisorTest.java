@@ -69,7 +69,6 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
   {
     final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper();
     indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
-    overlord.addProperty("druid.manager.segments.pollDuration", "PT0.1s");
 
     kafkaServer = new KafkaResource();
 

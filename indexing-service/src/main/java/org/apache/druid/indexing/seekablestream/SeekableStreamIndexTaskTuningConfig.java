@@ -42,7 +42,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   private static final Period DEFAULT_INTERMEDIATE_PERSIST_PERIOD = new Period("PT10M");
   private static final IndexSpec DEFAULT_INDEX_SPEC = IndexSpec.DEFAULT;
   private static final Boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = Boolean.FALSE;
-  private static final Boolean DEFAULT_SHOULD_RELEASE_LOCK_ON_HANDOFF = Boolean.FALSE;
+  private static final boolean DEFAULT_RELEASE_LOCKS_ON_HANDOFF = false;
   private static final long DEFAULT_HANDOFF_CONDITION_TIMEOUT = Duration.ofMinutes(15).toMillis();
 
   private final AppendableIndexSpec appendableIndexSpec;
@@ -150,7 +150,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
       this.numPersistThreads = Math.max(numPersistThreads, AppenderatorConfig.DEFAULT_NUM_PERSIST_THREADS);
     }
     this.maxColumnsToMerge = maxColumnsToMerge == null ? DEFAULT_MAX_COLUMNS_TO_MERGE : maxColumnsToMerge;
-    this.releaseLocksOnHandoff = Configs.valueOrDefault(releaseLocksOnHandoff, DEFAULT_SHOULD_RELEASE_LOCK_ON_HANDOFF);
+    this.releaseLocksOnHandoff = Configs.valueOrDefault(releaseLocksOnHandoff, DEFAULT_RELEASE_LOCKS_ON_HANDOFF);
   }
 
   @Override

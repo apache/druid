@@ -2454,12 +2454,8 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void test_dropSegment_unlocksInterval() throws Exception
   {
-    final List<Interval> unlockedIntervals = new ArrayList<>();
-    final TaskIntervalUnlocker intervalUnlocker = interval -> {
-      synchronized (unlockedIntervals) {
-        unlockedIntervals.add(interval);
-      }
-    };
+    final List<Interval> unlockedIntervals = Collections.synchronizedList(new ArrayList<>());
+    final TaskIntervalUnlocker intervalUnlocker = unlockedIntervals::add;
 
     try (final StreamAppenderatorTester tester = new StreamAppenderatorTester.Builder()
         .basePersistDirectory(temporaryFolder.newFolder())
@@ -2476,14 +2472,14 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
       final InputRow row1 = new MapBasedInputRow(
           DateTimes.of("2000"),
-          ImmutableList.of("dim1"),
-          ImmutableMap.of("dim1", "bar", "met1", 1)
+          List.of("dim1"),
+          Map.of("dim1", "bar", "met1", 1)
       );
 
       final InputRow row2 = new MapBasedInputRow(
           DateTimes.of("2000-01-01T02:30"),
-          ImmutableList.of("dim1"),
-          ImmutableMap.of("dim1", "baz", "met1", 1)
+          List.of("dim1"),
+          Map.of("dim1", "baz", "met1", 1)
       );
 
       appenderator.add(segmentId1, row1, Suppliers.ofInstance(Committers.nil()), false);
@@ -2506,12 +2502,8 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void test_dropSegment_skipsUnlockInterval_ifOverlappingSinkIsActive() throws Exception
   {
-    final List<Interval> unlockedIntervals = new ArrayList<>();
-    final TaskIntervalUnlocker intervalUnlocker = interval -> {
-      synchronized (unlockedIntervals) {
-        unlockedIntervals.add(interval);
-      }
-    };
+    final List<Interval> unlockedIntervals = Collections.synchronizedList(new ArrayList<>());
+    final TaskIntervalUnlocker intervalUnlocker = unlockedIntervals::add;
 
     try (final StreamAppenderatorTester tester = new StreamAppenderatorTester.Builder()
         .basePersistDirectory(temporaryFolder.newFolder())
@@ -2528,14 +2520,14 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
       final InputRow row1 = new MapBasedInputRow(
           DateTimes.of("2000"),
-          ImmutableList.of("dim1"),
-          ImmutableMap.of("dim1", "bar", "met1", 1)
+          List.of("dim1"),
+          Map.of("dim1", "bar", "met1", 1)
       );
 
       final InputRow row2 = new MapBasedInputRow(
           DateTimes.of("2000-01-01T02:30"),
-          ImmutableList.of("dim1"),
-          ImmutableMap.of("dim1", "baz", "met1", 1)
+          List.of("dim1"),
+          Map.of("dim1", "baz", "met1", 1)
       );
 
       appenderator.add(segmentId1, row1, Suppliers.ofInstance(Committers.nil()), false);
