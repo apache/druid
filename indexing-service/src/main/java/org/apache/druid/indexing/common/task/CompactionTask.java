@@ -79,10 +79,10 @@ import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.AggregateProjectionMetadata;
-import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -103,12 +103,12 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -615,7 +615,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             metricBuilder,
             segmentProvider.dataSource,
             interval,
-            lazyFetchSegments(segmentsToCompact, toolbox.getSegmentCacheManager(), toolbox.getIndexIO()),
+            lazyFetchSegments(segmentsToCompact, toolbox.getSegmentCacheManager()),
             dimensionsSpec,
             transformSpec,
             metricsSpec,
@@ -642,8 +642,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           ),
           lazyFetchSegments(
               timelineSegments,
-              toolbox.getSegmentCacheManager(),
-              toolbox.getIndexIO()
+              toolbox.getSegmentCacheManager()
           ),
           dimensionsSpec,
           transformSpec,
@@ -768,13 +767,12 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
    */
   private static Iterable<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> lazyFetchSegments(
       Iterable<DataSegment> dataSegments,
-      SegmentCacheManager segmentCacheManager,
-      IndexIO indexIO
+      SegmentCacheManager segmentCacheManager
   )
   {
     return Iterables.transform(
         Iterables.filter(dataSegments, dataSegment -> !dataSegment.isTombstone()),
-        dataSegment -> fetchSegment(dataSegment, segmentCacheManager, indexIO)
+        dataSegment -> fetchSegment(dataSegment, segmentCacheManager)
     );
   }
 
@@ -783,8 +781,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   // an error. Creating a function keeps everyone happy.
   private static Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>> fetchSegment(
       DataSegment dataSegment,
-      SegmentCacheManager segmentCacheManager,
-      IndexIO indexIO
+      SegmentCacheManager segmentCacheManager
   )
   {
     return Pair.of(
@@ -792,26 +789,21 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         () -> {
           try {
             final Closer closer = Closer.create();
-            final File file = segmentCacheManager.getSegmentFiles(dataSegment);
-            closer.register(() -> segmentCacheManager.cleanup(dataSegment));
-            final QueryableIndex queryableIndex = closer.register(indexIO.loadIndex(file));
+            segmentCacheManager.load(dataSegment);
+            closer.register(() -> segmentCacheManager.drop(dataSegment));
+            final Segment segment = closer.register(segmentCacheManager.acquireCachedSegment(dataSegment).orElseThrow());
             return new ResourceHolder<QueryableIndex>()
             {
               @Override
               public QueryableIndex get()
               {
-                return queryableIndex;
+                return segment.as(QueryableIndex.class);
               }
 
               @Override
               public void close()
               {
-                try {
-                  closer.close();
-                }
-                catch (IOException e) {
-                  throw new RuntimeException(e);
-                }
+                CloseableUtils.closeAndWrapExceptions(closer);
               }
             };
           }

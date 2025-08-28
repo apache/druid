@@ -35,7 +35,6 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.policy.PolicyEnforcer;
-import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
@@ -43,6 +42,7 @@ import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.joda.time.Interval;
 
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.StreamSupport;
 
@@ -93,9 +93,9 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
 
     // wrap in ReferenceCountingSegment, these aren't currently managed by SegmentManager so reference tracking doesn't
     // matter, but at least some or all will be in a future PR
-    final Iterable<ReferenceCountedObjectProvider<Segment>> segments =
+    final Iterable<Optional<Segment>> segments =
         FunctionalIterable.create(segmentWrangler.getSegmentsForIntervals(ev.getBaseDataSource(), intervals))
-                          .transform(ReferenceCountedSegmentProvider::wrapUnmanaged);
+                          .transform(ReferenceCountedSegmentProvider::unmanaged);
 
     final AtomicLong cpuAccumulator = new AtomicLong(0L);
 

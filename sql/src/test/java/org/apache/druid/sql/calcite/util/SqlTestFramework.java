@@ -1126,6 +1126,7 @@ public class SqlTestFramework
     {
       return new SpecificSegmentsQuerySegmentWalker(
           testSegmentsBroker.timelines,
+          testSegmentsBroker.referenceProviders,
           clientQuerySegmentWalker
       );
     }

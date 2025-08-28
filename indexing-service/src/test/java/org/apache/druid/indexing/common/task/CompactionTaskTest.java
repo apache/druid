@@ -102,6 +102,8 @@ import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.SimpleQueryableIndex;
 import org.apache.druid.segment.TestIndex;
@@ -355,7 +357,7 @@ public class CompactionTaskTest
   @Before
   public void setup()
   {
-    final IndexIO testIndexIO = new TestIndexIO(OBJECT_MAPPER, SEGMENT_MAP);
+    final TestIndexIO testIndexIO = new TestIndexIO(OBJECT_MAPPER, SEGMENT_MAP);
     emitter = new StubServiceEmitter();
     toolbox = makeTaskToolbox(
         new TestTaskActionClient(new ArrayList<>(SEGMENT_MAP.keySet())),
@@ -1925,20 +1927,28 @@ public class CompactionTaskTest
 
   private TaskToolbox makeTaskToolbox(
       TaskActionClient taskActionClient,
-      IndexIO indexIO,
+      TestIndexIO indexIO,
       Map<DataSegment, File> segments
   )
   {
     final SegmentCacheManager segmentCacheManager = new NoopSegmentCacheManager()
     {
       @Override
-      public File getSegmentFiles(DataSegment segment)
+      public void load(DataSegment segment)
       {
-        return Preconditions.checkNotNull(segments.get(segment));
+        // do nothing
       }
 
       @Override
-      public void cleanup(DataSegment segment)
+      public Optional<Segment> acquireCachedSegment(DataSegment dataSegment)
+      {
+        return Optional.of(
+            new QueryableIndexSegment(indexIO.loadIndex(segments.get(dataSegment)), dataSegment.getId())
+        );
+      }
+
+      @Override
+      public void drop(DataSegment segment)
       {
         // Do nothing.
       }
