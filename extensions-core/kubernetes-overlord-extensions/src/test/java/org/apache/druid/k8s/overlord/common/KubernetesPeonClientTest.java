@@ -30,7 +30,6 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
@@ -592,8 +591,8 @@ public class KubernetesPeonClientTest
   void test_getPeonPodWithRetries_withoutPod_raisesKubernetesResourceNotFoundException()
   {
     String k8sJobName = new K8sTaskId(TASK_NAME_PREFIX, ID).getK8sJobName();
-    DruidException e = Assertions.assertThrows(
-        DruidException.class,
+    KubernetesResourceNotFoundException e = Assertions.assertThrows(
+        KubernetesResourceNotFoundException.class,
         () -> instance.getPeonPodWithRetries(clientApi.getClient(), k8sJobName, 1, 1)
     );
 
@@ -629,9 +628,9 @@ public class KubernetesPeonClientTest
           // Test will fail if task is retried more than once.
           .once();
 
-    // Task declared to retry for 3 times should only try once when blacklisted event message is found.
-    DruidException e = Assertions.assertThrows(
-        DruidException.class,
+    // Task declared to retry for 3 times should only try once when a blacklisted event message is found.
+    KubernetesResourceNotFoundException e = Assertions.assertThrows(
+        KubernetesResourceNotFoundException.class,
         () -> instance.getPeonPodWithRetries(clientApi.getClient(), k8sJobName, 0, 3)
     );
 

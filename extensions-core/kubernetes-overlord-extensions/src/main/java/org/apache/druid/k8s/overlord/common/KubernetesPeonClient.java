@@ -438,9 +438,7 @@ public class KubernetesPeonClient
       );
     }
     catch (KubernetesResourceNotFoundException e) {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.NOT_FOUND)
-                          .build(e, e.getMessage());
+      throw e;
     }
     catch (Exception e) {
       throw DruidException.defensive(e, "Error when looking for K8s pod with label[job-name=%s]", jobName);
