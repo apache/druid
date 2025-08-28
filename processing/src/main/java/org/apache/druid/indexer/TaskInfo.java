@@ -76,4 +76,9 @@ public class TaskInfo<EntryType, StatusType>
   {
     return task;
   }
+
+  public TaskInfo<EntryType, StatusType> withStatus(StatusType newStatus)
+  {
+    return new TaskInfo<>(id, createdTime, newStatus, dataSource, task);
+  }
 }

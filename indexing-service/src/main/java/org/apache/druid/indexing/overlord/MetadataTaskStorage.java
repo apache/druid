@@ -46,6 +46,7 @@ import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
+import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -111,7 +112,7 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
-  public void insert(final Task task, final TaskStatus status)
+  public TaskInfo<Task, TaskStatus> insert(final Task task, final TaskStatus status)
   {
     Preconditions.checkNotNull(task, "task");
     Preconditions.checkNotNull(status, "status");
@@ -123,11 +124,12 @@ public class MetadataTaskStorage implements TaskStorage
     );
 
     log.info("Inserting task [%s] with status [%s].", task.getId(), status);
+    final DateTime insertionTime = DateTimes.nowUtc();
 
     try {
       handler.insert(
           task.getId(),
-          DateTimes.nowUtc(),
+          insertionTime,
           task.getDataSource(),
           task,
           status.isRunnable(),
@@ -142,6 +144,14 @@ public class MetadataTaskStorage implements TaskStorage
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+
+    return new TaskInfo<>(
+        task.getId(),
+        insertionTime,
+        status,
+        task.getDataSource(),
+        task
+    );
   }
 
   @Override
@@ -186,6 +196,15 @@ public class MetadataTaskStorage implements TaskStorage
                   .stream()
                   .filter(taskInfo -> taskInfo.getStatus().isRunnable() && taskInfo.getTask() != null)
                   .map(TaskInfo::getTask)
+                  .collect(Collectors.toList());
+  }
+
+  @Override
+  public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfos()
+  {
+    return handler.getTaskInfos(Collections.singletonMap(TaskLookupType.ACTIVE, ActiveTaskLookup.getInstance()), null)
+                  .stream()
+                  .filter(taskInfo -> taskInfo.getStatus().isRunnable() && taskInfo.getTask() != null)
                   .collect(Collectors.toList());
   }
 

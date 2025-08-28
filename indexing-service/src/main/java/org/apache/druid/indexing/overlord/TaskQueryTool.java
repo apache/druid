@@ -33,7 +33,6 @@ import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import org.apache.druid.indexing.overlord.http.TaskStateLookup;
 import org.apache.druid.indexing.overlord.http.TotalWorkerCapacityResponse;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -41,7 +40,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
-import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
@@ -106,6 +104,10 @@ public class TaskQueryTool
 
   public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource)
   {
+    final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
+    if (taskQueue.isPresent()) {
+      taskQueue.get().getActiveTasksForDatasource(dataSource);
+    }
     return storage.getTaskInfos(TaskLookup.activeTasksOnly(), dataSource);
   }
 
@@ -147,6 +149,13 @@ public class TaskQueryTool
   @Nullable
   public TaskInfo<Task, TaskStatus> getTaskInfo(String taskId)
   {
+    final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
+    if (taskQueue.isPresent()) {
+      final Optional<TaskInfo<Task, TaskStatus>> taskStatus = taskQueue.get().getActiveTaskInfo(taskId);
+      if (taskStatus.isPresent()) {
+        return taskStatus.get();
+      }
+    }
     return storage.getTaskInfo(taskId);
   }
 
@@ -156,12 +165,10 @@ public class TaskQueryTool
     if (taskQueue.isPresent()) {
       // Serve active task statuses from memory
       final List<TaskStatusPlus> taskStatusPlusList = new ArrayList<>();
+      final List<TaskInfo<Task, TaskStatus>> activeTasks = taskQueue.get().getTaskInfos();
 
-      // Use a dummy created time as this is not used by the caller, just needs to be non-null
-      final DateTime createdTime = DateTimes.nowUtc();
-
-      final List<Task> activeTasks = taskQueue.get().getTasks();
-      for (Task task : activeTasks) {
+      for (TaskInfo<Task, TaskStatus> taskInfo : activeTasks) {
+        final Task task = taskInfo.getTask();
         final Optional<TaskStatus> statusOptional = taskQueue.get().getTaskStatus(task.getId());
         if (statusOptional.isPresent()) {
           final TaskStatus status = statusOptional.get();
@@ -170,8 +177,8 @@ public class TaskQueryTool
                   task.getId(),
                   task.getGroupId(),
                   task.getType(),
-                  createdTime,
-                  createdTime,
+                  taskInfo.getCreatedTime(),
+                  taskInfo.getCreatedTime(),
                   status.getStatusCode(),
                   null,
                   status.getDuration(),
