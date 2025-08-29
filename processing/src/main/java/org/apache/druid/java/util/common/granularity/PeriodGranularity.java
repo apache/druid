@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.JsonSerializable;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -40,6 +41,15 @@ import org.joda.time.format.DateTimeFormatter;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.zone.ZoneOffsetTransition;
+import java.time.zone.ZoneRules;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * PeriodGranularity buckets data based on any custom time period
@@ -214,6 +224,139 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
            ", timeZone=" + getTimeZone() +
            ", origin=" + getOrigin() +
            '}';
+  }
+
+  /**
+   * Returns true if this granularity can be mapped to the target granularity. For example:
+   * <li>Period('PT1H') in UTC can be mapped to Period('P1D') in UTC</li>
+   * <li>Period('PT1H') in America/Los_Angeles can be mapped to Period('PT1H') in UTC</li>
+   * <li>Period('P1D') in America/Los_Angeles cannot be mapped to Period('P1D') in UTC</li>
+   */
+  public boolean canBeMappedTo(PeriodGranularity target)
+  {
+    if (hasOrigin || target.hasOrigin) {
+      return false;
+    }
+
+    if (getTimeZone().equals(target.getTimeZone())) {
+      int periodMonths = period.getYears() * 12 + period.getMonths();
+      int targetMonths = target.period.getYears() * 12 + target.period.getMonths();
+      if (targetMonths == 0 && periodMonths != 0) {
+        return false;
+      }
+
+      long periodStandardSeconds = getStandardSecondsOrThrow(period.withYears(0).withMonths(0));
+      long targetStandardSeconds = getStandardSecondsOrThrow(target.period.withYears(0).withMonths(0));
+      if (targetMonths == 0 && periodMonths == 0) {
+        // both periods have zero months
+        return targetStandardSeconds % periodStandardSeconds == 0;
+      }
+      // if we reach here, targetMonths != 0
+      if (periodMonths == 0) {
+        // can map if 1.target not have week/day/hour/minute/second, and 2.period can be mapped to day
+        // this is for simplicity, it's possible some period can be mapped to gran, but we don't support it
+        return targetStandardSeconds == 0 && (3600 * 24) % periodStandardSeconds == 0;
+      } else {
+        // can map if 1.target&period not have week/day/hour/minute/second, and 2.period month can be mapped to target month
+        return targetMonths % periodMonths == 0
+               && targetStandardSeconds == 0
+               && periodStandardSeconds == 0;
+      }
+    }
+
+    // Timezone doesn't match, we'd require periods to be in whole seconds, i.e. no years, months, or milliseconds.
+    if (getStandardSeconds(period).isEmpty()) {
+      return false;
+    }
+    long standardSeconds = getStandardSecondsOrThrow(period);
+    if (standardSeconds != getUtcMappablePeriodSecondsOrThrow()) {
+      // the period cannot be mapped to UTC with the same period
+      return false;
+    }
+    if (target.period.getYears() == 0 && target.period.getMonths() == 0) {
+      return target.getUtcMappablePeriodSecondsOrThrow() % standardSeconds == 0;
+    } else {
+      return getStandardSecondsOrThrow(target.period.withYears(0).withMonths(0)) == 0
+             && (3600 * 24) % standardSeconds == 0;
+    }
+  }
+
+  /**
+   * Returns the maximum possible period seconds that this granularity can be mapped to UTC.
+   * <p>
+   * Throws {@link DruidException} if the period cannot be mapped to whole seconds, i.e. it has years or months, or milliseconds.
+   */
+  public long getUtcMappablePeriodSecondsOrThrow()
+  {
+    long periodSeconds = PeriodGranularity.getStandardSecondsOrThrow(period);
+
+    if (ISOChronology.getInstanceUTC().getZone().equals(getTimeZone())) {
+      return periodSeconds;
+    }
+    ZoneRules rules = ZoneId.of(getTimeZone().getID()).getRules();
+    Set<Integer> offsets = Stream.concat(
+        Stream.of(rules.getStandardOffset(Instant.now())),
+        rules.getTransitions()
+             .stream()
+             .filter(t -> t.getInstant().isAfter(Instant.EPOCH)) // timezone transitions before epoch are patchy
+             .map(ZoneOffsetTransition::getOffsetBefore)
+    ).map(ZoneOffset::getTotalSeconds).collect(Collectors.toSet());
+
+    if (offsets.isEmpty()) {
+      // no offsets
+      return periodSeconds;
+    }
+
+    if (offsets.stream().allMatch(o -> o % periodSeconds == 0)) {
+      // all offsets are multiples of the period
+      return periodSeconds;
+    } else if (periodSeconds % 3600 == 0 && offsets.stream().allMatch(o -> o % 3600 == 0)) {
+      // fall back to hour if period is a multiple of hour and all offsets are multiples of hour
+      return 3600;
+    } else if (periodSeconds % 60 == 0 && offsets.stream().allMatch(o -> o % 60 == 0)) {
+      // fall back to minute if period is a multiple of minute and all offsets are multiples of minute
+      return 60;
+    } else {
+      // default to second
+      return 1;
+    }
+  }
+
+  /**
+   * Returns the standard whole seconds for the given period.
+   * <p>
+   * Throws {@link DruidException} if the period cannot be mapped to whole seconds, i.e. one of the following applies:
+   * <ul>
+   * <li>it has years or months
+   * <li>it has milliseconds
+   */
+  public static Long getStandardSecondsOrThrow(Period period)
+  {
+    Optional<Long> s = getStandardSeconds(period);
+    if (s.isPresent()) {
+      return s.get();
+    } else {
+      throw DruidException.defensive("Period[%s] cannot be converted to standard whole seconds", period);
+    }
+  }
+
+  /**
+   * Returns the standard whole seconds for the given period.
+   * <p>
+   * Returns empty if the period cannot be mapped to whole seconds, i.e. one of the following applies:
+   * <ul>
+   * <li>it has years or months
+   * <li>it has milliseconds
+   */
+  public static Optional<Long> getStandardSeconds(Period period)
+  {
+    if (period.getYears() == 0 && period.getMonths() == 0) {
+      long millis = period.toStandardDuration().getMillis();
+      return millis % 1000 == 0
+             ? Optional.of((long) (millis / 1000))
+             : Optional.empty();
+    }
+    return Optional.empty();
   }
 
   private static boolean isCompoundPeriod(Period period)
