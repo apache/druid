@@ -35,6 +35,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.guice.BuiltInTypesModule;
+import org.apache.druid.guice.CatalogCoreModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.LazySingleton;
@@ -409,6 +410,7 @@ public class SqlTestFramework
           new LookylooModule(),
           new SegmentWranglerModule(),
           new ExpressionModule(),
+          new CatalogCoreModule(),
           DruidModule.override(
               new QueryRunnerFactoryModule(),
               new Module()
