@@ -23,12 +23,6 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.DefaultPasswordProvider;
-import org.apache.druid.msq.guice.IndexerMemoryManagementModule;
-import org.apache.druid.msq.guice.MSQDurableStorageModule;
-import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
-import org.apache.druid.msq.guice.MSQIndexingModule;
-import org.apache.druid.msq.guice.MSQSqlModule;
-import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.security.basic.authentication.BasicHTTPEscalator;
@@ -86,14 +80,6 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
         .addServer(overlord)
         .addServer(indexer)
         .addServer(new EmbeddedBroker())
-        .addExtensions(
-            MSQSqlModule.class,
-            MSQIndexingModule.class,
-            SqlTaskModule.class,
-            MSQDurableStorageModule.class,
-            MSQExternalDataSourceModule.class,
-            IndexerMemoryManagementModule.class
-        )
         .addCommonProperty("druid.auth.basic.common.pollingPeriod", "100");
   }
 

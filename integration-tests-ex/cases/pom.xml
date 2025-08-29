@@ -427,15 +427,6 @@
             </properties>
         </profile>
         <profile>
-            <id>IT-Catalog</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <properties>
-                <it.category>Catalog</it.category>
-            </properties>
-        </profile>
-        <profile>
             <id>IT-S3DeepStorage</id>
             <activation>
                 <activeByDefault>false</activeByDefault>

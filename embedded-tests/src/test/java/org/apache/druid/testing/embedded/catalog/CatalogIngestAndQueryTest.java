@@ -17,66 +17,47 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.catalog;
+package org.apache.druid.testing.embedded.catalog;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.inject.Inject;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
-import org.apache.druid.sql.http.SqlQuery;
-import org.apache.druid.testing.utils.DataLoaderHelper;
-import org.apache.druid.testing.utils.MsqTestQueryHelper;
-import org.apache.druid.testsEx.cluster.CatalogClient;
-import org.apache.druid.testsEx.cluster.DruidClusterClient;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
-
-import static org.junit.Assert.assertTrue;
 
 /**
  * Tests that expect succesfully ingestng data into catalog defined tables and querying the data
  * gives expected results.
  */
-public abstract class ITCatalogIngestAndQueryTest
+public abstract class CatalogIngestAndQueryTest extends CatalogTestBase
 {
-  public static final Logger LOG = new Logger(ITCatalogIngestAndQueryTest.class);
-
-  @Inject
-  private MsqTestQueryHelper msqHelper;
-  @Inject
-  private DataLoaderHelper dataLoaderHelper;
-  @Inject
-  private DruidClusterClient clusterClient;
-  private CatalogClient client;
-
-  private final String operationName;
   private final String dmlPrefixPattern;
 
-  public ITCatalogIngestAndQueryTest()
+  public CatalogIngestAndQueryTest()
   {
-    this.operationName = getOperationName();
     this.dmlPrefixPattern = getDmlPrefixPattern();
   }
 
-  public abstract String getOperationName();
   public abstract String getDmlPrefixPattern();
 
-  @Before
+  private TestCatalogClient client;
+  private EmbeddedMSQApis msqApis;
+
+  @BeforeAll
   public void initializeClient()
   {
-    client = new CatalogClient(clusterClient);
+    client = new TestCatalogClient(cluster);
+    msqApis = new EmbeddedMSQApis(cluster, overlord);
   }
 
   /**
@@ -105,17 +86,15 @@ public abstract class ITCatalogIngestAndQueryTest
    *
    */
   @Test
-  public void testInsertImplicitCast() throws Exception
+  public void testInsertImplicitCast()
   {
-    String queryFile = "/catalog/implicitCast_select.sql";
-    String tableName = "testImplicitCast" + operationName;
+    final String tableName = dataSource;
     TableMetadata table = TableBuilder.datasource(tableName, "DAY")
         .column(Columns.TIME_COLUMN, Columns.LONG)
         .column("double_col1", "DOUBLE")
         .build();
 
     client.createTable(table, true);
-    LOG.info("table created:\n%s", client.readTable(table.id()));
     String queryInline =
         StringUtils.format(dmlPrefixPattern, tableName) + "\n"
         + "SELECT\n"
@@ -130,20 +109,18 @@ public abstract class ITCatalogIngestAndQueryTest
         + "  EXTEND (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e FLOAT, f VARCHAR)\n";
 
     // Submit the task and wait for the datasource to get loaded
-    LOG.info("Running query:\n%s", queryInline);
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskSuccesfully(queryInline);
+    SqlTaskStatus sqlTaskStatus = msqApis.submitTaskSql(queryInline);
+    cluster.callApi().waitForTaskToSucceed(sqlTaskStatus.getTaskId(), overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
 
-    if (sqlTaskStatus.getState().isFailure()) {
-      Assert.fail(StringUtils.format(
-          "Unable to start the task successfully.\nPossible exception: %s",
-          sqlTaskStatus.getError()
-      ));
-    }
-
-    msqHelper.pollTaskIdForSuccess(sqlTaskStatus.getTaskId());
-    dataLoaderHelper.waitUntilDatasourceIsReady(tableName);
-
-    msqHelper.testQueriesFromFile(queryFile, tableName);
+    cluster.callApi().verifySqlQuery(
+        "SELECT * FROM %s",
+        dataSource,
+        "2022-12-26T12:34:56.000Z,8.0\n"
+        + "2022-12-26T12:34:56.000Z,8.0\n"
+        + "2022-12-26T12:34:56.000Z,9.0\n"
+        + "2022-12-26T12:34:56.000Z,10.0"
+    );
   }
 
   /**
@@ -175,10 +152,9 @@ public abstract class ITCatalogIngestAndQueryTest
    *
    */
   @Test
-  public void testInsertWithClusteringFromCatalog() throws Exception
+  public void testInsertWithClusteringFromCatalog()
   {
-    String queryFile = "/catalog/clustering_select.sql";
-    String tableName = "testWithClusteringFromCatalog" + operationName;
+    String tableName = dataSource;
     TableMetadata table = TableBuilder.datasource(tableName, "ALL")
         .column(Columns.TIME_COLUMN, Columns.LONG)
         .column("bigint_col1", "BIGINT")
@@ -189,7 +165,6 @@ public abstract class ITCatalogIngestAndQueryTest
         .build();
 
     client.createTable(table, true);
-    LOG.info("table created:\n%s", client.readTable(table.id()));
     String queryInline =
         StringUtils.format(dmlPrefixPattern, tableName) + "\n"
         + "SELECT\n"
@@ -204,20 +179,18 @@ public abstract class ITCatalogIngestAndQueryTest
         + "  EXTEND (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e FLOAT, f VARCHAR)\n";
 
     // Submit the task and wait for the datasource to get loaded
-    LOG.info("Running query:\n%s", queryInline);
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskSuccesfully(queryInline);
+    SqlTaskStatus sqlTaskStatus = msqApis.submitTaskSql(queryInline);
+    cluster.callApi().waitForTaskToSucceed(sqlTaskStatus.getTaskId(), overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
 
-    if (sqlTaskStatus.getState().isFailure()) {
-      Assert.fail(StringUtils.format(
-          "Unable to start the task successfully.\nPossible exception: %s",
-          sqlTaskStatus.getError()
-      ));
-    }
-
-    msqHelper.pollTaskIdForSuccess(sqlTaskStatus.getTaskId());
-    dataLoaderHelper.waitUntilDatasourceIsReady(tableName);
-
-    msqHelper.testQueriesFromFile(queryFile, tableName);
+    cluster.callApi().verifySqlQuery(
+        "SELECT * FROM %s",
+        dataSource,
+        "2022-12-26T12:34:56.000Z,8\n"
+        + "2022-12-26T12:34:56.000Z,8\n"
+        + "2022-12-26T12:34:56.000Z,9\n"
+        + "2022-12-26T12:34:56.000Z,10"
+    );
   }
 
   /**
@@ -249,17 +222,15 @@ public abstract class ITCatalogIngestAndQueryTest
    *
    */
   @Test
-  public void testInsertWithClusteringFromQuery() throws Exception
+  public void testInsertWithClusteringFromQuery()
   {
-    String queryFile = "/catalog/clustering_select.sql";
-    String tableName = "testWithClusteringFromQuery" + operationName;
+    String tableName = dataSource;
     TableMetadata table = TableBuilder.datasource(tableName, "P1D")
         .column(Columns.TIME_COLUMN, Columns.LONG)
         .column("bigint_col1", "BIGINT")
         .build();
 
     client.createTable(table, true);
-    LOG.info("table created:\n%s", client.readTable(table.id()));
     String queryInline =
         StringUtils.format(dmlPrefixPattern, tableName) + "\n"
         + "SELECT\n"
@@ -275,20 +246,18 @@ public abstract class ITCatalogIngestAndQueryTest
         + "CLUSTERED BY \"bigint_col1\"\n";
 
     // Submit the task and wait for the datasource to get loaded
-    LOG.info("Running query:\n%s", queryInline);
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskSuccesfully(queryInline);
+    SqlTaskStatus sqlTaskStatus = msqApis.submitTaskSql(queryInline);
+    cluster.callApi().waitForTaskToSucceed(sqlTaskStatus.getTaskId(), overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
 
-    if (sqlTaskStatus.getState().isFailure()) {
-      Assert.fail(StringUtils.format(
-          "Unable to start the task successfully.\nPossible exception: %s",
-          sqlTaskStatus.getError()
-      ));
-    }
-
-    msqHelper.pollTaskIdForSuccess(sqlTaskStatus.getTaskId());
-    dataLoaderHelper.waitUntilDatasourceIsReady(tableName);
-
-    msqHelper.testQueriesFromFile(queryFile, tableName);
+    cluster.callApi().verifySqlQuery(
+        "SELECT * FROM %s",
+        dataSource,
+        "2022-12-26T12:34:56.000Z,8\n"
+        + "2022-12-26T12:34:56.000Z,8\n"
+        + "2022-12-26T12:34:56.000Z,9\n"
+        + "2022-12-26T12:34:56.000Z,10"
+    );
   }
 
   /**
@@ -323,10 +292,9 @@ public abstract class ITCatalogIngestAndQueryTest
    *
    */
   @Test
-  public void testInsertWithMultiClusteringFromCatalog() throws Exception
+  public void testInsertWithMultiClusteringFromCatalog()
   {
-    String queryFile = "/catalog/multiClustering_select.sql";
-    String tableName = "testWithMultiClusteringFromCatalog" + operationName;
+    String tableName = dataSource;
     TableMetadata table = TableBuilder.datasource(tableName, "P1D")
         .column(Columns.TIME_COLUMN, Columns.LONG)
         .column("varchar_col1", "VARCHAR")
@@ -340,7 +308,6 @@ public abstract class ITCatalogIngestAndQueryTest
         .build();
 
     client.createTable(table, true);
-    LOG.info("table created:\n%s", client.readTable(table.id()));
     String queryInline =
         StringUtils.format(dmlPrefixPattern, tableName) + "\n"
         + "SELECT\n"
@@ -358,20 +325,18 @@ public abstract class ITCatalogIngestAndQueryTest
         + "  EXTEND (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e FLOAT, f VARCHAR)\n";
 
     // Submit the task and wait for the datasource to get loaded
-    LOG.info("Running query:\n%s", queryInline);
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskSuccesfully(queryInline);
+    SqlTaskStatus sqlTaskStatus = msqApis.submitTaskSql(queryInline);
+    cluster.callApi().waitForTaskToSucceed(sqlTaskStatus.getTaskId(), overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
 
-    if (sqlTaskStatus.getState().isFailure()) {
-      Assert.fail(StringUtils.format(
-          "Unable to start the task successfully.\nPossible exception: %s",
-          sqlTaskStatus.getError()
-      ));
-    }
-
-    msqHelper.pollTaskIdForSuccess(sqlTaskStatus.getTaskId());
-    dataLoaderHelper.waitUntilDatasourceIsReady(tableName);
-
-    msqHelper.testQueriesFromFile(queryFile, tableName);
+    cluster.callApi().verifySqlQuery(
+        "SELECT * FROM %s",
+        dataSource,
+        "2022-12-26T12:34:56.000Z,extra,8,2.0,fop\n"
+        + "2022-12-26T12:34:56.000Z,extra,8,2.0,foq\n"
+        + "2022-12-26T12:34:56.000Z,extra,9,2.0,foo\n"
+        + "2022-12-26T12:34:56.000Z,extra,10,2.0,foo"
+    );
   }
 
   /**
@@ -406,10 +371,9 @@ public abstract class ITCatalogIngestAndQueryTest
    *
    */
   @Test
-  public void testInsertWithMultiClusteringFromQuery() throws Exception
+  public void testInsertWithMultiClusteringFromQuery()
   {
-    String queryFile = "/catalog/multiClustering_select.sql";
-    String tableName = "testWithMultiClusteringFromQuery" + operationName;
+    String tableName = dataSource;
     TableMetadata table = TableBuilder.datasource(tableName, "P1D")
         .column(Columns.TIME_COLUMN, Columns.LONG)
         .column("varchar_col1", "VARCHAR")
@@ -419,7 +383,6 @@ public abstract class ITCatalogIngestAndQueryTest
         .build();
 
     client.createTable(table, true);
-    LOG.info("table created:\n%s", client.readTable(table.id()));
     String queryInline =
         StringUtils.format(dmlPrefixPattern, tableName) + "\n"
         + "SELECT\n"
@@ -438,20 +401,18 @@ public abstract class ITCatalogIngestAndQueryTest
         + "CLUSTERED BY \"bigint_col1\", \"varchar_col2\"\n";
 
     // Submit the task and wait for the datasource to get loaded
-    LOG.info("Running query:\n%s", queryInline);
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskSuccesfully(queryInline);
+    SqlTaskStatus sqlTaskStatus = msqApis.submitTaskSql(queryInline);
+    cluster.callApi().waitForTaskToSucceed(sqlTaskStatus.getTaskId(), overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
 
-    if (sqlTaskStatus.getState().isFailure()) {
-      Assert.fail(StringUtils.format(
-          "Unable to start the task successfully.\nPossible exception: %s",
-          sqlTaskStatus.getError()
-      ));
-    }
-
-    msqHelper.pollTaskIdForSuccess(sqlTaskStatus.getTaskId());
-    dataLoaderHelper.waitUntilDatasourceIsReady(tableName);
-
-    msqHelper.testQueriesFromFile(queryFile, tableName);
+    cluster.callApi().verifySqlQuery(
+        "SELECT * FROM %s",
+        dataSource,
+        "2022-12-26T12:34:56.000Z,extra,8,2.0,fop\n"
+        + "2022-12-26T12:34:56.000Z,extra,8,2.0,foq\n"
+        + "2022-12-26T12:34:56.000Z,extra,9,2.0,foo\n"
+        + "2022-12-26T12:34:56.000Z,extra,10,2.0,foo"
+    );
   }
 
   /**
@@ -460,17 +421,15 @@ public abstract class ITCatalogIngestAndQueryTest
    * query again, should succeed.
    */
   @Test
-  public void testInsertNonDefinedColumnIntoSealedCatalogTableWithValidationDisabled() throws Exception
+  public void testInsertNonDefinedColumnIntoSealedCatalogTableWithValidationDisabled()
   {
-    String queryFile = "/catalog/sealedWithValidationDisabled_select.sql";
-    String tableName = "testInsertNonDefinedColumnIntoSealedCatalogTableWithValidationDisabled" + operationName;
+    final String tableName = dataSource;
     TableMetadata table = TableBuilder.datasource(tableName, "P1D")
         .column(Columns.TIME_COLUMN, Columns.LONG)
         .property(DatasourceDefn.SEALED_PROPERTY, true)
         .build();
 
     client.createTable(table, true);
-    LOG.info("table created:\n%s", client.readTable(table.id()));
     String queryInline =
         StringUtils.format(dmlPrefixPattern, tableName) + "\n"
         + "SELECT\n"
@@ -485,41 +444,27 @@ public abstract class ITCatalogIngestAndQueryTest
         + "  EXTEND (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e FLOAT, f VARCHAR)\n"
         + "PARTITIONED BY DAY\n";
 
-    LOG.info("Running query:\n%s", queryInline);
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskWithExpectedStatusCode(
-        sqlQueryFromString(
-            queryInline,
-            ImmutableMap.of()
-        ),
-        null,
-        null,
-        HttpResponseStatus.BAD_REQUEST
-    );
-    assertTrue(sqlTaskStatus.getError() != null && sqlTaskStatus.getError()
-        .getUnderlyingException()
-        .getMessage()
-        .equals(
-            StringUtils.format("Column [extra] is not defined in the target table [druid.%s] strict schema", tableName))
+    verifySubmitSqlTaskFailsWith400BadRequest(
+        queryInline,
+        StringUtils.format("Column [extra] is not defined in the target table [druid.%s] strict schema", tableName)
     );
 
     // Submit the task and wait for the datasource to get loaded
-    LOG.info("Running query:\n%s", queryInline);
-    sqlTaskStatus = msqHelper.submitMsqTaskSuccesfully(
+    final ClientSqlQuery sqlQuery = new ClientSqlQuery(
         queryInline,
-        ImmutableMap.of(QueryContexts.CATALOG_VALIDATION_ENABLED, false)
+        null,
+        false,
+        false,
+        false,
+        Map.of(QueryContexts.CATALOG_VALIDATION_ENABLED, false),
+        null
     );
+    SqlTaskStatus sqlTaskStatus = cluster.callApi().onAnyBroker(b -> b.submitSqlTask(sqlQuery));
 
-    if (sqlTaskStatus.getState().isFailure()) {
-      Assert.fail(StringUtils.format(
-          "Unable to start the task successfully.\nPossible exception: %s",
-          sqlTaskStatus.getError()
-      ));
-    }
+    cluster.callApi().waitForTaskToSucceed(sqlTaskStatus.getTaskId(), overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
 
-    msqHelper.pollTaskIdForSuccess(sqlTaskStatus.getTaskId());
-    dataLoaderHelper.waitUntilDatasourceIsReady(tableName);
-
-    msqHelper.testQueriesFromFile(queryFile, tableName);
+    cluster.callApi().verifySqlQuery("SELECT * FROM %s", dataSource, "2022-12-26T12:34:56.000Z,foo");
   }
 
   /**
@@ -550,10 +495,9 @@ public abstract class ITCatalogIngestAndQueryTest
    * because the broker knows the double_col column to be a DOUBLE, and so converts to null (0.0) at query time.
    */
   @Test
-  public void testInsertWithIncompatibleTypeAssignmentWithValidationDisabled() throws Exception
+  public void testInsertWithIncompatibleTypeAssignmentWithValidationDisabled()
   {
-    String tableName = "testInsertWithIncompatibleTypeAssignmentWithValidationDisabled" + operationName;
-    String queryFile = "/catalog/incompatibleTypeAssignmentWithValidationDisabled_select.sql";
+    String tableName = dataSource;
     TableMetadata table = TableBuilder.datasource(tableName, "P1D")
         .column(Columns.TIME_COLUMN, Columns.LONG)
         .column("double_col", "DOUBLE")
@@ -561,7 +505,6 @@ public abstract class ITCatalogIngestAndQueryTest
         .build();
 
     client.createTable(table, true);
-    LOG.info("table created:\n%s", client.readTable(table.id()));
     String queryInline =
         StringUtils.format(
             "INSERT INTO %s\n"
@@ -579,45 +522,26 @@ public abstract class ITCatalogIngestAndQueryTest
             tableName
         );
 
-    LOG.info("Running query:\n%s", queryInline);
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskWithExpectedStatusCode(
-        sqlQueryFromString(
-            queryInline,
-            ImmutableMap.of()
-        ),
-        null,
-        null,
-        HttpResponseStatus.BAD_REQUEST
-    );
-    assertTrue(sqlTaskStatus.getError() != null && sqlTaskStatus.getError()
-        .getUnderlyingException()
-        .getMessage()
-        .equals(
-            "Cannot assign to target field 'double_col' of type DOUBLE from source field 'double_col' of type VARCHAR (line [4], column [3])")
+    verifySubmitSqlTaskFailsWith400BadRequest(
+        queryInline,
+        "Cannot assign to target field 'double_col' of type DOUBLE from source field 'double_col' of type VARCHAR (line [4], column [3])"
     );
 
     // Submit the task and wait for the datasource to get loaded
-    LOG.info("Running query:\n%s", queryInline);
-    sqlTaskStatus = msqHelper.submitMsqTaskSuccesfully(
+    final ClientSqlQuery sqlQuery = new ClientSqlQuery(
         queryInline,
-        ImmutableMap.of(QueryContexts.CATALOG_VALIDATION_ENABLED, false)
+        null,
+        false,
+        false,
+        false,
+        Map.of(QueryContexts.CATALOG_VALIDATION_ENABLED, false),
+        null
     );
+    SqlTaskStatus sqlTaskStatus = cluster.callApi().onAnyBroker(b -> b.submitSqlTask(sqlQuery));
 
-    if (sqlTaskStatus.getState().isFailure()) {
-      Assert.fail(StringUtils.format(
-          "Unable to start the task successfully.\nPossible exception: %s",
-          sqlTaskStatus.getError()
-      ));
-    }
+    cluster.callApi().waitForTaskToSucceed(sqlTaskStatus.getTaskId(), overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
 
-    msqHelper.pollTaskIdForSuccess(sqlTaskStatus.getTaskId());
-    dataLoaderHelper.waitUntilDatasourceIsReady(tableName);
-
-    msqHelper.testQueriesFromFile(queryFile, tableName);
-  }
-
-  private static SqlQuery sqlQueryFromString(String queryString, Map<String, Object> context)
-  {
-    return new SqlQuery(queryString, null, false, false, false, context, null);
+    cluster.callApi().verifySqlQuery("SELECT * FROM %s", dataSource, "2022-12-26T12:34:56.000Z,");
   }
 }

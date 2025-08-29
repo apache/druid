@@ -17,50 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.catalog;
+package org.apache.druid.testing.embedded.catalog;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.inject.Inject;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.http.SqlTaskStatus;
-import org.apache.druid.sql.http.SqlQuery;
-import org.apache.druid.testing.utils.MsqTestQueryHelper;
-import org.apache.druid.testsEx.categories.Catalog;
-import org.apache.druid.testsEx.cluster.CatalogClient;
-import org.apache.druid.testsEx.cluster.DruidClusterClient;
-import org.apache.druid.testsEx.config.DruidTestRunner;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-
-import java.util.concurrent.ExecutionException;
-
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests that expect failures when ingestng data into catalog defined tables.
  */
-@RunWith(DruidTestRunner.class)
-@Category(Catalog.class)
-public class ITCatalogIngestErrorTest
+public class CatalogIngestErrorTest extends CatalogTestBase
 {
-  @Inject
-  private MsqTestQueryHelper msqHelper;
-  @Inject
-  private DruidClusterClient clusterClient;
-  private CatalogClient client;
+  private TestCatalogClient client;
 
-  @Before
+  @BeforeAll
   public void initializeClient()
   {
-    client = new CatalogClient(clusterClient);
+    client = new TestCatalogClient(cluster);
   }
 
   /**
@@ -68,10 +46,9 @@ public class ITCatalogIngestErrorTest
    * validation error.
    */
   @Test
-  public void testInsertNoPartitonedByFromCatalogOrQuery() throws ExecutionException, InterruptedException
+  public void testInsertNoPartitonedByFromCatalogOrQuery()
   {
-    String tableName = "testInsertNoPartitonedByFromCatalogOrQuery";
-    TableMetadata table = new TableBuilder(TableId.datasource(tableName), DatasourceDefn.TABLE_TYPE)
+    TableMetadata table = new TableBuilder(TableId.datasource(dataSource), DatasourceDefn.TABLE_TYPE)
         .column(Columns.TIME_COLUMN, Columns.LONG)
         .column("varchar_col", "VARCHAR")
         .column("bigint_col", "BIGINT")
@@ -94,15 +71,12 @@ public class ITCatalogIngestErrorTest
             + "  )\n"
             + ") "
             + "  EXTEND (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e FLOAT, f VARCHAR)\n",
-            tableName
+            dataSource
         );
 
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskWithExpectedStatusCode(sqlQueryFromString(queryInline), null, null, HttpResponseStatus.BAD_REQUEST);
-    assertTrue(sqlTaskStatus.getError() != null && sqlTaskStatus.getError()
-        .getUnderlyingException()
-        .getMessage()
-        .equals(
-            "Operation [INSERT] requires a PARTITIONED BY to be explicitly defined, but none was found.")
+    verifySubmitSqlTaskFailsWith400BadRequest(
+        queryInline,
+        "Operation [INSERT] requires a PARTITIONED BY to be explicitly defined, but none was found."
     );
   }
 
@@ -111,10 +85,9 @@ public class ITCatalogIngestErrorTest
    * proper validation error.
    */
   @Test
-  public void testInsertNonDefinedColumnIntoSealedCatalogTable() throws ExecutionException, InterruptedException
+  public void testInsertNonDefinedColumnIntoSealedCatalogTable()
   {
-    String tableName = "testInsertNonDefinedColumnIntoSealedCatalogTable";
-    TableMetadata table = TableBuilder.datasource(tableName, "P1D")
+    TableMetadata table = TableBuilder.datasource(dataSource, "P1D")
         .column(Columns.TIME_COLUMN, Columns.LONG)
         .column("varchar_col", "VARCHAR")
         .column("bigint_col", "BIGINT")
@@ -140,16 +113,14 @@ public class ITCatalogIngestErrorTest
             + ") "
             + "  EXTEND (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e FLOAT, f VARCHAR)\n"
             + "PARTITIONED BY DAY\n",
-            tableName
+            dataSource
         );
 
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskWithExpectedStatusCode(sqlQueryFromString(queryInline), null, null, HttpResponseStatus.BAD_REQUEST);
-    assertTrue(sqlTaskStatus.getError() != null && sqlTaskStatus.getError()
-        .getUnderlyingException()
-        .getMessage()
-        .equals(
-            "Column [extra] is not defined in the target table [druid.testInsertNonDefinedColumnIntoSealedCatalogTable] strict schema")
+    final String expectedMessage = StringUtils.format(
+        "Column [extra] is not defined in the target table [druid.%s] strict schema",
+        dataSource
     );
+    verifySubmitSqlTaskFailsWith400BadRequest(queryInline, expectedMessage);
   }
 
   /**
@@ -157,10 +128,9 @@ public class ITCatalogIngestErrorTest
    * column, should result in a proper validation error.
    */
   @Test
-  public void testInsertWithIncompatibleTypeAssignment() throws ExecutionException, InterruptedException
+  public void testInsertWithIncompatibleTypeAssignment()
   {
-    String tableName = "testInsertWithIncompatibleTypeAssignment";
-    TableMetadata table = TableBuilder.datasource(tableName, "P1D")
+    TableMetadata table = TableBuilder.datasource(dataSource, "P1D")
         .column(Columns.TIME_COLUMN, Columns.LONG)
         .column("varchar_col", "VARCHAR")
         .column("bigint_col", "BIGINT")
@@ -185,15 +155,13 @@ public class ITCatalogIngestErrorTest
             + ") "
             + "  EXTEND (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e FLOAT, f VARCHAR)\n"
             + "PARTITIONED BY DAY\n",
-            tableName
+            dataSource
         );
 
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskWithExpectedStatusCode(sqlQueryFromString(queryInline), null, null, HttpResponseStatus.BAD_REQUEST);
-    assertTrue(sqlTaskStatus.getError() != null && sqlTaskStatus.getError()
-        .getUnderlyingException()
-        .getMessage()
-        .equals(
-            "Cannot assign to target field 'varchar_col' of type VARCHAR from source field 'varchar_col' of type VARCHAR ARRAY (line [4], column [3])")
+    verifySubmitSqlTaskFailsWith400BadRequest(
+        queryInline,
+        "Cannot assign to target field 'varchar_col' of type VARCHAR from source"
+        + " field 'varchar_col' of type VARCHAR ARRAY (line [4], column [3])"
     );
   }
 
@@ -202,10 +170,9 @@ public class ITCatalogIngestErrorTest
    * the column, should result in a proper validation error.
    */
   @Test
-  public void testInsertGroupByWithIncompatibleTypeAssignment() throws ExecutionException, InterruptedException
+  public void testInsertGroupByWithIncompatibleTypeAssignment()
   {
-    String tableName = "testInsertGroupByWithIncompatibleTypeAssignment";
-    TableMetadata table = TableBuilder.datasource(tableName, "P1D")
+    TableMetadata table = TableBuilder.datasource(dataSource, "P1D")
         .column(Columns.TIME_COLUMN, Columns.LONG)
         .column("varchar_col", "VARCHAR")
         .column("bigint_col", "BIGINT")
@@ -232,20 +199,13 @@ public class ITCatalogIngestErrorTest
             + ") "
             + "  EXTEND (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e FLOAT, f VARCHAR)\n"
             + "PARTITIONED BY DAY\n",
-            tableName
+            dataSource
         );
 
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskWithExpectedStatusCode(sqlQueryFromString(queryInline), null, null, HttpResponseStatus.BAD_REQUEST);
-    assertTrue(sqlTaskStatus.getError() != null && sqlTaskStatus.getError()
-        .getUnderlyingException()
-        .getMessage()
-        .equals(
-            "Cannot assign to target field 'hll_col' of type COMPLEX<hyperUnique> from source field 'hll_col' of type VARCHAR ARRAY (line [7], column [3])")
+    verifySubmitSqlTaskFailsWith400BadRequest(
+        queryInline,
+        "Cannot assign to target field 'hll_col' of type COMPLEX<hyperUnique>"
+        + " from source field 'hll_col' of type VARCHAR ARRAY (line [7], column [3])"
     );
-  }
-
-  private static SqlQuery sqlQueryFromString(String queryString)
-  {
-    return new SqlQuery(queryString, null, false, false, false, ImmutableMap.of(), null);
   }
 }

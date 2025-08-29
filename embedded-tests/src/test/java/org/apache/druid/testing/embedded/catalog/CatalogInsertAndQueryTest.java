@@ -17,11 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.categories;
+package org.apache.druid.testing.embedded.catalog;
 
-import org.apache.druid.testsEx.config.Cluster;
-
-@Cluster(BatchIndex.class)
-public class Catalog
+public class CatalogInsertAndQueryTest extends CatalogIngestAndQueryTest
 {
+  @Override
+  public String getDmlPrefixPattern()
+  {
+    return "INSERT INTO \"%s\"";
+  }
 }

@@ -17,10 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.catalog;
+package org.apache.druid.testing.embedded.catalog;
 
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Inject;
 import org.apache.druid.catalog.http.TableEditRequest.DropColumns;
 import org.apache.druid.catalog.http.TableEditRequest.HideColumns;
 import org.apache.druid.catalog.http.TableEditRequest.MoveColumn;
@@ -32,36 +31,24 @@ import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.catalog.model.table.TableBuilder;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.testsEx.categories.Catalog;
-import org.apache.druid.testsEx.cluster.CatalogClient;
-import org.apache.druid.testsEx.cluster.DruidClusterClient;
-import org.apache.druid.testsEx.config.DruidTestRunner;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Light sanity check of the Catalog REST API. Functional testing is
  * done via a unit test. Here we simply ensure that the Jersey plumbing
  * works as intended.
  */
-@RunWith(DruidTestRunner.class)
-@Category(Catalog.class)
-public class ITCatalogRestTest
+public class CatalogRestTest extends CatalogTestBase
 {
-  @Inject
-  private DruidClusterClient clusterClient;
-
   /**
    * Sample a few error cases to ensure the plumbing works.
    * Complete error testing appears in unit tests.
@@ -69,7 +56,7 @@ public class ITCatalogRestTest
   @Test
   public void testErrors()
   {
-    CatalogClient client = new CatalogClient(clusterClient);
+    TestCatalogClient client = new TestCatalogClient(cluster);
 
     // Bogus schema
     {
@@ -128,7 +115,7 @@ public class ITCatalogRestTest
   @Test
   public void testLifecycle()
   {
-    CatalogClient client = new CatalogClient(clusterClient);
+    TestCatalogClient client = new TestCatalogClient(cluster);
 
     // Create a datasource
     TableMetadata table = TableBuilder.datasource("example", "P1D")
@@ -148,7 +135,7 @@ public class ITCatalogRestTest
         .buildSpec();
 
     // First, optimistic locking, wrong version
-    assertThrows(ISE.class, () -> client.updateTable(table.id(), dsSpec2, 1));
+    assertThrows(RuntimeException.class, () -> client.updateTable(table.id(), dsSpec2, 1));
 
     // Optimistic locking, correct version
     long newVersion = client.updateTable(table.id(), dsSpec2, version);
