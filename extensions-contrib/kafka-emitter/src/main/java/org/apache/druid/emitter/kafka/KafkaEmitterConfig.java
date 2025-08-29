@@ -81,7 +81,7 @@ public class KafkaEmitterConfig
   private final Map<String, String> kafkaProducerConfig;
   @JsonProperty("producer.hiddenProperties")
   private final DynamicConfigProvider<String> kafkaProducerSecrets;
-  @Nullable @JsonProperty("producer.shutdownTimeout")
+  @JsonProperty("producer.shutdownTimeout")
   private final Long shutdownTimeout;
 
   @JsonCreator
