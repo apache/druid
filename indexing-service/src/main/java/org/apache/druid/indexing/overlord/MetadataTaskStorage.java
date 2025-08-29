@@ -192,7 +192,7 @@ public class MetadataTaskStorage implements TaskStorage
   {
     // filter out taskInfo with a null 'task' which should only happen in practice if we are missing a jackson module
     // and don't know what to do with the payload, so we won't be able to make use of it anyway
-    return handler.getTaskInfos(Collections.singletonMap(TaskLookupType.ACTIVE, ActiveTaskLookup.getInstance()), null)
+    return handler.getTaskInfos(Map.of(TaskLookupType.ACTIVE, ActiveTaskLookup.getInstance()), null)
                   .stream()
                   .filter(taskInfo -> taskInfo.getStatus().isRunnable() && taskInfo.getTask() != null)
                   .map(TaskInfo::getTask)
@@ -202,7 +202,7 @@ public class MetadataTaskStorage implements TaskStorage
   @Override
   public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfos()
   {
-    return handler.getTaskInfos(Collections.singletonMap(TaskLookupType.ACTIVE, ActiveTaskLookup.getInstance()), null)
+    return handler.getTaskInfos(Map.of(TaskLookupType.ACTIVE, ActiveTaskLookup.getInstance()), null)
                   .stream()
                   .filter(taskInfo -> taskInfo.getStatus().isRunnable() && taskInfo.getTask() != null)
                   .collect(Collectors.toList());

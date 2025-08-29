@@ -251,7 +251,6 @@ public class TaskQueue
                 }
               }
             }
-
           }
       );
       ScheduledExecutors.scheduleAtFixedRate(
@@ -560,12 +559,8 @@ public class TaskQueue
             added.set(true);
             return new TaskEntry(taskInfo);
           } else if (prevEntry.lastUpdatedTime.isBefore(updateTime)) {
-            prevEntry.lastUpdatedTime = updateTime;
-          }
-
-          // Ensure we keep the current status up-to-date
-          if (!prevEntry.taskInfo.getStatus().equals(taskInfo.getStatus())) {
-            prevEntry.taskInfo = taskInfo;
+            // Ensure we keep the current status up-to-date
+            prevEntry.updateStatus(taskInfo.getStatus(), updateTime);
           }
 
           return prevEntry;
@@ -716,7 +711,7 @@ public class TaskQueue
     // Mark this task as complete, so it isn't managed while being cleaned up.
     entry.isComplete = true;
     // Update the task status associated with this entry
-    entry.taskInfo = entry.taskInfo.withNewStatus(taskStatus);
+    entry.taskInfo = entry.taskInfo.withStatus(taskStatus);
 
     final TaskLocation taskLocation = taskRunner.getTaskLocation(task.getId());
 
@@ -844,8 +839,10 @@ public class TaskQueue
 
     try {
       if (active) {
-        final Map<String, TaskInfo<Task, TaskStatus>> newTasks = CollectionUtils.toMap(taskStorage.getActiveTaskInfos(), (taskInfo) -> taskInfo.getTask().getId(), Function.identity());
-        final Map<String, TaskInfo<Task, TaskStatus>> oldTasks = CollectionUtils.mapValues(activeTasks, entry -> entry.taskInfo);
+        final Map<String, TaskInfo<Task, TaskStatus>> newTasks =
+            CollectionUtils.toMap(taskStorage.getActiveTaskInfos(), (taskInfo) -> taskInfo.getTask().getId(), Function.identity());
+        final Map<String, TaskInfo<Task, TaskStatus>> oldTasks =
+            CollectionUtils.mapValues(activeTasks, entry -> entry.taskInfo);
 
         // Identify the tasks that have been added or removed from the storage
         final MapDifference<String, TaskInfo<Task, TaskStatus>> mapDifference = Maps.difference(oldTasks, newTasks);
@@ -1027,9 +1024,8 @@ public class TaskQueue
   }
 
   /**
-   * Polls {@link #activeTasks} for the task with the corresponding {@code taskId}
-   * @param taskId
-   * @return an optional TaskInfo
+   * Gets the {@link TaskInfo} for the given {@code taskId} from {@link #activeTasks} if present,
+   * otherwise returns an empty optional.
    */
   public Optional<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(String taskId)
   {
@@ -1178,6 +1174,16 @@ public class TaskQueue
     {
       this.taskInfo = taskInfo;
       this.lastUpdatedTime = DateTimes.nowUtc();
+    }
+
+    /**
+     * Updates the {@link TaskStatus} for the task associated with this {@link TaskEntry} and sets the corresponding
+     * update time.
+     */
+    public void updateStatus(TaskStatus status, DateTime updateTime)
+    {
+      this.taskInfo.withStatus(status);
+      this.lastUpdatedTime = updateTime;
     }
   }
 

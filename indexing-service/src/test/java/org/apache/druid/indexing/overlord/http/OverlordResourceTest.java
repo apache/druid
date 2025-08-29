@@ -131,7 +131,7 @@ public class OverlordResourceTest
     provisioningStrategy = EasyMock.createMock(ProvisioningStrategy.class);
     authConfig = EasyMock.createMock(AuthConfig.class);
     overlord = EasyMock.createStrictMock(DruidOverlord.class);
-    taskMaster = EasyMock.createMock(TaskMaster.class);
+    taskMaster = EasyMock.createStrictMock(TaskMaster.class);
     taskStorage = EasyMock.createStrictMock(TaskStorage.class);
     taskLockbox = EasyMock.createStrictMock(GlobalTaskLockbox.class);
     taskQueryTool = new TaskQueryTool(
@@ -1007,18 +1007,20 @@ public class OverlordResourceTest
         task
     );
 
-    // Simulate in-memory queue for noop task
-    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    // For noop, simulate in-memory hit
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).once();
+    EasyMock.expect(taskQueue.getActiveTaskInfo(taskId)).andReturn(Optional.of(taskInfo)).once();
 
-    EasyMock.expect(taskQueue.getActiveTaskInfo(taskId)).andReturn(Optional.of(taskInfo));
-
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).once();
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getKnownTasks())
             .andReturn(ImmutableList.of(new MockTaskRunnerWorkItem(taskId))).anyTimes();
-    EasyMock.expect(taskRunner.getRunnerTaskState(taskId)).andReturn(RunnerTaskState.RUNNING);
+    EasyMock.expect(taskRunner.getRunnerTaskState(taskId)).andReturn(RunnerTaskState.RUNNING).once();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).once();
 
-    // Simulate task storage fetch for "othertask"
-    EasyMock.expect(taskQueue.getActiveTaskInfo("othertask")).andReturn(Optional.absent());
-    EasyMock.expect(taskStorage.getTaskInfo("othertask")).andReturn(null);
+    // For "othertask", simulate in-memory miss, then task storage read
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).once();
+    EasyMock.expect(taskQueue.getActiveTaskInfo("othertask")).andReturn(Optional.absent()).once();
+    EasyMock.expect(taskStorage.getTaskInfo("othertask")).andReturn(null).once();
 
     replayAll();
 
