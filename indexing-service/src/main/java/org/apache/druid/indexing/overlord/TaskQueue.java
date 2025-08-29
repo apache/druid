@@ -426,7 +426,7 @@ public class TaskQueue
   {
     // Don't do anything with tasks that have recently finished; notifyStatus will handle it.
     if (entry != null && !entry.isComplete) {
-      final Task task = entry.taskInfo.getTask();
+      final Task task = entry.getTask();
 
       if (entry.future == null) {
         if (runnerTaskFuture == null) {
@@ -569,7 +569,7 @@ public class TaskQueue
 
     if (added.get()) {
       taskLockbox.add(taskInfo.getTask());
-    } else if (!entry.taskInfo.getTask().equals(taskInfo.getTask())) {
+    } else if (!entry.getTask().equals(taskInfo.getTask())) {
       throw new ISE("Cannot add task[%s] as a different task for the same ID has already been added.", taskInfo.getTask().getId());
     }
   }
@@ -688,7 +688,7 @@ public class TaskQueue
       return;
     }
 
-    final Task task = entry.taskInfo.getTask();
+    final Task task = entry.getTask();
     Preconditions.checkNotNull(task, "task");
     Preconditions.checkNotNull(taskStatus, "status");
     Preconditions.checkState(active, "Queue is not active!");
@@ -925,7 +925,7 @@ public class TaskQueue
   {
     return activeTasks.values().stream()
                       .filter(entry -> !entry.isComplete)
-                      .map(entry -> entry.taskInfo.getTask())
+                      .map(entry -> entry.getTask())
                       .collect(Collectors.toMap(Task::getId, TaskQueue::getMetricKey));
   }
 
@@ -962,7 +962,7 @@ public class TaskQueue
 
     return activeTasks.values().stream()
                       .filter(entry -> !entry.isComplete)
-                      .map(entry -> entry.taskInfo.getTask())
+                      .map(entry -> entry.getTask())
                       .filter(task -> !runnerKnownTaskIds.contains(task.getId()))
                       .collect(Collectors.toMap(TaskQueue::getMetricKey, task -> 1L, Long::sum));
   }
@@ -1061,7 +1061,7 @@ public class TaskQueue
         entry -> !entry.isComplete
                  && entry.taskInfo.getDataSource().equals(datasource)
     ).map(
-        entry -> entry.taskInfo.getTask()
+        entry -> entry.getTask()
     ).collect(
         Collectors.toMap(Task::getId, Function.identity())
     );
@@ -1174,6 +1174,14 @@ public class TaskQueue
     {
       this.taskInfo = taskInfo;
       this.lastUpdatedTime = DateTimes.nowUtc();
+    }
+
+    /**
+     * Returns the task associated with this {@link TaskEntry}
+     */
+    public Task getTask()
+    {
+      return taskInfo.getTask();
     }
 
     /**
