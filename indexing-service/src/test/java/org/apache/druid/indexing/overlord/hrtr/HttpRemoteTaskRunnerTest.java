@@ -65,7 +65,6 @@ import org.apache.druid.server.initialization.IndexerZkConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMock;
-import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
@@ -902,7 +901,7 @@ public class HttpRemoteTaskRunnerTest
     );
 
     AtomicInteger ticks = new AtomicInteger();
-    Set<String> actualShutdowns = new ConcurrentHashSet<>();
+    Set<String> actualShutdowns = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     workerHolders.put(
         "host:1234",

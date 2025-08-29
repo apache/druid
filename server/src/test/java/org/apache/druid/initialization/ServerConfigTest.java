@@ -25,6 +25,7 @@ import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrategy;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.eclipse.jetty.http.UriCompliance;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -65,7 +66,8 @@ public class ServerConfigTest
         true,
         new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of(".*")),
         "my-cool-policy",
-        true
+        true,
+        UriCompliance.RFC3986.getName()
     );
     String modifiedConfigJson = OBJECT_MAPPER.writeValueAsString(modifiedConfig);
     ServerConfig modifiedConfig2 = OBJECT_MAPPER.readValue(modifiedConfigJson, ServerConfig.class);
@@ -79,6 +81,7 @@ public class ServerConfigTest
     Assert.assertEquals("my-cool-policy", modifiedConfig.getContentSecurityPolicy());
     Assert.assertEquals("my-cool-policy", modifiedConfig2.getContentSecurityPolicy());
     Assert.assertTrue(modifiedConfig2.isEnableHSTS());
+    Assert.assertEquals(UriCompliance.RFC3986.getName(), modifiedConfig2.getUriCompliance());
   }
 
   @Test

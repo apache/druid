@@ -33,7 +33,7 @@ then
   pushd ../
   rm -rf distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin
   # using parallel build here may not yield significant speedups
-  mvn -B -Pskip-static-checks,skip-tests -Dweb.console.skip=true install -Pintegration-test
+  mvn -B -Pskip-static-checks -DskipTests -Dweb.console.skip=${DRUID_INTEGRATION_TEST_SKIP_WEB_CONSOLE:-true} install -Pintegration-test
   mv distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin/bin $SHARED_DIR/docker/bin
   mv distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin/lib $SHARED_DIR/docker/lib
   mv distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin/extensions $SHARED_DIR/docker/extensions

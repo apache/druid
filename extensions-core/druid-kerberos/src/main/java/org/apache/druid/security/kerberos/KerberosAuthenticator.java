@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Self;
@@ -42,8 +41,8 @@ import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.authentication.util.Signer;
 import org.apache.hadoop.security.authentication.util.SignerException;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
-import org.eclipse.jetty.client.api.Request;
-import org.eclipse.jetty.http.HttpHeader;
+import org.eclipse.jetty.client.Request;
+import org.eclipse.jetty.http.HttpCookie;
 
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
@@ -64,7 +63,6 @@ import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
-import java.net.HttpCookie;
 import java.security.Principal;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -76,7 +74,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TimeZone;
-import java.util.stream.Collectors;
 
 
 @JsonTypeName("kerberos")
@@ -429,11 +426,7 @@ public class KerberosAuthenticator implements Authenticator
     if (cookieToken != null && cookieToken instanceof String) {
       log.debug("Found cookie token will attache it to proxyRequest as cookie");
       String authResult = (String) cookieToken;
-      String existingCookies = proxyRequest.getCookies()
-                                           .stream()
-                                           .map(HttpCookie::toString)
-                                           .collect(Collectors.joining(";"));
-      proxyRequest.header(HttpHeader.COOKIE, Joiner.on(";").join(authResult, existingCookies));
+      proxyRequest.cookie(HttpCookie.from(SIGNED_TOKEN_ATTRIBUTE, authResult));
     }
   }
 
