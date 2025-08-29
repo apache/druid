@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.projections;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.InvalidInput;
@@ -33,8 +32,6 @@ import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.filter.AndFilter;
-import org.apache.druid.segment.filter.IsBooleanFilter;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
@@ -198,7 +195,7 @@ public class Projections
 
         final Filter remappedQueryFilter = queryFilter.rewriteRequiredColumns(filterRewrites);
 
-        final Filter rewritten = rewriteFilter(projectionFilter, remappedQueryFilter);
+        final Filter rewritten = ProjectionFilterMatch.rewriteFilter(projectionFilter, remappedQueryFilter);
         // if the filter does not contain the projection filter, we cannot match this projection
         if (rewritten == null) {
           return null;
@@ -468,86 +465,6 @@ public class Projections
     if (physicalColumnChecker.check(projection.getName(), column)) {
       return matchBuilder.addMatchedQueryColumn(column)
                          .addReferencedPhysicalColumn(column);
-    }
-    return null;
-  }
-
-  /**
-   * Rewrites a query {@link Filter} if possible, removing the {@link Filter} of a projection. To match a projection
-   * filter, the query filter must be equal to the projection filter, or must contain the projection filter as the child
-   * of an AND filter. This method returns null
-   * indicating that a rewrite is impossible with the implication that the query cannot use the projection because the
-   * projection doesn't contain all the rows the query would match if not using the projection.
-   */
-  @Nullable
-  public static Filter rewriteFilter(Filter projectionFilter, Filter queryFilter)
-  {
-    if (queryFilter.equals(projectionFilter)) {
-      return ProjectionFilterMatch.INSTANCE;
-    }
-    if (queryFilter instanceof IsBooleanFilter && ((IsBooleanFilter) queryFilter).isTrue()) {
-      final IsBooleanFilter isTrueFilter = (IsBooleanFilter) queryFilter;
-      final Filter rewritten = rewriteFilter(projectionFilter, isTrueFilter.getBaseFilter());
-      if (rewritten == null) {
-        return null;
-      }
-      //noinspection ObjectEquality
-      if (rewritten == ProjectionFilterMatch.INSTANCE) {
-        return ProjectionFilterMatch.INSTANCE;
-      }
-      return new IsBooleanFilter(rewritten, true);
-    }
-    if (queryFilter instanceof AndFilter) {
-      AndFilter andFilter = (AndFilter) queryFilter;
-
-      // if both and filters, check to see if the query and filter contains all of the clauses of the projection and filter
-      if (projectionFilter instanceof AndFilter) {
-        AndFilter projectionAndFilter = (AndFilter) projectionFilter;
-        Filter rewritten = andFilter;
-        // calling rewriteFilter using each child of the projection AND filter as the projection filter will remove
-        // the child from the query AND filter if it exists (or return null if it does not exist, since it must exist
-        // to be a valid rewrite). The remaining AND filter of will only contain children that were not part of the
-        // projection AND filter
-        for (Filter filter : projectionAndFilter.getFilters()) {
-          rewritten = rewriteFilter(filter, rewritten);
-          if (rewritten != null) {
-            if (rewritten == ProjectionFilterMatch.INSTANCE) {
-              return ProjectionFilterMatch.INSTANCE;
-            }
-          }
-        }
-        if (rewritten != null) {
-          return rewritten;
-        }
-        return null;
-      }
-
-      // else check to see if any clause of the query AND filter is the projection filter
-      List<Filter> newChildren = Lists.newArrayListWithExpectedSize(andFilter.getFilters().size());
-      boolean childRewritten = false;
-      for (Filter filter : andFilter.getFilters()) {
-        Filter rewritten = rewriteFilter(projectionFilter, filter);
-        //noinspection ObjectEquality
-        if (rewritten == ProjectionFilterMatch.INSTANCE) {
-          childRewritten = true;
-        } else {
-          if (rewritten != null) {
-            newChildren.add(rewritten);
-            childRewritten = true;
-          } else {
-            newChildren.add(filter);
-          }
-        }
-      }
-      // at least one child must have been rewritten to rewrite the AND
-      if (childRewritten) {
-        if (newChildren.size() > 1) {
-          return new AndFilter(newChildren);
-        } else {
-          return newChildren.get(0);
-        }
-      }
-      return null;
     }
     return null;
   }

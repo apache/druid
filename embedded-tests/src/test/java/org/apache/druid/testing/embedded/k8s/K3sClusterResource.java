@@ -73,6 +73,7 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
 
   public static final String DRUID_NAMESPACE = "druid";
   private static final String NAMESPACE_MANIFEST = "manifests/druid-namespace.yaml";
+  private static final String DEFAULT_SERVICE_MANIFEST = "manifests/druid-service.yaml";
 
   private static final String COMMON_CONFIG_MAP = "druid-common-props";
   private static final String SERVICE_CONFIG_MAP = "druid-%s-props";
@@ -84,13 +85,20 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
 
   private KubernetesClient client;
   private String druidImageName;
+  private String druidManifestTemplate = DEFAULT_SERVICE_MANIFEST;
 
   private final Closer closer = Closer.create();
 
   public K3sClusterResource()
   {
     // Add the namespace manifest
-    manifestFiles.add(Resources.getFileForResource(NAMESPACE_MANIFEST));
+    addManifestResource(NAMESPACE_MANIFEST);
+  }
+
+  public K3sClusterResource addManifestResource(String manifestResourceName)
+  {
+    manifestFiles.add(Resources.getFileForResource(manifestResourceName));
+    return this;
   }
 
   public K3sClusterResource addService(K3sDruidService service)
@@ -109,9 +117,18 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
    * Uses the Docker test image specified by the system property
    * {@link DruidContainerResource#PROPERTY_TEST_IMAGE} for the Druid pods.
    */
-  public K3sClusterResource usingTestImage()
+  public K3sClusterResource usingDruidTestImage()
   {
     return usingDruidImage(DruidContainerResource.getTestDruidImageName());
+  }
+
+  /**
+   * Uses the given resource template to create manifests for Druid services.
+   */
+  public K3sClusterResource usingDruidManifestTemplate(String resourceName)
+  {
+    this.druidManifestTemplate = resourceName;
+    return this;
   }
 
   @Override
@@ -129,6 +146,9 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
         // Druid service is discoverable with the Druid service discovery
         portBindings.add(port + ":" + port);
       }
+      int servicePort = service.getServicePort();
+      container.addExposedPorts(servicePort);
+      portBindings.add(servicePort + ":" + servicePort);
     }
 
     container.setPortBindings(portBindings);
@@ -138,35 +158,57 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   @Override
   public void onStarted(EmbeddedDruidCluster cluster)
   {
-    client = new KubernetesClientBuilder()
-        .withConfig(Config.fromKubeconfig(getContainer().getKubeConfigYaml()))
-        .build();
-    closer.register(client);
-
+    initKubernetesClient();
     loadLocalDockerImageIntoContainer(druidImageName, cluster.getTestFolder());
-
     manifestFiles.forEach(this::applyManifest);
+    initializeDruidServices(cluster);
+    waitUntilPodsAreReady(DRUID_NAMESPACE);
+    waitUntilServicesAreHealthy();
+  }
 
-    // Create common config map
+  protected void initializeDruidServices(EmbeddedDruidCluster cluster)
+  {
+    createConfigMapForCommonProperties(cluster);
+    for (K3sDruidService druidService : services) {
+      final String serviceConfigMap = StringUtils.format(SERVICE_CONFIG_MAP, druidService.getName());
+      applyConfigMap(
+          newConfigMap(serviceConfigMap, druidService.getProperties(), "runtime.properties")
+      );
+      applyManifestYaml(druidService, createManifestYaml(druidService));
+    }
+  }
+
+  protected void waitUntilServicesAreHealthy()
+  {
+    services.forEach(this::waitUntilServiceIsHealthy);
+  }
+
+  protected List<K3sDruidService> getServices()
+  {
+    return services;
+  }
+
+  private void createConfigMapForCommonProperties(EmbeddedDruidCluster cluster)
+  {
     final Properties commonProperties = new Properties();
     commonProperties.putAll(cluster.getCommonProperties());
     commonProperties.remove("druid.extensions.modulesForEmbeddedTests");
     applyConfigMap(
         newConfigMap(COMMON_CONFIG_MAP, commonProperties, "common.runtime.properties")
     );
+  }
 
-    // Create config maps and manifests for each service
-    for (K3sDruidService druidService : services) {
-      final String serviceConfigMap = StringUtils.format(SERVICE_CONFIG_MAP, druidService.getName());
-      applyConfigMap(
-          newConfigMap(serviceConfigMap, druidService.getProperties(), "runtime.properties")
-      );
-      applyManifest(druidService);
-    }
+  private void initKubernetesClient()
+  {
+    client = new KubernetesClientBuilder()
+        .withConfig(Config.fromKubeconfig(getContainer().getKubeConfigYaml()))
+        .build();
+    closer.register(client);
+  }
 
-    // Wait for all pods to be ready and services to be healthy
-    client.pods().inNamespace(DRUID_NAMESPACE).resources().forEach(this::waitUntilPodIsReady);
-    services.forEach(this::waitUntilServiceIsHealthy);
+  protected void waitUntilPodsAreReady(String namespace)
+  {
+    client.pods().inNamespace(namespace).resources().forEach(this::waitUntilPodIsReady);
   }
 
   @Override
@@ -251,13 +293,19 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
   }
 
   /**
-   * Creates and applies the manifest for the given Druid service.
+   * Creates the manifest YAML for the given Druid service.
    */
-  private void applyManifest(K3sDruidService service)
+  protected String createManifestYaml(K3sDruidService service)
   {
-    final String manifestYaml = service.createManifestYaml(druidImageName);
-    log.info("Applying manifest for service[%s]: %s", service.getName(), manifestYaml);
+    return service.createManifestYaml(druidManifestTemplate, druidImageName);
+  }
 
+  /**
+   * Applies the given service manifest YAML to the K3s cluster.
+   */
+  protected void applyManifestYaml(K3sDruidService service, String manifestYaml)
+  {
+    log.info("Applying manifest for service[%s]: %s", service.getName(), manifestYaml);
     try (ByteArrayInputStream bis = new ByteArrayInputStream(manifestYaml.getBytes(StandardCharsets.UTF_8))) {
       client.load(bis).inNamespace(DRUID_NAMESPACE).serverSideApply();
       log.info("Applied manifest for service[%s]", service.getName());
