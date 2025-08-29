@@ -77,9 +77,9 @@
   "query/cache/total/put/error" : { "dimensions" : [], "type" : "gauge", "help": "Total number of new cache entries that could not be cached due to errors."},
   "query/cache/total/put/oversized" : { "dimensions" : [], "type" : "gauge", "help": "Total number of potential new cache entries that were skipped due to being too large (based on druid.{broker,historical,realtime}.cache.maxEntrySize properties)."},
 
-  "ingest/count" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Count of 1 every time an ingestion job runs (includes compaction jobs). Aggregate using dimensions." },
-  "ingest/segments/count" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Count of final segments created by job (includes tombstones)." },
-  "ingest/tombstones/count" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Count of final segments created by job (includes tombstones)." },
+  "ingest/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "count", "help": "Count of 1 every time an ingestion job runs (includes compaction jobs). Aggregate using dimensions." },
+  "ingest/segments/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "count", "help": "Count of final segments created by job (includes tombstones)." },
+  "ingest/tombstones/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "count", "help": "Count of tombstones created by job." },
 
   "ingest/kafka/lag" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge", "help": "Total lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute."},
   "ingest/kafka/maxLag" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge", "help": "Max lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute."},
