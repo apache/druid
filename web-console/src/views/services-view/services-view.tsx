@@ -49,6 +49,7 @@ import { Api, AppToaster } from '../../singletons';
 import type { AuxiliaryQueryFn, NumberLike } from '../../utils';
 import {
   assemble,
+  DATE_FORMAT,
   deepGet,
   filterMap,
   formatBytes,
@@ -72,6 +73,7 @@ import type { BasicAction } from '../../utils/basic-action';
 import { FillIndicator } from './fill-indicator/fill-indicator';
 
 import './services-view.scss';
+import dayjs from 'dayjs';
 
 const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[]> = {
   'full': [
@@ -143,6 +145,7 @@ interface ServiceResultRow {
   readonly plaintext_port: number;
   readonly tls_port: number;
   readonly start_time: string;
+  display_start_time: string;
 }
 
 interface ServicesWithAuxiliaryInfo {
@@ -271,6 +274,9 @@ ORDER BY
         let services: ServiceResultRow[];
         if (capabilities.hasSql()) {
           services = await queryDruidSql({ query: ServicesView.SERVICE_SQL }, cancelToken);
+          services.forEach(s => {
+            s.display_start_time = dayjs(s.start_time).format(DATE_FORMAT);
+          });
         } else if (capabilities.hasCoordinatorAccess()) {
           services = (await getApiArray('/druid/coordinator/v1/servers?simple', cancelToken)).map(
             (s: any): ServiceResultRow => {
@@ -286,6 +292,7 @@ ORDER BY
                 curr_size: s.currSize,
                 max_size: s.maxSize,
                 start_time: '1970:01:01T00:00:00Z',
+                display_start_time: '1970:01:01T00:00:00+00:00',
                 is_leader: 0,
               };
             },
@@ -611,9 +618,9 @@ ORDER BY
         {
           Header: 'Start time',
           show: visibleColumns.shown('Start time'),
-          accessor: 'start_time',
-          width: 200,
-          Cell: this.renderFilterableCell('start_time'),
+          accessor: 'display_start_time',
+          width: 220,
+          Cell: this.renderFilterableCell('display_start_time'),
           Aggregated: () => '',
         },
         {

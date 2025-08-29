@@ -21,6 +21,7 @@ import { fromDate, toTimeZone } from '@internationalized/date';
 import type { Timezone } from 'chronoshift';
 
 const CURRENT_YEAR = new Date().getUTCFullYear();
+export const DATE_FORMAT = 'YYYY-MM-DDTHH:mm:ss:SSSZ';
 
 export function isNonNullRange(range: DateRange): range is NonNullDateRange {
   return range[0] != null && range[1] != null;
