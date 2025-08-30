@@ -352,16 +352,6 @@
   </suppress>
 
   <suppress>
-    <!-- 4.5.5 is a fixed version as per https://nvd.nist.gov/vuln/detail/CVE-2021-44878. -->
-    <!-- However, vulnerability scan still shows this CVE. Pac4j release notes mention 5.3.1 as "fully fixed" version. -->
-    <!-- Remove suppression once upgraded to 5.3.1. -->
-    <notes><![CDATA[
-   file name: pac4j-core-4.5.7.jar
-   ]]></notes>
-    <cve>CVE-2021-44878</cve>
-  </suppress>
-
-  <suppress>
     <!-- package-lock.json?d3-color -->
     <notes><![CDATA[
    file name: d3-color:2.0.0
@@ -667,24 +657,6 @@
       file name: azure-identity-1.11.1.jar
     ]]></notes>
     <cve>CVE-2023-36415</cve>
-  </suppress>
-  <suppress>
-    <!-- Used in Pac4j. Pac4j versions (such as v5.7.3) corresponding
-    to the safe nimbus-jose-jwt v9.37.2 are incompatible with druid as they don't support JDK 8
-    https://www.pac4j.org/docs/alldocs.html -->
-
-    <notes><![CDATA[
-   file name: nimbus-jose-jwt-8.22.1.jar
-   ]]></notes>
-    <cve>CVE-2023-52428</cve>
-  </suppress>
-  <suppress>
-    <!-- Used in Azure dependencies.
-    Current latest version of Azure BOM (1.2.21) still uses 9.30.2, whereas bug resolved in 9.37.2 -->
-    <notes><![CDATA[
-   file name: nimbus-jose-jwt-9.30.2.jar
-   ]]></notes>
-    <cve>CVE-2023-52428</cve>
   </suppress>
   <suppress>
     <!-- Legit issues but currently use the latest ranger-plugins-audit jar v2.4.0 -->
