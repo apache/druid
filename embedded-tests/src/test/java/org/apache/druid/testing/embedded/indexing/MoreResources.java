@@ -20,7 +20,6 @@
 package org.apache.druid.testing.embedded.indexing;
 
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpecBuilder;
