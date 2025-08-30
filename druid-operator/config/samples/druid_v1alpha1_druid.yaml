@@ -1,0 +1,12 @@
+apiVersion: druid.apache.org/v1alpha1
+kind: Druid
+metadata:
+  labels:
+    app.kubernetes.io/name: druid
+    app.kubernetes.io/instance: druid-sample
+    app.kubernetes.io/part-of: druid-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: druid-operator
+  name: druid-sample
+spec:
+  # TODO(user): Add fields here
