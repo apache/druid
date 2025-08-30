@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
+import org.apache.druid.indexing.kafka.supervisor.KafkaTuningConfigBuilder;
 import org.apache.druid.indexing.kafka.test.TestModifiedKafkaIndexTaskTuningConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
@@ -130,33 +131,19 @@ public class KafkaIndexTaskTuningConfigTest
   @Test
   public void testConvert()
   {
-    KafkaSupervisorTuningConfig original = new KafkaSupervisorTuningConfig(
-        null,
-        1,
-        null,
-        null,
-        2,
-        10L,
-        new Period("PT3S"),
-        4,
-        IndexSpec.DEFAULT,
-        IndexSpec.DEFAULT,
-        true,
-        5L,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        2,
-        5
-    );
+    KafkaSupervisorTuningConfig original = new KafkaTuningConfigBuilder()
+        .withIntermediatePersistPeriod(new Period("PT3S"))
+        .withHandoffConditionTimeout(5L)
+        .withNumPersistThreads(2)
+        .withMaxRowsInMemory(1)
+        .withMaxRowsPerSegment(2)
+        .withMaxTotalRows(10L)
+        .withMaxPendingPersists(4)
+        .withIndexSpec(IndexSpec.DEFAULT)
+        .withIndexSpecForIntermediatePersists(IndexSpec.DEFAULT)
+        .withReportParseExceptions(true)
+        .withMaxColumnsToMerge(5)
+        .build();
     KafkaIndexTaskTuningConfig copy = original.convertToTaskTuningConfig();
 
     Assert.assertEquals(original.getAppendableIndexSpec(), copy.getAppendableIndexSpec());

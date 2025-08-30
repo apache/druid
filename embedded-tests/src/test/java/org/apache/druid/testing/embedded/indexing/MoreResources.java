@@ -19,12 +19,18 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.common.task.TaskBuilder;
+import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpecBuilder;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeAggregatorFactory;
+import org.joda.time.Period;
 
 import java.util.function.Supplier;
 
@@ -79,6 +85,33 @@ public class MoreResources
             .dynamicPartitionWithMaxRows(3)
             .granularitySpec("DAY", "SECOND", true)
             .appendToExisting(false);
+  }
+
+  /**
+   * Supervisor spec builder.
+   */
+  public static class Supervisor
+  {
+    /**
+     * A minimal Kafka supervisor spec that auto-discovers dimensions, has a task
+     * duration of 500ms and creates HOUR-ly segments.
+     */
+    public static Supplier<KafkaSupervisorSpecBuilder> KAFKA_JSON = () ->
+        new KafkaSupervisorSpecBuilder()
+            .withDataSchema(
+                schema -> schema
+                    .withDimensions(DimensionsSpec.EMPTY)
+                    .withGranularity(new UniformGranularitySpec(Granularities.HOUR, null, null))
+            )
+            .withIoConfig(
+                ioConfig -> ioConfig
+                    .withJsonInputFormat()
+                    .withTaskDuration(Period.millis(500))
+                    .withStartDelay(Period.millis(10))
+                    .withSupervisorRunPeriod(Period.millis(500))
+                    .withUseEarliestSequenceNumber(true)
+                    .withCompletionTimeout(Period.seconds(5))
+            );
   }
 
   public static class ProbufData
