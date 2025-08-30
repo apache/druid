@@ -559,7 +559,6 @@ public class TaskQueue
             added.set(true);
             return new TaskEntry(taskInfo);
           } else if (prevEntry.lastUpdatedTime.isBefore(updateTime)) {
-            // Ensure we keep the current status up-to-date
             prevEntry.updateStatus(taskInfo.getStatus(), updateTime);
           }
 
@@ -570,7 +569,7 @@ public class TaskQueue
     if (added.get()) {
       taskLockbox.add(taskInfo.getTask());
     } else if (!entry.getTask().equals(taskInfo.getTask())) {
-      throw new ISE("Cannot add task[%s] as a different task for the same ID has already been added.", taskInfo.getTask().getId());
+      throw new ISE("Cannot add task[%s] as a different task for the same ID has already been added.", taskInfo.getId());
     }
   }
 
@@ -710,8 +709,7 @@ public class TaskQueue
 
     // Mark this task as complete, so it isn't managed while being cleaned up.
     entry.isComplete = true;
-    // Update the task status associated with this entry
-    entry.taskInfo = entry.taskInfo.withStatus(taskStatus);
+    entry.updateStatus(taskStatus, DateTimes.nowUtc());
 
     final TaskLocation taskLocation = taskRunner.getTaskLocation(task.getId());
 
@@ -840,7 +838,7 @@ public class TaskQueue
     try {
       if (active) {
         final Map<String, TaskInfo<Task, TaskStatus>> newTasks =
-            CollectionUtils.toMap(taskStorage.getActiveTaskInfos(), (taskInfo) -> taskInfo.getTask().getId(), Function.identity());
+            CollectionUtils.toMap(taskStorage.getActiveTaskInfos(), TaskInfo::getId, Function.identity());
         final Map<String, TaskInfo<Task, TaskStatus>> oldTasks =
             CollectionUtils.mapValues(activeTasks, entry -> entry.taskInfo);
 
@@ -880,15 +878,6 @@ public class TaskQueue
     }
   }
 
-  private static Map<String, Task> toTaskIDMap(List<Task> taskList)
-  {
-    Map<String, Task> rv = new HashMap<>();
-    for (Task task : taskList) {
-      rv.put(task.getId(), task);
-    }
-    return rv;
-  }
-
   private Map<RowKey, Long> getDeltaValues(Map<RowKey, Long> total, Map<RowKey, Long> prev)
   {
     final Map<RowKey, Long> deltaValues = new HashMap<>();
@@ -925,7 +914,7 @@ public class TaskQueue
   {
     return activeTasks.values().stream()
                       .filter(entry -> !entry.isComplete)
-                      .map(entry -> entry.getTask())
+                      .map(TaskEntry::getTask)
                       .collect(Collectors.toMap(Task::getId, TaskQueue::getMetricKey));
   }
 
@@ -962,7 +951,7 @@ public class TaskQueue
 
     return activeTasks.values().stream()
                       .filter(entry -> !entry.isComplete)
-                      .map(entry -> entry.getTask())
+                      .map(TaskEntry::getTask)
                       .filter(task -> !runnerKnownTaskIds.contains(task.getId()))
                       .collect(Collectors.toMap(TaskQueue::getMetricKey, task -> 1L, Long::sum));
   }
@@ -1030,10 +1019,7 @@ public class TaskQueue
   public Optional<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(String taskId)
   {
     final TaskEntry entry = activeTasks.get(taskId);
-    if (entry == null) {
-      return Optional.absent();
-    }
-    return Optional.of(entry.taskInfo);
+    return entry == null ? Optional.absent() : Optional.of(entry.taskInfo);
   }
 
   /**
@@ -1060,9 +1046,7 @@ public class TaskQueue
     return activeTasks.values().stream().filter(
         entry -> !entry.isComplete
                  && entry.taskInfo.getDataSource().equals(datasource)
-    ).map(
-        entry -> entry.getTask()
-    ).collect(
+    ).map(TaskEntry::getTask).collect(
         Collectors.toMap(Task::getId, Function.identity())
     );
   }
@@ -1179,7 +1163,7 @@ public class TaskQueue
     /**
      * Returns the task associated with this {@link TaskEntry}
      */
-    public Task getTask()
+    Task getTask()
     {
       return taskInfo.getTask();
     }
@@ -1188,9 +1172,9 @@ public class TaskQueue
      * Updates the {@link TaskStatus} for the task associated with this {@link TaskEntry} and sets the corresponding
      * update time.
      */
-    public void updateStatus(TaskStatus status, DateTime updateTime)
+    void updateStatus(TaskStatus status, DateTime updateTime)
     {
-      this.taskInfo.withStatus(status);
+      this.taskInfo = this.taskInfo.withStatus(status);
       this.lastUpdatedTime = updateTime;
     }
   }
