@@ -117,7 +117,7 @@ public class CursorBuildSpec
 
   /**
    * {@link Filter} to supply to the {@link CursorHolder}. Only rows which match will be available through the
-   * selectors created from the {@link Cursor} or {@link org.apache.druid.segment.vector.VectorCursor}
+   * selectors created from the {@link Cursor} or {@link VectorCursor}
    */
   @Nullable
   public Filter getFilter()
@@ -128,7 +128,7 @@ public class CursorBuildSpec
   /**
    * {@link Interval} filter to supply to the {@link CursorHolder}. Only rows whose timestamps fall within this range
    * will be available through the selectors created from the {@link Cursor} or
-   * {@link org.apache.druid.segment.vector.VectorCursor}
+   * {@link VectorCursor}
    */
   public Interval getInterval()
   {
@@ -136,8 +136,8 @@ public class CursorBuildSpec
   }
 
   /**
-   * Set of physical columns required from a cursor. If null, and {@link #groupingColumns} is null or empty and
-   * {@link #aggregators} is null or empty, then a {@link CursorHolder} must assume that ALL columns are required.
+   * Set of physical columns required from a cursor. If null, then a {@link CursorHolder} must assume that ALL columns
+   * are required.
    */
   @Nullable
   public Set<String> getPhysicalColumns()
@@ -156,7 +156,7 @@ public class CursorBuildSpec
 
   /**
    * Any columns which will be used for grouping by a query engine for the {@link CursorHolder}, useful for
-   * specializing the {@link Cursor} or {@link org.apache.druid.segment.vector.VectorCursor} if any pre-aggregated
+   * specializing the {@link Cursor} or {@link VectorCursor} if any pre-aggregated
    * data is available.
    */
   @Nullable
@@ -168,7 +168,7 @@ public class CursorBuildSpec
   /**
    * Any {@link AggregatorFactory} which will be used by a query engine for the {@link CursorHolder}, useful
    * to assist in determining if {@link CursorHolder#canVectorize()}, as well as specializing the {@link Cursor} or
-   * {@link org.apache.druid.segment.vector.VectorCursor} if any pre-aggregated data is available.
+   * {@link VectorCursor} if any pre-aggregated data is available.
    */
   @Nullable
   public List<AggregatorFactory> getAggregators()
@@ -179,7 +179,7 @@ public class CursorBuildSpec
   /**
    * List of all {@link OrderBy} columns which a query engine will use to sort its results to supply to the
    * {@link CursorHolder}, which can allow optimization of the provided {@link Cursor} or
-   * {@link org.apache.druid.segment.vector.VectorCursor} if data matching the preferred ordering is available.
+   * {@link VectorCursor} if data matching the preferred ordering is available.
    * <p>
    * If not specified, the cursor will advance in the native order of the underlying data.
    */
@@ -190,7 +190,7 @@ public class CursorBuildSpec
 
   /**
    * {@link QueryContext} for the {@link CursorHolder} to provide a mechanism to push various data into
-   * {@link Cursor} and {@link org.apache.druid.segment.vector.VectorCursor} such as
+   * {@link Cursor} and {@link VectorCursor} such as
    * {@link org.apache.druid.query.QueryContexts#VECTORIZE_KEY} and
    * {@link org.apache.druid.query.QueryContexts#VECTOR_SIZE_KEY}
    */
@@ -201,7 +201,7 @@ public class CursorBuildSpec
 
   /**
    * {@link QueryMetrics} to use for measuring things involved with {@link Cursor} and
-   * {@link org.apache.druid.segment.vector.VectorCursor} creation.
+   * {@link VectorCursor} creation.
    */
   @Nullable
   public QueryMetrics<?> getQueryMetrics()
@@ -381,8 +381,7 @@ public class CursorBuildSpec
      * @see CursorBuildSpec#getPhysicalColumns() for usage. The backing value is not automatically populated by calls to
      * {@link #setFilter(Filter)}, {@link #setVirtualColumns(VirtualColumns)}, {@link #setAggregators(List)}, or
      * {@link #setPreferredOrdering(List)}, so this must be explicitly set for all required physical columns. If set to
-     * null, and {@link #groupingColumns} is null or empty and {@link #aggregators} is null or empty, then a
-     * {@link CursorHolder} must assume that ALL columns are required
+     * null, then a {@link CursorHolder} must assume that ALL columns are required
      */
     public CursorBuildSpecBuilder setPhysicalColumns(@Nullable Set<String> physicalColumns)
     {

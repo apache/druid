@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.projections;
 
-import com.google.common.collect.Sets;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -115,21 +114,13 @@ public class Projections
     if (!queryCursorBuildSpec.isCompatibleOrdering(projection.getOrderingWithTimeColumnSubstitution())) {
       return null;
     }
+    if (CollectionUtils.isNullOrEmpty(queryCursorBuildSpec.getPhysicalColumns())) {
+      return null;
+    }
     ProjectionMatchBuilder matchBuilder = new ProjectionMatchBuilder();
 
     // match virtual columns first, which will populate the 'remapColumns' of the match builder
     matchBuilder = matchQueryVirtualColumns(projection, queryCursorBuildSpec, physicalColumnChecker, matchBuilder);
-    if (matchBuilder == null) {
-      return null;
-    }
-
-
-    matchBuilder = matchGrouping(projection, queryCursorBuildSpec, physicalColumnChecker, matchBuilder);
-    if (matchBuilder == null) {
-      return null;
-    }
-
-    matchBuilder = matchAggregators(projection, queryCursorBuildSpec, matchBuilder);
     if (matchBuilder == null) {
       return null;
     }
@@ -139,7 +130,12 @@ public class Projections
       return null;
     }
 
-    matchBuilder = matchRemainingPhysicalColumns(projection, queryCursorBuildSpec, physicalColumnChecker, matchBuilder);
+    matchBuilder = matchGrouping(projection, queryCursorBuildSpec, physicalColumnChecker, matchBuilder);
+    if (matchBuilder == null) {
+      return null;
+    }
+
+    matchBuilder = matchAggregators(projection, queryCursorBuildSpec, matchBuilder);
     if (matchBuilder == null) {
       return null;
     }
@@ -204,11 +200,9 @@ public class Projections
         if (rewritten == ProjectionFilterMatch.INSTANCE) {
           // we can remove the whole thing since the query filter exactly matches the projection filter
           matchBuilder.rewriteFilter(null);
-          matchBuilder.addMatchedQueryColumns(originalRequired);
         } else {
           // otherwise, we partially rewrote the query filter to eliminate the projection filter since it is baked in
           matchBuilder.rewriteFilter(rewritten);
-          matchBuilder.addMatchedQueryColumns(Sets.difference(originalRequired, rewritten.getRequiredColumns()));
         }
       } else {
         // projection has a filter, but the query doesn't, no good
@@ -290,8 +284,7 @@ public class Projections
         if (combining != null) {
           matchBuilder.remapColumn(queryAgg.getName(), projectionAgg.getName())
                       .addReferencedPhysicalColumn(projectionAgg.getName())
-                      .addPreAggregatedAggregator(combining)
-                      .addMatchedQueryColumns(queryAgg.requiredFields());
+                      .addPreAggregatedAggregator(combining);
           foundMatch = true;
           break;
         }
@@ -302,39 +295,6 @@ public class Projections
       return matchBuilder;
     }
     return null;
-  }
-
-  @Nullable
-  public static ProjectionMatchBuilder matchRemainingPhysicalColumns(
-      AggregateProjectionMetadata.Schema projection,
-      CursorBuildSpec queryCursorBuildSpec,
-      PhysicalColumnChecker physicalColumnChecker,
-      ProjectionMatchBuilder matchBuilder
-  )
-  {
-    // validate physical and virtual columns have all been accounted for
-    final Set<String> matchedQueryColumns = matchBuilder.getMatchedQueryColumns();
-    if (queryCursorBuildSpec.getPhysicalColumns() != null) {
-      for (String queryColumn : queryCursorBuildSpec.getPhysicalColumns()) {
-        // a projection always has a __time column, it just might be a constant of the segment interval start if the
-        // projection itself did not transform the base table __time column
-        if (ColumnHolder.TIME_COLUMN_NAME.equals(queryColumn)) {
-          continue;
-        }
-        if (!matchedQueryColumns.contains(queryColumn)) {
-          matchBuilder = matchQueryPhysicalColumn(
-              queryColumn,
-              projection,
-              physicalColumnChecker,
-              matchBuilder
-          );
-          if (matchBuilder == null) {
-            return null;
-          }
-        }
-      }
-    }
-    return matchBuilder;
   }
 
   /**
@@ -370,9 +330,6 @@ public class Projections
       ProjectionMatchBuilder matchBuilder
   )
   {
-    if (matchBuilder.getMatchedQueryColumns().contains(column)) {
-      return matchBuilder;
-    }
     final VirtualColumn virtualColumn = queryCursorBuildSpec.getVirtualColumns().getVirtualColumn(column);
     if (virtualColumn != null) {
       return matchQueryVirtualColumn(
@@ -408,13 +365,10 @@ public class Projections
       if (!queryVirtualColumn.getOutputName().equals(remapColumnName)) {
         matchBuilder.remapColumn(queryVirtualColumn.getOutputName(), remapColumnName);
       }
-      return matchBuilder.addMatchedQueryColumn(queryVirtualColumn.getOutputName())
-                         .addMatchedQueryColumns(queryVirtualColumn.requiredColumns())
-                         .addReferencedPhysicalColumn(remapColumnName);
+      return matchBuilder.addReferencedPhysicalColumn(remapColumnName);
     }
 
-    matchBuilder.addMatchedQueryColumn(queryVirtualColumn.getOutputName())
-                .addReferenceedVirtualColumn(queryVirtualColumn);
+    matchBuilder.addReferenceedVirtualColumn(queryVirtualColumn);
     final List<String> requiredInputs = queryVirtualColumn.requiredColumns();
     if (requiredInputs.size() == 1 && ColumnHolder.TIME_COLUMN_NAME.equals(requiredInputs.get(0))) {
       // special handle time granularity. in the future this should be reworked to push this concept into the
@@ -463,8 +417,7 @@ public class Projections
   )
   {
     if (physicalColumnChecker.check(projection.getName(), column)) {
-      return matchBuilder.addMatchedQueryColumn(column)
-                         .addReferencedPhysicalColumn(column);
+      return matchBuilder.addReferencedPhysicalColumn(column);
     }
     return null;
   }

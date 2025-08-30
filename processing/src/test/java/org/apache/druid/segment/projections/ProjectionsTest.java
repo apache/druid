@@ -56,6 +56,7 @@ class ProjectionsTest
         12345
     );
     CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
+                                                     .setPhysicalColumns(Set.of("c"))
                                                      .setPreferredOrdering(List.of())
                                                      .setAggregators(
                                                          List.of(
@@ -99,6 +100,7 @@ class ProjectionsTest
         12345
     );
     CursorBuildSpec cursorBuildSpecNoFilter = CursorBuildSpec.builder()
+                                                             .setPhysicalColumns(Set.of("c"))
                                                              .setPreferredOrdering(List.of())
                                                              .setAggregators(
                                                                  List.of(
@@ -115,6 +117,7 @@ class ProjectionsTest
         )
     );
     CursorBuildSpec cursorBuildSpecWithFilter = CursorBuildSpec.builder()
+                                                               .setPhysicalColumns(Set.of("b", "c"))
                                                                .setPreferredOrdering(List.of())
                                                                .setFilter(
                                                                    new EqualityFilter(
@@ -166,6 +169,7 @@ class ProjectionsTest
     );
     CursorBuildSpec cursorBuildSpecNoFilter = CursorBuildSpec.builder()
                                                              .setPreferredOrdering(List.of())
+                                                             .setPhysicalColumns(Set.of("a", "b", "c"))
                                                              .setGroupingColumns(List.of("a", "b"))
                                                              .setAggregators(
                                                                  List.of(
@@ -182,6 +186,7 @@ class ProjectionsTest
         )
     );
     CursorBuildSpec cursorBuildSpecWithFilter = CursorBuildSpec.builder()
+                                                               .setPhysicalColumns(Set.of("a", "b", "c"))
                                                                .setGroupingColumns(List.of("a", "b"))
                                                                .setPreferredOrdering(List.of())
                                                                .setFilter(
