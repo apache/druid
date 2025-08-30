@@ -76,7 +76,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
-  public void insert(Task task, TaskStatus status)
+  public TaskInfo<Task, TaskStatus> insert(Task task, TaskStatus status)
   {
     Preconditions.checkNotNull(task, "task");
     Preconditions.checkNotNull(status, "status");
@@ -94,6 +94,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
     }
 
     log.info("Inserted task[%s] with status[%s]", task.getId(), status);
+    return TaskStuff.toTaskInfo(newTaskStuff);
   }
 
   @Override
@@ -154,6 +155,18 @@ public class HeapMemoryTaskStorage implements TaskStorage
     for (final TaskStuff taskStuff : tasks.values()) {
       if (taskStuff.getStatus().isRunnable()) {
         listBuilder.add(taskStuff.getTask());
+      }
+    }
+    return listBuilder.build();
+  }
+
+  @Override
+  public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfos()
+  {
+    final ImmutableList.Builder<TaskInfo<Task, TaskStatus>> listBuilder = ImmutableList.builder();
+    for (final TaskStuff taskStuff : tasks.values()) {
+      if (taskStuff.getStatus().isRunnable()) {
+        listBuilder.add(TaskStuff.toTaskInfo(taskStuff));
       }
     }
     return listBuilder.build();

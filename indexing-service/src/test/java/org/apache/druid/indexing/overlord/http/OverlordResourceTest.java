@@ -999,21 +999,28 @@ public class OverlordResourceTest
     final Task task = NoopTask.create();
     final String taskId = task.getId();
     final TaskStatus status = TaskStatus.running(taskId);
+    final TaskInfo<Task, TaskStatus> taskInfo = new TaskInfo<>(
+        task.getId(),
+        DateTimes.of("2018-01-01"),
+        status,
+        task.getDataSource(),
+        task
+    );
 
-    EasyMock.expect(taskQueryTool.getTaskInfo(taskId))
-            .andReturn(new TaskInfo(
-                task.getId(),
-                DateTimes.of("2018-01-01"),
-                status,
-                task.getDataSource(),
-                task
-            ));
+    // For noop, simulate in-memory hit
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).once();
+    EasyMock.expect(taskQueue.getActiveTaskInfo(taskId)).andReturn(Optional.of(taskInfo)).once();
 
-    EasyMock.expect(taskQueryTool.getTaskInfo("othertask"))
-            .andReturn(null);
-
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).once();
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getKnownTasks())
-        .andReturn(ImmutableList.of());
+            .andReturn(ImmutableList.of(new MockTaskRunnerWorkItem(taskId))).anyTimes();
+    EasyMock.expect(taskRunner.getRunnerTaskState(taskId)).andReturn(RunnerTaskState.RUNNING).once();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).once();
+
+    // For "othertask", simulate in-memory miss, then task storage read
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).once();
+    EasyMock.expect(taskQueue.getActiveTaskInfo("othertask")).andReturn(Optional.absent()).once();
+    EasyMock.expect(taskStorage.getTaskInfo("othertask")).andReturn(null).once();
 
     replayAll();
 

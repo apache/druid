@@ -38,6 +38,7 @@ import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.WorkerNodeService;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.RunnerTaskState;
+import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -622,6 +623,71 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertFalse(taskInQueueAsString.contains(password));
 
     Assert.assertEquals(taskInStorageAsString, taskInQueueAsString);
+  }
+
+  @Test
+  public void testTaskShutdownUpdatesTaskStatusInTaskQueue()
+  {
+    final String shutdownReason = "Test shutdown reason";
+    final TaskStatus shutdownStatus = TaskStatus.failure("shutdown-test-task", shutdownReason);
+    final TestTask task = new TestTask("shutdown-test-task", Intervals.of("2021-01-01/P1D"));
+    taskQueue.add(task);
+
+    final Optional<TaskInfo<Task, TaskStatus>> activeInfoOpt = taskQueue.getActiveTaskInfo(task.getId());
+    Assert.assertTrue(activeInfoOpt.isPresent());
+    Assert.assertEquals(TaskState.RUNNING, activeInfoOpt.get().getStatus().getStatusCode());
+
+    taskQueue.shutdown(task.getId(), shutdownReason);
+
+    final Optional<TaskInfo<Task, TaskStatus>> afterShutdownInfoOpt = taskQueue.getActiveTaskInfo(task.getId());
+    Assert.assertTrue(afterShutdownInfoOpt.isPresent());
+    Assert.assertEquals(shutdownStatus, afterShutdownInfoOpt.get().getStatus());
+    Assert.assertEquals(shutdownStatus, getTaskStorage().getStatus(task.getId()).get());
+  }
+
+  @Test
+  public void testTaskSuccessUpdatesTaskStatusInTaskQueue() throws Exception
+  {
+    final TaskStatus successStatus = TaskStatus.success("success-test-task");
+    final TestTask task = new TestTask("success-test-task", Intervals.of("2021-01-01/P1D"));
+    taskQueue.add(task);
+    taskQueue.manageQueuedTasks();
+
+    // ensure success callback has fired
+    Thread.sleep(100);
+    Assert.assertTrue(task.isDone());
+
+    final Optional<TaskInfo<Task, TaskStatus>> activeInfoOpt = taskQueue.getActiveTaskInfo(task.getId());
+    Assert.assertTrue(activeInfoOpt.isPresent());
+    Assert.assertEquals(successStatus, activeInfoOpt.get().getStatus());
+    Assert.assertEquals(successStatus, getTaskStorage().getStatus(task.getId()).get());
+  }
+
+  @Test
+  public void testTaskFailureUpdatesTaskStatusInTaskQueue() throws Exception
+  {
+    final TaskStatus failedStatus = TaskStatus.failure("failure-test-task", "error");
+    final TestTask task = new TestTask("failure-test-task", Intervals.of("2021-01-01/P1D"))
+    {
+      @Override
+      public TaskStatus runTask(TaskToolbox toolbox)
+      {
+        super.done = true;
+        return failedStatus;
+      }
+    };
+
+    taskQueue.add(task);
+    taskQueue.manageQueuedTasks();
+
+    // ensure failed callback has fired
+    Thread.sleep(100);
+    Assert.assertTrue(task.isDone());
+
+    final Optional<TaskInfo<Task, TaskStatus>> activeInfoOpt = taskQueue.getActiveTaskInfo(task.getId());
+    Assert.assertTrue(activeInfoOpt.isPresent());
+    Assert.assertEquals(failedStatus, activeInfoOpt.get().getStatus());
+    Assert.assertEquals(failedStatus, getTaskStorage().getStatus(task.getId()).get());
   }
 
   private HttpRemoteTaskRunner createHttpRemoteTaskRunner()
