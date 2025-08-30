@@ -36,7 +36,7 @@ import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.kafkainput.KafkaInputFormat;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
-import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
+import org.apache.druid.indexing.kafka.supervisor.KafkaIOConfigBuilder;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.test.TestBroker;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
@@ -147,29 +147,12 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
         null,
         DATA_SCHEMA,
         null,
-        new KafkaSupervisorIOConfig(
-            TOPIC,
-            null,
-            new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
-            null,
-            null,
-            null,
-            kafkaServer.consumerProperties(),
-            null,
-            null,
-            null,
-            null,
-            null,
-            true,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false
-        ),
+        new KafkaIOConfigBuilder()
+            .withTopic(TOPIC)
+            .withJsonInputFormat()
+            .withConsumerProperties(kafkaServer.consumerProperties())
+            .withUseEarliestSequenceNumber(true)
+            .build(),
         null,
         null,
         null,
@@ -203,29 +186,12 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
         null,
         DATA_SCHEMA,
         null,
-        new KafkaSupervisorIOConfig(
-            null,
-            Pattern.quote(TOPIC),
-            new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
-            null,
-            null,
-            null,
-            kafkaServer.consumerProperties(),
-            null,
-            null,
-            null,
-            null,
-            null,
-            true,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false
-        ),
+        new KafkaIOConfigBuilder()
+            .withTopicPattern(Pattern.quote(TOPIC))
+            .withJsonInputFormat()
+            .withConsumerProperties(kafkaServer.consumerProperties())
+            .withUseEarliestSequenceNumber(true)
+            .build(),
         null,
         null,
         null,
@@ -259,38 +225,22 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
         null,
         DATA_SCHEMA_KAFKA_TIMESTAMP,
         null,
-        new KafkaSupervisorIOConfig(
-            TOPIC,
-            null,
-            new KafkaInputFormat(
-                null,
-                null,
-                new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
-                null,
-                null,
-                null,
-                null
-            ),
-
-            null,
-            null,
-            null,
-            kafkaServer.consumerProperties(),
-            null,
-            null,
-            null,
-            null,
-            null,
-            true,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false
-        ),
+        new KafkaIOConfigBuilder()
+            .withTopic(TOPIC)
+            .withInputFormat(
+                new KafkaInputFormat(
+                    null,
+                    null,
+                    new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
+                    null,
+                    null,
+                    null,
+                    null
+                )
+            )
+            .withConsumerProperties(kafkaServer.consumerProperties())
+            .withUseEarliestSequenceNumber(true)
+            .build(),
         null,
         null,
         null,
@@ -375,29 +325,11 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
         null,
         dataSchema,
         null,
-        new KafkaSupervisorIOConfig(
-            TOPIC,
-            null,
-            null,
-            null,
-            null,
-            null,
-            kafkaServer.consumerProperties(),
-            null,
-            null,
-            null,
-            null,
-            null,
-            true,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false
-        ),
+        new KafkaIOConfigBuilder()
+            .withTopic(TOPIC)
+            .withConsumerProperties(kafkaServer.consumerProperties())
+            .withUseEarliestSequenceNumber(true)
+            .build(),
         null,
         null,
         null,
@@ -559,32 +491,13 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
         null,
         DATA_SCHEMA,
         null,
-        new KafkaSupervisorIOConfig(
-            TOPIC,
-            null,
-            new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
-            null,
-            null,
-            null,
-
+        new KafkaIOConfigBuilder()
+            .withTopic(TOPIC)
+            .withJsonInputFormat()
             // invalid bootstrap server
-            ImmutableMap.of("bootstrap.servers", "127.0.0.1"),
-
-            null,
-            null,
-            null,
-            null,
-            null,
-            true,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false
-        ),
+            .withConsumerProperties(Map.of("bootstrap.servers", "127.0.0.1"))
+            .withUseEarliestSequenceNumber(true)
+            .build(),
         null,
         null,
         null,
@@ -618,32 +531,13 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
         null,
         DATA_SCHEMA,
         null,
-        new KafkaSupervisorIOConfig(
-            TOPIC,
-            null,
-            new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
-            null,
-            null,
-            null,
-
+        new KafkaIOConfigBuilder()
+            .withTopic(TOPIC)
+            .withJsonInputFormat()
             // invalid bootstrap server
-            ImmutableMap.of("bootstrap.servers", "127.0.0.1"),
-
-            null,
-            null,
-            null,
-            null,
-            null,
-            true,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false
-        ),
+            .withConsumerProperties(Map.of("bootstrap.servers", "127.0.0.1"))
+            .withUseEarliestSequenceNumber(true)
+            .build(),
         null,
         null,
         null,
