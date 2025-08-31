@@ -17,14 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord.common;
+package org.apache.druid.segment.realtime.appenderator;
 
-import org.apache.druid.java.util.common.StringUtils;
+import org.joda.time.Interval;
 
-public class KubernetesResourceNotFoundException extends RuntimeException
+import java.io.IOException;
+
+/**
+ * Used to release task locks after segments have been handed off, typically with long-running tasks
+ * to avoid holding locks for longer than necessary. This interface is used instead of {@code TaskActionClient}
+ * to prevent a cyclic dependency with druid-indexing-service module.
+ */
+@FunctionalInterface
+public interface TaskIntervalUnlocker
 {
-  public KubernetesResourceNotFoundException(String formatText, Object... arguments)
-  {
-    super(StringUtils.nonStrictFormat(formatText, arguments));
-  }
+  /**
+   * Releases the lock for the exact interval for a task.
+   */
+  void releaseLock(Interval interval) throws IOException;
 }

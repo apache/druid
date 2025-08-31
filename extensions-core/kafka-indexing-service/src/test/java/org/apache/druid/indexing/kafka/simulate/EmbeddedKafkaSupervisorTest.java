@@ -33,20 +33,24 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
@@ -54,12 +58,14 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
+  private final EmbeddedHistorical historical = new EmbeddedHistorical();
   private KafkaResource kafkaServer;
 
   @Override
   public EmbeddedDruidCluster createCluster()
   {
     final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper();
+    indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
 
     kafkaServer = new KafkaResource();
 
@@ -69,6 +75,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
            .addServer(new EmbeddedCoordinator())
            .addServer(overlord)
            .addServer(indexer)
+           .addServer(historical)
            .addServer(broker);
 
     return cluster;
@@ -80,8 +87,9 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     final String topic = dataSource;
     kafkaServer.createTopicWithPartitions(topic, 2);
 
+    final int expectedSegments = 10;
     kafkaServer.produceRecordsToTopic(
-        generateRecordsForTopic(topic, 10, DateTimes.of("2025-06-01"))
+        generateRecordsForTopic(topic, expectedSegments, DateTimes.of("2025-06-01"))
     );
 
     // Submit and start a supervisor
@@ -117,6 +125,21 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
     supervisorStatus = cluster.callApi().getSupervisorStatus(supervisorId);
     Assertions.assertTrue(supervisorStatus.isSuspended());
+    indexer.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("ingest/handoff/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, List.of(dataSource)),
+        agg -> agg.hasSumAtLeast(expectedSegments)
+    );
+    overlord.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("task/action/run/time")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+                      .hasDimension(DruidMetrics.TASK_ACTION_TYPE, "lockRelease"),
+        agg -> agg.hasCountAtLeast(expectedSegments)
+    );
+    List<LockFilterPolicy> lockFilterPolicies = List.of(new LockFilterPolicy(dataSource, 0, null, null));
+    Map<String, List<Interval>> lockedIntervals = cluster.callApi()
+                                                         .onLeaderOverlord(client -> client.findLockedIntervals(lockFilterPolicies));
+    Assertions.assertEquals(0, lockedIntervals.size());
   }
 
   private KafkaSupervisorSpec createKafkaSupervisor(String supervisorId, String topic)
@@ -127,7 +150,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
                 .withTimestamp(new TimestampSpec("timestamp", null, null))
                 .withDimensions(DimensionsSpec.EMPTY)
         )
-        .withTuningConfig(tuningConfig -> tuningConfig.withMaxRowsPerSegment(1))
+        .withTuningConfig(tuningConfig -> tuningConfig.withMaxRowsPerSegment(1).withReleaseLocksOnHandoff(true))
         .withIoConfig(
             ioConfig -> ioConfig
                 .withInputFormat(new CsvInputFormat(List.of("timestamp", "item"), null, null, false, 0, false))

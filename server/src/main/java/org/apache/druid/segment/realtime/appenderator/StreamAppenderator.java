@@ -202,6 +202,7 @@ public class StreamAppenderator implements Appenderator
   private final SegmentLoaderConfig segmentLoaderConfig;
   private ScheduledExecutorService exec;
   private final FingerprintGenerator fingerprintGenerator;
+  private final TaskIntervalUnlocker taskIntervalUnlocker;
 
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
@@ -227,7 +228,8 @@ public class StreamAppenderator implements Appenderator
       Cache cache,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      TaskIntervalUnlocker taskIntervalUnlocker
   )
   {
     this.segmentLoaderConfig = segmentLoaderConfig;
@@ -255,6 +257,7 @@ public class StreamAppenderator implements Appenderator
         Execs.makeThreadFactory("StreamAppenderSegmentRemoval-%s")
     );
     this.fingerprintGenerator = new FingerprintGenerator(objectMapper);
+    this.taskIntervalUnlocker = taskIntervalUnlocker;
   }
 
   @VisibleForTesting
@@ -1525,6 +1528,10 @@ public class StreamAppenderator implements Appenderator
                 removeDirectory(computePersistDir(identifier));
               }
 
+              if (tuningConfig.isReleaseLocksOnHandoff()) {
+                unlockIntervalIfApplicable(sink);
+              }
+
               log.info("Dropped segment[%s].", identifier);
             };
 
@@ -1557,6 +1564,30 @@ public class StreamAppenderator implements Appenderator
         // starting to abandon segments
         persistExecutor
     );
+  }
+
+  /**
+   * Unlock the interval if there are more active sinks writing for this interval.
+   * The interval will be unlocked if there is no other sink writing to any overlapping intervals.
+   */
+  private void unlockIntervalIfApplicable(Sink abandonedSink)
+  {
+    Interval abandonedInterval = abandonedSink.getInterval();
+    boolean isIntervalActive = sinks.entrySet().stream()
+                                    .anyMatch(entry -> {
+                                      return entry.getValue().getInterval().overlaps(abandonedInterval);
+                                    });
+    if (isIntervalActive) {
+      log.info("Interval[%s] is still being appended to by other sinks.", abandonedInterval);
+    } else {
+      log.info("Unlocking interval[%s] as there are no more active sinks for it.", abandonedInterval);
+      try {
+        taskIntervalUnlocker.releaseLock(abandonedInterval);
+      }
+      catch (IOException e) {
+        log.makeAlert(e, "Failed to unlock interval[%s]", abandonedInterval).emit();
+      }
+    }
   }
 
   private Committed readCommit() throws IOException

@@ -131,6 +131,7 @@ public class KafkaIndexTaskTuningConfigTest
   @Test
   public void testConvert()
   {
+<<<<<<< HEAD
     KafkaSupervisorTuningConfig original = new KafkaTuningConfigBuilder()
         .withIntermediatePersistPeriod(new Period("PT3S"))
         .withHandoffConditionTimeout(5L)
@@ -144,6 +145,36 @@ public class KafkaIndexTaskTuningConfigTest
         .withReportParseExceptions(true)
         .withMaxColumnsToMerge(5)
         .build();
+=======
+    KafkaSupervisorTuningConfig original = new KafkaSupervisorTuningConfig(
+        null,
+        1,
+        null,
+        null,
+        2,
+        10L,
+        new Period("PT3S"),
+        4,
+        IndexSpec.DEFAULT,
+        IndexSpec.DEFAULT,
+        true,
+        5L,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        2,
+        5,
+        false
+    );
+>>>>>>> 07feec8af336cda0332768d23d38e5219067619f
     KafkaIndexTaskTuningConfig copy = original.convertToTaskTuningConfig();
 
     Assert.assertEquals(original.getAppendableIndexSpec(), copy.getAppendableIndexSpec());
@@ -185,7 +216,8 @@ public class KafkaIndexTaskTuningConfigTest
         42,
         42,
         2,
-        -1
+        -1,
+        false
     );
 
     String serialized = mapper.writeValueAsString(base);

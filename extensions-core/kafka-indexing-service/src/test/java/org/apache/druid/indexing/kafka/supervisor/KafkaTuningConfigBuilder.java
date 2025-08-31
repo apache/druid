@@ -34,6 +34,7 @@ public class KafkaTuningConfigBuilder extends TuningConfigBuilder<KafkaTuningCon
   private Period shutdownTimeout;
   private Period offsetFetchPeriod;
   private Period intermediateHandoffPeriod;
+  private Boolean releaseLocksOnHandoff;
 
   public KafkaTuningConfigBuilder withIntermediatePersistPeriod(Period intermediatePersistPeriod)
   {
@@ -77,6 +78,12 @@ public class KafkaTuningConfigBuilder extends TuningConfigBuilder<KafkaTuningCon
     return this;
   }
 
+  public KafkaTuningConfigBuilder withReleaseLocksOnHandoff(boolean releaseLocksOnHandoff)
+  {
+    this.releaseLocksOnHandoff = releaseLocksOnHandoff;
+    return this;
+  }
+
   @Override
   public KafkaSupervisorTuningConfig build()
   {
@@ -105,7 +112,8 @@ public class KafkaTuningConfigBuilder extends TuningConfigBuilder<KafkaTuningCon
         maxParseExceptions,
         maxSavedParseExceptions,
         numPersistThreads,
-        maxColumnsToMerge
+        maxColumnsToMerge,
+        releaseLocksOnHandoff
     );
   }
 }

@@ -1758,7 +1758,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     catch (Exception e) {
       stateManager.recordThrowableEvent(e);
-      log.makeAlert(e, "Exception in supervisor run loop for supervisor[%s] for dataSource[%s]", supervisorId, dataSource).emit();
+      if (e instanceof StreamException) {
+        // When a StreamException is thrown, the error message is more useful than the stack trace in telling what's wrong.
+        log.makeAlert("Exception in supervisor run loop for supervisor[%s] for dataSource[%s]: [%s]",
+            supervisorId, dataSource, e.getMessage()).emit();
+      } else {
+        log.makeAlert(e, "Exception in supervisor run loop for supervisor[%s] for dataSource[%s]", supervisorId, dataSource).emit();
+      }
     }
     finally {
       stateManager.markRunFinished();
