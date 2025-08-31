@@ -150,7 +150,11 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
                 .withTimestamp(new TimestampSpec("timestamp", null, null))
                 .withDimensions(DimensionsSpec.EMPTY)
         )
-        .withTuningConfig(tuningConfig -> tuningConfig.withMaxRowsPerSegment(1).withReleaseLocksOnHandoff(true))
+        .withTuningConfig(
+            tuningConfig -> tuningConfig
+                .withMaxRowsPerSegment(1)
+                .withReleaseLocksOnHandoff(true)
+        )
         .withIoConfig(
             ioConfig -> ioConfig
                 .withInputFormat(new CsvInputFormat(List.of("timestamp", "item"), null, null, false, 0, false))
