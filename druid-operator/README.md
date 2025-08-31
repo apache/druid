@@ -1,14 +1,9 @@
 <h2 align="center">
-  <picture>
-    <img alt="DataInfra Logo" src="https://raw.githubusercontent.com/datainfrahq/.github/main/images/druid-operator.png"width="200" height="200">
-  </picture>
   <br>
   Kubernetes Operator For Apache Druid
 </h2>
 
 <div align="center">
-
-![Build Status](https://github.com/datainfrahq/druid-operator/actions/workflows/docker-image.yml/badge.svg) ![Docker pull](https://img.shields.io/docker/pulls/datainfrahq/druid-operator.svg) [![Latest Version](https://img.shields.io/github/tag/datainfrahq/druid-operator)](https://github.com/datainfrahq/druid-operator/releases) [![Slack](https://img.shields.io/badge/slack-brightgreen.svg?logo=slack&label=Community&style=flat&color=%2373DC8C&)](https://kubernetes.slack.com/archives/C04F4M6HT2L)
 
 </div>
 
@@ -16,7 +11,6 @@
 - Druid Operator is designed to provision and manage [Apache Druid](https://druid.apache.org/) in distributed mode only.
 - It is built in Golang using [kubebuilder](https://github.com/kubernetes-sigs/kubebuilder).
 - Refer to [Documentation](./docs/README.md) for getting started.
-- Feel free to join Kubernetes slack and join [druid-operator](https://kubernetes.slack.com/archives/C04F4M6HT2L)
 
 ### Newsletter - Monthly updates on running druid on kubernetes.
 - [Apache Druid on Kubernetes](https://druidonk8s.substack.com/)
@@ -57,9 +51,3 @@
 | kubernetes >= 1.22 and <= 1.25 | :white_check_mark: | :white_check_mark: | :white_check_mark: |  :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | kubernetes > 1.25 and <= 1.33.1 | :x: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 
-### Contributors
-
-<a href="https://github.com/datainfrahq/druid-operator/graphs/contributors"><img src="https://contrib.rocks/image?repo=datainfrahq/druid-operator"/></a>
-
-### Note
-Apache®, [Apache Druid, Druid®](https://druid.apache.org/) are either registered trademarks or trademarks of the Apache Software Foundation in the United States and/or other countries. This project, druid-operator, is not an Apache Software Foundation project.
