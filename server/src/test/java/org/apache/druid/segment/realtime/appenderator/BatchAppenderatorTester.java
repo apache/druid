@@ -174,7 +174,8 @@ public class BatchAppenderatorTester implements AutoCloseable
         0L,
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
-        basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory
+        basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory,
+        null
     );
     metrics = new SegmentGenerationMetrics();
 

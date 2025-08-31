@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
@@ -45,6 +46,7 @@ public class TestAppenderatorConfig implements AppenderatorConfig
   private final IndexSpec indexSpecForIntermediatePersists;
   @Nullable
   private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
+  private final boolean releaseLocksOnHandoff;
 
   public TestAppenderatorConfig(
       AppendableIndexSpec appendableIndexSpec,
@@ -57,7 +59,8 @@ public class TestAppenderatorConfig implements AppenderatorConfig
       Long pushTimeout,
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       Integer maxColumnsToMerge,
-      File basePersistDirectory
+      File basePersistDirectory,
+      @Nullable Boolean releaseLocksOnHandoff
   )
   {
     this.appendableIndexSpec = appendableIndexSpec;
@@ -74,6 +77,7 @@ public class TestAppenderatorConfig implements AppenderatorConfig
 
     this.partitionsSpec = null;
     this.indexSpecForIntermediatePersists = this.indexSpec;
+    this.releaseLocksOnHandoff = Configs.valueOrDefault(releaseLocksOnHandoff, false);
   }
 
   @Override
@@ -163,6 +167,12 @@ public class TestAppenderatorConfig implements AppenderatorConfig
   }
 
   @Override
+  public boolean isReleaseLocksOnHandoff()
+  {
+    return releaseLocksOnHandoff;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -180,6 +190,7 @@ public class TestAppenderatorConfig implements AppenderatorConfig
            maxPendingPersists == that.maxPendingPersists &&
            reportParseExceptions == that.reportParseExceptions &&
            pushTimeout == that.pushTimeout &&
+           releaseLocksOnHandoff == that.releaseLocksOnHandoff &&
            Objects.equals(partitionsSpec, that.partitionsSpec) &&
            Objects.equals(indexSpec, that.indexSpec) &&
            Objects.equals(indexSpecForIntermediatePersists, that.indexSpecForIntermediatePersists) &&
@@ -203,7 +214,8 @@ public class TestAppenderatorConfig implements AppenderatorConfig
         maxPendingPersists,
         reportParseExceptions,
         pushTimeout,
-        segmentWriteOutMediumFactory
+        segmentWriteOutMediumFactory,
+        releaseLocksOnHandoff
     );
   }
 

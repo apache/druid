@@ -386,7 +386,7 @@ public class OverlordCompactionResourceTest
         new VersionedSupervisorSpec(spec, "2025-01")
     );
 
-    EasyMock.expect(supervisorManager.getSupervisorHistoryForId(supervisorId))
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId(supervisorId, null))
             .andReturn(specVersions)
             .anyTimes();
     replayAll();

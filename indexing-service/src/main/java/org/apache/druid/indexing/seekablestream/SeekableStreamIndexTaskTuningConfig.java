@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
@@ -41,6 +42,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   private static final Period DEFAULT_INTERMEDIATE_PERSIST_PERIOD = new Period("PT10M");
   private static final IndexSpec DEFAULT_INDEX_SPEC = IndexSpec.DEFAULT;
   private static final Boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = Boolean.FALSE;
+  private static final boolean DEFAULT_RELEASE_LOCKS_ON_HANDOFF = false;
   private static final long DEFAULT_HANDOFF_CONDITION_TIMEOUT = Duration.ofMinutes(15).toMillis();
 
   private final AppendableIndexSpec appendableIndexSpec;
@@ -68,6 +70,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
 
   private final int numPersistThreads;
   private final int maxColumnsToMerge;
+  private final boolean releaseLocksOnHandoff;
 
   public SeekableStreamIndexTaskTuningConfig(
       @Nullable AppendableIndexSpec appendableIndexSpec,
@@ -91,7 +94,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
       @Nullable Integer maxParseExceptions,
       @Nullable Integer maxSavedParseExceptions,
       @Nullable Integer numPersistThreads,
-      @Nullable Integer maxColumnsToMerge
+      @Nullable Integer maxColumnsToMerge,
+      @Nullable Boolean releaseLocksOnHandoff
   )
   {
     this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
@@ -146,6 +150,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
       this.numPersistThreads = Math.max(numPersistThreads, AppenderatorConfig.DEFAULT_NUM_PERSIST_THREADS);
     }
     this.maxColumnsToMerge = maxColumnsToMerge == null ? DEFAULT_MAX_COLUMNS_TO_MERGE : maxColumnsToMerge;
+    this.releaseLocksOnHandoff = Configs.valueOrDefault(releaseLocksOnHandoff, DEFAULT_RELEASE_LOCKS_ON_HANDOFF);
   }
 
   @Override
@@ -293,6 +298,12 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
     return maxColumnsToMerge;
   }
 
+  @JsonProperty
+  public boolean isReleaseLocksOnHandoff()
+  {
+    return releaseLocksOnHandoff;
+  }
+
   public abstract SeekableStreamIndexTaskTuningConfig withBasePersistDirectory(File dir);
 
   @Override
@@ -319,6 +330,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
            maxSavedParseExceptions == that.maxSavedParseExceptions &&
            numPersistThreads == that.numPersistThreads &&
            maxColumnsToMerge == that.maxColumnsToMerge &&
+           releaseLocksOnHandoff == that.releaseLocksOnHandoff &&
            Objects.equals(partitionsSpec, that.partitionsSpec) &&
            Objects.equals(intermediatePersistPeriod, that.intermediatePersistPeriod) &&
            Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
@@ -352,7 +364,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
         maxParseExceptions,
         maxSavedParseExceptions,
         numPersistThreads,
-        maxColumnsToMerge
+        maxColumnsToMerge,
+        releaseLocksOnHandoff
     );
   }
 

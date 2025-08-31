@@ -51,7 +51,7 @@ export const SupervisorHistoryPanel = React.memo(function SupervisorHistoryPanel
     processQuery: async (supervisorId, cancelToken) => {
       return (
         await getApiArray<SupervisorHistoryEntry>(
-          `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}/history`,
+          `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}/history?count=100`,
           cancelToken,
         )
       ).map(vs => deepSet(vs, 'spec', cleanSpec(vs.spec)));
