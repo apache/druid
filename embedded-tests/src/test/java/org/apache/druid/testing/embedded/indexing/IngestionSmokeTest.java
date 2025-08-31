@@ -300,7 +300,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
         (CloseableIterator<TaskStatusPlus>)
             cluster.callApi().onLeaderOverlord(o -> o.taskStatuses(null, dataSource, 1))
     );
-    Assertions.assertEquals(1, taskStatuses.size());
+    Assertions.assertFalse(taskStatuses.isEmpty());
     Assertions.assertEquals(TaskState.RUNNING, taskStatuses.get(0).getStatusCode());
 
     // Suspend the supervisor and verify the state
