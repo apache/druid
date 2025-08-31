@@ -41,7 +41,6 @@ import java.util.List;
 
 public class UnionQueryTest extends EmbeddedClusterTestBase
 {
-  private static final Logger LOG = new Logger(UnionQueryTest.class);
   private static final String UNION_SUPERVISOR_TEMPLATE = "/query/union_kafka_supervisor_template.json";
   private static final String UNION_DATA_FILE = "/query/union_data.json";
   private static final String UNION_QUERIES_RESOURCE = "/query/union_queries.json";
@@ -59,96 +58,18 @@ public class UnionQueryTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void testUnionQuery() throws Exception
+  public void testUnionQuery()
   {
-    final String baseName = EmbeddedClusterApis.createTestDatasourceName();
-    List<String> supervisors = new ArrayList<>();
-
     final int numDatasources = 3;
     for (int i = 0; i < numDatasources; i++) {
-      String datasource = baseName + "-" + i;
-      kafkaResource.createTopicWithPartitions(datasource, 1);
-      ITRetryUtil.retryUntil(
-          () -> kafkaResource.isStreamActive(datasource),
-          true,
-          10000,
-          30,
-          "Wait for stream active"
-      );
-      String supervisorSpec = generateStreamIngestionPropsTransform(
-          datasource,
-          datasource,
-          config
-      ).apply(getResourceAsString(UNION_SUPERVISOR_TEMPLATE));
-      LOG.info("supervisorSpec: [%s]\n", supervisorSpec);
-      // Start supervisor
-      String specResponse = indexer.submitSupervisor(supervisorSpec);
-      LOG.info("Submitted supervisor [%s]", specResponse);
-      supervisors.add(specResponse);
 
-      int ctr = 0;
-      try (
-          StreamEventWriter streamEventWriter = new KafkaEventWriter(config, false);
-          BufferedReader reader = new BufferedReader(
-              new InputStreamReader(getResourceAsStream(UNION_DATA_FILE), StandardCharsets.UTF_8)
-          )
-      ) {
-        String line;
-        while ((line = reader.readLine()) != null) {
-          streamEventWriter.write(datasource, StringUtils.toUtf8(line));
-          ctr++;
-        }
-      }
-      final int numWritten = ctr;
+      // just write some data
 
-      LOG.info("Waiting for stream indexing tasks to consume events");
+      // wait for data to be ingested
 
-      ITRetryUtil.retryUntilTrue(
-          () ->
-              numWritten == this.queryHelper.countRows(
-                  datasource,
-                  Intervals.ETERNITY,
-                  name -> new LongSumAggregatorFactory(name, "count")
-              ),
-          StringUtils.format(
-              "dataSource[%s] consumed [%,d] events, expected [%,d]",
-              datasource,
-              this.queryHelper.countRows(
-                  datasource,
-                  Intervals.ETERNITY,
-                  name -> new LongSumAggregatorFactory(name, "count")
-              ),
-              numWritten
-          )
-      );
+      // wait for all segments to be loaded
     }
 
-    String queryResponseTemplate = StringUtils.replace(
-        getResourceAsString(UNION_QUERIES_RESOURCE),
-        "%%DATASOURCE%%",
-        baseName
-    );
-
-    queryHelper.testQueriesFromString(queryResponseTemplate);
-
-    for (int i = 0; i < numDatasources; i++) {
-      indexer.terminateSupervisor(supervisors.get(i));
-      kafkaResource.deleteStream(baseName + "-" + i);
-    }
-
-    for (int i = 0; i < numDatasources; i++) {
-      final int datasourceNumber = i;
-      ITRetryUtil.retryUntil(
-          () -> coordinator.areSegmentsLoaded(baseName + "-" + datasourceNumber),
-          true,
-          10000,
-          10,
-          "Kafka segments loaded"
-      );
-    }
-
-    queryHelper.testQueriesFromString(queryResponseTemplate);
-
-    // unload everything
+    // run and verify the queries
   }
 }

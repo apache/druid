@@ -17,53 +17,65 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.msq;
+package org.apache.druid.testing.embedded.msq;
 
-import com.google.api.client.util.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.inject.Inject;
-import org.apache.druid.indexer.report.TaskContextReport;
-import org.apache.druid.indexer.report.TaskReport;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
-import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.http.SqlTaskStatus;
-import org.apache.druid.storage.local.LocalFileExportStorageProvider;
-import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
-import org.apache.druid.testing.utils.DataLoaderHelper;
-import org.apache.druid.testing.utils.MsqTestQueryHelper;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.apache.druid.testing.embedded.EmbeddedBroker;
+import org.apache.druid.testing.embedded.EmbeddedCoordinator;
+import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedHistorical;
+import org.apache.druid.testing.embedded.EmbeddedIndexer;
+import org.apache.druid.testing.embedded.EmbeddedOverlord;
+import org.apache.druid.testing.embedded.indexing.Resources;
+import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class MultiStageQuery
+public class MultiStageQueryTest extends EmbeddedClusterTestBase
 {
-  @Inject
-  private MsqTestQueryHelper msqHelper;
+  private final EmbeddedOverlord overlord = new EmbeddedOverlord();
+  private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
+  private final EmbeddedIndexer indexer = new EmbeddedIndexer()
+      .setServerMemory(300_000_000L)
+      .addProperty("druid.worker.capacity", "2");
+  private final MSQExportDirectory exportDirectory = new MSQExportDirectory();
 
-  @Inject
-  private DataLoaderHelper dataLoaderHelper;
+  private EmbeddedMSQApis msqApis;
 
-  @Inject
-  private CoordinatorResourceTestClient coordinatorClient;
+  @Override
+  protected EmbeddedDruidCluster createCluster()
+  {
+    return EmbeddedDruidCluster
+        .withEmbeddedDerbyAndZookeeper()
+        .useLatchableEmitter()
+        .addResource(exportDirectory)
+        .addServer(overlord)
+        .addServer(coordinator)
+        .addServer(indexer)
+        .addServer(new EmbeddedBroker())
+        .addServer(new EmbeddedHistorical());
+  }
 
-  private static final String QUERY_FILE = "/multi-stage-query/wikipedia_msq_select_query1.json";
+  @BeforeAll
+  public void initTestClient()
+  {
+    msqApis = new EmbeddedMSQApis(cluster, overlord);
+  }
 
   @Test
-  public void testMsqIngestionAndQuerying() throws Exception
+  public void testMsqIngestionAndQuerying()
   {
-    String datasource = "dst";
-
-    // Clear up the datasource from the previous runs
-    coordinatorClient.unloadSegmentsForDataSource(datasource);
-
-    String queryLocal =
+    final String sql =
         StringUtils.format(
             "INSERT INTO %s\n"
             + "SELECT\n"
@@ -93,41 +105,34 @@ public class MultiStageQuery
             + "  regionIsoCode\n"
             + "FROM TABLE(\n"
             + "  EXTERN(\n"
-            + "    '{\"type\":\"local\",\"files\":[\"/resources/data/batch_index/json/wikipedia_index_data1.json\"]}',\n"
+            + "    '{\"type\":\"local\",\"files\":[\"%s\"]}',\n"
             + "    '{\"type\":\"json\"}',\n"
             + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
             + "  )\n"
             + ")\n"
             + "PARTITIONED BY DAY\n",
-            datasource
+            dataSource,
+            Resources.DataFile.tinyWiki1Json().getAbsolutePath()
         );
 
-    // Submit the task and wait for the datasource to get loaded
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskSuccesfully(queryLocal);
+    final SqlTaskStatus taskStatus = msqApis.submitTaskSql(sql);
+    cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord.latchableEmitter());
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
 
-    if (sqlTaskStatus.getState().isFailure()) {
-      Assert.fail(StringUtils.format(
-          "Unable to start the task successfully.\nPossible exception: %s",
-          sqlTaskStatus.getError()
-      ));
-    }
-
-    msqHelper.pollTaskIdForSuccess(sqlTaskStatus.getTaskId());
-    dataLoaderHelper.waitUntilDatasourceIsReady(datasource);
-
-    msqHelper.testQueriesFromFile(QUERY_FILE, datasource);
+    cluster.callApi().verifySqlQuery(
+        "SELECT __time, isRobot, added, delta, deleted, namespace FROM %s",
+        dataSource,
+        "2013-08-31T01:02:33.000Z,,57,-143,200,article\n"
+        + "2013-08-31T03:32:45.000Z,,459,330,129,wikipedia\n"
+        + "2013-08-31T07:11:21.000Z,,123,111,12,article"
+    );
   }
 
   @Test
-  @Ignore("localfiles() is disabled")
-  public void testMsqIngestionAndQueryingWithLocalFn() throws Exception
+  @Disabled("Function LOCALFILES() is currently disabled")
+  public void testMsqIngestionAndQueryingWithLocalFn()
   {
-    String datasource = "dst";
-
-    // Clear up the datasource from the previous runs
-    coordinatorClient.unloadSegmentsForDataSource(datasource);
-
-    String queryLocal =
+    final String sql =
         StringUtils.format(
             "INSERT INTO %s\n"
             + "SELECT\n"
@@ -157,7 +162,7 @@ public class MultiStageQuery
             + "  regionIsoCode\n"
             + "FROM TABLE(\n"
             + "  LOCALFILES(\n"
-            + "    files => ARRAY['/resources/data/batch_index/json/wikipedia_index_data1.json'],\n"
+            + "    files => ARRAY['%s'],\n"
             + "    format => 'json'\n"
             + "  ))\n"
             + "  (\"timestamp\" VARCHAR, isRobot VARCHAR, diffUrl VARCHAR, added BIGINT, countryIsoCode VARCHAR, regionName VARCHAR,\n"
@@ -165,100 +170,74 @@ public class MultiStageQuery
             + "   isMinor VARCHAR, isAnonymous VARCHAR, deleted BIGINT, cityName VARCHAR, metroCode BIGINT, namespace VARCHAR,\n"
             + "   comment VARCHAR, page VARCHAR, commentLength BIGINT, countryName VARCHAR, \"user\" VARCHAR, regionIsoCode VARCHAR)\n"
             + "PARTITIONED BY DAY\n",
-            datasource
+            dataSource,
+            Resources.DataFile.tinyWiki1Json().getAbsolutePath()
         );
 
-    // Submit the task and wait for the datasource to get loaded
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskSuccesfully(queryLocal);
+    final SqlTaskStatus taskStatus = msqApis.submitTaskSql(sql);
+    cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord.latchableEmitter());
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
 
-    if (sqlTaskStatus.getState().isFailure()) {
-      Assert.fail(StringUtils.format(
-          "Unable to start the task successfully.\nPossible exception: %s",
-          sqlTaskStatus.getError()
-      ));
-    }
-
-    msqHelper.pollTaskIdForSuccess(sqlTaskStatus.getTaskId());
-    dataLoaderHelper.waitUntilDatasourceIsReady(datasource);
-
-    msqHelper.testQueriesFromFile(QUERY_FILE, datasource);
+    cluster.callApi().verifySqlQuery(
+        "SELECT __time, isRobot, added, delta, deleted, namespace FROM %s",
+        dataSource,
+        ""
+    );
   }
 
   @Test
-  public void testExport() throws Exception
+  public void testExport()
   {
-    String exportQuery =
+    final String exportSql =
         StringUtils.format(
-            "INSERT INTO extern(%s(exportPath => '%s'))\n"
+            "INSERT INTO extern(local(exportPath => '%s'))\n"
             + "AS CSV\n"
             + "SELECT page, added, delta\n"
             + "FROM TABLE(\n"
             + "  EXTERN(\n"
-            + "    '{\"type\":\"local\",\"files\":[\"/resources/data/batch_index/json/wikipedia_index_data1.json\"]}',\n"
+            + "    '{\"type\":\"local\",\"files\":[\"%s\"]}',\n"
             + "    '{\"type\":\"json\"}',\n"
             + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
             + "  )\n"
             + ")\n",
-            LocalFileExportStorageProvider.TYPE_NAME, "/shared/export/"
+            new File(exportDirectory.get(), dataSource).getAbsolutePath(),
+            Resources.DataFile.tinyWiki1Json().getAbsolutePath()
         );
 
-    SqlTaskStatus exportTask = msqHelper.submitMsqTaskSuccesfully(exportQuery);
+    final SqlTaskStatus taskStatus = msqApis.submitTaskSql(exportSql);
+    cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord.latchableEmitter());
 
-    msqHelper.pollTaskIdForSuccess(exportTask.getTaskId());
-
-    if (exportTask.getState().isFailure()) {
-      Assert.fail(StringUtils.format(
-          "Unable to start the task successfully.\nPossible exception: %s",
-          exportTask.getError()
-      ));
-    }
-
-    String resultQuery = StringUtils.format(
+    final String selectSql = StringUtils.format(
         "SELECT page, delta, added\n"
         + "  FROM TABLE(\n"
         + "    EXTERN(\n"
-        + "      '{\"type\":\"local\",\"baseDir\":\"/shared/export/\",\"filter\":\"*.csv\"}',\n"
+        + "      '{\"type\":\"local\",\"baseDir\":\"%s\",\"filter\":\"*.csv\"}',\n"
         + "      '{\"type\":\"csv\",\"findColumnsFromHeader\":true}'\n"
         + "    )\n"
         + "  ) EXTEND (\"added\" BIGINT, \"delta\" BIGINT, \"page\" VARCHAR)\n"
         + "   WHERE delta != 0\n"
-        + "   ORDER BY page");
-
-    SqlTaskStatus resultTaskStatus = msqHelper.submitMsqTaskSuccesfully(resultQuery);
-
-    msqHelper.pollTaskIdForSuccess(resultTaskStatus.getTaskId());
-
-    TaskReport.ReportMap statusReport = msqHelper.fetchStatusReports(resultTaskStatus.getTaskId());
-
-    MSQTaskReport taskReport = (MSQTaskReport) statusReport.get(MSQTaskReport.REPORT_KEY);
-    if (taskReport == null) {
-      throw new ISE("Unable to fetch the status report for the task [%]", resultTaskStatus.getTaskId());
-    }
-    TaskContextReport taskContextReport = (TaskContextReport) statusReport.get(TaskContextReport.REPORT_KEY);
-    Assert.assertFalse(taskContextReport.getPayload().isEmpty());
-
-    MSQTaskReportPayload taskReportPayload = Preconditions.checkNotNull(
-        taskReport.getPayload(),
-        "payload"
+        + "   ORDER BY page",
+        exportDirectory.get()
     );
-    MSQResultsReport resultsReport = Preconditions.checkNotNull(
-        taskReportPayload.getResults(),
-        "Results report for the task id is empty"
-    );
+
+    final MSQTaskReportPayload statusReport = msqApis.runTaskSqlAndGetReport(selectSql);
+    Assertions.assertNotNull(statusReport);
+    Assertions.assertNotNull(statusReport.getResults());
+
+    MSQResultsReport resultsReport = statusReport.getResults();
 
     List<List<Object>> actualResults = new ArrayList<>();
-
     for (final Object[] row : resultsReport.getResults()) {
       actualResults.add(Arrays.asList(row));
     }
 
-    ImmutableList<ImmutableList<Object>> expectedResults = ImmutableList.of(
-        ImmutableList.of("Cherno Alpha", 111, 123),
-        ImmutableList.of("Gypsy Danger", -143, 57),
-        ImmutableList.of("Striker Eureka", 330, 459)
+    List<List<Object>> expectedResults = List.of(
+        List.of("Cherno Alpha", 111, 123),
+        List.of("Gypsy Danger", -143, 57),
+        List.of("Striker Eureka", 330, 459)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedResults,
         actualResults
     );
