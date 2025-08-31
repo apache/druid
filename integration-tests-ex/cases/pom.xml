@@ -400,15 +400,6 @@
             </properties>
         </profile>
         <profile>
-            <id>IT-Query</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <properties>
-                <it.category>Query</it.category>
-            </properties>
-        </profile>
-        <profile>
             <id>IT-MultiStageQuery</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
@@ -451,15 +442,6 @@
             </activation>
             <properties>
                 <it.category>GcsDeepStorage</it.category>
-            </properties>
-        </profile>
-        <profile>
-            <id>IT-BackwardCompatibilityMain</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <properties>
-                <it.category>BackwardCompatibilityMain</it.category>
             </properties>
         </profile>
         <profile>

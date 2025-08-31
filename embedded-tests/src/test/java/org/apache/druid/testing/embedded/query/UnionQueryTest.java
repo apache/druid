@@ -17,57 +17,59 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.query;
+package org.apache.druid.testing.embedded.query;
 
-import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
+import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.testing.embedded.EmbeddedClusterApis;
+import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedOverlord;
+import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.testing.tools.ITRetryUtil;
-import org.apache.druid.testing.tools.IntegrationTestingConfig;
 import org.apache.druid.testing.tools.KafkaEventWriter;
-import org.apache.druid.testing.tools.KafkaUtil;
 import org.apache.druid.testing.tools.StreamEventWriter;
-import org.apache.druid.testing.utils.KafkaAdminClient;
-import org.apache.druid.testsEx.indexer.AbstractIndexerTest;
-import org.joda.time.Interval;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.UUID;
-import java.util.function.Function;
 
-public class UnionQueryTest extends AbstractIndexerTest
+public class UnionQueryTest extends EmbeddedClusterTestBase
 {
   private static final Logger LOG = new Logger(UnionQueryTest.class);
   private static final String UNION_SUPERVISOR_TEMPLATE = "/query/union_kafka_supervisor_template.json";
   private static final String UNION_DATA_FILE = "/query/union_data.json";
   private static final String UNION_QUERIES_RESOURCE = "/query/union_queries.json";
-  private static final String UNION_DATASOURCE = "wikipedia_index_test";
-  private String fullDatasourceName;
+
+  private final EmbeddedOverlord overlord = new EmbeddedOverlord();
+  private final KafkaResource kafkaResource = new KafkaResource();
+
+  @Override
+  protected EmbeddedDruidCluster createCluster()
+  {
+    return EmbeddedDruidCluster
+        .withEmbeddedDerbyAndZookeeper()
+        .addResource(kafkaResource)
+        .addServer(overlord);
+  }
 
   @Test
   public void testUnionQuery() throws Exception
   {
-    fullDatasourceName = UNION_DATASOURCE + config.getExtraDatasourceNameSuffix();
-    final String baseName = fullDatasourceName + UUID.randomUUID();
-    KafkaAdminClient streamAdminClient = new KafkaAdminClient(config);
+    final String baseName = EmbeddedClusterApis.createTestDatasourceName();
     List<String> supervisors = new ArrayList<>();
 
     final int numDatasources = 3;
     for (int i = 0; i < numDatasources; i++) {
       String datasource = baseName + "-" + i;
-      streamAdminClient.createStream(datasource, 1, Collections.emptyMap());
+      kafkaResource.createTopicWithPartitions(datasource, 1);
       ITRetryUtil.retryUntil(
-          () -> streamAdminClient.isStreamActive(datasource),
+          () -> kafkaResource.isStreamActive(datasource),
           true,
           10000,
           30,
@@ -129,10 +131,9 @@ public class UnionQueryTest extends AbstractIndexerTest
 
     queryHelper.testQueriesFromString(queryResponseTemplate);
 
-
     for (int i = 0; i < numDatasources; i++) {
       indexer.terminateSupervisor(supervisors.get(i));
-      streamAdminClient.deleteStream(baseName + "-" + i);
+      kafkaResource.deleteStream(baseName + "-" + i);
     }
 
     for (int i = 0; i < numDatasources; i++) {
@@ -148,60 +149,6 @@ public class UnionQueryTest extends AbstractIndexerTest
 
     queryHelper.testQueriesFromString(queryResponseTemplate);
 
-    for (int i = 0; i < numDatasources; i++) {
-      final String datasource = baseName + "-" + i;
-      List<String> intervals = coordinator.getSegmentIntervals(datasource);
-
-      Collections.sort(intervals);
-      String first = intervals.get(0).split("/")[0];
-      String last = intervals.get(intervals.size() - 1).split("/")[1];
-      Interval interval = Intervals.of(first + "/" + last);
-      coordinator.unloadSegmentsForDataSource(baseName + "-" + i);
-      ITRetryUtil.retryUntilFalse(
-          () -> coordinator.areSegmentsLoaded(datasource),
-          "Segment Unloading"
-      );
-      coordinator.deleteSegmentsDataSource(baseName + "-" + i, interval);
-    }
-  }
-
-
-  /**
-   * sad version of
-   * {@link org.apache.druid.tests.indexer.AbstractKafkaIndexingServiceTest#generateStreamIngestionPropsTransform}
-   */
-  private Function<String, String> generateStreamIngestionPropsTransform(
-      String streamName,
-      String fullDatasourceName,
-      IntegrationTestingConfig config
-  )
-  {
-    final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
-    final Properties consumerProperties = new Properties();
-    consumerProperties.putAll(consumerConfigs);
-    consumerProperties.setProperty("bootstrap.servers", config.getKafkaInternalHost());
-    KafkaUtil.addPropertiesFromTestConfig(config, consumerProperties);
-    return spec -> {
-      try {
-        spec = StringUtils.replace(
-            spec,
-            "%%DATASOURCE%%",
-            fullDatasourceName
-        );
-        spec = StringUtils.replace(
-            spec,
-            "%%TOPIC_VALUE%%",
-            streamName
-        );
-        return StringUtils.replace(
-            spec,
-            "%%STREAM_PROPERTIES_VALUE%%",
-            jsonMapper.writeValueAsString(consumerProperties)
-        );
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-    };
+    // unload everything
   }
 }
