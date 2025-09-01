@@ -39,7 +39,9 @@ import java.util.Map;
 
 /**
  * Test to verify that cancelled worker tasks are retried when fault tolerance
- * is enabled.
+ * is enabled. This test uses the {@link ClusterTestingModule} to create a
+ * faulty Indexer which blocks the completion of the worker task. This allows
+ * time to kill off the worker before it can finish, thus triggering a relaunch.
  */
 public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
 {
@@ -122,7 +124,7 @@ public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
         queryLocal
     );
 
-    // Add a faulty Indexer to the cluster so that worker can start
+    // Add a faulty Indexer to the cluster so that worker is launched but doesn't finish
     final EmbeddedIndexer faultyIndexer = new EmbeddedIndexer()
         .addProperty("druid.unsafe.cluster.testing", "true")
         .addProperty("druid.unsafe.cluster.testing.overlordClient.taskStatusDelay", "PT1H")
@@ -130,16 +132,14 @@ public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
     cluster.addServer(faultyIndexer);
     faultyIndexer.start();
 
-    // Wait until the worker task has started and has performed some actions
+    // Let the worker run for a bit so that controller task moves to READING_INPUT phase
     final ServiceMetricEvent matchingEvent = faultyIndexer.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("ingest/count")
     );
     final String workerTaskId = (String) matchingEvent.getUserDims().get(DruidMetrics.TASK_ID);
-
-    // Let the worker run for a bit so that controller task moves to READING_INPUT phase
     Thread.sleep(100);
 
-    // Cancel the task and verify that it has failed
+    // Cancel the worker task and verify that it has failed
     cluster.callApi().onLeaderOverlord(o -> o.cancelTask(workerTaskId));
     overlord.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("task/run/time")

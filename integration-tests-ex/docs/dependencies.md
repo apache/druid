@@ -56,7 +56,7 @@ As described in the [Docker](docker.md) section, we use third-party
   to create the Druid database and user upon startup.
 * [ZooKeeper](https://hub.docker.com/_/zookeeper).
 * [Kafka](https://hub.docker.com/r/bitnami/kafka/). There is no
-    "official" image so we use the one from Bitnami.
+  "official" image so we use the one from Bitnami.
 
 See `compose/dependencies.yaml` for the Docker Compose configuration
 for each of these services.
