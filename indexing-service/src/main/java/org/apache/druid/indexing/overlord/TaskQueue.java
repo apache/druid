@@ -37,6 +37,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.EntryAlreadyExists;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.RunnerTaskState;
+import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.Counters;
@@ -425,7 +426,7 @@ public class TaskQueue
   {
     // Don't do anything with tasks that have recently finished; notifyStatus will handle it.
     if (entry != null && !entry.isComplete) {
-      final Task task = entry.task;
+      final Task task = entry.getTask();
 
       if (entry.future == null) {
         if (runnerTaskFuture == null) {
@@ -535,10 +536,10 @@ public class TaskQueue
       // If this throws with any sort of exception, including TaskExistsException, we don't want to
       // insert the task into our queue. So don't catch it.
       final DateTime insertTime = DateTimes.nowUtc();
-      taskStorage.insert(task, TaskStatus.running(task.getId()));
+      final TaskInfo<Task, TaskStatus> taskInfo = taskStorage.insert(task, TaskStatus.running(task.getId()));
       // Note: the TaskEntry created for this task doesn't actually use the `insertTime` timestamp, it uses a new
       // timestamp created in the ctor. This prevents races from occurring while syncFromStorage() is happening.
-      addTaskInternal(task, insertTime);
+      addTaskInternal(taskInfo, insertTime);
       requestManagement();
       return true;
     }
@@ -548,17 +549,17 @@ public class TaskQueue
   }
 
   @GuardedBy("startStopLock")
-  private void addTaskInternal(final Task task, final DateTime updateTime)
+  private void addTaskInternal(final TaskInfo<Task, TaskStatus> taskInfo, final DateTime updateTime)
   {
     final AtomicBoolean added = new AtomicBoolean(false);
     final TaskEntry entry = addOrUpdateTaskEntry(
-        task.getId(),
+        taskInfo.getId(),
         prevEntry -> {
           if (prevEntry == null) {
             added.set(true);
-            return new TaskEntry(task);
+            return new TaskEntry(taskInfo);
           } else if (prevEntry.lastUpdatedTime.isBefore(updateTime)) {
-            prevEntry.lastUpdatedTime = updateTime;
+            prevEntry.updateStatus(taskInfo.getStatus(), updateTime);
           }
 
           return prevEntry;
@@ -566,9 +567,9 @@ public class TaskQueue
     );
 
     if (added.get()) {
-      taskLockbox.add(task);
-    } else if (!entry.task.equals(task)) {
-      throw new ISE("Cannot add task[%s] as a different task for the same ID has already been added.", task.getId());
+      taskLockbox.add(taskInfo.getTask());
+    } else if (!entry.getTask().equals(taskInfo.getTask())) {
+      throw new ISE("Cannot add task[%s] as a different task for the same ID has already been added.", taskInfo.getId());
     }
   }
 
@@ -584,14 +585,14 @@ public class TaskQueue
   @GuardedBy("startStopLock")
   private boolean removeTaskInternal(final String taskId, final DateTime deleteTime)
   {
-    final AtomicReference<Task> removedTask = new AtomicReference<>();
+    final AtomicReference<TaskInfo<Task, TaskStatus>> removedTask = new AtomicReference<>();
 
     addOrUpdateTaskEntry(
         taskId,
         prevEntry -> {
           // Remove the task only if it is complete OR it doesn't have a more recent update
           if (prevEntry != null && (prevEntry.isComplete || prevEntry.lastUpdatedTime.isBefore(deleteTime))) {
-            removedTask.set(prevEntry.task);
+            removedTask.set(prevEntry.taskInfo);
             // Remove this taskId from activeTasks by mapping it to null
             return null;
           }
@@ -601,7 +602,7 @@ public class TaskQueue
     );
 
     if (removedTask.get() != null) {
-      removeTaskLock(removedTask.get());
+      removeTaskLock(removedTask.get().getTask());
       return true;
     }
     return false;
@@ -686,7 +687,7 @@ public class TaskQueue
       return;
     }
 
-    final Task task = entry.task;
+    final Task task = entry.getTask();
     Preconditions.checkNotNull(task, "task");
     Preconditions.checkNotNull(taskStatus, "status");
     Preconditions.checkState(active, "Queue is not active!");
@@ -708,6 +709,7 @@ public class TaskQueue
 
     // Mark this task as complete, so it isn't managed while being cleaned up.
     entry.isComplete = true;
+    entry.updateStatus(taskStatus, DateTimes.nowUtc());
 
     final TaskLocation taskLocation = taskRunner.getTaskLocation(task.getId());
 
@@ -835,26 +837,26 @@ public class TaskQueue
 
     try {
       if (active) {
-        final Map<String, Task> newTasks =
-            CollectionUtils.toMap(taskStorage.getActiveTasks(), Task::getId, Function.identity());
-        final Map<String, Task> oldTasks =
-            CollectionUtils.mapValues(activeTasks, entry -> entry.task);
+        final Map<String, TaskInfo<Task, TaskStatus>> newTasks =
+            CollectionUtils.toMap(taskStorage.getActiveTaskInfos(), TaskInfo::getId, Function.identity());
+        final Map<String, TaskInfo<Task, TaskStatus>> oldTasks =
+            CollectionUtils.mapValues(activeTasks, entry -> entry.taskInfo);
 
         // Identify the tasks that have been added or removed from the storage
-        final MapDifference<String, Task> mapDifference = Maps.difference(oldTasks, newTasks);
-        final Collection<Task> addedTasks = mapDifference.entriesOnlyOnRight().values();
-        final Collection<Task> removedTasks = mapDifference.entriesOnlyOnLeft().values();
+        final MapDifference<String, TaskInfo<Task, TaskStatus>> mapDifference = Maps.difference(oldTasks, newTasks);
+        final Collection<TaskInfo<Task, TaskStatus>> addedTasks = mapDifference.entriesOnlyOnRight().values();
+        final Collection<TaskInfo<Task, TaskStatus>> removedTasks = mapDifference.entriesOnlyOnLeft().values();
 
         // Remove tasks not present in metadata store if their lastUpdatedTime is before syncStartTime
         int numTasksRemoved = 0;
-        for (Task task : removedTasks) {
+        for (TaskInfo<Task, TaskStatus> task : removedTasks) {
           if (removeTaskInternal(task.getId(), syncStartTime)) {
             ++numTasksRemoved;
           }
         }
 
         // Add new tasks present in metadata store if their lastUpdatedTime is before syncStartTime
-        for (Task task : addedTasks) {
+        for (TaskInfo<Task, TaskStatus> task : addedTasks) {
           addTaskInternal(task, syncStartTime);
         }
 
@@ -874,15 +876,6 @@ public class TaskQueue
     finally {
       startStopLock.readLock().unlock();
     }
-  }
-
-  private static Map<String, Task> toTaskIDMap(List<Task> taskList)
-  {
-    Map<String, Task> rv = new HashMap<>();
-    for (Task task : taskList) {
-      rv.put(task.getId(), task);
-    }
-    return rv;
   }
 
   private Map<RowKey, Long> getDeltaValues(Map<RowKey, Long> total, Map<RowKey, Long> prev)
@@ -921,7 +914,7 @@ public class TaskQueue
   {
     return activeTasks.values().stream()
                       .filter(entry -> !entry.isComplete)
-                      .map(entry -> entry.task)
+                      .map(TaskEntry::getTask)
                       .collect(Collectors.toMap(Task::getId, TaskQueue::getMetricKey));
   }
 
@@ -958,7 +951,7 @@ public class TaskQueue
 
     return activeTasks.values().stream()
                       .filter(entry -> !entry.isComplete)
-                      .map(entry -> entry.task)
+                      .map(TaskEntry::getTask)
                       .filter(task -> !runnerKnownTaskIds.contains(task.getId()))
                       .collect(Collectors.toMap(TaskQueue::getMetricKey, task -> 1L, Long::sum));
   }
@@ -998,16 +991,16 @@ public class TaskQueue
    */
   public Optional<Task> getActiveTask(String id)
   {
-    final TaskEntry entry = activeTasks.get(id);
-    if (entry == null) {
+    final Optional<TaskInfo<Task, TaskStatus>> taskInfo = getActiveTaskInfo(id);
+    if (!taskInfo.isPresent()) {
       return Optional.absent();
     }
 
-    Task task = entry.task;
+    Task task = taskInfo.get().getTask();
     if (task != null) {
       try {
         // Write and read the value using a mapper with password redaction mixin.
-        task = passwordRedactingMapper.readValue(passwordRedactingMapper.writeValueAsString(entry.task), Task.class);
+        task = passwordRedactingMapper.readValue(passwordRedactingMapper.writeValueAsString(task), Task.class);
       }
       catch (JsonProcessingException e) {
         log.error(e, "Failed to serialize or deserialize task with id [%s].", task.getId());
@@ -1020,25 +1013,40 @@ public class TaskQueue
   }
 
   /**
-   * List of all active and completed tasks currently being managed by this
-   * TaskQueue.
+   * Gets the {@link TaskInfo} for the given {@code taskId} from {@link #activeTasks} if present,
+   * otherwise returns an empty optional.
    */
-  public List<Task> getTasks()
+  public Optional<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(String taskId)
   {
-    return activeTasks.values().stream().map(entry -> entry.task).collect(Collectors.toList());
+    final TaskEntry entry = activeTasks.get(taskId);
+    return entry == null ? Optional.absent() : Optional.of(entry.taskInfo);
   }
 
   /**
-   * Returns the list of currently active tasks for the given datasource.
+   * List of all active and completed task infos currently being managed by this TaskQueue.
+   */
+  public List<TaskInfo<Task, TaskStatus>> getTaskInfos()
+  {
+    return activeTasks.values().stream().map(entry -> entry.taskInfo).collect(Collectors.toList());
+  }
+
+  /**
+   * List of all active and completed tasks currently being managed by this TaskQueue.
+   */
+  public List<Task> getTasks()
+  {
+    return getTaskInfos().stream().map(TaskInfo::getTask).collect(Collectors.toList());
+  }
+
+  /**
+   * Returns a map of currently active tasks for the given datasource.
    */
   public Map<String, Task> getActiveTasksForDatasource(String datasource)
   {
     return activeTasks.values().stream().filter(
         entry -> !entry.isComplete
-                 && entry.task.getDataSource().equals(datasource)
-    ).map(
-        entry -> entry.task
-    ).collect(
+                 && entry.taskInfo.getDataSource().equals(datasource)
+    ).map(TaskEntry::getTask).collect(
         Collectors.toMap(Task::getId, Function.identity())
     );
   }
@@ -1140,16 +1148,34 @@ public class TaskQueue
    */
   static class TaskEntry
   {
-    private final Task task;
+    private TaskInfo<Task, TaskStatus> taskInfo;
 
     private DateTime lastUpdatedTime;
     private ListenableFuture<TaskStatus> future = null;
     private boolean isComplete = false;
 
-    TaskEntry(Task task)
+    TaskEntry(TaskInfo<Task, TaskStatus> taskInfo)
     {
-      this.task = task;
+      this.taskInfo = taskInfo;
       this.lastUpdatedTime = DateTimes.nowUtc();
+    }
+
+    /**
+     * Returns the task associated with this {@link TaskEntry}
+     */
+    Task getTask()
+    {
+      return taskInfo.getTask();
+    }
+
+    /**
+     * Updates the {@link TaskStatus} for the task associated with this {@link TaskEntry} and sets the corresponding
+     * update time.
+     */
+    void updateStatus(TaskStatus status, DateTime updateTime)
+    {
+      this.taskInfo = this.taskInfo.withStatus(status);
+      this.lastUpdatedTime = updateTime;
     }
   }
 
