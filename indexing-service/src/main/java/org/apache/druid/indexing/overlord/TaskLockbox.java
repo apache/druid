@@ -495,10 +495,9 @@ public class TaskLockbox
     final boolean isTimeChunkLock = lockGranularity == LockGranularity.TIME_CHUNK;
 
     final AllocationHolderList holderList = new AllocationHolderList(requests, interval);
-    holderList.getPending().forEach(this::verifyTaskIsActive);
-
     giant.lock();
     try {
+      holderList.getPending().forEach(this::verifyTaskIsActive);
       if (isTimeChunkLock) {
         // For time-chunk locking, segment must be allocated only after acquiring the lock
         holderList.getPending().forEach(holder -> acquireTaskLock(holder, true));
@@ -524,7 +523,9 @@ public class TaskLockbox
 
   /**
    * Marks the segment allocation as failed if the underlying task is not active.
+   * Should be called only while holding the {@code giant} lock.
    */
+  @GuardedBy("giant")
   private void verifyTaskIsActive(SegmentAllocationHolder holder)
   {
     final String taskId = holder.task.getId();
