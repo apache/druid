@@ -17,27 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded;
+package org.apache.druid.testing.embedded.msq;
 
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.http.SqlTaskStatus;
+import org.apache.druid.testing.embedded.EmbeddedBroker;
+import org.apache.druid.testing.embedded.EmbeddedCoordinator;
+import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedHistorical;
+import org.apache.druid.testing.embedded.EmbeddedIndexer;
+import org.apache.druid.testing.embedded.EmbeddedOverlord;
+import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.indexing.Resources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
-public class ITKeyStatisticsSketchMergeMode extends EmbeddedClusterTestBase
+public class MSQKeyStatisticsSketchMergeModeTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer()
-      .setServerMemory(500_000_000L)
+      .setServerMemory(300_000_000L)
       .addProperty("druid.worker.capacity", "3");
   private EmbeddedMSQApis msqApis;
 
