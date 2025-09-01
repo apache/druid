@@ -30,6 +30,7 @@ import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
+import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.indexing.Resources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.junit.jupiter.api.BeforeAll;
@@ -77,46 +78,11 @@ public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
   @Test
   public void test_cancelledWorker_isRetried_ifFaultToleranceIsEnabled() throws Exception
   {
-    String queryLocal =
-        StringUtils.format(
-            "INSERT INTO %s\n"
-            + "SELECT\n"
-            + "  TIME_PARSE(\"timestamp\") AS __time,\n"
-            + "  isRobot,\n"
-            + "  diffUrl,\n"
-            + "  added,\n"
-            + "  countryIsoCode,\n"
-            + "  regionName,\n"
-            + "  channel,\n"
-            + "  flags,\n"
-            + "  delta,\n"
-            + "  isUnpatrolled,\n"
-            + "  isNew,\n"
-            + "  deltaBucket,\n"
-            + "  isMinor,\n"
-            + "  isAnonymous,\n"
-            + "  deleted,\n"
-            + "  cityName,\n"
-            + "  metroCode,\n"
-            + "  namespace,\n"
-            + "  comment,\n"
-            + "  page,\n"
-            + "  commentLength,\n"
-            + "  countryName,\n"
-            + "  user,\n"
-            + "  regionIsoCode\n"
-            + "FROM TABLE(\n"
-            + "  EXTERN(\n"
-            + "    '{\"type\":\"local\",\"files\":[\"%s\"]}',\n"
-            + "    '{\"type\":\"json\"}',\n"
-            + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
-            + "  )\n"
-            + ")\n"
-            + "PARTITIONED BY DAY\n"
-            + "CLUSTERED BY \"__time\"",
-            dataSource,
-            Resources.DataFile.tinyWiki1Json().getAbsolutePath()
-        );
+    final String queryLocal = StringUtils.format(
+        MoreResources.MSQ.INSERT_TINY_WIKI_JSON,
+        dataSource,
+        Resources.DataFile.tinyWiki1Json().getAbsolutePath()
+    );
 
     // Run the MSQ task in fault tolerance mode
     final SqlTaskStatus taskStatus = msqApis.submitTaskSql(

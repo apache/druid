@@ -81,6 +81,72 @@ public class MoreResources
             .appendToExisting(false);
   }
 
+  public static class MSQ
+  {
+    /**
+     * SQL to INSERT any of the tiny wiki JSON data files into a new datasource
+     * with DAY granularity. e.g. {@link Resources.DataFile#tinyWiki1Json()}.
+     */
+    public static final String INSERT_TINY_WIKI_JSON =
+        "INSERT INTO %s\n"
+        + "SELECT\n"
+        + "  TIME_PARSE(\"timestamp\") AS __time,\n"
+        + "  isRobot,\n"
+        + "  diffUrl,\n"
+        + "  added,\n"
+        + "  countryIsoCode,\n"
+        + "  regionName,\n"
+        + "  channel,\n"
+        + "  flags,\n"
+        + "  delta,\n"
+        + "  isUnpatrolled,\n"
+        + "  isNew,\n"
+        + "  deltaBucket,\n"
+        + "  isMinor,\n"
+        + "  isAnonymous,\n"
+        + "  deleted,\n"
+        + "  cityName,\n"
+        + "  metroCode,\n"
+        + "  namespace,\n"
+        + "  comment,\n"
+        + "  page,\n"
+        + "  commentLength,\n"
+        + "  countryName,\n"
+        + "  user,\n"
+        + "  regionIsoCode\n"
+        + "FROM TABLE(\n"
+        + "  EXTERN(\n"
+        + "    '{\"type\":\"local\",\"files\":[\"%s\"]}',\n"
+        + "    '{\"type\":\"json\"}',\n"
+        + "    "
+        + "'[{\"type\":\"string\",\"name\":\"timestamp\"},"
+        + "{\"type\":\"string\",\"name\":\"isRobot\"},"
+        + "{\"type\":\"string\",\"name\":\"diffUrl\"},"
+        + "{\"type\":\"long\",\"name\":\"added\"},"
+        + "{\"type\":\"string\",\"name\":\"countryIsoCode\"},"
+        + "{\"type\":\"string\",\"name\":\"regionName\"},"
+        + "{\"type\":\"string\",\"name\":\"channel\"},"
+        + "{\"type\":\"string\",\"name\":\"flags\"},"
+        + "{\"type\":\"long\",\"name\":\"delta\"},"
+        + "{\"type\":\"string\",\"name\":\"isUnpatrolled\"},"
+        + "{\"type\":\"string\",\"name\":\"isNew\"},"
+        + "{\"type\":\"double\",\"name\":\"deltaBucket\"},"
+        + "{\"type\":\"string\",\"name\":\"isMinor\"},"
+        + "{\"type\":\"string\",\"name\":\"isAnonymous\"},"
+        + "{\"type\":\"long\",\"name\":\"deleted\"},"
+        + "{\"type\":\"string\",\"name\":\"cityName\"},"
+        + "{\"type\":\"long\",\"name\":\"metroCode\"},"
+        + "{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},"
+        + "{\"type\":\"string\",\"name\":\"page\"},"
+        + "{\"type\":\"long\",\"name\":\"commentLength\"},"
+        + "{\"type\":\"string\",\"name\":\"countryName\"},"
+        + "{\"type\":\"string\",\"name\":\"user\"},"
+        + "{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
+        + "  )\n"
+        + ")\n"
+        + "PARTITIONED BY DAY\n";
+  }
+
   public static class ProbufData
   {
     public static final String WIKI_PROTOBUF_BYTES_DECODER_RESOURCE = "data/protobuf/wikipedia.desc";
