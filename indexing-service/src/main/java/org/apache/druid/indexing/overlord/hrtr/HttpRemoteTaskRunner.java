@@ -1227,7 +1227,6 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
 
             immutableWorker = findWorkerToRunTask(ti.getTask());
             if (immutableWorker == null) {
-              log.info("Kashif: No worker for task[%s]", taskId);
               continue;
             }
 

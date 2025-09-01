@@ -409,15 +409,6 @@
             </properties>
         </profile>
         <profile>
-            <id>IT-MultiStageQueryWithMM</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <properties>
-                <it.category>MultiStageQueryWithMM</it.category>
-            </properties>
-        </profile>
-        <profile>
             <id>IT-Catalog</id>
             <activation>
                 <activeByDefault>false</activeByDefault>

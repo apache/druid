@@ -204,6 +204,7 @@ Reference: https://dzone.com/articles/build-docker-image-from-maven
                                         <MARIADB_VERSION>${mariadb.version}</MARIADB_VERSION>
                                         <MYSQL_IMAGE_VERSION>${mysql.image.version}</MYSQL_IMAGE_VERSION>
                                         <CONFLUENT_VERSION>${confluent-version}</CONFLUENT_VERSION>
+                                        <!-- bitnami currently does not offer 3.9.1 image -->
                                         <KAFKA_VERSION>4.0.0</KAFKA_VERSION>
                                         <ZK_VERSION>${zookeeper.version}</ZK_VERSION>
                                         <HADOOP_VERSION>${hadoop.compile.version}</HADOOP_VERSION>

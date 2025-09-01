@@ -41,10 +41,10 @@ services:
     environment:
        ZOO_LOG4J_PROP: INFO,ROLLINGFILE
 
-  # Uses the Apache Kafka image
-  # See https://hub.docker.com/r/apache/kafka/
+  # Uses the Bitnami Kafka image
+  # See https://hub.docker.com/r/bitnami/kafka/
   kafka:
-    image: apache/kafka:${KAFKA_VERSION}
+    image: bitnami/kafka:${KAFKA_VERSION}
     container_name: kafka
     # platform: linux/x86_64
     labels:
@@ -56,7 +56,7 @@ services:
       druid-it-net:
         ipv4_address: 172.172.172.2
     volumes:
-      - ${SHARED_DIR}/kafka:/apache/kafka
+      - ${SHARED_DIR}/kafka:/bitnami/kafka
     environment:
       - KAFKA_CFG_NODE_ID=1001
       - KAFKA_CFG_PROCESS_ROLES=controller,broker

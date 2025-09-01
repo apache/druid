@@ -37,6 +37,10 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
+/**
+ * Test to verify that cancelled worker tasks are retried when fault tolerance
+ * is enabled.
+ */
 public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
@@ -69,7 +73,7 @@ public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void testMsqIngestionAndQuerying() throws Exception
+  public void test_cancelledWorker_isRetried_ifFaultToleranceIsEnabled() throws Exception
   {
     String queryLocal =
         StringUtils.format(
