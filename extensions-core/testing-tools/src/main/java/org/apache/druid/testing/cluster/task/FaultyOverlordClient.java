@@ -33,9 +33,9 @@ import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClientImpl;
 import org.apache.druid.testing.cluster.ClusterTestingTaskConfig;
-import org.jetbrains.annotations.Nullable;
 import org.joda.time.Duration;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Set;
 
