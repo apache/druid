@@ -568,6 +568,10 @@ public class TaskLockbox
     giant.lock();
 
     try {
+      if (!activeTasks.contains(task.getId())) {
+        throw new ISE("Unable to grant LockPosse to inactive Task [%s]", task.getId());
+      }
+
       final TaskLockPosse posseToUse;
       final List<TaskLockPosse> foundPosses = findLockPossesOverlapsInterval(
           request.getInterval()
@@ -1387,7 +1391,13 @@ public class TaskLockbox
   @VisibleForTesting
   Set<String> getActiveTasks()
   {
-    return activeTasks;
+    giant.lock();
+    try {
+      return activeTasks;
+    }
+    finally {
+      giant.unlock();
+    }
   }
 
   @VisibleForTesting
