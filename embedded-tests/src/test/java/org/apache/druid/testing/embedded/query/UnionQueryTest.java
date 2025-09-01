@@ -20,24 +20,10 @@
 package org.apache.druid.testing.embedded.query;
 
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.apache.druid.testing.tools.ITRetryUtil;
-import org.apache.druid.testing.tools.KafkaEventWriter;
-import org.apache.druid.testing.tools.StreamEventWriter;
 import org.junit.jupiter.api.Test;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
 
 public class UnionQueryTest extends EmbeddedClusterTestBase
 {

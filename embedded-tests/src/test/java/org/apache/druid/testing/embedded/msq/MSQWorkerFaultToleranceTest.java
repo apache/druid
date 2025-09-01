@@ -19,6 +19,7 @@
 
 package org.apache.druid.testing.embedded.msq;
 
+import org.apache.druid.guice.ClusterTestingModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
@@ -29,7 +30,6 @@ import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
-import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.Resources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.junit.jupiter.api.BeforeAll;
@@ -42,8 +42,8 @@ public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer()
-      .setServerMemory(300_000_000L)
-      .addProperty("druid.worker.capacity", "2");
+      .addProperty("druid.plaintextPort", "7091")
+      .addProperty("druid.worker.capacity", "1");
 
   private EmbeddedMSQApis msqApis;
 
@@ -53,15 +53,13 @@ public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
     return EmbeddedDruidCluster
         .withEmbeddedDerbyAndZookeeper()
         .useLatchableEmitter()
-        .addCommonProperty("druid.msq.intermediate.storage.enable", "true")
-        .addCommonProperty("druid.msq.intermediate.storage.type", "local")
-        .addCommonProperty("druid.msq.intermediate.storage.basePath", "stuff")
+        .addExtension(ClusterTestingModule.class)
+        .addResource(new MSQLocalDurableStorage())
         .addServer(overlord)
         .addServer(coordinator)
         .addServer(indexer)
         .addServer(new EmbeddedBroker())
-        .addServer(new EmbeddedHistorical())
-        .addServer(new EmbeddedRouter());
+        .addServer(new EmbeddedHistorical());
   }
 
   @BeforeAll
@@ -71,11 +69,11 @@ public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void testMsqIngestionAndQuerying()
+  public void testMsqIngestionAndQuerying() throws Exception
   {
     String queryLocal =
         StringUtils.format(
-            "INSERT INTO %1$s\n"
+            "INSERT INTO %s\n"
             + "SELECT\n"
             + "  TIME_PARSE(\"timestamp\") AS __time,\n"
             + "  isRobot,\n"
@@ -103,7 +101,7 @@ public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
             + "  regionIsoCode\n"
             + "FROM TABLE(\n"
             + "  EXTERN(\n"
-            + "    '{\"type\":\"local\",\"files\":[\"%2$s\", \"%2$s\", \"%2$s\", \"%2$s\"]}',\n"
+            + "    '{\"type\":\"local\",\"files\":[\"%s\"]}',\n"
             + "    '{\"type\":\"json\"}',\n"
             + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
             + "  )\n"
@@ -114,27 +112,43 @@ public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
             Resources.DataFile.tinyWiki1Json().getAbsolutePath()
         );
 
-    final SqlTaskStatus taskStatus = msqApis.submitTaskSql(Map.of("faultTolerance", true), queryLocal);
+    // Run the MSQ task in fault tolerance mode
+    final SqlTaskStatus taskStatus = msqApis.submitTaskSql(
+        Map.of("faultTolerance", true),
+        queryLocal
+    );
 
-    // Wait until the worker task is launched and then cancel it
-    final ServiceMetricEvent workerTaskStartedEvent = indexer.latchableEmitter().waitForEvent(
+    // Add a faulty Indexer to the cluster so that worker can start
+    final EmbeddedIndexer faultyIndexer = new EmbeddedIndexer()
+        .addProperty("druid.unsafe.cluster.testing", "true")
+        .addProperty("druid.unsafe.cluster.testing.overlordClient.taskStatusDelay", "PT1H")
+        .addProperty("druid.worker.capacity", "1");
+    cluster.addServer(faultyIndexer);
+    faultyIndexer.start();
+
+    // Wait until the worker task has started and has performed some actions
+    final ServiceMetricEvent matchingEvent = faultyIndexer.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("ingest/count")
-                      .hasDimension(DruidMetrics.TASK_TYPE, "query_worker")
     );
-    final String workerTaskId = (String) workerTaskStartedEvent.getUserDims().get(DruidMetrics.TASK_ID);
-    overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("task/action/run/time")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
-                      .hasDimension(DruidMetrics.TASK_ID, workerTaskId)
-    );
+    final String workerTaskId = (String) matchingEvent.getUserDims().get(DruidMetrics.TASK_ID);
 
+    // Let the worker run for a bit so that controller task moves to READING_INPUT phase
+    Thread.sleep(100);
+
+    // Cancel the task and verify that it has failed
     cluster.callApi().onLeaderOverlord(o -> o.cancelTask(workerTaskId));
     overlord.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("task/run/time")
-                      .hasDimension(DruidMetrics.TASK_ID, workerTaskId)
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
                       .hasDimension(DruidMetrics.TASK_STATUS, "FAILED")
     );
+    faultyIndexer.stop();
+
+    // Add a functional Indexer so that the worker is relaunched successfully
+    final EmbeddedIndexer functionalIndexer = new EmbeddedIndexer()
+        .addProperty("druid.worker.capacity", "1");
+    cluster.addServer(functionalIndexer);
+    functionalIndexer.start();
 
     // Verify that the controller task eventually succeeds
     cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord.latchableEmitter());
@@ -143,7 +157,9 @@ public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
     cluster.callApi().verifySqlQuery(
         "SELECT __time, isRobot, added, delta, deleted, namespace FROM %s",
         dataSource,
-        ""
+        "2013-08-31T01:02:33.000Z,,57,-143,200,article\n"
+        + "2013-08-31T03:32:45.000Z,,459,330,129,wikipedia\n"
+        + "2013-08-31T07:11:21.000Z,,123,111,12,article"
     );
   }
 }
