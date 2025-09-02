@@ -50,7 +50,7 @@ public class DruidAvaticaJsonHandlerTest extends DruidAvaticaHandlerTest
   }
 
   @Test
-  public void testNonPostRequestReturns400() throws Exception
+  public void testNonPostRequestReturns405() throws Exception
   {
     DruidMeta druidMeta = EasyMock.mock(DruidMeta.class);
     DruidAvaticaProtobufHandler handler = new DruidAvaticaProtobufHandler(
@@ -68,7 +68,7 @@ public class DruidAvaticaJsonHandlerTest extends DruidAvaticaHandlerTest
     EasyMock.expect(httpURI.getPath()).andReturn(DruidAvaticaProtobufHandler.AVATICA_PATH_NO_TRAILING_SLASH);
     EasyMock.expect(request.getMethod()).andReturn("GET");
 
-    response.setStatus(400);
+    response.setStatus(405);
     EasyMock.expectLastCall();
 
     response.write(

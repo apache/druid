@@ -87,7 +87,7 @@ public class DruidAvaticaProtobufHandler extends Handler.Abstract implements Met
     if (AVATICA_PATH_NO_TRAILING_SLASH.equals(StringUtils.maybeRemoveTrailingSlash(requestURI))) {
       try (Timer.Context ctx = this.requestTimer.start()) {
         if (!"POST".equals(request.getMethod())) {
-          response.setStatus(400); // HttpServletResponse.SC_BAD_REQUEST
+          response.setStatus(405);
           response.write(
               true,
               ByteBuffer.wrap("This server expects only POST calls.".getBytes(StandardCharsets.UTF_8)), callback

@@ -89,7 +89,7 @@ public class DruidAvaticaJsonHandler extends Handler.Abstract implements Metrics
         response.getHeaders().put("Content-Type", "application/json;charset=utf-8");
 
         if (!"POST".equals(request.getMethod())) {
-          response.setStatus(400); // HttpServletResponse.SC_BAD_REQUEST
+          response.setStatus(405);
           response.write(
               true,
               ByteBuffer.wrap("This server expects only POST calls.".getBytes(StandardCharsets.UTF_8)), callback
