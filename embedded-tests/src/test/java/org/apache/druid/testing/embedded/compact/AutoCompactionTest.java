@@ -1616,17 +1616,17 @@ public class AutoCompactionTest extends CompactionTestBase
     }
   }
 
-  private <T extends TaskBuilder.IndexCommon<?, ?, ?>> void loadData(Supplier<T> updatePayload)
+  private <T extends TaskBuilder.IndexCommon<?, ?, ?, ?>> void loadData(Supplier<T> updatePayload)
   {
     loadData(updatePayload, null);
   }
 
-  private <T extends TaskBuilder.IndexCommon<?, ?, ?>> void loadData(
+  private <T extends TaskBuilder.IndexCommon<?, ?, ?, ?>> void loadData(
       Supplier<T> taskPayloadSupplier,
       GranularitySpec granularitySpec
   )
   {
-    final TaskBuilder.IndexCommon<?, ?, ?> taskBuilder = taskPayloadSupplier.get();
+    final TaskBuilder.IndexCommon<?, ?, ?, ?> taskBuilder = taskPayloadSupplier.get();
     taskBuilder.dataSource(fullDatasourceName);
     if (granularitySpec != null) {
       taskBuilder.granularitySpec(granularitySpec);

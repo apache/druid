@@ -152,7 +152,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   private static final String TOPIC_PREFIX = "testTopic";
   private static final String DATASOURCE = "testDS";
   private static final int NUM_PARTITIONS = 3;
-  private static final long TEST_CHAT_RETRIES = 9L;
+  private static final int TEST_CHAT_RETRIES = 9;
   private static final Period TEST_HTTP_TIMEOUT = new Period("PT10S");
   private static final Period TEST_SHUTDOWN_TIMEOUT = new Period("PT80S");
 
@@ -308,59 +308,27 @@ public class KafkaSupervisorTest extends EasyMockSupport
     consumerProperties.put("myCustomKey", "myCustomValue");
     consumerProperties.put("bootstrap.servers", kafkaHost);
 
-    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
-        topic,
-        null,
-        INPUT_FORMAT,
-        replicas,
-        1,
-        new Period("PT1H"),
-        consumerProperties,
-        OBJECT_MAPPER.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class),
-        null,
-        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
-        new Period("P1D"),
-        new Period("PT30S"),
-        true,
-        new Period("PT30M"),
-        null,
-        null,
-        null,
-        null,
-        new IdleConfig(true, 1000L),
-        1,
-        false
-    );
+    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaIOConfigBuilder()
+        .withTopic(topic)
+        .withInputFormat(INPUT_FORMAT)
+        .withReplicas(replicas)
+        .withTaskCount(1)
+        .withConsumerProperties(consumerProperties)
+        .withAutoScalerConfig(OBJECT_MAPPER.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class))
+        .withUseEarliestSequenceNumber(true)
+        .build();
 
-    final KafkaSupervisorTuningConfig tuningConfigOri = new KafkaSupervisorTuningConfig(
-        null,
-        1000,
-        null,
-        null,
-        50000,
-        null,
-        new Period("P1Y"),
-        null,
-        null,
-        null,
-        false,
-        null,
-        false,
-        null,
-        numThreads,
-        TEST_CHAT_RETRIES,
-        TEST_HTTP_TIMEOUT,
-        TEST_SHUTDOWN_TIMEOUT,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
-
+    final KafkaSupervisorTuningConfig tuningConfigOri = new KafkaTuningConfigBuilder()
+        .withIntermediatePersistPeriod(Period.years(1))
+        .withResetOffsetAutomatically(false)
+        .withWorkerThreads(numThreads)
+        .withShutdownTimeout(TEST_SHUTDOWN_TIMEOUT)
+        .withMaxRowsInMemory(1000)
+        .withMaxRowsPerSegment(50000)
+        .withReportParseExceptions(false)
+        .withChatHandlerNumRetries(TEST_CHAT_RETRIES)
+        .withChatHandlerTimeout(TEST_HTTP_TIMEOUT.toStandardDuration())
+        .build();
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(kafkaSupervisorIOConfig).anyTimes();
     EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
     EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(tuningConfigOri).anyTimes();
@@ -4649,34 +4617,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         false,
         kafkaHost,
         dataSchema,
-        new KafkaSupervisorTuningConfig(
-            null,
-            1000,
-            null,
-            null,
-            50000,
-            null,
-            new Period("P1Y"),
-            null,
-            null,
-            null,
-            false,
-            null,
-            false,
-            null,
-            numThreads,
-            TEST_CHAT_RETRIES,
-            TEST_HTTP_TIMEOUT,
-            TEST_SHUTDOWN_TIMEOUT,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        )
+        tuningConfigBuilder().build()
     );
 
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
@@ -4690,34 +4631,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     DataSchema modifiedDataSchema = getDataSchema("some other datasource");
 
-    KafkaSupervisorTuningConfig modifiedTuningConfig = new KafkaSupervisorTuningConfig(
-        null,
-        42, // This is different
-        null,
-        null,
-        50000,
-        null,
-        new Period("P1Y"),
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        null,
-        numThreads,
-        TEST_CHAT_RETRIES,
-        TEST_HTTP_TIMEOUT,
-        TEST_SHUTDOWN_TIMEOUT,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    KafkaSupervisorTuningConfig modifiedTuningConfig = tuningConfigBuilder()
+        .withMaxRowsInMemory(42)
+        .build();
 
     KafkaIndexTask completedTaskFromStorage = createKafkaIndexTask(
         "id0",
@@ -4845,34 +4761,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         false,
         kafkaHost,
         dataSchema,
-        new KafkaSupervisorTuningConfig(
-            null,
-            1000,
-            null,
-            null,
-            50000,
-            null,
-            new Period("P1Y"),
-            null,
-            null,
-            null,
-            false,
-            null,
-            false,
-            null,
-            numThreads,
-            TEST_CHAT_RETRIES,
-            TEST_HTTP_TIMEOUT,
-            TEST_SHUTDOWN_TIMEOUT,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        )
+        tuningConfigBuilder().build()
     );
 
     // Create task1 with some start and end offsets
@@ -5208,6 +5097,19 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
   }
 
+  private KafkaTuningConfigBuilder tuningConfigBuilder()
+  {
+    return new KafkaTuningConfigBuilder()
+        .withIntermediatePersistPeriod(Period.years(1))
+        .withResetOffsetAutomatically(false)
+        .withWorkerThreads(numThreads)
+        .withShutdownTimeout(TEST_SHUTDOWN_TIMEOUT)
+        .withMaxRowsInMemory(1000)
+        .withMaxRowsPerSegment(50000)
+        .withReportParseExceptions(false)
+        .withChatHandlerNumRetries(TEST_CHAT_RETRIES)
+        .withChatHandlerTimeout(TEST_HTTP_TIMEOUT.toStandardDuration());
+  }
 
   private TestableKafkaSupervisor getTestableSupervisor(
       int replicas,
@@ -5366,34 +5268,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
       }
     };
 
-    final KafkaSupervisorTuningConfig tuningConfig = new KafkaSupervisorTuningConfig(
-        null,
-        1000,
-        null,
-        null,
-        50000,
-        null,
-        new Period("P1Y"),
-        null,
-        null,
-        null,
-        false,
-        null,
-        resetOffsetAutomatically,
-        null,
-        numThreads,
-        TEST_CHAT_RETRIES,
-        TEST_HTTP_TIMEOUT,
-        TEST_SHUTDOWN_TIMEOUT,
-        null,
-        null,
-        null,
-        null,
-        10,
-        null,
-        null,
-        null
-    );
+    final KafkaSupervisorTuningConfig tuningConfig = tuningConfigBuilder()
+        .withMaxSavedParseExceptions(10)
+        .withResetOffsetAutomatically(resetOffsetAutomatically)
+        .build();
 
     return new TestableKafkaSupervisor(
         taskStorage,
@@ -5484,34 +5362,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
       }
     };
 
-    final KafkaSupervisorTuningConfig tuningConfig = new KafkaSupervisorTuningConfig(
-        null,
-        1000,
-        null,
-        null,
-        50000,
-        null,
-        new Period("P1Y"),
-        null,
-        null,
-        null,
-        false,
-        null,
-        false,
-        null,
-        numThreads,
-        TEST_CHAT_RETRIES,
-        TEST_HTTP_TIMEOUT,
-        TEST_SHUTDOWN_TIMEOUT,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    final KafkaSupervisorTuningConfig tuningConfig = tuningConfigBuilder().build();
 
     return new TestableKafkaSupervisorWithCustomIsTaskCurrent(
         taskStorage,
