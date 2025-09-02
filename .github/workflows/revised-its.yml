@@ -49,7 +49,7 @@ jobs:
       fail-fast: false
       matrix:
         jdk: [17]
-        it: [MultiStageQuery, Catalog, BatchIndex, InputSource, InputFormat, DruidExactCountBitmap]
+        it: [MultiStageQuery, BatchIndex, InputSource, InputFormat, DruidExactCountBitmap]
         indexer: [middleManager]
     uses: ./.github/workflows/reusable-revised-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}

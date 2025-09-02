@@ -17,23 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.catalog;
+package org.apache.druid.testing.embedded.catalog;
 
-import org.apache.druid.testsEx.categories.Catalog;
-import org.apache.druid.testsEx.config.DruidTestRunner;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-
-@RunWith(DruidTestRunner.class)
-@Category(Catalog.class)
-public class ITCatalogInsertAndQueryTest extends ITCatalogIngestAndQueryTest
+public class CatalogInsertAndQueryTest extends CatalogIngestAndQueryTest
 {
-  @Override
-  public String getOperationName()
-  {
-    return "INSERT";
-  }
-
   @Override
   public String getDmlPrefixPattern()
   {
