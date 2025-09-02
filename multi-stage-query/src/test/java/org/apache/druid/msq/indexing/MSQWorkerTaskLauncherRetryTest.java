@@ -134,7 +134,6 @@ public class MSQWorkerTaskLauncherRetryTest
         workerFailureListener,
         ImmutableMap.of(),
         TimeUnit.SECONDS.toMillis(5),
-
         new MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig(),
         2
     );
