@@ -100,9 +100,6 @@ public class ClusterTestingModule implements DruidModule
       binder.bind(CoordinatorClient.class)
             .to(FaultyCoordinatorClient.class)
             .in(LazySingleton.class);
-      binder.bind(OverlordClient.class)
-            .to(FaultyOverlordClient.class)
-            .in(LazySingleton.class);
       binder.bind(RemoteTaskActionClientFactory.class)
             .to(FaultyRemoteTaskActionClientFactory.class)
             .in(LazySingleton.class);
@@ -111,7 +108,11 @@ public class ClusterTestingModule implements DruidModule
             .to(FaultyTaskLockbox.class)
             .in(LazySingleton.class);
     } else if (roles.contains(NodeRole.INDEXER)) {
-      JsonConfigProvider.bind(binder, PROPERTY_OVERLORD_CLIENT_CONFIG, ClusterTestingTaskConfig.OverlordClientConfig.class);
+      JsonConfigProvider.bind(
+          binder,
+          PROPERTY_OVERLORD_CLIENT_CONFIG,
+          ClusterTestingTaskConfig.OverlordClientConfig.class
+      );
       binder.bind(OverlordClient.class)
             .to(FaultyOverlordClient.class)
             .in(LazySingleton.class);
