@@ -76,7 +76,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
-  public TaskInfo<Task, TaskStatus> insert(Task task, TaskStatus status)
+  public TaskInfo insert(Task task, TaskStatus status)
   {
     Preconditions.checkNotNull(task, "task");
     Preconditions.checkNotNull(status, "status");
@@ -137,7 +137,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
 
   @Nullable
   @Override
-  public TaskInfo<Task, TaskStatus> getTaskInfo(String taskId)
+  public TaskInfo getTaskInfo(String taskId)
   {
     Preconditions.checkNotNull(taskId, "taskId");
     final TaskStuff taskStuff = tasks.get(taskId);
@@ -161,9 +161,9 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfos()
+  public List<TaskInfo> getActiveTaskInfos()
   {
-    final ImmutableList.Builder<TaskInfo<Task, TaskStatus>> listBuilder = ImmutableList.builder();
+    final ImmutableList.Builder<TaskInfo> listBuilder = ImmutableList.builder();
     for (final TaskStuff taskStuff : tasks.values()) {
       if (taskStuff.getStatus().isRunnable()) {
         listBuilder.add(TaskStuff.toTaskInfo(taskStuff));
@@ -184,9 +184,9 @@ public class HeapMemoryTaskStorage implements TaskStorage
     return listBuilder.build();
   }
 
-  public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource)
+  public List<TaskInfo> getActiveTaskInfo(@Nullable String dataSource)
   {
-    final ImmutableList.Builder<TaskInfo<Task, TaskStatus>> listBuilder = ImmutableList.builder();
+    final ImmutableList.Builder<TaskInfo> listBuilder = ImmutableList.builder();
     for (final TaskStuff taskStuff : tasks.values()) {
       if (taskStuff.getStatus().isRunnable()) {
         if (dataSource == null || dataSource.equals(taskStuff.getDataSource())) {
@@ -197,7 +197,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
     return listBuilder.build();
   }
 
-  public List<TaskInfo<Task, TaskStatus>> getRecentlyCreatedAlreadyFinishedTaskInfo(CompleteTaskLookup taskLookup)
+  public List<TaskInfo> getRecentlyCreatedAlreadyFinishedTaskInfo(CompleteTaskLookup taskLookup)
   {
     final Ordering<TaskStuff> createdDateDesc = new Ordering<TaskStuff>()
     {
@@ -220,12 +220,12 @@ public class HeapMemoryTaskStorage implements TaskStorage
    * This method should be used only for testing.
    */
   @Override
-  public List<TaskInfo<Task, TaskStatus>> getTaskInfos(
+  public List<TaskInfo> getTaskInfos(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String datasource
   )
   {
-    final List<TaskInfo<Task, TaskStatus>> tasks = new ArrayList<>();
+    final List<TaskInfo> tasks = new ArrayList<>();
     final Map<TaskLookupType, TaskLookup> processedTaskLookups =
         TaskStorageUtils.processTaskLookups(
             taskLookups,
@@ -254,7 +254,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
                                                 .collect(Collectors.toList());
   }
 
-  private List<TaskInfo<Task, TaskStatus>> getRecentlyCreatedAlreadyFinishedTaskInfoSince(
+  private List<TaskInfo> getRecentlyCreatedAlreadyFinishedTaskInfoSince(
       DateTime start,
       @Nullable Integer n,
       Ordering<TaskStuff> createdDateDesc
@@ -268,7 +268,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
     if (n != null) {
       stream = stream.limit(n);
     }
-    List<TaskInfo<Task, TaskStatus>> list = stream
+    List<TaskInfo> list = stream
         .map(TaskStuff::toTaskInfo)
         .collect(Collectors.toList());
     return Collections.unmodifiableList(list);
@@ -382,13 +382,11 @@ public class HeapMemoryTaskStorage implements TaskStorage
       return new TaskStuff(task, _status, createdDate, dataSource);
     }
 
-    static TaskInfo<Task, TaskStatus> toTaskInfo(TaskStuff taskStuff)
+    static TaskInfo toTaskInfo(TaskStuff taskStuff)
     {
-      return new TaskInfo<>(
-          taskStuff.getTask().getId(),
+      return new TaskInfo(
           taskStuff.getCreatedDate(),
           taskStuff.getStatus(),
-          taskStuff.getDataSource(),
           taskStuff.getTask()
       );
     }

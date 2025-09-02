@@ -29,6 +29,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexer.TaskIdStatus;
 import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
@@ -275,7 +276,7 @@ public abstract class SQLMetadataStorageActionHandler
 
   @Override
   @Nullable
-  public TaskInfo<Task, TaskStatus> getTaskInfo(String entryId)
+  public TaskInfo getTaskInfo(String entryId)
   {
     return connector.retryWithHandle(handle -> {
       final String query = StringUtils.format(
@@ -290,14 +291,14 @@ public abstract class SQLMetadataStorageActionHandler
   }
 
   @Override
-  public List<TaskInfo<Task, TaskStatus>> getTaskInfos(
+  public List<TaskInfo> getTaskInfos(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String dataSource
   )
   {
     return getConnector().retryTransaction(
         (handle, status) -> {
-          final List<TaskInfo<Task, TaskStatus>> tasks = new ArrayList<>();
+          final List<TaskInfo> tasks = new ArrayList<>();
           for (Entry<TaskLookupType, TaskLookup> entry : taskLookups.entrySet()) {
             final Query<Map<String, Object>> query;
             switch (entry.getKey()) {
@@ -327,7 +328,7 @@ public abstract class SQLMetadataStorageActionHandler
   }
 
   @Override
-  public List<TaskInfo<TaskIdentifier, TaskStatus>> getTaskStatusList(
+  public List<TaskIdStatus> getTaskStatusList(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String dataSource
   )
@@ -345,17 +346,17 @@ public abstract class SQLMetadataStorageActionHandler
   }
 
   @VisibleForTesting
-  List<TaskInfo<TaskIdentifier, TaskStatus>> getTaskStatusList(
+  List<TaskIdStatus> getTaskStatusList(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String dataSource,
       boolean fetchPayload
   )
   {
-    ResultSetMapper<TaskInfo<TaskIdentifier, TaskStatus>> resultSetMapper =
+    ResultSetMapper<TaskIdStatus> resultSetMapper =
         fetchPayload ? taskStatusMapperFromPayload : taskStatusMapper;
     return getConnector().retryTransaction(
         (handle, status) -> {
-          final List<TaskInfo<TaskIdentifier, TaskStatus>> taskMetadataInfos = new ArrayList<>();
+          final List<TaskIdStatus> taskMetadataInfos = new ArrayList<>();
           for (Entry<TaskLookupType, TaskLookup> entry : taskLookups.entrySet()) {
             final Query<Map<String, Object>> query;
             switch (entry.getKey()) {
@@ -592,7 +593,7 @@ public abstract class SQLMetadataStorageActionHandler
     return sql;
   }
 
-  private class TaskStatusMapperFromPayload implements ResultSetMapper<TaskInfo<TaskIdentifier, TaskStatus>>
+  private class TaskStatusMapperFromPayload implements ResultSetMapper<TaskIdStatus>
   {
     private final ObjectMapper objectMapper;
 
@@ -602,14 +603,14 @@ public abstract class SQLMetadataStorageActionHandler
     }
 
     @Override
-    public TaskInfo<TaskIdentifier, TaskStatus> map(int index, ResultSet resultSet, StatementContext context)
+    public TaskIdStatus map(int index, ResultSet resultSet, StatementContext context)
         throws SQLException
     {
       return toTaskIdentifierInfo(objectMapper, resultSet, true);
     }
   }
 
-  private class TaskStatusMapper implements ResultSetMapper<TaskInfo<TaskIdentifier, TaskStatus>>
+  private class TaskStatusMapper implements ResultSetMapper<TaskIdStatus>
   {
     private final ObjectMapper objectMapper;
 
@@ -619,14 +620,14 @@ public abstract class SQLMetadataStorageActionHandler
     }
 
     @Override
-    public TaskInfo<TaskIdentifier, TaskStatus> map(int index, ResultSet resultSet, StatementContext context)
+    public TaskIdStatus map(int index, ResultSet resultSet, StatementContext context)
         throws SQLException
     {
       return toTaskIdentifierInfo(objectMapper, resultSet, false);
     }
   }
 
-  private TaskInfo<TaskIdentifier, TaskStatus> toTaskIdentifierInfo(ObjectMapper objectMapper,
+  private TaskIdStatus toTaskIdentifierInfo(ObjectMapper objectMapper,
                                                                 ResultSet resultSet,
                                                                 boolean usePayload
   ) throws SQLException
@@ -661,7 +662,7 @@ public abstract class SQLMetadataStorageActionHandler
     String datasource = resultSet.getString("datasource");
     TaskIdentifier taskIdentifier = new TaskIdentifier(id, groupId, type);
 
-    return new TaskInfo<>(id, createdTime, status, datasource, taskIdentifier);
+    return new TaskIdStatus(taskIdentifier, status, datasource, createdTime);
   }
 
   static class TaskIdentifierMapper implements ResultSetMapper<TaskIdentifier>
@@ -695,7 +696,7 @@ public abstract class SQLMetadataStorageActionHandler
     }
   }
 
-  static class TaskInfoMapper implements ResultSetMapper<TaskInfo<Task, TaskStatus>>
+  static class TaskInfoMapper implements ResultSetMapper<TaskInfo>
   {
     private final ObjectMapper objectMapper;
 
@@ -705,10 +706,10 @@ public abstract class SQLMetadataStorageActionHandler
     }
 
     @Override
-    public TaskInfo<Task, TaskStatus> map(int index, ResultSet resultSet, StatementContext context)
+    public TaskInfo map(int index, ResultSet resultSet, StatementContext context)
         throws SQLException
     {
-      final TaskInfo<Task, TaskStatus> taskInfo;
+      final TaskInfo taskInfo;
       Task task;
       TaskStatus status;
       try {
@@ -725,11 +726,9 @@ public abstract class SQLMetadataStorageActionHandler
         log.error(e, "Encountered exception while deserializing task status_payload");
         throw new SQLException(e);
       }
-      taskInfo = new TaskInfo<>(
-          resultSet.getString("id"),
+      taskInfo = new TaskInfo(
           DateTimes.of(resultSet.getString("created_date")),
           status,
-          resultSet.getString("datasource"),
           task
       );
       return taskInfo;

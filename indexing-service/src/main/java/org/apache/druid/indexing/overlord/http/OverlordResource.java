@@ -39,7 +39,6 @@ import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
-import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionHolder;
@@ -291,7 +290,7 @@ public class OverlordResource
   @ResourceFilters(TaskResourceFilter.class)
   public Response getTaskStatus(@PathParam("taskid") String taskid)
   {
-    final TaskInfo<Task, TaskStatus> taskInfo = taskQueryTool.getTaskInfo(taskid);
+    final TaskInfo taskInfo = taskQueryTool.getTaskInfo(taskid);
     TaskStatusResponse response = null;
 
     if (taskInfo != null) {
@@ -395,11 +394,11 @@ public class OverlordResource
     return asLeaderWith(
         taskMaster.getTaskQueue(),
         taskQueue -> {
-          final List<TaskInfo<Task, TaskStatus>> tasks = taskQueryTool.getActiveTaskInfo(dataSource);
+          final List<TaskInfo> tasks = taskQueryTool.getActiveTaskInfo(dataSource);
           if (tasks.isEmpty()) {
             return Response.status(Status.NOT_FOUND).build();
           } else {
-            for (final TaskInfo<Task, TaskStatus> task : tasks) {
+            for (final TaskInfo task : tasks) {
               taskQueue.shutdown(task.getId(), "Shutdown request from user");
             }
             return Response.ok(ImmutableMap.of("dataSource", dataSource)).build();

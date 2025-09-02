@@ -21,7 +21,7 @@ package org.apache.druid.metadata;
 
 import com.google.common.base.Optional;
 import org.apache.druid.guice.annotations.ExtensionPoint;
-import org.apache.druid.indexer.TaskIdentifier;
+import org.apache.druid.indexer.TaskIdStatus;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
@@ -89,7 +89,7 @@ public interface MetadataStorageActionHandler
   Optional<TaskStatus> getStatus(String entryId);
 
   @Nullable
-  TaskInfo<Task, TaskStatus> getTaskInfo(String entryId);
+  TaskInfo getTaskInfo(String entryId);
 
   /**
    * Returns a list of {@link TaskInfo} from metadata store that matches to the given filters.
@@ -102,7 +102,7 @@ public interface MetadataStorageActionHandler
    * @param taskLookups task lookup type and filters.
    * @param datasource  datasource filter
    */
-  List<TaskInfo<Task, TaskStatus>> getTaskInfos(
+  List<TaskInfo> getTaskInfos(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String datasource
   );
@@ -118,12 +118,12 @@ public interface MetadataStorageActionHandler
    * @param taskLookups task lookup type and filters.
    * @param datasource  datasource filter
    */
-  List<TaskInfo<TaskIdentifier, TaskStatus>> getTaskStatusList(
+  List<TaskIdStatus> getTaskStatusList(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String datasource
   );
 
-  default List<TaskInfo<Task, TaskStatus>> getTaskInfos(
+  default List<TaskInfo> getTaskInfos(
       TaskLookup taskLookup,
       @Nullable String datasource
   )

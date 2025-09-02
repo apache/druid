@@ -111,7 +111,7 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
-  public TaskInfo<Task, TaskStatus> insert(final Task task, final TaskStatus status)
+  public TaskInfo insert(final Task task, final TaskStatus status)
   {
     Preconditions.checkNotNull(task, "task");
     Preconditions.checkNotNull(status, "status");
@@ -144,11 +144,9 @@ public class MetadataTaskStorage implements TaskStorage
       throw new RuntimeException(e);
     }
 
-    return new TaskInfo<>(
-        task.getId(),
+    return new TaskInfo(
         insertionTime,
         status,
-        task.getDataSource(),
         task
     );
   }
@@ -181,7 +179,7 @@ public class MetadataTaskStorage implements TaskStorage
 
   @Nullable
   @Override
-  public TaskInfo<Task, TaskStatus> getTaskInfo(String taskId)
+  public TaskInfo getTaskInfo(String taskId)
   {
     return handler.getTaskInfo(taskId);
   }
@@ -197,7 +195,7 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfos()
+  public List<TaskInfo> getActiveTaskInfos()
   {
     return handler.getTaskInfos(Map.of(TaskLookupType.ACTIVE, ActiveTaskLookup.getInstance()), null)
                   .stream()
@@ -208,12 +206,12 @@ public class MetadataTaskStorage implements TaskStorage
   @Override
   public List<Task> getActiveTasksByDatasource(String datasource)
   {
-    List<TaskInfo<Task, TaskStatus>> activeTaskInfos = handler.getTaskInfos(
+    List<TaskInfo> activeTaskInfos = handler.getTaskInfos(
         Collections.singletonMap(TaskLookupType.ACTIVE, ActiveTaskLookup.getInstance()),
         datasource
     );
     ImmutableList.Builder<Task> tasksBuilder = ImmutableList.builder();
-    for (TaskInfo<Task, TaskStatus> taskInfo : activeTaskInfos) {
+    for (TaskInfo taskInfo : activeTaskInfos) {
       if (taskInfo.getStatus().isRunnable() && taskInfo.getTask() != null) {
         tasksBuilder.add(taskInfo.getTask());
       }
@@ -222,7 +220,7 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskInfo<Task, TaskStatus>> getTaskInfos(
+  public List<TaskInfo> getTaskInfos(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String datasource
   )

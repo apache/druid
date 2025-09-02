@@ -20,7 +20,7 @@
 package org.apache.druid.metadata;
 
 import com.google.common.base.Optional;
-import org.apache.druid.indexer.TaskIdentifier;
+import org.apache.druid.indexer.TaskIdStatus;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
@@ -84,13 +84,13 @@ public class MetadataStorageActionHandlerTest
 
       @Nullable
       @Override
-      public TaskInfo<Task, TaskStatus> getTaskInfo(String entryId)
+      public TaskInfo getTaskInfo(String entryId)
       {
         return null;
       }
 
       @Override
-      public List<TaskInfo<Task, TaskStatus>> getTaskInfos(
+      public List<TaskInfo> getTaskInfos(
           Map<TaskLookup.TaskLookupType, TaskLookup> taskLookups,
           @Nullable String datasource
       )
@@ -99,7 +99,7 @@ public class MetadataStorageActionHandlerTest
       }
 
       @Override
-      public List<TaskInfo<TaskIdentifier, TaskStatus>> getTaskStatusList(
+      public List<TaskIdStatus> getTaskStatusList(
           Map<TaskLookup.TaskLookupType, TaskLookup> taskLookups,
           @Nullable String datasource
       )

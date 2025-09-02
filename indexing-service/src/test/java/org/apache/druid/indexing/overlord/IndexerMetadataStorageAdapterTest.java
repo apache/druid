@@ -25,7 +25,6 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.NoopTask;
-import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.TaskLookup;
@@ -58,19 +57,15 @@ public class IndexerMetadataStorageAdapterTest
   @Test
   public void testDeletePendingSegments()
   {
-    final List<TaskInfo<Task, TaskStatus>> taskInfos = ImmutableList.of(
-        new TaskInfo<>(
-            "id1",
+    final List<TaskInfo> taskInfos = ImmutableList.of(
+        new TaskInfo(
             DateTimes.of("2017-12-01"),
             TaskStatus.running("id1"),
-            "dataSource",
             NoopTask.create()
         ),
-        new TaskInfo<>(
-            "id2",
+        new TaskInfo(
             DateTimes.of("2017-12-02"),
             TaskStatus.running("id2"),
-            "dataSource",
             NoopTask.create()
         )
     );
@@ -93,19 +88,15 @@ public class IndexerMetadataStorageAdapterTest
   @Test
   public void testDeletePendingSegmentsOfOneOverlappingRunningTask()
   {
-    final ImmutableList<TaskInfo<Task, TaskStatus>> taskInfos = ImmutableList.of(
-        new TaskInfo<>(
-            "id1",
+    final ImmutableList<TaskInfo> taskInfos = ImmutableList.of(
+        new TaskInfo(
             DateTimes.of("2017-11-01"),
             TaskStatus.running("id1"),
-            "dataSource",
             NoopTask.create()
         ),
-        new TaskInfo<>(
-            "id2",
+        new TaskInfo(
             DateTimes.of("2017-12-02"),
             TaskStatus.running("id2"),
-            "dataSource",
             NoopTask.create()
         )
     );
@@ -140,19 +131,15 @@ public class IndexerMetadataStorageAdapterTest
   @Test
   public void testDeletePendingSegmentsOfMultipleOverlappingRunningTasks()
   {
-    final ImmutableList<TaskInfo<Task, TaskStatus>> taskInfos = ImmutableList.of(
-        new TaskInfo<>(
-            "id1",
+    final ImmutableList<TaskInfo> taskInfos = ImmutableList.of(
+        new TaskInfo(
             DateTimes.of("2017-12-01"),
             TaskStatus.running("id1"),
-            "dataSource",
             NoopTask.create()
         ),
-        new TaskInfo<>(
-            "id2",
+        new TaskInfo(
             DateTimes.of("2017-11-01"),
             TaskStatus.running("id2"),
-            "dataSource",
             NoopTask.create()
         )
     );

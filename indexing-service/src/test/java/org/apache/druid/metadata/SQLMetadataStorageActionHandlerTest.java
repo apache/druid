@@ -24,6 +24,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.indexer.TaskIdStatus;
 import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
@@ -164,12 +165,12 @@ public class SQLMetadataStorageActionHandlerTest
       handler.insert(entryId, DateTimes.of(StringUtils.format("2014-01-%02d", i)), "test", entry, false, status, "type", "group");
     }
 
-    final List<TaskInfo<Task, TaskStatus>> statuses = handler.getTaskInfos(
+    final List<TaskInfo> statuses = handler.getTaskInfos(
         CompleteTaskLookup.withTasksCreatedPriorTo(7, DateTimes.of("2014-01-01")),
         null
     );
     Assert.assertEquals(7, statuses.size());
-    for (TaskInfo<Task, TaskStatus> status : statuses) {
+    for (TaskInfo status : statuses) {
       Assert.assertEquals(TaskState.RUNNING, status.getStatus().getStatusCode());
     }
   }
@@ -185,12 +186,12 @@ public class SQLMetadataStorageActionHandlerTest
       handler.insert(entryId, DateTimes.of(StringUtils.format("2014-01-%02d", i)), "test", entry, false, status, "type", "group");
     }
 
-    final List<TaskInfo<Task, TaskStatus>> statuses = handler.getTaskInfos(
+    final List<TaskInfo> statuses = handler.getTaskInfos(
         CompleteTaskLookup.withTasksCreatedPriorTo(10, DateTimes.of("2014-01-01")),
         null
     );
     Assert.assertEquals(5, statuses.size());
-    for (TaskInfo<Task, TaskStatus> status : statuses) {
+    for (TaskInfo status : statuses) {
       Assert.assertEquals(TaskState.RUNNING, status.getStatus().getStatusCode());
     }
   }
@@ -225,8 +226,8 @@ public class SQLMetadataStorageActionHandlerTest
 
     Assert.assertTrue(handler.getLocks(entryId).isEmpty());
 
-    final TaskLock lock1 = createLock(entry);
-    final TaskLock lock2 = createLock(entry);
+    final TaskLock lock1 = createRandomLock(entry);
+    final TaskLock lock2 = createRandomLock(entry);
 
     Assert.assertTrue(handler.addLock(entryId, lock1));
     Assert.assertTrue(handler.addLock(entryId, lock2));
@@ -270,8 +271,8 @@ public class SQLMetadataStorageActionHandlerTest
         handler.getLocks(entryId)
     );
 
-    final TaskLock lock1 = createLock(entry);
-    final TaskLock lock2 = createLock(entry);
+    final TaskLock lock1 = createRandomLock(entry);
+    final TaskLock lock2 = createRandomLock(entry);
 
     Assert.assertTrue(handler.addLock(entryId, lock1));
 
@@ -300,8 +301,8 @@ public class SQLMetadataStorageActionHandlerTest
         handler.getLocks(entryId)
     );
 
-    final TaskLock lock1 = createLock(entry);
-    final TaskLock lock2 = createLock(entry);
+    final TaskLock lock1 = createRandomLock(entry);
+    final TaskLock lock2 = createRandomLock(entry);
 
     Assert.assertTrue(handler.addLock(entryId, lock1));
 
@@ -389,23 +390,23 @@ public class SQLMetadataStorageActionHandlerTest
   public void testGetTaskStatusPlusListInternal()
   {
     // SETUP
-    TaskInfo<Task, TaskStatus> activeUnaltered = createRandomTaskInfo(TaskState.RUNNING);
+    TaskInfo activeUnaltered = createRandomTaskInfo(TaskState.RUNNING);
     insertTaskInfo(activeUnaltered, false);
 
-    TaskInfo<Task, TaskStatus> completedUnaltered = createRandomTaskInfo(TaskState.SUCCESS);
+    TaskInfo completedUnaltered = createRandomTaskInfo(TaskState.SUCCESS);
     insertTaskInfo(completedUnaltered, false);
 
-    TaskInfo<Task, TaskStatus> activeAltered = createRandomTaskInfo(TaskState.RUNNING);
+    TaskInfo activeAltered = createRandomTaskInfo(TaskState.RUNNING);
     insertTaskInfo(activeAltered, true);
 
-    TaskInfo<Task, TaskStatus> completedAltered = createRandomTaskInfo(TaskState.SUCCESS);
+    TaskInfo completedAltered = createRandomTaskInfo(TaskState.SUCCESS);
     insertTaskInfo(completedAltered, true);
 
     Map<TaskLookup.TaskLookupType, TaskLookup> taskLookups = new HashMap<>();
     taskLookups.put(TaskLookup.TaskLookupType.ACTIVE, ActiveTaskLookup.getInstance());
     taskLookups.put(TaskLookup.TaskLookupType.COMPLETE, CompleteTaskLookup.of(null, Duration.millis(86400000)));
 
-    List<TaskInfo<TaskIdentifier, TaskStatus>> taskMetadataInfos;
+    List<TaskIdStatus> taskMetadataInfos;
 
     // BEFORE MIGRATION
 
@@ -460,7 +461,20 @@ public class SQLMetadataStorageActionHandlerTest
     );
   }
 
-  private TaskInfo<Task, TaskStatus> createRandomTaskInfo(TaskState taskState)
+  private TaskLock createRandomLock(Task task)
+  {
+    final long intervalStart = RANDOM.nextLong();
+    return new TimeChunkLock(
+        TaskLockType.APPEND,
+        task.getGroupId(),
+        task.getDataSource(),
+        Intervals.utc(intervalStart, intervalStart + 100),
+        "v1",
+        1
+    );
+  }
+
+  private TaskInfo createRandomTaskInfo(TaskState taskState)
   {
     String id = UUID.randomUUID().toString();
     DateTime createdTime = DateTime.now(DateTimeZone.UTC);
@@ -477,29 +491,14 @@ public class SQLMetadataStorageActionHandlerTest
         TaskLocation.create(UUID.randomUUID().toString(), 8080, 995)
     );
 
-    return new TaskInfo<>(
-        id,
+    return new TaskInfo(
         createdTime,
         status,
-        datasource,
         payload
     );
   }
 
-  private TaskLock createLock(Task task)
-  {
-    final long intervalStart = RANDOM.nextLong();
-    return new TimeChunkLock(
-        TaskLockType.APPEND,
-        task.getGroupId(),
-        task.getDataSource(),
-        Intervals.utc(intervalStart, intervalStart + 100),
-        "v1",
-        1
-    );
-  }
-
-  private void insertTaskInfo(TaskInfo<Task, TaskStatus> taskInfo, boolean altered)
+  private void insertTaskInfo(TaskInfo taskInfo, boolean altered)
   {
     try {
       handler.insert(
@@ -518,12 +517,12 @@ public class SQLMetadataStorageActionHandlerTest
     }
   }
 
-  private void verifyTaskInfoToMetadataInfo(TaskInfo<Task, TaskStatus> taskInfo,
-                                            List<TaskInfo<TaskIdentifier, TaskStatus>> taskMetadataInfos,
+  private void verifyTaskInfoToMetadataInfo(TaskInfo taskInfo,
+                                            List<TaskIdStatus> taskMetadataInfos,
                                             boolean nullNewColumns)
   {
-    for (TaskInfo<TaskIdentifier, TaskStatus> taskMetadataInfo : taskMetadataInfos) {
-      if (taskMetadataInfo.getId().equals(taskInfo.getId())) {
+    for (TaskIdStatus taskMetadataInfo : taskMetadataInfos) {
+      if (taskMetadataInfo.getTaskIdentifier().getId().equals(taskInfo.getId())) {
         verifyTaskInfoToMetadataInfo(taskInfo, taskMetadataInfo, nullNewColumns);
       }
       return;
@@ -531,18 +530,18 @@ public class SQLMetadataStorageActionHandlerTest
     Assert.fail();
   }
 
-  private void verifyTaskInfoToMetadataInfo(TaskInfo<Task, TaskStatus> taskInfo,
-                                            TaskInfo<TaskIdentifier, TaskStatus> taskMetadataInfo,
+  private void verifyTaskInfoToMetadataInfo(TaskInfo taskInfo,
+                                            TaskIdStatus taskMetadataInfo,
                                             boolean nullNewColumns)
   {
-    Assert.assertEquals(taskInfo.getId(), taskMetadataInfo.getId());
+    Assert.assertEquals(taskInfo.getId(), taskMetadataInfo.getTaskIdentifier().getId());
     Assert.assertEquals(taskInfo.getCreatedTime(), taskMetadataInfo.getCreatedTime());
     Assert.assertEquals(taskInfo.getDataSource(), taskMetadataInfo.getDataSource());
 
     verifyTaskStatus(taskInfo.getStatus(), taskMetadataInfo.getStatus());
 
     Task task = taskInfo.getTask();
-    TaskIdentifier taskIdentifier = taskMetadataInfo.getTask();
+    TaskIdentifier taskIdentifier = taskMetadataInfo.getTaskIdentifier();
     Assert.assertEquals(task.getId(), taskIdentifier.getId());
     if (nullNewColumns) {
       Assert.assertNull(taskIdentifier.getGroupId());
