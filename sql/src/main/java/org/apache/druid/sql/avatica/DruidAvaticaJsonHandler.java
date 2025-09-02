@@ -84,7 +84,7 @@ public class DruidAvaticaJsonHandler extends Handler.Abstract implements Metrics
   public boolean handle(Request request, Response response, Callback callback) throws Exception
   {
     String requestURI = request.getHttpURI().getPath();
-    try(Timer.Context ctx = this.requestTimer.start()) {
+    try (Timer.Context ctx = this.requestTimer.start()) {
       if (AVATICA_PATH_NO_TRAILING_SLASH.equals(StringUtils.maybeRemoveTrailingSlash(requestURI))) {
         response.getHeaders().put("Content-Type", "application/json;charset=utf-8");
 
