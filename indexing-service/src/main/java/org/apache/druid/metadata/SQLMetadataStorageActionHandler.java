@@ -47,7 +47,6 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.Query;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
-import org.skife.jdbi.v2.exceptions.StatementException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
@@ -237,12 +236,6 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     catch (Throwable t) {
       throw wrapInDruidException(entryId, t);
     }
-  }
-
-  public static boolean isStatementException(Throwable e)
-  {
-    return e instanceof StatementException ||
-           (e instanceof CallbackFailedException && e.getCause() instanceof StatementException);
   }
 
   private boolean isTransientDruidException(Throwable t)
@@ -446,7 +439,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
    */
   private DruidException wrapInDruidException(String taskId, Throwable t)
   {
-    if (isStatementException(t) && getEntry(taskId).isPresent()) {
+    if (SQLMetadataConnector.isStatementException(t) && getEntry(taskId).isPresent()) {
       return InvalidInput.exception("Task [%s] already exists", taskId);
     } else if (connector.isRootCausePacketTooBigException(t)) {
       return InvalidInput.exception(
