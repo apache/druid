@@ -523,7 +523,6 @@ public class TaskLockbox
 
   /**
    * Marks the segment allocation as failed if the underlying task is not active.
-   * Should be called only while holding the {@code giant} lock.
    */
   @GuardedBy("giant")
   private void verifyTaskIsActive(SegmentAllocationHolder holder)
