@@ -22,14 +22,12 @@ package org.apache.druid.testing.embedded.msq;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
-import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -37,9 +35,9 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.joda.time.Period;
@@ -145,54 +143,20 @@ public class BaseRealtimeQueryTest extends EmbeddedClusterTestBase
 
   private KafkaSupervisorSpec createKafkaSupervisor()
   {
-    final Period startDelay = Period.millis(10);
-    final Period supervisorRunPeriod = Period.millis(500);
-    final boolean useEarliestOffset = true;
-
-    return new KafkaSupervisorSpec(
-        dataSource,
-        null,
-        DataSchema.builder()
-                  .withDataSource(dataSource)
-                  .withTimestamp(new TimestampSpec("__time", "auto", null))
-                  .withGranularity(new UniformGranularitySpec(Granularities.DAY, null, null))
-                  .withDimensions(DimensionsSpec.builder().useSchemaDiscovery(true).build())
-                  .build(),
-        null,
-        new KafkaSupervisorIOConfig(
-            topic,
-            null,
-            new JsonInputFormat(null, null, null, null, null),
-            null,
-            TASK_COUNT,
-            TASK_DURATION,
-            kafka.consumerProperties(),
-            null,
-            null,
-            null,
-            startDelay,
-            supervisorRunPeriod,
-            useEarliestOffset,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        ),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    return MoreResources.Supervisor.KAFKA_JSON
+        .get()
+        .withDataSchema(
+            schema -> schema
+                .withTimestamp(new TimestampSpec("__time", "auto", null))
+                .withGranularity(new UniformGranularitySpec(Granularities.DAY, null, null))
+                .withDimensions(DimensionsSpec.builder().useSchemaDiscovery(true).build())
+        )
+        .withIoConfig(
+            ioConfig -> ioConfig
+                .withTaskCount(TASK_COUNT)
+                .withTaskDuration(TASK_DURATION)
+                .withConsumerProperties(kafka.consumerProperties())
+        )
+        .build(dataSource, topic);
   }
 }
