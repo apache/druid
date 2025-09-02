@@ -61,9 +61,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public abstract class SQLMetadataStorageActionHandler
@@ -320,7 +322,7 @@ public abstract class SQLMetadataStorageActionHandler
                 throw new IAE("Unknown TaskLookupType: [%s]", entry.getKey());
             }
           }
-          return tasks;
+          return tasks.stream().filter(Objects::nonNull).collect(Collectors.toList());
         },
         SQLMetadataConnector.QUIET_RETRIES,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
@@ -696,7 +698,7 @@ public abstract class SQLMetadataStorageActionHandler
     }
   }
 
-  static class TaskInfoMapper implements ResultSetMapper<TaskInfo>
+  private static class TaskInfoMapper implements ResultSetMapper<TaskInfo>
   {
     private final ObjectMapper objectMapper;
 
@@ -705,33 +707,31 @@ public abstract class SQLMetadataStorageActionHandler
       this.objectMapper = objectMapper;
     }
 
+    @Nullable
     @Override
     public TaskInfo map(int index, ResultSet resultSet, StatementContext context)
         throws SQLException
     {
-      final TaskInfo taskInfo;
       Task task;
-      TaskStatus status;
       try {
         task = objectMapper.readValue(resultSet.getBytes("payload"), Task.class);
       }
       catch (IOException e) {
         log.warn("Encountered exception[%s] while deserializing task payload, setting payload to null", e.getMessage());
-        task = null;
+        return null;
       }
       try {
-        status = objectMapper.readValue(resultSet.getBytes("status_payload"), TaskStatus.class);
+        TaskStatus status = objectMapper.readValue(resultSet.getBytes("status_payload"), TaskStatus.class);
+        return new TaskInfo(
+            DateTimes.of(resultSet.getString("created_date")),
+            status,
+            task
+        );
       }
       catch (IOException e) {
         log.error(e, "Encountered exception while deserializing task status_payload");
         throw new SQLException(e);
       }
-      taskInfo = new TaskInfo(
-          DateTimes.of(resultSet.getString("created_date")),
-          status,
-          task
-      );
-      return taskInfo;
     }
   }
 

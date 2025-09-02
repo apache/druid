@@ -20,6 +20,7 @@
 package org.apache.druid.cli;
 
 import com.google.inject.Injector;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.segment.SqlSegmentsMetadataManagerV2;
@@ -27,6 +28,8 @@ import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Set;
 
 public class CliOverlordTest
 {
@@ -37,7 +40,7 @@ public class CliOverlordTest
     final CliOverlord overlord = new CliOverlord();
     injector.injectMembers(overlord);
 
-    final Injector overlordInjector = overlord.makeInjector();
+    final Injector overlordInjector = overlord.makeInjector(Set.of(NodeRole.OVERLORD));
 
     final SegmentMetadataCache segmentMetadataCache
         = overlordInjector.getInstance(SegmentMetadataCache.class);

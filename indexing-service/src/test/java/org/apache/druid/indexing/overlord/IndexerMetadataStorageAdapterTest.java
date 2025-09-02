@@ -92,12 +92,12 @@ public class IndexerMetadataStorageAdapterTest
         new TaskInfo(
             DateTimes.of("2017-11-01"),
             TaskStatus.running("id1"),
-            NoopTask.create()
+            new NoopTask("id1", null, "dataSource", 1L, 0L, null)
         ),
         new TaskInfo(
             DateTimes.of("2017-12-02"),
             TaskStatus.running("id2"),
-            NoopTask.create()
+            new NoopTask("id2", null, "dataSource", 1L, 0L, null)
         )
     );
 
@@ -135,12 +135,12 @@ public class IndexerMetadataStorageAdapterTest
         new TaskInfo(
             DateTimes.of("2017-12-01"),
             TaskStatus.running("id1"),
-            NoopTask.create()
+            new NoopTask("id1", null, "dataSource", 1L, 0L, null)
         ),
         new TaskInfo(
             DateTimes.of("2017-11-01"),
             TaskStatus.running("id2"),
-            NoopTask.create()
+            new NoopTask("id2", null, "dataSource", 1L, 0L, null)
         )
     );
 
