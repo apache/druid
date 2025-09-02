@@ -84,46 +84,51 @@ public class DruidAvaticaJsonHandler extends Handler.Abstract implements Metrics
   public boolean handle(Request request, Response response, Callback callback) throws Exception
   {
     String requestURI = request.getHttpURI().getPath();
-    if (AVATICA_PATH_NO_TRAILING_SLASH.equals(StringUtils.maybeRemoveTrailingSlash(requestURI))) {
-      try (Timer.Context ctx = requestTimer.start()) {
+    try(Timer.Context ctx = this.requestTimer.start()) {
+      if (AVATICA_PATH_NO_TRAILING_SLASH.equals(StringUtils.maybeRemoveTrailingSlash(requestURI))) {
         response.getHeaders().put("Content-Type", "application/json;charset=utf-8");
 
-        if ("POST".equals(request.getMethod())) {
-          String rawRequest = request.getHeaders().get("request");
-          if (rawRequest == null) {
-            // Avoid a new buffer creation for every HTTP request
-            final UnsynchronizedBuffer buffer = threadLocalBuffer.get();
-            try (InputStream inputStream = Content.Source.asInputStream(request)) {
-              byte[] bytes = AvaticaUtils.readFullyToBytes(inputStream, buffer);
-              String encoding = request.getHeaders().get("Content-Encoding");
-              if (encoding == null) {
-                encoding = "UTF-8";
-              }
-              rawRequest = AvaticaUtils.newString(bytes, encoding);
-            }
-            finally {
-              // Reset the offset into the buffer after we're done
-              buffer.reset();
-            }
-          }
-          final String jsonRequest = rawRequest;
-          LOG.trace("request: %s", jsonRequest);
-
-          org.apache.calcite.avatica.remote.Handler.HandlerResponse<String> jsonResponse;
-          try {
-            jsonResponse = jsonHandler.apply(jsonRequest);
-          }
-          catch (Exception e) {
-            LOG.debug(e, "Error invoking request");
-            jsonResponse = jsonHandler.convertToErrorResponse(e);
-          }
-
-          LOG.trace("response: %s", jsonResponse);
-          response.setStatus(jsonResponse.getStatusCode());
-          response.write(true, ByteBuffer.wrap(jsonResponse.getResponse().getBytes(StandardCharsets.UTF_8)), callback);
+        if (!"POST".equals(request.getMethod())) {
+          response.setStatus(400); // HttpServletResponse.SC_BAD_REQUEST
+          response.write(
+              true,
+              ByteBuffer.wrap("This server expects only POST calls.".getBytes(StandardCharsets.UTF_8)), callback
+          );
+          return true;
         }
 
-        callback.succeeded();
+        String rawRequest = request.getHeaders().get("request");
+        if (rawRequest == null) {
+          // Avoid a new buffer creation for every HTTP request
+          final UnsynchronizedBuffer buffer = threadLocalBuffer.get();
+          try (InputStream inputStream = Content.Source.asInputStream(request)) {
+            byte[] bytes = AvaticaUtils.readFullyToBytes(inputStream, buffer);
+            String encoding = request.getHeaders().get("Content-Encoding");
+            if (encoding == null) {
+              encoding = "UTF-8";
+            }
+            rawRequest = AvaticaUtils.newString(bytes, encoding);
+          }
+          finally {
+            // Reset the offset into the buffer after we're done
+            buffer.reset();
+          }
+        }
+        final String jsonRequest = rawRequest;
+        LOG.trace("request: %s", jsonRequest);
+
+        org.apache.calcite.avatica.remote.Handler.HandlerResponse<String> jsonResponse;
+        try {
+          jsonResponse = jsonHandler.apply(jsonRequest);
+        }
+        catch (Exception e) {
+          LOG.debug(e, "Error invoking request");
+          jsonResponse = jsonHandler.convertToErrorResponse(e);
+        }
+
+        LOG.trace("response: %s", jsonResponse);
+        response.setStatus(jsonResponse.getStatusCode());
+        response.write(true, ByteBuffer.wrap(jsonResponse.getResponse().getBytes(StandardCharsets.UTF_8)), callback);
         return true;
       }
     }

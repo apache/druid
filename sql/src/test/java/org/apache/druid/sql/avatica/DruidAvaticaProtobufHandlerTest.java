@@ -27,7 +27,7 @@ import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.util.Callback;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
@@ -86,7 +86,7 @@ public class DruidAvaticaProtobufHandlerTest extends DruidAvaticaHandlerTest
 
     boolean handled = handler.handle(request, response, callback);
 
-    Assert.assertTrue("Handler should have handled the request", handled);
+    Assertions.assertTrue(handled, "Handler should have handled the request");
     EasyMock.verify(request, response, callback, httpURI);
   }
 }

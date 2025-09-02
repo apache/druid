@@ -21,14 +21,15 @@ package org.apache.druid.sql.avatica;
 
 import org.apache.druid.server.DruidNode;
 import org.easymock.EasyMock;
-import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpURI;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.util.Callback;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.nio.ByteBuffer;
 
 public class DruidAvaticaJsonHandlerTest extends DruidAvaticaHandlerTest
 {
@@ -49,10 +50,10 @@ public class DruidAvaticaJsonHandlerTest extends DruidAvaticaHandlerTest
   }
 
   @Test
-  public void testNonPostRequestSucceeds() throws Exception
+  public void testNonPostRequestReturns400() throws Exception
   {
     DruidMeta druidMeta = EasyMock.mock(DruidMeta.class);
-    DruidAvaticaJsonHandler handler = new DruidAvaticaJsonHandler(
+    DruidAvaticaProtobufHandler handler = new DruidAvaticaProtobufHandler(
         druidMeta,
         new DruidNode("dummy", "dummy", false, 1, null, true, false),
         new AvaticaMonitor()
@@ -62,25 +63,26 @@ public class DruidAvaticaJsonHandlerTest extends DruidAvaticaHandlerTest
     Response response = EasyMock.mock(Response.class);
     Callback callback = EasyMock.mock(Callback.class);
     HttpURI httpURI = EasyMock.mock(HttpURI.class);
-    HttpFields.Mutable headers = EasyMock.mock(HttpFields.Mutable.class);
 
     EasyMock.expect(request.getHttpURI()).andReturn(httpURI);
-    EasyMock.expect(httpURI.getPath()).andReturn(DruidAvaticaJsonHandler.AVATICA_PATH_NO_TRAILING_SLASH);
+    EasyMock.expect(httpURI.getPath()).andReturn(DruidAvaticaProtobufHandler.AVATICA_PATH_NO_TRAILING_SLASH);
     EasyMock.expect(request.getMethod()).andReturn("GET");
 
-    EasyMock.expect(response.getHeaders()).andReturn(headers);
-    
-    headers.put("Content-Type", "application/json;charset=utf-8");
-    EasyMock.expectLastCall().andReturn(null);
-    
-    callback.succeeded();
+    response.setStatus(400);
+    EasyMock.expectLastCall();
+
+    response.write(
+        EasyMock.eq(true),
+        EasyMock.anyObject(ByteBuffer.class),
+        EasyMock.eq(callback)
+    );
     EasyMock.expectLastCall();
 
     EasyMock.replay(request, response, callback, httpURI);
 
     boolean handled = handler.handle(request, response, callback);
 
-    Assert.assertTrue("Handler should have handled the request", handled);
+    Assertions.assertTrue(handled, "Handler should have handled the request");
     EasyMock.verify(request, response, callback, httpURI);
   }
 }

@@ -108,7 +108,6 @@ public class DruidAvaticaProtobufHandler extends Handler.Abstract implements Met
 
         org.apache.calcite.avatica.remote.Handler.HandlerResponse<byte[]> handlerResponse;
         try {
-          // For now, skip impersonation to get basic compilation working
           handlerResponse = pbHandler.apply(requestBytes);
         }
         catch (Exception e) {
