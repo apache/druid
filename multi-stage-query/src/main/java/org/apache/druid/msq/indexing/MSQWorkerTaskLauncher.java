@@ -299,23 +299,11 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
         
         // Check for failed workers and collect them
         for (TaskTracker taskTracker : taskTrackers.values()) {
-          if (taskTracker.isRetrying()) {
-            failedWorkers.add(
-                new IntObjectPair<>()
-                {
-                  @Override
-                  public int leftInt()
-                  {
-                    return taskTracker.getWorkerNumber();
-                  }
-
-                  @Override
-                  public MSQFault right()
-                  {
-                    return generateFailureFault(taskTracker.msqWorkerTask.getId(), taskTracker.statusRef.get());
-                  }
-                }
-            );
+          if (taskTracker.isRetryCandidate()) {
+            failedWorkers.add(IntObjectPair.of(
+                taskTracker.getWorkerNumber(),
+                generateFailureFault(taskTracker.msqWorkerTask.getId(), taskTracker.statusRef.get())
+            ));
           }
         }
         if (!failedWorkers.isEmpty()) {
@@ -379,22 +367,12 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
 
         // Check for failed workers in the requested set
         for (TaskTracker taskTracker : taskTrackers.values()) {
-          if (taskTracker.isRetrying() && workerNumbers.contains(taskTracker.getWorkerNumber())) {
+          if (taskTracker.isRetryCandidate() && workerNumbers.contains(taskTracker.getWorkerNumber())) {
             failedWorkers.add(
-                new IntObjectPair<>()
-                {
-                  @Override
-                  public int leftInt()
-                  {
-                    return taskTracker.getWorkerNumber();
-                  }
-
-                  @Override
-                  public MSQFault right()
-                  {
-                    return generateFailureFault(taskTracker.msqWorkerTask.getId(), taskTracker.statusRef.get());
-                  }
-                }
+                IntObjectPair.of(
+                    taskTracker.getWorkerNumber(),
+                    generateFailureFault(taskTracker.msqWorkerTask.getId(), taskTracker.statusRef.get())
+                )
             );
           }
         }
@@ -655,7 +633,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
     for (Map.Entry<String, TaskTracker> taskEntry : taskTrackersByWorkerNumber()) {
       final String taskId = taskEntry.getKey();
       final TaskTracker tracker = taskEntry.getValue();
-      if (tracker.isRetrying()) {
+      if (tracker.isRetryCandidate()) {
         continue;
       }
       if (tracker.statusRef.get() != null
@@ -675,7 +653,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
 
   private void startRetryingTasksIfNeeded(TaskTracker tracker, String taskId)
   {
-    tracker.enableRetrying();
+    tracker.enableRetry();
     removeWorkerFromFullyStartedWorkers(tracker);
     MSQFault msqFault = generateFailureFault(taskId, tracker.statusRef.get());
     log.info("Task[%s] failed caused of [%s]. Trying to relaunch the worker", taskId, msqFault);
@@ -963,7 +941,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
     /**
      * Enables retrying for the task
      */
-    public void enableRetrying()
+    public void enableRetry()
     {
       isRetryingRef.set(true);
     }
@@ -971,7 +949,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
     /**
      * Checks is the task is retrying,
      */
-    public boolean isRetrying()
+    public boolean isRetryCandidate()
     {
       return isRetryingRef.get();
     }
