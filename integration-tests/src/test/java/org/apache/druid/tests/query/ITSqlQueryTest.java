@@ -26,10 +26,10 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
-import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.guice.TestClient;
-import org.apache.druid.testing.utils.ITRetryUtil;
+import org.apache.druid.testing.tools.ITRetryUtil;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
 import org.apache.druid.tests.TestNGGroup;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -141,8 +141,7 @@ public class ITSqlQueryTest
         (request) -> {
         },
         (statusCode, responseBody) -> {
-          Assert.assertEquals(statusCode, HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE.getCode(), responseBody);
-          assertStringCompare("Unsupported Content-Type:", responseBody, responseBody::contains);
+          Assert.assertEquals(statusCode, HttpResponseStatus.BAD_REQUEST.getCode(), responseBody);
         }
     );
   }
@@ -157,7 +156,6 @@ public class ITSqlQueryTest
         },
         (statusCode, responseBody) -> {
           Assert.assertEquals(statusCode, HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE.getCode(), responseBody);
-          assertStringCompare("Unsupported Content-Type:", responseBody, responseBody::contains);
         }
     );
   }
@@ -212,6 +210,17 @@ public class ITSqlQueryTest
   {
     executeQuery(
         MediaType.APPLICATION_JSON,
+        "{\"query\":\"select 567\"}",
+        (request) -> {
+        },
+        (statusCode, responseBody) -> {
+          Assert.assertEquals(statusCode, 200, responseBody);
+          Assert.assertEquals(responseBody, "[{\"EXPR$0\":567}]");
+        }
+    );
+
+    executeQuery(
+        "application/json; charset=UTF-8",
         "{\"query\":\"select 567\"}",
         (request) -> {
         },

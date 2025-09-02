@@ -27,7 +27,6 @@ import io.fabric8.kubernetes.api.model.PodListBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.KubernetesClientTimeoutException;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
@@ -145,7 +144,7 @@ public class KubernetesPeonClientTest
     client.pods().inNamespace(NAMESPACE).resource(pod).create();
 
     Assertions.assertThrows(
-        KubernetesClientTimeoutException.class,
+        DruidException.class,
         () -> instance.launchPeonJobAndWaitForStart(job, NoopTask.create(), 1, TimeUnit.SECONDS)
     );
   }
@@ -593,8 +592,8 @@ public class KubernetesPeonClientTest
   void test_getPeonPodWithRetries_withoutPod_raisesKubernetesResourceNotFoundException()
   {
     String k8sJobName = new K8sTaskId(TASK_NAME_PREFIX, ID).getK8sJobName();
-    DruidException e = Assertions.assertThrows(
-        DruidException.class,
+    KubernetesResourceNotFoundException e = Assertions.assertThrows(
+        KubernetesResourceNotFoundException.class,
         () -> instance.getPeonPodWithRetries(clientApi.getClient(), k8sJobName, 1, 1)
     );
 
@@ -630,9 +629,9 @@ public class KubernetesPeonClientTest
           // Test will fail if task is retried more than once.
           .once();
 
-    // Task declared to retry for 3 times should only try once when blacklisted event message is found.
-    DruidException e = Assertions.assertThrows(
-        DruidException.class,
+    // Task declared to retry for 3 times should only try once when a blacklisted event message is found.
+    KubernetesResourceNotFoundException e = Assertions.assertThrows(
+        KubernetesResourceNotFoundException.class,
         () -> instance.getPeonPodWithRetries(clientApi.getClient(), k8sJobName, 0, 3)
     );
 
@@ -712,5 +711,140 @@ public class KubernetesPeonClientTest
 
     Optional<LogWatch> maybeLogWatch = instance.getPeonLogWatcher(new K8sTaskId(TASK_NAME_PREFIX, ID));
     Assertions.assertFalse(maybeLogWatch.isPresent());
+  }
+
+  @Test
+  void test_createK8sJobWithRetries_withSuccessfulCreation_createsJob()
+  {
+    Job job = new JobBuilder()
+        .withNewMetadata()
+        .withName(KUBERNETES_JOB_NAME)
+        .endMetadata()
+        .build();
+
+    // Should not throw any exception
+    instance.createK8sJobWithRetries(job);
+
+    // Verify job was created
+    Job createdJob = client.batch().v1().jobs().inNamespace(NAMESPACE).withName(KUBERNETES_JOB_NAME).get();
+    Assertions.assertNotNull(createdJob);
+    Assertions.assertEquals(KUBERNETES_JOB_NAME, createdJob.getMetadata().getName());
+  }
+
+  @Test
+  void test_createK8sJobWithRetries_withNonRetryableException_failsImmediately()
+  {
+    Job job = new JobBuilder()
+        .withNewMetadata()
+        .withName(KUBERNETES_JOB_NAME)
+        .endMetadata()
+        .build();
+
+    String jobPath = "/apis/batch/v1/namespaces/" + NAMESPACE + "/jobs";
+
+    // Return 403 Forbidden - this is not a retryable exception
+    server.expect().post()
+        .withPath(jobPath)
+        .andReturn(HttpURLConnection.HTTP_FORBIDDEN, "Forbidden: insufficient permissions")
+        .once();
+
+    // Should fail immediately without retries
+    DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> instance.createK8sJobWithRetries(clientApi.getClient(), job, 0, 5)
+    );
+
+    // Verify the error message contains our job name
+    Assertions.assertTrue(e.getMessage().contains(KUBERNETES_JOB_NAME));
+  }
+
+  @Test
+  void test_createK8sJobWithRetries_withJobAlreadyExists_succeedsGracefully()
+  {
+    Job job = new JobBuilder()
+        .withNewMetadata()
+        .withName(KUBERNETES_JOB_NAME)
+        .endMetadata()
+        .build();
+
+    String jobPath = "/apis/batch/v1/namespaces/" + NAMESPACE + "/jobs";
+
+    // Return 409 Conflict - job already exists
+    server.expect().post()
+        .withPath(jobPath)
+        .andReturn(HttpURLConnection.HTTP_CONFLICT, "Job already exists")
+        .once();
+
+    // Should succeed gracefully without throwing exception
+    Assertions.assertDoesNotThrow(
+        () -> instance.createK8sJobWithRetries(clientApi.getClient(), job, 0, 5)
+    );
+  }
+
+  @Test
+  void test_waitForPodResultWithRetries_withSuccessfulPodReady_returnsPod()
+  {
+    Pod pod = new PodBuilder()
+        .withNewMetadata()
+        .withName(POD_NAME)
+        .endMetadata()
+        .withNewStatus()
+        .withPodIP("192.168.1.100")
+        .endStatus()
+        .build();
+
+    // Create the pod in the mock client
+    client.pods().inNamespace(NAMESPACE).resource(pod).create();
+
+    // Should return the pod successfully
+    Pod result = instance.waitForPodResultWithRetries(
+        clientApi.getClient(), 
+        pod, 
+        1, 
+        TimeUnit.SECONDS, 
+        0, 
+        3
+    );
+
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals(POD_NAME, result.getMetadata().getName());
+    Assertions.assertEquals("192.168.1.100", result.getStatus().getPodIP());
+  }
+
+  @Test
+  void test_waitForPodResultWithRetries_withNonRetryableFailure_throwsDruidException()
+  {
+    Pod pod = new PodBuilder()
+        .withNewMetadata()
+        .withName(POD_NAME)
+        .endMetadata()
+        .withNewStatus()
+        .withPodIP(null) // Pod without IP, will timeout
+        .endStatus()
+        .build();
+
+    String podPath = "/api/v1/namespaces/" + NAMESPACE + "/pods/" + POD_NAME;
+
+    // Mock server to return the pod without IP, causing timeout
+    server.expect().get()
+        .withPath(podPath + "?watch=true")
+        .andReturn(HttpURLConnection.HTTP_INTERNAL_ERROR, "Internal server error")
+        .once();
+
+    // Should throw DruidException after failure
+    DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> instance.waitForPodResultWithRetries(
+            clientApi.getClient(), 
+            pod, 
+            1, 
+            TimeUnit.MILLISECONDS, // Very short timeout to force failure
+            0, 
+            1
+        )
+    );
+
+    // Verify the error message contains our pod name
+    Assertions.assertTrue(e.getMessage().contains(POD_NAME));
   }
 }

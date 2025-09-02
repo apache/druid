@@ -799,7 +799,7 @@ name: pac4j-oidc java security library
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 4.5.7
+version: 5.7.3
 libraries:
   - org.pac4j: pac4j-oidc
 
@@ -809,9 +809,19 @@ name: pac4j-core java security library
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 4.5.7
+version: 5.7.3
 libraries:
   - org.pac4j: pac4j-core
+
+---
+
+name: pac4j-javaee java security library
+license_category: binary
+module: extensions/druid-pac4j
+license_name: Apache License version 2.0
+version: 5.7.3
+libraries:
+  - org.pac4j: pac4j-javaee
 
 ---
 
@@ -830,7 +840,7 @@ name: com.nimbusds nimbus-jose-jwt
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 8.22.1
+version: 9.37.2
 libraries:
   - com.nimbusds: nimbus-jose-jwt
 
@@ -840,7 +850,7 @@ name: com.nimbusds content-type
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 2.1
+version: 2.2
 libraries:
   - com.nimbusds: content-type
 
@@ -850,7 +860,7 @@ name: com.nimbusds oauth2-oidc-sdk
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 8.22
+version: 10.8
 libraries:
   - com.nimbusds: oauth2-oidc-sdk
 
@@ -1707,7 +1717,7 @@ name: Apache Calcite Avatica
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.25.0
+version: 1.26.0
 libraries:
   - org.apache.calcite.avatica: avatica-core
   - org.apache.calcite.avatica: avatica-metrics
@@ -3325,16 +3335,6 @@ libraries:
 
 ---
 
-name: Protocol Buffers Dynamic Schema
-license_category: binary
-module: extensions/protobuf-extensions
-license_name: Apache License version 2.0
-version: 0.9.3
-libraries:
-  - com.github.os72: protobuf-dynamic
-
----
-
 name: Gson
 license_category: binary
 module: extensions/protobuf-extensions
@@ -3619,7 +3619,7 @@ name: Protocol Buffers
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: BSD-3-Clause License
-version: 3.25.5
+version: 3.25.8
 copyright: Google, Inc.
 license_file_path: licenses/bin/protobuf-java.BSD3
 libraries:
@@ -3887,9 +3887,9 @@ libraries:
 name: Reactive Streams
 license_category: binary
 module: java-core
-license_name: Creative Commons CC0
+license_name: MIT-0
 version: 1.0.4
-license_file_path: licenses/bin/reactive-streams.CC0
+license_file_path: licenses/bin/reactive-streams.MIT0
 libraries:
   - org.reactivestreams: reactive-streams
 
@@ -4892,10 +4892,11 @@ license_name: Apache License version 2.0
 libraries:
   - org.apache.kafka: kafka-clients
 notices:
-  - kafka-clients: 'Apache Kafka Copyright 2019 The Apache Software Foundation.
+  - kafka-clients: |
+      Apache Kafka Copyright 2019 The Apache Software Foundation.
 
-This distribution has a binary dependency on jersey, which is available under
-the CDDL License. The source code of jersey can be found at https://github.com/jersey/jersey/.'
+      This distribution has a binary dependency on jersey, which is available under
+      the CDDL License. The source code of jersey can be found at https://github.com/jersey/jersey/.
 
 ---
 

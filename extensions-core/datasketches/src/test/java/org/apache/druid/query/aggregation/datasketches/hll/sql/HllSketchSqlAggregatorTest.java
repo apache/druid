@@ -232,7 +232,8 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
   private static final ExprMacroTable MACRO_TABLE = new ExprMacroTable(
       ImmutableList.of(
-          new HllPostAggExprMacros.HLLSketchEstimateExprMacro()
+          new HllPostAggExprMacros.HLLSketchEstimateExprMacro(),
+          new HllPostAggExprMacros.HllSketchEstimateWithErrorBoundsExprMacro()
       )
   );
 
@@ -1007,7 +1008,9 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
         + " HLL_SKETCH_ESTIMATE(hllsketch_dim1),"
         + " HLL_SKETCH_ESTIMATE(hllsketch_dbl1),"
         + " HLL_SKETCH_ESTIMATE(hllsketch_l1),"
-        + " HLL_SKETCH_ESTIMATE(hllsketch_f1)"
+        + " HLL_SKETCH_ESTIMATE(hllsketch_f1),"
+        + " HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(hllsketch_dim1),"
+        + " HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(hllsketch_dim1, 2)"
         + " FROM druid.foo",
         ImmutableList.of(
             newScanQueryBuilder()
@@ -1017,21 +1020,33 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                     makeSketchEstimateExpression("v0", "hllsketch_dim1"),
                     makeSketchEstimateExpression("v1", "hllsketch_dbl1"),
                     makeSketchEstimateExpression("v2", "hllsketch_l1"),
-                    makeSketchEstimateExpression("v3", "hllsketch_f1")
+                    makeSketchEstimateExpression("v3", "hllsketch_f1"),
+                    new ExpressionVirtualColumn(
+                        "v4",
+                        "hll_sketch_estimate_with_error_bounds(\"hllsketch_dim1\")",
+                        ColumnType.DOUBLE_ARRAY,
+                        MACRO_TABLE
+                    ),
+                    new ExpressionVirtualColumn(
+                        "v5",
+                        "hll_sketch_estimate_with_error_bounds(\"hllsketch_dim1\",2)",
+                        ColumnType.DOUBLE_ARRAY,
+                        MACRO_TABLE
+                    )
                 )
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .columns("v0", "v1", "v2", "v3")
-                .columnTypes(ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.DOUBLE)
+                .columns("v0", "v1", "v2", "v3", "v4", "v5")
+                .columnTypes(ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.DOUBLE_ARRAY, ColumnType.DOUBLE_ARRAY)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{0.0D, 1.0D, 1.0D, 1.0D},
-            new Object[]{1.0D, 1.0D, 1.0D, 1.0D},
-            new Object[]{1.0D, 1.0D, 1.0D, 1.0D},
-            new Object[]{1.0D, 0.0D, 0.0D, 0.0D},
-            new Object[]{1.0D, 0.0D, 0.0D, 0.0D},
-            new Object[]{1.0D, 0.0D, 0.0D, 0.0D}
+            new Object[]{0.0D, 1.0D, 1.0D, 1.0D, "[0.0,0.0,0.0]", "[0.0,0.0,0.0]"},
+            new Object[]{1.0D, 1.0D, 1.0D, 1.0D, "[1.0,1.0,1.000049929250618]", "[1.0,1.0,1.0000998634873453]"},
+            new Object[]{1.0D, 1.0D, 1.0D, 1.0D, "[1.0,1.0,1.000049929250618]", "[1.0,1.0,1.0000998634873453]"},
+            new Object[]{1.0D, 0.0D, 0.0D, 0.0D, "[1.0,1.0,1.000049929250618]", "[1.0,1.0,1.0000998634873453]"},
+            new Object[]{1.0D, 0.0D, 0.0D, 0.0D, "[1.0,1.0,1.000049929250618]", "[1.0,1.0,1.0000998634873453]"},
+            new Object[]{1.0D, 0.0D, 0.0D, 0.0D, "[1.0,1.0,1.000049929250618]", "[1.0,1.0,1.0000998634873453]"}
         )
     );
   }

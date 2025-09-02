@@ -56,6 +56,13 @@ import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.dart.guice.DartControllerMemoryManagementModule;
+import org.apache.druid.msq.dart.guice.DartControllerModule;
+import org.apache.druid.msq.guice.MSQDurableStorageModule;
+import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
+import org.apache.druid.msq.guice.MSQIndexingModule;
+import org.apache.druid.msq.guice.MSQSqlModule;
+import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.lookup.LookupModule;
@@ -196,7 +203,14 @@ public class CliBroker extends ServerRunnable
                 .in(LazySingleton.class);
         },
         new LookupModule(),
-        new SqlModule()
+        new SqlModule(),
+        new MSQIndexingModule(),
+        new MSQDurableStorageModule(),
+        new MSQExternalDataSourceModule(),
+        new MSQSqlModule(),
+        new SqlTaskModule(),
+        new DartControllerModule(),
+        new DartControllerMemoryManagementModule()
     );
   }
 }

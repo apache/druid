@@ -84,7 +84,7 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
       {compactionConfigHasLegacyInputSegmentSizeBytesSet(currentConfig) && (
         <Callout className="legacy-callout" intent={Intent.WARNING}>
           <p>
-            You current config sets the legacy <Code>inputSegmentSizeBytes</Code> to{' '}
+            Your current config sets the legacy <Code>inputSegmentSizeBytes</Code> to{' '}
             <Code>{formatBytesCompact(currentConfig.inputSegmentSizeBytes!)}</Code> it is
             recommended to unset this property.
           </p>
