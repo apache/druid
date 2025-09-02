@@ -21,8 +21,7 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class PostgreSQLMetadataStorageActionHandler
-    extends SQLMetadataStorageActionHandler
+public class PostgreSQLMetadataStorageActionHandler extends SQLMetadataStorageActionHandler
 {
   public PostgreSQLMetadataStorageActionHandler(
       SQLMetadataConnector connector,

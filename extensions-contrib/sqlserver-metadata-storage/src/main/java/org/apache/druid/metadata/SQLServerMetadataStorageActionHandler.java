@@ -21,8 +21,7 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class SQLServerMetadataStorageActionHandler
-    extends SQLMetadataStorageActionHandler
+public class SQLServerMetadataStorageActionHandler extends SQLMetadataStorageActionHandler
 {
   public SQLServerMetadataStorageActionHandler(
       SQLMetadataConnector connector,

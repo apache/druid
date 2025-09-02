@@ -22,8 +22,7 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 
-public class DerbyMetadataStorageActionHandler
-    extends SQLMetadataStorageActionHandler
+public class DerbyMetadataStorageActionHandler extends SQLMetadataStorageActionHandler
 {
   @VisibleForTesting
   DerbyMetadataStorageActionHandler(
