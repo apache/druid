@@ -34,7 +34,6 @@ import org.apache.druid.testing.embedded.indexing.Resources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -92,63 +91,6 @@ public class MultiStageQueryTest extends EmbeddedClusterTestBase
         "2013-08-31T01:02:33.000Z,,57,-143,200,article\n"
         + "2013-08-31T03:32:45.000Z,,459,330,129,wikipedia\n"
         + "2013-08-31T07:11:21.000Z,,123,111,12,article"
-    );
-  }
-
-  @Test
-  @Disabled("Function LOCALFILES() is currently disabled")
-  public void testMsqIngestionAndQueryingWithLocalFn()
-  {
-    final String sql =
-        StringUtils.format(
-            "INSERT INTO %s\n"
-            + "SELECT\n"
-            + "  TIME_PARSE(\"timestamp\") AS __time,\n"
-            + "  isRobot,\n"
-            + "  diffUrl,\n"
-            + "  added,\n"
-            + "  countryIsoCode,\n"
-            + "  regionName,\n"
-            + "  channel,\n"
-            + "  flags,\n"
-            + "  delta,\n"
-            + "  isUnpatrolled,\n"
-            + "  isNew,\n"
-            + "  deltaBucket,\n"
-            + "  isMinor,\n"
-            + "  isAnonymous,\n"
-            + "  deleted,\n"
-            + "  cityName,\n"
-            + "  metroCode,\n"
-            + "  namespace,\n"
-            + "  comment,\n"
-            + "  page,\n"
-            + "  commentLength,\n"
-            + "  countryName,\n"
-            + "  user,\n"
-            + "  regionIsoCode\n"
-            + "FROM TABLE(\n"
-            + "  LOCALFILES(\n"
-            + "    files => ARRAY['%s'],\n"
-            + "    format => 'json'\n"
-            + "  ))\n"
-            + "  (\"timestamp\" VARCHAR, isRobot VARCHAR, diffUrl VARCHAR, added BIGINT, countryIsoCode VARCHAR, regionName VARCHAR,\n"
-            + "   channel VARCHAR, flags VARCHAR, delta BIGINT, isUnpatrolled VARCHAR, isNew VARCHAR, deltaBucket DOUBLE,\n"
-            + "   isMinor VARCHAR, isAnonymous VARCHAR, deleted BIGINT, cityName VARCHAR, metroCode BIGINT, namespace VARCHAR,\n"
-            + "   comment VARCHAR, page VARCHAR, commentLength BIGINT, countryName VARCHAR, \"user\" VARCHAR, regionIsoCode VARCHAR)\n"
-            + "PARTITIONED BY DAY\n",
-            dataSource,
-            Resources.DataFile.tinyWiki1Json().getAbsolutePath()
-        );
-
-    final SqlTaskStatus taskStatus = msqApis.submitTaskSql(sql);
-    cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord.latchableEmitter());
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
-
-    cluster.callApi().verifySqlQuery(
-        "SELECT __time, isRobot, added, delta, deleted, namespace FROM %s",
-        dataSource,
-        ""
     );
   }
 
