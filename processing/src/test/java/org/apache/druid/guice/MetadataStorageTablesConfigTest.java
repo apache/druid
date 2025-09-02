@@ -69,15 +69,15 @@ public class MetadataStorageTablesConfigTest
     Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.config"), config.getConfigTable());
     Assert.assertEquals(
         props.getProperty("druid.metadata.storage.tables.tasks"),
-        config.getEntryTable(MetadataStorageTablesConfig.TASK_ENTRY_TYPE)
+        config.getTasksTable()
     );
     Assert.assertEquals(
         props.getProperty("druid.metadata.storage.tables.taskLog"),
-        config.getLogTable(MetadataStorageTablesConfig.TASK_ENTRY_TYPE)
+        config.getTaskLogTable()
     );
     Assert.assertEquals(
         props.getProperty("druid.metadata.storage.tables.taskLock"),
-        config.getLockTable(MetadataStorageTablesConfig.TASK_ENTRY_TYPE)
+        config.getTaskLockTable()
     );
     Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.dataSource"), config.getDataSourceTable());
     Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.supervisors"), config.getSupervisorTable());

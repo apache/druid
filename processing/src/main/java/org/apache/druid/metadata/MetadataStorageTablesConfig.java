@@ -23,9 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  */
 public class MetadataStorageTablesConfig
@@ -40,10 +37,6 @@ public class MetadataStorageTablesConfig
   public static final String TASK_ENTRY_TYPE = "task";
 
   private static final String DEFAULT_BASE = "druid";
-
-  private final Map<String, String> entryTables = new HashMap<>();
-  private final Map<String, String> logTables = new HashMap<>();
-  private final Map<String, String> lockTables = new HashMap<>();
 
   @JsonProperty("base")
   private final String base;
@@ -112,9 +105,6 @@ public class MetadataStorageTablesConfig
     this.tasksTable = makeTableName(tasksTable, "tasks");
     this.taskLogTable = makeTableName(taskLogTable, "tasklogs");
     this.taskLockTable = makeTableName(taskLockTable, "tasklocks");
-    entryTables.put(TASK_ENTRY_TYPE, this.tasksTable);
-    logTables.put(TASK_ENTRY_TYPE, this.taskLogTable);
-    lockTables.put(TASK_ENTRY_TYPE, this.taskLockTable);
     this.auditTable = makeTableName(auditTable, "audit");
     this.supervisorTable = makeTableName(supervisorTable, "supervisors");
     this.segmentSchemasTable = makeTableName(segmentSchemasTable, "segmentSchemas");
@@ -165,26 +155,6 @@ public class MetadataStorageTablesConfig
   public String getConfigTable()
   {
     return configTable;
-  }
-
-  public String getEntryTable(final String entryType)
-  {
-    return entryTables.get(entryType);
-  }
-
-  public String getLogTable(final String entryType)
-  {
-    return logTables.get(entryType);
-  }
-
-  public String getLockTable(final String entryType)
-  {
-    return lockTables.get(entryType);
-  }
-
-  public String getTaskEntryType()
-  {
-    return TASK_ENTRY_TYPE;
   }
 
   public String getAuditTable()

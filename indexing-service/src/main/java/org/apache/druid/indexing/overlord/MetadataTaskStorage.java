@@ -42,7 +42,6 @@ import org.apache.druid.metadata.MetadataStorageActionHandler;
 import org.apache.druid.metadata.MetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.MetadataStorageActionHandlerTypes;
 import org.apache.druid.metadata.MetadataStorageConnector;
-import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
@@ -81,7 +80,7 @@ public class MetadataTaskStorage implements TaskStorage
 
   private final MetadataStorageConnector metadataStorageConnector;
   private final TaskStorageConfig config;
-  private final MetadataStorageActionHandler<Task, TaskStatus, TaskAction, TaskLock> handler;
+  private final MetadataStorageActionHandler handler;
 
   private static final EmittingLogger log = new EmittingLogger(MetadataTaskStorage.class);
 
@@ -94,7 +93,7 @@ public class MetadataTaskStorage implements TaskStorage
   {
     this.metadataStorageConnector = metadataStorageConnector;
     this.config = config;
-    this.handler = factory.create(MetadataStorageTablesConfig.TASK_ENTRY_TYPE, TASK_TYPES);
+    this.handler = factory.create();
   }
 
   @LifecycleStart

@@ -21,20 +21,17 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class PostgreSQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
-    extends SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
+public class PostgreSQLMetadataStorageActionHandler
+    extends SQLMetadataStorageActionHandler
 {
   public PostgreSQLMetadataStorageActionHandler(
       SQLMetadataConnector connector,
       ObjectMapper jsonMapper,
-      MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType> types,
-      String entryTypeName,
       String entryTable,
-      String logTable,
       String lockTable
   )
   {
-    super(connector, jsonMapper, types, entryTypeName, entryTable, logTable, lockTable);
+    super(connector, jsonMapper, entryTable, lockTable);
   }
 
   @Override

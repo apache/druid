@@ -35,20 +35,13 @@ public class PostgreSQLMetadataStorageActionHandlerFactory extends SQLMetadataSt
   }
 
   @Override
-  public <EntryType, StatusType, LogType, LockType>
-      MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType> create(
-          String entryType,
-          MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType> payloadTypes
-  )
+  public MetadataStorageActionHandler create()
   {
-    return new PostgreSQLMetadataStorageActionHandler<>(
+    return new PostgreSQLMetadataStorageActionHandler(
         connector,
         jsonMapper,
-        payloadTypes,
-        entryType,
-        config.getEntryTable(entryType),
-        config.getLogTable(entryType),
-        config.getLockTable(entryType)
+        config.getTasksTable(),
+        config.getTaskLockTable()
     );
   }
 }

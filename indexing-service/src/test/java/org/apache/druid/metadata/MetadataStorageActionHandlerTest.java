@@ -20,15 +20,16 @@
 package org.apache.druid.metadata;
 
 import com.google.common.base.Optional;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
+import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.task.Task;
 import org.joda.time.DateTime;
-import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Test;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -41,21 +42,21 @@ import java.util.Map;
 public class MetadataStorageActionHandlerTest
 {
 
-  private MetadataStorageActionHandler<String, String, String, String> handler;
+  private MetadataStorageActionHandler handler;
 
   @Before
   public void setup()
   {
-    this.handler = new MetadataStorageActionHandler<>()
+    this.handler = new MetadataStorageActionHandler()
     {
       @Override
       public void insert(
           String id,
           DateTime timestamp,
           String dataSource,
-          String entry,
+          @NotNull Task entry,
           boolean active,
-          @Nullable String status,
+          @Nullable TaskStatus status,
           String type,
           String groupId
       )
@@ -64,32 +65,32 @@ public class MetadataStorageActionHandlerTest
       }
 
       @Override
-      public boolean setStatus(String entryId, boolean active, String status)
+      public boolean setStatus(String entryId, boolean active, TaskStatus status)
       {
         return false;
       }
 
       @Override
-      public Optional<String> getEntry(String entryId)
+      public Optional<Task> getEntry(String entryId)
       {
         return null;
       }
 
       @Override
-      public Optional<String> getStatus(String entryId)
+      public Optional<TaskStatus> getStatus(String entryId)
       {
         return null;
       }
 
       @Nullable
       @Override
-      public TaskInfo<String, String> getTaskInfo(String entryId)
+      public TaskInfo<Task, TaskStatus> getTaskInfo(String entryId)
       {
         return null;
       }
 
       @Override
-      public List<TaskInfo<String, String>> getTaskInfos(
+      public List<TaskInfo<Task, TaskStatus>> getTaskInfos(
           Map<TaskLookup.TaskLookupType, TaskLookup> taskLookups,
           @Nullable String datasource
       )
@@ -98,7 +99,7 @@ public class MetadataStorageActionHandlerTest
       }
 
       @Override
-      public List<TaskInfo<TaskIdentifier, String>> getTaskStatusList(
+      public List<TaskInfo<TaskIdentifier, TaskStatus>> getTaskStatusList(
           Map<TaskLookup.TaskLookupType, TaskLookup> taskLookups,
           @Nullable String datasource
       )
@@ -107,13 +108,13 @@ public class MetadataStorageActionHandlerTest
       }
 
       @Override
-      public boolean addLock(String entryId, String lock)
+      public boolean addLock(String entryId, TaskLock lock)
       {
         return false;
       }
 
       @Override
-      public boolean replaceLock(String entryId, long oldLockId, String newLock)
+      public boolean replaceLock(String entryId, long oldLockId, TaskLock newLock)
       {
         return false;
       }
@@ -131,13 +132,13 @@ public class MetadataStorageActionHandlerTest
       }
 
       @Override
-      public Map<Long, String> getLocks(String entryId)
+      public Map<Long, TaskLock> getLocks(String entryId)
       {
         return Collections.emptyMap();
       }
 
       @Override
-      public Long getLockId(String entryId, String lock)
+      public Long getLockId(String entryId, TaskLock lock)
       {
         return 0L;
       }
@@ -148,31 +149,5 @@ public class MetadataStorageActionHandlerTest
 
       }
     };
-  }
-
-  @Test
-  public void testAddLogThrowsUnsupportedException()
-  {
-    Exception exception = Assert.assertThrows(
-        DruidException.class,
-        () -> handler.addLog("abcd", "logentry")
-    );
-    Assert.assertEquals(
-        "Task actions are not logged anymore.",
-        exception.getMessage()
-    );
-  }
-
-  @Test
-  public void testGetLogsThrowsUnsupportedException()
-  {
-    Exception exception = Assert.assertThrows(
-        DruidException.class,
-        () -> handler.getLogs("abcd")
-    );
-    Assert.assertEquals(
-        "Task actions are not logged anymore.",
-        exception.getMessage()
-    );
   }
 }

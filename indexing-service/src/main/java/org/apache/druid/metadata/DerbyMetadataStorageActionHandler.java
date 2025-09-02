@@ -22,21 +22,18 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 
-public class DerbyMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
-    extends SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
+public class DerbyMetadataStorageActionHandler
+    extends SQLMetadataStorageActionHandler
 {
   @VisibleForTesting
   DerbyMetadataStorageActionHandler(
       SQLMetadataConnector connector,
       ObjectMapper jsonMapper,
-      MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType> types,
-      String entryTypeName,
       String entryTable,
-      String logTable,
       String lockTable
   )
   {
-    super(connector, jsonMapper, types, entryTypeName, entryTable, logTable, lockTable);
+    super(connector, jsonMapper, entryTable, lockTable);
   }
 
   @Override

@@ -20,10 +20,12 @@
 package org.apache.druid.metadata;
 
 import com.google.common.base.Optional;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
+import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.joda.time.DateTime;
 
@@ -34,7 +36,7 @@ import java.util.List;
 import java.util.Map;
 
 @ExtensionPoint
-public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
+public interface MetadataStorageActionHandler
 {
   /**
    * Creates a new entry.
@@ -52,9 +54,9 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
       @NotNull String id,
       @NotNull DateTime timestamp,
       @NotNull String dataSource,
-      @NotNull EntryType entry,
+      @NotNull Task entry,
       boolean active,
-      @Nullable StatusType status,
+      @Nullable TaskStatus status,
       @NotNull String type,
       @NotNull String groupId
   );
@@ -68,7 +70,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param status status
    * @return true if the status was updated, false if the entry did not exist of if the entry was inactive
    */
-  boolean setStatus(String entryId, boolean active, StatusType status);
+  boolean setStatus(String entryId, boolean active, TaskStatus status);
 
   /**
    * Retrieves the entry with the given id.
@@ -76,7 +78,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param entryId entry id
    * @return optional entry, absent if the given id does not exist
    */
-  Optional<EntryType> getEntry(String entryId);
+  Optional<Task> getEntry(String entryId);
 
   /**
    * Retrieve the status for the entry with the given id.
@@ -84,14 +86,14 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param entryId entry id
    * @return optional status, absent if entry does not exist or status is not set
    */
-  Optional<StatusType> getStatus(String entryId);
+  Optional<TaskStatus> getStatus(String entryId);
 
   @Nullable
-  TaskInfo<EntryType, StatusType> getTaskInfo(String entryId);
+  TaskInfo<Task, TaskStatus> getTaskInfo(String entryId);
 
   /**
    * Returns a list of {@link TaskInfo} from metadata store that matches to the given filters.
-   *
+   * <p>
    * If {@code taskLookups} includes {@link TaskLookupType#ACTIVE}, it returns all active tasks in the metadata store.
    * If {@code taskLookups} includes {@link TaskLookupType#COMPLETE}, it returns all complete tasks in the metadata
    * store. For complete tasks, additional filters in {@code CompleteTaskLookup} can be applied.
@@ -100,14 +102,14 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param taskLookups task lookup type and filters.
    * @param datasource  datasource filter
    */
-  List<TaskInfo<EntryType, StatusType>> getTaskInfos(
+  List<TaskInfo<Task, TaskStatus>> getTaskInfos(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String datasource
   );
 
   /**
    * Returns the statuses of the specified tasks.
-   *
+   * <p>
    * If {@code taskLookups} includes {@link TaskLookupType#ACTIVE}, it returns all active tasks in the metadata store.
    * If {@code taskLookups} includes {@link TaskLookupType#COMPLETE}, it returns all complete tasks in the metadata
    * store. For complete tasks, additional filters in {@code CompleteTaskLookup} can be applied.
@@ -116,12 +118,12 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param taskLookups task lookup type and filters.
    * @param datasource  datasource filter
    */
-  List<TaskInfo<TaskIdentifier, StatusType>> getTaskStatusList(
+  List<TaskInfo<TaskIdentifier, TaskStatus>> getTaskStatusList(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String datasource
   );
 
-  default List<TaskInfo<EntryType, StatusType>> getTaskInfos(
+  default List<TaskInfo<Task, TaskStatus>> getTaskInfos(
       TaskLookup taskLookup,
       @Nullable String datasource
   )
@@ -136,7 +138,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param lock lock to add
    * @return true if the lock was added
    */
-  boolean addLock(String entryId, LockType lock);
+  boolean addLock(String entryId, TaskLock lock);
 
   /**
    * Replace an existing lock with a new lock.
@@ -147,7 +149,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    *
    * @return true if the lock is replaced
    */
-  boolean replaceLock(String entryId, long oldLockId, LockType newLock);
+  boolean replaceLock(String entryId, long oldLockId, TaskLock newLock);
 
   /**
    * Remove the lock with the given lock id.
@@ -164,42 +166,12 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
   void removeTasksOlderThan(long timestamp);
 
   /**
-   * Task logs are not used anymore and this method is never called by Druid code.
-   * It has been retained only for backwards compatibility with older extensions.
-   * New extensions must not implement this method.
-   *
-   * @throws DruidException of category UNSUPPORTED whenever called.
-   */
-  @Deprecated
-  default boolean addLog(String entryId, LogType log)
-  {
-    throw DruidException.defensive()
-                        .ofCategory(DruidException.Category.UNSUPPORTED)
-                        .build("Task actions are not logged anymore.");
-  }
-
-  /**
-   * Task logs are not used anymore and this method is never called by Druid code.
-   * It has been retained only for backwards compatibility with older extensions.
-   * New extensions must not implement this method.
-   *
-   * @throws DruidException of category UNSUPPORTED whenever called.
-   */
-  @Deprecated
-  default List<LogType> getLogs(String entryId)
-  {
-    throw DruidException.defensive()
-                        .ofCategory(DruidException.Category.UNSUPPORTED)
-                        .build("Task actions are not logged anymore.");
-  }
-
-  /**
    * Returns the locks for the given entry
    *
    * @param entryId entry id
    * @return map of lockId to lock
    */
-  Map<Long, LockType> getLocks(String entryId);
+  Map<Long, TaskLock> getLocks(String entryId);
 
   /**
    * Returns the lock id for the given entry and the lock.
@@ -207,7 +179,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @return lock id if found, otherwise null.
    */
   @Nullable
-  Long getLockId(String entryId, LockType lock);
+  Long getLockId(String entryId, TaskLock lock);
 
   /**
    * Utility to migrate existing tasks to the new schema by populating type and groupId asynchronously

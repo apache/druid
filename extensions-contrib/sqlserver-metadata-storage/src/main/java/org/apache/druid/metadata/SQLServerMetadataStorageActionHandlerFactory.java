@@ -35,20 +35,13 @@ public class SQLServerMetadataStorageActionHandlerFactory extends SQLMetadataSto
   }
 
   @Override
-  public <EntryType, StatusType, LogType, LockType>
-      MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType> create(
-          String entryType,
-          MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType> payloadTypes
-  )
+  public MetadataStorageActionHandler create()
   {
-    return new SQLServerMetadataStorageActionHandler<>(
+    return new SQLServerMetadataStorageActionHandler(
         connector,
         jsonMapper,
-        payloadTypes,
-        entryType,
-        config.getEntryTable(entryType),
-        config.getLogTable(entryType),
-        config.getLockTable(entryType)
+        config.getTasksTable(),
+        config.getTaskLockTable()
     );
   }
 }
