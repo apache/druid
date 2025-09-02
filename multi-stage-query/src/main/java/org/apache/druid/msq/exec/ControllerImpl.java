@@ -1393,10 +1393,7 @@ public class ControllerImpl implements Controller
     try {
       Set<IntObjectPair<MSQFault>> workerFaultSet;
       while (!(workerFaultSet = workerManager.waitForWorkers(workers)).isEmpty()) {
-        for (IntObjectPair<MSQFault> workerFault : workerFaultSet) {
-          throwIfNonRetriableFault(workerFault.right());
-          addToRetryQueue(queryKernel, workerFault.firstInt(), workerFault.right());
-        }
+        retryWorkersOrFailJob(queryKernel, workerFaultSet);
       }
     }
     catch (InterruptedException e) {
@@ -1432,6 +1429,14 @@ public class ControllerImpl implements Controller
         // Nonretryable failure.
         throw new RuntimeException(workerResult.error());
       }
+    }
+  }
+
+  private void retryWorkersOrFailJob(ControllerQueryKernel queryKernel, Set<IntObjectPair<MSQFault>> workerFaultSet)
+  {
+    for (IntObjectPair<MSQFault> workerFault : workerFaultSet) {
+      throwIfNonRetriableFault(workerFault.right());
+      addToRetryQueue(queryKernel, workerFault.firstInt(), workerFault.right());
     }
   }
 
@@ -2382,10 +2387,7 @@ public class ControllerImpl implements Controller
       // wait till the workers identified above are fully ready
       Set<IntObjectPair<MSQFault>> workerFaultSet;
       while (!(workerFaultSet = workerManager.waitForWorkers(workersNeedToBeFullyStarted)).isEmpty()) {
-        for (IntObjectPair<MSQFault> workerFault : workerFaultSet) {
-          throwIfNonRetriableFault(workerFault.right());
-          addToRetryQueue(queryKernel, workerFault.firstInt(), workerFault.right());
-        }
+        retryWorkersOrFailJob(queryKernel, workerFaultSet);
       }
 
       for (Map.Entry<StageId, Map<Integer, WorkOrder>> stageWorkOrders : stageWorkerOrders.entrySet()) {
@@ -2568,10 +2570,7 @@ public class ControllerImpl implements Controller
 
           Set<IntObjectPair<MSQFault>> workerFaultSet;
           while (!(workerFaultSet = workerManager.launchWorkersIfNeeded(workerCount)).isEmpty()) {
-            for (IntObjectPair<MSQFault> workerFault : workerFaultSet) {
-              throwIfNonRetriableFault(workerFault.right());
-              addToRetryQueue(queryKernel, workerFault.firstInt(), workerFault.right());
-            }
+            retryWorkersOrFailJob(queryKernel, workerFaultSet);
           }
           stageRuntimesForLiveReports.put(stageId.getStageNumber(), new Interval(DateTimes.nowUtc(), DateTimes.MAX));
           startWorkForStage(queryDef, queryKernel, stageId.getStageNumber(), segmentsToGenerate);
