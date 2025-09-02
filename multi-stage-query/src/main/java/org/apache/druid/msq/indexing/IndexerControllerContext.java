@@ -125,7 +125,8 @@ public class IndexerControllerContext implements ControllerContext
     final ControllerMemoryParameters memoryParameters =
         ControllerMemoryParameters.createProductionInstance(
             memoryIntrospector,
-            querySpec.getTuningConfig().getMaxNumWorkers()
+            querySpec.getTuningConfig().getMaxNumWorkers(),
+            MultiStageQueryContext.getFrameSize(querySpec.getContext())
         );
 
     final ControllerQueryKernelConfig config = makeQueryKernelConfig(querySpec, memoryParameters);

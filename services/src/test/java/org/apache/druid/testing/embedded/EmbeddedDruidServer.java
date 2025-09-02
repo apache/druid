@@ -47,6 +47,7 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
 {
   private static final Logger log = new Logger(EmbeddedDruidServer.class);
   protected static final long MEM_100_MB = HumanReadableBytes.parse("100M");
+  protected static final long MEM_2_MB = HumanReadableBytes.parse("2M");
 
   /**
    * A static incremental ID is used instead of a random number to ensure that
@@ -58,7 +59,7 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
   private final AtomicReference<EmbeddedServerLifecycle> lifecycle = new AtomicReference<>();
 
   private long serverMemory = MEM_100_MB;
-  private long serverDirectMemory = MEM_100_MB;
+  private long serverDirectMemory = MEM_2_MB;
   private final Map<String, String> serverProperties = new HashMap<>();
   private final List<BeforeStart> beforeStartHooks = new ArrayList<>();
   private final ServerReferenceHolder referenceHolder = new ServerReferenceHolder();

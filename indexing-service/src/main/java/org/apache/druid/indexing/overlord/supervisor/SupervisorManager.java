@@ -299,9 +299,9 @@ public class SupervisorManager
     log.info("SupervisorManager stopped.");
   }
 
-  public List<VersionedSupervisorSpec> getSupervisorHistoryForId(String id)
+  public List<VersionedSupervisorSpec> getSupervisorHistoryForId(String id, @Nullable Integer limit) throws IllegalArgumentException
   {
-    return metadataSupervisorManager.getAllForId(id);
+    return metadataSupervisorManager.getAllForId(id, limit);
   }
 
   public Map<String, List<VersionedSupervisorSpec>> getSupervisorHistory()
