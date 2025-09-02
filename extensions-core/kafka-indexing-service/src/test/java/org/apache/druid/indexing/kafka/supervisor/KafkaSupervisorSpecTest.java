@@ -691,7 +691,7 @@ public class KafkaSupervisorSpecTest
 
   private KafkaSupervisorSpec getSpec(String topic, String topicPattern)
   {
-    return new KafkaSupervisorSpecBuilder()
+    KafkaSupervisorSpecBuilder builder = new KafkaSupervisorSpecBuilder()
         .withDataSchema(
             schema -> schema
                 .withTimestamp(new TimestampSpec(null, null, null))
@@ -700,10 +700,12 @@ public class KafkaSupervisorSpecTest
         )
         .withIoConfig(
             ioConfig -> ioConfig
-                .withTopicPattern(topicPattern)
                 .withJsonInputFormat()
                 .withConsumerProperties(Map.of("bootstrap.servers", "localhost:9092"))
-        )
-        .build("testDs", topic);
+        );
+
+    return topic == null
+           ? builder.buildWithTopicPattern("testDs", topicPattern)
+           : builder.build("testDs", topic);
   }
 }

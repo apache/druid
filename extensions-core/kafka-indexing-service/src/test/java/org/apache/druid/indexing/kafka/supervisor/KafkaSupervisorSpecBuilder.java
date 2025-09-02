@@ -64,7 +64,23 @@ public class KafkaSupervisorSpecBuilder
   public KafkaSupervisorSpec build(String dataSource, String topic)
   {
     dataSchema.withDataSource(dataSource);
-    ioConfig.withTopic(topic);
+    ioConfig.withTopic(topic).withTopicPattern(null);
+    return build();
+  }
+
+  /**
+   * Builds a new {@link KafkaSupervisorSpec} which reads from multiple toppics
+   * that satisfy the given {@code topicPattern}.
+   */
+  public KafkaSupervisorSpec buildWithTopicPattern(String dataSource, String topicPattern)
+  {
+    dataSchema.withDataSource(dataSource);
+    ioConfig.withTopic(null).withTopicPattern(topicPattern);
+    return build();
+  }
+
+  private KafkaSupervisorSpec build()
+  {
     return new KafkaSupervisorSpec(
         id,
         null,

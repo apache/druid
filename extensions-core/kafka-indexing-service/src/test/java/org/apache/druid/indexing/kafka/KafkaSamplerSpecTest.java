@@ -171,12 +171,11 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
         .withDataSchema(DATA_SCHEMA)
         .withIoConfig(
             ioConfig -> ioConfig
-                .withTopicPattern(Pattern.quote(TOPIC))
                 .withJsonInputFormat()
                 .withConsumerProperties(kafkaServer.consumerProperties())
                 .withUseEarliestSequenceNumber(true)
         )
-        .build(DATASOURCE, null);
+        .buildWithTopicPattern(DATASOURCE, Pattern.quote(TOPIC));
 
     KafkaSamplerSpec samplerSpec = new KafkaSamplerSpec(
         supervisorSpec,
