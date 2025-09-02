@@ -443,7 +443,9 @@ ORDER BY
       workerInfoLookup: Record<string, WorkerInfo>,
     ): Column<ServiceResultRow>[] => {
       const { capabilities } = this.props;
-      const webConsoleConfig: WebConsoleConfig | undefined = localStorageGetJson(LocalStorageKeys.WEB_CONSOLE_CONFIGS);
+      const webConsoleConfig: WebConsoleConfig | undefined = localStorageGetJson(
+        LocalStorageKeys.WEB_CONSOLE_CONFIGS,
+      );
       const showLocalTime = webConsoleConfig?.showLocalTime;
       return [
         {

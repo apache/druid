@@ -381,7 +381,9 @@ ORDER BY
     const { tasksState, groupTasksBy, visibleColumns } = this.state;
 
     const tasks = tasksState.data || [];
-    const webConsoleConfig: WebConsoleConfig | undefined = localStorageGetJson(LocalStorageKeys.WEB_CONSOLE_CONFIGS);
+    const webConsoleConfig: WebConsoleConfig | undefined = localStorageGetJson(
+      LocalStorageKeys.WEB_CONSOLE_CONFIGS,
+    );
     const showLocalTime = webConsoleConfig?.showLocalTime;
     return (
       <ReactTable
@@ -509,14 +511,18 @@ ORDER BY
             Header: 'Created time',
             accessor: showLocalTime ? 'local_created_time' : 'created_time',
             width: 220,
-            Cell: this.renderTaskFilterableCell(showLocalTime ? 'local_created_time' : 'created_time', true, value => {
-              const parsedDate = dayjs(value);
-              return !parsedDate.isValid() ? (
-                String(value)
-              ) : (
-                <span data-tooltip={parsedDate.fromNow()}>{value}</span>
-              );
-            }),
+            Cell: this.renderTaskFilterableCell(
+              showLocalTime ? 'local_created_time' : 'created_time',
+              true,
+              value => {
+                const parsedDate = dayjs(value);
+                return !parsedDate.isValid() ? (
+                  String(value)
+                ) : (
+                  <span data-tooltip={parsedDate.fromNow()}>{value}</span>
+                );
+              },
+            ),
             Aggregated: () => '',
             show: visibleColumns.shown('Created time'),
           },

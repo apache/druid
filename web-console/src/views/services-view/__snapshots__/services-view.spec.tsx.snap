@@ -206,7 +206,7 @@ exports[`ServicesView renders data 1`] = `
             "Header": "Start time",
             "accessor": "start_time",
             "show": true,
-            "width": 200,
+            "width": 220,
           },
           {
             "Aggregated": [Function],

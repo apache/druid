@@ -59,7 +59,7 @@ export const WebConsoleConfigDialog = React.memo(function WebConsoleConfigDialog
       </div>
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-        <Button text="Save" onClick={save} intent={Intent.PRIMARY} rightIcon={IconNames.TICK} />
+          <Button text="Save" onClick={save} intent={Intent.PRIMARY} rightIcon={IconNames.TICK} />
         </div>
       </div>
     </Dialog>

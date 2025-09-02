@@ -29,7 +29,8 @@ export const WEB_CONSOLE_CONFIG_FIELDS: Field<WebConsoleConfig>[] = [
     defaultValue: false,
     info: (
       <>
-        Boolean flag for whether we show local time in the &quot;Tasks&quot;, &quot;Segments&quot; and &quot;Services&quot; views.
+        Boolean flag for whether we show local time in the &quot;Tasks&quot;, &quot;Segments&quot;
+        and &quot;Services&quot; views.
       </>
     ),
   },
