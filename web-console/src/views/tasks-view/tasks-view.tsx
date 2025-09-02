@@ -19,7 +19,7 @@
 import { Button, ButtonGroup, Intent, Label, MenuItem, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime'
+import relativeTime from 'dayjs/plugin/relativeTime';
 import React, { type ReactNode } from 'react';
 import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
@@ -43,6 +43,7 @@ import {
   TASK_CANCELED_ERROR_MESSAGES,
   TASK_CANCELED_PREDICATE,
 } from '../../druid-models';
+import type { WebConsoleConfig } from '../../druid-models/web-console-config/web-console-config';
 import type { Capabilities } from '../../helpers';
 import {
   SMALL_TABLE_PAGE_SIZE,
@@ -57,6 +58,7 @@ import {
   getDruidErrorMessage,
   hasOverlayOpen,
   LocalStorageBackedVisibility,
+  localStorageGetJson,
   LocalStorageKeys,
   oneOf,
   queryDruidSql,
@@ -87,6 +89,7 @@ interface TaskQueryResultRow {
   group_id: string;
   type: string;
   created_time: string;
+  local_created_time: string;
   datasource: string;
   duration: number;
   error_msg: string | null;
@@ -190,7 +193,7 @@ ORDER BY
             cancelToken,
           );
           tasks.forEach(t => {
-            t.display_created_time = dayjs(t.created_time).format(DATE_FORMAT);
+            t.local_created_time = dayjs(t.created_time).format(DATE_FORMAT);
           });
           return tasks;
         } else if (capabilities.hasOverlordAccess()) {
@@ -200,7 +203,7 @@ ORDER BY
               group_id: d.groupId,
               type: d.type,
               created_time: d.createdTime,
-              display_created_time: dayjs(d.createdTime).format(DATE_FORMAT),
+              local_created_time: dayjs(d.createdTime).format(DATE_FORMAT),
               datasource: d.dataSource,
               duration: d.duration ? d.duration : 0,
               error_msg: d.errorMsg,
@@ -378,6 +381,8 @@ ORDER BY
     const { tasksState, groupTasksBy, visibleColumns } = this.state;
 
     const tasks = tasksState.data || [];
+    const webConsoleConfig: WebConsoleConfig | undefined = localStorageGetJson(LocalStorageKeys.WEB_CONSOLE_CONFIGS);
+    const showLocalTime = webConsoleConfig?.showLocalTime;
     return (
       <ReactTable
         data={tasks}
@@ -502,18 +507,16 @@ ORDER BY
           },
           {
             Header: 'Created time',
-            accessor: 'display_created_time',
+            accessor: showLocalTime ? 'local_created_time' : 'created_time',
             width: 220,
-            Cell: this.renderTaskFilterableCell('display_created_time', true, value => {
+            Cell: this.renderTaskFilterableCell(showLocalTime ? 'local_created_time' : 'created_time', true, value => {
               const parsedDate = dayjs(value);
               return !parsedDate.isValid() ? (
                 String(value)
               ) : (
-                <span data-tooltip={parsedDate.fromNow()}>
-                  {parsedDate.format(DATE_FORMAT)}
-                </span>
+                <span data-tooltip={parsedDate.fromNow()}>{value}</span>
               );
-            }, ),
+            }),
             Aggregated: () => '',
             show: visibleColumns.shown('Created time'),
           },
@@ -533,9 +536,7 @@ ORDER BY
 
                 const end = start.add(value, 'ms');
                 return (
-                  <span
-                    data-tooltip={`End time: ${end.format(DATE_FORMAT)}\n(${end.fromNow()})`}
-                  >
+                  <span data-tooltip={`End time: ${end.format(DATE_FORMAT)}\n(${end.fromNow()})`}>
                     {shownDuration}
                   </span>
                 );

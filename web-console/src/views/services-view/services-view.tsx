@@ -19,6 +19,7 @@
 import { Button, ButtonGroup, Intent, Label, MenuItem, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { max, sum } from 'd3-array';
+import dayjs from 'dayjs';
 import memoize from 'memoize-one';
 import React, { createContext, useContext } from 'react';
 import type { Column, Filter } from 'react-table';
@@ -39,6 +40,7 @@ import {
 import { AsyncActionDialog } from '../../dialogs';
 import type { QueryWithContext } from '../../druid-models';
 import { getConsoleViewIcon } from '../../druid-models';
+import type { WebConsoleConfig } from '../../druid-models/web-console-config/web-console-config';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
   STANDARD_TABLE_PAGE_SIZE,
@@ -58,6 +60,7 @@ import {
   getApiArray,
   hasOverlayOpen,
   LocalStorageBackedVisibility,
+  localStorageGetJson,
   LocalStorageKeys,
   lookupBy,
   oneOf,
@@ -73,7 +76,6 @@ import type { BasicAction } from '../../utils/basic-action';
 import { FillIndicator } from './fill-indicator/fill-indicator';
 
 import './services-view.scss';
-import dayjs from 'dayjs';
 
 const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[]> = {
   'full': [
@@ -145,7 +147,7 @@ interface ServiceResultRow {
   readonly plaintext_port: number;
   readonly tls_port: number;
   readonly start_time: string;
-  display_start_time: string;
+  local_start_time: string;
 }
 
 interface ServicesWithAuxiliaryInfo {
@@ -275,7 +277,7 @@ ORDER BY
         if (capabilities.hasSql()) {
           services = await queryDruidSql({ query: ServicesView.SERVICE_SQL }, cancelToken);
           services.forEach(s => {
-            s.display_start_time = dayjs(s.start_time).format(DATE_FORMAT);
+            s.local_start_time = dayjs(s.start_time).format(DATE_FORMAT);
           });
         } else if (capabilities.hasCoordinatorAccess()) {
           services = (await getApiArray('/druid/coordinator/v1/servers?simple', cancelToken)).map(
@@ -292,7 +294,7 @@ ORDER BY
                 curr_size: s.currSize,
                 max_size: s.maxSize,
                 start_time: '1970:01:01T00:00:00Z',
-                display_start_time: '1970:01:01T00:00:00+00:00',
+                local_start_time: '1970:01:01T00:00:00+00:00',
                 is_leader: 0,
               };
             },
@@ -441,6 +443,8 @@ ORDER BY
       workerInfoLookup: Record<string, WorkerInfo>,
     ): Column<ServiceResultRow>[] => {
       const { capabilities } = this.props;
+      const webConsoleConfig: WebConsoleConfig | undefined = localStorageGetJson(LocalStorageKeys.WEB_CONSOLE_CONFIGS);
+      const showLocalTime = webConsoleConfig?.showLocalTime;
       return [
         {
           Header: 'Service',
@@ -618,9 +622,9 @@ ORDER BY
         {
           Header: 'Start time',
           show: visibleColumns.shown('Start time'),
-          accessor: 'display_start_time',
+          accessor: showLocalTime ? 'local_start_time' : 'start_time',
           width: 220,
-          Cell: this.renderFilterableCell('display_start_time'),
+          Cell: this.renderFilterableCell(showLocalTime ? 'local_start_time' : 'start_time'),
           Aggregated: () => '',
         },
         {
