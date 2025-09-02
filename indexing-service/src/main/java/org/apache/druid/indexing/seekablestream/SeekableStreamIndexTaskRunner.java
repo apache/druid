@@ -1717,6 +1717,83 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     return Response.ok(parseExceptionHandler.getSavedParseExceptionReports()).build();
   }
 
+  @POST
+  @Path("/updateAssignments")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  public void reassignPartitions(PartitionReassignmentRequest<PartitionIdType, SequenceOffsetType> req) throws InterruptedException
+  {
+    try {
+      requestPause();
+      checkpointSequences();
+      createNewSequenceForPartitions(req.getPartitionAssignments());
+      resume();
+    } catch (Exception e) {
+      log.makeAlert(e, "Failed to reassign partitions.");
+    }
+  }
+
+  private void createNewSequenceForPartitions(List<PartitionAssignment<PartitionIdType, SequenceOffsetType>> newPartitions)
+      throws IOException
+  {
+    Map<PartitionIdType, SequenceOffsetType> newPartitionStartOffsets = new HashMap<>();
+    Map<PartitionIdType, SequenceOffsetType> newPartitionEndOffsets = new HashMap<>();
+    for (PartitionAssignment<PartitionIdType, SequenceOffsetType> partition: newPartitions) {
+      SequenceOffsetType startOffset = currOffsets.computeIfAbsent(
+          partition.getPartitionId(),
+          k -> partition.getStartOffset()
+      );
+      newPartitionStartOffsets.put(partition.getPartitionId(), startOffset);
+      newPartitionEndOffsets.put(partition.getPartitionId(), endOffsets.getOrDefault(partition.getPartitionId(), partition.getEndOffset()));
+    }
+    final Set<PartitionIdType> exclusiveStartPartitions = computeExclusiveStartPartitionsForSequence(newPartitionStartOffsets);
+    final SequenceMetadata<PartitionIdType, SequenceOffsetType> newSequence = new SequenceMetadata<>(
+        sequences.isEmpty() ? 0 : getLastSequenceMetadata().getSequenceId() + 1,
+        StringUtils.format("%s_%d", ioConfig.getBaseSequenceName(), sequences.isEmpty() ? 0 : getLastSequenceMetadata().getSequenceId() + 1),
+        newPartitionStartOffsets,
+        newPartitionEndOffsets,
+        false,
+        exclusiveStartPartitions,
+        getTaskLockType()
+    );
+
+    currOffsets.clear();
+    currOffsets.putAll(newPartitionStartOffsets);
+    endOffsets.clear();
+    endOffsets.putAll(newPartitionEndOffsets);
+
+    addSequence(newSequence);
+    persistSequences();
+    log.info("Created new sequence [%s] for partitions [%s] with start offsets [%s]",
+             newSequence.getSequenceName(), newPartitions, newPartitionStartOffsets);
+  }
+
+  private void checkpointSequences()
+  {
+    try {
+      final SequenceMetadata<PartitionIdType, SequenceOffsetType> latestSequence = getLastSequenceMetadata();
+      if (!latestSequence.isCheckpointed()) {
+        final CheckPointDataSourceMetadataAction checkpointAciton = new CheckPointDataSourceMetadataAction(
+            getSupervisorId(),
+            ioConfig.getTaskGroupId(),
+            null,
+            createDataSourceMetadata(
+                new SeekableStreamStartSequenceNumbers<>(
+                    stream,
+                    latestSequence.getStartOffsets(),
+                    latestSequence.getExclusiveStartPartitions()
+                )
+            )
+        );
+        toolbox.getTaskActionClient().submit(checkpointAciton);
+      }
+    }
+    catch (Exception e) {
+      log.error(e, "Failed to checkpoint sequences.");
+      backgroundThreadException = e;
+    }
+  }
+
   @VisibleForTesting
   public Response setEndOffsets(
       Map<PartitionIdType, SequenceOffsetType> sequenceNumbers,
