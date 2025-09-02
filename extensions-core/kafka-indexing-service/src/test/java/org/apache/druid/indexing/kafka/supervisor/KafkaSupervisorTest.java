@@ -308,29 +308,15 @@ public class KafkaSupervisorTest extends EasyMockSupport
     consumerProperties.put("myCustomKey", "myCustomValue");
     consumerProperties.put("bootstrap.servers", kafkaHost);
 
-    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
-        topic,
-        null,
-        INPUT_FORMAT,
-        replicas,
-        1,
-        new Period("PT1H"),
-        consumerProperties,
-        OBJECT_MAPPER.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class),
-        null,
-        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
-        new Period("P1D"),
-        new Period("PT30S"),
-        true,
-        new Period("PT30M"),
-        null,
-        null,
-        null,
-        null,
-        new IdleConfig(true, 1000L),
-        1,
-        false
-    );
+    KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaIOConfigBuilder()
+        .withTopic(topic)
+        .withInputFormat(INPUT_FORMAT)
+        .withReplicas(replicas)
+        .withTaskCount(1)
+        .withConsumerProperties(consumerProperties)
+        .withAutoScalerConfig(OBJECT_MAPPER.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class))
+        .withUseEarliestSequenceNumber(true)
+        .build();
 
     final KafkaSupervisorTuningConfig tuningConfigOri = new KafkaTuningConfigBuilder()
         .withIntermediatePersistPeriod(Period.years(1))

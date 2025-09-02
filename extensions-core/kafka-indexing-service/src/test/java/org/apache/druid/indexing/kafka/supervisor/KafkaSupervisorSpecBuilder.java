@@ -21,7 +21,6 @@ package org.apache.druid.indexing.kafka.supervisor;
 
 import org.apache.druid.segment.indexing.DataSchema;
 
-import java.util.Map;
 import java.util.function.Consumer;
 
 /**
@@ -56,12 +55,6 @@ public class KafkaSupervisorSpecBuilder
   public KafkaSupervisorSpecBuilder withId(String id)
   {
     this.id = id;
-    return this;
-  }
-
-  public KafkaSupervisorSpecBuilder withConsumerProperties(Map<String, Object> consumerProperties)
-  {
-    ioConfig.withConsumerProperties(consumerProperties);
     return this;
   }
 

@@ -19,6 +19,8 @@
 
 package org.apache.druid.indexing.kafka.supervisor;
 
+import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.kafkainput.KafkaInputFormat;
 import org.apache.druid.indexing.seekablestream.supervisor.SupervisorIOConfigBuilder;
 
 import java.util.Map;
@@ -47,6 +49,20 @@ public class KafkaIOConfigBuilder extends SupervisorIOConfigBuilder<KafkaIOConfi
   public KafkaIOConfigBuilder withConsumerProperties(Map<String, Object> consumerProperties)
   {
     this.consumerProperties = consumerProperties;
+    return this;
+  }
+
+  public KafkaIOConfigBuilder withKafkaInputFormat(InputFormat valueFormat)
+  {
+    this.inputFormat = new KafkaInputFormat(
+        null,
+        null,
+        valueFormat,
+        null,
+        null,
+        null,
+        null
+    );
     return this;
   }
 
