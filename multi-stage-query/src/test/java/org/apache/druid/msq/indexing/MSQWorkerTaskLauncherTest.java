@@ -21,7 +21,6 @@ package org.apache.druid.msq.indexing;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.msq.exec.WorkerFailureListener;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -44,6 +43,7 @@ public class MSQWorkerTaskLauncherTest
         "controller-id",
         "foo",
         Mockito.mock(OverlordClient.class),
+        getWorkerFailureListener(),
         ImmutableMap.of(),
         TimeUnit.SECONDS.toMillis(5),
         new MSQWorkerTaskLauncherConfig()
@@ -59,11 +59,21 @@ public class MSQWorkerTaskLauncherTest
     Assert.assertEquals(target.getWorkersToRelaunch(), ImmutableSet.of(1));
   }
 
+  
   @Test
-  public void testMultipleWorkerFailureRegistration()
+  public void testLaunchWorkersIfNeeded_returnsEmptySet_whenNoFailures() throws InterruptedException
   {
-    target.start(getWorkerFailureListener());
-    Assert.assertThrows(DruidException.class, () -> target.start(getWorkerFailureListener()));
+    // Test that launchWorkersIfNeeded returns empty set when no workers fail
+    var result = target.launchWorkersIfNeeded(0);
+    Assert.assertTrue(result.isEmpty());
+  }
+  
+  @Test
+  public void testWaitForWorkers_returnsEmptySet_whenNoFailures() throws InterruptedException
+  {
+    // Test that waitForWorkers returns empty set when no workers fail
+    var result = target.waitForWorkers(ImmutableSet.of());
+    Assert.assertTrue(result.isEmpty());
   }
 
   private static WorkerFailureListener getWorkerFailureListener()

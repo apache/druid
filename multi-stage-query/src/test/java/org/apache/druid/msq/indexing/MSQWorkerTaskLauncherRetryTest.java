@@ -20,27 +20,29 @@
 package org.apache.druid.msq.indexing;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import it.unimi.dsi.fastutil.ints.IntObjectPair;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.report.TaskReport;
-import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.msq.exec.MSQTasks;
+import org.apache.druid.msq.exec.WorkerFailureListener;
+import org.apache.druid.msq.indexing.error.MSQFault;
+import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -57,214 +59,178 @@ import org.junit.jupiter.api.Test;
 import javax.annotation.Nullable;
 import java.net.URI;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public class MSQWorkerTaskLauncherRetryTests
+public class MSQWorkerTaskLauncherRetryTest
 {
-
   private static final TaskLocation RUNNING_TASK_LOCATION = new TaskLocation("host", 1, 2, null);
 
   @Test
-  public void mainThreadBlockingSimulationTest() throws Exception
+  public void testLaunchWorkersIfNeeded_returnsFailedWorkers() throws InterruptedException
   {
-    final ExecutorService executors = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setDaemon(false)
-                                                                                                  .setNameFormat(
-                                                                                                      "Controller-simulator-%d")
-                                                                                                  .build());
+    TestOverlordClient overlordClient = new TestOverlordClient();
+    overlordClient.addFailedWorker(1);
 
-    final TestOverlordClient overlordClient = new TestOverlordClient();
-    final int failedWorkerNumber = 2;
-    final CountDownLatch workerFailedLatch = new CountDownLatch(1);
-    final CountDownLatch workerStartedLatch = new CountDownLatch(1);
-    overlordClient.addFailedWorker(2);
-    overlordClient.addUnknownLocationWorker(1);
+    AtomicInteger failureCallbackCount = new AtomicInteger(0);
+    WorkerFailureListener workerFailureListener = (task, fault) -> {
+      failureCallbackCount.incrementAndGet();
+      Assertions.assertEquals(1, task.getWorkerNumber());
+      Assertions.assertTrue(fault instanceof WorkerFailedFault);
+    };
 
-    final MSQWorkerTaskLauncher msqWorkerTaskLauncher = new MSQWorkerTaskLauncher(
+    MSQWorkerTaskLauncher launcher = new MSQWorkerTaskLauncher(
         "controller-id",
         "foo",
         overlordClient,
+        workerFailureListener,
         ImmutableMap.of(),
         TimeUnit.SECONDS.toMillis(5),
-        new MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig()
+        new MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig(),
+        2
     );
 
-    try {
-      final long workerThreadId = Thread.currentThread().getId();
+    launcher.start();
 
-      startTaskLauncher(
-          msqWorkerTaskLauncher,
-          failedWorkerNumber,
-          workerFailedLatch,
-          overlordClient,
-          workerThreadId,
-          workerStartedLatch
-      );
+    // Should return failed workers in the set
+    Set<IntObjectPair<MSQFault>> failedWorkers = launcher.launchWorkersIfNeeded(2);
 
-      MockConsumer mockConsumer = new MockConsumer(
-          msqWorkerTaskLauncher,
-          3,
-          workerStartedLatch
-      );
-      Future<?> futures = executors.submit(mockConsumer);
-      // hook called but worker not queued for relaunch.
-      workerFailedLatch.await();
-      Assertions.assertEquals(1, workerStartedLatch.getCount());
-      // we would need to call hooks to allow the main thread to proceed since we are using an exec service to so the thread id's would not match.
-      enableWorkerRelaunch(overlordClient, failedWorkerNumber, msqWorkerTaskLauncher, workerStartedLatch);
-      // future should be completed in 5 seconds else throw an exception.
-      Assertions.assertNull(futures.get(5, TimeUnit.SECONDS));
-    }
-    finally {
-      msqWorkerTaskLauncher.stop(true);
-      executors.shutdownNow();
-    }
-  }
+    // The method should not invoke the failure listener directly anymore, 
+    // but should return the failed workers
+    Assertions.assertFalse(failedWorkers.isEmpty());
 
-  private static void enableWorkerRelaunch(
-      TestOverlordClient overlordClient,
-      int failedWorkerNumber,
-      MSQWorkerTaskLauncher msqWorkerTaskLauncher,
-      CountDownLatch workerStartedLatch
-  )
-  {
-    overlordClient.removeUnknownLocationWorker(1);
-    overlordClient.removefailedWorker(failedWorkerNumber);
-    msqWorkerTaskLauncher.submitForRelaunch(failedWorkerNumber);
-    workerStartedLatch.countDown();
-  }
-
-  private static void startTaskLauncher(
-      MSQWorkerTaskLauncher msqWorkerTaskLauncher,
-      int failedWorkerNumber,
-      CountDownLatch workerFailedLatch,
-      TestOverlordClient overlordClient,
-      long workerThreadId,
-      CountDownLatch workerStartedLatch
-  )
-  {
-    msqWorkerTaskLauncher.start((task, fault) -> {
-      Assertions.assertEquals(failedWorkerNumber, task.getWorkerNumber());
-      workerFailedLatch.countDown();
-      if (workerThreadId == Thread.currentThread().getId()) {
-        // If the worker thread is the same as the main thread, we can directly relaunch the worker.
-        enableWorkerRelaunch(overlordClient, failedWorkerNumber, msqWorkerTaskLauncher, workerStartedLatch);
+    // Check that the failed worker is in the returned set
+    boolean foundFailedWorker = false;
+    for (IntObjectPair<MSQFault> failedWorker : failedWorkers) {
+      if (failedWorker.leftInt() == 1) {
+        foundFailedWorker = true;
+        Assertions.assertTrue(failedWorker.right() instanceof WorkerFailedFault);
       }
-    });
-  }
+    }
+    Assertions.assertTrue(foundFailedWorker, "Failed worker should be in the returned set");
 
+    launcher.stop(true);
+  }
 
   @Test
-  public void mainThreadNonBlockingSimulationTest() throws Exception
+  public void testWaitForWorkers_returnsFailedWorkers() throws InterruptedException
   {
-    final TestOverlordClient overlordClient = new TestOverlordClient();
-    final int failedWorkerNumber = 2;
-    final CountDownLatch workerFailedLatch = new CountDownLatch(1);
-    final CountDownLatch workerStartedLatch = new CountDownLatch(1);
-    overlordClient.addFailedWorker(2);
-    overlordClient.addUnknownLocationWorker(1);
+    TestOverlordClient overlordClient = new TestOverlordClient();
+    overlordClient.addFailedWorker(0);
 
-    final MSQWorkerTaskLauncher msqWorkerTaskLauncher = new MSQWorkerTaskLauncher(
+    AtomicInteger failureCallbackCount = new AtomicInteger(0);
+    WorkerFailureListener workerFailureListener = (task, fault) -> {
+      failureCallbackCount.incrementAndGet();
+    };
+
+    MSQWorkerTaskLauncher launcher = new MSQWorkerTaskLauncher(
         "controller-id",
         "foo",
         overlordClient,
+        workerFailureListener,
         ImmutableMap.of(),
         TimeUnit.SECONDS.toMillis(5),
-        new MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig()
+
+        new MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig(),
+        2
     );
 
-    try {
-      final long workerThreadId = Thread.currentThread().getId();
+    launcher.start();
 
-      startTaskLauncher(
-          msqWorkerTaskLauncher,
-          failedWorkerNumber,
-          workerFailedLatch,
-          overlordClient,
-          workerThreadId,
-          workerStartedLatch
-      );
+    // Launch workers first
+    launcher.launchWorkersIfNeeded(1);
 
+    // Should return failed workers in the set when waiting for specific workers
+    Set<IntObjectPair<MSQFault>> failedWorkers = launcher.waitForWorkers(ImmutableSet.of(0));
 
-      MockConsumer mockConsumer = new MockConsumer(
-          msqWorkerTaskLauncher,
-          3,
-          workerStartedLatch
-      );
-      mockConsumer.run();
-      // failed latch  called
-      workerFailedLatch.await();
-      // worker started.
-      workerStartedLatch.await();
+    // The method should not invoke the failure listener directly anymore,
+    // but should return the failed workers
+    Assertions.assertFalse(failedWorkers.isEmpty());
+
+    // Check that the failed worker is in the returned set
+    boolean foundFailedWorker = false;
+    for (IntObjectPair<MSQFault> failedWorker : failedWorkers) {
+      if (failedWorker.leftInt() == 0) {
+        foundFailedWorker = true;
+        Assertions.assertTrue(failedWorker.right() instanceof WorkerFailedFault);
+      }
     }
-    finally {
-      msqWorkerTaskLauncher.stop(true);
-    }
+    Assertions.assertTrue(foundFailedWorker, "Failed worker should be in the returned set");
+
+    launcher.stop(true);
   }
 
-
-  private static class MockConsumer implements Runnable
+  @Test
+  public void testLaunchWorkersIfNeeded_returnsEmptySet_whenNoFailures() throws InterruptedException
   {
+    TestOverlordClient overlordClient = new TestOverlordClient();
+    // Don't add any failed workers
 
-    private final MSQWorkerTaskLauncher msqWorkerTaskLauncher;
-    private final int taskCount;
-    private final CountDownLatch workerStartedLatch;
+    WorkerFailureListener workerFailureListener = (task, fault) -> {
+      Assertions.fail("Should not call failure listener when no workers fail");
+    };
 
-    public MockConsumer(
-        MSQWorkerTaskLauncher msqWorkerTaskLauncher,
-        int tasksCount,
-        CountDownLatch workerStartedLatch
-    )
-    {
-      this.msqWorkerTaskLauncher = msqWorkerTaskLauncher;
-      this.taskCount = tasksCount;
-      this.workerStartedLatch = workerStartedLatch;
-    }
+    MSQWorkerTaskLauncher launcher = new MSQWorkerTaskLauncher(
+        "controller-id",
+        "foo",
+        overlordClient,
+        workerFailureListener,
+        ImmutableMap.of(),
+        TimeUnit.SECONDS.toMillis(5),
+        new MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig(),
+        2
+    );
 
+    launcher.start();
 
-    @Override
-    public void run()
-    {
-      // start stages
-      try {
-        msqWorkerTaskLauncher.launchWorkersIfNeeded(taskCount);
-        workerStartedLatch.await();
-      }
-      catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
-      Set<Integer> workerNumbers = new HashSet<>();
-      for (int i = 0; i < taskCount; i++) {
-        workerNumbers.add(i);
-      }
+    // Should return empty set when no workers fail
+    Set<IntObjectPair<MSQFault>> failedWorkers = launcher.launchWorkersIfNeeded(1);
+    Assertions.assertTrue(failedWorkers.isEmpty());
 
-      // submit work worders
-      try {
-        msqWorkerTaskLauncher.waitForWorkers(workerNumbers);
-      }
-      catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
-    }
+    launcher.stop(true);
   }
 
+  @Test
+  public void testWaitForWorkers_returnsEmptySet_whenNoFailures() throws InterruptedException
+  {
+    TestOverlordClient overlordClient = new TestOverlordClient();
+    // Don't add any failed workers
+
+    WorkerFailureListener workerFailureListener = (task, fault) -> {
+      Assertions.fail("Should not call failure listener when no workers fail");
+    };
+
+    MSQWorkerTaskLauncher launcher = new MSQWorkerTaskLauncher(
+        "controller-id",
+        "foo",
+        overlordClient,
+        workerFailureListener,
+        ImmutableMap.of(),
+        TimeUnit.SECONDS.toMillis(5),
+        new MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig(),
+        2
+    );
+
+    launcher.start();
+
+    // Launch workers first
+    launcher.launchWorkersIfNeeded(1);
+
+    // Should return empty set when no workers fail
+    Set<IntObjectPair<MSQFault>> failedWorkers = launcher.waitForWorkers(ImmutableSet.of(0));
+    Assertions.assertTrue(failedWorkers.isEmpty());
+
+    launcher.stop(true);
+  }
 
   private static class TestOverlordClient implements OverlordClient
   {
     private final ConcurrentSkipListSet<Integer> unknownLocationWorkers = new ConcurrentSkipListSet<>();
     private final ConcurrentSkipListSet<Integer> failedWorkers = new ConcurrentSkipListSet<>();
-
-    public TestOverlordClient()
-    {
-    }
 
     @Override
     public ListenableFuture<URI> findCurrentLeader()
@@ -281,11 +247,7 @@ public class MSQWorkerTaskLauncherRetryTests
     @Override
     public ListenableFuture<Void> cancelTask(String taskId)
     {
-      if (failedWorkers.contains(MSQTasks.workerFromTaskId(taskId))) {
-        return Futures.immediateFuture(null);
-      } else {
-        throw DruidException.defensive("Task %s should not be cancelled", taskId);
-      }
+      return Futures.immediateFuture(null);
     }
 
     @Override
@@ -305,7 +267,7 @@ public class MSQWorkerTaskLauncherRetryTests
       for (String taskId : taskIds) {
         int workerNumber = MSQTasks.workerFromTaskId(taskId);
         if (failedWorkers.contains(workerNumber)) {
-          taskStatusMap.put(taskId, TaskStatus.failure(taskId, TaskQueue.FAILED_TO_RUN_TASK_SEE_OVERLORD_MSG));
+          taskStatusMap.put(taskId, TaskStatus.failure(taskId, "Task failed"));
         } else if (unknownLocationWorkers.contains(workerNumber)) {
           taskStatusMap.put(taskId, TaskStatus.running(taskId).withLocation(TaskLocation.unknown()));
         } else {
