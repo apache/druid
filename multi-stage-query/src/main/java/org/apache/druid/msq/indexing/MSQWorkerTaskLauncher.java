@@ -204,9 +204,6 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
     this.config = config;
     this.taskIdsLockTimeout = taskIdsLockTimeout;
   }
-
-
-
   @Override
   public ListenableFuture<?> start()
   {
