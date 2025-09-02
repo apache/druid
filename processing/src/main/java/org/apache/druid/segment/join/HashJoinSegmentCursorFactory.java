@@ -156,7 +156,9 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
         // start with a full scan clipped to interval
         final CursorBuildSpec.CursorBuildSpecBuilder cursorBuildSpecBuilder =
             CursorBuildSpec.builder()
-                           .setInterval(spec.getInterval());
+                           .setInterval(spec.getInterval())
+                           .setQueryContext(spec.getQueryContext())
+                           .setQueryMetrics(spec.getQueryMetrics());
 
         // retain time ordering if preferred
         Order timeOrder = Cursors.getTimeOrdering(spec.getPreferredOrdering());

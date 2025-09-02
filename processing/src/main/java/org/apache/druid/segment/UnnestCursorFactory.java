@@ -515,6 +515,8 @@ public class UnnestCursorFactory implements CursorFactory
                           .setPhysicalColumns(physicalColumns)
                           .setVirtualColumns(VirtualColumns.create(List.of(unnestColumn)))
                           .setPreferredOrdering(maybeOrderByTime)
+                          .setQueryContext(spec.getQueryContext())
+                          .setQueryMetrics(spec.getQueryMetrics())
                           .build();
   }
 
