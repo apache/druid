@@ -34,6 +34,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.JobResponse;
@@ -357,19 +358,28 @@ public class KubernetesPeonLifecycle
 
   protected void saveLogs()
   {
-    ExecutorService executor = Executors.newSingleThreadExecutor();
+    ExecutorService executor = Executors.newSingleThreadExecutor(Execs.makeThreadFactory("k8s-tasklog-persist-%d"));
     try {
       Future<?> future = executor.submit(this::doSaveLogs);
       future.get(logSaveTimeoutMs, TimeUnit.MILLISECONDS);
     }
     catch (TimeoutException e) {
-      log.warn("saveLogs() timed out after %d ms for task [%s]", logSaveTimeoutMs, taskId.getOriginalTaskId());
+      log.warn("Persisting task logs timed out after %d ms for task [%s]. This does not have any impact on the"
+               + " work done by the task, but the logs may be innaccessible. If this continues to happen, check"
+               + " Kubernetes server logs for potential errors.", logSaveTimeoutMs, taskId.getOriginalTaskId());
     }
     catch (Exception e) {
-      log.error(e, "saveLogs() failed for task [%s]", taskId.getOriginalTaskId());
+      log.error(e, "Persisting task logs failed for task [%s] This does not have any impact on the"
+                   + " work done by the task, but the logs may be innaccessible. If this continues to happen, check"
+                   + " Kubernetes server logs for potential errors.", taskId.getOriginalTaskId());
     }
     finally {
       executor.shutdownNow();
+      // shutdownNow does not always allow finally blocks to run, so we make sure to close the logWatch here too if it
+      // wasn't closed in doSaveLogs
+      if (logWatch != null) {
+        logWatch.close();
+      }
     }
   }
 
