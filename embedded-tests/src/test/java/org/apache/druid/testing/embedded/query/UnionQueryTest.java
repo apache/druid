@@ -60,6 +60,14 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+/**
+ * Embedded test to verify the following:
+ * <ul>
+ * <li>Native queries against a {@link UnionDataSource}</li>
+ * <li>SQL UNION ALL queries</li>
+ * <li>Native queries for exact cardinality count using Bitmap64 count extension</li>
+ * </ul>
+ */
 public class UnionQueryTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
