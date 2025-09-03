@@ -75,11 +75,6 @@
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>druid-kafka-indexing-service</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
             <groupId>org.apache.druid.integration-tests</groupId>
             <artifactId>druid-it-tools</artifactId>
             <version>${project.parent.version}</version>
