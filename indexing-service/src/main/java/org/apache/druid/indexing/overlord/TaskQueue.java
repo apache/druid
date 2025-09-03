@@ -409,7 +409,7 @@ public class TaskQueue
         }
       });
     }
-    log.info("Cleaned up [%,d] tasks on task runner with IDs[%s].", unknownTaskIds.size(), unknownTaskIds);
+    log.info("Notified task runner to clean up [%,d] tasks with IDs[%s].", unknownTaskIds.size(), unknownTaskIds);
 
     // Attain futures for all active tasks (assuming they are ready to run).
     // Copy tasks list, as notifyStatus may modify it.
