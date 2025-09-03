@@ -73,7 +73,7 @@ class JodaStuff
     public Interval deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
         throws IOException
     {
-      return Intervals.of(jsonParser.getText());
+      return Intervals.deserialize(jsonParser.getText());
     }
   }
 
@@ -82,7 +82,7 @@ class JodaStuff
     @Override
     public Object deserializeKey(String key, DeserializationContext ctxt)
     {
-      return Intervals.of(key);
+      return Intervals.deserialize(key);
     }
   }
 

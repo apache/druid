@@ -25,6 +25,8 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
 
 import javax.annotation.Nullable;
 
@@ -32,6 +34,8 @@ public final class Intervals
 {
   public static final Interval ETERNITY = utc(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT);
   public static final ImmutableList<Interval> ONLY_ETERNITY = ImmutableList.of(ETERNITY);
+  private static final DateTimeFormatter FAST_ISO_UTC_FORMATTER =
+      ISODateTimeFormat.dateTime().withChronology(ISOChronology.getInstanceUTC());
 
   public static Interval utc(long startInstant, long endInstant)
   {
@@ -51,6 +55,46 @@ public final class Intervals
   public static Interval of(String format, Object... formatArgs)
   {
     return of(StringUtils.format(format, formatArgs));
+  }
+
+  /**
+   * @return Null if cannot parse with optimized strategy, else return the Interval.
+   */
+  @Nullable
+  private static Interval tryOptimizedIntervalDeserialization(final String intervalText)
+  {
+    final int slashIndex = intervalText.indexOf('/');
+    if (slashIndex <= 0 || slashIndex >= intervalText.length() - 1) {
+      return null;
+    }
+    try {
+      final String startStr = intervalText.substring(0, slashIndex);
+      final long startMillis = FAST_ISO_UTC_FORMATTER.parseMillis(startStr);
+
+      final String endStr = intervalText.substring(slashIndex + 1);
+      final long endMillis = FAST_ISO_UTC_FORMATTER.parseMillis(endStr);
+      return Intervals.utc(startMillis, endMillis);
+    }
+    catch (IllegalArgumentException e) {
+      return null;
+    }
+  }
+
+  /**
+   * Parses a Joda-Time {@link Interval} from its string representation.
+   *
+   * Tries a fast path for ISO-8601 UTC, slash-delimited intervals (e.g.
+   * "2022-09-16T00:00:00.000Z/2022-09-17T00:00:00.000Z"); otherwise falls back to the
+   * general interval parser. The returned interval uses ISO chronology in UTC.
+   */
+  public static Interval deserialize(String string)
+  {
+    final Interval interval = tryOptimizedIntervalDeserialization(string);
+    if (interval == null) {
+      return Intervals.of(string);
+    } else {
+      return interval;
+    }
   }
 
   /**
