@@ -260,12 +260,6 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.druid.extensions.contrib</groupId>
-            <artifactId>druid-exact-count-bitmap</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
         </dependency>
@@ -508,15 +502,6 @@
                     </plugin>
                 </plugins>
             </build>
-        </profile>
-        <profile>
-            <id>IT-DruidExactCountBitmap</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <properties>
-                <it.category>DruidExactCountBitmap</it.category>
-            </properties>
         </profile>
     </profiles>
 </project>
