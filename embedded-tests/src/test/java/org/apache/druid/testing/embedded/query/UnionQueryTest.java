@@ -286,9 +286,7 @@ public class UnionQueryTest extends EmbeddedClusterTestBase
     final List<Map<String, Object>> resultList = JacksonUtils.readValue(
         TestHelper.JSON_MAPPER,
         resultAsJson.getBytes(StandardCharsets.UTF_8),
-        new TypeReference<>()
-        {
-        }
+        new TypeReference<>() {}
     );
     Assertions.assertEquals(expectedResult, resultList);
   }
