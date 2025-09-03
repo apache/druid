@@ -112,12 +112,28 @@ public class ClusterTestingTaskConfig
    */
   public static class OverlordClientConfig
   {
-    private static final OverlordClientConfig DEFAULT = new OverlordClientConfig();
+    private static final OverlordClientConfig DEFAULT = new OverlordClientConfig(null);
+
+    @JsonProperty
+    private final Duration taskStatusDelay;
+
+    @JsonCreator
+    public OverlordClientConfig(
+        @JsonProperty("taskStatusDelay") @Nullable Duration taskStatusDelay
+    )
+    {
+      this.taskStatusDelay = taskStatusDelay;
+    }
+
+    public Duration getTaskStatusDelay()
+    {
+      return taskStatusDelay;
+    }
 
     @Override
     public String toString()
     {
-      return "";
+      return '{' + "taskStatusDelay=" + taskStatusDelay + '}';
     }
   }
 
