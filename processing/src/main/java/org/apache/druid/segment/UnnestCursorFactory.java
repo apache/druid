@@ -427,7 +427,7 @@ public class UnnestCursorFactory implements CursorFactory
    * Computes the capabilities of {@link #unnestColumn}, after unnesting.
    */
   @Nullable
-  public static ColumnCapabilities computeOutputColumnCapabilities(
+  static ColumnCapabilities computeOutputColumnCapabilities(
       final ColumnInspector baseColumnInspector,
       final VirtualColumn unnestColumn
   )
@@ -455,10 +455,11 @@ public class UnnestCursorFactory implements CursorFactory
 
   /**
    * Converts a {@link CursorBuildSpec} to the base table {@link CursorBuildSpec}, ensuring that all required columns
-   * of are added to {@link CursorBuildSpec#getPhysicalColumns()} and the unnest column is added to {@link CursorBuildSpec#getVirtualColumns()}
+   * of the original spec are added to {@link CursorBuildSpec#getPhysicalColumns()} and the unnest column is added to
+   * {@link CursorBuildSpec#getVirtualColumns()}
    */
   @VisibleForTesting
-  public static CursorBuildSpec transformCursorBuildSpec(
+  static CursorBuildSpec transformCursorBuildSpec(
       CursorBuildSpec spec,
       VirtualColumn unnestColumn,
       @Nullable Filter baseTableFilter
