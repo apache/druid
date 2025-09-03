@@ -403,7 +403,7 @@ public class TaskQueue
       updateTaskEntry(taskId, entry -> {
         if (entry == null) {
           unknownTaskIds.add(taskId);
-          shutdownUnknownTaskOnRunner(taskId);
+          shutdownTaskOnRunner(taskId, "Task is not present in queue anymore.");
         } else {
           runnerTaskFutures.put(taskId, workItem.getResult());
         }
@@ -472,14 +472,21 @@ public class TaskQueue
     }
   }
 
-  private void shutdownUnknownTaskOnRunner(String taskId)
+  /**
+   * Triggers a shutdown of the given Task on the {@link TaskRunner}.
+   * The shutdown is invoked on {@link #taskCompleteCallbackExecutor} to avoid
+   * blocking critical paths as task shutdown on the runner may sometimes be slow.
+   */
+  private void shutdownTaskOnRunner(String taskId, String reasonFormat, Object... args)
   {
-    try {
-      taskRunner.shutdown(taskId, "Task is not present in queue anymore.");
-    }
-    catch (Exception e) {
-      log.warn(e, "TaskRunner failed to clean up task[%s].", taskId);
-    }
+    taskCompleteCallbackExecutor.submit(() -> {
+      try {
+        taskRunner.shutdown(taskId, reasonFormat, args);
+      }
+      catch (Throwable e) {
+        log.error(e, "TaskRunner failed to cleanup task[%s] after completion.", taskId);
+      }
+    });
   }
 
   private boolean isTaskPending(Task task)
@@ -734,14 +741,7 @@ public class TaskQueue
          .emit();
     }
 
-    // Inform taskRunner that this task can be shut down.
-    try {
-      taskRunner.shutdown(task.getId(), reasonFormat, args);
-    }
-    catch (Throwable e) {
-      // If task runner shutdown fails, continue with the task shutdown routine.
-      log.warn(e, "TaskRunner failed to cleanup task after completion: %s", task.getId());
-    }
+    shutdownTaskOnRunner(task.getId(), reasonFormat, args);
 
     removeTaskLock(task);
     requestManagement();
