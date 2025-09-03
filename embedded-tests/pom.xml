@@ -132,6 +132,12 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.apache.druid.extensions.contrib</groupId>
+      <artifactId>druid-exact-count-bitmap</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>joda-time</groupId>
       <artifactId>joda-time</artifactId>
     </dependency>

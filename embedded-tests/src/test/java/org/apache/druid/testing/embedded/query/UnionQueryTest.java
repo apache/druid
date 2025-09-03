@@ -33,9 +33,9 @@ import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.query.aggregation.datasketches.hll.HllSketchModule;
-import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchModule;
-import org.apache.druid.query.aggregation.datasketches.theta.SketchModule;
+import org.apache.druid.query.aggregation.exact.count.bitmap64.Bitmap64ExactCountBuildAggregatorFactory;
+import org.apache.druid.query.aggregation.exact.count.bitmap64.Bitmap64ExactCountMergeAggregatorFactory;
+import org.apache.druid.query.aggregation.exact.count.bitmap64.Bitmap64ExactCountModule;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.search.InsensitiveContainsSearchQuerySpec;
@@ -60,6 +60,14 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+/**
+ * Embedded test to verify the following:
+ * <ul>
+ * <li>Native queries against a {@link UnionDataSource}</li>
+ * <li>SQL UNION ALL queries</li>
+ * <li>Native queries for exact cardinality count using Bitmap64 count extension</li>
+ * </ul>
+ */
 public class UnionQueryTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
@@ -71,7 +79,7 @@ public class UnionQueryTest extends EmbeddedClusterTestBase
     return EmbeddedDruidCluster
         .withEmbeddedDerbyAndZookeeper()
         .useLatchableEmitter()
-        .addExtensions(SketchModule.class, HllSketchModule.class, DoublesSketchModule.class)
+        .addExtension(Bitmap64ExactCountModule.class)
         .addServer(overlord)
         .addServer(coordinator)
         .addServer(new EmbeddedIndexer())
@@ -93,6 +101,13 @@ public class UnionQueryTest extends EmbeddedClusterTestBase
       final Task task = MoreResources.Task.INDEX_TASK_WITH_AGGREGATORS
           .get()
           .dataSource(datasourceName)
+          .metricAggregates(
+              new CountAggregatorFactory("ingested_events"),
+              new DoubleSumAggregatorFactory("added", "added"),
+              new DoubleSumAggregatorFactory("deleted", "deleted"),
+              new DoubleSumAggregatorFactory("delta", "delta"),
+              new Bitmap64ExactCountBuildAggregatorFactory("unique_deleted", "deleted")
+          )
           .withId(IdUtils.getRandomId());
       cluster.callApi().runTask(task, overlord);
       cluster.callApi().waitForAllSegmentsToBeAvailable(datasourceName, coordinator);
@@ -182,7 +197,12 @@ public class UnionQueryTest extends EmbeddedClusterTestBase
         )
     );
 
-    // Verify some SQL queries
+    verifyBitmap64CardinalityQueries(unionDatasource);
+    verifyUnionAllSqlQueries(datasourceNames);
+  }
+
+  private void verifyUnionAllSqlQueries(List<String> datasourceNames)
+  {
     cluster.callApi().verifySqlQuery(
         "SELECT page, COUNT(*), SUM(ingested_events), SUM(added), SUM(deleted), SUM(delta) FROM (%s)"
         + " WHERE __time >= '2013-08-31' AND __time < '2013-09-01'"
@@ -214,6 +234,39 @@ public class UnionQueryTest extends EmbeddedClusterTestBase
         "2,2,516.0,329.0,187.0\n"
         + "2,2,516.0,329.0,187.0\n"
         + "2,2,516.0,329.0,187.0"
+    );
+  }
+
+  private void verifyBitmap64CardinalityQueries(DataSource dataSource)
+  {
+    verifyQuery(
+        Druids
+            .newTimeseriesQueryBuilder()
+            .intervals("2013-08-31/2013-09-01")
+            .dataSource(dataSource)
+            .granularity(Granularities.ALL)
+            .aggregators(
+                new CountAggregatorFactory("rows"),
+                new Bitmap64ExactCountBuildAggregatorFactory("added_cardinality", "added"),
+                new Bitmap64ExactCountBuildAggregatorFactory("deleted_cardinality", "deleted"),
+                new Bitmap64ExactCountMergeAggregatorFactory("unique_deleted_cardinality", "unique_deleted"),
+                new Bitmap64ExactCountBuildAggregatorFactory("time_cardinality", "__time")
+            )
+            .build(),
+        List.of(
+            Map.of(
+                "timestamp",
+                "2013-08-31T01:02:33.000Z",
+                "result",
+                Map.of(
+                    "rows", 15,
+                    "added_cardinality", 5,
+                    "deleted_cardinality", 5,
+                    "unique_deleted_cardinality", 5,
+                    "time_cardinality", 5
+                )
+            )
+        )
     );
   }
 
