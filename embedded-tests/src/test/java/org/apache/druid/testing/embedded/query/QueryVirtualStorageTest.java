@@ -134,7 +134,7 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
   }
 
   @Override
-  protected void beforeEachTest()
+  protected void refreshDatasourceName()
   {
     // don't change the datasource name for each run because we set things up before all tests
   }
