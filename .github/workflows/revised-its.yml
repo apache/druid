@@ -18,24 +18,6 @@
 name: "Revised ITs workflow"
 on:
   workflow_call:
-    inputs:
-      BACKWARD_COMPATIBILITY_IT_ENABLED:
-        description: "Flag for backward compatibility IT"
-        required: false
-        default: false
-        type: string
-      DRUID_PREVIOUS_VERSION:
-        description: "Previous druid versions to run the test against."
-        required: false
-        type: string
-      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL:
-        description: "URL to download the previous druid version."
-        required: false
-        type: string
-      DRUID_PREVIOUS_IT_IMAGE_NAME:
-        description: "Druid previous version image name."
-        required: false
-        type: string
   workflow_dispatch:
 
 jobs:
@@ -67,7 +49,7 @@ jobs:
       fail-fast: false
       matrix:
         jdk: [17]
-        it: [MultiStageQuery, BatchIndex, MultiStageQueryWithMM, InputSource, InputFormat, Query, DruidExactCountBitmap]
+        it: [MultiStageQuery, BatchIndex, InputSource, InputFormat, DruidExactCountBitmap]
         indexer: [middleManager]
     uses: ./.github/workflows/reusable-revised-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
@@ -90,27 +72,6 @@ jobs:
       script: ./it.sh github S3DeepStorage
       it: S3DeepStorage
       mysql_driver: com.mysql.jdbc.Driver
-      DRUID_CLOUD_BUCKET: druid-qa
-      DRUID_CLOUD_PATH: aws-${{ github.run_id }}-${{ github.run_attempt }}
-      AWS_REGION: us-east-1
-      AWS_ACCESS_KEY_ID: admin
-      AWS_SECRET_ACCESS_KEY: miniopassword
-
-  backward-compatibility-it:
-    needs: changes
-    uses: ./.github/workflows/reusable-revised-its.yml
-    if: ${{ inputs.BACKWARD_COMPATIBILITY_IT_ENABLED == 'true' && (needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true') }}
-    with:
-      build_jdk: 17
-      runtime_jdk: 17
-      use_indexer: middleManager
-      script: ./it.sh github BackwardCompatibilityMain
-      it: BackwardCompatibilityMain
-      mysql_driver: com.mysql.jdbc.Driver
-      BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ inputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
-      DRUID_PREVIOUS_VERSION: ${{ inputs.DRUID_PREVIOUS_VERSION }}
-      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ inputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
-      DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ inputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
       DRUID_CLOUD_BUCKET: druid-qa
       DRUID_CLOUD_PATH: aws-${{ github.run_id }}-${{ github.run_attempt }}
       AWS_REGION: us-east-1

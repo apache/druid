@@ -442,6 +442,7 @@ public class WorkerHolder
         if (isWorkerDisabled != disabled.get()) {
           disabled.set(isWorkerDisabled);
           log.info("Worker[%s] disabled set to [%s].", worker.getHost(), isWorkerDisabled);
+          listener.stateChanged(!isWorkerDisabled, WorkerHolder.this);
         }
       }
     };
@@ -450,5 +451,7 @@ public class WorkerHolder
   public interface Listener
   {
     void taskAddedOrUpdated(TaskAnnouncement announcement, WorkerHolder workerHolder);
+
+    void stateChanged(boolean enabled, WorkerHolder workerHolder);
   }
 }
