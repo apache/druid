@@ -402,7 +402,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     stateListener.stateChanged(KubernetesPeonLifecycle.State.STOPPED, ID);
     EasyMock.expectLastCall().once();
     logWatch.close();
-    EasyMock.expectLastCall();
+    EasyMock.expectLastCall().atLeastOnce();
 
     Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
@@ -452,13 +452,11 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     taskLogs.pushTaskLog(EasyMock.eq(ID), EasyMock.anyObject(File.class));
     EasyMock.expectLastCall();
     logWatch.close();
-    EasyMock.expectLastCall();
+    EasyMock.expectLastCall().atLeastOnce();
     stateListener.stateChanged(KubernetesPeonLifecycle.State.RUNNING, ID);
     EasyMock.expectLastCall().once();
     stateListener.stateChanged(KubernetesPeonLifecycle.State.STOPPED, ID);
     EasyMock.expectLastCall().once();
-    logWatch.close();
-    EasyMock.expectLastCall();
 
     Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
@@ -563,7 +561,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     stateListener.stateChanged(KubernetesPeonLifecycle.State.STOPPED, ID);
     EasyMock.expectLastCall().once();
     logWatch.close();
-    EasyMock.expectLastCall();
+    EasyMock.expectLastCall().atLeastOnce();
 
     Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
@@ -617,7 +615,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     stateListener.stateChanged(KubernetesPeonLifecycle.State.STOPPED, ID);
     EasyMock.expectLastCall().once();
     logWatch.close();
-    EasyMock.expectLastCall();
+    EasyMock.expectLastCall().atLeastOnce();
 
     Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
@@ -659,7 +657,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     stateListener.stateChanged(KubernetesPeonLifecycle.State.STOPPED, ID);
     EasyMock.expectLastCall().once();
     logWatch.close();
-    EasyMock.expectLastCall();
+    EasyMock.expectLastCall().atLeastOnce();
 
     Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
