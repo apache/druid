@@ -40,7 +40,6 @@ import org.hamcrest.MatcherAssert;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -91,11 +90,9 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
 
     coordinator.addProperty("druid.manager.segments.useIncrementalCache", "always");
 
-    overlord.addProperty("druid.manager.segments.useIncrementalCache", "always")
-            .addProperty("druid.manager.segments.pollDuration", "PT0.1s");
-
     broker.addProperty("druid.msq.dart.controller.heapFraction", "0.9")
-          .addProperty("druid.query.default.context.maxConcurrentStages", "1");
+          .addProperty("druid.query.default.context.maxConcurrentStages", "1")
+          .addProperty("druid.sql.planner.metadataRefreshPeriod", "PT0.1s");
 
     historical.addProperty("druid.msq.dart.worker.heapFraction", "0.9")
               .addProperty("druid.msq.dart.worker.concurrentQueries", "1")
@@ -141,11 +138,7 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
     broker.start();
     indexer.start();
     historical.start();
-  }
 
-  @BeforeEach
-  void setUpEach()
-  {
     msqApis = new EmbeddedMSQApis(cluster, overlord);
     submitSupervisor();
     publishToKafka(TestIndex.getMMappedWikipediaIndex());

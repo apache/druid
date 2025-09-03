@@ -17,15 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.query;
+package org.apache.druid.testing.embedded.catalog;
 
-import org.apache.druid.testsEx.categories.Query;
-import org.apache.druid.testsEx.config.DruidTestRunner;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-
-@RunWith(DruidTestRunner.class)
-@Category(Query.class)
-public class ITUnionQueryTest extends UnionQueryTest
+public class CatalogReplaceAndQueryTest extends CatalogIngestAndQueryTest
 {
+  @Override
+  public String getDmlPrefixPattern()
+  {
+    return "REPLACE INTO \"%s\" OVERWRITE ALL";
+  }
 }

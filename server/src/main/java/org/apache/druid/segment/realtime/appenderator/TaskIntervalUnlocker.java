@@ -17,16 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.BackwardCompatibilityMain;
+package org.apache.druid.segment.realtime.appenderator;
 
-import org.apache.druid.testsEx.categories.BackwardCompatibilityMain;
-import org.apache.druid.testsEx.config.DruidTestRunner;
-import org.apache.druid.testsEx.indexer.IndexerTest;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
+import org.joda.time.Interval;
 
-@RunWith(DruidTestRunner.class)
-@Category(BackwardCompatibilityMain.class)
-public class ITBCMainIndexerTest extends IndexerTest
+import java.io.IOException;
+
+/**
+ * Used to release task locks after segments have been handed off, typically with long-running tasks
+ * to avoid holding locks for longer than necessary. This interface is used instead of {@code TaskActionClient}
+ * to prevent a cyclic dependency with druid-indexing-service module.
+ */
+@FunctionalInterface
+public interface TaskIntervalUnlocker
 {
+  /**
+   * Releases the lock for the exact interval for a task.
+   */
+  void releaseLock(Interval interval) throws IOException;
 }

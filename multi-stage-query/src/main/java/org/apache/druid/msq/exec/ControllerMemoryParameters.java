@@ -66,14 +66,15 @@ public class ControllerMemoryParameters
    */
   public static ControllerMemoryParameters createProductionInstance(
       final MemoryIntrospector memoryIntrospector,
-      final int maxWorkerCount
+      final int maxWorkerCount,
+      final int frameSize
   )
   {
     final long totalMemory = memoryIntrospector.memoryPerTask();
     final long memoryForInputChannels =
         WorkerMemoryParameters.computeProcessorMemoryForInputChannels(
             maxWorkerCount,
-            WorkerMemoryParameters.DEFAULT_FRAME_SIZE
+            frameSize
         );
     final int partitionStatisticsMaxRetainedBytes = (int) Math.min(
         totalMemory - memoryForInputChannels,
