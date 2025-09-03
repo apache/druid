@@ -161,7 +161,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   static final String METADATA_NEXT_PARTITIONS = "nextPartitions";
   static final String METADATA_PUBLISH_PARTITIONS = "publishPartitions";
 
-  private final Map<PartitionIdType, SequenceOffsetType> endOffsets;
+  private Map<PartitionIdType, SequenceOffsetType> endOffsets;
 
   // lastReadOffsets are the last offsets that were read and processed.
   private final Map<PartitionIdType, SequenceOffsetType> lastReadOffsets = new HashMap<>();
@@ -206,14 +206,14 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   protected final Condition isAwaitingRetry = pollRetryLock.newCondition();
 
   private final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task;
-  private final SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig;
+  private SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig;
   private final SeekableStreamIndexTaskTuningConfig tuningConfig;
   private final InputRowSchema inputRowSchema;
   @Nullable
   private final InputFormat inputFormat;
   @Nullable
   private final InputRowParser<ByteBuffer> parser;
-  private final String stream;
+  private String stream;
 
   private final Set<String> publishingSequences = Sets.newConcurrentHashSet();
   private final Set<String> publishedSequences = Sets.newConcurrentHashSet();
@@ -1718,54 +1718,69 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   }
 
   @POST
-  @Path("/updateAssignments")
+  @Path("/updateConfig")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  public void reassignPartitions(PartitionReassignmentRequest<PartitionIdType, SequenceOffsetType> req) throws InterruptedException
+  public Response updateConfig(TaskConfigUpdateRequest<PartitionIdType, SequenceOffsetType> req) throws InterruptedException
   {
     try {
       requestPause();
       checkpointSequences();
-      createNewSequenceForPartitions(req.getPartitionAssignments());
+
+      this.ioConfig = req.getIoConfig();
+      this.stream = ioConfig.getStartSequenceNumbers().getStream();
+      this.endOffsets = new ConcurrentHashMap<>(ioConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap());
+      minMessageTime = Configs.valueOrDefault(ioConfig.getMinimumMessageTime(), DateTimes.MIN);
+      maxMessageTime = Configs.valueOrDefault(ioConfig.getMaximumMessageTime(), DateTimes.MAX);
+
+      createNewSequenceFromIoConfig(req.getIoConfig());
       resume();
+      return Response.ok().build();
     } catch (Exception e) {
-      log.makeAlert(e, "Failed to reassign partitions.");
+      log.makeAlert(e, "Failed to update task config");
+      return Response.serverError().entity(e.getMessage()).build();
     }
   }
 
-  private void createNewSequenceForPartitions(List<PartitionAssignment<PartitionIdType, SequenceOffsetType>> newPartitions)
+  /**
+   * Creates new sequences for the ingestion process. It currently accepts the ioConfig given by the request as the correct offsets
+   * and ignores the offsets it may have stored in currOffsets and endOffsets.
+   */
+  private void createNewSequenceFromIoConfig(SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig)
       throws IOException
   {
-    Map<PartitionIdType, SequenceOffsetType> newPartitionStartOffsets = new HashMap<>();
-    Map<PartitionIdType, SequenceOffsetType> newPartitionEndOffsets = new HashMap<>();
-    for (PartitionAssignment<PartitionIdType, SequenceOffsetType> partition: newPartitions) {
-      SequenceOffsetType startOffset = currOffsets.computeIfAbsent(
-          partition.getPartitionId(),
-          k -> partition.getStartOffset()
-      );
-      newPartitionStartOffsets.put(partition.getPartitionId(), startOffset);
-      newPartitionEndOffsets.put(partition.getPartitionId(), endOffsets.getOrDefault(partition.getPartitionId(), partition.getEndOffset()));
-    }
-    final Set<PartitionIdType> exclusiveStartPartitions = computeExclusiveStartPartitionsForSequence(newPartitionStartOffsets);
+    Map<PartitionIdType, SequenceOffsetType> partitionStartOffsets = ioConfig.getStartSequenceNumbers()
+                                                                             .getPartitionSequenceNumberMap();
+    Map<PartitionIdType, SequenceOffsetType> partitionEndSequences = ioConfig.getEndSequenceNumbers()
+                                                                             .getPartitionSequenceNumberMap();
+
+    final Set<PartitionIdType> exclusiveStartPartitions = computeExclusiveStartPartitionsForSequence(
+        partitionStartOffsets);
     final SequenceMetadata<PartitionIdType, SequenceOffsetType> newSequence = new SequenceMetadata<>(
         sequences.isEmpty() ? 0 : getLastSequenceMetadata().getSequenceId() + 1,
-        StringUtils.format("%s_%d", ioConfig.getBaseSequenceName(), sequences.isEmpty() ? 0 : getLastSequenceMetadata().getSequenceId() + 1),
-        newPartitionStartOffsets,
-        newPartitionEndOffsets,
+        StringUtils.format(
+            "%s_%d",
+            ioConfig.getBaseSequenceName(),
+            sequences.isEmpty() ? 0 : getLastSequenceMetadata().getSequenceId() + 1
+        ),
+        partitionStartOffsets,
+        partitionEndSequences,
         false,
         exclusiveStartPartitions,
         getTaskLockType()
     );
 
     currOffsets.clear();
-    currOffsets.putAll(newPartitionStartOffsets);
+    currOffsets.putAll(partitionStartOffsets);
     endOffsets.clear();
-    endOffsets.putAll(newPartitionEndOffsets);
+    endOffsets.putAll(partitionEndSequences);
 
     addSequence(newSequence);
     persistSequences();
-    log.info("Created new sequence [%s] for partitions [%s] with start offsets [%s]",
-             newSequence.getSequenceName(), newPartitions, newPartitionStartOffsets);
+    log.info(
+        "Created new sequence [%s] with start offsets [%s]",
+        newSequence.getSequenceName(), partitionStartOffsets
+    );
   }
 
   private void checkpointSequences()

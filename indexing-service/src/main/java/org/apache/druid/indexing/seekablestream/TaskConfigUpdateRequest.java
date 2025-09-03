@@ -22,29 +22,27 @@ package org.apache.druid.indexing.seekablestream;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.List;
 import java.util.Objects;
 
 /**
- * Request object for reassigning partitions to a seekable stream index task.
- * Contains a list of partition assignments, each with partition ID, start offset, and end offset.
+ * Request object for updating the configuration of a running {@link SeekableStreamIndexTask}.
  */
-public class PartitionReassignmentRequest<PartitionIdType, SequenceOffsetType>
+public class TaskConfigUpdateRequest<PartitionIdType, SequenceOffsetType>
 {
-  private final List<PartitionAssignment<PartitionIdType, SequenceOffsetType>> partitionAssignments;
+  private final SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig;
 
   @JsonCreator
-  public PartitionReassignmentRequest(
-      @JsonProperty("partitionAssignments") List<PartitionAssignment<PartitionIdType, SequenceOffsetType>> partitionAssignments
+  public TaskConfigUpdateRequest(
+      @JsonProperty("ioConfig") SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig
   )
   {
-    this.partitionAssignments = partitionAssignments;
+    this.ioConfig = ioConfig;
   }
 
   @JsonProperty
-  public List<PartitionAssignment<PartitionIdType, SequenceOffsetType>> getPartitionAssignments()
+  public SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> getIoConfig()
   {
-    return partitionAssignments;
+    return ioConfig;
   }
 
   @Override
@@ -56,21 +54,21 @@ public class PartitionReassignmentRequest<PartitionIdType, SequenceOffsetType>
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    PartitionReassignmentRequest<?, ?> that = (PartitionReassignmentRequest<?, ?>) o;
-    return Objects.equals(partitionAssignments, that.partitionAssignments);
+    TaskConfigUpdateRequest<?, ?> that = (TaskConfigUpdateRequest<?, ?>) o;
+    return Objects.equals(ioConfig, that.ioConfig);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(partitionAssignments);
+    return Objects.hash(ioConfig);
   }
 
   @Override
   public String toString()
   {
-    return "PartitionReassignmentRequest{" +
-           "partitionAssignments=" + partitionAssignments +
+    return "TaskConfigUpdateRequest{" +
+           "ioConfig=" + ioConfig +
            '}';
   }
 }
