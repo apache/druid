@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.IntObjectPair;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.common.guava.FutureUtils;
@@ -34,10 +35,10 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.worker.DartWorkerClient;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.WorkerClient;
-import org.apache.druid.msq.exec.WorkerFailureListener;
 import org.apache.druid.msq.exec.WorkerManager;
 import org.apache.druid.msq.exec.WorkerStats;
 import org.apache.druid.msq.indexing.WorkerCount;
+import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.utils.CloseableUtils;
 
 import java.util.ArrayList;
@@ -86,7 +87,7 @@ public class DartWorkerManager implements WorkerManager
   }
 
   @Override
-  public ListenableFuture<?> start(WorkerFailureListener workerFailureListener)
+  public ListenableFuture<?> start()
   {
     if (!state.compareAndSet(State.NEW, State.STARTED)) {
       throw new ISE("Cannot start from state[%s]", state.get());
@@ -96,7 +97,7 @@ public class DartWorkerManager implements WorkerManager
   }
 
   @Override
-  public void launchWorkersIfNeeded(int workerCount)
+  public Set<IntObjectPair<MSQFault>> launchWorkersIfNeeded(int workerCount)
   {
     // Nothing to do, just validate the count.
     if (workerCount > workerIds.size()) {
@@ -106,10 +107,12 @@ public class DartWorkerManager implements WorkerManager
           workerIds.size()
       );
     }
+    // Dart workers are always available, so no failures to report
+    return Collections.emptySet();
   }
 
   @Override
-  public void waitForWorkers(Set<Integer> workerNumbers)
+  public Set<IntObjectPair<MSQFault>> waitForWorkers(Set<Integer> workerNumbers)
   {
     // Nothing to wait for, just validate the numbers.
     for (final int workerNumber : workerNumbers) {
@@ -121,6 +124,8 @@ public class DartWorkerManager implements WorkerManager
         );
       }
     }
+    // Dart workers are always available, so no failures to report
+    return Collections.emptySet();
   }
 
   @Override
