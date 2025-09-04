@@ -35,6 +35,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Handles metadata storage of {@link Task}, {@link TaskLock} and {@link TaskStatus} objects.
+ */
 @ExtensionPoint
 public interface MetadataStorageActionHandler
 {
