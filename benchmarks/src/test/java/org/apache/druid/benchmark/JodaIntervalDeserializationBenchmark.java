@@ -55,7 +55,7 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 5)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-public class JodaIntervalDeserialization
+public class JodaIntervalDeserializationBenchmark
 {
   @Param({"20000"})
   public int numValues;
@@ -67,7 +67,7 @@ public class JodaIntervalDeserialization
   public static void main(String[] args) throws RunnerException
   {
     Options opt = new OptionsBuilder()
-        .include(JodaIntervalDeserialization.class.getSimpleName())
+        .include(JodaIntervalDeserializationBenchmark.class.getSimpleName())
         .forks(1)
         .build();
     new Runner(opt).run();
@@ -105,7 +105,7 @@ public class JodaIntervalDeserialization
 
     final String[] fallbackSamples = new String[]{
         "\"2022-01-01T00:00:00.000Z/P1D\"",
-        "\"2022-01-01T12:00:00Z/PT6H\"",
+        "\"2022-01-01T00:00:00Z/2022-01-02T00:00:00Z\"",
         "\"2022-01-01T00:00:00Z/P2DT3H4M5S\"",
         "\"P2DT3H4M5S/2022-01-03T03:04:05Z\""
     };

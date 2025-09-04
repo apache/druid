@@ -112,7 +112,7 @@ public class IntervalsTest
 
     for (String s : intervalStringRepresentations) {
       Interval expected = Intervals.of(s);
-      Interval actual = Intervals.deserialize(s);
+      Interval actual = Intervals.fromString(s);
       Assert.assertEquals("Mismatch for: " + s, expected, actual);
     }
   }

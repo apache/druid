@@ -58,7 +58,7 @@ public final class Intervals
   }
 
   /**
-   * @return Null if cannot parse with optimized strategy, else return the Interval.
+   * @return null if the input format cannot be parsed with optimized strategy, else return the Interval.
    */
   @Nullable
   private static Interval tryOptimizedIntervalDeserialization(final String intervalText)
@@ -89,7 +89,7 @@ public final class Intervals
    * slower {@link Intervals#of(String)} parser. Checking the format takes some time, so if you are very sure
    * you are not working with the specified format above, use {@link Intervals#of(String)} instead.
    */
-  public static Interval deserialize(String string)
+  public static Interval fromString(String string)
   {
     final Interval interval = tryOptimizedIntervalDeserialization(string);
     if (interval == null) {
