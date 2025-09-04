@@ -2661,7 +2661,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByPathSelectorFilterCoalesce()
   {
-    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT "
         + "JSON_VALUE(nest, '$.x'), "
@@ -2673,18 +2672,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.STRING)
+                            expressionVirtualColumn("v0", "nvl(\"v1\",'0')", ColumnType.STRING),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                         )
-                        .setDimensions(
-                            dimensions(
-                                new DefaultDimensionSpec("v0", "d0")
-                            )
-                        )
-                        .setDimFilter(
-                            expressionFilter(
-                                "case_searched(notnull(json_value(\"nest\",'$.x', 'STRING')),(json_value(\"nest\",'$.x', 'STRING') == '100'),0)"
-                            )
-                        )
+                        .setDimensions(new DefaultDimensionSpec("v1", "d0"))
+                        .setDimFilter(equality("v0", "100", ColumnType.STRING))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -2931,6 +2923,45 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(new Object[]{"100", 1L}),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByCoalesceJsonValue()
+  {
+    testQuery(
+        "SELECT "
+        + "COALESCE(JSON_VALUE(nest, '$.x'), 'unknown'), "
+        + "SUM(cnt) "
+        + "FROM druid.nested\n"
+        + "GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn("v0", "nvl(\"v1\",'unknown')", ColumnType.STRING),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0")
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"100", 2L},
+            new Object[]{"200", 1L},
+            new Object[]{"unknown", 4L}
+        ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.STRING)
                     .add("EXPR$1", ColumnType.LONG)
@@ -6355,12 +6386,41 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testFilterCoalesceJsonValue()
+  {
+    testQuery(
+        "SELECT "
+        + "SUM(cnt) "
+        + "FROM druid.nested\n"
+        + "WHERE COALESCE(JSON_VALUE(nest, '$.x'), 'unknown') = '200'",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "nvl(\"v1\",'unknown')", ColumnType.STRING),
+                      new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
+                  )
+                  .filters(equality("v0", "200", ColumnType.STRING))
+                  .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{1L}),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
   public void testCoalesceOnNestedColumns()
   {
     testBuilder()
         .sql(
             "select c,long,coalesce(c,long) as col "
-                + " from druid.all_auto, unnest(json_value(arrayNestedLong, '$[1]' returning bigint array)) as u(c) "
+            + " from druid.all_auto, unnest(json_value(arrayNestedLong, '$[1]' returning bigint array)) as u(c) "
         )
         .expectedQueries(
             ImmutableList.of(
