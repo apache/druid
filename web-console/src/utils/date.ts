@@ -19,6 +19,11 @@
 import type { DateRange, NonNullDateRange } from '@blueprintjs/datetime';
 import { fromDate, toTimeZone } from '@internationalized/date';
 import type { Timezone } from 'chronoshift';
+import dayjs from 'dayjs';
+
+import type { WebConsoleConfig } from '../druid-models/web-console-config/web-console-config';
+
+import { localStorageGetJson,LocalStorageKeys } from './local-storage-keys';
 
 const CURRENT_YEAR = new Date().getUTCFullYear();
 export const DATE_FORMAT = 'YYYY-MM-DDTHH:mm:ss.SSSZ';
@@ -94,4 +99,12 @@ export function maxDate(a: Date, b: Date): Date {
 
 export function minDate(a: Date, b: Date): Date {
   return a < b ? a : b;
+}
+
+export function formatDate(value: string) {
+  const webConsoleConfig: WebConsoleConfig | undefined = localStorageGetJson(
+    LocalStorageKeys.WEB_CONSOLE_CONFIGS,
+  );
+  const showLocalTime = webConsoleConfig?.showLocalTime;
+  return showLocalTime ? dayjs(value).format(DATE_FORMAT) : dayjs(value).toISOString();
 }

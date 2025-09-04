@@ -43,9 +43,11 @@ import {
   TASK_CANCELED_ERROR_MESSAGES,
   TASK_CANCELED_PREDICATE,
 } from '../../druid-models';
-import type { WebConsoleConfig } from '../../druid-models/web-console-config/web-console-config';
 import type { Capabilities } from '../../helpers';
 import {
+  booleanCustomTableFilter,
+  combineModeAndNeedle,
+  parseFilterModeAndNeedle,
   SMALL_TABLE_PAGE_SIZE,
   SMALL_TABLE_PAGE_SIZE_OPTIONS,
   suggestibleFilterInput,
@@ -53,12 +55,12 @@ import {
 import { Api, AppToaster } from '../../singletons';
 import {
   DATE_FORMAT,
+  formatDate,
   formatDuration,
   getApiArray,
   getDruidErrorMessage,
   hasOverlayOpen,
   LocalStorageBackedVisibility,
-  localStorageGetJson,
   LocalStorageKeys,
   oneOf,
   queryDruidSql,
@@ -89,7 +91,6 @@ interface TaskQueryResultRow {
   group_id: string;
   type: string;
   created_time: string;
-  local_created_time: string;
   datasource: string;
   duration: number;
   error_msg: string | null;
@@ -192,9 +193,6 @@ ORDER BY
             },
             cancelToken,
           );
-          tasks.forEach(t => {
-            t.local_created_time = dayjs(t.created_time).format(DATE_FORMAT);
-          });
           return tasks;
         } else if (capabilities.hasOverlordAccess()) {
           return (await getApiArray(`/druid/indexer/v1/tasks`, cancelToken)).map(d => {
@@ -203,7 +201,6 @@ ORDER BY
               group_id: d.groupId,
               type: d.type,
               created_time: d.createdTime,
-              local_created_time: dayjs(d.createdTime).format(DATE_FORMAT),
               datasource: d.dataSource,
               duration: d.duration ? d.duration : 0,
               error_msg: d.errorMsg,
@@ -341,7 +338,8 @@ ORDER BY
   private renderTaskFilterableCell(
     field: string,
     enableComparisons = false,
-    valueFn: (value: string) => ReactNode = String,
+    displayFn: (value: string ) => ReactNode = String,
+    filterDisplayFn: (value: string) => string = String,
   ) {
     const { filters, onFiltersChange } = this.props;
 
@@ -353,8 +351,9 @@ ORDER BY
           filters={filters}
           onFiltersChange={onFiltersChange}
           enableComparisons={enableComparisons}
+          displayValue={filterDisplayFn(row.value)}
         >
-          {valueFn(row.value)}
+          {displayFn(row.value)}
         </TableFilterableCell>
       );
     };
@@ -381,10 +380,6 @@ ORDER BY
     const { tasksState, groupTasksBy, visibleColumns } = this.state;
 
     const tasks = tasksState.data || [];
-    const webConsoleConfig: WebConsoleConfig | undefined = localStorageGetJson(
-      LocalStorageKeys.WEB_CONSOLE_CONFIGS,
-    );
-    const showLocalTime = webConsoleConfig?.showLocalTime;
     return (
       <ReactTable
         data={tasks}
@@ -489,7 +484,7 @@ ORDER BY
                 case 'object':
                   return (
                     TasksView.statusRanking[d1.status] - TasksView.statusRanking[d2.status] ||
-                    d1.created_time.localeCompare(d2.created_time)
+                    dayjs(d1.created_time).diff(d2.created_time)
                   );
 
                 default:
@@ -509,22 +504,34 @@ ORDER BY
           },
           {
             Header: 'Created time',
-            accessor: showLocalTime ? 'local_created_time' : 'created_time',
+            accessor: 'created_time',
             width: 220,
             Cell: this.renderTaskFilterableCell(
-              showLocalTime ? 'local_created_time' : 'created_time',
+              'created_time',
               true,
               value => {
-                const parsedDate = dayjs(value);
-                return !parsedDate.isValid() ? (
-                  String(value)
+                const day = dayjs(value);
+                return day.isValid() ? (
+                  <span data-tooltip={day.fromNow()}>{formatDate(value)}</span>
                 ) : (
-                  <span data-tooltip={parsedDate.fromNow()}>{value}</span>
+                  String(value)
                 );
               },
+              formatDate,
             ),
             Aggregated: () => '',
             show: visibleColumns.shown('Created time'),
+            filterMethod: (filter: Filter, row: TaskQueryResultRow) => {
+              const modeAndNeedle = parseFilterModeAndNeedle(filter)
+              if (!modeAndNeedle) return true;
+              const parsedRowDate = formatDate(row.created_time);
+              if (modeAndNeedle.mode === '~') {
+                return booleanCustomTableFilter(filter, parsedRowDate);
+              }
+              const parsedFilterDate = formatDate(modeAndNeedle.needle);
+              filter.value = combineModeAndNeedle(modeAndNeedle.mode, parsedFilterDate);
+              return booleanCustomTableFilter(filter, parsedRowDate);
+            },
           },
           {
             Header: 'Duration',
@@ -533,6 +540,7 @@ ORDER BY
             filterable: false,
             className: 'padded',
             Cell({ value, original, aggregated }) {
+              console.log(value, original, aggregated);
               if (aggregated) return '';
               if (value > 0) {
                 const shownDuration = formatDuration(value);

@@ -47,11 +47,11 @@ import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-di
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import type { QueryContext, QueryWithContext, ShardSpec } from '../../druid-models';
 import { computeSegmentTimeSpan, getConsoleViewIcon, getDatasourceColor } from '../../druid-models';
-import type { WebConsoleConfig } from '../../druid-models/web-console-config/web-console-config';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
   booleanCustomTableFilter,
   BooleanFilterInput,
+  combineModeAndNeedle,
   parseFilterModeAndNeedle,
   sqlQueryCustomTableFilter,
   STANDARD_TABLE_PAGE_SIZE,
@@ -64,16 +64,15 @@ import {
   assemble,
   compact,
   countBy,
-  DATE_FORMAT,
   filterMap,
   findMap,
   formatBytes,
+  formatDate,
   formatInteger,
   getApiArray,
   hasOverlayOpen,
   isNumberLikeNaN,
   LocalStorageBackedVisibility,
-  localStorageGetJson,
   LocalStorageKeys,
   oneOf,
   queryDruidSql,
@@ -160,21 +159,21 @@ function formatRangeDimensionValue(dimension: any, value: any): string {
 }
 
 function segmentFiltersToExpression(filters: Filter[]): SqlExpression {
-  const webConsoleConfig: WebConsoleConfig | undefined = localStorageGetJson(
-    LocalStorageKeys.WEB_CONSOLE_CONFIGS,
-  );
-  const showLocalTime = webConsoleConfig?.showLocalTime;
   return SqlExpression.and(
     ...filterMap(filters, filter => {
-      if ((filter.id === 'start' || filter.id === 'end') && showLocalTime) {
-        // Local times need to be converted to UTC for the SQL query
-        const newFilter = { ...filter };
-        const modeAndNeedle = parseFilterModeAndNeedle(newFilter);
+      if (filter.id === 'start' || filter.id === 'end') {
+        // Dates need to be converted to ISO string for the SQL query
+        const modeAndNeedle = parseFilterModeAndNeedle(filter);
         if (!modeAndNeedle) return;
-        const parsedDate = dayjs(modeAndNeedle.needle);
-        if (!parsedDate.isValid()) return;
-        newFilter.value = `${modeAndNeedle.mode}${parsedDate.toISOString()}`;
-        return sqlQueryCustomTableFilter(newFilter);
+        if (modeAndNeedle.mode === '~') {
+          return sqlQueryCustomTableFilter(filter);
+        }
+        const internalFilter = { ...filter };
+        const formattedDate = formatDate(modeAndNeedle.needle);
+        const filterDate = dayjs(formattedDate).toISOString();
+        filter.value = combineModeAndNeedle(modeAndNeedle.mode,formattedDate);
+        internalFilter.value = combineModeAndNeedle(modeAndNeedle.mode, filterDate);
+        return sqlQueryCustomTableFilter(internalFilter);
       }
       if (filter.id === 'shard_type') {
         // Special handling for shard_type that needs to be searched for in the shard_spec
@@ -588,19 +587,11 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     });
   }
 
-  private readonly formatDate = (value: string) => {
-    const webConsoleConfig: WebConsoleConfig | undefined = localStorageGetJson(
-      LocalStorageKeys.WEB_CONSOLE_CONFIGS,
-    );
-    const showLocalTime = webConsoleConfig?.showLocalTime;
-    return showLocalTime ? dayjs(value).format(DATE_FORMAT) : value;
-  }
-
   private renderFilterableCell(
     field: string,
     enableComparisons = false,
     displayFn: (value: string) => ReactNode = String,
-    valueFn: (value: string) => string = String,
+    filterDisplayFn: (value: string) => string = String,
   ) {
     const { filters } = this.props;
     const { handleFilterChange } = this;
@@ -609,10 +600,11 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       return (
         <TableFilterableCell
           field={field}
-          value={valueFn(row.value)}
+          value={row.value}
           filters={filters}
           onFiltersChange={handleFilterChange}
           enableComparisons={enableComparisons}
+          displayValue={filterDisplayFn(row.value)}
         >
           {displayFn(row.value)}
         </TableFilterableCell>
@@ -728,7 +720,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             width: 220,
             defaultSortDesc: true,
             filterable: allowGeneralFilter,
-            Cell: this.renderFilterableCell('start', true, this.formatDate, this.formatDate),
+            Cell: this.renderFilterableCell('start', true, formatDate, formatDate),
           },
           {
             Header: 'End',
@@ -738,7 +730,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             width: 220,
             defaultSortDesc: true,
             filterable: allowGeneralFilter,
-            Cell: this.renderFilterableCell('end', true, this.formatDate, this.formatDate),
+            Cell: this.renderFilterableCell('end', true, formatDate, formatDate),
           },
           {
             Header: 'Version',
@@ -754,7 +746,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             show: visibleColumns.shown('Time span'),
             id: 'time_span',
             className: 'padded',
-            accessor: ({ start, end }) => computeSegmentTimeSpan(start, end),
+            accessor: ({ start, end }) => computeSegmentTimeSpan(dayjs(start).toISOString(), dayjs(end).toISOString()),
             width: 100,
             sortable: false,
             filterable: false,
