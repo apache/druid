@@ -22,25 +22,26 @@ package org.apache.druid.indexing.seekablestream;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
  * Request object for updating the configuration of a running {@link SeekableStreamIndexTask}.
  */
-public class TaskConfigUpdateRequest<PartitionIdType, SequenceOffsetType>
+public class TaskConfigUpdateRequest
 {
-  private final SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig;
+  private final Object ioConfig;
 
   @JsonCreator
   public TaskConfigUpdateRequest(
-      @JsonProperty("ioConfig") SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig
+      @JsonProperty("ioConfig") @Nullable Object ioConfig
   )
   {
     this.ioConfig = ioConfig;
   }
 
   @JsonProperty
-  public SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> getIoConfig()
+  public Object getIoConfig()
   {
     return ioConfig;
   }
@@ -54,7 +55,7 @@ public class TaskConfigUpdateRequest<PartitionIdType, SequenceOffsetType>
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    TaskConfigUpdateRequest<?, ?> that = (TaskConfigUpdateRequest<?, ?>) o;
+    TaskConfigUpdateRequest that = (TaskConfigUpdateRequest) o;
     return Objects.equals(ioConfig, that.ioConfig);
   }
 

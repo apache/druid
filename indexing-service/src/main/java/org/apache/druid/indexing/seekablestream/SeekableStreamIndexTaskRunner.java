@@ -1721,19 +1721,23 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Path("/updateConfig")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response updateConfig(TaskConfigUpdateRequest<PartitionIdType, SequenceOffsetType> req) throws InterruptedException
+  public Response updateConfig(TaskConfigUpdateRequest updateRequest, @Context final HttpServletRequest req) throws InterruptedException
   {
+    authorizationCheck(req);
     try {
       requestPause();
       checkpointSequences();
 
-      this.ioConfig = req.getIoConfig();
+      @SuppressWarnings("unchecked")
+      SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig = 
+          (SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType>) updateRequest.getIoConfig();
+      this.ioConfig = newIoConfig;
       this.stream = ioConfig.getStartSequenceNumbers().getStream();
       this.endOffsets = new ConcurrentHashMap<>(ioConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap());
       minMessageTime = Configs.valueOrDefault(ioConfig.getMinimumMessageTime(), DateTimes.MIN);
       maxMessageTime = Configs.valueOrDefault(ioConfig.getMaximumMessageTime(), DateTimes.MAX);
 
-      createNewSequenceFromIoConfig(req.getIoConfig());
+      createNewSequenceFromIoConfig(newIoConfig);
       resume();
       return Response.ok().build();
     } catch (Exception e) {
