@@ -197,7 +197,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         disabled={!capabilities.hasCoordinatorAccess()}
       />
       <MenuItem
-        icon={IconNames.SETTINGS}
+        icon={IconNames.CONSOLE}
         text="Web console config"
         onClick={() => setWebConsoleConfigDialogOpen(true)}
       />
