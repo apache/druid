@@ -47,7 +47,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -198,7 +198,7 @@ public class SegmentCacheBootstrapper
       final int numSegments = segmentsOnStartup.size();
       final CountDownLatch latch = new CountDownLatch(numSegments);
       final AtomicInteger counter = new AtomicInteger(0);
-      final CopyOnWriteArrayList<DataSegment> failedSegments = new CopyOnWriteArrayList<>();
+      final ConcurrentLinkedQueue<DataSegment> failedSegments = new ConcurrentLinkedQueue<>();
       for (final DataSegment segment : segmentsOnStartup) {
         bootstrapExecutor.submit(
             () -> {
@@ -239,7 +239,7 @@ public class SegmentCacheBootstrapper
       try {
         latch.await();
 
-        if (failedSegments.size() > 0) {
+        if (!failedSegments.isEmpty()) {
           log.makeAlert("[%,d] errors seen while loading segments on startup", failedSegments.size())
              .addData("failedSegments", failedSegments)
              .emit();
