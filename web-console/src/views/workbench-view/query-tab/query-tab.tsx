@@ -225,11 +225,13 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
             if (cancelQueryId) {
               signal.addEventListener('abort', () => {
                 if (signal.reason === QueryManager.TERMINATION_MESSAGE) return;
-                void Api.instance.delete(
-                  `/druid/v2${engine === 'sql-native' ? '/sql' : ''}/${Api.encodePath(
-                    cancelQueryId,
-                  )}`,
-                );
+                Api.instance
+                  .delete(
+                    `/druid/v2${engine === 'sql-native' ? '/sql' : ''}/${Api.encodePath(
+                      cancelQueryId,
+                    )}`,
+                  )
+                  .catch(() => {});
               });
             }
 
@@ -274,7 +276,9 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
             if (cancelQueryId) {
               signal.addEventListener('abort', () => {
                 if (signal.reason === QueryManager.TERMINATION_MESSAGE) return;
-                void Api.instance.delete(`/druid/v2/sql/${Api.encodePath(cancelQueryId)}`);
+                Api.instance
+                  .delete(`/druid/v2/sql/${Api.encodePath(cancelQueryId)}`)
+                  .catch(() => {});
               });
             }
 

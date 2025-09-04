@@ -252,7 +252,7 @@ function cancelTaskExecutionOnCancel(
 ): void {
   signal.addEventListener('abort', () => {
     if (preserveOnTermination && signal.reason === QueryManager.TERMINATION_MESSAGE) return;
-    void cancelTaskExecution(id);
+    cancelTaskExecution(id).catch(() => {});
   });
 }
 
