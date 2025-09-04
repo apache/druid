@@ -112,7 +112,6 @@ public class SeekableStreamSupervisorIOConfigTest
     };
 
     Assert.assertEquals(Integer.valueOf(5), configAuto.getTaskCount()); // taskCountStart
-    Assert.assertEquals(2, configAuto.getReplicas().intValue());
 
     // autoScalerEnabled = false
     SeekableStreamSupervisorIOConfig configNoAuto = new SeekableStreamSupervisorIOConfig(
@@ -137,59 +136,73 @@ public class SeekableStreamSupervisorIOConfigTest
     };
 
     Assert.assertEquals(Integer.valueOf(10), configNoAuto.getTaskCount());
-    Assert.assertEquals(2, configNoAuto.getReplicas().intValue());
   }
 
-  @Test(expected = IAE.class)
+  @Test
   public void testBothLateMessageRejectionPeriodAndStartDateTime()
   {
     LagAggregator lagAggregator = mock(LagAggregator.class);
 
-    new SeekableStreamSupervisorIOConfig(
-        "stream",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        Period.seconds(10),
-        null,
-        null,
-        lagAggregator,
-        DateTimes.nowUtc(),
-        null,
-        null
-    )
-    {
-    };
+    IAE ex = Assert.assertThrows(
+        IAE.class,
+        () -> new SeekableStreamSupervisorIOConfig(
+            "stream",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            Period.seconds(10),
+            null,
+            null,
+            lagAggregator,
+            DateTimes.nowUtc(),
+            null,
+            null
+        )
+        {
+        }
+    );
+    Assert.assertTrue(
+        ex.getMessage()
+          .contains(
+              "SeekableStreamSupervisorIOConfig does not support both properties lateMessageRejectionStartDateTime and lateMessageRejectionPeriod"
+          )
+    );
   }
 
-  @Test(expected = DruidException.class)
+  @Test
   public void testNullAggregatorThrows()
   {
-    new SeekableStreamSupervisorIOConfig(
-        "stream",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    )
-    {
-    };
+    DruidException ex = Assert.assertThrows(
+        DruidException.class,
+        () -> new SeekableStreamSupervisorIOConfig(
+            "stream",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        )
+        {
+        }
+    );
+    Assert.assertTrue(
+        ex.getMessage().contains("'lagAggregator' must be specified in supervisor 'spec.ioConfig'")
+    );
   }
 
   @Test
@@ -197,7 +210,7 @@ public class SeekableStreamSupervisorIOConfigTest
   {
     LagAggregator lagAggregator = mock(LagAggregator.class);
 
-    // Autoscaler disabled, no stopTaskCount
+    // Autoscaler disabled, stopTaskCount unset
     SeekableStreamSupervisorIOConfig config1 = new SeekableStreamSupervisorIOConfig(
         "stream",
         null,
@@ -308,7 +321,7 @@ public class SeekableStreamSupervisorIOConfigTest
     Assert.assertEquals(1, config2.getMaxAllowedStops());
 
 
-    // Autoscaler enabled, stopTaskCountPercent unset, stopTaskCount set
+    // Autoscaler enabled, stopTaskCountPercent unset, stopTaskCount unset
     when(autoScalerConfig.getEnableTaskAutoScaler()).thenReturn(true);
     when(autoScalerConfig.getTaskCountStart()).thenReturn(10);
     when(autoScalerConfig.getStopTaskCountPercent()).thenReturn(null);

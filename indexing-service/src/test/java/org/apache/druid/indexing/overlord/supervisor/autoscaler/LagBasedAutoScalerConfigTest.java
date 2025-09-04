@@ -31,14 +31,10 @@ public class LagBasedAutoScalerConfigTest
   @Test
   public void testSerdeWithDefaults() throws Exception
   {
-    String jsonStr = "{\n"
-                     + "  \"enableTaskAutoScaler\": false\n"
-                     + "}";
-
     LagBasedAutoScalerConfig config = OBJECT_MAPPER.readValue(
         OBJECT_MAPPER.writeValueAsString(
             OBJECT_MAPPER.readValue(
-                jsonStr,
+                "{}",
                 LagBasedAutoScalerConfig.class
             )
         ), LagBasedAutoScalerConfig.class
@@ -118,84 +114,181 @@ public class LagBasedAutoScalerConfigTest
   public void testEnabledTaskCountChecks()
   {
     // Should throw if taskCountMax or taskCountMin is missing
-    try {
-      new LagBasedAutoScalerConfig(
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          1,
-          null,
-          null,
-          null,
-          true,
-          null,
-          null,
-          null
-      );
-      Assert.fail("Expected exception for null taskCountMax or taskCountMin");
-    }
-    catch (RuntimeException ex) {
-      Assert.assertTrue(ex.getMessage().contains("taskCountMax or taskCountMin can't be null"));
-    }
+    RuntimeException ex1 = Assert.assertThrows(
+        RuntimeException.class,
+        () ->
+            new LagBasedAutoScalerConfig(
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                1,
+                null,
+                null,
+                null,
+                true,
+                null,
+                null,
+                null
+            )
+    );
+    Assert.assertTrue(ex1.getMessage().contains("taskCountMax or taskCountMin can't be null"));
 
     // Should throw if taskCountMax < taskCountMin
-    try {
-      new LagBasedAutoScalerConfig(
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          2,
-          1,
-          3,
-          null,
-          null,
-          true,
-          null,
-          null,
-          null
-      );
-      Assert.fail("Expected exception for taskCountMax < taskCountMin");
-    }
-    catch (RuntimeException ex) {
-      Assert.assertTrue(ex.getMessage().contains("taskCountMax can't lower than taskCountMin"));
-    }
+    RuntimeException ex2 = Assert.assertThrows(
+        RuntimeException.class,
+        () ->
+            new LagBasedAutoScalerConfig(
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                2,
+                1,
+                3,
+                null,
+                null,
+                true,
+                null,
+                null,
+                null
+            )
+    );
+    Assert.assertTrue(ex2.getMessage().contains("taskCountMax can't lower than taskCountMin"));
 
     // Should throw if taskCountStart out of range
-    try {
-      new LagBasedAutoScalerConfig(
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          5,
-          10,
-          3,
-          null,
-          null,
-          true,
-          null,
-          null,
-          null
-      );
-      Assert.fail("Expected exception for taskCountStart out of range");
-    }
-    catch (RuntimeException ex) {
-      Assert.assertTrue(ex.getMessage().contains("taskCountMin <= taskCountStart <= taskCountMax"));
-    }
+    RuntimeException ex3 = Assert.assertThrows(
+        RuntimeException.class,
+        () ->
+            new LagBasedAutoScalerConfig(
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                5,
+                10,
+                3,
+                null,
+                null,
+                true,
+                null,
+                null,
+                null
+            )
+    );
+    Assert.assertTrue(ex3.getMessage().contains("taskCountMin <= taskCountStart <= taskCountMax"));
+  }
+
+  @Test
+  public void testStopTaskCountPercentBounds()
+  {
+    // Fail if stopTaskCountPercent = 0
+    IllegalArgumentException ex1 = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new LagBasedAutoScalerConfig(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            10,
+            null,
+            1,
+            1,
+            2,
+            true,
+            null,
+            null,
+            0.0
+        )
+    );
+    Assert.assertTrue(ex1.getMessage().contains("0.0 < stopTaskCountPercent <= 1.0"));
+
+    // Fail if stopTaskCountPercent < 0
+    IllegalArgumentException ex2 = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new LagBasedAutoScalerConfig(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            10,
+            null,
+            1,
+            1, 2,
+            true,
+            null,
+            null,
+            -0.1
+        )
+    );
+    Assert.assertTrue(ex2.getMessage().contains("0.0 < stopTaskCountPercent <= 1.0"));
+
+    // Fail if stopTaskCountPercent > 1.0
+    IllegalArgumentException ex3 = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new LagBasedAutoScalerConfig(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            10,
+            null,
+            1,
+            1,
+            2,
+            true,
+            null,
+            null,
+            1.1
+        )
+    );
+    Assert.assertTrue(ex3.getMessage().contains("0.0 < stopTaskCountPercent <= 1.0"));
+
+    // Should succeed for a valid value
+    LagBasedAutoScalerConfig config = new LagBasedAutoScalerConfig(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        10,
+        null,
+        1,
+        1,
+        2,
+        true,
+        null,
+        null,
+        0.5
+    );
+    Assert.assertEquals(Double.valueOf(0.5), config.getStopTaskCountPercent());
   }
 }

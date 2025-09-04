@@ -22,6 +22,7 @@ package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.AggregateFunction;
@@ -102,6 +103,8 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
     this.scaleOutStep = scaleOutStep != null ? scaleOutStep : 2;
     this.minTriggerScaleActionFrequencyMillis = minTriggerScaleActionFrequencyMillis
         != null ? minTriggerScaleActionFrequencyMillis : 600000;
+
+    Preconditions.checkArgument(stopTaskCountPercent == null || (stopTaskCountPercent > 0.0 && stopTaskCountPercent <= 1.0), "0.0 < stopTaskCountPercent <= 1.0");
     this.stopTaskCountPercent = stopTaskCountPercent;
   }
 

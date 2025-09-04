@@ -2735,9 +2735,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     };
 
     Assert.assertEquals(2, config.getMaxAllowedStops());
-
     config.setTaskCount(30);
-
     Assert.assertEquals(12, config.getMaxAllowedStops());
   }
 
