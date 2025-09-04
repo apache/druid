@@ -18,6 +18,7 @@
 
 import { Button, ButtonGroup, Intent, Label, MenuItem, Switch, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import dayjs from 'dayjs';
 import { C, L, SqlComparison, SqlExpression } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import type { ReactNode } from 'react';
@@ -46,6 +47,7 @@ import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-di
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import type { QueryContext, QueryWithContext, ShardSpec } from '../../druid-models';
 import { computeSegmentTimeSpan, getConsoleViewIcon, getDatasourceColor } from '../../druid-models';
+import type { WebConsoleConfig } from '../../druid-models/web-console-config/web-console-config';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
   booleanCustomTableFilter,
@@ -62,6 +64,7 @@ import {
   assemble,
   compact,
   countBy,
+  DATE_FORMAT,
   filterMap,
   findMap,
   formatBytes,
@@ -70,6 +73,7 @@ import {
   hasOverlayOpen,
   isNumberLikeNaN,
   LocalStorageBackedVisibility,
+  localStorageGetJson,
   LocalStorageKeys,
   oneOf,
   queryDruidSql,
@@ -156,8 +160,22 @@ function formatRangeDimensionValue(dimension: any, value: any): string {
 }
 
 function segmentFiltersToExpression(filters: Filter[]): SqlExpression {
+  const webConsoleConfig: WebConsoleConfig | undefined = localStorageGetJson(
+    LocalStorageKeys.WEB_CONSOLE_CONFIGS,
+  );
+  const showLocalTime = webConsoleConfig?.showLocalTime;
   return SqlExpression.and(
     ...filterMap(filters, filter => {
+      if ((filter.id === 'start' || filter.id === 'end') && showLocalTime) {
+        // Local times need to be converted to UTC for the SQL query
+        const newFilter = { ...filter };
+        const modeAndNeedle = parseFilterModeAndNeedle(newFilter);
+        if (!modeAndNeedle) return;
+        const parsedDate = dayjs(modeAndNeedle.needle);
+        if (!parsedDate.isValid()) return;
+        newFilter.value = `${modeAndNeedle.mode}${parsedDate.toISOString()}`;
+        return sqlQueryCustomTableFilter(newFilter);
+      }
       if (filter.id === 'shard_type') {
         // Special handling for shard_type that needs to be searched for in the shard_spec
         // Creates filters like `shard_spec LIKE '%"type":"numbered"%'`
@@ -570,10 +588,19 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     });
   }
 
+  private readonly formatDate = (value: string) => {
+    const webConsoleConfig: WebConsoleConfig | undefined = localStorageGetJson(
+      LocalStorageKeys.WEB_CONSOLE_CONFIGS,
+    );
+    const showLocalTime = webConsoleConfig?.showLocalTime;
+    return showLocalTime ? dayjs(value).format(DATE_FORMAT) : value;
+  }
+
   private renderFilterableCell(
     field: string,
     enableComparisons = false,
-    valueFn: (value: string) => ReactNode = String,
+    displayFn: (value: string) => ReactNode = String,
+    valueFn: (value: string) => string = String,
   ) {
     const { filters } = this.props;
     const { handleFilterChange } = this;
@@ -582,12 +609,12 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       return (
         <TableFilterableCell
           field={field}
-          value={row.value}
+          value={valueFn(row.value)}
           filters={filters}
           onFiltersChange={handleFilterChange}
           enableComparisons={enableComparisons}
         >
-          {valueFn(row.value)}
+          {displayFn(row.value)}
         </TableFilterableCell>
       );
     };
@@ -698,20 +725,20 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             show: visibleColumns.shown('Start'),
             accessor: 'start',
             headerClassName: 'enable-comparisons',
-            width: 180,
+            width: 220,
             defaultSortDesc: true,
             filterable: allowGeneralFilter,
-            Cell: this.renderFilterableCell('start', true),
+            Cell: this.renderFilterableCell('start', true, this.formatDate, this.formatDate),
           },
           {
             Header: 'End',
             show: visibleColumns.shown('End'),
             accessor: 'end',
             headerClassName: 'enable-comparisons',
-            width: 180,
+            width: 220,
             defaultSortDesc: true,
             filterable: allowGeneralFilter,
-            Cell: this.renderFilterableCell('end', true),
+            Cell: this.renderFilterableCell('end', true, this.formatDate, this.formatDate),
           },
           {
             Header: 'Version',
