@@ -774,18 +774,19 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     @Override
     public void mount(StorageLocation mountLocation) throws SegmentLoadingException
     {
-      final Lock lock = mountLocation.getLock().readLock();
-      lock.lock();
-      try {
+      // check to see if we should still be mounting by making sure we are still reserved in the location
+      // this is not done under a lock of the location, and that is ok.. we will check again at the end to prevent any
+      // orphaned files
+      if (!mountLocation.isReserved(this.id) && !mountLocation.isWeakReserved(this.id)) {
+        log.debug(
+            "aborting mount in location[%s] since entry[%s] is no longer reserved",
+            mountLocation.getPath(),
+            this.id
+        );
+        return;
+      }
 
-        if (!mountLocation.isReserved(this.id) && !mountLocation.isWeakReserved(this.id)) {
-          log.debug(
-              "aborting mount in location[%s] since entry[%s] is no longer reserved",
-              mountLocation.getPath(),
-              this.id
-          );
-          return;
-        }
+      try {
         synchronized (this) {
           if (location != null) {
             log.debug(
@@ -830,6 +831,18 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           lazyLoadCallback = SegmentLazyLoadFailCallback.NOOP;
           referenceProvider = ReferenceCountedSegmentProvider.of(segment);
         }
+
+
+        // since we do not hold a lock on the location while mounting, make sure that we actually are reserved and
+        // should have mounted, otherwise unmount so we don't leave any orphaned files
+        if (!mountLocation.isReserved(this.id) && !mountLocation.isWeakReserved(this.id)) {
+          log.debug(
+              "aborting mount in location[%s] since entry[%s] is no longer reserved",
+              mountLocation.getPath(),
+              this.id
+          );
+          unmount();
+        }
       }
       catch (SegmentLoadingException e) {
         try {
@@ -852,9 +865,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       catch (Throwable t) {
         unmount();
         throw t;
-      }
-      finally {
-        lock.unlock();
       }
     }
 
@@ -903,29 +913,19 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       if (!isMounted()) {
         return;
       }
-      final Lock lock;
       synchronized (this) {
-        lock = location.getLock().readLock();
-      }
-      lock.lock();
-      try {
-        synchronized (this) {
-          final File[] children = storageDir.listFiles();
-          if (children != null) {
-            for (File child : children) {
-              try (InputStream in = Files.newInputStream(child.toPath())) {
-                IOUtils.copy(in, NullOutputStream.NULL_OUTPUT_STREAM);
-                log.info("Loaded [%s] into page cache.", child.getAbsolutePath());
-              }
-              catch (Exception e) {
-                log.error(e, "Failed to load [%s] into page cache", child.getAbsolutePath());
-              }
+        final File[] children = storageDir.listFiles();
+        if (children != null) {
+          for (File child : children) {
+            try (InputStream in = Files.newInputStream(child.toPath())) {
+              IOUtils.copy(in, NullOutputStream.NULL_OUTPUT_STREAM);
+              log.info("Loaded [%s] into page cache.", child.getAbsolutePath());
+            }
+            catch (Exception e) {
+              log.error(e, "Failed to load [%s] into page cache", child.getAbsolutePath());
             }
           }
         }
-      }
-      finally {
-        lock.unlock();
       }
     }
 

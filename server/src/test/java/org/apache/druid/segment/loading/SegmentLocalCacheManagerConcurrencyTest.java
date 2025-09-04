@@ -195,15 +195,38 @@ class SegmentLocalCacheManagerConcurrencyTest
     final Interval interval = Intervals.of("2019-01-01/P1D");
     makeSegmentsToLoad(8, localStorageFolder, interval, segmentsToLoad);
 
-    final List<Future<?>> futures = segmentsToLoad
+    final List<Future<?>> loadFutures = segmentsToLoad
         .stream()
         .map(segment -> executorService.submit(new Load(manager, segment)))
         .collect(Collectors.toList());
 
-    for (Future<?> future : futures) {
+    for (Future<?> future : loadFutures) {
       future.get();
     }
-    Assertions.assertTrue(true);
+
+    final List<Future<Integer>> acquireFutures = segmentsToLoad
+        .stream()
+        .map(segment -> executorService.submit(new LoadCached(manager, segment, 50, 50)))
+        .collect(Collectors.toList());
+
+
+    int rows = 0;
+    int success = 0;
+    for (Future<Integer> future : acquireFutures) {
+      try {
+        Integer s = future.get();
+        success++;
+        if (s != null) {
+          rows += s;
+        }
+      }
+      catch (Throwable t) {
+        Assertions.fail();
+      }
+    }
+
+    Assertions.assertEquals(8, success);
+    Assertions.assertEquals(8 * 1209, rows);
   }
 
   @Test
