@@ -31,10 +31,8 @@ public class MetadataStorageTablesConfig
 
   public static MetadataStorageTablesConfig fromBase(String base)
   {
-    return new MetadataStorageTablesConfig(base, null, null, null, null, null, null, null, null, null, null, null, null);
+    return new MetadataStorageTablesConfig(base, null, null, null, null, null, null, null, null, null, null, null);
   }
-
-  public static final String TASK_ENTRY_TYPE = "task";
 
   private static final String DEFAULT_BASE = "druid";
 
@@ -62,9 +60,6 @@ public class MetadataStorageTablesConfig
   @JsonProperty("tasks")
   private final String tasksTable;
 
-  @JsonProperty("taskLog")
-  private final String taskLogTable;
-
   @JsonProperty("taskLock")
   private final String taskLockTable;
 
@@ -86,7 +81,6 @@ public class MetadataStorageTablesConfig
       @JsonProperty("rules") String rulesTable,
       @JsonProperty("config") String configTable,
       @JsonProperty("tasks") String tasksTable,
-      @JsonProperty("taskLog") String taskLogTable,
       @JsonProperty("taskLock") String taskLockTable,
       @JsonProperty("audit") String auditTable,
       @JsonProperty("supervisors") String supervisorTable,
@@ -103,7 +97,6 @@ public class MetadataStorageTablesConfig
     this.configTable = makeTableName(configTable, "config");
 
     this.tasksTable = makeTableName(tasksTable, "tasks");
-    this.taskLogTable = makeTableName(taskLogTable, "tasklogs");
     this.taskLockTable = makeTableName(taskLockTable, "tasklocks");
     this.auditTable = makeTableName(auditTable, "audit");
     this.supervisorTable = makeTableName(supervisorTable, "supervisors");
@@ -170,11 +163,6 @@ public class MetadataStorageTablesConfig
   public String getTasksTable()
   {
     return tasksTable;
-  }
-
-  public String getTaskLogTable()
-  {
-    return taskLogTable;
   }
 
   public String getTaskLockTable()

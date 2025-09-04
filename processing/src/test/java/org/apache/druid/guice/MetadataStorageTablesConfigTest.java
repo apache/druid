@@ -72,10 +72,6 @@ public class MetadataStorageTablesConfigTest
         config.getTasksTable()
     );
     Assert.assertEquals(
-        props.getProperty("druid.metadata.storage.tables.taskLog"),
-        config.getTaskLogTable()
-    );
-    Assert.assertEquals(
         props.getProperty("druid.metadata.storage.tables.taskLock"),
         config.getTaskLockTable()
     );
