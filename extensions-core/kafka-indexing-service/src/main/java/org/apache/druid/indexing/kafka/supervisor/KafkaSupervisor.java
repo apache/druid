@@ -141,10 +141,34 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   protected int getTaskGroupIdForPartition(KafkaTopicPartition partitionId)
   {
     Integer taskCount = spec.getIoConfig().getTaskCount();
+    
+    if (spec.usePerpetuallyRunningTasks()) {
+      int taskGroupId = getRangeBasedTaskGroupId(partitionId, taskCount);
+      log.debug("Range-based assignment for partition [%s]: taskGroupId [%d]", partitionId, taskGroupId);
+      return taskGroupId;
+    } else {
+      if (partitionId.isMultiTopicPartition()) {
+        return Math.abs(31 * partitionId.topic().hashCode() + partitionId.partition()) % taskCount;
+      } else {
+        return partitionId.partition() % taskCount;
+      }
+    }
+  }
+
+  /**
+   * Assigns partitions to task groups using range-based sequential assignment.
+   * This ensures that adjacent partitions are assigned to the same task group
+   */
+  private int getRangeBasedTaskGroupId(KafkaTopicPartition partitionId, Integer taskCount)
+  {
+    int totalPartitions = partitionIds.size();
+    int minPartitionsPerTaskGroup = totalPartitions / taskCount;
+
+
     if (partitionId.isMultiTopicPartition()) {
       return Math.abs(31 * partitionId.topic().hashCode() + partitionId.partition()) % taskCount;
     } else {
-      return partitionId.partition() % taskCount;
+      return partitionId.partition() / minPartitionsPerTaskGroup;
     }
   }
 

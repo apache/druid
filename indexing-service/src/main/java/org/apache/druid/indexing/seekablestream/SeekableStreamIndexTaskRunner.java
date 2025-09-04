@@ -251,6 +251,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private volatile DateTime minMessageTime;
   private volatile DateTime maxMessageTime;
   private final ScheduledExecutorService rejectionPeriodUpdaterExec;
+  private volatile boolean isConfigChangeOngoing = false;
 
   public SeekableStreamIndexTaskRunner(
       final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task,
@@ -1600,6 +1601,15 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     return endOffsets;
   }
 
+  @GET
+  @Path("/config")
+  @Produces(MediaType.APPLICATION_JSON)
+  public SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> getIOConfigHTTP(@Context final HttpServletRequest req)
+  {
+    authorizationCheck(req);
+    return ioConfig;
+  }
+
   @POST
   @Path("/offsets/end")
   @Consumes(MediaType.APPLICATION_JSON)
@@ -1725,7 +1735,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     authorizationCheck(req);
     try {
-      requestPause();
+      pause();
+      isConfigChangeOngoing = true;
       checkpointSequences();
 
       @SuppressWarnings("unchecked")
@@ -1738,6 +1749,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       maxMessageTime = Configs.valueOrDefault(ioConfig.getMaximumMessageTime(), DateTimes.MAX);
 
       createNewSequenceFromIoConfig(newIoConfig);
+      isConfigChangeOngoing = false;
       resume();
       return Response.ok().build();
     } catch (Exception e) {
@@ -1834,7 +1846,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                      .build();
     } else {
       try {
-        pauseLock.lockInterruptibly();
+        // Don't acquire a lock if a config change is ongoing, as the runner is already paused.
+        if (!isConfigChangeOngoing)
+        {
+          pauseLock.lockInterruptibly();
+        }
         // Perform all sequence related checks before checking for isPaused()
         // and after acquiring pauseLock to correctly guard against duplicate requests
         Preconditions.checkState(sequenceNumbers.size() > 0, "No sequences found to set end sequences");
@@ -1858,7 +1874,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             || (latestSequence.getEndOffsets().equals(sequenceNumbers) && finish)) {
           log.warn("Ignoring duplicate request, end offsets already set for sequences [%s]", sequenceNumbers);
           resetNextCheckpointTime();
-          resume();
+          if (!isConfigChangeOngoing) {
+            resume();
+          }
           return Response.ok(sequenceNumbers).build();
         } else if (latestSequence.isCheckpointed()) {
           return Response.status(Response.Status.BAD_REQUEST)
@@ -1937,7 +1955,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       }
     }
 
-    resume();
+    if (!isConfigChangeOngoing) {
+      resume();
+    }
 
     return Response.ok(sequenceNumbers).build();
   }
