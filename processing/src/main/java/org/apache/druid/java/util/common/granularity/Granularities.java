@@ -200,8 +200,10 @@ public class Granularities
   @Nullable
   private static Granularity fromExpr(Expr expr)
   {
-    String identifier = expr.getIdentifierIfIdentifier();
+    String identifier = expr.getBindingIfIdentifier();
     if (identifier != null) {
+      // If the grouping is based on __time directly, return None.
+      // Otherwise, grouping based on non-time columns, return ALL.
       return identifier.equals(ColumnHolder.TIME_COLUMN_NAME)
              ? Granularities.NONE
              : Granularities.ALL;
