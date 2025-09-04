@@ -89,12 +89,22 @@ public final class Intervals
 
   /**
    * A performance-optimized method for parsing a Joda-Time {@link Interval} from a string.
-   * This method is significantly faster than the standard {@link Intervals#of(String)} for this
-   * specific, common interval format "YYYY-MM-DD'T'HH:mm:ss.SSSZ/YYYY-MM-DD'T'HH:mm:ss.SSSZ".
+   * This method is significantly faster than the standard {@link Intervals#of(String)} for the following
+   * group of offsets:
+   * <ol>
+   *   <li>"2022-01-01T00:00:00.000Z/2022-01-02T00:00:00.000Z"</li>
+   *   <li>"2022-01-01T00:00:00.000+05:30/2022-01-01T01:00:00.000+05:30"</li>
+   *   <li>"2022-01-01T00:00:00.000+0530/2022-01-01T01:00:00.000+0530"</li>
+   * </ol>
    * <p>
    * If the input string does not match the format, it will fall back to the more flexible but
-   * slower {@link Intervals#of(String)} parser. Checking the format takes some time, so if you are very sure
-   * you are not working with the specified format above, use {@link Intervals#of(String)} instead.
+   * slower {@link Intervals#of(String)} parser. If you are dealing with any Intervals format examples below,
+   * consider using {@link Intervals#of(String)} instead:
+   * <ol>
+   *   <li>"2022-01-01T00:00:00Z/2022-01-02T00:00:00Z" (without millis)</li>
+   *   <li>"2022-01-01/2022-01-02" (Date only)</li>
+   *   <li>"2022-01-01T12:00:00.000Z/PT6H" (Periods in start / end)</li>
+   * </ol>
    */
   public static Interval fromString(String string)
   {
