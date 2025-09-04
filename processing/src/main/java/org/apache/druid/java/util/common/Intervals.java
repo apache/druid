@@ -81,11 +81,13 @@ public final class Intervals
   }
 
   /**
-   * Parses a Joda-Time {@link Interval} from its string representation.
-   *
-   * Tries a fast path for ISO-8601 UTC, slash-delimited intervals (e.g.
-   * "2022-09-16T00:00:00.000Z/2022-09-17T00:00:00.000Z"); otherwise falls back to the
-   * general interval parser. The returned interval uses ISO chronology in UTC.
+   * A performance-optimized method for parsing a Joda-Time {@link Interval} from a string.
+   * This method is significantly faster than the standard {@link Intervals#of(String)} for this
+   * specific, common interval format "YYYY-MM-DD'T'HH:mm:ss.SSSZ/YYYY-MM-DD'T'HH:mm:ss.SSSZ".
+   * <p>
+   * If the input string does not match the format, it will fall back to the more flexible but
+   * slower {@link Intervals#of(String)} parser. Checking the format takes some time, so if you are very sure
+   * you are not working with the specified format above, use {@link Intervals#of(String)} instead.
    */
   public static Interval deserialize(String string)
   {
