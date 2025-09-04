@@ -128,7 +128,7 @@ public class StorageLocation
    * {@link #linkNewWeakEntry(WeakCacheEntry)} or {@link #unlinkWeakEntry(WeakCacheEntry)}, including calling
    * {@link #canHandle(CacheEntry)} which can unlink entries
    */
-  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true);
 
   public StorageLocation(File path, long maxSizeBytes, @Nullable Double freeSpacePercent)
   {
