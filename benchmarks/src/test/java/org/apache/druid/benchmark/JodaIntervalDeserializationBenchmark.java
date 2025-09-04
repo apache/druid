@@ -104,10 +104,10 @@ public class JodaIntervalDeserializationBenchmark
     };
 
     final String[] fallbackSamples = new String[]{
-        "\"2022-01-01T00:00:00.000Z/P1D\"",
         "\"2022-01-01T00:00:00Z/2022-01-02T00:00:00Z\"",
-        "\"2022-01-01T00:00:00Z/P2DT3H4M5S\"",
-        "\"P2DT3H4M5S/2022-01-03T03:04:05Z\""
+        "\"2022-01-01T12:34:56Z/2022-01-02T12:34:56Z\"",
+        "\"2010-06-30T23:59:59Z/2010-07-01T23:59:59Z\"",
+        "\"1999-12-31T00:00:00Z/2000-01-01T00:00:00Z\""
     };
 
     for (int i = 0; i < numValues; i++) {
