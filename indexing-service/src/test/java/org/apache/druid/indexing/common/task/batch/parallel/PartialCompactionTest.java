@@ -228,7 +228,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
         inputDir,
         "test_*",
         partitionsSpec,
-        10,
+        2,
         expectedTaskState,
         appendToExisting,
         false
