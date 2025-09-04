@@ -137,7 +137,7 @@ public class HashJoinSegmentTest extends InitializedNullHandlingTest
     );
 
     closer = Closer.create();
-    baseSegmentRef = closer.register(ReferenceCountedSegmentProvider.wrapRootGenerationSegment(baseSegment));
+    baseSegmentRef = closer.register(ReferenceCountedSegmentProvider.of(baseSegment));
     referencedSegment = () ->
         baseSegmentRef.acquireReference()
                       .map(
@@ -179,7 +179,7 @@ public class HashJoinSegmentTest extends InitializedNullHandlingTest
         preAnalysis,
         SegmentMapFunction.IDENTITY
     );
-    return segmentMapFunction.apply(referencedSegment)
+    return segmentMapFunction.apply(referencedSegment.acquireReference())
                              .map(s -> {
                                final Closer closer = Closer.create();
                                allReferencesAcquireCount++;

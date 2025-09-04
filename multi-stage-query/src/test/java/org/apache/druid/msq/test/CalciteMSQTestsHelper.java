@@ -154,7 +154,8 @@ public class CalciteMSQTestsHelper
       public Supplier<ResourceHolder<CompleteSegment>> fetchSegment(
           SegmentId segmentId,
           ChannelCounters channelCounters,
-          boolean isReindex)
+          boolean isReindex
+      )
       {
         CompleteSegment a = walker.getSegment(segmentId);
         return () -> new ReferenceCountingResourceHolder<>(a, Closer.create());

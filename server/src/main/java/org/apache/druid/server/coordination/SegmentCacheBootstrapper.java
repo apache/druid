@@ -64,7 +64,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * are complete.
  */
 @ManageLifecycle
-public class SegmentBootstrapper
+public class SegmentCacheBootstrapper
 {
   private final SegmentLoadDropHandler loadDropHandler;
   private final SegmentLoaderConfig config;
@@ -80,12 +80,12 @@ public class SegmentBootstrapper
   // Synchronizes start/stop of this object.
   private final Object startStopLock = new Object();
 
-  private static final EmittingLogger log = new EmittingLogger(SegmentBootstrapper.class);
+  private static final EmittingLogger log = new EmittingLogger(SegmentCacheBootstrapper.class);
 
   private final DataSourceTaskIdHolder datasourceHolder;
 
   @Inject
-  public SegmentBootstrapper(
+  public SegmentCacheBootstrapper(
       SegmentLoadDropHandler loadDropHandler,
       SegmentLoaderConfig config,
       DataSegmentAnnouncer segmentAnnouncer,
@@ -148,6 +148,7 @@ public class SegmentBootstrapper
         if (shouldAnnounce()) {
           serverAnnouncer.unannounce();
         }
+        segmentManager.shutdown();
       }
       catch (Exception e) {
         throw new RuntimeException(e);
@@ -179,12 +180,14 @@ public class SegmentBootstrapper
 
     // Start a temporary thread pool to load segments into page cache during bootstrap
     final ExecutorService bootstrapExecutor = Execs.multiThreaded(
-        config.getNumBootstrapThreads(), "Segment-Bootstrap-%s"
+        config.getNumBootstrapThreads(),
+        "Segment-Bootstrap-%s"
     );
 
     // Start a temporary scheduled executor for background segment announcing
     final ScheduledExecutorService backgroundAnnouncerExecutor = Executors.newScheduledThreadPool(
-        config.getNumLoadingThreads(), Execs.makeThreadFactory("Background-Segment-Announcer-%s")
+        config.getNumLoadingThreads(),
+        Execs.makeThreadFactory("Background-Segment-Announcer-%s")
     );
 
     try (final BackgroundSegmentAnnouncer backgroundSegmentAnnouncer =
