@@ -33,6 +33,7 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.scan.ScanResultValue;
@@ -96,15 +97,15 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{LockGranularity.TIME_CHUNK, false, 2, INTERVAL_TO_INDEX, 2},
-        new Object[]{LockGranularity.TIME_CHUNK, true, 2, INTERVAL_TO_INDEX, 2},
-        new Object[]{LockGranularity.TIME_CHUNK, true, 2, null, 2},
+        new Object[]{LockGranularity.TIME_CHUNK, false, 10, INTERVAL_TO_INDEX, 2},
+        new Object[]{LockGranularity.TIME_CHUNK, true, 10, INTERVAL_TO_INDEX, 2},
+        new Object[]{LockGranularity.TIME_CHUNK, true, 10, null, 2},
         new Object[]{LockGranularity.TIME_CHUNK, true, 1, INTERVAL_TO_INDEX, 2},
-        new Object[]{LockGranularity.SEGMENT, true, 2, INTERVAL_TO_INDEX, 2},
-        new Object[]{LockGranularity.TIME_CHUNK, true, 2, INTERVAL_TO_INDEX, null},
-        new Object[]{LockGranularity.TIME_CHUNK, true, 2, null, null},
+        new Object[]{LockGranularity.SEGMENT, true, 10, INTERVAL_TO_INDEX, 2},
+        new Object[]{LockGranularity.TIME_CHUNK, true, 10, INTERVAL_TO_INDEX, null},
+        new Object[]{LockGranularity.TIME_CHUNK, true, 10, null, null},
         new Object[]{LockGranularity.TIME_CHUNK, true, 1, INTERVAL_TO_INDEX, null},
-        new Object[]{LockGranularity.SEGMENT, true, 2, INTERVAL_TO_INDEX, null}
+        new Object[]{LockGranularity.SEGMENT, true, 10, INTERVAL_TO_INDEX, null}
     );
   }
 
@@ -135,6 +136,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
   @Before
   public void setup() throws IOException
   {
+    final Stopwatch stopwatch = Stopwatch.createStarted();
     inputDir = temporaryFolder.newFolder("data");
     final Set<Interval> intervals = new HashSet<>();
     // set up data
@@ -274,6 +276,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
   @Test
   public void testAppendLinearlyPartitionedSegmensToHashPartitionedDatasourceSuccessfullyAppend()
   {
+    final Stopwatch stopwatch = Stopwatch.createStarted();
     final Set<DataSegment> publishedSegments = new HashSet<>();
     publishedSegments.addAll(
         runTask(

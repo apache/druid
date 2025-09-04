@@ -131,6 +131,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   private SegmentCacheManagerFactory segmentCacheManagerFactory;
   private TaskStorage taskStorage;
   private IndexerSQLMetadataStorageCoordinator storageCoordinator;
+  private TaskActionToolbox taskActionToolbox;
   private SegmentsMetadataManager segmentsMetadataManager;
   private GlobalTaskLockbox lockbox;
   private File baseDir;
@@ -194,6 +195,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, getObjectMapper());
     reportsFile = temporaryFolder.newFile();
     dataSegmentKiller = new TestDataSegmentKiller();
+    taskActionToolbox = createTaskActionToolbox();
 
     segmentMetadataCache.start();
     segmentMetadataCache.becomeLeader();
@@ -278,7 +280,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     return dataSegmentKiller;
   }
 
-  public TaskActionToolbox createTaskActionToolbox()
+  private TaskActionToolbox createTaskActionToolbox()
   {
     storageCoordinator.start();
     return new TaskActionToolbox(
@@ -289,6 +291,11 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         supervisorManager,
         objectMapper
     );
+  }
+
+  public TaskActionToolbox getTaskActionToolbox()
+  {
+    return taskActionToolbox;
   }
 
   public TaskToolbox createTaskToolbox(TaskConfig config, Task task, SupervisorManager supervisorManager)
@@ -417,7 +424,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
 
     private TestLocalTaskActionClient(Task task)
     {
-      super(task, taskStorage, createTaskActionToolbox());
+      super(task, taskStorage, getTaskActionToolbox());
     }
 
     @Override
