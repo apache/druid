@@ -2905,7 +2905,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           tuningConfig,
           ioConfig,
           context,
-          groupId
+          groupId,
+          null
       );
       this.streamingTaskRunner = streamingTaskRunner;
     }

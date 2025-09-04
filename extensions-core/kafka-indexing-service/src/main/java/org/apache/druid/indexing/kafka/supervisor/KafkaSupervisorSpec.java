@@ -61,6 +61,7 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
       @JsonProperty("ioConfig") @Nullable KafkaSupervisorIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
       @JsonProperty("suspended") Boolean suspended,
+      @JsonProperty("usePerpetuallyRunningTasks") @Nullable Boolean usePerpetuallyRunningTasks,
       @JacksonInject TaskStorage taskStorage,
       @JacksonInject TaskMaster taskMaster,
       @JacksonInject IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
@@ -93,7 +94,8 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
         emitter,
         monitorSchedulerConfig,
         rowIngestionMetersFactory,
-        supervisorStateManagerConfig
+        supervisorStateManagerConfig,
+        usePerpetuallyRunningTasks
     );
   }
 
@@ -165,6 +167,7 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
         getIoConfig(),
         getContext(),
         suspend,
+        usePerpetuallyRunningTasks(),
         taskStorage,
         taskMaster,
         indexerMetadataStorageCoordinator,

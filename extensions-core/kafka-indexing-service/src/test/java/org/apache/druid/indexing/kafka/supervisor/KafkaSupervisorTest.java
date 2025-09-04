@@ -5732,6 +5732,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             Duration.standardHours(2).getStandardMinutes()
         ),
         Collections.emptyMap(),
+        null,
         OBJECT_MAPPER
     );
   }

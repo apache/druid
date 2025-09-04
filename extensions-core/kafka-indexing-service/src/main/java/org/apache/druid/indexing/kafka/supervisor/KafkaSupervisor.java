@@ -252,6 +252,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
           (KafkaIndexTaskTuningConfig) taskTuningConfig,
           (KafkaIndexTaskIOConfig) taskIoConfig,
           context,
+          spec.usePerpetuallyRunningTasks(),
           sortingMapper
       ));
     }
