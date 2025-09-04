@@ -57,6 +57,16 @@ public final class Intervals
     return of(StringUtils.format(format, formatArgs));
   }
 
+  private static boolean canDeserializeIntervalOptimallyFromString(String intervalText)
+  {
+    if (intervalText.contains("P")) {
+      return false;
+    }
+
+    final int slashIndex = intervalText.indexOf('/');
+    return (slashIndex > 0 && slashIndex < intervalText.length() - 1);
+  }
+
   /**
    * @return null if the input format cannot be parsed with optimized strategy, else return the Interval.
    */
@@ -64,14 +74,11 @@ public final class Intervals
   private static Interval tryOptimizedIntervalDeserialization(final String intervalText)
   {
     final int slashIndex = intervalText.indexOf('/');
-    if (slashIndex <= 0 || slashIndex >= intervalText.length() - 1) {
-      return null;
-    }
-    try {
-      final String startStr = intervalText.substring(0, slashIndex);
-      final long startMillis = FAST_ISO_UTC_FORMATTER.parseMillis(startStr);
+    final String startStr = intervalText.substring(0, slashIndex);
+    final String endStr = intervalText.substring(slashIndex + 1);
 
-      final String endStr = intervalText.substring(slashIndex + 1);
+    try {
+      final long startMillis = FAST_ISO_UTC_FORMATTER.parseMillis(startStr);
       final long endMillis = FAST_ISO_UTC_FORMATTER.parseMillis(endStr);
       return Intervals.utc(startMillis, endMillis);
     }
@@ -91,7 +98,11 @@ public final class Intervals
    */
   public static Interval fromString(String string)
   {
-    final Interval interval = tryOptimizedIntervalDeserialization(string);
+    Interval interval = null;
+    if (canDeserializeIntervalOptimallyFromString(string)) {
+      interval = tryOptimizedIntervalDeserialization(string);
+    }
+
     if (interval == null) {
       return Intervals.of(string);
     } else {

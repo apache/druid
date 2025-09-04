@@ -148,5 +148,3 @@ public class JodaIntervalDeserializationBenchmark
     }
   }
 }
-
-
