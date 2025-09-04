@@ -23,14 +23,18 @@ import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestcontainerResource;
-import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.redpanda.RedpandaContainer;
 
 /**
  * A resource for managing a Schema Registry instance in embedded tests.
+ * <p>
+ * Uses Redpanda testcontainers under the hood which offers built in schema registry support that is confluent
+ * compatible while having a much smaller image size than the official confluent schema registry image.
  */
-public class KafkaSchemaRegistryResource extends TestcontainerResource<GenericContainer<?>>
+public class KafkaSchemaRegistryResource extends TestcontainerResource<RedpandaContainer>
 {
-  private static final String SCHEMA_REGISTRY_IMAGE = "confluentinc/cp-schema-registry:latest";
+  private static final String SCHEMA_REGISTRY_IMAGE = "docker.redpanda.com/redpandadata/redpanda:v25.2.2";
+  private static final int SCHEMA_REGISTRY_PORT = 8081;
 
   private final KafkaResource kafkaResource;
   private String connectURI;
@@ -43,14 +47,10 @@ public class KafkaSchemaRegistryResource extends TestcontainerResource<GenericCo
   }
 
   @Override
-  protected GenericContainer<?> createContainer()
+  protected RedpandaContainer createContainer()
   {
-    return new GenericContainer<>(SCHEMA_REGISTRY_IMAGE)
-        .dependsOn(kafkaResource.getContainer())
-        .withExposedPorts(9081)
-        .withEnv("SCHEMA_REGISTRY_HOST_NAME", "schema-registry")
-        .withEnv("SCHEMA_REGISTRY_LISTENERS", "http://0.0.0.0:9081")
-        .withEnv("SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS", kafkaResource.getBootstrapServerUrl());
+    return new RedpandaContainer(SCHEMA_REGISTRY_IMAGE)
+        .dependsOn(kafkaResource.getContainer());
   }
 
   @Override
@@ -66,7 +66,7 @@ public class KafkaSchemaRegistryResource extends TestcontainerResource<GenericCo
     return StringUtils.format(
         "%s:%d",
         embeddedHostname,
-        getContainer().getMappedPort(9081)
+        getContainer().getMappedPort(SCHEMA_REGISTRY_PORT)
     );
   }
 
@@ -82,7 +82,7 @@ public class KafkaSchemaRegistryResource extends TestcontainerResource<GenericCo
     return StringUtils.format(
         "http://%s:%d",
         cluster.getEmbeddedHostname(),
-        getContainer().getMappedPort(9081)
+        getContainer().getMappedPort(SCHEMA_REGISTRY_PORT)
     );
   }
 }

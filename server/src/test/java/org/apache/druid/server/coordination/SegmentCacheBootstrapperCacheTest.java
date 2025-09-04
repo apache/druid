@@ -28,7 +28,6 @@ import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.TestSegmentUtils;
-import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -51,15 +50,18 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Similar to {@link SegmentBootstrapperTest}. This class includes tests that cover the
+ * Similar to {@link SegmentCacheBootstrapperTest}. This class includes tests that cover the
  * storage location layer as well.
  */
-public class SegmentBootstrapperCacheTest
+public class SegmentCacheBootstrapperCacheTest
 {
   private static final long MAX_SIZE = 1000L;
   private static final long SEGMENT_SIZE = 100L;
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  private File infoDir;
+  private File cacheDir;
   private TestDataSegmentAnnouncer segmentAnnouncer;
   private TestDataServerAnnouncer serverAnnouncer;
   private SegmentManager segmentManager;
@@ -70,21 +72,23 @@ public class SegmentBootstrapperCacheTest
   private ObjectMapper objectMapper;
 
   @Before
-  public void setup()
+  public void setup() throws IOException
   {
+    infoDir = temporaryFolder.newFolder();
+    cacheDir = temporaryFolder.newFolder();
     loaderConfig = new SegmentLoaderConfig()
     {
       @Override
       public File getInfoDir()
       {
-        return temporaryFolder.getRoot();
+        return infoDir;
       }
 
       @Override
       public List<StorageLocationConfig> getLocations()
       {
         return Collections.singletonList(
-            new StorageLocationConfig(temporaryFolder.getRoot(), MAX_SIZE, null)
+            new StorageLocationConfig(cacheDir, MAX_SIZE, null)
         );
       }
     };
@@ -130,7 +134,7 @@ public class SegmentBootstrapperCacheTest
         segmentManager
     );
 
-    final SegmentBootstrapper bootstrapper = new SegmentBootstrapper(
+    final SegmentCacheBootstrapper bootstrapper = new SegmentCacheBootstrapper(
         loadDropHandler,
         loaderConfig,
         segmentAnnouncer,
@@ -158,7 +162,7 @@ public class SegmentBootstrapperCacheTest
         segmentManager
     );
 
-    final SegmentBootstrapper bootstrapper = new SegmentBootstrapper(
+    final SegmentCacheBootstrapper bootstrapper = new SegmentCacheBootstrapper(
         loadDropHandler,
         loaderConfig,
         segmentAnnouncer,
@@ -187,8 +191,7 @@ public class SegmentBootstrapperCacheTest
       String version = "segment-" + i;
       DataSegment segment = TestSegmentUtils.makeSegment("test", version, SEGMENT_SIZE);
       cacheManager.storeInfoFile(segment);
-      String storageDir = DataSegmentPusher.getDefaultStorageDir(segment, false);
-      File segmentDir = new File(temporaryFolder.getRoot(), storageDir);
+      File segmentDir = new File(cacheDir, segment.getId().toString());
       new TestSegmentUtils.TestLoadSpec((int) SEGMENT_SIZE, version).loadSegment(segmentDir);
       expectedSegments.add(segment);
     }
@@ -199,7 +202,7 @@ public class SegmentBootstrapperCacheTest
         segmentManager
     );
 
-    final SegmentBootstrapper bootstrapper = new SegmentBootstrapper(
+    final SegmentCacheBootstrapper bootstrapper = new SegmentCacheBootstrapper(
         loadDropHandler,
         loaderConfig,
         segmentAnnouncer,

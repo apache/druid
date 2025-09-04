@@ -232,7 +232,7 @@ public class BaseHashJoinSegmentCursorFactoryTest extends InitializedNullHandlin
   protected HashJoinSegment makeFactToCountrySegment(JoinType joinType)
   {
     return new HashJoinSegment(
-        ReferenceCountedSegmentProvider.wrapRootGenerationSegment(factSegment).acquireReference().orElseThrow(),
+        ReferenceCountedSegmentProvider.unmanaged(factSegment).orElseThrow(),
         null,
         ImmutableList.of(factToCountryOnIsoCode(joinType)),
         null,

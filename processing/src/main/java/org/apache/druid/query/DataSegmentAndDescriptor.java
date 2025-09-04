@@ -17,15 +17,32 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.query;
+package org.apache.druid.query;
 
-import org.apache.druid.testsEx.categories.Query;
-import org.apache.druid.testsEx.config.DruidTestRunner;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
+import org.apache.druid.timeline.DataSegment;
 
-@RunWith(DruidTestRunner.class)
-@Category(Query.class)
-public class ITUnionQueryTest extends UnionQueryTest
+import javax.annotation.Nullable;
+
+public class DataSegmentAndDescriptor
 {
+  @Nullable
+  private final DataSegment dataSegment;
+  private final SegmentDescriptor descriptor;
+
+  public DataSegmentAndDescriptor(@Nullable DataSegment dataSegment, SegmentDescriptor descriptor)
+  {
+    this.dataSegment = dataSegment;
+    this.descriptor = descriptor;
+  }
+
+  @Nullable
+  public DataSegment getDataSegment()
+  {
+    return dataSegment;
+  }
+
+  public SegmentDescriptor getDescriptor()
+  {
+    return descriptor;
+  }
 }

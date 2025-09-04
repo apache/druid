@@ -152,7 +152,7 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
   /**
    * Adds a {@link BeforeStart} to run as part of {@link #beforeStart(EmbeddedDruidCluster)}
    */
-  @SuppressWarnings({"UnusedReturnValue", "unchecked"})
+  @SuppressWarnings({"unchecked"})
   public final T addBeforeStartHook(BeforeStart hook)
   {
     beforeStartHooks.add(hook);
