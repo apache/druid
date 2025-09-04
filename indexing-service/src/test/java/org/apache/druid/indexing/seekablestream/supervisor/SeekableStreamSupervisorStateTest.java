@@ -2634,6 +2634,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null,
         true,
         null,
+        null,
         null
     );
     SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(1, autoScalerConfig);
@@ -2687,6 +2688,57 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
 
     replayAll();
+  }
+
+  @Test
+  public void testMaxAllowedStopsWithStopTaskCountPercent()
+  {
+    LagAggregator lagAggregator = createMock(LagAggregator.class);
+    AutoScalerConfig autoScalerConfig = new LagBasedAutoScalerConfig(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        45,
+        null,
+        5,
+        null,
+        null,
+        true,
+        null,
+        null,
+        0.4
+    );
+    SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
+        "stream",
+        null,
+        1,
+        99,
+        new Period("PT1H"),
+        new Period("PT1S"),
+        new Period("PT30S"),
+        false,
+        new Period("PT30M"),
+        null,
+        null,
+        autoScalerConfig,
+        lagAggregator,
+        null,
+        null,
+        1 // ensure this is overridden
+    )
+    {
+    };
+
+    Assert.assertEquals(2, config.getMaxAllowedStops());
+
+    config.setTaskCount(30);
+
+    Assert.assertEquals(12, config.getMaxAllowedStops());
   }
 
   private static DataSchema getDataSchema()

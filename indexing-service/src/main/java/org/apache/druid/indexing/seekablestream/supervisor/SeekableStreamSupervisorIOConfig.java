@@ -53,6 +53,7 @@ public abstract class SeekableStreamSupervisorIOConfig
   @Nullable private final Integer stopTaskCount;
 
   private final LagAggregator lagAggregator;
+  private final boolean autoScalerEnabled;
 
   public SeekableStreamSupervisorIOConfig(
       String stream,
@@ -84,8 +85,9 @@ public abstract class SeekableStreamSupervisorIOConfig
     this.lagAggregator = lagAggregator;
     // Could be null
     this.autoScalerConfig = autoScalerConfig;
-    // if autoscaler is enable then taskcount will be ignored here. and init taskcount will be equal to taskCountMin
-    if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler()) {
+    this.autoScalerEnabled = autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler();
+    // if autoscaler is enabled then taskcount will be ignored here. and init taskcount will be equal to taskCountMin
+    if (autoScalerEnabled) {
       final Integer startTaskCount = autoScalerConfig.getTaskCountStart();
       this.taskCount = startTaskCount != null ? startTaskCount : autoScalerConfig.getTaskCountMin();
     } else {
@@ -231,6 +233,9 @@ public abstract class SeekableStreamSupervisorIOConfig
 
   public int getMaxAllowedStops()
   {
+    if (autoScalerEnabled && autoScalerConfig.getStopTaskCountPercent() != null) {
+      return (int) Math.floor(taskCount * autoScalerConfig.getStopTaskCountPercent());
+    }
     return stopTaskCount == null ? taskCount : stopTaskCount;
   }
 }

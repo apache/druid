@@ -49,6 +49,7 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
   private final boolean enableTaskAutoScaler;
   private final long minTriggerScaleActionFrequencyMillis;
   private final AggregateFunction lagAggregate;
+  @Nullable private Double stopTaskCountPercent;
 
   @JsonCreator
   public LagBasedAutoScalerConfig(
@@ -67,7 +68,8 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
           @Nullable @JsonProperty("scaleOutStep") Integer scaleOutStep,
           @Nullable @JsonProperty("enableTaskAutoScaler") Boolean enableTaskAutoScaler,
           @Nullable @JsonProperty("minTriggerScaleActionFrequencyMillis") Long minTriggerScaleActionFrequencyMillis,
-          @Nullable @JsonProperty("lagAggregate") AggregateFunction lagAggregate
+          @Nullable @JsonProperty("lagAggregate") AggregateFunction lagAggregate,
+          @Nullable @JsonProperty("stopTaskCountPercent") Double stopTaskCountPercent
   )
   {
     this.enableTaskAutoScaler = enableTaskAutoScaler != null ? enableTaskAutoScaler : false;
@@ -100,6 +102,7 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
     this.scaleOutStep = scaleOutStep != null ? scaleOutStep : 2;
     this.minTriggerScaleActionFrequencyMillis = minTriggerScaleActionFrequencyMillis
         != null ? minTriggerScaleActionFrequencyMillis : 600000;
+    this.stopTaskCountPercent = stopTaskCountPercent;
   }
 
   @JsonProperty
@@ -213,6 +216,15 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
   }
 
   @Override
+  @JsonProperty
+  @Nullable
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Double getStopTaskCountPercent()
+  {
+    return stopTaskCountPercent;
+  }
+
+  @Override
   public String toString()
   {
     return "autoScalerConfig{" +
@@ -232,6 +244,7 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
             ", scaleInStep=" + scaleInStep +
             ", scaleOutStep=" + scaleOutStep +
             ", lagAggregate=" + lagAggregate +
+            ", stopTaskCountPercent=" + stopTaskCountPercent +
             '}';
   }
 }
