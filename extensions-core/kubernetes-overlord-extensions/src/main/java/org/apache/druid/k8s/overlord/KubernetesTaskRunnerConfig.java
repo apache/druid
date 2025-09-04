@@ -106,6 +106,11 @@ public class KubernetesTaskRunnerConfig
   private Period k8sjobLaunchTimeout = new Period("PT1H");
 
   @JsonProperty
+  @NotNull
+  // how long to wait for log saving operations to complete
+  private Period logSaveTimeout = new Period("PT300S");
+
+  @JsonProperty
   // ForkingTaskRunner inherits the monitors from the MM, in k8s mode
   // the peon inherits the monitors from the overlord, so if someone specifies
   // a TaskCountStatsMonitor in the overlord for example, the peon process
@@ -152,6 +157,7 @@ public class KubernetesTaskRunnerConfig
       Period taskCleanupDelay,
       Period taskCleanupInterval,
       Period k8sjobLaunchTimeout,
+      Period logSaveTimeout,
       List<String> peonMonitors,
       List<String> javaOptsArray,
       int cpuCoreInMicro,
@@ -207,6 +213,10 @@ public class KubernetesTaskRunnerConfig
     this.taskJoinTimeout = ObjectUtils.defaultIfNull(
         taskJoinTimeout,
         this.taskJoinTimeout
+    );
+    this.logSaveTimeout = ObjectUtils.defaultIfNull(
+        logSaveTimeout,
+        this.logSaveTimeout
     );
     this.peonMonitors = ObjectUtils.defaultIfNull(
         peonMonitors,
@@ -306,6 +316,11 @@ public class KubernetesTaskRunnerConfig
     return k8sjobLaunchTimeout;
   }
 
+  public Period getLogSaveTimeout()
+  {
+    return logSaveTimeout;
+  }
+
   public List<String> getPeonMonitors()
   {
     return peonMonitors;
@@ -363,6 +378,7 @@ public class KubernetesTaskRunnerConfig
     private Map<String, String> annotations;
     private Integer capacity;
     private Period taskJoinTimeout;
+    private Period logSaveTimeout;
 
     public Builder()
     {
@@ -489,6 +505,12 @@ public class KubernetesTaskRunnerConfig
       return this;
     }
 
+    public Builder withLogSaveTimeout(Period logSaveTimeout)
+    {
+      this.logSaveTimeout = logSaveTimeout;
+      return this;
+    }
+
     public KubernetesTaskRunnerConfig build()
     {
       return new KubernetesTaskRunnerConfig(
@@ -505,6 +527,7 @@ public class KubernetesTaskRunnerConfig
           this.taskCleanupDelay,
           this.taskCleanupInterval,
           this.k8sjobLaunchTimeout,
+          this.logSaveTimeout,
           this.peonMonitors,
           this.javaOptsArray,
           this.cpuCoreInMicro,

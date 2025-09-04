@@ -47,7 +47,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -64,7 +64,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * are complete.
  */
 @ManageLifecycle
-public class SegmentBootstrapper
+public class SegmentCacheBootstrapper
 {
   private final SegmentLoadDropHandler loadDropHandler;
   private final SegmentLoaderConfig config;
@@ -80,12 +80,12 @@ public class SegmentBootstrapper
   // Synchronizes start/stop of this object.
   private final Object startStopLock = new Object();
 
-  private static final EmittingLogger log = new EmittingLogger(SegmentBootstrapper.class);
+  private static final EmittingLogger log = new EmittingLogger(SegmentCacheBootstrapper.class);
 
   private final DataSourceTaskIdHolder datasourceHolder;
 
   @Inject
-  public SegmentBootstrapper(
+  public SegmentCacheBootstrapper(
       SegmentLoadDropHandler loadDropHandler,
       SegmentLoaderConfig config,
       DataSegmentAnnouncer segmentAnnouncer,
@@ -148,6 +148,7 @@ public class SegmentBootstrapper
         if (shouldAnnounce()) {
           serverAnnouncer.unannounce();
         }
+        segmentManager.shutdown();
       }
       catch (Exception e) {
         throw new RuntimeException(e);
@@ -179,12 +180,14 @@ public class SegmentBootstrapper
 
     // Start a temporary thread pool to load segments into page cache during bootstrap
     final ExecutorService bootstrapExecutor = Execs.multiThreaded(
-        config.getNumBootstrapThreads(), "Segment-Bootstrap-%s"
+        config.getNumBootstrapThreads(),
+        "Segment-Bootstrap-%s"
     );
 
     // Start a temporary scheduled executor for background segment announcing
     final ScheduledExecutorService backgroundAnnouncerExecutor = Executors.newScheduledThreadPool(
-        config.getNumLoadingThreads(), Execs.makeThreadFactory("Background-Segment-Announcer-%s")
+        config.getNumLoadingThreads(),
+        Execs.makeThreadFactory("Background-Segment-Announcer-%s")
     );
 
     try (final BackgroundSegmentAnnouncer backgroundSegmentAnnouncer =
@@ -195,7 +198,7 @@ public class SegmentBootstrapper
       final int numSegments = segmentsOnStartup.size();
       final CountDownLatch latch = new CountDownLatch(numSegments);
       final AtomicInteger counter = new AtomicInteger(0);
-      final CopyOnWriteArrayList<DataSegment> failedSegments = new CopyOnWriteArrayList<>();
+      final ConcurrentLinkedQueue<DataSegment> failedSegments = new ConcurrentLinkedQueue<>();
       for (final DataSegment segment : segmentsOnStartup) {
         bootstrapExecutor.submit(
             () -> {
@@ -236,7 +239,7 @@ public class SegmentBootstrapper
       try {
         latch.await();
 
-        if (failedSegments.size() > 0) {
+        if (!failedSegments.isEmpty()) {
           log.makeAlert("[%,d] errors seen while loading segments on startup", failedSegments.size())
              .addData("failedSegments", failedSegments)
              .emit();

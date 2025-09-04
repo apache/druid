@@ -84,6 +84,17 @@ public class EmbeddedMSQApis
    */
   public SqlTaskStatus submitTaskSql(String sql, Object... args)
   {
+    return submitTaskSql(null, sql, args);
+  }
+
+  /**
+   * Submits the given SQL query to any of the brokers (using {@code BrokerClient})
+   * of the cluster, checks that the task has started and returns the {@link SqlTaskStatus}.
+   *
+   * @return The result of the SQL as a single CSV string.
+   */
+  public SqlTaskStatus submitTaskSql(Map<String, Object> queryContext, String sql, Object... args)
+  {
     final SqlTaskStatus taskStatus =
         cluster.callApi().onAnyBroker(
             b -> b.submitSqlTask(
@@ -93,7 +104,7 @@ public class EmbeddedMSQApis
                     false,
                     false,
                     false,
-                    null,
+                    queryContext,
                     null
                 )
             )

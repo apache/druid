@@ -17,15 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.DruidExactCountBitmap;
+package org.apache.druid.segment.loading;
 
-import org.apache.druid.testsEx.categories.DruidExactCountBitmap;
-import org.apache.druid.testsEx.config.DruidTestRunner;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
+import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 
-@RunWith(DruidTestRunner.class)
-@Category(DruidExactCountBitmap.class)
-public class ITDruidExactCountBitmapTest extends DruidExactCountBitmapTest
+/**
+ * Common interface to specify a unique identifier of a {@link CacheEntry} for a {@link StorageLocation}
+ */
+@SubclassesMustOverrideEqualsAndHashCode
+public interface CacheEntryIdentifier
 {
 }
