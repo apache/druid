@@ -747,4 +747,9 @@ public class QueryContext
   {
     return getBoolean(QueryContexts.CTX_PREPLANNED, QueryContexts.DEFAULT_PREPLANNED);
   }
+
+  public boolean isRealtimeSegmentsOnly()
+  {
+    return getBoolean(QueryContexts.REALTIME_SEGMENTS_ONLY, QueryContexts.DEFAULT_REALTIME_SEGMENTS_ONLY);
+  }
 }

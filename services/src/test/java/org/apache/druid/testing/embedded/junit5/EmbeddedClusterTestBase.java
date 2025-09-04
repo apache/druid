@@ -76,8 +76,11 @@ public abstract class EmbeddedClusterTestBase
     }
   }
 
+  /**
+   * Assigns a new value to the {@link #dataSource} before each test.
+   */
   @BeforeEach
-  protected void beforeEachTest()
+  protected void refreshDatasourceName()
   {
     dataSource = EmbeddedClusterApis.createTestDatasourceName();
   }

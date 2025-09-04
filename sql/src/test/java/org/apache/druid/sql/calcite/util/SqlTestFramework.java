@@ -1046,15 +1046,18 @@ public class SqlTestFramework
     @Provides
     @LazySingleton
     public SpecificSegmentsQuerySegmentWalker specificSegmentsQuerySegmentWalker(
-        @Named("empty") SpecificSegmentsQuerySegmentWalker walker, Builder builder,
-        List<TestDataSet> testDataSets)
+        @Named("empty") SpecificSegmentsQuerySegmentWalker walker,
+        Builder builder,
+        List<TestDataSet> testDataSets,
+        ObjectMapper jsonMapper
+    )
     {
       builder.resourceCloser.register(walker);
       if (testDataSets.isEmpty()) {
         builder.componentSupplier.addSegmentsToWalker(walker);
       } else {
         for (TestDataSet testDataSet : testDataSets) {
-          walker.add(testDataSet, builder.componentSupplier.getTempDirProducer().newTempFolder());
+          walker.add(testDataSet, jsonMapper, builder.componentSupplier.getTempDirProducer().newTempFolder());
         }
       }
 
@@ -1123,6 +1126,7 @@ public class SqlTestFramework
     {
       return new SpecificSegmentsQuerySegmentWalker(
           testSegmentsBroker.timelines,
+          testSegmentsBroker.referenceProviders,
           clientQuerySegmentWalker
       );
     }

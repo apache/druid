@@ -495,10 +495,9 @@ public class TaskLockbox
     final boolean isTimeChunkLock = lockGranularity == LockGranularity.TIME_CHUNK;
 
     final AllocationHolderList holderList = new AllocationHolderList(requests, interval);
-    holderList.getPending().forEach(this::verifyTaskIsActive);
-
     giant.lock();
     try {
+      holderList.getPending().forEach(this::verifyTaskIsActive);
       if (isTimeChunkLock) {
         // For time-chunk locking, segment must be allocated only after acquiring the lock
         holderList.getPending().forEach(holder -> acquireTaskLock(holder, true));
@@ -525,6 +524,7 @@ public class TaskLockbox
   /**
    * Marks the segment allocation as failed if the underlying task is not active.
    */
+  @GuardedBy("giant")
   private void verifyTaskIsActive(SegmentAllocationHolder holder)
   {
     final String taskId = holder.task.getId();
@@ -567,6 +567,10 @@ public class TaskLockbox
     giant.lock();
 
     try {
+      if (!activeTasks.contains(task.getId())) {
+        throw new ISE("Unable to grant LockPosse to inactive Task [%s]", task.getId());
+      }
+
       final TaskLockPosse posseToUse;
       final List<TaskLockPosse> foundPosses = findLockPossesOverlapsInterval(
           request.getInterval()
@@ -1386,7 +1390,13 @@ public class TaskLockbox
   @VisibleForTesting
   Set<String> getActiveTasks()
   {
-    return activeTasks;
+    giant.lock();
+    try {
+      return activeTasks;
+    }
+    finally {
+      giant.unlock();
+    }
   }
 
   @VisibleForTesting

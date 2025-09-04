@@ -20,9 +20,8 @@
 package org.apache.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.databind.InjectableValues;
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
@@ -35,7 +34,6 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfi
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -43,7 +41,6 @@ import org.apache.druid.metadata.TestSupervisorSpec;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
-import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
@@ -74,7 +71,7 @@ public class KafkaSupervisorSpecTest
             .addValue(SupervisorStateManagerConfig.class, null)
             .addValue(ExprMacroTable.class.getName(), LookupEnabledTestExprMacroTable.INSTANCE)
     );
-    mapper.registerModules((Iterable<Module>) new KafkaIndexTaskModule().getJacksonModules());
+    mapper.registerModules(new KafkaIndexTaskModule().getJacksonModules());
   }
 
   @Test
@@ -676,95 +673,39 @@ public class KafkaSupervisorSpecTest
     );
 
     // Test valid spec update. This spec changes context vs the sourceSpec
-    KafkaSupervisorSpec validDestSpec = new KafkaSupervisorSpec(
-        null,
-        null,
-        DataSchema.builder().withDataSource("testDs").withAggregators(new CountAggregatorFactory("rows")).withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null)).build(),
-        null,
-        new KafkaSupervisorIOConfig(
-            "metrics",
-            null,
-            new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
-            null,
-            null,
-            null,
-            Map.of("bootstrap.servers", "localhost:9092"),
-            null,
-            null,
-            null,
-            null,
-            null,
-            true,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false
-        ),
-        Map.of(
-            "key1",
-            "value1",
-            "key2",
-            "value2"
-        ),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    KafkaSupervisorSpec validDestSpec = new KafkaSupervisorSpecBuilder()
+        .withDataSchema(
+            schema -> schema
+                .withTimestamp(new TimestampSpec(null, null, null))
+                .withAggregators(new CountAggregatorFactory("rows"))
+                .withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null))
+        )
+        .withIoConfig(
+            ioConfig -> ioConfig
+                .withJsonInputFormat()
+                .withConsumerProperties(Map.of("bootstrap.servers", "localhost:9092"))
+        )
+        .build("testDs", "metrics");
     sourceSpec.validateSpecUpdateTo(validDestSpec);
   }
 
   private KafkaSupervisorSpec getSpec(String topic, String topicPattern)
   {
-    return new KafkaSupervisorSpec(
-      null,
-      null,
-      DataSchema.builder().withDataSource("testDs").withAggregators(new CountAggregatorFactory("rows")).withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null)).build(),
-      null,
-      new KafkaSupervisorIOConfig(
-          topic,
-          topicPattern,
-          new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
-          null,
-          null,
-          null,
-          Map.of("bootstrap.servers", "localhost:9092"),
-          null,
-          null,
-          null,
-          null,
-          null,
-          true,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          false
-      ),
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
-  );
+    KafkaSupervisorSpecBuilder builder = new KafkaSupervisorSpecBuilder()
+        .withDataSchema(
+            schema -> schema
+                .withTimestamp(new TimestampSpec(null, null, null))
+                .withAggregators(new CountAggregatorFactory("rows"))
+                .withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null))
+        )
+        .withIoConfig(
+            ioConfig -> ioConfig
+                .withJsonInputFormat()
+                .withConsumerProperties(Map.of("bootstrap.servers", "localhost:9092"))
+        );
+
+    return topic == null
+           ? builder.buildWithTopicPattern("testDs", topicPattern)
+           : builder.build("testDs", topic);
   }
 }
