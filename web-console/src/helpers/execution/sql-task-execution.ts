@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type { AxiosResponse, CancelToken } from 'axios';
+import type { AxiosResponse } from 'axios';
 import { QueryResult } from 'druid-query-toolkit';
 
 import type { AsyncStatusResponse, MsqTaskPayloadResponse, QueryContext } from '../../druid-models';
@@ -38,7 +38,7 @@ export interface SubmitTaskQueryOptions {
   context?: QueryContext;
   baseQueryContext?: QueryContext;
   prefixLines?: number;
-  cancelToken?: CancelToken;
+  signal?: AbortSignal;
   preserveOnTermination?: boolean;
   onSubmitted?: (id: string) => void;
 }
@@ -51,7 +51,7 @@ export async function submitTaskQuery(
     context,
     baseQueryContext,
     prefixLines,
-    cancelToken,
+    signal,
     preserveOnTermination,
     onSubmitted,
   } = options;
@@ -87,7 +87,7 @@ export async function submitTaskQuery(
       `/druid/v2/sql/statements`,
       jsonQuery,
       {
-        cancelToken,
+        signal,
       },
     );
   } catch (e) {
@@ -114,8 +114,8 @@ export async function submitTaskQuery(
 
   if (!execution.isWaitingForQuery()) return execution;
 
-  if (cancelToken) {
-    cancelTaskExecutionOnCancel(execution.id, cancelToken, Boolean(preserveOnTermination));
+  if (signal) {
+    cancelTaskExecutionOnCancel(execution.id, signal, Boolean(preserveOnTermination));
   }
 
   return new IntermediateQueryState(execution);
@@ -123,26 +123,26 @@ export async function submitTaskQuery(
 
 export interface ReattachTaskQueryOptions {
   id: string;
-  cancelToken?: CancelToken;
+  signal?: AbortSignal;
   preserveOnTermination?: boolean;
 }
 
 export async function reattachTaskExecution(
   option: ReattachTaskQueryOptions,
 ): Promise<Execution | IntermediateQueryState<Execution>> {
-  const { id, cancelToken, preserveOnTermination } = option;
+  const { id, signal, preserveOnTermination } = option;
   let execution: Execution;
 
   try {
-    execution = await getTaskExecution(id, undefined, cancelToken);
+    execution = await getTaskExecution(id, undefined, signal);
   } catch (e) {
     throw new Error(`Reattaching to query failed due to: ${e.message}`);
   }
 
   if (!execution.isWaitingForQuery()) return execution;
 
-  if (cancelToken) {
-    cancelTaskExecutionOnCancel(execution.id, cancelToken, Boolean(preserveOnTermination));
+  if (signal) {
+    cancelTaskExecutionOnCancel(execution.id, signal, Boolean(preserveOnTermination));
   }
 
   return new IntermediateQueryState(execution);
@@ -150,18 +150,18 @@ export async function reattachTaskExecution(
 
 export async function updateExecutionWithTaskIfNeeded(
   execution: Execution,
-  cancelToken?: CancelToken,
+  signal?: AbortSignal,
 ): Promise<Execution> {
   if (!execution.isWaitingForQuery()) return execution;
 
   // Inherit old payload so as not to re-query it
-  return await getTaskExecution(execution.id, execution._payload, cancelToken);
+  return await getTaskExecution(execution.id, execution._payload, signal);
 }
 
 export async function getTaskExecution(
   id: string,
   taskPayloadOverride?: MsqTaskPayloadResponse,
-  cancelToken?: CancelToken,
+  signal?: AbortSignal,
 ): Promise<Execution> {
   const encodedId = Api.encodePath(id);
 
@@ -172,7 +172,7 @@ export async function getTaskExecution(
     try {
       taskReport = (
         await Api.instance.get(`/druid/indexer/v1/task/${encodedId}/reports`, {
-          cancelToken,
+          signal,
         })
       ).data;
     } catch (e) {
@@ -196,7 +196,7 @@ export async function getTaskExecution(
     const statusResp = await Api.instance.get<AsyncStatusResponse>(
       `/druid/v2/sql/statements/${encodedId}?detail=true`,
       {
-        cancelToken,
+        signal,
       },
     );
 
@@ -208,7 +208,7 @@ export async function getTaskExecution(
     try {
       taskPayload = (
         await Api.instance.get(`/druid/indexer/v1/task/${encodedId}`, {
-          cancelToken,
+          signal,
         })
       ).data;
     } catch (e) {
@@ -225,7 +225,7 @@ export async function getTaskExecution(
       const statusResp = await Api.instance.get<AsyncStatusResponse>(
         `/druid/v2/sql/statements/${encodedId}`,
         {
-          cancelToken,
+          signal,
         },
       );
 
@@ -247,15 +247,13 @@ export async function getTaskExecution(
 
 function cancelTaskExecutionOnCancel(
   id: string,
-  cancelToken: CancelToken,
+  signal: AbortSignal,
   preserveOnTermination = false,
 ): void {
-  void cancelToken.promise
-    .then(cancel => {
-      if (preserveOnTermination && cancel.message === QueryManager.TERMINATION_MESSAGE) return;
-      return cancelTaskExecution(id);
-    })
-    .catch(() => {});
+  signal.addEventListener('abort', () => {
+    if (preserveOnTermination && signal.reason === QueryManager.TERMINATION_MESSAGE) return;
+    void cancelTaskExecution(id);
+  });
 }
 
 export function cancelTaskExecution(id: string): Promise<void> {
