@@ -403,6 +403,16 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
   }
 
   @Override
+  protected SeekableStreamIndexTaskIOConfig<String, Long> createUpdatedTaskIoConfig(
+      Set<String> partitions,
+      SeekableStreamSupervisor<String, Long, ByteEntity>.TaskGroup existingTaskGroup,
+      Map<String, Long> latestCommittedOffsets
+  )
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
   protected String baseTaskName()
   {
     return "index_rabbit";
