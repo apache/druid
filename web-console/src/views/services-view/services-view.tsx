@@ -394,7 +394,7 @@ ORDER BY
           value={row.value}
           filters={filters}
           onFiltersChange={onFiltersChange}
-displayValue={displayFn(row.value)}
+          displayValue={displayFn(row.value)}
         >
           {displayFn(row.value)}
         </TableFilterableCell>
@@ -524,7 +524,6 @@ displayValue={displayFn(row.value)}
             if (value === null) return '';
             return formatBytes(value);
           },
-          
         },
         {
           Header: 'Max size',
@@ -626,7 +625,7 @@ displayValue={displayFn(row.value)}
           Cell: this.renderFilterableCell('start_time', formatDate),
           Aggregated: () => '',
           filterMethod: (filter: Filter, row: ServiceResultRow) => {
-            const modeAndNeedle = parseFilterModeAndNeedle(filter)
+            const modeAndNeedle = parseFilterModeAndNeedle(filter);
             if (!modeAndNeedle) return true;
             const parsedRowTime = formatDate(row.start_time);
             if (modeAndNeedle.mode === '~') {

@@ -43,7 +43,8 @@ export interface TableFilterableCellProps {
 export const TableFilterableCell = React.memo(function TableFilterableCell(
   props: TableFilterableCellProps,
 ) {
-  const { field, value, children, filters, enableComparisons, onFiltersChange, displayValue } = props;
+  const { field, value, children, filters, enableComparisons, onFiltersChange, displayValue } =
+    props;
 
   return (
     <Popover

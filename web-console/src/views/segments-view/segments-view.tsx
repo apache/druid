@@ -171,7 +171,7 @@ function segmentFiltersToExpression(filters: Filter[]): SqlExpression {
         const internalFilter = { ...filter };
         const formattedDate = formatDate(modeAndNeedle.needle);
         const filterDate = dayjs(formattedDate).toISOString();
-        filter.value = combineModeAndNeedle(modeAndNeedle.mode,formattedDate);
+        filter.value = combineModeAndNeedle(modeAndNeedle.mode, formattedDate);
         internalFilter.value = combineModeAndNeedle(modeAndNeedle.mode, filterDate);
         return sqlQueryCustomTableFilter(internalFilter);
       }
@@ -746,7 +746,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             show: visibleColumns.shown('Time span'),
             id: 'time_span',
             className: 'padded',
-            accessor: ({ start, end }) => computeSegmentTimeSpan(dayjs(start).toISOString(), dayjs(end).toISOString()),
+            accessor: ({ start, end }) =>
+              computeSegmentTimeSpan(dayjs(start).toISOString(), dayjs(end).toISOString()),
             width: 100,
             sortable: false,
             filterable: false,

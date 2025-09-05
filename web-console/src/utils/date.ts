@@ -23,7 +23,7 @@ import dayjs from 'dayjs';
 
 import type { WebConsoleConfig } from '../druid-models/web-console-config/web-console-config';
 
-import { localStorageGetJson,LocalStorageKeys } from './local-storage-keys';
+import { localStorageGetJson, LocalStorageKeys } from './local-storage-keys';
 
 const CURRENT_YEAR = new Date().getUTCFullYear();
 export const DATE_FORMAT = 'YYYY-MM-DDTHH:mm:ss.SSSZ';

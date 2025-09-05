@@ -338,7 +338,7 @@ ORDER BY
   private renderTaskFilterableCell(
     field: string,
     enableComparisons = false,
-    displayFn: (value: string ) => ReactNode = String,
+    displayFn: (value: string) => ReactNode = String,
     filterDisplayFn: (value: string) => string = String,
   ) {
     const { filters, onFiltersChange } = this.props;
@@ -522,7 +522,7 @@ ORDER BY
             Aggregated: () => '',
             show: visibleColumns.shown('Created time'),
             filterMethod: (filter: Filter, row: TaskQueryResultRow) => {
-              const modeAndNeedle = parseFilterModeAndNeedle(filter)
+              const modeAndNeedle = parseFilterModeAndNeedle(filter);
               if (!modeAndNeedle) return true;
               const parsedRowDate = formatDate(row.created_time);
               if (modeAndNeedle.mode === '~') {

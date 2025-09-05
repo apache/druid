@@ -277,7 +277,7 @@ exports[`HeaderBar matches snapshot 1`] = `
           <Blueprint5.MenuItem
             active={false}
             disabled={false}
-            icon="settings"
+            icon="console"
             multiline={false}
             onClick={[Function]}
             popoverProps={{}}
