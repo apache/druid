@@ -129,7 +129,8 @@ public class LatchableEmitter extends StubServiceEmitter
   }
 
   /**
-   * Wait indefinitely until a metric event that matches the given condition is emitted.
+   * Wait until a metric event that matches the given condition is emitted.
+   * Uses a default timeout of 60 seconds.
    */
   public ServiceMetricEvent waitForEvent(UnaryOperator<EventMatcher> condition)
   {
