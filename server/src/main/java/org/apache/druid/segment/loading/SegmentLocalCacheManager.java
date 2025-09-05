@@ -212,9 +212,10 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
     try {
       latch.await();
-    } catch (InterruptedException e) {
+    }
+    catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      log.makeAlert(e, "Segment Metadata Retrieval during Historical Startup Interrupted");
+      log.makeAlert(e, "Cached Segment Metadata Retrieval during Interrupted");
     }
 
     long timetaken = stopwatch.millisElapsed();
