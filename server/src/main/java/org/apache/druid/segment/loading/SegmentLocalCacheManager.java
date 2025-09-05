@@ -957,7 +957,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         if (children != null) {
           for (File child : children) {
             try (InputStream in = Files.newInputStream(child.toPath())) {
-              IOUtils.copy(in, NullOutputStream.INSTANCE);
+              IOUtils.copy(in, NullOutputStream.NULL_OUTPUT_STREAM);
               log.info("Loaded [%s] into page cache.", child.getAbsolutePath());
             }
             catch (Exception e) {
