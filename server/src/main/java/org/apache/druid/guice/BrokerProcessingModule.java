@@ -48,6 +48,7 @@ import org.apache.druid.utils.RuntimeInfo;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * This module is used to fulfill dependency injection of query processing and caching resources: buffer pools and
@@ -84,7 +85,7 @@ public class BrokerProcessingModule implements Module
       DruidProcessingConfig config
   )
   {
-    return new ForwardingQueryProcessingPool(Execs.dummy());
+    return new ForwardingQueryProcessingPool(Execs.dummy(), (ScheduledExecutorService) Execs.dummy());
   }
 
   @Provides
