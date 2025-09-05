@@ -94,7 +94,8 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
         emitter,
         monitorSchedulerConfig,
         rowIngestionMetersFactory,
-        supervisorStateManagerConfig
+        supervisorStateManagerConfig,
+        null
     );
     this.awsCredentialsConfig = awsCredentialsConfig;
   }

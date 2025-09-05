@@ -90,7 +90,7 @@ public class KafkaSupervisorSpecBuilder
         null,
         false,
         // Jackson injected params, not needed while posting a supervisor to the Overlord
-        null, null, null, null, null, null, null, null, null
+        null, null, null, null, null, null, null, null, null, null
     );
   }
 }
