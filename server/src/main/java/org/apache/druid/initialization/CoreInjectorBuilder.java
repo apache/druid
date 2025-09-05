@@ -137,4 +137,52 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
     );
     return this;
   }
+
+  /**
+   * Rough bridge solution for Hadoop indexing that needs server-like Injector but can't run jetty 12
+   */
+  @Deprecated
+  public CoreInjectorBuilder forServerWithoutJetty()
+  {
+    withLogging();
+    withLifecycle();
+    add(
+        ExtensionsModule.SecondaryModule.class,
+        new DruidAuthModule(),
+        new PolicyModule(),
+        TLSCertificateCheckerModule.class,
+        EmitterModule.class,
+        HttpClientModule.global(),
+        HttpClientModule.escalatedGlobal(),
+        new HttpClientModule("druid.broker.http", Client.class, true),
+        new HttpClientModule("druid.broker.http", EscalatedClient.class, true),
+        new CuratorModule(),
+        new AnnouncerModule(),
+        new MetricsModule(),
+        new SegmentWriteOutMediumModule(),
+        new ServerModule(),
+        new StorageNodeModule(),
+        new ExpressionModule(),
+        new BuiltInTypesModule(),
+        new DiscoveryModule(),
+        new ServerViewModule(),
+        new MetadataConfigModule(),
+        new DerbyMetadataStorageDruidModule(),
+        new JacksonConfigManagerModule(),
+        new LocalDataStorageDruidModule(),
+        new TombstoneDataStorageModule(),
+        new JavaScriptModule(),
+        new AuthenticatorModule(),
+        new AuthenticatorMapperModule(),
+        new EscalatorModule(),
+        new AuthorizerModule(),
+        new AuthorizerMapperModule(),
+        new StartupLoggingModule(),
+        new ExternalStorageAccessSecurityModule(),
+        new ServiceClientModule(),
+        new StorageConnectorModule(),
+        new CatalogCoreModule()
+    );
+    return this;
+  }
 }

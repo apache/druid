@@ -23,6 +23,9 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
+import org.eclipse.jetty.client.Response;
+import org.eclipse.jetty.http.HttpField;
+import org.eclipse.jetty.http.HttpFields;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.After;
@@ -46,6 +49,9 @@ public class StandardResponseHeaderFilterHolderTest
   public HttpServletResponse httpResponse;
   public FilterChain filterChain;
 
+  public HttpServletResponse proxyResponse;
+  public Response clientResponse;
+
   @Before
   public void setUp()
   {
@@ -53,12 +59,15 @@ public class StandardResponseHeaderFilterHolderTest
     httpRequest = EasyMock.strictMock(HttpServletRequest.class);
     httpResponse = EasyMock.strictMock(HttpServletResponse.class);
     filterChain = EasyMock.strictMock(FilterChain.class);
+
+    proxyResponse = EasyMock.strictMock(HttpServletResponse.class);
+    clientResponse = EasyMock.strictMock(Response.class);
   }
 
   @After
   public void tearDown()
   {
-    EasyMock.verify(serverConfig, httpRequest, httpResponse, filterChain);
+    EasyMock.verify(serverConfig, httpRequest, httpResponse, filterChain, proxyResponse, clientResponse);
   }
 
   @Test
@@ -130,6 +139,40 @@ public class StandardResponseHeaderFilterHolderTest
     );
   }
 
+  @Test
+  public void test_deduplicateHeadersInProxyServlet_duplicatesExist()
+  {
+    EasyMock.expect(proxyResponse.containsHeader("Cache-Control")).andReturn(true).once();
+    proxyResponse.setHeader("Cache-Control", null);
+    EasyMock.expectLastCall().once();
+    EasyMock.expect(proxyResponse.containsHeader("Strict-Transport-Security")).andReturn(false).once();
+
+    EasyMock.expect(clientResponse.getHeaders()).andReturn(HttpFields.from(new HttpField("Cache-Control", "true"), new HttpField("Strict-Transport-Security", "true"))).times(3);
+
+
+    replayAllMocks();
+
+    StandardResponseHeaderFilterHolder.deduplicateHeadersInProxyServlet(proxyResponse, clientResponse);
+  }
+
+  @Test
+  public void test_duplicateHeadersInProxyServlet_noDuplicates()
+  {
+    EasyMock.expect(proxyResponse.containsHeader("Cache-Control")).andReturn(false).once();
+    EasyMock.expect(proxyResponse.containsHeader("Strict-Transport-Security")).andReturn(false).once();
+
+    EasyMock.expect(clientResponse.getHeaders())
+            .andReturn(HttpFields.from(
+                new HttpField("Cache-Control", "true"),
+                new HttpField("Strict-Transport-Security", "true")
+            ))
+            .times(3);
+
+    replayAllMocks();
+
+    StandardResponseHeaderFilterHolder.deduplicateHeadersInProxyServlet(proxyResponse, clientResponse);
+  }
+
   private StandardResponseHeaderFilterHolder.StandardResponseHeaderFilter makeFilter()
   {
     return (StandardResponseHeaderFilterHolder.StandardResponseHeaderFilter)
@@ -163,6 +206,6 @@ public class StandardResponseHeaderFilterHolderTest
 
   private void replayAllMocks()
   {
-    EasyMock.replay(serverConfig, httpRequest, httpResponse, filterChain);
+    EasyMock.replay(serverConfig, httpRequest, httpResponse, filterChain, proxyResponse, clientResponse);
   }
 }
