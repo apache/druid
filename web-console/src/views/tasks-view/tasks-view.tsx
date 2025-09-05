@@ -187,13 +187,12 @@ ORDER BY
     this.taskQueryManager = new QueryManager({
       processQuery: async (capabilities, cancelToken) => {
         if (capabilities.hasSql()) {
-          const tasks = await queryDruidSql(
+          return await queryDruidSql(
             {
               query: TasksView.TASK_SQL,
             },
             cancelToken,
           );
-          return tasks;
         } else if (capabilities.hasOverlordAccess()) {
           return (await getApiArray(`/druid/indexer/v1/tasks`, cancelToken)).map(d => {
             return {
@@ -484,7 +483,7 @@ ORDER BY
                 case 'object':
                   return (
                     TasksView.statusRanking[d1.status] - TasksView.statusRanking[d2.status] ||
-                    dayjs(d1.created_time).diff(d2.created_time)
+                    d1.created_time.localeCompare(d2.created_time)
                   );
 
                 default:
@@ -540,7 +539,6 @@ ORDER BY
             filterable: false,
             className: 'padded',
             Cell({ value, original, aggregated }) {
-              console.log(value, original, aggregated);
               if (aggregated) return '';
               if (value > 0) {
                 const shownDuration = formatDuration(value);
