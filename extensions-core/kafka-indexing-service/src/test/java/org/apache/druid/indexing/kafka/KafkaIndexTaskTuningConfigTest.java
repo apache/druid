@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
+import org.apache.druid.indexing.kafka.supervisor.KafkaTuningConfigBuilder;
 import org.apache.druid.indexing.kafka.test.TestModifiedKafkaIndexTaskTuningConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
@@ -70,7 +71,7 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(0, config.getMaxPendingPersists());
     Assert.assertEquals(IndexSpec.DEFAULT, config.getIndexSpec());
     Assert.assertEquals(IndexSpec.DEFAULT, config.getIndexSpecForIntermediatePersists());
-    Assert.assertEquals(false, config.isReportParseExceptions());
+    Assert.assertFalse(config.isReportParseExceptions());
     Assert.assertEquals(Duration.ofMinutes(15).toMillis(), config.getHandoffConditionTimeout());
     Assert.assertEquals(1, config.getNumPersistThreads());
     Assert.assertEquals(-1, config.getMaxColumnsToMerge());
@@ -130,34 +131,19 @@ public class KafkaIndexTaskTuningConfigTest
   @Test
   public void testConvert()
   {
-    KafkaSupervisorTuningConfig original = new KafkaSupervisorTuningConfig(
-        null,
-        1,
-        null,
-        null,
-        2,
-        10L,
-        new Period("PT3S"),
-        4,
-        IndexSpec.DEFAULT,
-        IndexSpec.DEFAULT,
-        true,
-        5L,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        2,
-        5,
-        false
-    );
+    KafkaSupervisorTuningConfig original = new KafkaTuningConfigBuilder()
+        .withIntermediatePersistPeriod(new Period("PT3S"))
+        .withHandoffConditionTimeout(5L)
+        .withNumPersistThreads(2)
+        .withMaxRowsInMemory(1)
+        .withMaxRowsPerSegment(2)
+        .withMaxTotalRows(10L)
+        .withMaxPendingPersists(4)
+        .withIndexSpec(IndexSpec.DEFAULT)
+        .withIndexSpecForIntermediatePersists(IndexSpec.DEFAULT)
+        .withReportParseExceptions(true)
+        .withMaxColumnsToMerge(5)
+        .build();
     KafkaIndexTaskTuningConfig copy = original.convertToTaskTuningConfig();
 
     Assert.assertEquals(original.getAppendableIndexSpec(), copy.getAppendableIndexSpec());
@@ -169,7 +155,7 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertNull(copy.getBasePersistDirectory());
     Assert.assertEquals(4, copy.getMaxPendingPersists());
     Assert.assertEquals(IndexSpec.DEFAULT, copy.getIndexSpec());
-    Assert.assertEquals(true, copy.isReportParseExceptions());
+    Assert.assertTrue(copy.isReportParseExceptions());
     Assert.assertEquals(5L, copy.getHandoffConditionTimeout());
     Assert.assertEquals(2, copy.getNumPersistThreads());
     Assert.assertEquals(5, copy.getMaxColumnsToMerge());
@@ -207,7 +193,7 @@ public class KafkaIndexTaskTuningConfigTest
     TestModifiedKafkaIndexTaskTuningConfig deserialized =
         mapper.readValue(serialized, TestModifiedKafkaIndexTaskTuningConfig.class);
 
-    Assert.assertEquals(null, deserialized.getExtra());
+    Assert.assertNull(deserialized.getExtra());
     Assert.assertEquals(base.getAppendableIndexSpec(), deserialized.getAppendableIndexSpec());
     Assert.assertEquals(base.getMaxRowsInMemory(), deserialized.getMaxRowsInMemory());
     Assert.assertEquals(base.getMaxBytesInMemory(), deserialized.getMaxBytesInMemory());

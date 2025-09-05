@@ -20,24 +20,17 @@
 package org.apache.druid.testing.embedded.indexing;
 
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.emitter.kafka.KafkaEmitter;
 import org.apache.druid.emitter.kafka.KafkaEmitterModule;
-import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
-import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
-import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
 import org.apache.druid.indexing.overlord.Segments;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
@@ -143,16 +136,12 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     final int expectedSegmentsHandedOff = 10;
 
     final int taskCount = 5;
-    final int taskDurationMillis = 1_000;
-    final int taskCompletionTimeoutMillis = 10_000;
 
     // Submit and start a supervisor
     final String supervisorId = dataSource + "_supe";
     final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(
         supervisorId,
         taskCount,
-        taskDurationMillis,
-        taskCompletionTimeoutMillis,
         maxRowsPerSegment
     );
 
@@ -194,16 +183,12 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     final int compactedMaxRowsPerSegment = 5000;
 
     final int taskCount = 2;
-    final int taskDurationMillis = 500;
-    final int taskCompletionTimeoutMillis = 5_000;
 
     // Submit and start a supervisor
     final String supervisorId = dataSource + "_supe";
     final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(
         supervisorId,
         taskCount,
-        taskDurationMillis,
-        taskCompletionTimeoutMillis,
         maxRowsPerSegment
     );
     cluster.callApi().postSupervisor(kafkaSupervisorSpec);
@@ -315,16 +300,12 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     final int compactedMaxRowsPerSegment = 5000;
 
     final int taskCount = 2;
-    final int taskDurationMillis = 500;
-    final int taskCompletionTimeoutMillis = 5_000;
 
     // Submit and start a supervisor
     final String supervisorId = dataSource + "_supe";
     final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(
         supervisorId,
         taskCount,
-        taskDurationMillis,
-        taskCompletionTimeoutMillis,
         maxRowsPerSegment
     );
     cluster.callApi().postSupervisor(kafkaSupervisorSpec);
@@ -382,7 +363,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
    * SELECTs the total count of the given metric in the {@link #dataSource} and
    * verifies it against the metrics actually emitted by the server.
    */
-  private void verifyIngestedMetricCountMatchesEmittedCount(String metricName, EmbeddedDruidServer server)
+  private void verifyIngestedMetricCountMatchesEmittedCount(String metricName, EmbeddedDruidServer<?> server)
   {
     // Get the value of the metric from the datasource
     final DruidNode selfNode = server.bindings().selfNode();
@@ -404,52 +385,19 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
   private KafkaSupervisorSpec createKafkaSupervisor(
       String supervisorId,
       int taskCount,
-      int taskDurationMillis,
-      int taskCompletionTimeoutMillis,
       int maxRowsPerSegment
   )
   {
-    final Period startDelay = Period.millis(10);
-    final Period supervisorRunPeriod = Period.millis(500);
-    final boolean useEarliestOffset = true;
-
-    return new KafkaSupervisorSpec(
-        supervisorId,
-        null,
-        DataSchema.builder()
-                  .withDataSource(dataSource)
-                  .withTimestamp(new TimestampSpec("timestamp", "iso", null))
-                  .withGranularity(new UniformGranularitySpec(Granularities.HOUR, null, null))
-                  .withDimensions(DimensionsSpec.EMPTY)
-                  .build(),
-        createTuningConfig(maxRowsPerSegment),
-        new KafkaSupervisorIOConfig(
-            TOPIC,
-            null,
-            new JsonInputFormat(null, null, null, null, null),
-            null,
-            taskCount,
-            Period.millis(taskDurationMillis),
-            kafkaServer.consumerProperties(),
-            null, null, null,
-            startDelay,
-            supervisorRunPeriod,
-            useEarliestOffset,
-            Period.millis(taskCompletionTimeoutMillis),
-            null, null, null, null, null, null, null
-        ),
-        null, null, null, null, null, null, null, null, null, null, null, null
-    );
-  }
-
-  private KafkaSupervisorTuningConfig createTuningConfig(int maxRowsPerSegment)
-  {
-    return new KafkaSupervisorTuningConfig(
-        null,
-        null, null, null,
-        maxRowsPerSegment,
-        null, null, null, null, null, null, null, null, null, null,
-        null, null, null, null, null, null, null, null, null, null, null
-    );
+    return MoreResources.Supervisor.KAFKA_JSON
+        .get()
+        .withDataSchema(schema -> schema.withTimestamp(new TimestampSpec("timestamp", "iso", null)))
+        .withTuningConfig(tuningConfig -> tuningConfig.withMaxRowsPerSegment(maxRowsPerSegment))
+        .withIoConfig(
+            ioConfig -> ioConfig
+                .withConsumerProperties(kafkaServer.consumerProperties())
+                .withTaskCount(taskCount)
+        )
+        .withId(supervisorId)
+        .build(dataSource, TOPIC);
   }
 }

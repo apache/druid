@@ -44,13 +44,10 @@ import org.apache.druid.data.input.protobuf.ProtobufInputRowParser;
 import org.apache.druid.data.input.protobuf.SchemaRegistryBasedProtobufBytesDecoder;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
-import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
-import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -581,70 +578,38 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
         parser,
         new TypeReference<>() {}
     );
-    return new KafkaSupervisorSpec(
-        supervisorId,
-        null,
-        DataSchema.builder()
-                  .withDataSource(dataSource)
-                  .withTimestamp(new TimestampSpec("timestamp", null, null))
-                  .withDimensions(DimensionsSpec.EMPTY)
-                  .withParserMap(parserMap)
-                  .build(),
-        createTuningConfig(),
-        new KafkaSupervisorIOConfig(
-            topic,
-            null,
-            null,
-            null, null,
-            Period.millis(100),
-            kafkaServer.consumerProperties(),
-            null, null, null,
-            Period.millis(10),
-            Period.millis(10),
-            true,
-            null, null, null, null, null, null, null, null
-        ),
-        null, null, null, null, null, null, null, null, null, null, null, null
-    );
+    return MoreResources.Supervisor.KAFKA_JSON
+        .get()
+        .withDataSchema(
+            schema -> schema
+                .withTimestamp(new TimestampSpec("timestamp", null, null))
+                .withParserMap(parserMap)
+        )
+        .withIoConfig(
+            ioConfig -> ioConfig
+                .withInputFormat(null)
+                .withConsumerProperties(kafkaServer.consumerProperties())
+                .withSupervisorRunPeriod(Period.millis(10))
+        )
+        .withTuningConfig(tuningConfig -> tuningConfig.withMaxRowsPerSegment(1))
+        .withId(supervisorId)
+        .build(dataSource, topic);
   }
 
   private KafkaSupervisorSpec createKafkaSupervisor(String supervisorId, String topic, InputFormat inputFormat)
   {
-    return new KafkaSupervisorSpec(
-        supervisorId,
-        null,
-        DataSchema.builder()
-                  .withDataSource(dataSource)
-                  .withTimestamp(new TimestampSpec("timestamp", null, null))
-                  .withDimensions(DimensionsSpec.EMPTY)
-                  .build(),
-        createTuningConfig(),
-        new KafkaSupervisorIOConfig(
-            topic,
-            null,
-            inputFormat,
-            null, null,
-            Period.millis(100),
-            kafkaServer.consumerProperties(),
-            null, null, null,
-            Period.millis(10),
-            Period.millis(10),
-            true,
-            null, null, null, null, null, null, null, null
-        ),
-        null, null, null, null, null, null, null, null, null, null, null, null
-    );
-  }
-
-  private KafkaSupervisorTuningConfig createTuningConfig()
-  {
-    return new KafkaSupervisorTuningConfig(
-        null,
-        null, null, null,
-        1,
-        null, null, null, null, null, null, null, null, null, null,
-        null, null, null, null, null, null, null, null, null, null, null
-    );
+    return MoreResources.Supervisor.KAFKA_JSON
+        .get()
+        .withDataSchema(schema -> schema.withTimestamp(new TimestampSpec("timestamp", null, null)))
+        .withIoConfig(
+            ioConfig -> ioConfig
+                .withInputFormat(inputFormat)
+                .withConsumerProperties(kafkaServer.consumerProperties())
+                .withSupervisorRunPeriod(Period.millis(10))
+        )
+        .withTuningConfig(tuningConfig -> tuningConfig.withMaxRowsPerSegment(1))
+        .withId(supervisorId)
+        .build(dataSource, topic);
   }
 
   private Map<String, Object> createWikipediaAvroSchemaMap()

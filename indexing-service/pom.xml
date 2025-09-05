@@ -267,6 +267,12 @@
             <artifactId>jdbi</artifactId>
             <scope>test</scope>
         </dependency>
+      <dependency>
+        <groupId>com.google.api.grpc</groupId>
+        <artifactId>proto-google-common-protos</artifactId>
+        <version>2.48.0</version>
+        <scope>test</scope>
+      </dependency>
     </dependencies>
 
     <build>

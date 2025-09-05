@@ -25,12 +25,11 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.task.NoopTask;
-import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.Intervals;
@@ -40,11 +39,11 @@ import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.segment.TestDataSource;
-import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
+import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.jupiter.api.Assertions;
@@ -213,22 +212,11 @@ public class OverlordClientTest extends EmbeddedClusterTestBase
   @Test
   public void test_postSupervisor_fails_ifRequiredExtensionIsNotLoaded()
   {
-    final KafkaSupervisorSpec kafkaSupervisor = new KafkaSupervisorSpec(
-        null,
-        null,
-        DataSchema.builder().withDataSource(dataSource).build(),
-        null,
-        new KafkaSupervisorIOConfig(
-            "topic",
-            null,
-            new JsonInputFormat(null, null, null, null, null),
-            null, null, null,
-            Map.of("bootstrap.servers", "localhost:9092"),
-            null, null, null, null, null, null, null, null, null, null, null, null, null, null
-        ),
-        Map.of(),
-        null, null, null, null, null, null, null, null, null, null, null
-    );
+    final KafkaSupervisorSpec kafkaSupervisor = MoreResources.Supervisor.KAFKA_JSON
+        .get()
+        .withDataSchema(schema -> schema.withTimestamp(new TimestampSpec(null, null, null)))
+        .withIoConfig(ioConfig -> ioConfig.withConsumerProperties(Map.of("bootstrap.servers", "localhost")))
+        .build(dataSource, "topic");
 
     final Exception exception = Assertions.assertThrows(
         Exception.class,

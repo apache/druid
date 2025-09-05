@@ -27,16 +27,14 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
-import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
-import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
+import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpecBuilder;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -47,7 +45,6 @@ import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -147,39 +144,25 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
 
   private KafkaSupervisorSpec createKafkaSupervisor(String supervisorId, String topic)
   {
-    return new KafkaSupervisorSpec(
-        supervisorId,
-        null,
-        DataSchema.builder()
-                  .withDataSource(dataSource)
-                  .withTimestamp(new TimestampSpec("timestamp", null, null))
-                  .withDimensions(DimensionsSpec.EMPTY)
-                  .build(),
-        createTuningConfig(),
-        new KafkaSupervisorIOConfig(
-            topic,
-            null,
-            new CsvInputFormat(List.of("timestamp", "item"), null, null, false, 0, false),
-            null, null,
-            null,
-            kafkaServer.consumerProperties(),
-            null, null, null, null, null,
-            true,
-            null, null, null, null, null, null, null, null
-        ),
-        null, null, null, null, null, null, null, null, null, null, null, null
-    );
-  }
-
-  private KafkaSupervisorTuningConfig createTuningConfig()
-  {
-    return new KafkaSupervisorTuningConfig(
-        null,
-        null, null, null,
-        1,
-        null, null, null, null, null, null, null, null, null, null,
-        null, null, null, null, new Period("PT2S"), null, null, null, null, null, true
-    );
+    return new KafkaSupervisorSpecBuilder()
+        .withDataSchema(
+            schema -> schema
+                .withTimestamp(new TimestampSpec("timestamp", null, null))
+                .withDimensions(DimensionsSpec.EMPTY)
+        )
+        .withTuningConfig(
+            tuningConfig -> tuningConfig
+                .withMaxRowsPerSegment(1)
+                .withReleaseLocksOnHandoff(true)
+        )
+        .withIoConfig(
+            ioConfig -> ioConfig
+                .withInputFormat(new CsvInputFormat(List.of("timestamp", "item"), null, null, false, 0, false))
+                .withConsumerProperties(kafkaServer.consumerProperties())
+                .withUseEarliestSequenceNumber(true)
+        )
+        .withId(supervisorId)
+        .build(dataSource, topic);
   }
 
   private List<ProducerRecord<byte[], byte[]>> generateRecordsForTopic(

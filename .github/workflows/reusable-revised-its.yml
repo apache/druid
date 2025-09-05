@@ -57,19 +57,6 @@ on:
       AWS_SECRET_ACCESS_KEY:
         required: false
         type: string
-      BACKWARD_COMPATIBILITY_IT_ENABLED:
-        required: false
-        type: string
-        default: false
-      DRUID_PREVIOUS_VERSION:
-        required: false
-        type: string
-      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL:
-        required: false
-        type: string
-      DRUID_PREVIOUS_IT_IMAGE_NAME:
-        required: false
-        type: string
 
 env:
   MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }} # Used by tests to connect to metadata store directly.
@@ -119,15 +106,6 @@ jobs:
             ./druid-container-jdk${{ inputs.build_jdk }}.tar.gz
             ./integration-tests-ex/image/target/env.sh
 
-      - name: Retrieve previous version cached docker image
-        id: docker-restore-previous-version
-        if: ${{ inputs.BACKWARD_COMPATIBILITY_IT_ENABLED == 'true' }}
-        uses: actions/cache/restore@v4
-        with:
-          key: druid-container-jdk${{ inputs.build_jdk }}-version${{ inputs.DRUID_PREVIOUS_VERSION }}.tar.gz-${{ github.sha }}
-          path: |
-            ./druid-container-jdk${{ inputs.build_jdk }}-version${{ inputs.DRUID_PREVIOUS_VERSION }}.tar.gz           
-
       - name: Maven build
         if: steps.maven-restore.outputs.cache-hit != 'true' || ( steps.docker-restore.outputs.cache-hit != 'true' && steps.targets-restore.outputs.cache-hit != 'true' )
         run: |
@@ -137,25 +115,12 @@ jobs:
         if: steps.docker-restore.outputs.cache-hit != 'true' || steps.maven-restore.outputs.cache-hit != 'true'
         env:
           docker-restore: ${{ toJson(steps.docker-restore.outputs) }}
-          BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ inputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
-          DRUID_PREVIOUS_VERSION: ${{ inputs.DRUID_PREVIOUS_VERSION }}
-          DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ inputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
-          DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ inputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
         run: |
           ./it.sh image
           source ./integration-tests-ex/image/target/env.sh
           docker tag $DRUID_IT_IMAGE_NAME $DRUID_IT_IMAGE_NAME-jdk${{ inputs.build_jdk }}
           echo $DRUID_IT_IMAGE_NAME
           docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ inputs.build_jdk }}.tar.gz
-
-      - name: Save previous version docker image
-        if: ${{ inputs.BACKWARD_COMPATIBILITY_IT_ENABLED == 'true' && (steps.docker-restore.outputs.cache-hit != 'true' || steps.maven-restore.outputs.cache-hit != 'true') }}
-        env:
-          docker-restore: ${{ toJson(steps.docker-restore.outputs) }}
-        run: |
-          docker tag ${{ inputs.DRUID_PREVIOUS_IT_IMAGE_NAME }} ${{ inputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}-jdk${{ inputs.build_jdk }}-version${{ inputs.DRUID_PREVIOUS_VERSION }}
-          echo ${DRUID_PREVIOUS_IT_IMAGE_NAME}
-          docker save "${{ inputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}" | gzip > druid-container-jdk${{ inputs.build_jdk }}-version${{ inputs.DRUID_PREVIOUS_VERSION }}.tar.gz
 
       - name: Stop and remove docker containers
         run: |
@@ -168,20 +133,9 @@ jobs:
           docker load --input druid-container-jdk${{ inputs.build_jdk }}.tar.gz
           docker images
 
-      - name: Load previous version docker image
-        if: ${{ inputs.BACKWARD_COMPATIBILITY_IT_ENABLED == 'true' }}
-        run: |
-          docker load --input druid-container-jdk${{ inputs.build_jdk }}-version${{ inputs.DRUID_PREVIOUS_VERSION }}.tar.gz
-          docker images
-
       - name: Run IT
         id: run-it
         timeout-minutes: 60
-        env:
-          BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ inputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
-          DRUID_PREVIOUS_VERSION: ${{ inputs.DRUID_PREVIOUS_VERSION }}
-          DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ inputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
-          DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ inputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
         run: |
           ${{ inputs.script }}
 
