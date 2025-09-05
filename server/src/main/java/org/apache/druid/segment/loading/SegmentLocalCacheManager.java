@@ -194,10 +194,10 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
 
     final File[] segmentsToLoad = retrieveSegmentMetadataFiles();
-    final Collection<DataSegment> cachedSegments = new ConcurrentLinkedQueue<>();
+    final ConcurrentLinkedQueue<DataSegment> cachedSegments = new ConcurrentLinkedQueue<>();
 
     Stopwatch stopwatch = Stopwatch.createStarted();
-    log.info("Retrieving [%d] segment metadata files to cache.", segmentsToLoad.length);
+    log.info("Retrieving [%d] cached segment metadata files to cache.", segmentsToLoad.length);
 
     AtomicInteger ignoredfileCounter = new AtomicInteger(0);
     CountDownLatch latch = new CountDownLatch(segmentsToLoad.length);
@@ -215,12 +215,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      log.makeAlert(e, "Cached Segment Metadata Retrieval during Interrupted");
+      log.makeAlert(e, "Interrupted when trying to retrieve cached segment metadata files");
     }
 
-    long timetaken = stopwatch.millisElapsed();
     stopwatch.stop();
-    log.info("Retrieved [%d,%d] cached segments in [%d]ms.", cachedSegments.size(), segmentsToLoad.length, timetaken);
+    log.info("Retrieved [%d,%d] cached segments in [%d]ms.", cachedSegments.size(), segmentsToLoad.length, stopwatch.millisElapsed());
 
     if (ignoredfileCounter.get() > 0) {
       log.makeAlert("Ignored misnamed segment cache files on startup.")
@@ -239,7 +238,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return files == null ? new File[0] : files;
   }
 
-  private void addFilesToCachedSegments(File file, AtomicInteger ignored, Collection<DataSegment> cachedSegments)
+  private void addFilesToCachedSegments(File file, AtomicInteger ignored, ConcurrentLinkedQueue<DataSegment> cachedSegments)
   {
     try {
       final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
