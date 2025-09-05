@@ -81,6 +81,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -741,7 +742,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         GroupByQuery.builder()
                     .setDataSource("test")
                     .setGranularity(Granularities.ALL)
-                    .setInterval(Intervals.ETERNITY)
+                    .setInterval(new Interval(TIMESTAMP, TIMESTAMP.plusDays(1)))
                     .addDimension("a")
                     .setDimFilter(new EqualityFilter("a", ColumnType.STRING, "a", null))
                     .addAggregator(new LongSumAggregatorFactory("c_sum", "c"))
@@ -758,6 +759,62 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         queryMetrics,
         Collections.singletonList(
             new Object[]{"a", 7L, Pair.of(TIMESTAMP.plusHours(1).plusMinutes(1).getMillis(), 2L)}
+        )
+    );
+  }
+
+  @Test
+  public void testProjectionSingleDimFilterWithPartialIntervalAligned()
+  {
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(new Interval(TIMESTAMP, TIMESTAMP.plusHours(1)))
+                    .addDimension("a")
+                    .setDimFilter(new EqualityFilter("a", ColumnType.STRING, "a", null))
+                    .addAggregator(new LongSumAggregatorFactory("c_sum", "c"))
+                    .addAggregator(new LongLastAggregatorFactory("c_last", "c", null))
+                    .build();
+    final ExpectedProjectionGroupBy queryMetrics =
+        new ExpectedProjectionGroupBy("a_hourly_c_sum_with_count_latest");
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, 1);
+
+    testGroupBy(
+        query,
+        queryMetrics,
+        Collections.singletonList(
+            new Object[]{"a", 4L, Pair.of(TIMESTAMP.plusMinutes(4).getMillis(), 2L)}
+        )
+    );
+  }
+
+  @Test
+  public void testProjectionSingleDimFilterWithPartialIntervalUnaligned()
+  {
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(new Interval(TIMESTAMP, TIMESTAMP.plusHours(1).minusMinutes(1)))
+                    .addDimension("a")
+                    .setDimFilter(new EqualityFilter("a", ColumnType.STRING, "a", null))
+                    .addAggregator(new LongSumAggregatorFactory("c_sum", "c"))
+                    .addAggregator(new LongLastAggregatorFactory("c_last", "c", null))
+                    .build();
+    final ExpectedProjectionGroupBy queryMetrics =
+        new ExpectedProjectionGroupBy(null);
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, 3);
+
+    testGroupBy(
+        query,
+        queryMetrics,
+        Collections.singletonList(
+            new Object[]{"a", 4L, Pair.of(TIMESTAMP.plusMinutes(4).getMillis(), 2L)}
         )
     );
   }

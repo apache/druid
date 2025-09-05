@@ -32,6 +32,8 @@ import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.utils.CollectionUtils;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
@@ -48,6 +50,7 @@ public class Projections
   public static <T> QueryableProjection<T> findMatchingProjection(
       CursorBuildSpec cursorBuildSpec,
       SortedSet<AggregateProjectionMetadata> projections,
+      Interval dataInterval,
       PhysicalColumnChecker physicalChecker,
       Function<String, T> getRowSelector
   )
@@ -62,7 +65,7 @@ public class Projections
         if (name != null && !name.equals(spec.getSchema().getName())) {
           continue;
         }
-        final ProjectionMatch match = matchAggregateProjection(spec.getSchema(), cursorBuildSpec, physicalChecker);
+        final ProjectionMatch match = matchAggregateProjection(spec.getSchema(), cursorBuildSpec, dataInterval, physicalChecker);
         if (match != null) {
           if (cursorBuildSpec.getQueryMetrics() != null) {
             cursorBuildSpec.getQueryMetrics().projection(spec.getSchema().getName());
@@ -108,6 +111,7 @@ public class Projections
   public static ProjectionMatch matchAggregateProjection(
       AggregateProjectionMetadata.Schema projection,
       CursorBuildSpec queryCursorBuildSpec,
+      Interval dataInterval,
       PhysicalColumnChecker physicalColumnChecker
   )
   {
@@ -115,6 +119,11 @@ public class Projections
       return null;
     }
     if (CollectionUtils.isNullOrEmpty(queryCursorBuildSpec.getPhysicalColumns())) {
+      return null;
+    }
+
+
+    if (matchQueryIntervalWithProjectionGranularity(projection, queryCursorBuildSpec, dataInterval)) {
       return null;
     }
     ProjectionMatchBuilder matchBuilder = new ProjectionMatchBuilder();
@@ -141,6 +150,25 @@ public class Projections
     }
 
     return matchBuilder.build(queryCursorBuildSpec);
+  }
+
+  private static boolean matchQueryIntervalWithProjectionGranularity(
+      AggregateProjectionMetadata.Schema projection,
+      CursorBuildSpec queryCursorBuildSpec,
+      Interval dataInterval
+  )
+  {
+    final Interval queryInterval = queryCursorBuildSpec.getInterval();
+    if (!queryInterval.contains(dataInterval)) {
+      final Granularity granularity = projection.getEffectiveGranularity();
+      final DateTime start  = queryInterval.getStart();
+      final DateTime end = queryInterval.getEnd();
+      // the interval filter must align with the projection granularity for a match to be valid
+      if (!start.equals(granularity.bucketStart(start)) || !end.equals(granularity.bucketStart(end))) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Nullable
