@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
+import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BitmapResultFactory;
@@ -127,6 +128,77 @@ public class AndFilter implements BooleanFilter
 
         assert match.isValid(mask);
         return match;
+      }
+    };
+  }
+
+  /**
+   * Creates a {@link BitmapColumnIndex} that will perform an intersection a list of {@link BitmapColumnIndex}
+   */
+  private static BitmapColumnIndex makeAndBitmapColumnIndex(
+      BitmapFactory bitmapFactory,
+      ColumnIndexCapabilities indexCapabilities,
+      List<BitmapColumnIndex> bitmapColumnIndices
+  )
+  {
+    return new BitmapColumnIndex()
+    {
+      @Override
+      public ColumnIndexCapabilities getIndexCapabilities()
+      {
+        return indexCapabilities;
+      }
+
+      @Override
+      public int estimatedComputeCost()
+      {
+        // There's no additional cost on AND filter, cost in child filters would be summed.
+        return 0;
+      }
+
+      @Override
+      public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
+      {
+        final List<T> bitmapResults = new ArrayList<>(bitmapColumnIndices.size());
+        for (final BitmapColumnIndex index : bitmapColumnIndices) {
+          final T bitmapResult = index.computeBitmapResult(bitmapResultFactory, includeUnknown);
+          if (bitmapResultFactory.isEmpty(bitmapResult)) {
+            // Short-circuit.
+            return bitmapResultFactory.wrapAllFalse(bitmapFactory.makeEmptyImmutableBitmap());
+          }
+          bitmapResults.add(bitmapResult);
+        }
+        return bitmapResultFactory.intersection(bitmapResults);
+      }
+
+      @Nullable
+      @Override
+      public <T> T computeBitmapResult(
+          BitmapResultFactory<T> bitmapResultFactory,
+          int applyRowCount,
+          int totalRowCount,
+          boolean includeUnknown
+      )
+      {
+        final List<T> bitmapResults = new ArrayList<>(bitmapColumnIndices.size());
+        for (final BitmapColumnIndex index : bitmapColumnIndices) {
+          final T bitmapResult = index.computeBitmapResult(
+              bitmapResultFactory,
+              applyRowCount,
+              totalRowCount,
+              includeUnknown
+          );
+          if (bitmapResult == null) {
+            // all or nothing
+            return null;
+          }
+          if (bitmapResultFactory.isEmpty(bitmapResult)) {
+            // Short-circuit.
+            return bitmapResultFactory.wrapAllFalse(bitmapFactory.makeEmptyImmutableBitmap());
+          }
+          bitmapResults.add(bitmapResult);
+        }
+        return bitmapResultFactory.intersection(bitmapResults);
       }
     };
   }
@@ -264,6 +336,30 @@ public class AndFilter implements BooleanFilter
 
   @Nullable
   @Override
+  public BitmapColumnIndex getBitmapColumnIndex(BitmapFactory bitmapFactory, List<FilterBundle.Builder> childBuilders)
+  {
+    if (childBuilders.size() == 1) {
+      return Iterables.getOnlyElement(childBuilders).getBitmapColumnIndex();
+    }
+
+    final List<BitmapColumnIndex> bitmapColumnIndices = new ArrayList<>(childBuilders.size());
+    ColumnIndexCapabilities merged = new SimpleColumnIndexCapabilities(true, true);
+    for (final FilterBundle.Builder filter : childBuilders) {
+      final BitmapColumnIndex index = filter.getBitmapColumnIndex();
+      if (index == null) {
+        // all or nothing
+        return null;
+      }
+      merged = merged.merge(index.getIndexCapabilities());
+      bitmapColumnIndices.add(index);
+    }
+
+    final ColumnIndexCapabilities finalMerged = merged;
+    return makeAndBitmapColumnIndex(bitmapFactory, finalMerged, bitmapColumnIndices);
+  }
+
+  @Nullable
+  @Override
   public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
     if (filters.size() == 1) {
@@ -282,67 +378,7 @@ public class AndFilter implements BooleanFilter
       bitmapColumnIndices.add(index);
     }
 
-    final ColumnIndexCapabilities finalMerged = merged;
-    return new BitmapColumnIndex()
-    {
-      @Override
-      public ColumnIndexCapabilities getIndexCapabilities()
-      {
-        return finalMerged;
-      }
-
-      @Override
-      public int estimatedComputeCost()
-      {
-        // There's no additional cost on AND filter, cost in child filters would be summed.
-        return 0;
-      }
-
-      @Override
-      public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
-      {
-        final List<T> bitmapResults = new ArrayList<>(bitmapColumnIndices.size());
-        for (final BitmapColumnIndex index : bitmapColumnIndices) {
-          final T bitmapResult = index.computeBitmapResult(bitmapResultFactory, includeUnknown);
-          if (bitmapResultFactory.isEmpty(bitmapResult)) {
-            // Short-circuit.
-            return bitmapResultFactory.wrapAllFalse(selector.getBitmapFactory().makeEmptyImmutableBitmap());
-          }
-          bitmapResults.add(bitmapResult);
-        }
-        return bitmapResultFactory.intersection(bitmapResults);
-      }
-
-      @Nullable
-      @Override
-      public <T> T computeBitmapResult(
-          BitmapResultFactory<T> bitmapResultFactory,
-          int applyRowCount,
-          int totalRowCount,
-          boolean includeUnknown
-      )
-      {
-        final List<T> bitmapResults = new ArrayList<>(bitmapColumnIndices.size());
-        for (final BitmapColumnIndex index : bitmapColumnIndices) {
-          final T bitmapResult = index.computeBitmapResult(
-              bitmapResultFactory,
-              applyRowCount,
-              totalRowCount,
-              includeUnknown
-          );
-          if (bitmapResult == null) {
-            // all or nothing
-            return null;
-          }
-          if (bitmapResultFactory.isEmpty(bitmapResult)) {
-            // Short-circuit.
-            return bitmapResultFactory.wrapAllFalse(selector.getBitmapFactory().makeEmptyImmutableBitmap());
-          }
-          bitmapResults.add(bitmapResult);
-        }
-        return bitmapResultFactory.intersection(bitmapResults);
-      }
-    };
+    return makeAndBitmapColumnIndex(selector.getBitmapFactory(), merged, bitmapColumnIndices);
   }
 
   @Override
