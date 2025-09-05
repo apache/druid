@@ -211,6 +211,30 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   }
 
   @Override
+  public ListenableFuture<Boolean> updateConfigAsync(String taskId, TaskConfigUpdateRequest updateRequest)
+  {
+    final RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.POST, "/updateConfig")
+        .jsonContent(jsonMapper, updateRequest);
+
+    return makeRequest(taskId, requestBuilder)
+        .handler(IgnoreHttpResponseHandler.INSTANCE)
+        .onSuccess(r -> true)
+        .onHttpError(e -> {
+          log.warn("Task [%s] config update failed due to http request failure [%s].", taskId, e.getMessage());
+          return Either.value(false);
+        })
+        .onNotAvailable(e -> {
+          log.warn("Task [%s] config update failed because task is not available.", taskId);
+          return Either.value(false);
+        })
+        .onClosed(e -> {
+          log.warn("Task [%s] config update failed because task is no longer running.", taskId);
+          return Either.value(false);
+        })
+        .go();
+  }
+
+  @Override
   public ListenableFuture<Boolean> setEndOffsetsAsync(
       final String id,
       final Map<PartitionIdType, SequenceOffsetType> endOffsets,

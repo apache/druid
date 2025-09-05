@@ -73,6 +73,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.TaskConfigUpdateRequest;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
@@ -200,9 +201,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // We don't include closed partitions in the starting offsets. However, we keep the full unfiltered map of
     // partitions, only used for generating the sequence name, to avoid ambiguity in sequence names if mulitple
     // task groups have nothing but closed partitions in their assignments.
+
     final ImmutableMap<PartitionIdType, SequenceOffsetType> unfilteredStartingSequencesForSequenceName;
 
     final ConcurrentHashMap<String, TaskData> tasks = new ConcurrentHashMap<>();
+
     final DateTime minimumMessageTime;
     final DateTime maximumMessageTime;
     final Set<PartitionIdType> exclusiveStartSequenceNumberPartitions;
@@ -211,6 +214,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     DateTime completionTimeout; // is set after signalTasksToFinish(); if not done by timeout, take corrective action
 
     boolean handoffEarly = false; // set by SupervisorManager.stopTaskGroupEarly
+
+    public int getId()
+    {
+      return groupId;
+    }
+
+    public DateTime getMinimumMessageTime()
+    {
+      return minimumMessageTime;
+    }
+
+    public DateTime getMaximumMessageTime()
+    {
+      return maximumMessageTime;
+    }
 
     TaskGroup(
         int groupId,
@@ -564,9 +582,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           dataSource
       );
       final Stopwatch scaleActionStopwatch = Stopwatch.createStarted();
-      gracefulShutdownInternal();
-      changeTaskCountInIOConfig(desiredActiveTaskCount);
-      clearAllocationInfo();
+      
+      if (spec.usePerpetuallyRunningTasks()) {
+        return changeTaskCountForPerpetualTasks(desiredActiveTaskCount, scaleActionStopwatch);
+      } else {
+        gracefulShutdownInternal();
+        changeTaskCountInIOConfig(desiredActiveTaskCount);
+        clearAllocationInfo();
+      }
+      
       emitter.emit(ServiceMetricEvent.builder()
                                      .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
                                      .setDimension(DruidMetrics.DATASOURCE, dataSource)
@@ -583,6 +607,211 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       return true;
     }
   }
+
+  private Map<PartitionIdType, SequenceOffsetType> getLatestOffsetsFromMetadataStore() {
+    try {
+      DataSourceMetadata metadata = indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(dataSource);
+      if (metadata instanceof SeekableStreamDataSourceMetadata) {
+        @SuppressWarnings("unchecked")
+        SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> streamMetadata =
+            (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) metadata;
+        return streamMetadata.getSeekableStreamSequenceNumbers().getPartitionSequenceNumberMap();
+      }
+    } catch (Exception e) {
+      log.warn(e, "Failed to retrieve latest offsets from metadata store, using current partition state");
+    }
+    return Collections.emptyMap();
+  }
+
+  /**
+   * Handles task count changes for perpetual tasks using updateConfig instead of graceful shutdown.
+   * This approach pauses tasks, recalculates partition assignments, and sends config updates.
+   */
+  private boolean changeTaskCountForPerpetualTasks(int desiredActiveTaskCount, Stopwatch scaleActionStopwatch)
+      throws InterruptedException, ExecutionException
+  {
+    log.info("Handling task count change for perpetual tasks from [%d] to [%d]", 
+             activelyReadingTaskGroups.size(), desiredActiveTaskCount);
+
+    pauseAllTasks();
+    changeTaskCountInIOConfig(desiredActiveTaskCount);
+    Map<Integer, Set<PartitionIdType>> newPartitionGroups = calculateNewPartitionGroups();
+
+    boolean success = sendConfigUpdatesToTasks(newPartitionGroups);
+
+    if (success) {
+      updatePartitionGroupsForPerpetualTasks(newPartitionGroups);
+      log.info("Successfully updated task configurations for perpetual tasks scaling");
+    } else {
+      log.error("Failed to update task configurations for perpetual tasks");
+    }
+
+    return success;
+  }
+
+  private void pauseAllTasks() throws InterruptedException, ExecutionException
+  {
+    log.info("Pausing all tasks for perpetual task scaling");
+    List<ListenableFuture<Map<PartitionIdType, SequenceOffsetType>>> pauseFutures = new ArrayList<>();
+    
+    for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
+      for (String taskId : taskGroup.taskIds()) {
+        log.debug("Pausing task [%s]", taskId);
+        pauseFutures.add(taskClient.pauseAsync(taskId));
+      }
+    }
+    
+    coalesceAndAwait(pauseFutures);
+    log.info("Successfully paused [%d] tasks", pauseFutures.size());
+  }
+
+  /**
+   * Calculates new partition groups using the existing getTaskGroupIdForPartition() logic.
+   */
+  private Map<Integer, Set<PartitionIdType>> calculateNewPartitionGroups()
+  {
+    log.info("Calculating new partition groups using getTaskGroupIdForPartition() logic");
+    Map<Integer, Set<PartitionIdType>> newPartitionGroups = new HashMap<>();
+    
+    List<PartitionIdType> allPartitions = new ArrayList<>(partitionIds);
+    
+    if (allPartitions.isEmpty()) {
+      log.warn("No partitions available for assignment");
+      return newPartitionGroups;
+    }
+    
+    for (PartitionIdType partition : allPartitions) {
+      int taskGroupId = getTaskGroupIdForPartition(partition);
+      
+      if (taskGroupId >= 0 && taskGroupId < ioConfig.getTaskCount()) {
+        newPartitionGroups.computeIfAbsent(taskGroupId, k -> new HashSet<>()).add(partition);
+      } else {
+        log.warn("Invalid task group ID [%d] for partition [%s], skipping", taskGroupId, partition);
+      }
+    }
+    
+    log.info("Created [%d] new partition groups: %s", newPartitionGroups.size(), newPartitionGroups);
+    return newPartitionGroups;
+  }
+
+  /**
+   * Sends configuration updates to tasks with new partition assignments.
+   * Also handles cleanup of obsolete task groups when scaling down.
+   */
+  private boolean sendConfigUpdatesToTasks(Map<Integer, Set<PartitionIdType>> newPartitionGroups)
+      throws InterruptedException, ExecutionException
+  {
+    log.info("Sending configuration updates to tasks");
+    List<ListenableFuture<Boolean>> updateFutures = new ArrayList<>();
+    Map<PartitionIdType, SequenceOffsetType> latestCommittedOffsets = getLatestOffsetsFromMetadataStore();
+    for (Map.Entry<Integer, Set<PartitionIdType>> entry : newPartitionGroups.entrySet()) {
+      int taskGroupId = entry.getKey();
+      Set<PartitionIdType> partitions = entry.getValue();
+      
+      TaskGroup existingTaskGroup = activelyReadingTaskGroups.get(taskGroupId);
+      if (existingTaskGroup != null) {
+        for (String taskId : existingTaskGroup.taskIds()) {
+          SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig = createUpdatedTaskIoConfig(partitions, existingTaskGroup, latestCommittedOffsets);
+          TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(newIoConfig);
+          
+          log.debug("Updating config for task [%s] with partitions [%s]", taskId, partitions);
+          updateFutures.add(taskClient.updateConfigAsync(taskId, updateRequest));
+        }
+      }
+    }
+
+
+    if (updateFutures.isEmpty()) {
+      log.info("No configuration updates needed");
+      return true;
+    }
+
+    List<Either<Throwable, Boolean>> results = coalesceAndAwait(updateFutures);
+    boolean allSucceeded = results.stream().allMatch(result -> {
+      if (result.isValue()) {
+        Boolean value = result.valueOrThrow();
+        return value != null && value;
+      }
+      return false;
+    });
+
+    if (allSucceeded) {
+      log.info("Successfully sent configuration updates to [%d] tasks", updateFutures.size());
+    } else {
+      log.error("Some configuration updates failed");
+    }
+    handleObsoleteTaskGroups(newPartitionGroups.keySet());
+
+    return allSucceeded;
+  }
+
+  /**
+   * Handles obsolete task groups when scaling down.
+   * Pauses tasks in task groups that are no longer needed and removes them from activelyReadingTaskGroups.
+   */
+  private void handleObsoleteTaskGroups(Set<Integer> newTaskGroupIds)
+  {
+    Set<Integer> currentTaskGroupIds = new HashSet<>(activelyReadingTaskGroups.keySet());
+    Set<Integer> obsoleteTaskGroupIds = new HashSet<>(currentTaskGroupIds);
+    obsoleteTaskGroupIds.removeAll(newTaskGroupIds);
+    
+    if (obsoleteTaskGroupIds.isEmpty()) {
+      log.debug("No obsolete task groups to clean up");
+      return;
+    }
+    
+    log.info("Handling obsolete task groups during scaling down: %s", obsoleteTaskGroupIds);
+    
+    for (Integer obsoleteTaskGroupId : obsoleteTaskGroupIds) {
+      TaskGroup obsoleteTaskGroup = activelyReadingTaskGroups.get(obsoleteTaskGroupId);
+      if (obsoleteTaskGroup != null) {
+        log.info("Pausing tasks in obsolete task group [%d]: %s", obsoleteTaskGroupId, obsoleteTaskGroup.taskIds());
+        
+        // Pause all tasks in the obsolete task group
+        for (String taskId : obsoleteTaskGroup.taskIds()) {
+          try {
+            taskClient.pauseAsync(taskId);
+            log.info("Requested pause for task [%s] in obsolete task group [%d]", taskId, obsoleteTaskGroupId);
+          } catch (Exception e) {
+            log.error(e, "Failed to pause task [%s] in obsolete task group [%d]", taskId, obsoleteTaskGroupId);
+          }
+        }
+        
+        // Remove the task group from activelyReadingTaskGroups
+        // The supervisor's normal run cycle will handle shutdown of these paused tasks
+        activelyReadingTaskGroups.remove(obsoleteTaskGroupId);
+        log.info("Removed obsolete task group [%d] from activelyReadingTaskGroups", obsoleteTaskGroupId);
+      }
+    }
+  }
+
+  /**
+   * Updates the partition groups mapping for perpetual tasks without clearing other allocation info.
+   */
+  private void updatePartitionGroupsForPerpetualTasks(Map<Integer, Set<PartitionIdType>> newPartitionGroups)
+  {
+    log.info("Updating partition groups mapping for perpetual tasks");
+    
+    // Update the partition groups mapping
+    partitionGroups.clear();
+    partitionGroups.putAll(newPartitionGroups);
+    
+    // Update partition offsets for new partitions if needed
+    for (PartitionIdType partition : partitionIds) {
+      partitionOffsets.putIfAbsent(partition, getNotSetMarker());
+    }
+    
+    log.info("Updated partition groups: %s", partitionGroups);
+  }
+
+  /**
+   * Creates an updated IOConfig for a task with new partition assignments.
+   */
+  protected abstract SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> createUpdatedTaskIoConfig(
+      Set<PartitionIdType> partitions,
+      TaskGroup existingTaskGroup,
+      Map<PartitionIdType, SequenceOffsetType> latestCommittedOffsets
+  );
 
   private void changeTaskCountInIOConfig(int desiredActiveTaskCount)
   {

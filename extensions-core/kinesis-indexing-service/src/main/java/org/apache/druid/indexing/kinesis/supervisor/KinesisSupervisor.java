@@ -150,6 +150,16 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   }
 
   @Override
+  protected SeekableStreamIndexTaskIOConfig<String, String> createUpdatedTaskIoConfig(
+      Set<String> partitions,
+      TaskGroup existingTaskGroup,
+      Map<String, String> latestCommittedOffsets
+  )
+  {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
   protected List<SeekableStreamIndexTask<String, String, KinesisRecordEntity>> createIndexTasks(
       int replicas,
       String baseSequenceName,
