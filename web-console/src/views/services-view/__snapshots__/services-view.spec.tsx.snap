@@ -205,6 +205,8 @@ exports[`ServicesView renders data 1`] = `
             "Cell": [Function],
             "Header": "Start time",
             "accessor": "start_time",
+            "filterMethod": [Function],
+            "id": "start_time",
             "show": true,
             "width": 220,
           },
