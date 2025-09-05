@@ -719,6 +719,7 @@ public class KafkaSupervisorSpecTest
         null,
         null,
         null,
+        null,
         null
     );
     sourceSpec.validateSpecUpdateTo(validDestSpec);
@@ -754,6 +755,7 @@ public class KafkaSupervisorSpecTest
           null,
           false
       ),
+      null,
       null,
       null,
       null,

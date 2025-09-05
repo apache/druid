@@ -227,7 +227,7 @@ public class OverlordClientTest extends EmbeddedClusterTestBase
             null, null, null, null, null, null, null, null, null, null, null, null, null, null
         ),
         Map.of(),
-        null, null, null, null, null, null, null, null, null, null
+        null, null, null, null, null, null, null, null, null, null, null
     );
 
     final Exception exception = Assertions.assertThrows(

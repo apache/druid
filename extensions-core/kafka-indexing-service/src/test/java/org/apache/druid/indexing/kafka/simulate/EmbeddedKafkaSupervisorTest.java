@@ -167,7 +167,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
             true,
             null, null, null, null, null, null, null, null
         ),
-        null, null, null, null, null, null, null, null, null, null, null
+        null, null, null, null, null, null, null, null, null, null, null, null
     );
   }
 

@@ -604,7 +604,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
             true,
             null, null, null, null, null, null, null, null
         ),
-        null, null, null, null, null, null, null, null, null, null, null
+        null, null, null, null, null, null, null, null, null, null, null, null
     );
   }
 
@@ -632,7 +632,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
             true,
             null, null, null, null, null, null, null, null
         ),
-        null, null, null, null, null, null, null, null, null, null, null
+        null, null, null, null, null, null, null, null, null, null, null, null
     );
   }
 

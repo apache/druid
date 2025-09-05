@@ -2949,6 +2949,17 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }
 
     @Override
+    protected SeekableStreamIndexTaskIOConfig<String, String> createUpdatedTaskIoConfig(
+        Set<String> partitions,
+        SeekableStreamSupervisor<String, String, ByteEntity>.TaskGroup existingTaskGroup,
+        Map<String, String> latestCommittedOffsets
+    )
+    {
+      // dummy implementation
+      return null;
+    }
+
+    @Override
     protected String baseTaskName()
     {
       return "test";
@@ -3164,6 +3175,16 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }
 
     @Override
+    protected SeekableStreamIndexTaskIOConfig<String, String> createUpdatedTaskIoConfig(
+        Set<String> partitions,
+        SeekableStreamSupervisor<String, String, ByteEntity>.TaskGroup existingTaskGroup,
+        Map<String, String> latestCommittedOffsets
+    )
+    {
+      return null;
+    }
+
+    @Override
     protected Map<String, String> getLatestSequencesFromStream()
     {
       return streamOffsets;
@@ -3198,6 +3219,16 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       this.metricFlag = metricFlag;
       this.partitionsRecordLag = partitionsRecordLag;
       this.partitionsTimeLag = partitionsTimeLag;
+    }
+
+    @Override
+    protected SeekableStreamIndexTaskIOConfig<String, String> createUpdatedTaskIoConfig(
+        Set<String> partitions,
+        SeekableStreamSupervisor<String, String, ByteEntity>.TaskGroup existingTaskGroup,
+        Map<String, String> latestCommittedOffsets
+    )
+    {
+      return null;
     }
 
     @Nullable

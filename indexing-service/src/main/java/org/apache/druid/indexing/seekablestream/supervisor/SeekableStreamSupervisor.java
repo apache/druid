@@ -608,7 +608,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  private Map<PartitionIdType, SequenceOffsetType> getLatestOffsetsFromMetadataStore() {
+  private Map<PartitionIdType, SequenceOffsetType> getLatestOffsetsFromMetadataStore()
+  {
     try {
       DataSourceMetadata metadata = indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(dataSource);
       if (metadata instanceof SeekableStreamDataSourceMetadata) {
@@ -617,7 +618,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) metadata;
         return streamMetadata.getSeekableStreamSequenceNumbers().getPartitionSequenceNumberMap();
       }
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       log.warn(e, "Failed to retrieve latest offsets from metadata store, using current partition state");
     }
     return Collections.emptyMap();
@@ -672,24 +674,24 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   {
     log.info("Calculating new partition groups using getTaskGroupIdForPartition() logic");
     Map<Integer, Set<PartitionIdType>> newPartitionGroups = new HashMap<>();
-    
+
     List<PartitionIdType> allPartitions = new ArrayList<>(partitionIds);
-    
+
     if (allPartitions.isEmpty()) {
       log.warn("No partitions available for assignment");
       return newPartitionGroups;
     }
-    
+
     for (PartitionIdType partition : allPartitions) {
       int taskGroupId = getTaskGroupIdForPartition(partition);
-      
+
       if (taskGroupId >= 0 && taskGroupId < ioConfig.getTaskCount()) {
         newPartitionGroups.computeIfAbsent(taskGroupId, k -> new HashSet<>()).add(partition);
       } else {
         log.warn("Invalid task group ID [%d] for partition [%s], skipping", taskGroupId, partition);
       }
     }
-    
+
     log.info("Created [%d] new partition groups: %s", newPartitionGroups.size(), newPartitionGroups);
     return newPartitionGroups;
   }
@@ -707,13 +709,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     for (Map.Entry<Integer, Set<PartitionIdType>> entry : newPartitionGroups.entrySet()) {
       int taskGroupId = entry.getKey();
       Set<PartitionIdType> partitions = entry.getValue();
-      
+
       TaskGroup existingTaskGroup = activelyReadingTaskGroups.get(taskGroupId);
       if (existingTaskGroup != null) {
         for (String taskId : existingTaskGroup.taskIds()) {
-          SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig = createUpdatedTaskIoConfig(partitions, existingTaskGroup, latestCommittedOffsets);
+          SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig = createUpdatedTaskIoConfig(
+              partitions,
+              existingTaskGroup,
+              latestCommittedOffsets
+          );
           TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(newIoConfig);
-          
+
           log.debug("Updating config for task [%s] with partitions [%s]", taskId, partitions);
           updateFutures.add(taskClient.updateConfigAsync(taskId, updateRequest));
         }
@@ -754,29 +760,30 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     Set<Integer> currentTaskGroupIds = new HashSet<>(activelyReadingTaskGroups.keySet());
     Set<Integer> obsoleteTaskGroupIds = new HashSet<>(currentTaskGroupIds);
     obsoleteTaskGroupIds.removeAll(newTaskGroupIds);
-    
+
     if (obsoleteTaskGroupIds.isEmpty()) {
       log.debug("No obsolete task groups to clean up");
       return;
     }
-    
+
     log.info("Handling obsolete task groups during scaling down: %s", obsoleteTaskGroupIds);
-    
+
     for (Integer obsoleteTaskGroupId : obsoleteTaskGroupIds) {
       TaskGroup obsoleteTaskGroup = activelyReadingTaskGroups.get(obsoleteTaskGroupId);
       if (obsoleteTaskGroup != null) {
         log.info("Pausing tasks in obsolete task group [%d]: %s", obsoleteTaskGroupId, obsoleteTaskGroup.taskIds());
-        
+
         // Pause all tasks in the obsolete task group
         for (String taskId : obsoleteTaskGroup.taskIds()) {
           try {
             taskClient.pauseAsync(taskId);
             log.info("Requested pause for task [%s] in obsolete task group [%d]", taskId, obsoleteTaskGroupId);
-          } catch (Exception e) {
+          }
+          catch (Exception e) {
             log.error(e, "Failed to pause task [%s] in obsolete task group [%d]", taskId, obsoleteTaskGroupId);
           }
         }
-        
+
         // Remove the task group from activelyReadingTaskGroups
         // The supervisor's normal run cycle will handle shutdown of these paused tasks
         activelyReadingTaskGroups.remove(obsoleteTaskGroupId);

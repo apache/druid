@@ -1731,7 +1731,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Path("/updateConfig")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response updateConfig(TaskConfigUpdateRequest updateRequest, @Context final HttpServletRequest req) throws InterruptedException
+  public Response updateConfig(TaskConfigUpdateRequest updateRequest, @Context final HttpServletRequest req)
+      throws InterruptedException
   {
     authorizationCheck(req);
     try {
@@ -1740,7 +1741,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       checkpointSequences();
 
       @SuppressWarnings("unchecked")
-      SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig = 
+      SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig =
           (SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType>) updateRequest.getIoConfig();
       this.ioConfig = newIoConfig;
       this.stream = ioConfig.getStartSequenceNumbers().getStream();
@@ -1752,7 +1753,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       isConfigChangeOngoing = false;
       resume();
       return Response.ok().build();
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       log.makeAlert(e, "Failed to update task config");
       return Response.serverError().entity(e.getMessage()).build();
     }
@@ -1847,8 +1849,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     } else {
       try {
         // Don't acquire a lock if a config change is ongoing, as the runner is already paused.
-        if (!isConfigChangeOngoing)
-        {
+        if (!isConfigChangeOngoing) {
           pauseLock.lockInterruptibly();
         }
         // Perform all sequence related checks before checking for isPaused()

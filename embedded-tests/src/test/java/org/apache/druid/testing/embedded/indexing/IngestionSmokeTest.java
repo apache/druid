@@ -337,7 +337,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
             true,
             null, null, null, null, null, null, null, null
         ),
-        null, null, null, null, null, null, null, null, null, null, null
+        null, null, null, null, null, null, null, null, null, null, null, null
     );
   }
 

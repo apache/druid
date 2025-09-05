@@ -438,7 +438,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
             Period.millis(taskCompletionTimeoutMillis),
             null, null, null, null, null, null, null
         ),
-        null, null, null, null, null, null, null, null, null, null, null
+        null, null, null, null, null, null, null, null, null, null, null, null
     );
   }
 

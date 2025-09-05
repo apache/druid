@@ -180,6 +180,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         null
     );
 
@@ -226,6 +227,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             false
         ),
+        null,
         null,
         null,
         null,
@@ -291,6 +293,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             false
         ),
+        null,
         null,
         null,
         null,
@@ -398,6 +401,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             false
         ),
+        null,
         null,
         null,
         null,
@@ -595,6 +599,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         null
     );
 
@@ -644,6 +649,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
             null,
             false
         ),
+        null,
         null,
         null,
         null,
