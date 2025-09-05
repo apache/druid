@@ -49,6 +49,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+
 @State(Scope.Benchmark)
 @Fork(value = 1)
 @Warmup(iterations = 3)
@@ -59,8 +60,10 @@ public class JodaIntervalDeserializationBenchmark
 {
   @Param({"20000"})
   public int numValues;
-  private ObjectMapper legacyMapper;
-  private ObjectMapper optimizedMapper;
+  /** Object Mapper that uses {@link Intervals#fromString(String)} under the hood. */
+  private ObjectMapper formatStrictObjectMapper;
+  private ObjectMapper defaultMapper;
+
   private List<String> intervalJsonValues;
   private List<String> fallbackIntervalJsonValues;
 
@@ -76,21 +79,21 @@ public class JodaIntervalDeserializationBenchmark
   @Setup
   public void setUp()
   {
-    SimpleModule legacyModule = new SimpleModule()
-        .addDeserializer(
-            Interval.class,
-            new StdDeserializer<>(Interval.class)
-            {
-              @Override
-              public Interval deserialize(JsonParser jsonParser, DeserializationContext ctx) throws IOException
-              {
-                return Intervals.of(jsonParser.getText());
-              }
-            }
-        );
+    SimpleModule strictIntervalFormatModule = new SimpleModule();
+    strictIntervalFormatModule.addDeserializer(
+        Interval.class,
+        new StdDeserializer<>(Interval.class)
+        {
+          @Override
+          public Interval deserialize(JsonParser jsonParser, DeserializationContext ctx) throws IOException
+          {
+            return Intervals.fromString(jsonParser.getText());
+          }
+        }
+    );
 
-    optimizedMapper = new DefaultObjectMapper();
-    legacyMapper = new DefaultObjectMapper().registerModule(legacyModule);
+    defaultMapper = new DefaultObjectMapper();
+    formatStrictObjectMapper = new DefaultObjectMapper().registerModule(strictIntervalFormatModule);
 
     intervalJsonValues = new ArrayList<>(numValues);
     fallbackIntervalJsonValues = new ArrayList<>(numValues);
@@ -120,7 +123,7 @@ public class JodaIntervalDeserializationBenchmark
   public void deserializeOptimized(Blackhole blackhole) throws Exception
   {
     for (String json : intervalJsonValues) {
-      blackhole.consume(optimizedMapper.readValue(json, Interval.class));
+      blackhole.consume(formatStrictObjectMapper.readValue(json, Interval.class));
     }
   }
 
@@ -128,7 +131,7 @@ public class JodaIntervalDeserializationBenchmark
   public void deserializeLegacy(Blackhole blackhole) throws Exception
   {
     for (String json : intervalJsonValues) {
-      blackhole.consume(legacyMapper.readValue(json, Interval.class));
+      blackhole.consume(defaultMapper.readValue(json, Interval.class));
     }
   }
 
@@ -136,7 +139,7 @@ public class JodaIntervalDeserializationBenchmark
   public void deserializeOptimizedFallback(Blackhole blackhole) throws Exception
   {
     for (String json : fallbackIntervalJsonValues) {
-      blackhole.consume(optimizedMapper.readValue(json, Interval.class));
+      blackhole.consume(formatStrictObjectMapper.readValue(json, Interval.class));
     }
   }
 
@@ -144,7 +147,7 @@ public class JodaIntervalDeserializationBenchmark
   public void deserializeLegacyFallback(Blackhole blackhole) throws Exception
   {
     for (String json : fallbackIntervalJsonValues) {
-      blackhole.consume(legacyMapper.readValue(json, Interval.class));
+      blackhole.consume(defaultMapper.readValue(json, Interval.class));
     }
   }
 }

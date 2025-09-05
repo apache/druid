@@ -57,8 +57,46 @@ public final class Intervals
     return of(StringUtils.format(format, formatArgs));
   }
 
+  /**
+   * A performance-optimized method for parsing a Joda-Time {@link Interval} from a string.
+   * This method is significantly faster than the standard {@link Intervals#of(String)} for the following
+   * group of offsets:
+   * <ol>
+   *   <li>"2022-01-01T00:00:00.000Z/2022-01-02T00:00:00.000Z"</li>
+   *   <li>"2022-01-01T00:00:00.000+05:30/2022-01-01T01:00:00.000+05:30"</li>
+   *   <li>"2022-01-01T00:00:00.000+0530/2022-01-01T01:00:00.000+0530"</li>
+   * </ol>
+   * <p>
+   * If the input string does not match the format, it will fall back to the more flexible but
+   * slower {@link Intervals#of(String)} parser. If you are dealing with any Intervals format examples below,
+   * consider using {@link Intervals#of(String)} instead:
+   * <ol>
+   *   <li>"2022-01-01T00:00:00Z/2022-01-02T00:00:00Z" (without millis)</li>
+   *   <li>"2022-01-01/2022-01-02" (Date only)</li>
+   *   <li>"2022-01-01T12:00:00.000Z/PT6H" (Periods in start / end)</li>
+   * </ol>
+   *
+   * Currently, this method is only used in {@link org.apache.druid.timeline.SegmentId}.
+   * Should you find additional places where the Interval format is guaranteed to be compatible with this method,
+   * feel free to open a PR.
+   */
+  public static Interval fromString(String string)
+  {
+    Interval interval = null;
+    if (canDeserializeIntervalOptimallyFromString(string)) {
+      interval = tryOptimizedIntervalDeserialization(string);
+    }
+
+    if (interval == null) {
+      return Intervals.of(string);
+    } else {
+      return interval;
+    }
+  }
+
   private static boolean canDeserializeIntervalOptimallyFromString(String intervalText)
   {
+    // Optimized version does not deal well with Periods.
     if (intervalText.contains("P")) {
       return false;
     }
@@ -84,39 +122,6 @@ public final class Intervals
     }
     catch (IllegalArgumentException e) {
       return null;
-    }
-  }
-
-  /**
-   * A performance-optimized method for parsing a Joda-Time {@link Interval} from a string.
-   * This method is significantly faster than the standard {@link Intervals#of(String)} for the following
-   * group of offsets:
-   * <ol>
-   *   <li>"2022-01-01T00:00:00.000Z/2022-01-02T00:00:00.000Z"</li>
-   *   <li>"2022-01-01T00:00:00.000+05:30/2022-01-01T01:00:00.000+05:30"</li>
-   *   <li>"2022-01-01T00:00:00.000+0530/2022-01-01T01:00:00.000+0530"</li>
-   * </ol>
-   * <p>
-   * If the input string does not match the format, it will fall back to the more flexible but
-   * slower {@link Intervals#of(String)} parser. If you are dealing with any Intervals format examples below,
-   * consider using {@link Intervals#of(String)} instead:
-   * <ol>
-   *   <li>"2022-01-01T00:00:00Z/2022-01-02T00:00:00Z" (without millis)</li>
-   *   <li>"2022-01-01/2022-01-02" (Date only)</li>
-   *   <li>"2022-01-01T12:00:00.000Z/PT6H" (Periods in start / end)</li>
-   * </ol>
-   */
-  public static Interval fromString(String string)
-  {
-    Interval interval = null;
-    if (canDeserializeIntervalOptimallyFromString(string)) {
-      interval = tryOptimizedIntervalDeserialization(string);
-    }
-
-    if (interval == null) {
-      return Intervals.of(string);
-    } else {
-      return interval;
     }
   }
 
