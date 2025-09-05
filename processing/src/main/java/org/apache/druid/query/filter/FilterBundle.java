@@ -169,16 +169,18 @@ public class FilterBundle
     {
       this.filter = filter;
       this.columnIndexSelector = columnIndexSelector;
-      this.bitmapColumnIndex = filter.getBitmapColumnIndex(columnIndexSelector);
       // Construct Builder instances for all child filters recursively.
       if (filter instanceof BooleanFilter) {
-        Collection<Filter> childFilters = ((BooleanFilter) filter).getFilters();
+        final BooleanFilter bool = (BooleanFilter) filter;
+        Collection<Filter> childFilters = bool.getFilters();
         this.childBuilders = new ArrayList<>(childFilters.size());
         for (Filter childFilter : childFilters) {
           this.childBuilders.add(new FilterBundle.Builder(childFilter, columnIndexSelector, cursorAutoArrangeFilters));
         }
+        this.bitmapColumnIndex = bool.getBitmapColumnIndex(columnIndexSelector.getBitmapFactory(), childBuilders);
       } else {
         this.childBuilders = new ArrayList<>(0);
+        this.bitmapColumnIndex = filter.getBitmapColumnIndex(columnIndexSelector);
       }
       if (cursorAutoArrangeFilters) {
         // Sort child builders by cost in ASCENDING order, should be stable by default.

@@ -23,6 +23,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BitmapResultFactory;
@@ -453,6 +454,62 @@ public class OrFilter implements BooleanFilter
     };
   }
 
+  /**
+   * Creates a {@link BitmapColumnIndex} that will perform a union on a list of {@link BitmapColumnIndex}
+   */
+  private static BitmapColumnIndex makeOrBitmapColumnIndex(
+      ColumnIndexCapabilities indexCapabilities,
+      List<BitmapColumnIndex> bitmapColumnIndices
+  )
+  {
+    return new BitmapColumnIndex()
+    {
+      @Override
+      public ColumnIndexCapabilities getIndexCapabilities()
+      {
+        return indexCapabilities;
+      }
+
+      @Override
+      public int estimatedComputeCost()
+      {
+        // There's no additional cost on OR filter, cost in child filters would be summed.
+        return 0;
+      }
+
+      @Override
+      public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
+      {
+        return bitmapResultFactory.union(
+            () -> bitmapColumnIndices.stream()
+                                     .map(x -> x.computeBitmapResult(bitmapResultFactory, includeUnknown))
+                                     .iterator()
+        );
+      }
+
+      @Nullable
+      @Override
+      public <T> T computeBitmapResult(
+          BitmapResultFactory<T> bitmapResultFactory,
+          int applyRowCount,
+          int totalRowCount,
+          boolean includeUnknown
+      )
+      {
+        List<T> results = Lists.newArrayListWithCapacity(bitmapColumnIndices.size());
+        for (BitmapColumnIndex index : bitmapColumnIndices) {
+          final T r = index.computeBitmapResult(bitmapResultFactory, applyRowCount, totalRowCount, includeUnknown);
+          if (r == null) {
+            // all or nothing
+            return null;
+          }
+          results.add(r);
+        }
+        return bitmapResultFactory.union(results);
+      }
+    };
+  }
+
   @Override
   public <T> FilterBundle makeFilterBundle(
       FilterBundle.Builder filterBundleBuilder,
@@ -633,6 +690,29 @@ public class OrFilter implements BooleanFilter
 
   @Nullable
   @Override
+  public BitmapColumnIndex getBitmapColumnIndex(BitmapFactory bitmapFactory, List<FilterBundle.Builder> childBuilders)
+  {
+    if (childBuilders.size() == 1) {
+      return Iterables.getOnlyElement(childBuilders).getBitmapColumnIndex();
+    }
+
+    List<BitmapColumnIndex> bitmapColumnIndices = new ArrayList<>(childBuilders.size());
+    ColumnIndexCapabilities merged = new SimpleColumnIndexCapabilities(true, true);
+    for (FilterBundle.Builder filter : childBuilders) {
+      BitmapColumnIndex index = filter.getBitmapColumnIndex();
+      if (index == null) {
+        // all or nothing
+        return null;
+      }
+      merged = merged.merge(index.getIndexCapabilities());
+      bitmapColumnIndices.add(index);
+    }
+
+    return makeOrBitmapColumnIndex(merged, bitmapColumnIndices);
+  }
+
+  @Nullable
+  @Override
   public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
     if (filters.size() == 1) {
@@ -652,52 +732,7 @@ public class OrFilter implements BooleanFilter
     }
 
     final ColumnIndexCapabilities finalMerged = merged;
-    return new BitmapColumnIndex()
-    {
-      @Override
-      public ColumnIndexCapabilities getIndexCapabilities()
-      {
-        return finalMerged;
-      }
-
-      @Override
-      public int estimatedComputeCost()
-      {
-        // There's no additional cost on OR filter, cost in child filters would be summed.
-        return 0;
-      }
-
-      @Override
-      public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
-      {
-        return bitmapResultFactory.union(
-            () -> bitmapColumnIndices.stream()
-                                     .map(x -> x.computeBitmapResult(bitmapResultFactory, includeUnknown))
-                                     .iterator()
-        );
-      }
-
-      @Nullable
-      @Override
-      public <T> T computeBitmapResult(
-          BitmapResultFactory<T> bitmapResultFactory,
-          int applyRowCount,
-          int totalRowCount,
-          boolean includeUnknown
-      )
-      {
-        List<T> results = Lists.newArrayListWithCapacity(bitmapColumnIndices.size());
-        for (BitmapColumnIndex index : bitmapColumnIndices) {
-          final T r = index.computeBitmapResult(bitmapResultFactory, applyRowCount, totalRowCount, includeUnknown);
-          if (r == null) {
-            // all or nothing
-            return null;
-          }
-          results.add(r);
-        }
-        return bitmapResultFactory.union(results);
-      }
-    };
+    return makeOrBitmapColumnIndex(finalMerged, bitmapColumnIndices);
   }
 
   @Override
