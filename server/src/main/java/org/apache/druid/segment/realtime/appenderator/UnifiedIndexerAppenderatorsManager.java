@@ -170,7 +170,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       PolicyEnforcer policyEnforcer,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      TaskIntervalUnlocker taskIntervalUnlocker
   )
   {
     synchronized (this) {
@@ -194,7 +195,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           cache,
           rowIngestionMeters,
           parseExceptionHandler,
-          centralizedDatasourceSchemaConfig
+          centralizedDatasourceSchemaConfig,
+          taskIntervalUnlocker
       )
       {
         @Override
@@ -506,6 +508,12 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     public int getNumPersistThreads()
     {
       return baseConfig.getNumPersistThreads();
+    }
+
+    @Override
+    public boolean isReleaseLocksOnHandoff()
+    {
+      return baseConfig.isReleaseLocksOnHandoff();
     }
   }
 

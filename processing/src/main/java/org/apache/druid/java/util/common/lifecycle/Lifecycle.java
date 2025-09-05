@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.Closeable;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
@@ -443,7 +444,12 @@ public class Lifecycle
         }
         if (doStart) {
           log.info("Starting lifecycle [%s#%s]", o.getClass().getSimpleName(), method.getName());
-          method.invoke(o);
+          try {
+            method.invoke(o);
+          }
+          catch (InvocationTargetException e) {
+            throw new RuntimeException(e.getCause());
+          }
         }
       }
     }
