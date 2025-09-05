@@ -214,7 +214,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             if (legacyPath.exists()) {
               final File destination = cacheEntry.toPotentialLocation(location.getPath());
               FileUtils.mkdirp(destination);
-              Files.move(legacyPath.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING);
+              final File[] oldFiles = legacyPath.listFiles();
+              final File[] newFiles = destination.listFiles();
+              // make sure old files exist and new files do not exist
+              if (oldFiles != null && oldFiles.length > 0 && newFiles != null && newFiles.length == 0) {
+                Files.move(legacyPath.toPath(), destination.toPath(), StandardCopyOption.ATOMIC_MOVE);
+              }
               cleanupLegacyCacheLocation(location.getPath(), legacyPath);
             }
 
