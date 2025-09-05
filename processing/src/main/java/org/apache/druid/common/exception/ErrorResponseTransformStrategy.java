@@ -28,7 +28,8 @@ import java.util.function.Function;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "strategy", defaultImpl = NoErrorResponseTransformStrategy.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "none", value = NoErrorResponseTransformStrategy.class),
-    @JsonSubTypes.Type(name = "allowedRegex", value = AllowedRegexErrorResponseTransformStrategy.class)
+    @JsonSubTypes.Type(name = "allowedRegex", value = AllowedRegexErrorResponseTransformStrategy.class),
+    @JsonSubTypes.Type(name = "roleBased", value = RoleBasedTransformStrategy.class),
 })
 public interface ErrorResponseTransformStrategy
 {
