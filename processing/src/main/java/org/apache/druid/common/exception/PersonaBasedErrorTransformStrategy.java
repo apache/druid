@@ -27,13 +27,13 @@ import org.apache.druid.java.util.emitter.service.AlertEvent;
 import java.util.UUID;
 import java.util.function.Function;
 
-public class RoleBasedTransformStrategy implements ErrorResponseTransformStrategy
+public class PersonaBasedErrorTransformStrategy implements ErrorResponseTransformStrategy
 {
   private static final String ERROR_WITH_ID_TEMPLATE = "Could not process the query, please contact your administrator "
                                                        + "with Error ID [%s] if the issue persists.";
-  private static final EmittingLogger LOG = new EmittingLogger(RoleBasedTransformStrategy.class);
+  private static final EmittingLogger LOG = new EmittingLogger(PersonaBasedErrorTransformStrategy.class);
 
-  public static final RoleBasedTransformStrategy INSTANCE = new RoleBasedTransformStrategy();
+  public static final PersonaBasedErrorTransformStrategy INSTANCE = new PersonaBasedErrorTransformStrategy();
 
   @Override
   public Exception transformIfNeeded(SanitizableException exception)
@@ -75,6 +75,6 @@ public class RoleBasedTransformStrategy implements ErrorResponseTransformStrateg
   @Override
   public int hashCode()
   {
-    return RoleBasedTransformStrategy.class.hashCode();
+    return PersonaBasedErrorTransformStrategy.class.hashCode();
   }
 }

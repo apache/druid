@@ -29,7 +29,7 @@ import java.util.function.Function;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "none", value = NoErrorResponseTransformStrategy.class),
     @JsonSubTypes.Type(name = "allowedRegex", value = AllowedRegexErrorResponseTransformStrategy.class),
-    @JsonSubTypes.Type(name = "roleBased", value = RoleBasedTransformStrategy.class),
+    @JsonSubTypes.Type(name = "roleBased", value = PersonaBasedErrorTransformStrategy.class),
 })
 public interface ErrorResponseTransformStrategy
 {
