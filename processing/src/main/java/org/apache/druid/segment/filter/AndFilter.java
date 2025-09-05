@@ -152,7 +152,7 @@ public class AndFilter implements BooleanFilter
       @Override
       public int estimatedComputeCost()
       {
-        // There's no additional cost on AND filter, cost in child filters would be summed.
+        // There's no additional cost on AND filter, cost in child FilterBundle.Builder will be summed
         return 0;
       }
 

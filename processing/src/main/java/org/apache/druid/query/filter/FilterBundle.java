@@ -178,6 +178,16 @@ public class FilterBundle
           childBuilders.add(new FilterBundle.Builder(childFilter, columnIndexSelector, cursorAutoArrangeFilters));
         }
         this.bitmapColumnIndex = bool.getBitmapColumnIndex(columnIndexSelector.getBitmapFactory(), childBuilders);
+      } else if (filter instanceof BooleanUnaryFilter) {
+        final BooleanUnaryFilter bool = (BooleanUnaryFilter) filter;
+        childBuilders = new ArrayList<>(1);
+        final FilterBundle.Builder childBuilder = new FilterBundle.Builder(
+            bool.getBaseFilter(),
+            columnIndexSelector,
+            cursorAutoArrangeFilters
+        );
+        childBuilders.add(childBuilder);
+        this.bitmapColumnIndex = bool.getBitmapColumnIndex(columnIndexSelector.getNumRows(), childBuilder);
       } else {
         this.childBuilders = List.of();
         this.bitmapColumnIndex = filter.getBitmapColumnIndex(columnIndexSelector);
