@@ -1,0 +1,165 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#-------------------------------------------------------------------------
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+  name: druidingestions.druid.apache.org
+spec:
+  group: druid.apache.org
+  names:
+    kind: DruidIngestion
+    listKind: DruidIngestionList
+    plural: druidingestions
+    singular: druidingestion
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    - jsonPath: .spec.ingestionSpec.type
+      name: Type
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Ingestion is the Schema for the Ingestion API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              auth:
+                properties:
+                  passwordKey:
+                    description: PasswordKey specifies the key within the Kubernetes
+                      secret that contains the password for authentication.
+                    type: string
+                  secretRef:
+                    description: |-
+                      SecretReference represents a Secret Reference. It has enough information to retrieve secret
+                      in any namespace
+                    properties:
+                      name:
+                        description: name is unique within a namespace to reference
+                          a secret resource.
+                        type: string
+                      namespace:
+                        description: namespace defines the space within which the
+                          secret name must be unique.
+                        type: string
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  type:
+                    type: string
+                  usernameKey:
+                    description: UsernameKey specifies the key within the Kubernetes
+                      secret that contains the username for authentication.
+                    type: string
+                required:
+                - secretRef
+                - type
+                type: object
+              druidCluster:
+                type: string
+              ingestion:
+                properties:
+                  compaction:
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  nativeSpec:
+                    description: |-
+                      nativeSpec allows the ingestion specification to be defined in a native Kubernetes format.
+                      This is particularly useful for environment-specific configurations and will eventually
+                      replace the JSON-based Spec field.
+                      Note: Spec will be ignored if nativeSpec is provided.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  rules:
+                    items:
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                    type: array
+                  spec:
+                    description: |-
+                      Spec should be passed in as a JSON string.
+                      Note: This field is planned for deprecation in favor of nativeSpec.
+                    type: string
+                  type:
+                    type: string
+                required:
+                - type
+                type: object
+              suspend:
+                type: boolean
+            required:
+            - druidCluster
+            - ingestion
+            type: object
+          status:
+            properties:
+              currentIngestionSpec.json:
+                description: |-
+                  CurrentIngestionSpec is a string instead of RawExtension to maintain compatibility with existing
+                  IngestionSpecs that are stored as JSON strings.
+                type: string
+              lastUpdateTime:
+                format: date-time
+                type: string
+              message:
+                type: string
+              reason:
+                type: string
+              rules:
+                items:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                type: array
+              status:
+                type: string
+              taskId:
+                type: string
+              type:
+                type: string
+            required:
+            - currentIngestionSpec.json
+            - taskId
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
