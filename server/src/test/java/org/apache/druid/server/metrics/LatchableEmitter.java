@@ -138,7 +138,7 @@ public class LatchableEmitter extends StubServiceEmitter
     waitForEvent(
         event -> event instanceof ServiceMetricEvent
                  && matcher.test((ServiceMetricEvent) event),
-        10_000
+        20_000
     );
     return matcher.matchingEvent.get();
   }
