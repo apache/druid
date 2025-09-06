@@ -33,13 +33,11 @@ import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.druid.concurrent.Threads;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.AlertBuilder;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
@@ -116,7 +114,6 @@ public class CuratorModule implements Module
       final CuratorConfig config,
       final DruidConnectionStateListener connectionStateListener,
       final ServiceEmitter emitter,
-      @Self final DruidNode selfNode,
       final Lifecycle lifecycle
   )
   {
@@ -128,7 +125,7 @@ public class CuratorModule implements Module
 
     framework.getConnectionStateListenable().addListener(connectionStateListener);
     addUnhandledErrorListener(framework, emitter, lifecycle);
-    addLifecycleHandler(framework, lifecycle, selfNode);
+    addLifecycleHandler(framework, lifecycle);
 
     return framework;
   }
@@ -185,11 +182,7 @@ public class CuratorModule implements Module
   /**
    * Add unhandled error listener that shuts down the JVM.
    */
-  private void addLifecycleHandler(
-      final CuratorFramework framework,
-      final Lifecycle lifecycle,
-      final DruidNode selfNode
-  )
+  private void addLifecycleHandler(final CuratorFramework framework, final Lifecycle lifecycle)
   {
     lifecycle.addHandler(
         new Lifecycle.Handler()
@@ -197,14 +190,14 @@ public class CuratorModule implements Module
           @Override
           public void start()
           {
-            log.info("Starting Curator for server[%s]", selfNode);
+            log.info("Starting Curator");
             framework.start();
           }
 
           @Override
           public void stop()
           {
-            log.info("Stopping Curator for server[%s]", selfNode);
+            log.debug("Stopping Curator");
             framework.close();
           }
         }
