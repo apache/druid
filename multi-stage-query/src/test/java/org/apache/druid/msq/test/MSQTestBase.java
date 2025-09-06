@@ -54,6 +54,7 @@ import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
@@ -143,7 +144,6 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
@@ -155,6 +155,8 @@ import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
@@ -369,8 +371,36 @@ public class MSQTestBase extends BaseCalciteQueryTest
           new HllSketchModule(),
           new LocalMsqSqlModule(),
           new ExpressionModule(),
-          binder -> binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT)
+          binder -> {
+            binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
+            binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class).in(LazySingleton.class);
+          }
       );
+    }
+
+    @Override
+    public DruidModule getOverrideModule()
+    {
+      return new DruidModule() {
+        @Override
+        public void configure(Binder binder)
+        {
+          binder.bind(StorageConfig.class).toInstance(new StorageConfig("/"));
+          binder.bind(SegmentWriteOutMediumFactory.class)
+                .toInstance(TmpFileSegmentWriteOutMediumFactory.instance());
+        }
+
+        @Override
+        public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+        {
+          return ImmutableList.<com.fasterxml.jackson.databind.Module>builder()
+                              .addAll(new StorageConnectorModule().getJacksonModules())
+                              .addAll(new MSQIndexingModule().getJacksonModules())
+                              .addAll(new MSQSqlModule().getJacksonModules())
+                              .addAll(BuiltInTypesModule.getJacksonModulesList())
+                              .build();
+        }
+      };
     }
 
     private static final class LocalMsqSqlModule implements DruidModule
@@ -429,13 +459,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     SqlTestFramework qf = queryFramework();
 
-    ObjectMapper secondMapper = setupObjectMapper(qf.injector());
-    indexIO = new IndexIO(secondMapper, ColumnConfig.DEFAULT);
+    objectMapper = setupObjectMapper(qf.injector());
+    indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
 
-    segmentCacheManager = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, secondMapper).manufacturate(newTempFolder("cacheManager"));
-
-    MSQSqlModule sqlModule = new MSQSqlModule();
-
+    segmentCacheManager =
+        new SegmentCacheManagerFactory(indexIO, objectMapper).manufacturate(newTempFolder("cacheManager"));
     segmentManager = new MSQTestSegmentManager(segmentCacheManager);
 
     List<Module> modules = ImmutableList.of(
@@ -474,6 +502,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
           }).annotatedWith(Self.class).toInstance(ImmutableSet.of(NodeRole.PEON));
           binder.bind(QueryProcessingPool.class)
                 .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
+          binder.bind(SegmentWriteOutMediumFactory.class)
+                .toInstance(TmpFileSegmentWriteOutMediumFactory.instance());
           binder.bind(DataSegmentProvider.class)
                 .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(this::newTempFolder, segmentId));
           binder.bind(DataServerQueryHandlerFactory.class).toInstance(getTestDataServerQueryHandlerFactory());
@@ -505,7 +535,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
             );
             binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
                   .toProvider(() -> localFileStorageConnector);
-            binder.bind(StorageConfig.class).toInstance(new StorageConfig("/"));
           }
           catch (IOException e) {
             throw new ISE(e, "Unable to create setup storage connector");
@@ -544,12 +573,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
     injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build(), ImmutableSet.of(NodeRole.PEON))
         .addAll(modules)
         .build();
-
-    objectMapper = setupObjectMapper(injector);
-    objectMapper.registerModules(new StorageConnectorModule().getJacksonModules());
-    objectMapper.registerModules(new MSQIndexingModule().getJacksonModules());
-    objectMapper.registerModules(sqlModule.getJacksonModules());
-    objectMapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
 
     testTaskActionClient = Mockito.spy(new MSQTestTaskActionClient(objectMapper, injector));
     indexingServiceClient = new MSQTestOverlordServiceClient(
@@ -1369,6 +1392,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                 dataSegment.getDataSource()
             );
           }
+          segmentCacheManager.load(dataSegment);
           final QueryableIndex queryableIndex = indexIO.loadIndex(segmentCacheManager.getSegmentFiles(dataSegment));
           final CursorFactory cursorFactory = new QueryableIndexCursorFactory(queryableIndex);
 

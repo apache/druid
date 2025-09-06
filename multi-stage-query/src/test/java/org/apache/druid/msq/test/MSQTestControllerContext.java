@@ -53,6 +53,7 @@ import org.apache.druid.msq.exec.MSQMetriceEventBuilder;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
+import org.apache.druid.msq.exec.WorkerFailureListener;
 import org.apache.druid.msq.exec.WorkerImpl;
 import org.apache.druid.msq.exec.WorkerManager;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
@@ -346,7 +347,8 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
   public WorkerManager newWorkerManager(
       String queryId,
       MSQSpec querySpec,
-      ControllerQueryKernelConfig queryKernelConfig
+      ControllerQueryKernelConfig queryKernelConfig,
+      WorkerFailureListener workerFailureListener
   )
   {
     MSQWorkerTaskLauncherConfig taskLauncherConfig = new MSQWorkerTaskLauncherConfig();
@@ -358,6 +360,7 @@ public class MSQTestControllerContext implements ControllerContext, DartControll
         controller.queryId(),
         "test-datasource",
         overlordClient,
+        workerFailureListener,
         IndexerControllerContext.makeTaskContext(querySpec, queryKernelConfig, ImmutableMap.of()),
         0,
         taskLauncherConfig

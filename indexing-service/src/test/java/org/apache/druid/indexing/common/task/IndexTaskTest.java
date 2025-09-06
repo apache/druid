@@ -503,6 +503,7 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertEquals(1, segments.size());
     DataSegment segment = segments.get(0);
+    segmentCacheManager.load(segment);
     final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
 
     final WindowedCursorFactory windowed = new WindowedCursorFactory(
@@ -732,6 +733,7 @@ public class IndexTaskTest extends IngestionTestBase
       final HashBasedNumberedShardSpec hashBasedNumberedShardSpec = (HashBasedNumberedShardSpec) segment.getShardSpec();
       Assert.assertEquals(HashPartitionFunction.MURMUR3_32_ABS, hashBasedNumberedShardSpec.getPartitionFunction());
 
+      segmentCacheManager.load(segment);
       final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
 
       final WindowedCursorFactory windowed = new WindowedCursorFactory(

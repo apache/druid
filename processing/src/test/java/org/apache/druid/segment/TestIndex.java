@@ -522,16 +522,21 @@ public class TestIndex
   {
     try {
       File someTmpFile = File.createTempFile("billy", "yay");
-      someTmpFile.delete();
-      FileUtils.mkdirp(someTmpFile);
-      someTmpFile.deleteOnExit();
-
-      INDEX_MERGER.persist(index, someTmpFile, indexSpec, null);
+      someTmpFile = persist(index, indexSpec, someTmpFile);
       return INDEX_IO.loadIndex(someTmpFile);
     }
     catch (IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  public static File persist(IncrementalIndex index, IndexSpec indexSpec, File path) throws IOException
+  {
+    path.delete();
+    FileUtils.mkdirp(path);
+    path.deleteOnExit();
+
+    return INDEX_MERGER.persist(index, path, indexSpec, null);
   }
 
 

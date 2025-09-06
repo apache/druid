@@ -27,7 +27,6 @@ import org.apache.druid.segment.VirtualColumns;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -45,7 +44,6 @@ public final class ProjectionMatchBuilder
   private final Set<VirtualColumn> referencedVirtualColumns;
   private final Map<String, String> remapColumns;
   private final List<AggregatorFactory> combiningFactories;
-  private final Set<String> matchedQueryColumns;
   @Nullable
   private Filter rewriteFilter;
 
@@ -55,7 +53,6 @@ public final class ProjectionMatchBuilder
     this.referencedVirtualColumns = new HashSet<>();
     this.remapColumns = new HashMap<>();
     this.combiningFactories = new ArrayList<>();
-    this.matchedQueryColumns = new HashSet<>();
   }
 
   /**
@@ -103,18 +100,6 @@ public final class ProjectionMatchBuilder
     return this;
   }
 
-  public ProjectionMatchBuilder addMatchedQueryColumn(String queryColumn)
-  {
-    matchedQueryColumns.add(queryColumn);
-    return this;
-  }
-
-  public ProjectionMatchBuilder addMatchedQueryColumns(Collection<String> queryColumns)
-  {
-    matchedQueryColumns.addAll(queryColumns);
-    return this;
-  }
-
   public ProjectionMatchBuilder rewriteFilter(Filter rewriteFilter)
   {
     this.rewriteFilter = rewriteFilter;
@@ -129,11 +114,6 @@ public final class ProjectionMatchBuilder
   public Map<String, String> getRemapColumns()
   {
     return remapColumns;
-  }
-
-  public Set<String> getMatchedQueryColumns()
-  {
-    return matchedQueryColumns;
   }
 
   public ProjectionMatch build(CursorBuildSpec queryCursorBuildSpec)

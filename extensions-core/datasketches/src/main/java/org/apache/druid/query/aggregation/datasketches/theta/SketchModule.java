@@ -75,6 +75,7 @@ public class SketchModule implements DruidModule
         ThetaSketchApproxCountDistinctSqlAggregator.class
     );
     ExpressionModule.addExprMacro(binder, ThetaPostAggMacros.ThetaSketchEstimateExprMacro.class);
+    ExpressionModule.addExprMacro(binder, ThetaPostAggMacros.ThetaSketchEstimateWithErrorBoundsExprMacro.class);
   }
 
   @Override

@@ -38,6 +38,7 @@ import org.apache.druid.msq.exec.MSQMetriceEventBuilder;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.WorkerClient;
+import org.apache.druid.msq.exec.WorkerFailureListener;
 import org.apache.druid.msq.exec.WorkerManager;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig;
@@ -125,7 +126,8 @@ public class IndexerControllerContext implements ControllerContext
     final ControllerMemoryParameters memoryParameters =
         ControllerMemoryParameters.createProductionInstance(
             memoryIntrospector,
-            querySpec.getTuningConfig().getMaxNumWorkers()
+            querySpec.getTuningConfig().getMaxNumWorkers(),
+            MultiStageQueryContext.getFrameSize(querySpec.getContext())
         );
 
     final ControllerQueryKernelConfig config = makeQueryKernelConfig(querySpec, memoryParameters);
@@ -216,13 +218,15 @@ public class IndexerControllerContext implements ControllerContext
   public WorkerManager newWorkerManager(
       final String queryId,
       final MSQSpec querySpec,
-      final ControllerQueryKernelConfig queryKernelConfig
+      final ControllerQueryKernelConfig queryKernelConfig,
+      final WorkerFailureListener workerFailureListener
   )
   {
     return new MSQWorkerTaskLauncher(
         queryId,
         taskDataSource,
         overlordClient,
+        workerFailureListener,
         makeTaskContext(querySpec, queryKernelConfig, taskContext),
         // 10 minutes +- 2 minutes jitter
         TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L),
