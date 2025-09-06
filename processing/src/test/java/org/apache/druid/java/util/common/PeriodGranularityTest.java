@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Assertions;
 public class PeriodGranularityTest
 {
   PeriodGranularity UTC_PT1H = new PeriodGranularity(new Period("PT1H"), null, DateTimeZone.UTC);
-  PeriodGranularity UTC_PT1M = new PeriodGranularity(new Period("PT1M"), null, DateTimeZone.UTC);
+  PeriodGranularity UTC_PT30M = new PeriodGranularity(new Period("PT30M"), null, DateTimeZone.UTC);
 
   DateTimeZone PACIFIC_TZ = DateTimes.inferTzFromString("America/Los_Angeles");
   DateTimeZone INDIAN_TZ = DateTimes.inferTzFromString("Asia/Kolkata");
@@ -36,7 +36,7 @@ public class PeriodGranularityTest
   @Test
   public void testCanBeMappedTo_sameTimeZone()
   {
-    Assertions.assertTrue(UTC_PT1M.canBeMappedTo(UTC_PT1H));
+    Assertions.assertTrue(UTC_PT30M.canBeMappedTo(UTC_PT1H));
 
     PeriodGranularity pacificPT2H = new PeriodGranularity(new Period("PT2H"), null, PACIFIC_TZ);
     Assertions.assertFalse(pacificPT2H.canBeMappedTo(new PeriodGranularity(new Period("PT20M"), null, PACIFIC_TZ)));
@@ -77,10 +77,21 @@ public class PeriodGranularityTest
   }
 
   @Test
-  public void testCanBeMappedTo_sameMinuteAlignWithUtc()
+  public void testCanBeMappedTo_same30MinutesAlignWithUtc()
   {
     Assertions.assertFalse(UTC_PT1H.canBeMappedTo(new PeriodGranularity(new Period("PT2H"), null, INDIAN_TZ)));
-    Assertions.assertTrue(UTC_PT1M.canBeMappedTo(new PeriodGranularity(new Period("PT1M"), null, PACIFIC_TZ)));
+    Assertions.assertFalse(new PeriodGranularity(
+        new Period("PT1H"),
+        null,
+        PACIFIC_TZ
+    ).canBeMappedTo(new PeriodGranularity(new Period("PT1H"), null, INDIAN_TZ)));
+
+    Assertions.assertTrue(new PeriodGranularity(
+        new Period("PT30M"),
+        null,
+        PACIFIC_TZ
+    ).canBeMappedTo(new PeriodGranularity(new Period("PT1H"), null, INDIAN_TZ)));
+    Assertions.assertTrue(UTC_PT30M.canBeMappedTo(new PeriodGranularity(new Period("PT30M"), null, PACIFIC_TZ)));
   }
 
   @Test
@@ -102,7 +113,6 @@ public class PeriodGranularityTest
   @Test
   public void testCanBeMappedTo_differentTimeZone()
   {
-    // In theory pacificPT1M should be able to map to UTC_PT1M, but we don't support this for simplicity.
     PeriodGranularity pacificPT1H = new PeriodGranularity(new Period("PT1H"), null, PACIFIC_TZ);
     Assertions.assertTrue(pacificPT1H.canBeMappedTo(UTC_PT1H));
     Assertions.assertTrue(pacificPT1H.canBeMappedTo(new PeriodGranularity(

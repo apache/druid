@@ -29,6 +29,7 @@ import com.google.common.collect.Lists;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.DimFilter;
@@ -37,6 +38,7 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.utils.CollectionUtils;
+import org.joda.time.DateTimeZone;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -47,7 +49,7 @@ import java.util.stream.Collectors;
 
 /**
  * API type to specify an aggregating projection on {@link org.apache.druid.segment.incremental.IncrementalIndexSchema}
- *
+ * <p>
  * Decorated with {@link JsonTypeInfo} annotations as a future-proofing mechanism in the event we add other types of
  * projections and need to extract out a base interface from this class.
  */
@@ -208,7 +210,10 @@ public class AggregateProjectionSpec
            '}';
   }
 
-  private static ProjectionOrdering computeOrdering(VirtualColumns virtualColumns, List<DimensionSchema> groupingColumns)
+  private static ProjectionOrdering computeOrdering(
+      VirtualColumns virtualColumns,
+      List<DimensionSchema> groupingColumns
+  )
   {
     if (groupingColumns.isEmpty()) {
       // no ordering since there is only 1 row for this projection
@@ -218,10 +223,9 @@ public class AggregateProjectionSpec
 
     String timeColumnName = null;
     Granularity granularity = null;
-    // try to find the __time column equivalent, which might be a time_floor expression to model granularity
-    // bucketing. The time column is decided as the finest granularity on __time detected. If the projection does
-    // not have a time-like column, the granularity will be handled as ALL for the projection and all projection
-    // rows will use a synthetic timestamp of the minimum timestamp of the incremental index
+
+    // determine the granularity and time column name for the projection, based on the first time-like grouping column.
+    // if there are multiple time-like grouping columns, they must be "coarser" than the first time-like grouping column.
     for (final DimensionSchema dimension : groupingColumns) {
       ordering.add(OrderBy.ascending(dimension.getName()));
       if (ColumnHolder.TIME_COLUMN_NAME.equals(dimension.getName())) {
@@ -235,12 +239,35 @@ public class AggregateProjectionSpec
           continue;
         }
         if (granularity == null) {
-          granularity = maybeGranularity;
-          timeColumnName = dimension.getName();
-        } else if (maybeGranularity.isFinerThan(granularity)) {
-          // finer is not a perfect check here, we should rather compute a compatible granularity
-          granularity = maybeGranularity;
-          timeColumnName = dimension.getName();
+          if (maybeGranularity.getClass().equals(PeriodGranularity.class)
+              && maybeGranularity.getTimeZone().equals(DateTimeZone.UTC)
+              && ((PeriodGranularity) maybeGranularity).getOrigin() == null) {
+            granularity = maybeGranularity;
+            timeColumnName = dimension.getName();
+            continue;
+          } else {
+            // we don't allow:
+            // 1. virtual column on __time if there's no grouping on __time
+            // 2. non-UTC or non-epoch origin period granularity
+            throw InvalidInput.exception(
+                "cannot use granularity[%s] on column[%s] as projection time column",
+                maybeGranularity,
+                dimension.getName()
+            );
+          }
+        }
+        if (granularity.equals(Granularities.NONE) || (granularity.getClass().equals(PeriodGranularity.class)
+                                                       && maybeGranularity.getClass().equals(PeriodGranularity.class)
+                                                       && ((PeriodGranularity) granularity).canBeMappedTo((PeriodGranularity) maybeGranularity))) {
+          // keep existing granularity
+        } else {
+          throw InvalidInput.exception(
+              "cannot map time granularity[%s] on column[%s] to time granularity[%s] on column[%s], failed to determine projection time column",
+              granularity,
+              timeColumnName,
+              maybeGranularity,
+              dimension.getName()
+          );
         }
       }
     }

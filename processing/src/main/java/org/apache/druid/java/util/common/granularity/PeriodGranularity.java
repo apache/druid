@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.JsonSerializable;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
 import com.google.common.base.Preconditions;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -227,10 +226,26 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   }
 
   /**
-   * Returns true if this granularity can be mapped to the target granularity. For example:
-   * <li>Period('PT1H') in UTC can be mapped to Period('P1D') in UTC</li>
-   * <li>Period('PT1H') in America/Los_Angeles can be mapped to Period('PT1H') in UTC</li>
-   * <li>Period('P1D') in America/Los_Angeles cannot be mapped to Period('P1D') in UTC</li>
+   * Returns true if this granularity can be mapped to the target granularity. A granularity can be mapped when each
+   * interval of the source fits entirely within a single interval of the target under the given time zone.
+   *
+   * <p>Examples:
+   * <ul>
+   *   <li>{@code Period("PT1H")} in UTC can be mapped to {@code Period("P1D")} in UTC,
+   *       since every hourly interval is fully contained within some day interval.</li>
+   *   <li>{@code Period("PT1H")} in {@code America/Los_Angeles} can be mapped to
+   *       {@code Period("PT1H")} in UTC, since each hour in local time still fits inside
+   *       a corresponding hour in UTC (even though offsets can differ due to daylight saving).</li>
+   *   <li>{@code Period("P1D")} in {@code America/Los_Angeles} cannot be mapped to
+   *       {@code Period("P1D")} in UTC, since local day boundaries may cross UTC days and
+   *       are not fully contained within a single UTC day.</li>
+   *   <li>{@code Period("PT1H")} in {@code Asia/Kolkata} cannot be mapped to
+   *       {@code Period("PT1H")} in UTC, since the 30-minute offset causes local hour
+   *       intervals to straddle two UTC hour intervals.</li>
+   * </ul>
+   *
+   * @param target the target granularity to check against
+   * @return {@code true} if this granularity is fully contained within the target granularity; {@code false} otherwise
    */
   public boolean canBeMappedTo(PeriodGranularity target)
   {
@@ -245,22 +260,28 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
         return false;
       }
 
-      long periodStandardSeconds = getStandardSecondsOrThrow(period.withYears(0).withMonths(0));
-      long targetStandardSeconds = getStandardSecondsOrThrow(target.period.withYears(0).withMonths(0));
+      Optional<Long> periodStandardSeconds = getStandardSeconds(period.withYears(0).withMonths(0));
+      if (periodStandardSeconds.isEmpty()) {
+        return false;
+      }
+      Optional<Long> targetStandardSeconds = getStandardSeconds(target.period.withYears(0).withMonths(0));
+      if (targetStandardSeconds.isEmpty()) {
+        return false;
+      }
       if (targetMonths == 0 && periodMonths == 0) {
         // both periods have zero months
-        return targetStandardSeconds % periodStandardSeconds == 0;
+        return targetStandardSeconds.get() % periodStandardSeconds.get() == 0;
       }
       // if we reach here, targetMonths != 0
       if (periodMonths == 0) {
         // can map if 1.target not have week/day/hour/minute/second, and 2.period can be mapped to day
         // this is for simplicity, it's possible some period can be mapped to gran, but we don't support it
-        return targetStandardSeconds == 0 && (3600 * 24) % periodStandardSeconds == 0;
+        return targetStandardSeconds.get() == 0 && (3600 * 24) % periodStandardSeconds.get() == 0;
       } else {
         // can map if 1.target&period not have week/day/hour/minute/second, and 2.period month can be mapped to target month
         return targetMonths % periodMonths == 0
-               && targetStandardSeconds == 0
-               && periodStandardSeconds == 0;
+               && targetStandardSeconds.get() == 0
+               && periodStandardSeconds.get() == 0;
       }
     }
 
@@ -268,27 +289,43 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
     if (getStandardSeconds(period).isEmpty()) {
       return false;
     }
-    long standardSeconds = getStandardSecondsOrThrow(period);
-    if (standardSeconds != getUtcMappablePeriodSecondsOrThrow()) {
+    Optional<Long> standardSeconds = getStandardSeconds(period);
+    if (standardSeconds.isEmpty()) {
+      return false;
+    }
+    Optional<Long> utcMappablePeriodSeconds = getUtcMappablePeriodSeconds();
+    if (utcMappablePeriodSeconds.isEmpty()) {
+      return false;
+    }
+    if (!standardSeconds.get().equals(utcMappablePeriodSeconds.get())) {
       // the period cannot be mapped to UTC with the same period
       return false;
     }
     if (target.period.getYears() == 0 && target.period.getMonths() == 0) {
-      return target.getUtcMappablePeriodSecondsOrThrow() % standardSeconds == 0;
+      Optional<Long> targetUtcMappablePeriodSeconds = target.getUtcMappablePeriodSeconds();
+      if (targetUtcMappablePeriodSeconds.isEmpty()) {
+        return false;
+      }
+      return targetUtcMappablePeriodSeconds.get() % standardSeconds.get() == 0;
     } else {
-      return getStandardSecondsOrThrow(target.period.withYears(0).withMonths(0)) == 0
-             && (3600 * 24) % standardSeconds == 0;
+      Optional<Long> targetStandardSecondsIgnoringMonth = getStandardSeconds(target.period.withYears(0).withMonths(0));
+      return targetStandardSecondsIgnoringMonth.isPresent()
+             && targetStandardSecondsIgnoringMonth.get() == 0
+             && (3600 * 24) % standardSeconds.get() == 0;
     }
   }
 
   /**
    * Returns the maximum possible period seconds that this granularity can be mapped to UTC.
    * <p>
-   * Throws {@link DruidException} if the period cannot be mapped to whole seconds, i.e. it has years or months, or milliseconds.
+   * Returns empty if the period cannot be mapped to whole seconds, i.e. it has years or months, or milliseconds.
    */
-  public long getUtcMappablePeriodSecondsOrThrow()
+  private Optional<Long> getUtcMappablePeriodSeconds()
   {
-    long periodSeconds = PeriodGranularity.getStandardSecondsOrThrow(period);
+    Optional<Long> periodSeconds = PeriodGranularity.getStandardSeconds(period);
+    if (periodSeconds.isEmpty()) {
+      return Optional.empty();
+    }
 
     if (ISOChronology.getInstanceUTC().getZone().equals(getTimeZone())) {
       return periodSeconds;
@@ -307,36 +344,21 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
       return periodSeconds;
     }
 
-    if (offsets.stream().allMatch(o -> o % periodSeconds == 0)) {
+    if (offsets.stream().allMatch(o -> o % periodSeconds.get() == 0)) {
       // all offsets are multiples of the period
       return periodSeconds;
-    } else if (periodSeconds % 3600 == 0 && offsets.stream().allMatch(o -> o % 3600 == 0)) {
+    } else if (periodSeconds.get() % 3600 == 0 && offsets.stream().allMatch(o -> o % 3600 == 0)) {
       // fall back to hour if period is a multiple of hour and all offsets are multiples of hour
-      return 3600;
-    } else if (periodSeconds % 60 == 0 && offsets.stream().allMatch(o -> o % 60 == 0)) {
+      return Optional.of(3600L);
+    } else if (periodSeconds.get() % 1800 == 0 && offsets.stream().allMatch(o -> o % 1800 == 0)) {
+      // fall back to hour if period is a multiple of 30 minutes and all offsets are multiples of 30 minutes
+      return Optional.of(1800L);
+    } else if (periodSeconds.get() % 60 == 0 && offsets.stream().allMatch(o -> o % 60 == 0)) {
       // fall back to minute if period is a multiple of minute and all offsets are multiples of minute
-      return 60;
+      return Optional.of(60L);
     } else {
       // default to second
-      return 1;
-    }
-  }
-
-  /**
-   * Returns the standard whole seconds for the given period.
-   * <p>
-   * Throws {@link DruidException} if the period cannot be mapped to whole seconds, i.e. one of the following applies:
-   * <ul>
-   * <li>it has years or months
-   * <li>it has milliseconds
-   */
-  public static Long getStandardSecondsOrThrow(Period period)
-  {
-    Optional<Long> s = getStandardSeconds(period);
-    if (s.isPresent()) {
-      return s.get();
-    } else {
-      throw DruidException.defensive("Period[%s] cannot be converted to standard whole seconds", period);
+      return Optional.of(1L);
     }
   }
 
@@ -348,12 +370,12 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
    * <li>it has years or months
    * <li>it has milliseconds
    */
-  public static Optional<Long> getStandardSeconds(Period period)
+  private static Optional<Long> getStandardSeconds(Period period)
   {
     if (period.getYears() == 0 && period.getMonths() == 0) {
       long millis = period.toStandardDuration().getMillis();
       return millis % 1000 == 0
-             ? Optional.of((long) (millis / 1000))
+             ? Optional.of(millis / 1000)
              : Optional.empty();
     }
     return Optional.empty();

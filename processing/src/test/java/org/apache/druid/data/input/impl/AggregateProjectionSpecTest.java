@@ -27,10 +27,12 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -59,12 +61,15 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
             new FloatDimensionSchema("c"),
             new DoubleDimensionSchema("d")
         ),
-        new AggregatorFactory[] {
+        new AggregatorFactory[]{
             new CountAggregatorFactory("count"),
             new LongSumAggregatorFactory("e", "e")
         }
     );
-    Assertions.assertEquals(spec, JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(spec), AggregateProjectionSpec.class));
+    Assertions.assertEquals(
+        spec,
+        JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(spec), AggregateProjectionSpec.class)
+    );
   }
 
   @Test
@@ -75,12 +80,84 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
         null,
         VirtualColumns.EMPTY,
         List.of(),
-        new AggregatorFactory[] {
+        new AggregatorFactory[]{
             new CountAggregatorFactory("count"),
             new LongSumAggregatorFactory("e", "e")
         }
     );
     Assertions.assertTrue(spec.getOrdering().isEmpty());
+  }
+
+  @Test
+  void testComputeOrdering_granularity()
+  {
+    AggregateProjectionSpec spec = new AggregateProjectionSpec(
+        "some_projection",
+        null,
+        VirtualColumns.EMPTY,
+        List.of(new LongDimensionSchema("__time")),
+        new AggregatorFactory[]{}
+    );
+    Assertions.assertEquals("__time", spec.toMetadataSchema().getTimeColumnName());
+
+    ExpressionVirtualColumn hourly = new ExpressionVirtualColumn(
+        "hourly",
+        "timestamp_floor(__time, 'PT1H', null, null)",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+    ExpressionVirtualColumn daily = new ExpressionVirtualColumn(
+        "daily",
+        "timestamp_floor(__time, 'P1D', null, null)",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+    Assertions.assertEquals("hourly", new AggregateProjectionSpec(
+        "some_projection",
+        null,
+        VirtualColumns.create(hourly, daily),
+        List.of(new LongDimensionSchema("hourly"), new LongDimensionSchema("daily")),
+        new AggregatorFactory[]{}
+    ).toMetadataSchema().getTimeColumnName());
+    // the first time-like column is daily, which is coarser than hourly, not allowed.
+    DruidException e = Assertions.assertThrows(DruidException.class, () -> new AggregateProjectionSpec(
+        "some_projection",
+        null,
+        VirtualColumns.create(hourly, daily),
+        List.of(new LongDimensionSchema("daily"), new LongDimensionSchema("hourly")),
+        new AggregatorFactory[]{}
+    ));
+    Assertions.assertEquals(
+        "cannot map time granularity[{type=period, period=P1D, timeZone=UTC, origin=null}] on column[daily] to"
+        + " time granularity[{type=period, period=PT1H, timeZone=UTC, origin=null}] on column[hourly], failed to determine projection time column",
+        e.getMessage()
+    );
+
+    ExpressionVirtualColumn ptHourly = new ExpressionVirtualColumn(
+        "ptHourly",
+        "timestamp_floor(__time, 'PT1H', null, 'America/Los_Angeles')",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+    Assertions.assertEquals("hourly", new AggregateProjectionSpec(
+        "some_projection",
+        null,
+        VirtualColumns.create(hourly, ptHourly),
+        List.of(new LongDimensionSchema("hourly"), new LongDimensionSchema("ptHourly")),
+        new AggregatorFactory[]{}
+    ).toMetadataSchema().getTimeColumnName());
+    // the first time-like column is non-UTC, not allowed.
+    DruidException e2 = Assertions.assertThrows(DruidException.class, () -> new AggregateProjectionSpec(
+        "some_projection",
+        null,
+        VirtualColumns.create(hourly, ptHourly),
+        List.of(new LongDimensionSchema("ptHourly"), new LongDimensionSchema("hourly")),
+        new AggregatorFactory[]{}
+    ));
+    Assertions.assertEquals(
+        "cannot use granularity[{type=period, period=PT1H, timeZone=America/Los_Angeles, origin=null}] on column[ptHourly] as projection time column",
+        e2.getMessage()
+    );
   }
 
   @Test
@@ -125,7 +202,10 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
             null
         )
     );
-    Assertions.assertEquals("projection[other_projection] groupingColumns and aggregators must not both be null or empty", t.getMessage());
+    Assertions.assertEquals(
+        "projection[other_projection] groupingColumns and aggregators must not both be null or empty",
+        t.getMessage()
+    );
 
     t = Assertions.assertThrows(
         DruidException.class,
@@ -137,7 +217,10 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
             null
         )
     );
-    Assertions.assertEquals("projection[other_projection] groupingColumns and aggregators must not both be null or empty", t.getMessage());
+    Assertions.assertEquals(
+        "projection[other_projection] groupingColumns and aggregators must not both be null or empty",
+        t.getMessage()
+    );
   }
 
   @Test
