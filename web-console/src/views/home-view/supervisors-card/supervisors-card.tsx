@@ -36,7 +36,7 @@ export interface SupervisorsCardProps {
 
 export const SupervisorsCard = React.memo(function SupervisorsCard(props: SupervisorsCardProps) {
   const [supervisorCountState] = useQueryManager<Capabilities, SupervisorCounts>({
-    processQuery: async (capabilities, cancelToken) => {
+    processQuery: async (capabilities, signal) => {
       if (capabilities.hasSql()) {
         return (
           await queryDruidSql(
@@ -46,13 +46,13 @@ export const SupervisorsCard = React.memo(function SupervisorsCard(props: Superv
   COUNT(*) FILTER (WHERE "suspended" = 1) AS "suspended"
 FROM sys.supervisors`,
             },
-            cancelToken,
+            signal,
           )
         )[0];
       } else if (capabilities.hasOverlordAccess()) {
         const supervisors = await getApiArray<{ spec: IngestionSpec }>(
           '/druid/indexer/v1/supervisor?full',
-          cancelToken,
+          signal,
         );
         const [running, suspended] = partition(supervisors, d => !d.spec.suspended);
         return {

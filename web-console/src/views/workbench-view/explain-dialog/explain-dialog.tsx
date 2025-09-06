@@ -67,7 +67,7 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
 
   const [explainState] = useQueryManager<QueryContextEngine, QueryExplanation[] | string>({
     initQuery: queryWithContext,
-    processQuery: async (queryWithContext, cancelToken) => {
+    processQuery: async (queryWithContext, signal) => {
       const { engine, queryString, queryContext, wrapQueryLimit } = queryWithContext;
 
       let context: QueryContext | undefined;
@@ -91,12 +91,12 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
       switch (engine) {
         case 'sql-native':
         case 'sql-msq-dart':
-          result = await queryDruidSql(payload, cancelToken);
+          result = await queryDruidSql(payload, signal);
           break;
 
         case 'sql-msq-task':
           try {
-            result = (await Api.instance.post(`/druid/v2/sql/task`, payload, { cancelToken })).data;
+            result = (await Api.instance.post(`/druid/v2/sql/task`, payload, { signal })).data;
           } catch (e) {
             throw new Error(getDruidErrorMessage(e));
           }

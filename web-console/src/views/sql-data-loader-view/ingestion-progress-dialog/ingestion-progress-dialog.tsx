@@ -48,10 +48,10 @@ export const IngestionProgressDialog = React.memo(function IngestionProgressDial
 
   const [insertResultState, ingestQueryManager] = useQueryManager<string, Execution, Execution>({
     initQuery: taskId,
-    processQuery: async (id, cancelToken) => {
+    processQuery: async (id, signal) => {
       return await reattachTaskExecution({
         id,
-        cancelToken,
+        signal,
         preserveOnTermination: true,
       });
     },

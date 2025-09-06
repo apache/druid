@@ -299,7 +299,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
     this.segmentsQueryManager = new QueryManager({
       debounceIdle: 500,
-      processQuery: async (query: SegmentsQuery, cancelToken, setIntermediateQuery) => {
+      processQuery: async (query: SegmentsQuery, signal, setIntermediateQuery) => {
         const { page, pageSize, filtered, sorted, visibleColumns, capabilities, groupByInterval } =
           query;
 
@@ -373,10 +373,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           }
           const sqlQuery = queryParts.join('\n');
           setIntermediateQuery(sqlQuery);
-          let result = await queryDruidSql(
-            { query: sqlQuery, context: sqlQueryContext },
-            cancelToken,
-          );
+          let result = await queryDruidSql({ query: sqlQuery, context: sqlQueryContext }, signal);
 
           if (visibleColumns.shown('Shard type', 'Shard spec')) {
             result = result.map(sr => ({
@@ -387,7 +384,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
           segments = result as SegmentQueryResultRow[];
 
-          auxiliaryQueries.push(async (segmentsWithAuxiliaryInfo, cancelToken) => {
+          auxiliaryQueries.push(async (segmentsWithAuxiliaryInfo, signal) => {
             const sqlQuery = assemble(
               'SELECT COUNT(*) AS "cnt"',
               'FROM "sys"."segments"',
@@ -398,7 +395,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 {
                   query: sqlQuery,
                 },
-                cancelToken,
+                signal,
               )
             )[0].cnt;
             return {
@@ -411,7 +408,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           const datasourceFilter = filtered.find(({ id }) => id === 'datasource');
           if (datasourceFilter) {
             datasourceList = (
-              await getApiArray('/druid/coordinator/v1/metadata/datasources', cancelToken)
+              await getApiArray('/druid/coordinator/v1/metadata/datasources', signal)
             ).filter((datasource: string) =>
               booleanCustomTableFilter(datasourceFilter, datasource),
             );
@@ -422,7 +419,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               `/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments${datasourceList
                 .map(d => `&datasources=${Api.encodePath(d)}`)
                 .join('')}`,
-              cancelToken,
+              signal,
             )
           ).map((segment: any) => {
             const [start, end] = segment.interval.split('/');

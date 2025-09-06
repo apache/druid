@@ -18,7 +18,6 @@
 
 import { Code, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import axios from 'axios';
 import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
 import type { JSX } from 'react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -201,7 +200,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
   >({
     initQuery: cachedExecutionState ? undefined : currentRunningPromise || query.getLastExecution(),
     initState: cachedExecutionState,
-    processQuery: async (q, cancelToken) => {
+    processQuery: async (q, signal) => {
       if (q instanceof WorkbenchQuery) {
         ExecutionStateCache.deleteState(id);
         const { engine, query, prefixLines, cancelQueryId } = q.getApiQuery();
@@ -214,7 +213,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
               context: mandatoryQueryContext,
               baseQueryContext,
               prefixLines,
-              cancelToken,
+              signal,
               preserveOnTermination: true,
               onSubmitted: id => {
                 onQueryChange(props.query.changeLastExecution({ engine, id }));
@@ -224,28 +223,28 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
           case 'native':
           case 'sql-native': {
             if (cancelQueryId) {
-              void cancelToken.promise
-                .then(cancel => {
-                  if (cancel.message === QueryManager.TERMINATION_MESSAGE) return;
-                  return Api.instance.delete(
+              signal.addEventListener('abort', () => {
+                if (signal.reason === QueryManager.TERMINATION_MESSAGE) return;
+                Api.instance
+                  .delete(
                     `/druid/v2${engine === 'sql-native' ? '/sql' : ''}/${Api.encodePath(
                       cancelQueryId,
                     )}`,
-                  );
-                })
-                .catch(() => {});
+                  )
+                  .catch(() => {});
+              });
             }
 
             onQueryChange(props.query.changeLastExecution(undefined));
 
+            const controller = new AbortController();
+            nativeQueryCancelFnRef.current = () => controller.abort();
             const executionPromise = queryRunner
               .runQuery({
                 query,
                 extraQueryContext: mandatoryQueryContext,
                 defaultQueryContext: baseQueryContext,
-                cancelToken: new axios.CancelToken(cancelFn => {
-                  nativeQueryCancelFnRef.current = cancelFn;
-                }),
+                signal: controller.signal,
               })
               .then(
                 queryResult => Execution.fromResult(engine, queryResult),
@@ -275,21 +274,21 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
 
           case 'sql-msq-dart': {
             if (cancelQueryId) {
-              void cancelToken.promise
-                .then(cancel => {
-                  if (cancel.message === QueryManager.TERMINATION_MESSAGE) return;
-                  return Api.instance.delete(`/druid/v2/sql/${Api.encodePath(cancelQueryId)}`);
-                })
-                .catch(() => {});
+              signal.addEventListener('abort', () => {
+                if (signal.reason === QueryManager.TERMINATION_MESSAGE) return;
+                Api.instance
+                  .delete(`/druid/v2/sql/${Api.encodePath(cancelQueryId)}`)
+                  .catch(() => {});
+              });
             }
 
             onQueryChange(props.query.changeLastExecution(undefined));
 
+            const controller = new AbortController();
+            nativeQueryCancelFnRef.current = () => controller.abort();
             const executionPromise = Api.instance
               .post(`/druid/v2/sql`, query, {
-                cancelToken: new axios.CancelToken(cancelFn => {
-                  nativeQueryCancelFnRef.current = cancelFn;
-                }),
+                signal: controller.signal,
               })
               .then(
                 ({ data: dartResponse }) => {
@@ -342,7 +341,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
           case 'sql-msq-task':
             return await reattachTaskExecution({
               id: q.id,
-              cancelToken,
+              signal,
               preserveOnTermination: true,
             });
 

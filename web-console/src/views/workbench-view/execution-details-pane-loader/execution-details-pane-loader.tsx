@@ -41,8 +41,8 @@ export const ExecutionDetailsPaneLoader = React.memo(function ExecutionDetailsPa
   const [executionState, queryManager] = useQueryManager<string, Execution>({
     initQuery: initExecution ? undefined : id,
     initState: initExecution ? new QueryState({ data: initExecution }) : undefined,
-    processQuery: (id, cancelToken) => {
-      return getTaskExecution(id, undefined, cancelToken);
+    processQuery: (id, signal) => {
+      return getTaskExecution(id, undefined, signal);
     },
   });
 

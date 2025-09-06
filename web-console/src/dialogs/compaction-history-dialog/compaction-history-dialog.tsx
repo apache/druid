@@ -64,14 +64,14 @@ export const CompactionHistoryDialog = React.memo(function CompactionHistoryDial
   const [diffIndex, setDiffIndex] = useState(-1);
   const [historyState] = useQueryManager<string, CompactionHistoryEntry[]>({
     initQuery: datasource,
-    processQuery: async (datasource, cancelToken) => {
+    processQuery: async (datasource, signal) => {
       try {
         return await getApiArrayFromKey<CompactionHistoryEntry>(
           `/druid/indexer/v1/compaction/config/datasources/${Api.encodePath(
             datasource,
           )}/history?count=20`,
           'entries',
-          cancelToken,
+          signal,
         );
       } catch (e) {
         if (e.response?.status === 404) return [];

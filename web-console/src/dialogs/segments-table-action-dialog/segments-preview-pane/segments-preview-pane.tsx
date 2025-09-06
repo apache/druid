@@ -76,7 +76,7 @@ export const SegmentsPreviewPane = React.memo(function DatasourcePreviewPane(
 
   const [recordState] = useQueryManager<string, QueryResult>({
     initQuery: segmentIdParts.datasource,
-    processQuery: async (datasource, cancelToken) => {
+    processQuery: async (datasource, signal) => {
       let result: QueryResult;
       try {
         result = await queryRunner.runQuery({
@@ -99,7 +99,7 @@ export const SegmentsPreviewPane = React.memo(function DatasourcePreviewPane(
             granularity: 'all',
           },
           extraQueryContext: { sqlOuterLimit: 100 },
-          cancelToken,
+          signal,
         });
       } catch (e) {
         throw new DruidError(e);

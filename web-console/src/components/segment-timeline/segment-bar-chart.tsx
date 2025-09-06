@@ -51,7 +51,7 @@ export const SegmentBarChart = function SegmentBarChart(props: SegmentBarChartPr
 
   const [intervalRowsState] = useQueryManager({
     query: intervalsQuery,
-    processQuery: async ({ capabilities, dateRange, shownDatasource }, cancelToken) => {
+    processQuery: async ({ capabilities, dateRange, shownDatasource }, signal) => {
       if (capabilities.hasSql()) {
         const query = SqlQuery.from(N('sys').table('segments'))
           .changeWhereExpression(
@@ -72,7 +72,7 @@ export const SegmentBarChart = function SegmentBarChart(props: SegmentBarChartPr
           .addSelect(F.sum(C('num_rows')).as('rows'))
           .toString();
 
-        return (await queryDruidSql({ query }, cancelToken)).map(sr => {
+        return (await queryDruidSql({ query }, signal)).map(sr => {
           const start = new Date(sr.start);
           const end = new Date(sr.end);
 
@@ -90,7 +90,7 @@ export const SegmentBarChart = function SegmentBarChart(props: SegmentBarChartPr
             `/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments&${
               shownDatasource ? `datasources=${Api.encodePath(shownDatasource)}` : ''
             }`,
-            cancelToken,
+            signal,
           ),
           (segment: any) => {
             if (segment.overshadowed) return; // We have to include overshadowed segments to get the realtime segments in this API
@@ -118,10 +118,10 @@ export const SegmentBarChart = function SegmentBarChart(props: SegmentBarChartPr
 
   const [allLoadRulesState] = useQueryManager({
     query: shownDatasource ? '' : undefined,
-    processQuery: async (_, cancelToken) => {
+    processQuery: async (_, signal) => {
       return (
         await Api.instance.get<Record<string, Rule[]>>('/druid/coordinator/v1/rules', {
-          cancelToken,
+          signal,
         })
       ).data;
     },

@@ -61,9 +61,9 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
 
   const [dartQueryEntriesState, queryManager] = useQueryManager<number, DartQueryEntry[]>({
     query: useStore(WORK_STATE_STORE, getMsqDartVersion),
-    processQuery: async (_, cancelToken) => {
+    processQuery: async (_, signal) => {
       return (
-        (await Api.instance.get('/druid/v2/sql/queries', { cancelToken })).data
+        (await Api.instance.get('/druid/v2/sql/queries', { signal })).data
           .queries as DartQueryEntry[]
       ).filter(q => q.engine === 'msq-dart');
     },

@@ -18,7 +18,6 @@
 
 import { Button, Callout, Intent, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { CancelToken } from 'axios';
 import type { QueryResult, SqlQuery } from 'druid-query-toolkit';
 import { F, SqlExpression, SqlFunction } from 'druid-query-toolkit';
 import type { JSX } from 'react';
@@ -152,7 +151,7 @@ export const RollupAnalysisPane = React.memo(function RollupAnalysisPane(
     AnalyzeResult,
     Execution
   >({
-    processQuery: async (analyzeQuery: AnalyzeQuery, cancelToken) => {
+    processQuery: async (analyzeQuery: AnalyzeQuery, signal) => {
       const { expressions, deep } = analyzeQuery;
 
       const groupedAsStrings = expressions.map(ex =>
@@ -179,7 +178,7 @@ export const RollupAnalysisPane = React.memo(function RollupAnalysisPane(
       const res = await submitTaskQuery({
         query: queryString,
         context: {},
-        cancelToken,
+        signal,
       });
 
       if (res instanceof IntermediateQueryState) return res;
@@ -193,9 +192,9 @@ export const RollupAnalysisPane = React.memo(function RollupAnalysisPane(
     backgroundStatusCheck: async (
       execution: Execution,
       analyzeQuery: AnalyzeQuery,
-      cancelToken: CancelToken,
+      signal: AbortSignal,
     ) => {
-      const res = await executionBackgroundStatusCheck(execution, analyzeQuery, cancelToken);
+      const res = await executionBackgroundStatusCheck(execution, analyzeQuery, signal);
       if (res instanceof IntermediateQueryState) return res;
 
       if (res.result) {

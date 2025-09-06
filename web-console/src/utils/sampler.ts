@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-import type { CancelToken } from 'axios';
 import { dedupe, F, SqlExpression, SqlFunction } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 
@@ -189,14 +188,14 @@ export async function getProxyOverlordModules(): Promise<string[]> {
 export async function postToSampler(
   sampleSpec: SampleSpec,
   forStr: string,
-  cancelToken?: CancelToken,
+  signal?: AbortSignal,
 ): Promise<SampleResponse> {
   sampleSpec = fixSamplerLookups(fixSamplerTypes(sampleSpec));
 
   let sampleResp: any;
   try {
     sampleResp = await Api.instance.post(`/druid/indexer/v1/sampler?for=${forStr}`, sampleSpec, {
-      cancelToken,
+      signal,
     });
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));

@@ -439,21 +439,21 @@ GROUP BY 1, 2`;
     this.datasourceQueryManager = new QueryManager<DatasourceQuery, DatasourcesAndDefaultRules>({
       processQuery: async (
         { capabilities, visibleColumns, showUnused },
-        cancelToken,
+        signal,
         setIntermediateQuery,
       ) => {
         let datasources: DatasourceQueryResultRow[];
         if (capabilities.hasSql()) {
           const query = DatasourcesView.query(visibleColumns);
           setIntermediateQuery(query);
-          datasources = await queryDruidSql({ query }, cancelToken);
+          datasources = await queryDruidSql({ query }, signal);
         } else if (capabilities.hasCoordinatorAccess()) {
           const datasourcesResp = await getApiArray(
             '/druid/coordinator/v1/datasources?simple',
-            cancelToken,
+            signal,
           );
           const loadstatusResp = await Api.instance.get('/druid/coordinator/v1/loadstatus?simple', {
-            cancelToken,
+            signal,
           });
           const loadstatus = loadstatusResp.data;
           datasources = datasourcesResp.map((d: any): DatasourceQueryResultRow => {
@@ -493,13 +493,13 @@ GROUP BY 1, 2`;
 
         if (visibleColumns.shown('Running tasks')) {
           if (capabilities.hasSql()) {
-            auxiliaryQueries.push(async (datasourcesAndDefaultRules, cancelToken) => {
+            auxiliaryQueries.push(async (datasourcesAndDefaultRules, signal) => {
               try {
                 const runningTasks = await queryDruidSql<RunningTaskRow>(
                   {
                     query: DatasourcesView.RUNNING_TASK_SQL,
                   },
-                  cancelToken,
+                  signal,
                 );
 
                 const runningTasksByDatasource = groupByAsMap(
@@ -530,12 +530,9 @@ GROUP BY 1, 2`;
               }
             });
           } else if (capabilities.hasOverlordAccess()) {
-            auxiliaryQueries.push(async (datasourcesAndDefaultRules, cancelToken) => {
+            auxiliaryQueries.push(async (datasourcesAndDefaultRules, signal) => {
               try {
-                const taskList = await getApiArray(
-                  `/druid/indexer/v1/tasks?state=running`,
-                  cancelToken,
-                );
+                const taskList = await getApiArray(`/druid/indexer/v1/tasks?state=running`, signal);
 
                 const runningTasksByDatasource = groupByAsMap(
                   taskList,
@@ -588,11 +585,11 @@ GROUP BY 1, 2`;
           }
 
           // Rules
-          auxiliaryQueries.push(async (datasourcesAndDefaultRules, cancelToken) => {
+          auxiliaryQueries.push(async (datasourcesAndDefaultRules, signal) => {
             try {
               const rules = (
                 await Api.instance.get<Record<string, Rule[]>>('/druid/coordinator/v1/rules', {
-                  cancelToken,
+                  signal,
                 })
               ).data;
 
@@ -614,12 +611,12 @@ GROUP BY 1, 2`;
           });
 
           // Compaction
-          auxiliaryQueries.push(async (datasourcesAndDefaultRules, cancelToken) => {
+          auxiliaryQueries.push(async (datasourcesAndDefaultRules, signal) => {
             try {
               const compactionConfigsAndMore = (
                 await Api.instance.get<CompactionConfigs>(
                   '/druid/indexer/v1/compaction/config/datasources',
-                  { cancelToken },
+                  { signal },
                 )
               ).data;
               const compactionConfigs = lookupBy(
@@ -629,7 +626,7 @@ GROUP BY 1, 2`;
 
               const compactionStatusesResp = await Api.instance.get<{
                 latestStatus: CompactionStatus[];
-              }>('/druid/indexer/v1/compaction/status/datasources', { cancelToken });
+              }>('/druid/indexer/v1/compaction/status/datasources', { signal });
               const compactionStatuses = lookupBy(
                 compactionStatusesResp.data.latestStatus || [],
                 c => c.dataSource,

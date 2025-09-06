@@ -124,16 +124,16 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     };
 
     this.lookupsQueryManager = new QueryManager({
-      processQuery: async (_, cancelToken) => {
+      processQuery: async (_, signal) => {
         const tiersResp = await getApiArray(
           '/druid/coordinator/v1/lookups/config?discover=true',
-          cancelToken,
+          signal,
         );
         const tiers =
           tiersResp.length > 0 ? tiersResp.sort(tierNameCompare) : [DEFAULT_LOOKUP_TIER];
 
         const lookupResp = await Api.instance.get('/druid/coordinator/v1/lookups/config/all', {
-          cancelToken,
+          signal,
         });
         const lookupData = lookupResp.data;
 

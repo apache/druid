@@ -31,17 +31,17 @@ export interface DatasourcesCardProps {
 export const DatasourcesCard = React.memo(function DatasourcesCard(props: DatasourcesCardProps) {
   const [datasourceCountState] = useQueryManager<Capabilities, number>({
     initQuery: props.capabilities,
-    processQuery: async (capabilities, cancelToken) => {
+    processQuery: async (capabilities, signal) => {
       let datasources: string[];
       if (capabilities.hasSql()) {
         datasources = await queryDruidSql(
           {
             query: `SELECT datasource FROM sys.segments GROUP BY 1`,
           },
-          cancelToken,
+          signal,
         );
       } else if (capabilities.hasCoordinatorAccess()) {
-        datasources = await getApiArray<string>('/druid/coordinator/v1/datasources', cancelToken);
+        datasources = await getApiArray<string>('/druid/coordinator/v1/datasources', signal);
       } else {
         throw new Error(`must have SQL or coordinator access`);
       }
