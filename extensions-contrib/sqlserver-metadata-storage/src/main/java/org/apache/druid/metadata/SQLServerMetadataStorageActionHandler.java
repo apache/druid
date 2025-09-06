@@ -19,10 +19,23 @@
 
 package org.apache.druid.metadata;
 
-public interface MetadataStorageActionHandlerFactory
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+public class SQLServerMetadataStorageActionHandler extends SQLMetadataStorageActionHandler
 {
-  <EntryType, StatusType, LogType, LockType> MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType> create(
-      String entryType,
-      MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType> payloadTypes
-  );
+  public SQLServerMetadataStorageActionHandler(
+      SQLMetadataConnector connector,
+      ObjectMapper jsonMapper,
+      String entryTable,
+      String lockTable
+  )
+  {
+    super(connector, jsonMapper, entryTable, lockTable);
+  }
+
+  @Override
+  protected String decorateSqlWithLimit(String sql)
+  {
+    return "SELECT TOP (:n)" + sql.substring("SELECT".length());
+  }
 }

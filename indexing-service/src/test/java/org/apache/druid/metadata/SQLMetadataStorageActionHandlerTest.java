@@ -19,19 +19,25 @@
 
 package org.apache.druid.metadata;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.indexer.TaskIdStatus;
 import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.TimeChunkLock;
+import org.apache.druid.indexing.common.task.NoopTask;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
@@ -50,6 +56,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -62,7 +69,7 @@ public class SQLMetadataStorageActionHandlerTest
 
   private static final Random RANDOM = new Random(1);
 
-  private SQLMetadataStorageActionHandler<Map<String, Object>, Map<String, Object>, Map<String, String>, Map<String, Object>> handler;
+  private SQLMetadataStorageActionHandler handler;
 
   private final String entryTable = "entries";
 
@@ -71,38 +78,15 @@ public class SQLMetadataStorageActionHandlerTest
   {
     TestDerbyConnector connector = derbyConnectorRule.getConnector();
 
-    final String entryType = "entry";
     final String lockTable = "locks";
 
     connector.prepareTaskEntryTable(entryTable);
-    connector.createLockTable(lockTable, entryType);
+    connector.createLockTable(lockTable);
 
-    handler = new DerbyMetadataStorageActionHandler<>(
+    handler = new DerbyMetadataStorageActionHandler(
         connector,
         JSON_MAPPER,
-        new MetadataStorageActionHandlerTypes<>()
-        {
-          @Override
-          public TypeReference<Map<String, Object>> getEntryType()
-          {
-            return new TypeReference<>() {};
-          }
-
-          @Override
-          public TypeReference<Map<String, Object>> getStatusType()
-          {
-            return new TypeReference<>() {};
-          }
-
-          @Override
-          public TypeReference<Map<String, Object>> getLockType()
-          {
-            return new TypeReference<>() {};
-          }
-        },
-        entryType,
         entryTable,
-        null,
         lockTable
     );
   }
@@ -110,11 +94,11 @@ public class SQLMetadataStorageActionHandlerTest
   @Test
   public void testEntryAndStatus()
   {
-    Map<String, Object> entry = ImmutableMap.of("numericId", 1234);
-    Map<String, Object> status1 = ImmutableMap.of("count", 42);
-    Map<String, Object> status2 = ImmutableMap.of("count", 42, "temp", 1);
+    Task entry = NoopTask.create();
+    TaskStatus status1 = TaskStatus.running(entry.getId());
+    TaskStatus status2 = TaskStatus.success(entry.getId());
 
-    final String entryId = "1234";
+    final String entryId = entry.getId();
 
     handler.insert(entryId, DateTimes.of("2014-01-02T00:00:00.123"), "testDataSource", entry, true, null, "type", "group");
 
@@ -174,21 +158,20 @@ public class SQLMetadataStorageActionHandlerTest
   public void testGetRecentStatuses()
   {
     for (int i = 1; i < 11; i++) {
-      final String entryId = "abcd_" + i;
-      final Map<String, Object> entry = ImmutableMap.of("a", i);
-      final Map<String, Object> status = ImmutableMap.of("count", i * 10);
+      final Task entry = NoopTask.create();
+      final String entryId = entry.getId();
+      final TaskStatus status = TaskStatus.running(entry.getId());
 
       handler.insert(entryId, DateTimes.of(StringUtils.format("2014-01-%02d", i)), "test", entry, false, status, "type", "group");
     }
 
-    final List<TaskInfo<Map<String, Object>, Map<String, Object>>> statuses = handler.getTaskInfos(
+    final List<TaskInfo> statuses = handler.getTaskInfos(
         CompleteTaskLookup.withTasksCreatedPriorTo(7, DateTimes.of("2014-01-01")),
         null
     );
     Assert.assertEquals(7, statuses.size());
-    int i = 10;
-    for (TaskInfo<Map<String, Object>, Map<String, Object>> status : statuses) {
-      Assert.assertEquals(ImmutableMap.of("count", i-- * 10), status.getStatus());
+    for (TaskInfo status : statuses) {
+      Assert.assertEquals(TaskState.RUNNING, status.getStatus().getStatusCode());
     }
   }
 
@@ -196,30 +179,29 @@ public class SQLMetadataStorageActionHandlerTest
   public void testGetRecentStatuses2()
   {
     for (int i = 1; i < 6; i++) {
-      final String entryId = "abcd_" + i;
-      final Map<String, Object> entry = ImmutableMap.of("a", i);
-      final Map<String, Object> status = ImmutableMap.of("count", i * 10);
+      final Task entry = NoopTask.create();
+      final String entryId = entry.getId();
+      final TaskStatus status = TaskStatus.running(entry.getId());
 
       handler.insert(entryId, DateTimes.of(StringUtils.format("2014-01-%02d", i)), "test", entry, false, status, "type", "group");
     }
 
-    final List<TaskInfo<Map<String, Object>, Map<String, Object>>> statuses = handler.getTaskInfos(
+    final List<TaskInfo> statuses = handler.getTaskInfos(
         CompleteTaskLookup.withTasksCreatedPriorTo(10, DateTimes.of("2014-01-01")),
         null
     );
     Assert.assertEquals(5, statuses.size());
-    int i = 5;
-    for (TaskInfo<Map<String, Object>, Map<String, Object>> status : statuses) {
-      Assert.assertEquals(ImmutableMap.of("count", i-- * 10), status.getStatus());
+    for (TaskInfo status : statuses) {
+      Assert.assertEquals(TaskState.RUNNING, status.getStatus().getStatusCode());
     }
   }
 
   @Test(timeout = 60_000L)
   public void testDuplicateInsertThrowsEntryExistsException()
   {
-    final String entryId = "abcd";
-    Map<String, Object> entry = ImmutableMap.of("a", 1);
-    Map<String, Object> status = ImmutableMap.of("count", 42);
+    Task entry = NoopTask.create();
+    final String entryId = entry.getId();
+    TaskStatus status = TaskStatus.running(entryId);
 
     handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status, "type", "group");
 
@@ -228,65 +210,33 @@ public class SQLMetadataStorageActionHandlerTest
         () -> handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status, "type", "group")
     );
     Assert.assertEquals("invalidInput", exception.getErrorCode());
-    Assert.assertEquals("Task [abcd] already exists", exception.getMessage());
-  }
-
-  @Test
-  public void testAddLogThrowsUnsupportedException()
-  {
-    Exception exception = Assert.assertThrows(
-        DruidException.class,
-        () -> handler.addLog("abcd", ImmutableMap.of("logentry", "created"))
-    );
-    Assert.assertEquals(
-        "Task actions are not logged anymore.",
-        exception.getMessage()
-    );
-  }
-
-  @Test
-  public void testGetLogsThrowsUnsupportedException()
-  {
-    Exception exception = Assert.assertThrows(
-        DruidException.class,
-        () -> handler.getLogs("abcd")
-    );
-    Assert.assertEquals(
-        "Task actions are not logged anymore.",
-        exception.getMessage()
-    );
+    Assert.assertEquals(StringUtils.format("Task [%s] already exists", entryId), exception.getMessage());
   }
 
   @Test
   public void testLocks()
   {
-    final String entryId = "ABC123";
-    Map<String, Object> entry = ImmutableMap.of("a", 1);
-    Map<String, Object> status = ImmutableMap.of("count", 42);
+    Task entry = NoopTask.create();
+    final String entryId = entry.getId();
+    TaskStatus status = TaskStatus.running(entryId);
 
     handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status, "type", "group");
 
-    Assert.assertEquals(
-        ImmutableMap.<Long, Map<String, Object>>of(),
-        handler.getLocks("non_exist_entry")
-    );
+    Assert.assertTrue(handler.getLocks("non_exist_entry").isEmpty());
 
-    Assert.assertEquals(
-        ImmutableMap.<Long, Map<String, Object>>of(),
-        handler.getLocks(entryId)
-    );
+    Assert.assertTrue(handler.getLocks(entryId).isEmpty());
 
-    final ImmutableMap<String, Object> lock1 = ImmutableMap.of("lock", 1);
-    final ImmutableMap<String, Object> lock2 = ImmutableMap.of("lock", 2);
+    final TaskLock lock1 = createRandomLock(entry);
+    final TaskLock lock2 = createRandomLock(entry);
 
     Assert.assertTrue(handler.addLock(entryId, lock1));
     Assert.assertTrue(handler.addLock(entryId, lock2));
 
-    final Map<Long, Map<String, Object>> locks = handler.getLocks(entryId);
+    final Map<Long, TaskLock> locks = handler.getLocks(entryId);
     Assert.assertEquals(2, locks.size());
 
     Assert.assertEquals(
-        ImmutableSet.<Map<String, Object>>of(lock1, lock2),
+        Set.of(lock1, lock2),
         new HashSet<>(locks.values())
     );
 
@@ -294,7 +244,7 @@ public class SQLMetadataStorageActionHandlerTest
     handler.removeLock(lockId);
     locks.remove(lockId);
 
-    final Map<Long, Map<String, Object>> updated = handler.getLocks(entryId);
+    final Map<Long, TaskLock> updated = handler.getLocks(entryId);
     Assert.assertEquals(
         new HashSet<>(locks.values()),
         new HashSet<>(updated.values())
@@ -305,9 +255,9 @@ public class SQLMetadataStorageActionHandlerTest
   @Test
   public void testReplaceLock()
   {
-    final String entryId = "ABC123";
-    Map<String, Object> entry = ImmutableMap.of("a", 1);
-    Map<String, Object> status = ImmutableMap.of("count", 42);
+    Task entry = NoopTask.create();
+    final String entryId = entry.getId();
+    TaskStatus status = TaskStatus.running(entryId);
 
     handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status, "type", "group");
 
@@ -321,8 +271,8 @@ public class SQLMetadataStorageActionHandlerTest
         handler.getLocks(entryId)
     );
 
-    final ImmutableMap<String, Object> lock1 = ImmutableMap.of("lock", 1);
-    final ImmutableMap<String, Object> lock2 = ImmutableMap.of("lock", 2);
+    final TaskLock lock1 = createRandomLock(entry);
+    final TaskLock lock2 = createRandomLock(entry);
 
     Assert.assertTrue(handler.addLock(entryId, lock1));
 
@@ -335,9 +285,9 @@ public class SQLMetadataStorageActionHandlerTest
   @Test
   public void testGetLockId()
   {
-    final String entryId = "ABC123";
-    Map<String, Object> entry = ImmutableMap.of("a", 1);
-    Map<String, Object> status = ImmutableMap.of("count", 42);
+    Task entry = NoopTask.create();
+    final String entryId = entry.getId();
+    TaskStatus status = TaskStatus.running(entryId);
 
     handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status, "type", "group");
 
@@ -351,8 +301,8 @@ public class SQLMetadataStorageActionHandlerTest
         handler.getLocks(entryId)
     );
 
-    final ImmutableMap<String, Object> lock1 = ImmutableMap.of("lock", 1);
-    final ImmutableMap<String, Object> lock2 = ImmutableMap.of("lock", 2);
+    final TaskLock lock1 = createRandomLock(entry);
+    final TaskLock lock2 = createRandomLock(entry);
 
     Assert.assertTrue(handler.addLock(entryId, lock1));
 
@@ -363,19 +313,19 @@ public class SQLMetadataStorageActionHandlerTest
   @Test
   public void testRemoveTasksOlderThan()
   {
-    final String entryId1 = "1234";
-    Map<String, Object> entry1 = ImmutableMap.of("numericId", 1234);
-    Map<String, Object> status1 = ImmutableMap.of("count", 42, "temp", 1);
+    Task entry1 = NoopTask.create();
+    final String entryId1 = entry1.getId();
+    TaskStatus status1 = TaskStatus.running(entryId1);
     handler.insert(entryId1, DateTimes.of("2014-01-01T00:00:00.123"), "testDataSource", entry1, false, status1, "type", "group");
 
-    final String entryId2 = "ABC123";
-    Map<String, Object> entry2 = ImmutableMap.of("a", 1);
-    Map<String, Object> status2 = ImmutableMap.of("count", 42);
+    Task entry2 = NoopTask.create();
+    final String entryId2 = entry2.getId();
+    TaskStatus status2 = TaskStatus.running(entryId2);
     handler.insert(entryId2, DateTimes.of("2014-01-01T00:00:00.123"), "test", entry2, true, status2, "type", "group");
 
-    final String entryId3 = "DEF5678";
-    Map<String, Object> entry3 = ImmutableMap.of("numericId", 5678);
-    Map<String, Object> status3 = ImmutableMap.of("count", 21, "temp", 2);
+    Task entry3 = NoopTask.create();
+    final String entryId3 = entry3.getId();
+    TaskStatus status3 = TaskStatus.running(entryId2);
     handler.insert(entryId3, DateTimes.of("2014-01-02T12:00:00.123"), "testDataSource", entry3, false, status3, "type", "group");
 
     Assert.assertEquals(Optional.of(entry1), handler.getEntry(entryId1));
@@ -440,23 +390,23 @@ public class SQLMetadataStorageActionHandlerTest
   public void testGetTaskStatusPlusListInternal()
   {
     // SETUP
-    TaskInfo<Map<String, Object>, Map<String, Object>> activeUnaltered = createRandomTaskInfo(TaskState.RUNNING);
+    TaskInfo activeUnaltered = createRandomTaskInfo(TaskState.RUNNING);
     insertTaskInfo(activeUnaltered, false);
 
-    TaskInfo<Map<String, Object>, Map<String, Object>> completedUnaltered = createRandomTaskInfo(TaskState.SUCCESS);
+    TaskInfo completedUnaltered = createRandomTaskInfo(TaskState.SUCCESS);
     insertTaskInfo(completedUnaltered, false);
 
-    TaskInfo<Map<String, Object>, Map<String, Object>> activeAltered = createRandomTaskInfo(TaskState.RUNNING);
+    TaskInfo activeAltered = createRandomTaskInfo(TaskState.RUNNING);
     insertTaskInfo(activeAltered, true);
 
-    TaskInfo<Map<String, Object>, Map<String, Object>> completedAltered = createRandomTaskInfo(TaskState.SUCCESS);
+    TaskInfo completedAltered = createRandomTaskInfo(TaskState.SUCCESS);
     insertTaskInfo(completedAltered, true);
 
     Map<TaskLookup.TaskLookupType, TaskLookup> taskLookups = new HashMap<>();
     taskLookups.put(TaskLookup.TaskLookupType.ACTIVE, ActiveTaskLookup.getInstance());
     taskLookups.put(TaskLookup.TaskLookupType.COMPLETE, CompleteTaskLookup.of(null, Duration.millis(86400000)));
 
-    List<TaskInfo<TaskIdentifier, Map<String, Object>>> taskMetadataInfos;
+    List<TaskIdStatus> taskMetadataInfos;
 
     // BEFORE MIGRATION
 
@@ -511,36 +461,44 @@ public class SQLMetadataStorageActionHandlerTest
     );
   }
 
-  private TaskInfo<Map<String, Object>, Map<String, Object>> createRandomTaskInfo(TaskState taskState)
+  private TaskLock createRandomLock(Task task)
+  {
+    final long intervalStart = RANDOM.nextLong();
+    return new TimeChunkLock(
+        TaskLockType.APPEND,
+        task.getGroupId(),
+        task.getDataSource(),
+        Intervals.utc(intervalStart, intervalStart + 100),
+        "v1",
+        1
+    );
+  }
+
+  private TaskInfo createRandomTaskInfo(TaskState taskState)
   {
     String id = UUID.randomUUID().toString();
     DateTime createdTime = DateTime.now(DateTimeZone.UTC);
     String datasource = UUID.randomUUID().toString();
-    String type = UUID.randomUUID().toString();
     String groupId = UUID.randomUUID().toString();
 
-    Map<String, Object> payload = new HashMap<>();
-    payload.put("id", id);
-    payload.put("type", type);
-    payload.put("groupId", groupId);
+    Task payload = new NoopTask(id, groupId, datasource, 1L, 0L, null);
 
-    Map<String, Object> status = new HashMap<>();
-    status.put("id", id);
-    status.put("status", taskState);
-    status.put("duration", RANDOM.nextLong());
-    status.put("location", TaskLocation.create(UUID.randomUUID().toString(), 8080, 995));
-    status.put("errorMsg", UUID.randomUUID().toString());
-
-    return new TaskInfo<>(
+    TaskStatus status = new TaskStatus(
         id,
+        taskState,
+        RANDOM.nextLong(),
+        UUID.randomUUID().toString(),
+        TaskLocation.create(UUID.randomUUID().toString(), 8080, 995)
+    );
+
+    return new TaskInfo(
         createdTime,
         status,
-        datasource,
         payload
     );
   }
 
-  private void insertTaskInfo(TaskInfo<Map<String, Object>, Map<String, Object>> taskInfo, boolean altered)
+  private void insertTaskInfo(TaskInfo taskInfo, boolean altered)
   {
     try {
       handler.insert(
@@ -548,10 +506,10 @@ public class SQLMetadataStorageActionHandlerTest
           taskInfo.getCreatedTime(),
           taskInfo.getDataSource(),
           taskInfo.getTask(),
-          TaskState.RUNNING.equals(taskInfo.getStatus().get("status")),
+          TaskState.RUNNING.equals(taskInfo.getStatus().getStatusCode()),
           taskInfo.getStatus(),
-          altered ? taskInfo.getTask().get("type").toString() : null,
-          altered ? taskInfo.getTask().get("groupId").toString() : null
+          altered ? taskInfo.getTask().getType() : null,
+          altered ? taskInfo.getTask().getGroupId() : null
       );
     }
     catch (Exception e) {
@@ -559,12 +517,12 @@ public class SQLMetadataStorageActionHandlerTest
     }
   }
 
-  private void verifyTaskInfoToMetadataInfo(TaskInfo<Map<String, Object>, Map<String, Object>> taskInfo,
-                                            List<TaskInfo<TaskIdentifier, Map<String, Object>>> taskMetadataInfos,
+  private void verifyTaskInfoToMetadataInfo(TaskInfo taskInfo,
+                                            List<TaskIdStatus> taskMetadataInfos,
                                             boolean nullNewColumns)
   {
-    for (TaskInfo<TaskIdentifier, Map<String, Object>> taskMetadataInfo : taskMetadataInfos) {
-      if (taskMetadataInfo.getId().equals(taskInfo.getId())) {
+    for (TaskIdStatus taskMetadataInfo : taskMetadataInfos) {
+      if (taskMetadataInfo.getTaskIdentifier().getId().equals(taskInfo.getId())) {
         verifyTaskInfoToMetadataInfo(taskInfo, taskMetadataInfo, nullNewColumns);
       }
       return;
@@ -572,34 +530,30 @@ public class SQLMetadataStorageActionHandlerTest
     Assert.fail();
   }
 
-  private void verifyTaskInfoToMetadataInfo(TaskInfo<Map<String, Object>, Map<String, Object>> taskInfo,
-                                            TaskInfo<TaskIdentifier, Map<String, Object>> taskMetadataInfo,
+  private void verifyTaskInfoToMetadataInfo(TaskInfo taskInfo,
+                                            TaskIdStatus taskMetadataInfo,
                                             boolean nullNewColumns)
   {
-    Assert.assertEquals(taskInfo.getId(), taskMetadataInfo.getId());
+    Assert.assertEquals(taskInfo.getId(), taskMetadataInfo.getTaskIdentifier().getId());
     Assert.assertEquals(taskInfo.getCreatedTime(), taskMetadataInfo.getCreatedTime());
     Assert.assertEquals(taskInfo.getDataSource(), taskMetadataInfo.getDataSource());
 
     verifyTaskStatus(taskInfo.getStatus(), taskMetadataInfo.getStatus());
 
-    Map<String, Object> task = taskInfo.getTask();
-    TaskIdentifier taskIdentifier = taskMetadataInfo.getTask();
-    Assert.assertEquals(task.get("id"), taskIdentifier.getId());
+    Task task = taskInfo.getTask();
+    TaskIdentifier taskIdentifier = taskMetadataInfo.getTaskIdentifier();
+    Assert.assertEquals(task.getId(), taskIdentifier.getId());
     if (nullNewColumns) {
       Assert.assertNull(taskIdentifier.getGroupId());
       Assert.assertNull(taskIdentifier.getType());
     } else {
-      Assert.assertEquals(task.get("groupId"), taskIdentifier.getGroupId());
-      Assert.assertEquals(task.get("type"), taskIdentifier.getType());
+      Assert.assertEquals(task.getGroupId(), taskIdentifier.getGroupId());
+      Assert.assertEquals(task.getType(), taskIdentifier.getType());
     }
   }
 
-  private void verifyTaskStatus(Map<String, Object> expected, Map<String, Object> actual)
+  private void verifyTaskStatus(TaskStatus expected, TaskStatus actual)
   {
-    Assert.assertEquals(expected.get("id"), actual.get("id"));
-    Assert.assertEquals(expected.get("duration"), actual.get("duration"));
-    Assert.assertEquals(expected.get("errorMsg"), actual.get("errorMsg"));
-    Assert.assertEquals(expected.get("status").toString(), actual.get("status"));
-    Assert.assertEquals(expected.get("location"), JSON_MAPPER.convertValue(actual.get("location"), TaskLocation.class));
+    Assert.assertEquals(expected, actual);
   }
 }
