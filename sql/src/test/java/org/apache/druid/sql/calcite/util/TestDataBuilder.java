@@ -861,6 +861,10 @@ public class TestDataBuilder
         TestHelper.JSON_MAPPER,
         new File(tmpDir, "3")
     ).add(
+        TestDataSet.LARRY,
+        TestHelper.JSON_MAPPER,
+        new File(tmpDir, "larry")
+    ).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE4)
                    .interval(index4.getDataInterval())
