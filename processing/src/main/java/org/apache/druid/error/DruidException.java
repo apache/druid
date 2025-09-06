@@ -21,12 +21,14 @@ package org.apache.druid.error;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.exception.SanitizableException;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * Represents an error condition exposed to the user and/or operator of Druid.  Given that a DruidException is intended
@@ -129,7 +131,7 @@ import java.util.Map;
  * introduced DruidException.
  */
 @NotThreadSafe
-public class DruidException extends RuntimeException
+public class DruidException extends RuntimeException implements SanitizableException
 {
   public static final String CLASS_NAME_STR = DruidException.class.getName();
 
@@ -314,6 +316,16 @@ public class DruidException extends RuntimeException
         category,
         StringUtils.format("%s: %s", StringUtils.nonStrictFormat(msg, args), getMessage())
     ).withContext(context);
+  }
+
+  @Override
+  public Exception sanitize(Function<String, String> errorMessageTransformFunction)
+  {
+    String transformedErrorMessage = errorMessageTransformFunction.apply(getMessage());
+    return new DruidExceptionBuilder(errorCode)
+        .forPersona(targetPersona)
+        .ofCategory(category)
+        .build(transformedErrorMessage);
   }
 
   /**

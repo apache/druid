@@ -24,6 +24,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.sun.jersey.api.core.HttpContext;
+import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
+import org.apache.druid.common.exception.SanitizableException;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -32,6 +34,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryResultPusher;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationResult;
@@ -83,6 +86,7 @@ public class SqlResource
   private final SqlLifecycleManager sqlLifecycleManager;
   private final SqlEngineRegistry sqlEngineRegistry;
   private final DefaultQueryConfig defaultQueryConfig;
+  private final ServerConfig serverConfig;
 
   @VisibleForTesting
   @Inject
@@ -91,7 +95,8 @@ public class SqlResource
       final SqlLifecycleManager sqlLifecycleManager,
       final SqlEngineRegistry sqlEngineRegistry,
       final SqlResourceQueryResultPusherFactory resultPusherFactory,
-      final DefaultQueryConfig defaultQueryConfig
+      final DefaultQueryConfig defaultQueryConfig,
+      final ServerConfig serverConfig
   )
   {
     this.resultPusherFactory = resultPusherFactory;
@@ -99,7 +104,7 @@ public class SqlResource
     this.authorizerMapper = Preconditions.checkNotNull(authorizerMapper, "authorizerMapper");
     this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");
     this.defaultQueryConfig = Preconditions.checkNotNull(defaultQueryConfig, "defaultQueryConfig");
-
+    this.serverConfig = serverConfig;
   }
 
   @GET
@@ -186,7 +191,11 @@ public class SqlResource
     }
     catch (Exception e) {
       // Can't use the queryContext with SETs since it might not have been created yet. Use the original one.
-      return handleExceptionBeforeStatementCreated(e, sqlQuery.queryContext());
+      return handleExceptionBeforeStatementCreated(
+          e,
+          sqlQuery.queryContext(),
+          serverConfig.getErrorResponseTransformStrategy()
+      );
     }
 
     final String currThreadName = Thread.currentThread().getName();
@@ -296,12 +305,16 @@ public class SqlResource
   /**
    * Generates a response for a {@link DruidException} that occurs prior to the {@link HttpStatement} being created.
    */
-  public static Response handleExceptionBeforeStatementCreated(final Exception e, final QueryContext queryContext)
+  public static Response handleExceptionBeforeStatementCreated(
+      final Exception e,
+      final QueryContext queryContext,
+      final ErrorResponseTransformStrategy strategy
+  )
   {
     if (e instanceof DruidException) {
       final String sqlQueryId = queryContext.getString(QueryContexts.CTX_SQL_QUERY_ID);
       return QueryResultPusher.handleDruidExceptionBeforeResponseStarted(
-          (DruidException) e,
+          (DruidException) strategy.transformIfNeeded((SanitizableException) e),
           MediaType.APPLICATION_JSON_TYPE,
           sqlQueryId != null
           ? ImmutableMap.<String, String>builder()

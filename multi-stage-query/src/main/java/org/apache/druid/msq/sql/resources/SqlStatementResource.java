@@ -76,6 +76,7 @@ import org.apache.druid.query.QueryException;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.QueryResponse;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationResult;
@@ -134,6 +135,7 @@ public class SqlStatementResource
   private final StorageConnector storageConnector;
   private final AuthorizerMapper authorizerMapper;
   private final DefaultQueryConfig defaultQueryConfig;
+  private final ServerConfig serverConfig;
 
   @Inject
   public SqlStatementResource(
@@ -142,7 +144,8 @@ public class SqlStatementResource
       final OverlordClient overlordClient,
       final @MultiStageQuery StorageConnectorProvider storageConnectorProvider,
       final AuthorizerMapper authorizerMapper,
-      final DefaultQueryConfig defaultQueryConfig
+      final DefaultQueryConfig defaultQueryConfig,
+      final ServerConfig serverConfig
   )
   {
     this.msqSqlStatementFactory = msqSqlStatementFactory;
@@ -151,6 +154,7 @@ public class SqlStatementResource
     this.storageConnector = storageConnectorProvider.createStorageConnector(null);
     this.authorizerMapper = authorizerMapper;
     this.defaultQueryConfig = defaultQueryConfig;
+    this.serverConfig = serverConfig;
   }
 
   /**
@@ -200,7 +204,11 @@ public class SqlStatementResource
       stmt = msqSqlStatementFactory.httpStatement(sqlQueryPlus, req);
     }
     catch (Exception e) {
-      return SqlResource.handleExceptionBeforeStatementCreated(e, sqlQuery.queryContext());
+      return SqlResource.handleExceptionBeforeStatementCreated(
+          e,
+          sqlQuery.queryContext(),
+          serverConfig.getErrorResponseTransformStrategy()
+      );
     }
 
     final String sqlQueryId = stmt.sqlQueryId();
