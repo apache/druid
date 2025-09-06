@@ -71,6 +71,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   protected final LockGranularity lockGranularityToUse;
   protected final TaskLockType lockTypeToUse;
   protected final String supervisorId;
+  protected final boolean isPerpetuallyRunning;
 
   // Lazily initialized, to avoid calling it on the overlord when tasks are instantiated.
   // See https://github.com/apache/druid/issues/7724 for issues that can cause.
@@ -85,7 +86,8 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
       final SeekableStreamIndexTaskTuningConfig tuningConfig,
       final SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig,
       @Nullable final Map<String, Object> context,
-      @Nullable final String groupId
+      @Nullable final String groupId,
+      @Nullable final Boolean isPerpetuallyRunning
   )
   {
     super(
@@ -106,6 +108,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
                                 : LockGranularity.SEGMENT;
     this.lockTypeToUse = TaskLocks.determineLockTypeForAppend(getContext());
     this.supervisorId = Preconditions.checkNotNull(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), "supervisorId");
+    this.isPerpetuallyRunning = Configs.valueOrDefault(isPerpetuallyRunning, false);
   }
 
   protected static String getFormattedGroupId(String supervisorId, String type)
@@ -151,6 +154,12 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   public SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> getIOConfig()
   {
     return ioConfig;
+  }
+
+  @JsonProperty
+  public boolean isPerpetuallyRunning()
+  {
+    return isPerpetuallyRunning;
   }
 
   @Override

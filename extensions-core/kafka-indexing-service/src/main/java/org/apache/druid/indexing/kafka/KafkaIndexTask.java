@@ -69,6 +69,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
       @JsonProperty("tuningConfig") KafkaIndexTaskTuningConfig tuningConfig,
       @JsonProperty("ioConfig") KafkaIndexTaskIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("isPerpetuallyRunning") @Nullable Boolean isPerpetuallyRunning,
       @JacksonInject ObjectMapper configMapper
   )
   {
@@ -80,7 +81,8 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
         tuningConfig,
         ioConfig,
         context,
-        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE)
+        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE),
+        isPerpetuallyRunning
     );
     this.configMapper = configMapper;
 

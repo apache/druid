@@ -266,7 +266,7 @@ public class CliPeonTest
     )
     {
 
-      super(id, supervisorId, taskResource, dataSchema, tuningConfig, ioConfig, context, groupId);
+      super(id, supervisorId, taskResource, dataSchema, tuningConfig, ioConfig, context, groupId, null);
     }
 
     @Override

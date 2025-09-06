@@ -342,6 +342,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         kafkaSupervisorIOConfig,
         null,
         false,
+        null,
         taskStorage,
         taskMaster,
         indexerMetadataStorageCoordinator,
@@ -5287,6 +5288,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             kafkaSupervisorIOConfig,
             null,
             suspended,
+            null,
             taskStorage,
             taskMaster,
             indexerMetadataStorageCoordinator,
@@ -5378,6 +5380,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             kafkaSupervisorIOConfig,
             null,
             suspended,
+            null,
             taskStorage,
             taskMaster,
             indexerMetadataStorageCoordinator,
@@ -5470,6 +5473,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             kafkaSupervisorIOConfig,
             null,
             suspended,
+            null,
             taskStorage,
             taskMaster,
             indexerMetadataStorageCoordinator,
@@ -5583,6 +5587,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             Duration.standardHours(2).getStandardMinutes()
         ),
         Collections.emptyMap(),
+        null,
         OBJECT_MAPPER
     );
   }

@@ -168,6 +168,13 @@ public interface SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetTy
       PendingSegmentRecord pendingSegmentRecord
   );
 
+  /**
+   * Update the configuration of a running task.
+   *
+   * Task-side is {@link SeekableStreamIndexTaskRunner#updateConfig}.
+   */
+  ListenableFuture<Boolean> updateConfigAsync(String taskId, TaskConfigUpdateRequest updateRequest);
+
   Class<PartitionIdType> getPartitionType();
 
   Class<SequenceOffsetType> getSequenceType();

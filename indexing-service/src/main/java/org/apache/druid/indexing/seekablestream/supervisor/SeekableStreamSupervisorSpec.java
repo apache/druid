@@ -78,6 +78,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   protected final DruidMonitorSchedulerConfig monitorSchedulerConfig;
   private final boolean suspended;
   protected final SupervisorStateManagerConfig supervisorStateManagerConfig;
+  protected final boolean usePerpetuallyRunningTasks;
 
   /**
    * Base constructor for SeekableStreamSupervisors.
@@ -97,7 +98,8 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
       ServiceEmitter emitter,
       DruidMonitorSchedulerConfig monitorSchedulerConfig,
       RowIngestionMetersFactory rowIngestionMetersFactory,
-      SupervisorStateManagerConfig supervisorStateManagerConfig
+      SupervisorStateManagerConfig supervisorStateManagerConfig,
+      @Nullable Boolean usePerpetuallyRunningTasks
   )
   {
     this.ingestionSchema = checkIngestionSchema(ingestionSchema);
@@ -117,6 +119,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
     this.suspended = suspended != null ? suspended : false;
     this.supervisorStateManagerConfig = supervisorStateManagerConfig;
+    this.usePerpetuallyRunningTasks = Configs.valueOrDefault(usePerpetuallyRunningTasks, false);
   }
 
   @JsonProperty
@@ -142,6 +145,12 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   public SeekableStreamSupervisorIOConfig getIoConfig()
   {
     return ingestionSchema.getIOConfig();
+  }
+
+  @JsonProperty
+  public boolean usePerpetuallyRunningTasks()
+  {
+    return usePerpetuallyRunningTasks;
   }
 
   @Nullable

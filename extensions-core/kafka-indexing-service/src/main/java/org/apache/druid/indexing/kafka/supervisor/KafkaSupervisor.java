@@ -76,6 +76,8 @@ import java.util.TreeMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static java.lang.Math.max;
+
 /**
  * Supervisor responsible for managing the KafkaIndexTasks for a single dataSource. At a high level, the class accepts a
  * {@link KafkaSupervisorSpec} which includes the Kafka topic and configuration as well as an ingestion spec which will
@@ -141,10 +143,34 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   protected int getTaskGroupIdForPartition(KafkaTopicPartition partitionId)
   {
     Integer taskCount = spec.getIoConfig().getTaskCount();
+    
+    if (spec.usePerpetuallyRunningTasks()) {
+      int taskGroupId = getRangeBasedTaskGroupId(partitionId, taskCount);
+      log.debug("Range-based assignment for partition [%s]: taskGroupId [%d]", partitionId, taskGroupId);
+      return taskGroupId;
+    } else {
+      if (partitionId.isMultiTopicPartition()) {
+        return Math.abs(31 * partitionId.topic().hashCode() + partitionId.partition()) % taskCount;
+      } else {
+        return partitionId.partition() % taskCount;
+      }
+    }
+  }
+
+  /**
+   * Assigns partitions to task groups using range-based sequential assignment.
+   * This ensures that adjacent partitions are assigned to the same task group
+   */
+  private int getRangeBasedTaskGroupId(KafkaTopicPartition partitionId, Integer taskCount)
+  {
+    int totalPartitions = partitionIds.size();
+    int minPartitionsPerTaskGroup = totalPartitions / taskCount;
+
+
     if (partitionId.isMultiTopicPartition()) {
       return Math.abs(31 * partitionId.topic().hashCode() + partitionId.partition()) % taskCount;
     } else {
-      return partitionId.partition() % taskCount;
+      return max(taskCount - 1, partitionId.partition() / minPartitionsPerTaskGroup);
     }
   }
 
@@ -227,6 +253,73 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   }
 
   @Override
+  protected SeekableStreamIndexTaskIOConfig<KafkaTopicPartition, Long> createUpdatedTaskIoConfig(
+      Set<KafkaTopicPartition> partitions,
+      TaskGroup existingTaskGroup,
+      Map<KafkaTopicPartition, Long> latestCommittedOffsets
+  )
+  {
+    log.info("Creating updated task IO config for task group [%s]", existingTaskGroup.getId());
+    Map<KafkaTopicPartition, Long> startingSequences = new HashMap<>();
+    Set<KafkaTopicPartition> exclusiveStartSequenceNumberPartitions = new HashSet<>();
+
+    for (KafkaTopicPartition partition : partitions) {
+      Long offset;
+      if (!latestCommittedOffsets.containsKey(partition)) {
+        log.warn("No committed offset found for partition [%s], using NOT_SET", partition);
+        offset = NOT_SET;
+      } else {
+        offset = latestCommittedOffsets.get(partition);
+      }
+
+      startingSequences.put(partition, offset);
+    }
+
+    SeekableStreamStartSequenceNumbers<KafkaTopicPartition, Long> startSequenceNumbers =
+        new SeekableStreamStartSequenceNumbers<>(
+            spec.getIoConfig().getStream(),
+            startingSequences,
+            exclusiveStartSequenceNumberPartitions
+        );
+
+    // For end sequences, use NOT_SET to indicate open-ended reading
+    Map<KafkaTopicPartition, Long> endingSequences = new HashMap<>();
+    for (KafkaTopicPartition partition : partitions) {
+      endingSequences.put(partition, NOT_SET);
+    }
+
+    SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long> endSequenceNumbers =
+        new SeekableStreamEndSequenceNumbers<>(
+            spec.getIoConfig().getStream(),
+            endingSequences
+        );
+
+    log.info(
+        "Created updated IOConfig with starting sequences [%s] for partitions [%s]",
+        startingSequences, partitions
+    );
+
+    // Create the updated IOConfig
+    return new KafkaIndexTaskIOConfig(
+        existingTaskGroup.getId(),
+        existingTaskGroup.getBaseSequenceName(),
+        null,
+        null,
+        startSequenceNumbers,
+        endSequenceNumbers,
+        spec.getIoConfig().getConsumerProperties(),
+        spec.getIoConfig().getPollTimeout(),
+        true,
+        existingTaskGroup.getMinimumMessageTime(),
+        existingTaskGroup.getMaximumMessageTime(),
+        spec.getIoConfig().getInputFormat(),
+        spec.getIoConfig().getConfigOverrides(),
+        spec.getIoConfig().isMultiTopic(),
+        spec.getIoConfig().getTaskDuration().getStandardMinutes()
+    );
+  }
+
+  @Override
   protected List<SeekableStreamIndexTask<KafkaTopicPartition, Long, KafkaRecordEntity>> createIndexTasks(
       int replicas,
       String baseSequenceName,
@@ -252,6 +345,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
           (KafkaIndexTaskTuningConfig) taskTuningConfig,
           (KafkaIndexTaskIOConfig) taskIoConfig,
           context,
+          spec.usePerpetuallyRunningTasks(),
           sortingMapper
       ));
     }

@@ -2931,6 +2931,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         tuningConfig,
         ioConfig,
         context,
+        null,
         OBJECT_MAPPER
     );
     task.setPollRetryMs(POLL_RETRY_MS);
