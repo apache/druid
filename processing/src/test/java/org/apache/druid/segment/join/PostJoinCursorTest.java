@@ -265,7 +265,7 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     HashJoinSegment hashJoinSegment = new HashJoinSegment(
-        ReferenceCountedSegmentProvider.wrapRootGenerationSegment(infiniteFactSegment).acquireReference().orElseThrow(),
+        ReferenceCountedSegmentProvider.unmanaged(infiniteFactSegment).orElseThrow(),
         null,
         joinableClauses,
         joinFilterPreAnalysis,

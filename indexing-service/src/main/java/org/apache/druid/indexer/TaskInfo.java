@@ -20,40 +20,32 @@
 package org.apache.druid.indexer;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.indexing.common.task.Task;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
-
 /**
- * This class is used to store task info from runner query and cache in OverlordResource
+ * Contains the {@link TaskStatus} of a {@link Task} and its created time.
  */
-public class TaskInfo<EntryType, StatusType>
+public class TaskInfo
 {
-  private final String id;
   private final DateTime createdTime;
-  private final StatusType status;
-  private final String dataSource;
-  @Nullable
-  private final EntryType task;
+  private final TaskStatus status;
+  private final Task task;
 
   public TaskInfo(
-      String id,
       DateTime createdTime,
-      StatusType status,
-      String dataSource,
-      @Nullable EntryType task
+      TaskStatus status,
+      Task task
   )
   {
-    this.id = Preconditions.checkNotNull(id, "id");
     this.createdTime = Preconditions.checkNotNull(createdTime, "createdTime");
     this.status = Preconditions.checkNotNull(status, "status");
-    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
-    this.task = task;
+    this.task = Preconditions.checkNotNull(task, "Task cannot be null");
   }
 
   public String getId()
   {
-    return id;
+    return task.getId();
   }
 
   public DateTime getCreatedTime()
@@ -61,18 +53,17 @@ public class TaskInfo<EntryType, StatusType>
     return createdTime;
   }
 
-  public StatusType getStatus()
+  public TaskStatus getStatus()
   {
     return status;
   }
 
   public String getDataSource()
   {
-    return dataSource;
+    return task.getDataSource();
   }
 
-  @Nullable
-  public EntryType getTask()
+  public Task getTask()
   {
     return task;
   }
@@ -80,8 +71,8 @@ public class TaskInfo<EntryType, StatusType>
   /**
    * Returns a copy of this TaskInfo object with the given status.
    */
-  public TaskInfo<EntryType, StatusType> withStatus(StatusType status)
+  public TaskInfo withStatus(TaskStatus status)
   {
-    return new TaskInfo<>(id, createdTime, status, dataSource, task);
+    return new TaskInfo(createdTime, status, task);
   }
 }

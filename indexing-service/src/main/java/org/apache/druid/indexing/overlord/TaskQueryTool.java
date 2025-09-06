@@ -102,7 +102,7 @@ public class TaskQueryTool
     return taskLockbox.getActiveLocks(lockFilterPolicies);
   }
 
-  public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource)
+  public List<TaskInfo> getActiveTaskInfo(@Nullable String dataSource)
   {
     return storage.getTaskInfos(TaskLookup.activeTasksOnly(), dataSource);
   }
@@ -143,11 +143,11 @@ public class TaskQueryTool
   }
 
   @Nullable
-  public TaskInfo<Task, TaskStatus> getTaskInfo(String taskId)
+  public TaskInfo getTaskInfo(String taskId)
   {
     final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
     if (taskQueue.isPresent()) {
-      final Optional<TaskInfo<Task, TaskStatus>> taskStatus = taskQueue.get().getActiveTaskInfo(taskId);
+      final Optional<TaskInfo> taskStatus = taskQueue.get().getActiveTaskInfo(taskId);
       if (taskStatus.isPresent()) {
         return taskStatus.get();
       }
@@ -161,9 +161,9 @@ public class TaskQueryTool
     if (taskQueue.isPresent()) {
       // Serve active task statuses from memory
       final List<TaskStatusPlus> taskStatusPlusList = new ArrayList<>();
-      final List<TaskInfo<Task, TaskStatus>> activeTasks = taskQueue.get().getTaskInfos();
+      final List<TaskInfo> activeTasks = taskQueue.get().getTaskInfos();
 
-      for (TaskInfo<Task, TaskStatus> taskInfo : activeTasks) {
+      for (TaskInfo taskInfo : activeTasks) {
         final Task task = taskInfo.getTask();
         final Optional<TaskStatus> statusOptional = taskQueue.get().getTaskStatus(task.getId());
         if (statusOptional.isPresent()) {

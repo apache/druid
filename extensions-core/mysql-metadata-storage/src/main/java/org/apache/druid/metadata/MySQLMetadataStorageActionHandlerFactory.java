@@ -22,10 +22,10 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 
-public class DerbyMetadataStorageActionHandlerFactory extends SQLMetadataStorageActionHandlerFactory
+public class MySQLMetadataStorageActionHandlerFactory extends SQLMetadataStorageActionHandlerFactory
 {
   @Inject
-  public DerbyMetadataStorageActionHandlerFactory(
+  public MySQLMetadataStorageActionHandlerFactory(
       SQLMetadataConnector connector,
       MetadataStorageTablesConfig config,
       ObjectMapper jsonMapper
@@ -35,19 +35,13 @@ public class DerbyMetadataStorageActionHandlerFactory extends SQLMetadataStorage
   }
 
   @Override
-  public <A, B, C, D> MetadataStorageActionHandler<A, B, C, D> create(
-      final String entryType,
-      MetadataStorageActionHandlerTypes<A, B, C, D> payloadTypes
-  )
+  public MetadataStorageActionHandler create()
   {
-    return new DerbyMetadataStorageActionHandler<>(
+    return new MySQLMetadataStorageActionHandler(
         connector,
         jsonMapper,
-        payloadTypes,
-        entryType,
-        config.getEntryTable(entryType),
-        config.getLogTable(entryType),
-        config.getLockTable(entryType)
+        config.getTasksTable(),
+        config.getTaskLockTable()
     );
   }
 }

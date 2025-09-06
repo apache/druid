@@ -17,29 +17,32 @@
  * under the License.
  */
 
-package org.apache.druid.metadata;
+package org.apache.druid.query;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.timeline.DataSegment;
 
-public class SQLServerMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
-    extends SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
+import javax.annotation.Nullable;
+
+public class DataSegmentAndDescriptor
 {
-  public SQLServerMetadataStorageActionHandler(
-      SQLMetadataConnector connector,
-      ObjectMapper jsonMapper,
-      MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType> types,
-      String entryTypeName,
-      String entryTable,
-      String logTable,
-      String lockTable
-  )
+  @Nullable
+  private final DataSegment dataSegment;
+  private final SegmentDescriptor descriptor;
+
+  public DataSegmentAndDescriptor(@Nullable DataSegment dataSegment, SegmentDescriptor descriptor)
   {
-    super(connector, jsonMapper, types, entryTypeName, entryTable, logTable, lockTable);
+    this.dataSegment = dataSegment;
+    this.descriptor = descriptor;
   }
 
-  @Override
-  protected String decorateSqlWithLimit(String sql)
+  @Nullable
+  public DataSegment getDataSegment()
   {
-    return "SELECT TOP (:n)" + sql.substring("SELECT".length());
+    return dataSegment;
+  }
+
+  public SegmentDescriptor getDescriptor()
+  {
+    return descriptor;
   }
 }

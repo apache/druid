@@ -17,32 +17,43 @@
  * under the License.
  */
 
-package org.apache.druid.metadata;
+package org.apache.druid.segment.loading;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.timeline.SegmentId;
 
-public class DerbyMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
-    extends SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
+import java.util.Objects;
+
+/**
+ * Use a {@link SegmentId} as a {@link CacheEntryIdentifier}
+ */
+public final class SegmentCacheEntryIdentifier implements CacheEntryIdentifier
 {
-  @VisibleForTesting
-  DerbyMetadataStorageActionHandler(
-      SQLMetadataConnector connector,
-      ObjectMapper jsonMapper,
-      MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType> types,
-      String entryTypeName,
-      String entryTable,
-      String logTable,
-      String lockTable
-  )
+  private final SegmentId segmentId;
+
+  public SegmentCacheEntryIdentifier(SegmentId segmentId)
   {
-    super(connector, jsonMapper, types, entryTypeName, entryTable, logTable, lockTable);
+    this.segmentId = segmentId;
   }
 
   @Override
-  protected String decorateSqlWithLimit(String sql)
+  public boolean equals(Object o)
   {
-    return sql + " FETCH FIRST :n ROWS ONLY";
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SegmentCacheEntryIdentifier that = (SegmentCacheEntryIdentifier) o;
+    return Objects.equals(segmentId, that.segmentId);
   }
 
+  @Override
+  public int hashCode()
+  {
+    return segmentId.hashCode();
+  }
+
+  @Override
+  public String toString()
+  {
+    return segmentId.toString();
+  }
 }

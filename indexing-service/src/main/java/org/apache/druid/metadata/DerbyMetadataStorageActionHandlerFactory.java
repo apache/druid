@@ -17,8 +17,31 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.categories;
+package org.apache.druid.metadata;
 
-public class DruidExactCountBitmap
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
+
+public class DerbyMetadataStorageActionHandlerFactory extends SQLMetadataStorageActionHandlerFactory
 {
+  @Inject
+  public DerbyMetadataStorageActionHandlerFactory(
+      SQLMetadataConnector connector,
+      MetadataStorageTablesConfig config,
+      ObjectMapper jsonMapper
+  )
+  {
+    super(connector, config, jsonMapper);
+  }
+
+  @Override
+  public MetadataStorageActionHandler create()
+  {
+    return new DerbyMetadataStorageActionHandler(
+        connector,
+        jsonMapper,
+        config.getTasksTable(),
+        config.getTaskLockTable()
+    );
+  }
 }

@@ -17,29 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.metadata;
+package org.apache.druid.segment.loading;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 
-public class MySQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
-    extends SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
+/**
+ * Common interface to specify a unique identifier of a {@link CacheEntry} for a {@link StorageLocation}
+ */
+@SubclassesMustOverrideEqualsAndHashCode
+public interface CacheEntryIdentifier
 {
-  MySQLMetadataStorageActionHandler(
-      SQLMetadataConnector connector,
-      ObjectMapper jsonMapper,
-      MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType> types,
-      String entryTypeName,
-      String entryTable,
-      String logTable,
-      String lockTable
-  )
-  {
-    super(connector, jsonMapper, types, entryTypeName, entryTable, logTable, lockTable);
-  }
-
-  @Override
-  protected String decorateSqlWithLimit(String sql)
-  {
-    return sql + " LIMIT :n";
-  }
 }

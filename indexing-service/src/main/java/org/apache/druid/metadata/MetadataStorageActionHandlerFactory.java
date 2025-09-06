@@ -17,15 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.DruidExactCountBitmap;
+package org.apache.druid.metadata;
 
-import org.apache.druid.testsEx.categories.DruidExactCountBitmap;
-import org.apache.druid.testsEx.config.DruidTestRunner;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-
-@RunWith(DruidTestRunner.class)
-@Category(DruidExactCountBitmap.class)
-public class ITDruidExactCountBitmapTest extends DruidExactCountBitmapTest
+public interface MetadataStorageActionHandlerFactory
 {
+  MetadataStorageActionHandler create();
 }

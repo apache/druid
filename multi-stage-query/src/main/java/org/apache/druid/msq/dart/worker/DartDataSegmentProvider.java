@@ -29,9 +29,9 @@ import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.PhysicalSegmentInspector;
-import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -64,14 +64,14 @@ public class DartDataSegmentProvider implements DataSegmentProvider
     }
 
     return () -> {
-      final Optional<VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>> timeline =
+      final Optional<VersionedIntervalTimeline<String, DataSegment>> timeline =
           segmentManager.getTimeline(new TableDataSource(segmentId.getDataSource()));
 
       if (!timeline.isPresent()) {
         throw segmentNotFound(segmentId);
       }
 
-      final PartitionChunk<ReferenceCountedSegmentProvider> chunk =
+      final PartitionChunk<DataSegment> chunk =
           timeline.get().findChunk(
               segmentId.getInterval(),
               segmentId.getVersion(),
@@ -82,8 +82,8 @@ public class DartDataSegmentProvider implements DataSegmentProvider
         throw segmentNotFound(segmentId);
       }
 
-      final ReferenceCountedSegmentProvider segmentReference = chunk.getObject();
-      final Optional<Segment> maybeSegment = segmentReference.acquireReference();
+      final DataSegment dataSegment = chunk.getObject();
+      final Optional<Segment> maybeSegment = segmentManager.acquireCachedSegment(dataSegment);
       if (!maybeSegment.isPresent()) {
         // Segment has disappeared before we could acquire a reference to it.
         throw segmentNotFound(segmentId);
