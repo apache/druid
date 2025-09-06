@@ -178,7 +178,7 @@ exports[`SegmentsView matches snapshot 1`] = `
             "filterable": true,
             "headerClassName": "enable-comparisons",
             "show": true,
-            "width": 180,
+            "width": 220,
           },
           {
             "Cell": [Function],
@@ -188,7 +188,7 @@ exports[`SegmentsView matches snapshot 1`] = `
             "filterable": true,
             "headerClassName": "enable-comparisons",
             "show": true,
-            "width": 180,
+            "width": 220,
           },
           {
             "Cell": [Function],

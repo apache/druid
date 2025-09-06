@@ -202,7 +202,7 @@ exports[`TasksView matches snapshot 1`] = `
           "Header": "Created time",
           "accessor": "created_time",
           "show": true,
-          "width": 190,
+          "width": 220,
         },
         {
           "Aggregated": [Function],
