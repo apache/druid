@@ -224,6 +224,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
     return Projections.findMatchingProjection(
         cursorBuildSpec,
         projections,
+        dataInterval,
         (projectionName, columnName) ->
             projectionColumns.get(projectionName).containsKey(columnName) || getColumnCapabilities(columnName) == null,
         this::getProjectionQueryableIndex
