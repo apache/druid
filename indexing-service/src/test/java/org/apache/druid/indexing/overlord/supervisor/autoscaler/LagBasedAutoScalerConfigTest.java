@@ -282,4 +282,50 @@ public class LagBasedAutoScalerConfigTest
     );
     Assert.assertEquals(Double.valueOf(0.5), config.getStopTaskCountRatio());
   }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    LagBasedAutoScalerConfig config1 = new LagBasedAutoScalerConfig(
+        1000L,
+        2000L,
+        3000L,
+        4000L,
+        5000L,
+        6000L,
+        0.1,
+        0.2,
+        10,
+        5,
+        1,
+        2,
+        3,
+        true,
+        7000L,
+        AggregateFunction.SUM,
+        0.5
+    );
+    LagBasedAutoScalerConfig config2 = new LagBasedAutoScalerConfig(
+        2000L,
+        2000L,
+        5000L,
+        4500L,
+        5000L,
+        6000L,
+        0.2,
+        0.4,
+        40,
+        20,
+        1,
+        4,
+        1,
+        true,
+        7000L,
+        AggregateFunction.AVERAGE,
+        0.5
+    );
+
+    Assert.assertNotEquals(config1, config2);
+    Assert.assertNotEquals(config1.hashCode(), config2.hashCode());
+  }
 }
