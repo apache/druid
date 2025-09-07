@@ -292,6 +292,10 @@ public class SeekableStreamSupervisorIOConfigTest
 
     Assert.assertEquals(5, config.getMaxAllowedStops());
 
+    // Ensure never goes below 1
+    when(autoScalerConfig.getStopTaskCountRatio()).thenReturn(0.05);
+    Assert.assertEquals(1, config.getMaxAllowedStops());
+
     // Autoscaler enabled, stopTaskCountRatio unset, stopTaskCount set
     when(autoScalerConfig.getEnableTaskAutoScaler()).thenReturn(true);
     when(autoScalerConfig.getTaskCountStart()).thenReturn(10);

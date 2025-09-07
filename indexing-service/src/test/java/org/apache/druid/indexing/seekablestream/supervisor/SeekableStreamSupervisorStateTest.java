@@ -2691,7 +2691,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
-  public void testMaxAllowedStopsWithStopTaskCountPercent()
+  public void testMaxAllowedStopsWithStopTaskCountRatio()
   {
     LagAggregator lagAggregator = createMock(LagAggregator.class);
     AutoScalerConfig autoScalerConfig = new LagBasedAutoScalerConfig(
