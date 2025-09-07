@@ -233,8 +233,8 @@ public abstract class SeekableStreamSupervisorIOConfig
 
   public int getMaxAllowedStops()
   {
-    if (autoScalerEnabled && autoScalerConfig.getStopTaskCountPercent() != null) {
-      return (int) Math.floor(taskCount * autoScalerConfig.getStopTaskCountPercent());
+    if (autoScalerEnabled && autoScalerConfig.getStopTaskCountRatio() != null) {
+      return (int) Math.floor(taskCount * autoScalerConfig.getStopTaskCountRatio());
     }
     return stopTaskCount == null ? taskCount : stopTaskCount;
   }

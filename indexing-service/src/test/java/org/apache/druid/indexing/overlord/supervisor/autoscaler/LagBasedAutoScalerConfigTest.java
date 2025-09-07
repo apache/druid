@@ -29,15 +29,26 @@ public class LagBasedAutoScalerConfigTest
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   @Test
-  public void testSerdeWithDefaults() throws Exception
+  public void testDefaults()
   {
-    LagBasedAutoScalerConfig config = OBJECT_MAPPER.readValue(
-        OBJECT_MAPPER.writeValueAsString(
-            OBJECT_MAPPER.readValue(
-                "{}",
-                LagBasedAutoScalerConfig.class
-            )
-        ), LagBasedAutoScalerConfig.class
+    LagBasedAutoScalerConfig config = new LagBasedAutoScalerConfig(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
     );
 
     Assert.assertFalse(config.getEnableTaskAutoScaler());
@@ -53,61 +64,41 @@ public class LagBasedAutoScalerConfigTest
     Assert.assertEquals(2, config.getScaleOutStep());
     Assert.assertEquals(600000, config.getMinTriggerScaleActionFrequencyMillis());
     Assert.assertNull(config.getLagAggregate());
-    Assert.assertNull(config.getStopTaskCountPercent());
+    Assert.assertNull(config.getStopTaskCountRatio());
     Assert.assertEquals(0, config.getTaskCountMax());
     Assert.assertEquals(0, config.getTaskCountMin());
     Assert.assertNull(config.getTaskCountStart());
   }
 
   @Test
-  public void testSerdeWithOverrides() throws Exception
+  public void testSerde() throws Exception
   {
-    String jsonStr = "{\n"
-                     + "  \"lagCollectionIntervalMillis\": 111,\n"
-                     + "  \"lagCollectionRangeMillis\": 222,\n"
-                     + "  \"scaleActionStartDelayMillis\": 333,\n"
-                     + "  \"scaleActionPeriodMillis\": 444,\n"
-                     + "  \"scaleOutThreshold\": 555,\n"
-                     + "  \"scaleInThreshold\": 666,\n"
-                     + "  \"triggerScaleOutFractionThreshold\": 0.12,\n"
-                     + "  \"triggerScaleInFractionThreshold\": 0.34,\n"
-                     + "  \"taskCountMax\": 10,\n"
-                     + "  \"taskCountMin\": 5,\n"
-                     + "  \"taskCountStart\": 7,\n"
-                     + "  \"scaleInStep\": 3,\n"
-                     + "  \"scaleOutStep\": 4,\n"
-                     + "  \"enableTaskAutoScaler\": true,\n"
-                     + "  \"minTriggerScaleActionFrequencyMillis\": 777,\n"
-                     + "  \"lagAggregate\": \"AVERAGE\",\n"
-                     + "  \"stopTaskCountPercent\": 0.5\n"
-                     + "}";
-
-    LagBasedAutoScalerConfig config = OBJECT_MAPPER.readValue(
+    LagBasedAutoScalerConfig config1 = new LagBasedAutoScalerConfig(
+        100000L,
+        100000L,
+        100000L,
+        100000L,
+        1000000L,
+        100000L,
+        0.1,
+        0.9,
+        10,
+        5,
+        1,
+        1,
+        5,
+        true,
+        5000L,
+        AggregateFunction.SUM,
+        0.1
+    );
+    LagBasedAutoScalerConfig config2 = OBJECT_MAPPER.readValue(
         OBJECT_MAPPER.writeValueAsString(
-            OBJECT_MAPPER.readValue(
-                jsonStr,
-                LagBasedAutoScalerConfig.class
-            )
+            config1
         ), LagBasedAutoScalerConfig.class
     );
 
-    Assert.assertTrue(config.getEnableTaskAutoScaler());
-    Assert.assertEquals(111, config.getLagCollectionIntervalMillis());
-    Assert.assertEquals(222, config.getLagCollectionRangeMillis());
-    Assert.assertEquals(333, config.getScaleActionStartDelayMillis());
-    Assert.assertEquals(444, config.getScaleActionPeriodMillis());
-    Assert.assertEquals(555, config.getScaleOutThreshold());
-    Assert.assertEquals(666, config.getScaleInThreshold());
-    Assert.assertEquals(0.12, config.getTriggerScaleOutFractionThreshold(), 0.00001);
-    Assert.assertEquals(0.34, config.getTriggerScaleInFractionThreshold(), 0.00001);
-    Assert.assertEquals(10, config.getTaskCountMax());
-    Assert.assertEquals(5, config.getTaskCountMin());
-    Assert.assertEquals(Integer.valueOf(7), config.getTaskCountStart());
-    Assert.assertEquals(3, config.getScaleInStep());
-    Assert.assertEquals(4, config.getScaleOutStep());
-    Assert.assertEquals(777, config.getMinTriggerScaleActionFrequencyMillis());
-    Assert.assertEquals(AggregateFunction.AVERAGE, config.getLagAggregate());
-    Assert.assertEquals(Double.valueOf(0.5), config.getStopTaskCountPercent());
+    Assert.assertEquals(config1, config2);
   }
 
   @Test
@@ -193,9 +184,9 @@ public class LagBasedAutoScalerConfigTest
   }
 
   @Test
-  public void testStopTaskCountPercentBounds()
+  public void testStopTaskCountRatioBounds()
   {
-    // Fail if stopTaskCountPercent = 0
+    // Fail if stopTaskCountRatio = 0
     IllegalArgumentException ex1 = Assert.assertThrows(
         IllegalArgumentException.class,
         () -> new LagBasedAutoScalerConfig(
@@ -218,9 +209,9 @@ public class LagBasedAutoScalerConfigTest
             0.0
         )
     );
-    Assert.assertTrue(ex1.getMessage().contains("0.0 < stopTaskCountPercent <= 1.0"));
+    Assert.assertTrue(ex1.getMessage().contains("0.0 < stopTaskCountRatio <= 1.0"));
 
-    // Fail if stopTaskCountPercent < 0
+    // Fail if stopTaskCountRatio < 0
     IllegalArgumentException ex2 = Assert.assertThrows(
         IllegalArgumentException.class,
         () -> new LagBasedAutoScalerConfig(
@@ -242,9 +233,9 @@ public class LagBasedAutoScalerConfigTest
             -0.1
         )
     );
-    Assert.assertTrue(ex2.getMessage().contains("0.0 < stopTaskCountPercent <= 1.0"));
+    Assert.assertTrue(ex2.getMessage().contains("0.0 < stopTaskCountRatio <= 1.0"));
 
-    // Fail if stopTaskCountPercent > 1.0
+    // Fail if stopTaskCountRatio > 1.0
     IllegalArgumentException ex3 = Assert.assertThrows(
         IllegalArgumentException.class,
         () -> new LagBasedAutoScalerConfig(
@@ -267,7 +258,7 @@ public class LagBasedAutoScalerConfigTest
             1.1
         )
     );
-    Assert.assertTrue(ex3.getMessage().contains("0.0 < stopTaskCountPercent <= 1.0"));
+    Assert.assertTrue(ex3.getMessage().contains("0.0 < stopTaskCountRatio <= 1.0"));
 
     // Should succeed for a valid value
     LagBasedAutoScalerConfig config = new LagBasedAutoScalerConfig(
@@ -289,6 +280,6 @@ public class LagBasedAutoScalerConfigTest
         null,
         0.5
     );
-    Assert.assertEquals(Double.valueOf(0.5), config.getStopTaskCountPercent());
+    Assert.assertEquals(Double.valueOf(0.5), config.getStopTaskCountRatio());
   }
 }

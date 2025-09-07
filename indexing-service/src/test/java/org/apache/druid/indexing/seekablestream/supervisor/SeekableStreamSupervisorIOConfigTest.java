@@ -264,10 +264,10 @@ public class SeekableStreamSupervisorIOConfigTest
 
     AutoScalerConfig autoScalerConfig = mock(AutoScalerConfig.class);
 
-    // Autoscaler enabled, stopTaskCountPercent set
+    // Autoscaler enabled, stopTaskCountRatio set
     when(autoScalerConfig.getEnableTaskAutoScaler()).thenReturn(true);
     when(autoScalerConfig.getTaskCountStart()).thenReturn(10);
-    when(autoScalerConfig.getStopTaskCountPercent()).thenReturn(0.5);
+    when(autoScalerConfig.getStopTaskCountRatio()).thenReturn(0.5);
 
     SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
         "stream",
@@ -292,10 +292,10 @@ public class SeekableStreamSupervisorIOConfigTest
 
     Assert.assertEquals(5, config.getMaxAllowedStops());
 
-    // Autoscaler enabled, stopTaskCountPercent unset, stopTaskCount set
+    // Autoscaler enabled, stopTaskCountRatio unset, stopTaskCount set
     when(autoScalerConfig.getEnableTaskAutoScaler()).thenReturn(true);
     when(autoScalerConfig.getTaskCountStart()).thenReturn(10);
-    when(autoScalerConfig.getStopTaskCountPercent()).thenReturn(null);
+    when(autoScalerConfig.getStopTaskCountRatio()).thenReturn(null);
 
     SeekableStreamSupervisorIOConfig config2 = new SeekableStreamSupervisorIOConfig(
         "stream",
@@ -321,10 +321,10 @@ public class SeekableStreamSupervisorIOConfigTest
     Assert.assertEquals(1, config2.getMaxAllowedStops());
 
 
-    // Autoscaler enabled, stopTaskCountPercent unset, stopTaskCount unset
+    // Autoscaler enabled, stopTaskCountRatio unset, stopTaskCount unset
     when(autoScalerConfig.getEnableTaskAutoScaler()).thenReturn(true);
     when(autoScalerConfig.getTaskCountStart()).thenReturn(10);
-    when(autoScalerConfig.getStopTaskCountPercent()).thenReturn(null);
+    when(autoScalerConfig.getStopTaskCountRatio()).thenReturn(null);
 
     SeekableStreamSupervisorIOConfig config3 = new SeekableStreamSupervisorIOConfig(
         "stream",
