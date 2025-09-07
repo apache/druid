@@ -232,9 +232,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   private File[] retrieveSegmentMetadataFiles() throws IOException
   {
-    File baseDir = config.getInfoDir();
-    FileUtils.mkdirp(baseDir);
-    File[] files = baseDir.listFiles();
+    File infoDir = getEffectiveInfoDir();
+    FileUtils.mkdirp(infoDir);
+    File[] files = infoDir.listFiles();
     return files == null ? new File[0] : files;
   }
 
