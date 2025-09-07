@@ -58,6 +58,7 @@ public class KubernetesClusterDockerTest extends IngestionSmokeTest implements L
         .addServer(overlord)
         .addServer(broker)
         .addServer(eventCollector)
+        .addCommonProperty("druid.emitter.latching.defaultWaitTimeoutMillis", "60000")
         .addCommonProperty(
             "druid.extensions.loadList",
             "[\"druid-s3-extensions\", \"druid-kafka-indexing-service\","
