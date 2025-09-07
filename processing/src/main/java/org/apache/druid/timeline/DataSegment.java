@@ -182,6 +182,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   @JsonCreator
   private DataSegment(
       @JsonProperty("dataSource") String dataSource,
+      // We take interval input as a String so we can deserialize it optimally via Intervals.fromString(interval).
       @JsonProperty("interval") String interval,
       @JsonProperty("version") String version,
       // use `Map` *NOT* `LoadSpec` because we want to do lazy materialization to prevent dependency pollution

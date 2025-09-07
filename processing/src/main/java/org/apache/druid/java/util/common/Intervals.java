@@ -77,8 +77,6 @@ public final class Intervals
    * </ol>
    *
    * Currently, this method is only used in {@link org.apache.druid.timeline.SegmentId}.
-   * Should you find additional places where the Interval format is guaranteed to be compatible with this method,
-   * feel free to open a PR.
    */
   public static Interval fromString(String string)
   {
@@ -87,11 +85,7 @@ public final class Intervals
       interval = tryOptimizedIntervalDeserialization(string);
     }
 
-    if (interval == null) {
-      return Intervals.of(string);
-    } else {
-      return interval;
-    }
+    return interval == null ? Intervals.of(string) : interval;
   }
 
   private static boolean canDeserializeIntervalOptimallyFromString(String intervalText)
