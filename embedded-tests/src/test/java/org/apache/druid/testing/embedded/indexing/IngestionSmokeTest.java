@@ -180,10 +180,11 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
 
     eventCollector.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("segment/schemaCache/datasource/dropped/count")
-            .hasDimension(DruidMetrics.DATASOURCE, dataSource)
-            .hasService("druid/broker")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+                      .hasService("druid/broker")
     );
-      cluster.callApi().verifySqlQuery("SELECT * FROM sys.segments WHERE datasource='%s'", dataSource, "");
+
+    cluster.callApi().verifySqlQuery("SELECT * FROM sys.segments WHERE datasource='%s'", dataSource, "");
 
     // Kill all unused segments
     final String killTaskId = cluster.callApi().onLeaderOverlord(
