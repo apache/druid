@@ -139,6 +139,19 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
         ColumnType.LONG,
         TestExprMacroTable.INSTANCE
     );
+    // the first time-like column is non-UTC, not allowed.
+    DruidException e2 = Assertions.assertThrows(DruidException.class, () -> new AggregateProjectionSpec(
+        "some_projection",
+        null,
+        VirtualColumns.create(ptHourly),
+        List.of(new LongDimensionSchema("ptHourly")),
+        new AggregatorFactory[]{}
+    ));
+    Assertions.assertEquals(
+        "cannot use granularity[{type=period, period=PT1H, timeZone=America/Los_Angeles, origin=null}] on column[ptHourly] as projection time column",
+        e2.getMessage()
+    );
+    // happy path, the first time-like column is hourly, which is UTC and can be mapped to ptHourly.
     Assertions.assertEquals("hourly", new AggregateProjectionSpec(
         "some_projection",
         null,
@@ -146,18 +159,6 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
         List.of(new LongDimensionSchema("hourly"), new LongDimensionSchema("ptHourly")),
         new AggregatorFactory[]{}
     ).toMetadataSchema().getTimeColumnName());
-    // the first time-like column is non-UTC, not allowed.
-    DruidException e2 = Assertions.assertThrows(DruidException.class, () -> new AggregateProjectionSpec(
-        "some_projection",
-        null,
-        VirtualColumns.create(hourly, ptHourly),
-        List.of(new LongDimensionSchema("ptHourly"), new LongDimensionSchema("hourly")),
-        new AggregatorFactory[]{}
-    ));
-    Assertions.assertEquals(
-        "cannot use granularity[{type=period, period=PT1H, timeZone=America/Los_Angeles, origin=null}] on column[ptHourly] as projection time column",
-        e2.getMessage()
-    );
   }
 
   @Test

@@ -129,7 +129,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
         parsedExpression,
         outputType
     );
-    this.expressionAnalysis = Suppliers.memoize(parsedExpression.get()::analyzeInputs);
+    this.expressionAnalysis = Suppliers.memoize(() -> parsedExpression.get().analyzeInputs());
     this.cacheKey = makeCacheKeySupplier();
   }
 

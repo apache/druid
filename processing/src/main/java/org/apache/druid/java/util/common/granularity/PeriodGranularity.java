@@ -358,7 +358,7 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
       // fall back to hour if period is a multiple of hour and all offsets are multiples of hour, e.x. PT1H in America/Los_Angeles
       return Optional.of(3600L);
     } else if (periodSeconds.get() % 1800 == 0 && offsets.stream().allMatch(o -> o % 1800 == 0)) {
-      // fall back to hour if period is a multiple of 30 minutes and all offsets are multiples of 30 minutes, e.x. PT30M in Asia/Kolkata
+      // fall back to 30 minutes if period is a multiple of 30 minutes and all offsets are multiples of 30 minutes, e.x. PT30M in Asia/Kolkata
       return Optional.of(1800L);
     } else if (periodSeconds.get() % 60 == 0 && offsets.stream().allMatch(o -> o % 60 == 0)) {
       // fall back to minute if period is a multiple of minute and all offsets are multiples of minute

@@ -383,6 +383,9 @@ public class Projections
         if (projection.getEffectiveGranularity().equals(virtualGranularity)) {
           return matchBuilder.remapColumn(queryVirtualColumn.getOutputName(), ColumnHolder.TIME_COLUMN_NAME)
                              .addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
+        } else if (virtualGranularity.equals(Granularities.NONE)
+                   || projection.getEffectiveGranularity().equals(Granularities.ALL)) {
+          return null;
         } else if (virtualGranularity instanceof PeriodGranularity
                    && projection.getEffectiveGranularity() instanceof PeriodGranularity) {
           PeriodGranularity virtualGran = (PeriodGranularity) virtualGranularity;
@@ -391,8 +394,6 @@ public class Projections
           if (!PERIOD_GRAN_CACHE.computeIfAbsent(combinedKey, (unused) -> projectionGran.canBeMappedTo(virtualGran))) {
             return null;
           }
-        } else if (virtualGranularity.isFinerThan(projection.getEffectiveGranularity())) {
-          return null;
         }
         return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
       } else {

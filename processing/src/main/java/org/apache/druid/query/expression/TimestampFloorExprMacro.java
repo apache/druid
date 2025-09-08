@@ -41,10 +41,10 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
   public static String forQueryGranularity(PeriodGranularity period)
   {
     return FN_NAME + "(" + ColumnHolder.TIME_COLUMN_NAME
-           + ",'" + period.getPeriod()
-           + "'," + (period.getOrigin() == null ? "null" : StringUtils.format("'%s'", period.getOrigin()))
-           + ",'" + period.getTimeZone()
-           + "')";
+           + "," + StringUtils.format("'%s'", period.getPeriod())
+           + "," + (period.getOrigin() == null ? "null" : StringUtils.format("'%s'", period.getOrigin()))
+           + "," + StringUtils.format("'%s'", period.getTimeZone())
+           + ")";
   }
 
   private static final String FN_NAME = "timestamp_floor";
