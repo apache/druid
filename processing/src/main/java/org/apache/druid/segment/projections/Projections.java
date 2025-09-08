@@ -122,7 +122,6 @@ public class Projections
       return null;
     }
 
-
     if (isUnalignedInterval(projection, queryCursorBuildSpec, dataInterval)) {
       return null;
     }

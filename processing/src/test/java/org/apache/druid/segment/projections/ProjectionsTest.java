@@ -419,7 +419,6 @@ class ProjectionsTest
     );
     Assertions.assertNull(projectionMatch);
 
-    // interval larger than data interval can match, though this shouldn't really happen in practice
     Interval wonky = new Interval(time, time.plusHours(1).plusMinutes(12));
     CursorBuildSpec cursorBuildSpecUnalignedButContaining = CursorBuildSpec.builder()
                                                                            .setInterval(wonky)
