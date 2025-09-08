@@ -21,6 +21,7 @@ package org.apache.druid.segment.projections;
 
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
@@ -45,6 +46,8 @@ import java.util.function.Function;
 
 public class Projections
 {
+  private static final Map<byte[], Boolean> PERIOD_GRAN_CACHE = new HashMap<>();
+
   @Nullable
   public static <T> QueryableProjection<T> findMatchingProjection(
       CursorBuildSpec cursorBuildSpec,
@@ -382,9 +385,10 @@ public class Projections
                              .addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
         } else if (virtualGranularity instanceof PeriodGranularity
                    && projection.getEffectiveGranularity() instanceof PeriodGranularity) {
-          PeriodGranularity virtualGranularityPeriod = (PeriodGranularity) virtualGranularity;
-          PeriodGranularity projectionGranularityPeriod = (PeriodGranularity) projection.getEffectiveGranularity();
-          if (!projectionGranularityPeriod.canBeMappedTo(virtualGranularityPeriod)) {
+          PeriodGranularity virtualGran = (PeriodGranularity) virtualGranularity;
+          PeriodGranularity projectionGran = (PeriodGranularity) projection.getEffectiveGranularity();
+          byte[] combinedKey = StringUtils.toUtf8(projectionGran + "->" + virtualGran);
+          if (!PERIOD_GRAN_CACHE.computeIfAbsent(combinedKey, (unused) -> projectionGran.canBeMappedTo(virtualGran))) {
             return null;
           }
         } else if (virtualGranularity.isFinerThan(projection.getEffectiveGranularity())) {

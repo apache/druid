@@ -257,40 +257,43 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
       int periodMonths = period.getYears() * 12 + period.getMonths();
       int targetMonths = target.period.getYears() * 12 + target.period.getMonths();
       if (targetMonths == 0 && periodMonths != 0) {
+        // cannot map if target has no month, but period has month, e.x. P1M cannot be mapped to P1D or P1W
         return false;
       }
 
       Optional<Long> periodStandardSeconds = getStandardSeconds(period.withYears(0).withMonths(0));
       if (periodStandardSeconds.isEmpty()) {
+        // millisecond precision period is not supported
         return false;
       }
       Optional<Long> targetStandardSeconds = getStandardSeconds(target.period.withYears(0).withMonths(0));
       if (targetStandardSeconds.isEmpty()) {
+        // millisecond precision period is not supported
         return false;
       }
       if (targetMonths == 0 && periodMonths == 0) {
-        // both periods have zero months
+        // both periods have zero months, we only need to check standard seconds
+        // e.x. PT1H can be mapped to PT3H, PT15M can be mapped to PT1H
         return targetStandardSeconds.get() % periodStandardSeconds.get() == 0;
       }
       // if we reach here, targetMonths != 0
       if (periodMonths == 0) {
         // can map if 1.target not have week/day/hour/minute/second, and 2.period can be mapped to day
-        // this is for simplicity, it's possible some period can be mapped to gran, but we don't support it
+        // e.x PT3H can be mapped to P1M
         return targetStandardSeconds.get() == 0 && (3600 * 24) % periodStandardSeconds.get() == 0;
       } else {
         // can map if 1.target&period not have week/day/hour/minute/second, and 2.period month can be mapped to target month
+        // e.x. P1M can be mapped to P3M, P1M can be mapped to P1Y
         return targetMonths % periodMonths == 0
                && targetStandardSeconds.get() == 0
                && periodStandardSeconds.get() == 0;
       }
     }
 
-    // Timezone doesn't match, we'd require periods to be in whole seconds, i.e. no years, months, or milliseconds.
-    if (getStandardSeconds(period).isEmpty()) {
-      return false;
-    }
+    // different time zones, we'd map to UTC first, then check if the target can cover the UTC-mapped period
     Optional<Long> standardSeconds = getStandardSeconds(period);
     if (standardSeconds.isEmpty()) {
+      // must be in whole seconds, i.e. no years, months, or milliseconds.
       return false;
     }
     Optional<Long> utcMappablePeriodSeconds = getUtcMappablePeriodSeconds();
@@ -298,7 +301,7 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
       return false;
     }
     if (!standardSeconds.get().equals(utcMappablePeriodSeconds.get())) {
-      // the period cannot be mapped to UTC with the same period
+      // the period cannot be mapped to UTC with the same period, e.x. PT1H in Asia/Kolkata cannot be mapped to PT1H in UTC
       return false;
     }
     if (target.period.getYears() == 0 && target.period.getMonths() == 0) {
@@ -306,8 +309,12 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
       if (targetUtcMappablePeriodSeconds.isEmpty()) {
         return false;
       }
+      // both periods have zero months, we only need to check standard seconds
+      // e.x. PT30M in Asia/Kolkata can be mapped to PT1H in America/Los_Angeles
       return targetUtcMappablePeriodSeconds.get() % standardSeconds.get() == 0;
     } else {
+      // can map if 1.target not have week/day/hour/minute/second, and 2.period can be mapped to day
+      // e.x PT1H in America/Los_Angeles can be mapped to P1M in Asia/Shanghai
       Optional<Long> targetStandardSecondsIgnoringMonth = getStandardSeconds(target.period.withYears(0).withMonths(0));
       return targetStandardSecondsIgnoringMonth.isPresent()
              && targetStandardSecondsIgnoringMonth.get() == 0
@@ -345,13 +352,13 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
     }
 
     if (offsets.stream().allMatch(o -> o % periodSeconds.get() == 0)) {
-      // all offsets are multiples of the period
+      // all offsets are multiples of the period, e.x. PT8H and PT2H in Asia/Shanghai
       return periodSeconds;
     } else if (periodSeconds.get() % 3600 == 0 && offsets.stream().allMatch(o -> o % 3600 == 0)) {
-      // fall back to hour if period is a multiple of hour and all offsets are multiples of hour
+      // fall back to hour if period is a multiple of hour and all offsets are multiples of hour, e.x. PT1H in America/Los_Angeles
       return Optional.of(3600L);
     } else if (periodSeconds.get() % 1800 == 0 && offsets.stream().allMatch(o -> o % 1800 == 0)) {
-      // fall back to hour if period is a multiple of 30 minutes and all offsets are multiples of 30 minutes
+      // fall back to hour if period is a multiple of 30 minutes and all offsets are multiples of 30 minutes, e.x. PT30M in Asia/Kolkata
       return Optional.of(1800L);
     } else if (periodSeconds.get() % 60 == 0 && offsets.stream().allMatch(o -> o % 60 == 0)) {
       // fall back to minute if period is a multiple of minute and all offsets are multiples of minute
