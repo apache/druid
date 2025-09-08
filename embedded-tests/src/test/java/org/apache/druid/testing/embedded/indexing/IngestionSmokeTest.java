@@ -179,7 +179,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     );
 
     eventCollector.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("segment/schemaCache/datasource/dropped/count")
+        event -> event.hasMetricName("segment/schemaCache/dataSource/removed")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
                       .hasService("druid/broker")
     );
