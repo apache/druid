@@ -88,7 +88,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
    * Broker with a short metadata refresh period.
    */
   protected EmbeddedBroker broker = new EmbeddedBroker()
-      .addProperty("druid.sql.planner.metadataRefreshPeriod", "PT1s");
+      .addProperty("druid.sql.planner.metadataRefreshPeriod", "PT0.1s");
 
   /**
    * Event collector used to wait for metric events to occur.
