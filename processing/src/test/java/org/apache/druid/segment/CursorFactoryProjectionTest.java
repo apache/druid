@@ -1585,14 +1585,14 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         query,
         queryMetrics,
         makeArrayResultSet(
-            new Object[]{TIMESTAMP.getMillis(), "aaaa"},
-            new Object[]{TIMESTAMP.plusMinutes(2).getMillis(), "aaaa"},
-            new Object[]{TIMESTAMP.plusMinutes(4).getMillis(), "aaaa"},
-            new Object[]{TIMESTAMP.plusMinutes(6).getMillis(), "baaa"},
-            new Object[]{TIMESTAMP.plusMinutes(8).getMillis(), "baaa"},
-            new Object[]{TIMESTAMP.plusMinutes(10).getMillis(), "baaa"},
-            new Object[]{TIMESTAMP.plusHours(1).getMillis(), "aaaa"},
-            new Object[]{TIMESTAMP.plusHours(1).plusMinutes(1).getMillis(), "aaaa"}
+            new Object[]{UTC_MIDNIGHT.getMillis(), "aaaa"},
+            new Object[]{UTC_MIDNIGHT.plusMinutes(2).getMillis(), "aaaa"},
+            new Object[]{UTC_MIDNIGHT.plusMinutes(4).getMillis(), "aaaa"},
+            new Object[]{UTC_MIDNIGHT.plusMinutes(6).getMillis(), "baaa"},
+            new Object[]{UTC_MIDNIGHT.plusMinutes(8).getMillis(), "baaa"},
+            new Object[]{UTC_MIDNIGHT.plusMinutes(10).getMillis(), "baaa"},
+            new Object[]{UTC_MIDNIGHT.plusHours(1).getMillis(), "aaaa"},
+            new Object[]{UTC_MIDNIGHT.plusHours(1).plusMinutes(1).getMillis(), "aaaa"}
         )
     );
   }
