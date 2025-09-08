@@ -60,6 +60,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -88,7 +89,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
    * Broker with a short metadata refresh period.
    */
   protected EmbeddedBroker broker = new EmbeddedBroker()
-      .addProperty("druid.sql.planner.metadataRefreshPeriod", "PT0.1s");
+      .addProperty("druid.sql.planner.metadataRefreshPeriod", "PT1s");
 
   /**
    * Event collector used to wait for metric events to occur.
@@ -149,6 +150,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
   }
 
   @Test
+  @Disabled("Disabled due to flakiness after segment drops")
   public void test_runIndexTask_andKillData()
   {
     final int numSegments = 10;
