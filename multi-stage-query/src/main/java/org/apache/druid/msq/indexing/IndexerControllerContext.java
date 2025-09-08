@@ -308,6 +308,7 @@ public class IndexerControllerContext implements ControllerContext
     final boolean removeNullBytes = MultiStageQueryContext.removeNullBytes(queryContext);
     final boolean includeAllCounters = MultiStageQueryContext.getIncludeAllCounters(queryContext);
     final boolean isReindex = MultiStageQueryContext.isReindex(queryContext);
+    final int frameSize = MultiStageQueryContext.getFrameSize(queryContext);
     final ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
 
     builder
@@ -317,7 +318,8 @@ public class IndexerControllerContext implements ControllerContext
         .put(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, maxConcurrentStages)
         .put(MultiStageQueryContext.CTX_ROW_BASED_FRAME_TYPE, (int) rowBasedFrameType.version())
         .put(MultiStageQueryContext.CTX_REMOVE_NULL_BYTES, removeNullBytes)
-        .put(MultiStageQueryContext.CTX_INCLUDE_ALL_COUNTERS, includeAllCounters);
+        .put(MultiStageQueryContext.CTX_INCLUDE_ALL_COUNTERS, includeAllCounters)
+        .put(MultiStageQueryContext.CTX_MAX_FRAME_SIZE, frameSize);
 
     if (querySpec.getId() != null) {
       builder.put(BaseQuery.QUERY_ID, querySpec.getId());

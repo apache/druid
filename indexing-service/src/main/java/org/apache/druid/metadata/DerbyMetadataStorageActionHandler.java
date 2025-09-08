@@ -19,26 +19,26 @@
 
 package org.apache.druid.metadata;
 
-/**
- * A config object for tests, use by overriding the specific getter methods and returning what you want
- */
-public class TestMetadataStorageTablesConfig extends MetadataStorageTablesConfig
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
+
+public class DerbyMetadataStorageActionHandler extends SQLMetadataStorageActionHandler
 {
-  public TestMetadataStorageTablesConfig()
+  @VisibleForTesting
+  DerbyMetadataStorageActionHandler(
+      SQLMetadataConnector connector,
+      ObjectMapper jsonMapper,
+      String entryTable,
+      String lockTable
+  )
   {
-    super(
-        "test",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    super(connector, jsonMapper, entryTable, lockTable);
   }
+
+  @Override
+  protected String decorateSqlWithLimit(String sql)
+  {
+    return sql + " FETCH FIRST :n ROWS ONLY";
+  }
+
 }

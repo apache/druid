@@ -523,7 +523,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     // Verify that shutdown on TaskQueue finishes immediately
     taskQueue.shutdown(task1.getId(), "killed");
 
-    Optional<TaskInfo<Task, TaskStatus>> taskInfo = taskQueue.getActiveTaskInfo(task1.getId());
+    Optional<TaskInfo> taskInfo = taskQueue.getActiveTaskInfo(task1.getId());
     Assert.assertTrue(taskInfo.isPresent());
     Assert.assertEquals(TaskStatus.failure(task1.getId(), "killed"), taskInfo.get().getStatus());
 

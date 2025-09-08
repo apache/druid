@@ -19,39 +19,18 @@
 
 package org.apache.druid.query.filter;
 
-import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 
 import javax.annotation.Nullable;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
 
-public interface BooleanFilter extends Filter
+public interface BooleanUnaryFilter extends Filter
 {
-  /**
-   * Returns the child filters for this filter.
-   *
-   * This is a LinkedHashSet because we don't want duplicates, but the order is also important in some cases (such
-   * as when filters are provided in an order that encourages short-circuiting.)
-   */
-  LinkedHashSet<Filter> getFilters();
-
-  @Override
-  default Set<String> getRequiredColumns()
-  {
-    Set<String> allColumns = new HashSet<>();
-    for (Filter f : getFilters()) {
-      allColumns.addAll(f.getRequiredColumns());
-    }
-    return allColumns;
-  }
+  Filter getBaseFilter();
 
   /**
-   * Specialized alternative to {@link #getBitmapColumnIndex(ColumnIndexSelector)} to allow reuse any precomputed
+   * Specialized alternative to {@link #getBitmapColumnIndex(ColumnIndexSelector)} to allow reuse of
    * {@link BitmapColumnIndex} created as part of a {@link FilterBundle.Builder}
    */
   @Nullable
-  BitmapColumnIndex getBitmapColumnIndex(BitmapFactory bitmapFactory, List<FilterBundle.Builder> childBuilders);
+  BitmapColumnIndex getBitmapColumnIndex(int numRows, FilterBundle.Builder baseBuilder);
 }
