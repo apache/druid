@@ -85,9 +85,13 @@ public class OverlordClientTest2 extends EmbeddedClusterTestBase
     Thread.sleep(500);
     overlord.start();
 
+    while(true) {
+      Thread.sleep(500);
     Object r = cluster.callApi().onLeaderOverlord( oc -> oc.taskStatus(taskId));
+    System.out.println(r);
+    }
 
-    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
+//    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
   }
 //
 //  @Test
