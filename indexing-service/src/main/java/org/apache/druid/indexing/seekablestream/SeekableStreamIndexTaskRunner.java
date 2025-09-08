@@ -78,7 +78,9 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.PendingSegmentRecord;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -1737,6 +1739,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     authorizationCheck(req);
     try {
+      log.info("Attempting to update config to [%s]", request.getIoConfig());
       pause();
       isConfigChangeOngoing = true;
       checkpointSequences();
@@ -1756,7 +1759,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
       createNewSequenceFromIoConfig(newIoConfig);
       isConfigChangeOngoing = false;
-      log.info("Config updated to [%s]", newIoConfig);
+      log.info("Config updated to [%s]", this.ioConfig);
+      toolbox.getEmitter().emit(ServiceMetricEvent.builder()
+                                    .setDimension(DruidMetrics.TASK_ID, task.getId())
+                                    .setDimension(DruidMetrics.TASK_TYPE, task.getType())
+                                    .setDimension(DruidMetrics.DATASOURCE, task.getDataSource())
+                                    .build("task/config/update/success", String.valueOf(1)));
       resume();
       return Response.ok().build();
     }
