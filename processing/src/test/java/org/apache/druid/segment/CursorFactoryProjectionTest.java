@@ -1591,8 +1591,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
             new Object[]{UTC_MIDNIGHT.plusMinutes(6).getMillis(), "baaa"},
             new Object[]{UTC_MIDNIGHT.plusMinutes(8).getMillis(), "baaa"},
             new Object[]{UTC_MIDNIGHT.plusMinutes(10).getMillis(), "baaa"},
-            new Object[]{UTC_MIDNIGHT.plusHours(1).getMillis(), "aaaa"},
-            new Object[]{UTC_MIDNIGHT.plusHours(1).plusMinutes(1).getMillis(), "aaaa"}
+            new Object[]{UTC_01H.getMillis(), "aaaa"},
+            new Object[]{UTC_01H31M.getMillis(), "aaaa"}
         )
     );
   }
@@ -1658,8 +1658,13 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     queryMetrics.assertProjection();
 
-    final List<ResultRow> results = resultRows.toList();
-    assertGroupByResultsAnyOrder(expectedResults, results);
+    final Object[] results = resultRows.toList().stream().map(ResultRow::getArray).map(Arrays::toString).toArray();
+    Arrays.sort(results);
+
+    final Object[] expectedResultsArray = expectedResults.stream().map(Arrays::toString).toArray();
+    Arrays.sort(expectedResultsArray);
+    // print a full diff of all differing elements.
+    Assertions.assertEquals(Arrays.toString(expectedResultsArray), Arrays.toString(results));
 
     final Sequence<ResultRow> resultRowsNoProjection = groupingEngine.process(
         query.withOverriddenContext(Map.of(QueryContexts.NO_PROJECTIONS, true)),
@@ -1669,8 +1674,11 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         null
     );
 
-    final List<ResultRow> resultsNoProjection = resultRowsNoProjection.toList();
-    assertGroupByResultsAnyOrder(expectedResults, resultsNoProjection);
+    final Object[] resultsNoProjection = resultRowsNoProjection.toList().stream().map(ResultRow::getArray).map(Arrays::toString).toArray();
+    Arrays.sort(resultsNoProjection);
+    // print a full diff of all differing elements.
+    Assertions.assertEquals(Arrays.toString(expectedResultsArray), Arrays.toString(resultsNoProjection));
+
   }
 
   private void testTimeseries(
@@ -1723,14 +1731,6 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     Assertions.assertEquals(expected.size(), actual.size());
     for (int i = 0; i < expected.size(); i++) {
       Assertions.assertArrayEquals(expected.get(i), actual.get(i).getArray());
-    }
-  }
-
-  private void assertGroupByResultsAnyOrder(Set<Object[]> expected, List<ResultRow> actual)
-  {
-    Assertions.assertEquals(expected.size(), actual.size());
-    for (ResultRow row : actual) {
-      Assertions.assertTrue(expected.contains(row.getArray()), "missing row:" + Arrays.deepToString(row.getArray()));
     }
   }
 
