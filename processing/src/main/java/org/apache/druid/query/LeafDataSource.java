@@ -30,6 +30,7 @@ import java.util.List;
  */
 public abstract class LeafDataSource implements DataSource
 {
+
   @Override
   public final List<DataSource> getChildren()
   {

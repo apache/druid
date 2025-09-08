@@ -183,6 +183,11 @@ public class EmbeddedDruidCluster implements EmbeddedResource
     }
     return this;
   }
+  public void revoidServer(EmbeddedDruidServer<?> server)
+  {
+    servers.remove(server);
+    resources.remove(server);
+  }
 
   /**
    * Adds a resource to this cluster. This method should not be used to add

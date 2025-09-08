@@ -22,6 +22,7 @@ package org.apache.druid.java.util.common.lifecycle;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 
@@ -204,6 +205,7 @@ public class Lifecycle
         throw new ISE("Cannot add a handler after the Lifecycle has started, it doesn't work that way.");
       }
       handlers.get(stage).add(handler);
+      System.out.println("LSaddHandler:"+this+" -- " + handler);
     }
     finally {
       startStopLock.unlock();
@@ -318,6 +320,7 @@ public class Lifecycle
         }
       }
       handlers.get(stage).add(handler);
+      System.out.println("LSaddHandler2:"+this+" -- " + handler);
     }
     finally {
       startStopLock.unlock();
@@ -469,6 +472,12 @@ public class Lifecycle
           }
         }
       }
+    }
+
+    @Override
+    public String toString()
+    {
+      return ToStringBuilder.reflectionToString(this);
     }
   }
 
