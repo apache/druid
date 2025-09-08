@@ -280,6 +280,48 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testGetCachedSegmentsLegacyPathsMigratedResilience() throws Exception
+  {
+    final DataSegment segmentToBootstrap = makeTestDataSegment(segmentDeepStorageDir);
+    FileUtils.mkdirp(new File(localSegmentCacheDir, "info_dir"));
+    manager.storeInfoFile(segmentToBootstrap);
+    File segmentZip = createSegmentZipInLocation(
+        segmentDeepStorageDir,
+        TEST_DATA_RELATIVE_PATH
+    );
+    File unzippedSegmentPathInLocation = new File(
+        localSegmentCacheDir,
+        DataSegmentPusher.getDefaultStorageDir(segmentToBootstrap, false)
+    );
+    FileUtils.mkdirp(unzippedSegmentPathInLocation);
+    CompressionUtils.unzip(
+        segmentZip,
+        unzippedSegmentPathInLocation
+    );
+
+    File unzippedSegmentInDestination = new File(
+        localSegmentCacheDir,
+        segmentToBootstrap.getId().toString()
+    );
+    FileUtils.mkdirp(unzippedSegmentInDestination);
+    CompressionUtils.unzip(
+        segmentZip,
+        unzippedSegmentInDestination
+    );
+
+    for (DataSegment segment : manager.getCachedSegments()) {
+      manager.bootstrap(segment, SegmentLazyLoadFailCallback.NOOP);
+    }
+
+    // if bootstrapping a file that already exists it will be mounted by bootsrap
+    Assert.assertNotNull(manager.getSegmentFiles(segmentToBootstrap));
+
+    Assert.assertFalse(unzippedSegmentPathInLocation.exists());
+    Assert.assertFalse(new File(localSegmentCacheDir, segmentToBootstrap.getDataSource()).exists());
+    Assert.assertTrue(new File(localSegmentCacheDir, segmentToBootstrap.getId().toString()).exists());
+  }
+
+  @Test
   public void testIfSegmentIsLoaded() throws IOException
   {
     // can use fake segments since we aren't loading them for real and just using utility method

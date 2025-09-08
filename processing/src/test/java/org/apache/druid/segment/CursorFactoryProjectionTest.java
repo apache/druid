@@ -72,6 +72,7 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryMetrics;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -281,6 +282,12 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                              )
                              .groupingColumns(new LongDimensionSchema("__vc2"), new StringDimensionSchema("__vc3"))
                              .aggregators(new LongSumAggregatorFactory("sum_c", "c"))
+                             .build(),
+      AggregateProjectionSpec.builder("time_and_a")
+                             .groupingColumns(
+                                 new LongDimensionSchema(ColumnHolder.TIME_COLUMN_NAME),
+                                 new StringDimensionSchema("a")
+                             )
                              .build()
   );
 
@@ -1473,6 +1480,48 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
             new Object[]{"baa", 6L},
             new Object[]{"baa", 8L},
             new Object[]{"bbb", 11L}
+        )
+    );
+  }
+
+  @Test
+  public void testProjectionGroupOnTime()
+  {
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.ETERNITY)
+                    .addDimension(new DefaultDimensionSpec(ColumnHolder.TIME_COLUMN_NAME, "d0", ColumnType.LONG))
+                    .addDimension("v0")
+                    .setVirtualColumns(
+                        new ExpressionVirtualColumn(
+                            "v0",
+                            "concat(a, 'aaa')",
+                            ColumnType.STRING,
+                            TestExprMacroTable.INSTANCE
+                        )
+                    )
+                    .build();
+
+    final ExpectedProjectionGroupBy queryMetrics =
+        new ExpectedProjectionGroupBy("time_and_a");
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, 8);
+
+    testGroupBy(
+        query,
+        queryMetrics,
+        makeArrayResultSet(
+            new Object[]{TIMESTAMP.getMillis(), "aaaa"},
+            new Object[]{TIMESTAMP.plusMinutes(2).getMillis(), "aaaa"},
+            new Object[]{TIMESTAMP.plusMinutes(4).getMillis(), "aaaa"},
+            new Object[]{TIMESTAMP.plusMinutes(6).getMillis(), "baaa"},
+            new Object[]{TIMESTAMP.plusMinutes(8).getMillis(), "baaa"},
+            new Object[]{TIMESTAMP.plusMinutes(10).getMillis(), "baaa"},
+            new Object[]{TIMESTAMP.plusHours(1).getMillis(), "aaaa"},
+            new Object[]{TIMESTAMP.plusHours(1).plusMinutes(1).getMillis(), "aaaa"}
         )
     );
   }

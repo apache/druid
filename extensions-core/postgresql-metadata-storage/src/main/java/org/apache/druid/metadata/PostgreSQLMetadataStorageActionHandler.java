@@ -20,35 +20,23 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
 
-public class MySQLMetadataStorageActionHandlerFactory extends SQLMetadataStorageActionHandlerFactory
+public class PostgreSQLMetadataStorageActionHandler extends SQLMetadataStorageActionHandler
 {
-  @Inject
-  public MySQLMetadataStorageActionHandlerFactory(
+  public PostgreSQLMetadataStorageActionHandler(
       SQLMetadataConnector connector,
-      MetadataStorageTablesConfig config,
-      ObjectMapper jsonMapper
+      ObjectMapper jsonMapper,
+      String entryTable,
+      String lockTable
   )
   {
-    super(connector, config, jsonMapper);
+    super(connector, jsonMapper, entryTable, lockTable);
   }
 
   @Override
-  public <EntryType, StatusType, LogType, LockType>
-      MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType> create(
-          String entryType,
-          MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType> payloadTypes
-  )
+  protected String decorateSqlWithLimit(String sql)
   {
-    return new MySQLMetadataStorageActionHandler<>(
-        connector,
-        jsonMapper,
-        payloadTypes,
-        entryType,
-        config.getEntryTable(entryType),
-        config.getLogTable(entryType),
-        config.getLockTable(entryType)
-    );
+    return sql + " LIMIT :n";
   }
+
 }

@@ -22,10 +22,10 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 
-public class SQLServerMetadataStorageActionHandlerFactory extends SQLMetadataStorageActionHandlerFactory
+public class PostgreSQLMetadataStorageActionHandlerFactory extends SQLMetadataStorageActionHandlerFactory
 {
   @Inject
-  public SQLServerMetadataStorageActionHandlerFactory(
+  public PostgreSQLMetadataStorageActionHandlerFactory(
       SQLMetadataConnector connector,
       MetadataStorageTablesConfig config,
       ObjectMapper jsonMapper
@@ -35,20 +35,13 @@ public class SQLServerMetadataStorageActionHandlerFactory extends SQLMetadataSto
   }
 
   @Override
-  public <EntryType, StatusType, LogType, LockType>
-      MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType> create(
-          String entryType,
-          MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType> payloadTypes
-  )
+  public MetadataStorageActionHandler create()
   {
-    return new SQLServerMetadataStorageActionHandler<>(
+    return new PostgreSQLMetadataStorageActionHandler(
         connector,
         jsonMapper,
-        payloadTypes,
-        entryType,
-        config.getEntryTable(entryType),
-        config.getLogTable(entryType),
-        config.getLockTable(entryType)
+        config.getTasksTable(),
+        config.getTaskLockTable()
     );
   }
 }

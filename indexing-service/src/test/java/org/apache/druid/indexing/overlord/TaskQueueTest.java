@@ -633,13 +633,13 @@ public class TaskQueueTest extends IngestionTestBase
     final TestTask task = new TestTask("shutdown-test-task", Intervals.of("2021-01-01/P1D"));
     taskQueue.add(task);
 
-    final Optional<TaskInfo<Task, TaskStatus>> activeInfoOpt = taskQueue.getActiveTaskInfo(task.getId());
+    final Optional<TaskInfo> activeInfoOpt = taskQueue.getActiveTaskInfo(task.getId());
     Assert.assertTrue(activeInfoOpt.isPresent());
     Assert.assertEquals(TaskState.RUNNING, activeInfoOpt.get().getStatus().getStatusCode());
 
     taskQueue.shutdown(task.getId(), shutdownReason);
 
-    final Optional<TaskInfo<Task, TaskStatus>> afterShutdownInfoOpt = taskQueue.getActiveTaskInfo(task.getId());
+    final Optional<TaskInfo> afterShutdownInfoOpt = taskQueue.getActiveTaskInfo(task.getId());
     Assert.assertTrue(afterShutdownInfoOpt.isPresent());
     Assert.assertEquals(shutdownStatus, afterShutdownInfoOpt.get().getStatus());
     Assert.assertEquals(shutdownStatus, getTaskStorage().getStatus(task.getId()).get());
@@ -657,7 +657,7 @@ public class TaskQueueTest extends IngestionTestBase
     Thread.sleep(100);
     Assert.assertTrue(task.isDone());
 
-    final Optional<TaskInfo<Task, TaskStatus>> activeInfoOpt = taskQueue.getActiveTaskInfo(task.getId());
+    final Optional<TaskInfo> activeInfoOpt = taskQueue.getActiveTaskInfo(task.getId());
     Assert.assertTrue(activeInfoOpt.isPresent());
     Assert.assertEquals(successStatus, activeInfoOpt.get().getStatus());
     Assert.assertEquals(successStatus, getTaskStorage().getStatus(task.getId()).get());
@@ -684,7 +684,7 @@ public class TaskQueueTest extends IngestionTestBase
     Thread.sleep(100);
     Assert.assertTrue(task.isDone());
 
-    final Optional<TaskInfo<Task, TaskStatus>> activeInfoOpt = taskQueue.getActiveTaskInfo(task.getId());
+    final Optional<TaskInfo> activeInfoOpt = taskQueue.getActiveTaskInfo(task.getId());
     Assert.assertTrue(activeInfoOpt.isPresent());
     Assert.assertEquals(failedStatus, activeInfoOpt.get().getStatus());
     Assert.assertEquals(failedStatus, getTaskStorage().getStatus(task.getId()).get());

@@ -20,26 +20,28 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
 
-public class MySQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
-    extends SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
+public class DerbyMetadataStorageActionHandlerFactory extends SQLMetadataStorageActionHandlerFactory
 {
-  MySQLMetadataStorageActionHandler(
+  @Inject
+  public DerbyMetadataStorageActionHandlerFactory(
       SQLMetadataConnector connector,
-      ObjectMapper jsonMapper,
-      MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType> types,
-      String entryTypeName,
-      String entryTable,
-      String logTable,
-      String lockTable
+      MetadataStorageTablesConfig config,
+      ObjectMapper jsonMapper
   )
   {
-    super(connector, jsonMapper, types, entryTypeName, entryTable, logTable, lockTable);
+    super(connector, config, jsonMapper);
   }
 
   @Override
-  protected String decorateSqlWithLimit(String sql)
+  public MetadataStorageActionHandler create()
   {
-    return sql + " LIMIT :n";
+    return new DerbyMetadataStorageActionHandler(
+        connector,
+        jsonMapper,
+        config.getTasksTable(),
+        config.getTaskLockTable()
+    );
   }
 }

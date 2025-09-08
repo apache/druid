@@ -424,6 +424,13 @@ public class Projections
       ProjectionMatchBuilder matchBuilder
   )
   {
+    // if we need __time as a physical column, the projection must be grouping on __time directly
+    if (ColumnHolder.TIME_COLUMN_NAME.equals(column)) {
+      if (ColumnHolder.TIME_COLUMN_NAME.equals(projection.getTimeColumnName())) {
+        return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
+      }
+      return null;
+    }
     if (physicalColumnChecker.check(projection.getName(), column)) {
       return matchBuilder.addReferencedPhysicalColumn(column);
     }
