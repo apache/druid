@@ -117,6 +117,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -1731,7 +1732,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Path("/updateConfig")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response updateConfig(TaskConfigUpdateRequest updateRequest, @Context final HttpServletRequest req)
+  public Response updateConfig(TaskConfigUpdateRequest request, @Context final HttpServletRequest req)
       throws InterruptedException
   {
     authorizationCheck(req);
@@ -1740,9 +1741,13 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       isConfigChangeOngoing = true;
       checkpointSequences();
 
-      @SuppressWarnings("unchecked")
-      SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig =
-          (SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType>) updateRequest.getIoConfig();
+      SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig;
+      if (request.getIoConfig() instanceof LinkedHashMap) {
+        newIoConfig =(SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType>)
+            toolbox.getJsonMapper().convertValue(request.getIoConfig(), SeekableStreamIndexTaskIOConfig.class);
+      } else {
+        newIoConfig = (SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType>) request.getIoConfig();
+      }
       this.ioConfig = newIoConfig;
       this.stream = ioConfig.getStartSequenceNumbers().getStream();
       this.endOffsets = new ConcurrentHashMap<>(ioConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap());
@@ -1751,6 +1756,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
       createNewSequenceFromIoConfig(newIoConfig);
       isConfigChangeOngoing = false;
+      log.info("Config updated to [%s]", newIoConfig);
       resume();
       return Response.ok().build();
     }
