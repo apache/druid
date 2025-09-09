@@ -19,6 +19,7 @@
 
 package org.apache.druid.math.expr.vector;
 
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExpressionType;
 
 import java.util.Arrays;
@@ -68,5 +69,14 @@ public final class ExprEvalDoubleVector extends BaseExprEvalVector<double[]>
       }
     }
     return objects;
+  }
+
+  @Override
+  public boolean elementAsBoolean(int index)
+  {
+    if (nulls != null && nulls[index]) {
+      return Evals.asBoolean(0.0);
+    }
+    return Evals.asBoolean(values[index]);
   }
 }

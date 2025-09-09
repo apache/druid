@@ -19,6 +19,7 @@
 
 package org.apache.druid.math.expr.vector;
 
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
@@ -63,6 +64,15 @@ public final class ExprEvalLongVector extends BaseExprEvalVector<long[]>
       }
     }
     return objects;
+  }
+
+  @Override
+  public boolean elementAsBoolean(int index)
+  {
+    if (nulls != null && nulls[index]) {
+      return Evals.asBoolean(0L);
+    }
+    return Evals.asBoolean(values[index]);
   }
 
 }

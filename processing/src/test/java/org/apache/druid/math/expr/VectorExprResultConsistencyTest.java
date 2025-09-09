@@ -38,6 +38,7 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -347,6 +348,28 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     );
     testFunctions(types, templates, functions);
   }
+
+  @Test
+  public void testIfFunction()
+  {
+    testExpression("if(l1, l1, l2)", types);
+    testExpression("if(l1, s1, s2)", types);
+    testExpression("if(l1, d1, d2)", types);
+    testExpression("if(d1, l1, l2)", types);
+    testExpression("if(d1, s1, s2)", types);
+    testExpression("if(d1, d1, d2)", types);
+    testExpression("if(boolString1, s1, s2)", types);
+    testExpression("if(boolString1, l1, l2)", types);
+    testExpression("if(boolString1, d1, d2)", types);
+    // cannot vectorize mixed types
+    Assertions.assertFalse(
+        Parser.parse("if(s1, l1, d2)", MACRO_TABLE).canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
+    Assertions.assertFalse(
+        Parser.parse("if(s1, d1, s2)", MACRO_TABLE).canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
+  }
+
 
   @Test
   public void testStringFns()
