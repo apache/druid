@@ -33,12 +33,6 @@
   </parent>
 
   <dependencies>
-  <dependency>
-            <groupId>org.junit.platform</groupId>
-            <artifactId>junit-platform-runner</artifactId>
-            <version>1.13.4</version>
-            <scope>test</scope>
-        </dependency>
     <dependency>
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-processing</artifactId>

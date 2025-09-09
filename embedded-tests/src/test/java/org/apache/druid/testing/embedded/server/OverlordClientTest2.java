@@ -67,7 +67,7 @@ public class OverlordClientTest2 extends EmbeddedClusterTestBase
     final String taskId = IdUtils.newTaskId("sim_test_noop", TestDataSource.WIKI, null);
     Thread.sleep(500);
     cluster.callApi().onLeaderOverlord(
-        o -> o.runTask(taskId, new NoopTask(taskId, null, null, 2000L, 0L, null))
+        o -> o.runTask(taskId, new NoopTask(taskId, null, null, 4000L, 0L, null))
     );
     Thread.sleep(500);
 
