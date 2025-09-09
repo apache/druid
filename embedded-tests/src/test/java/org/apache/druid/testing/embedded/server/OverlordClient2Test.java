@@ -90,18 +90,17 @@ public class OverlordClient2Test extends EmbeddedClusterTestBase
 //    System.out.println("----stop4---");
 //    Thread.sleep(500);
 
-    int cnt =0;
-while (true) {
-  cnt++;
-  Thread.sleep(500);
-  if(cnt==10) {
-
-    System.out.println("cancel task");
-    cluster.callApi().onLeaderOverlord(oc -> oc.cancelTask(taskId));
+  int cnt = 0;
+  while (cnt < 100) {
+    cnt++;
+    Thread.sleep(1000);
+    if (cnt == 4) {
+      System.out.println("@@@cancel task");
+      cluster.callApi().onLeaderOverlord(oc -> oc.cancelTask(taskId));
+    }
+    Object r = cluster.callApi().onLeaderOverlord(oc -> oc.taskStatus(taskId));
+    System.out.println(r);
   }
-  Object r = cluster.callApi().onLeaderOverlord(oc -> oc.taskStatus(taskId));
-  System.out.println(r);
-}
 
 //    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
   }

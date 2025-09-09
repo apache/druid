@@ -20,6 +20,13 @@
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.jayway.jsonpath.Configuration;
+import com.jayway.jsonpath.DocumentContext;
+import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.ParseContext;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -27,7 +34,7 @@ import java.util.concurrent.TimeoutException;
 public class ASD
 {
 
-  public static void main(String[] args) throws InterruptedException, ExecutionException, TimeoutException
+  public static void main(String[] args) throws InterruptedException, ExecutionException, TimeoutException, Exception
   {
 
     ListeningExecutorService executor = MoreExecutors.newDirectExecutorService();
@@ -38,6 +45,27 @@ public class ASD
     Object res = f.get(1, TimeUnit.MILLISECONDS);
     System.out.println(f);
     System.out.println(res);
+
+
+
+
+    for(int i=0;i<10;i++) {
+    System.out.println("_ "+System.currentTimeMillis());
+    DocumentBuilderFactory aa = DocumentBuilderFactory.newInstance();
+    System.out.println(System.currentTimeMillis());
+    DocumentBuilder a = aa.newDocumentBuilder();
+    System.out.println(System.currentTimeMillis());
+    }
+
+    JsonPath p=null;
+    DocumentContext a = p.parse("asd");
+    Configuration cfg=Configuration.defaultConfiguration();
+    byte[] bytes=null;
+    ParseContext aa = JsonPath.using(Configuration.defaultConfiguration());
+    aa.parseUtf8(bytes);
+//    a.
+
+
 
   }
 
