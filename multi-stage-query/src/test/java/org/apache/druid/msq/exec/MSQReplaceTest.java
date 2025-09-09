@@ -2779,9 +2779,10 @@ public class MSQReplaceTest extends MSQTestBase
     return expectedCompactionState(
         context,
         partitionDimensions,
-        new DimensionsSpec.Builder().setDimensions(dimensions)
-                                    .setDimensionExclusions(Collections.singletonList("__time"))
-                                    .build(),
+        DimensionsSpec.builder()
+                      .setDimensions(dimensions)
+                      .setDimensionExclusions(Collections.singletonList("__time"))
+                      .build(),
         segmentGranularity,
         interval
     );
