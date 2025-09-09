@@ -58,9 +58,9 @@ import java.util.Map;
  */
 public abstract class AggregateMergeRule extends RelOptRule
 {
-  protected AggregateMergeRule(final RelOptRuleOperand operand)
+  protected AggregateMergeRule(final RelOptRuleOperand operand, final String description)
   {
-    super(operand);
+    super(operand, description);
   }
 
   /**
@@ -187,6 +187,11 @@ public abstract class AggregateMergeRule extends RelOptRule
       return null;
     }
 
+    if (project.containsOver()) {
+      // Project containing window functions is not supported.
+      return null;
+    }
+
     final ImmutableBitSet groupSet = aggregate.getGroupSet();
 
     // group-by index => underlying field number
@@ -218,6 +223,10 @@ public abstract class AggregateMergeRule extends RelOptRule
         final int inputBit = inputBits.asList().get(0);
         final int aggCallPosition = inputBit - aggregate.getGroupCount();
         final AggregateCall aggCall = aggregate.getAggCallList().get(aggCallPosition);
+        if (!isAggregateSupported(aggCall)) {
+          return null;
+        }
+
         newAggCallPositions.add(aggCallPosition);
 
         // Add aggregator args to the new Project.
@@ -289,7 +298,10 @@ public abstract class AggregateMergeRule extends RelOptRule
   {
     public WithProject()
     {
-      super(operand(Aggregate.class, operand(Project.class, operand(Aggregate.class, any()))));
+      super(
+          operand(Aggregate.class, operand(Project.class, operand(Aggregate.class, any()))),
+          "AggregateMergeRule[WithProject]"
+      );
     }
 
     @Override
@@ -319,7 +331,10 @@ public abstract class AggregateMergeRule extends RelOptRule
   {
     public WithoutProject()
     {
-      super(operand(Aggregate.class, operand(Aggregate.class, any())));
+      super(
+          operand(Aggregate.class, operand(Aggregate.class, any())),
+          "AggregateMergeRule[WithoutProject]"
+      );
     }
 
     @Override
