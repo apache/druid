@@ -84,7 +84,7 @@ public class QueryableIndexTimeBoundaryInspector implements TimeBoundaryInspecto
 
   private void populateMinMaxTime()
   {
-    if (timeOrdered) {
+    if (timeOrdered && index.getNumRows() > 0) {
       // Compute and cache minTime, maxTime.
       final ColumnHolder columnHolder = index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME);
       try (NumericColumn column = (NumericColumn) columnHolder.getColumn()) {
