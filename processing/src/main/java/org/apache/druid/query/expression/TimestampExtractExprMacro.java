@@ -24,7 +24,12 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
+import org.apache.druid.math.expr.vector.DoubleUnivariateLongFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.LongUnivariateLongFunctionVectorProcessor;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.chrono.ISOChronology;
@@ -182,6 +187,38 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
     public ExpressionType getOutputType(InputBindingInspector inspector)
     {
       return getOutputExpressionType(unit);
+    }
+
+    @Override
+    public boolean canVectorize(InputBindingInspector inspector)
+    {
+      return args.get(0).canVectorize(inspector);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
+    {
+      final ExprVectorProcessor<?> processor;
+
+      if (getOutputExpressionType(unit).is(ExprType.DOUBLE)) {
+        processor = new DoubleUnivariateLongFunctionVectorProcessor(
+            CastToTypeVectorProcessor.cast(args.get(0).asVectorProcessor(inspector), ExpressionType.LONG),
+            input -> {
+              final DateTime dateTime = new DateTime(input, chronology);
+              return getExprEval(dateTime, unit).asDouble();
+            }
+        );
+      } else {
+        processor = new LongUnivariateLongFunctionVectorProcessor(
+            CastToTypeVectorProcessor.cast(args.get(0).asVectorProcessor(inspector), ExpressionType.LONG),
+            input -> {
+              final DateTime dateTime = new DateTime(input, chronology);
+              return getExprEval(dateTime, unit).asLong();
+            }
+        );
+      }
+
+      return (ExprVectorProcessor<T>) processor;
     }
   }
 
