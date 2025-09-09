@@ -36,7 +36,6 @@ import org.apache.druid.testing.embedded.indexing.IngestionSmokeTest;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 
 /**
  * Runs some basic ingestion tests using Coordinator and Overlord at version
@@ -84,13 +83,6 @@ public class IngestionBackwardCompatibilityDockerTest extends IngestionSmokeTest
     Assertions.assertFalse(
         overlord.bindings().overlordLeaderSelector().isLeader()
     );
-  }
-
-  @Override
-  @Disabled("Disabled due to flakiness after segment drops")
-  public void test_runIndexTask_andKillData()
-  {
-    super.test_runIndexTask_andKillData();
   }
 
   @Override
