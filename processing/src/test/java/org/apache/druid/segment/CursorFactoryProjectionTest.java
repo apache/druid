@@ -1314,6 +1314,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
   @Test
   public void testTimeseriesQueryGranularityFinerThanProjectionGranularity()
   {
+    // timeseries query only works on base table if base table is sorted by time
     Assume.assumeTrue(segmentSortedByTime);
     final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                         .dataSource("test")
@@ -1536,6 +1537,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                     .build();
 
     final boolean isRealtime = projectionsCursorFactory instanceof IncrementalIndexCursorFactory;
+    // realtime projections don't have row count, so abfoo is chosen because of how projection sorting happens
     final ExpectedProjectionGroupBy queryMetrics = new ExpectedProjectionGroupBy(isRealtime ? "abfoo" : "a_hourly_c_sum_filter_a_to_a");
 
     final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
@@ -1646,16 +1648,19 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         results
     );
 
+
     Assertions.assertEquals(TIMESTAMP, projectionsTimeBoundaryInspector.getMinTime());
     if (isRealtime || segmentSortedByTime) {
       Assertions.assertEquals(TIMESTAMP.plusHours(1).plusMinutes(1), projectionsTimeBoundaryInspector.getMaxTime());
     } else {
+      // min and max time are inexact for non time ordered segments
       Assertions.assertEquals(
           TIMESTAMP.plusHours(1).plusMinutes(1).plusMillis(1),
           projectionsTimeBoundaryInspector.getMaxTime()
       );
     }
 
+    // timeseries query only works on base table if base table is sorted by time
     Assume.assumeTrue(segmentSortedByTime);
     final Sequence<Result<TimeseriesResultValue>> resultRowsNoProjection = timeseriesEngine.process(
         query.withOverriddenContext(Map.of(QueryContexts.NO_PROJECTIONS, true)),
@@ -1819,6 +1824,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     final List<Result<TimeseriesResultValue>> results = resultRows.toList();
     assertTimeseriesResults(query.getResultRowSignature(RowSignature.Finalization.YES), expectedResults, results);
 
+    // timeseries query only works on base table if base table is sorted by time
     Assume.assumeTrue(segmentSortedByTime);
     final Sequence<Result<TimeseriesResultValue>> resultRowsNoProjection = timeseriesEngine.process(
         query.withOverriddenContext(Map.of(QueryContexts.NO_PROJECTIONS, true)),

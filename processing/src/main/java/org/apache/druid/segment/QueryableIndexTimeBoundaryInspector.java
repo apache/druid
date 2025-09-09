@@ -54,6 +54,9 @@ public class QueryableIndexTimeBoundaryInspector implements TimeBoundaryInspecto
   @MonotonicNonNull
   private volatile DateTime maxTime;
 
+  @MonotonicNonNull
+  private volatile Integer numRows;
+
   @Override
   public DateTime getMinTime()
   {
@@ -79,12 +82,15 @@ public class QueryableIndexTimeBoundaryInspector implements TimeBoundaryInspecto
   @Override
   public boolean isMinMaxExact()
   {
-    return timeOrdered;
+    if (numRows == null) {
+      numRows = index.getNumRows();
+    }
+    return timeOrdered && numRows > 0;
   }
 
   private void populateMinMaxTime()
   {
-    if (timeOrdered && index.getNumRows() > 0) {
+    if (isMinMaxExact()) {
       // Compute and cache minTime, maxTime.
       final ColumnHolder columnHolder = index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME);
       try (NumericColumn column = (NumericColumn) columnHolder.getColumn()) {
