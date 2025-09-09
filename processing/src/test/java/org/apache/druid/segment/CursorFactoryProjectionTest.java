@@ -1646,6 +1646,13 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         results
     );
 
+    Assertions.assertEquals(TIMESTAMP, projectionsTimeBoundaryInspector.getMinTime());
+    if (isRealtime || segmentSortedByTime) {
+      Assertions.assertEquals(TIMESTAMP.plusHours(1).plusMinutes(1), projectionsTimeBoundaryInspector.getMaxTime());
+    } else {
+      Assertions.assertEquals(TIMESTAMP.plusHours(1).plusMinutes(1).plusMillis(1), projectionsTimeBoundaryInspector.getMaxTime());
+    }
+
     Assume.assumeTrue(segmentSortedByTime);
     final Sequence<Result<TimeseriesResultValue>> resultRowsNoProjection = timeseriesEngine.process(
         query.withOverriddenContext(Map.of(QueryContexts.NO_PROJECTIONS, true)),
