@@ -55,7 +55,7 @@ public class ReferenceCountingSegmentTest
     cursorFactory = EasyMock.createNiceMock(CursorFactory.class);
     indexedTable = EasyMock.createNiceMock(IndexedTable.class);
 
-    segment = ReferenceCountedSegmentProvider.wrapRootGenerationSegment(
+    segment = ReferenceCountedSegmentProvider.of(
         new Segment()
         {
           @Override

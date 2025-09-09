@@ -188,6 +188,7 @@
         <module>server</module>
         <module>indexing-service</module>
         <module>indexing-hadoop</module>
+        <module>multi-stage-query</module>
         <module>services</module>
         <module>sql</module>
         <module>integration-tests</module>
@@ -211,7 +212,6 @@
         <module>extensions-core/kafka-extraction-namespace</module>
         <module>extensions-core/kafka-indexing-service</module>
         <module>extensions-core/kinesis-indexing-service</module>
-        <module>extensions-core/multi-stage-query</module>
         <module>extensions-core/mysql-metadata-storage</module>
         <module>extensions-core/orc-extensions</module>
         <module>extensions-core/parquet-extensions</module>
@@ -1642,7 +1642,7 @@
             <plugin>
                 <groupId>de.thetaphi</groupId>
                 <artifactId>forbiddenapis</artifactId>
-                <version>3.2</version>
+                <version>3.5.1</version>
                 <configuration>
                     <ignoreSignaturesOfMissingClasses>true</ignoreSignaturesOfMissingClasses>
                     <bundledSignatures>
@@ -1661,6 +1661,10 @@
                       <exclude>**/DruidSqlParserImpl.class</exclude>
                       <exclude>**/DruidSqlParserImplTokenManager.class</exclude>
                       <exclude>**/SimpleCharStream.class</exclude>
+                      <!-- Exclude JMH-generated classes -->
+                      <exclude>**/*_jmhType_*.class</exclude>
+                      <exclude>**/*_jmhTest_*.class</exclude>
+                      <exclude>**/*_generated*.class</exclude>
                     </excludes>
                     <suppressAnnotations>
                         <annotation>**.SuppressForbidden</annotation>

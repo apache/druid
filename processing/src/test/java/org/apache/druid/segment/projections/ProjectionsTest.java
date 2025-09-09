@@ -22,17 +22,19 @@ package org.apache.druid.segment.projections;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.filter.EqualityFilter;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.filter.AndFilter;
-import org.apache.druid.segment.filter.IsBooleanFilter;
-import org.apache.druid.segment.filter.OrFilter;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -60,6 +62,7 @@ class ProjectionsTest
         12345
     );
     CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
+                                                     .setPhysicalColumns(Set.of("c"))
                                                      .setPreferredOrdering(List.of())
                                                      .setAggregators(
                                                          List.of(
@@ -71,6 +74,7 @@ class ProjectionsTest
     ProjectionMatch projectionMatch = Projections.matchAggregateProjection(
         spec.getSchema(),
         cursorBuildSpec,
+        Intervals.ETERNITY,
         new RowSignatureChecker(baseTable)
     );
     ProjectionMatch expected = new ProjectionMatch(
@@ -103,6 +107,7 @@ class ProjectionsTest
         12345
     );
     CursorBuildSpec cursorBuildSpecNoFilter = CursorBuildSpec.builder()
+                                                             .setPhysicalColumns(Set.of("c"))
                                                              .setPreferredOrdering(List.of())
                                                              .setAggregators(
                                                                  List.of(
@@ -115,10 +120,12 @@ class ProjectionsTest
         Projections.matchAggregateProjection(
             spec.getSchema(),
             cursorBuildSpecNoFilter,
+            Intervals.ETERNITY,
             new RowSignatureChecker(baseTable)
         )
     );
     CursorBuildSpec cursorBuildSpecWithFilter = CursorBuildSpec.builder()
+                                                               .setPhysicalColumns(Set.of("b", "c"))
                                                                .setPreferredOrdering(List.of())
                                                                .setFilter(
                                                                    new EqualityFilter(
@@ -137,6 +144,7 @@ class ProjectionsTest
     ProjectionMatch projectionMatch = Projections.matchAggregateProjection(
         spec.getSchema(),
         cursorBuildSpecWithFilter,
+        Intervals.ETERNITY,
         new RowSignatureChecker(baseTable)
     );
     ProjectionMatch expected = new ProjectionMatch(
@@ -170,6 +178,7 @@ class ProjectionsTest
     );
     CursorBuildSpec cursorBuildSpecNoFilter = CursorBuildSpec.builder()
                                                              .setPreferredOrdering(List.of())
+                                                             .setPhysicalColumns(Set.of("a", "b", "c"))
                                                              .setGroupingColumns(List.of("a", "b"))
                                                              .setAggregators(
                                                                  List.of(
@@ -182,10 +191,12 @@ class ProjectionsTest
         Projections.matchAggregateProjection(
             spec.getSchema(),
             cursorBuildSpecNoFilter,
+            Intervals.ETERNITY,
             new RowSignatureChecker(baseTable)
         )
     );
     CursorBuildSpec cursorBuildSpecWithFilter = CursorBuildSpec.builder()
+                                                               .setPhysicalColumns(Set.of("a", "b", "c"))
                                                                .setGroupingColumns(List.of("a", "b"))
                                                                .setPreferredOrdering(List.of())
                                                                .setFilter(
@@ -205,6 +216,7 @@ class ProjectionsTest
     ProjectionMatch projectionMatch = Projections.matchAggregateProjection(
         spec.getSchema(),
         cursorBuildSpecWithFilter,
+        Intervals.ETERNITY,
         new RowSignatureChecker(baseTable)
     );
     ProjectionMatch expected = new ProjectionMatch(
@@ -220,63 +232,215 @@ class ProjectionsTest
   }
 
   @Test
-  void testRewriteFilter()
+  public void testSchemaMatchIntervalEternity()
   {
-    Filter xeqfoo = new EqualityFilter("x", ColumnType.STRING, "foo", null);
-    Filter xeqfoo2 = new EqualityFilter("x", ColumnType.STRING, "foo", null);
-    Filter xeqbar = new EqualityFilter("x", ColumnType.STRING, "bar", null);
-    Filter yeqbar = new EqualityFilter("y", ColumnType.STRING, "bar", null);
-    Filter zeq123 = new EqualityFilter("z", ColumnType.LONG, 123L, null);
+    final DateTime time = Granularities.DAY.bucketStart(DateTimes.nowUtc());
+    RowSignature baseTable = RowSignature.builder()
+                                         .addTimeColumn()
+                                         .add("a", ColumnType.STRING)
+                                         .build();
 
-    Filter queryFilter = xeqfoo2;
-    Assertions.assertInstanceOf(
-        ProjectionFilterMatch.class,
-        Projections.rewriteFilter(xeqfoo, queryFilter)
+    AggregateProjectionMetadata spec = new AggregateProjectionMetadata(
+        AggregateProjectionSpec.builder("some_projection")
+                               .groupingColumns(new StringDimensionSchema("a"))
+                               .build()
+                               .toMetadataSchema(),
+        12345
     );
 
-    queryFilter = yeqbar;
-    Assertions.assertNull(Projections.rewriteFilter(xeqfoo, queryFilter));
+    CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
+                                                     .setPhysicalColumns(Set.of("a"))
+                                                     .setGroupingColumns(List.of("a"))
+                                                     .build();
 
-    queryFilter = new AndFilter(List.of(xeqfoo, yeqbar));
-    Assertions.assertEquals(
-        yeqbar,
-        Projections.rewriteFilter(xeqfoo, queryFilter)
+    ProjectionMatch projectionMatch = Projections.matchAggregateProjection(
+        spec.getSchema(),
+        cursorBuildSpec,
+        Intervals.ETERNITY,
+        new RowSignatureChecker(baseTable)
+    );
+    ProjectionMatch expected = new ProjectionMatch(
+        CursorBuildSpec.builder()
+                       .setPhysicalColumns(Set.of("a"))
+                       .setGroupingColumns(List.of("a"))
+                       .setAggregators(List.of())
+                       .build(),
+        Map.of()
+    );
+    Assertions.assertEquals(expected, projectionMatch);
+
+    // projection with no time column can still match cursor build spec with eternity interval
+    projectionMatch = Projections.matchAggregateProjection(
+        spec.getSchema(),
+        cursorBuildSpec,
+        new Interval(time, time.plusHours(1)),
+        new RowSignatureChecker(baseTable)
     );
 
-    queryFilter = new AndFilter(List.of(new OrFilter(List.of(xeqfoo, xeqbar)), yeqbar));
-    Assertions.assertNull(Projections.rewriteFilter(xeqfoo, queryFilter));
+    Assertions.assertEquals(expected, projectionMatch);
+  }
 
-    queryFilter = new AndFilter(List.of(new IsBooleanFilter(xeqfoo, true), yeqbar));
-    Assertions.assertEquals(yeqbar, Projections.rewriteFilter(xeqfoo, queryFilter));
+  @Test
+  public void testSchemaMatchIntervalProjectionGranularityEternity()
+  {
+    final DateTime time = Granularities.DAY.bucketStart(DateTimes.nowUtc());
 
-    queryFilter = new AndFilter(List.of(new IsBooleanFilter(xeqfoo, false), yeqbar));
-    Assertions.assertNull(Projections.rewriteFilter(xeqfoo, queryFilter));
+    RowSignature baseTable = RowSignature.builder()
+                                         .addTimeColumn()
+                                         .add("a", ColumnType.STRING)
+                                         .build();
 
-    queryFilter = new AndFilter(List.of(new AndFilter(List.of(xeqfoo, yeqbar)), zeq123));
-    Assertions.assertEquals(
-        new AndFilter(List.of(yeqbar, zeq123)),
-        Projections.rewriteFilter(xeqfoo, queryFilter)
+    // hour granularity projection
+    AggregateProjectionMetadata spec = new AggregateProjectionMetadata(
+        AggregateProjectionSpec.builder("some_projection")
+                               .groupingColumns(
+                                   new LongDimensionSchema(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
+                                   new StringDimensionSchema("a")
+                               )
+                               .virtualColumns(
+                                   Granularities.toVirtualColumn(
+                                       Granularities.HOUR,
+                                       Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                                   )
+                               )
+                               .build()
+                               .toMetadataSchema(),
+        12345
     );
 
-    queryFilter = new AndFilter(
-        List.of(
-            new EqualityFilter("a", ColumnType.STRING, "foo", null),
-            new EqualityFilter("b", ColumnType.STRING, "bar", null),
-            new EqualityFilter("c", ColumnType.STRING, "baz", null)
-        )
+    // eternity interval cursor build spec with granularity set
+    CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
+                                                     .setPhysicalColumns(Set.of("__time", "a"))
+                                                     .setGroupingColumns(List.of("v0", "a"))
+                                                     .setVirtualColumns(
+                                                         VirtualColumns.create(
+                                                             Granularities.toVirtualColumn(Granularities.HOUR, "v0")
+                                                         )
+                                                     )
+                                                     .build();
+
+
+    ProjectionMatch expectedWithGranularity = new ProjectionMatch(
+        CursorBuildSpec.builder()
+                       .setPhysicalColumns(Set.of("__time", "a"))
+                       .setGroupingColumns(List.of("v0", "a"))
+                       .setAggregators(List.of())
+                       .build(),
+        Map.of("v0", "__time")
     );
-    Assertions.assertEquals(
-        new EqualityFilter("b", ColumnType.STRING, "bar", null),
-        Projections.rewriteFilter(
-            new AndFilter(
-                List.of(
-                    new EqualityFilter("a", ColumnType.STRING, "foo", null),
-                    new EqualityFilter("c", ColumnType.STRING, "baz", null)
-                )
-            ),
-            queryFilter
-        )
+
+    ProjectionMatch projectionMatch = Projections.matchAggregateProjection(
+        spec.getSchema(),
+        cursorBuildSpec,
+        Intervals.ETERNITY,
+        new RowSignatureChecker(baseTable)
     );
+    Assertions.assertEquals(expectedWithGranularity, projectionMatch);
+
+    projectionMatch = Projections.matchAggregateProjection(
+        spec.getSchema(),
+        cursorBuildSpec,
+        new Interval(time, time.plusHours(1)),
+        new RowSignatureChecker(baseTable)
+    );
+
+    Assertions.assertEquals(expectedWithGranularity, projectionMatch);
+
+  }
+
+  @Test
+  public void testSchemaMatchIntervalProjectionGranularity()
+  {
+    final DateTime time = Granularities.DAY.bucketStart(DateTimes.nowUtc());
+
+    RowSignature baseTable = RowSignature.builder()
+                                         .addTimeColumn()
+                                         .add("a", ColumnType.STRING)
+                                         .build();
+
+    // hour granularity projection
+    AggregateProjectionMetadata spec = new AggregateProjectionMetadata(
+        AggregateProjectionSpec.builder("some_projection")
+                               .groupingColumns(
+                                   new LongDimensionSchema(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
+                                   new StringDimensionSchema("a")
+                               )
+                               .virtualColumns(
+                                   Granularities.toVirtualColumn(
+                                       Granularities.HOUR,
+                                       Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                                   )
+                               )
+                               .build()
+                               .toMetadataSchema(),
+        12345
+    );
+
+    Interval day = new Interval(time, time.plusDays(1));
+    Interval hour = new Interval(time, time.plusHours(1));
+    Interval partial = new Interval(time, time.plusMinutes(42));
+    // aligned interval cursor build spec
+    CursorBuildSpec cursorBuildSpecHourInterval = CursorBuildSpec.builder()
+                                                                 .setInterval(hour)
+                                                                 .setPhysicalColumns(Set.of("a"))
+                                                                 .setGroupingColumns(List.of("a"))
+                                                                 .build();
+
+    ProjectionMatch expected = new ProjectionMatch(
+        CursorBuildSpec.builder()
+                       .setInterval(hour)
+                       .setPhysicalColumns(Set.of("a"))
+                       .setGroupingColumns(List.of("a"))
+                       .setAggregators(List.of())
+                       .build(),
+        Map.of()
+    );
+    ProjectionMatch projectionMatch = Projections.matchAggregateProjection(
+        spec.getSchema(),
+        cursorBuildSpecHourInterval,
+        day,
+        new RowSignatureChecker(baseTable)
+    );
+    Assertions.assertEquals(expected, projectionMatch);
+
+
+    // partial interval does not align with projection granularity (and does not contain data interval)
+    CursorBuildSpec cursorBuildSpecPartialInterval = CursorBuildSpec.builder()
+                                                                    .setInterval(partial)
+                                                                    .setPhysicalColumns(Set.of("a"))
+                                                                    .setGroupingColumns(List.of("a"))
+                                                                    .build();
+
+    projectionMatch = Projections.matchAggregateProjection(
+        spec.getSchema(),
+        cursorBuildSpecPartialInterval,
+        day,
+        new RowSignatureChecker(baseTable)
+    );
+    Assertions.assertNull(projectionMatch);
+
+    Interval wonky = new Interval(time, time.plusHours(1).plusMinutes(12));
+    CursorBuildSpec cursorBuildSpecUnalignedButContaining = CursorBuildSpec.builder()
+                                                                           .setInterval(wonky)
+                                                                           .setPhysicalColumns(Set.of("a"))
+                                                                           .setGroupingColumns(List.of("a"))
+                                                                           .build();
+    expected = new ProjectionMatch(
+        CursorBuildSpec.builder()
+                       .setInterval(wonky)
+                       .setPhysicalColumns(Set.of("a"))
+                       .setGroupingColumns(List.of("a"))
+                       .setAggregators(List.of())
+                       .build(),
+        Map.of()
+    );
+    projectionMatch = Projections.matchAggregateProjection(
+        spec.getSchema(),
+        cursorBuildSpecUnalignedButContaining,
+        hour,
+        new RowSignatureChecker(baseTable)
+    );
+    Assertions.assertEquals(expected, projectionMatch);
   }
 
   private static class RowSignatureChecker implements Projections.PhysicalColumnChecker

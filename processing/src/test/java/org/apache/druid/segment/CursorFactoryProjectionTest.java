@@ -72,6 +72,7 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryMetrics;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -81,6 +82,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -280,6 +282,12 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                              )
                              .groupingColumns(new LongDimensionSchema("__vc2"), new StringDimensionSchema("__vc3"))
                              .aggregators(new LongSumAggregatorFactory("sum_c", "c"))
+                             .build(),
+      AggregateProjectionSpec.builder("time_and_a")
+                             .groupingColumns(
+                                 new LongDimensionSchema(ColumnHolder.TIME_COLUMN_NAME),
+                                 new StringDimensionSchema("a")
+                             )
                              .build()
   );
 
@@ -741,7 +749,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         GroupByQuery.builder()
                     .setDataSource("test")
                     .setGranularity(Granularities.ALL)
-                    .setInterval(Intervals.ETERNITY)
+                    .setInterval(new Interval(TIMESTAMP, TIMESTAMP.plusDays(1)))
                     .addDimension("a")
                     .setDimFilter(new EqualityFilter("a", ColumnType.STRING, "a", null))
                     .addAggregator(new LongSumAggregatorFactory("c_sum", "c"))
@@ -758,6 +766,62 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         queryMetrics,
         Collections.singletonList(
             new Object[]{"a", 7L, Pair.of(TIMESTAMP.plusHours(1).plusMinutes(1).getMillis(), 2L)}
+        )
+    );
+  }
+
+  @Test
+  public void testProjectionSingleDimFilterWithPartialIntervalAligned()
+  {
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(new Interval(TIMESTAMP, TIMESTAMP.plusHours(1)))
+                    .addDimension("a")
+                    .setDimFilter(new EqualityFilter("a", ColumnType.STRING, "a", null))
+                    .addAggregator(new LongSumAggregatorFactory("c_sum", "c"))
+                    .addAggregator(new LongLastAggregatorFactory("c_last", "c", null))
+                    .build();
+    final ExpectedProjectionGroupBy queryMetrics =
+        new ExpectedProjectionGroupBy("a_hourly_c_sum_with_count_latest");
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, 1);
+
+    testGroupBy(
+        query,
+        queryMetrics,
+        Collections.singletonList(
+            new Object[]{"a", 4L, Pair.of(TIMESTAMP.plusMinutes(4).getMillis(), 2L)}
+        )
+    );
+  }
+
+  @Test
+  public void testProjectionSingleDimFilterWithPartialIntervalUnaligned()
+  {
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(new Interval(TIMESTAMP, TIMESTAMP.plusHours(1).minusMinutes(1)))
+                    .addDimension("a")
+                    .setDimFilter(new EqualityFilter("a", ColumnType.STRING, "a", null))
+                    .addAggregator(new LongSumAggregatorFactory("c_sum", "c"))
+                    .addAggregator(new LongLastAggregatorFactory("c_last", "c", null))
+                    .build();
+    final ExpectedProjectionGroupBy queryMetrics =
+        new ExpectedProjectionGroupBy(null);
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, 3);
+
+    testGroupBy(
+        query,
+        queryMetrics,
+        Collections.singletonList(
+            new Object[]{"a", 4L, Pair.of(TIMESTAMP.plusMinutes(4).getMillis(), 2L)}
         )
     );
   }
@@ -1416,6 +1480,48 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
             new Object[]{"baa", 6L},
             new Object[]{"baa", 8L},
             new Object[]{"bbb", 11L}
+        )
+    );
+  }
+
+  @Test
+  public void testProjectionGroupOnTime()
+  {
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.ETERNITY)
+                    .addDimension(new DefaultDimensionSpec(ColumnHolder.TIME_COLUMN_NAME, "d0", ColumnType.LONG))
+                    .addDimension("v0")
+                    .setVirtualColumns(
+                        new ExpressionVirtualColumn(
+                            "v0",
+                            "concat(a, 'aaa')",
+                            ColumnType.STRING,
+                            TestExprMacroTable.INSTANCE
+                        )
+                    )
+                    .build();
+
+    final ExpectedProjectionGroupBy queryMetrics =
+        new ExpectedProjectionGroupBy("time_and_a");
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, 8);
+
+    testGroupBy(
+        query,
+        queryMetrics,
+        makeArrayResultSet(
+            new Object[]{TIMESTAMP.getMillis(), "aaaa"},
+            new Object[]{TIMESTAMP.plusMinutes(2).getMillis(), "aaaa"},
+            new Object[]{TIMESTAMP.plusMinutes(4).getMillis(), "aaaa"},
+            new Object[]{TIMESTAMP.plusMinutes(6).getMillis(), "baaa"},
+            new Object[]{TIMESTAMP.plusMinutes(8).getMillis(), "baaa"},
+            new Object[]{TIMESTAMP.plusMinutes(10).getMillis(), "baaa"},
+            new Object[]{TIMESTAMP.plusHours(1).getMillis(), "aaaa"},
+            new Object[]{TIMESTAMP.plusHours(1).plusMinutes(1).getMillis(), "aaaa"}
         )
     );
   }

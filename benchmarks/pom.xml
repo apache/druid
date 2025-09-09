@@ -223,13 +223,13 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.druid.extensions</groupId>
+      <groupId>org.apache.druid</groupId>
       <artifactId>druid-multi-stage-query</artifactId>
       <version>${project.parent.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.druid.extensions</groupId>
+      <groupId>org.apache.druid</groupId>
       <artifactId>druid-multi-stage-query</artifactId>
       <version>${project.parent.version}</version>
       <classifier>tests</classifier>

@@ -64,7 +64,7 @@ public class KafkaSupervisorTuningConfigTest
     Assert.assertEquals(0, config.getMaxPendingPersists());
     Assert.assertEquals(IndexSpec.DEFAULT, config.getIndexSpec());
     Assert.assertEquals(IndexSpec.DEFAULT, config.getIndexSpecForIntermediatePersists());
-    Assert.assertEquals(false, config.isReportParseExceptions());
+    Assert.assertFalse(config.isReportParseExceptions());
     Assert.assertEquals(java.time.Duration.ofMinutes(15).toMillis(), config.getHandoffConditionTimeout());
     Assert.assertNull(config.getWorkerThreads());
     Assert.assertEquals(8L, (long) config.getChatRetries());
@@ -111,7 +111,7 @@ public class KafkaSupervisorTuningConfigTest
     Assert.assertEquals(100, config.getMaxRowsPerSegment().intValue());
     Assert.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(100, config.getMaxPendingPersists());
-    Assert.assertEquals(true, config.isReportParseExceptions());
+    Assert.assertTrue(config.isReportParseExceptions());
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
     Assert.assertEquals(12, (int) config.getWorkerThreads());
     Assert.assertEquals(14L, (long) config.getChatRetries());

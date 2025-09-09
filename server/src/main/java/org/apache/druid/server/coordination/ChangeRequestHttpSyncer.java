@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordination;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
@@ -65,11 +66,11 @@ public class ChangeRequestHttpSyncer<T>
   private static final long MAX_RETRY_BACKOFF = TimeUnit.MINUTES.toMillis(2);
 
   private final ObjectMapper smileMapper;
+  private final JavaType changeRequestsSnapshotResponseType;
   private final HttpClient httpClient;
   private final ScheduledExecutorService executor;
   private final URL baseServerURL;
   private final String baseRequestPath;
-  private final TypeReference<ChangeRequestsSnapshot<T>> responseTypeReferences;
   private final long serverTimeoutMS;
   private final long serverHttpTimeout;
 
@@ -116,11 +117,11 @@ public class ChangeRequestHttpSyncer<T>
   )
   {
     this.smileMapper = smileMapper;
+    this.changeRequestsSnapshotResponseType = smileMapper.getTypeFactory().constructType(responseTypeReferences);
     this.httpClient = httpClient;
     this.executor = executor;
     this.baseServerURL = baseServerURL;
     this.baseRequestPath = baseRequestPath;
-    this.responseTypeReferences = responseTypeReferences;
     this.serverTimeoutMS = serverTimeoutMS;
     this.serverHttpTimeout = serverTimeoutMS + HTTP_TIMEOUT_EXTRA_MS;
     this.listener = listener;
@@ -279,7 +280,7 @@ public class ChangeRequestHttpSyncer<T>
                   }
 
                   log.debug("Received sync response from server[%s]", logIdentity);
-                  ChangeRequestsSnapshot<T> changes = smileMapper.readValue(stream, responseTypeReferences);
+                  ChangeRequestsSnapshot<T> changes = smileMapper.readValue(stream, changeRequestsSnapshotResponseType);
                   log.debug("Finished reading sync response from server[%s]", logIdentity);
 
                   if (changes.isResetCounter()) {

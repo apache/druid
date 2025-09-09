@@ -67,7 +67,7 @@ public abstract class CompactionTestBase extends EmbeddedClusterTestBase
   /**
    * Creates and runs a task for the current {@link #dataSource}.
    */
-  protected String runTask(TaskBuilder<?, ?, ?> taskBuilder)
+  protected String runTask(TaskBuilder<?, ?, ?, ?> taskBuilder)
   {
     final String taskId = IdUtils.getRandomId();
     cluster.callApi().runTask(taskBuilder.dataSource(dataSource).withId(taskId), overlord);

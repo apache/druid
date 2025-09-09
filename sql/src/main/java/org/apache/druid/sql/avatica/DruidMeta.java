@@ -36,11 +36,12 @@ import org.apache.calcite.avatica.QueryState;
 import org.apache.calcite.avatica.remote.AvaticaRuntimeException;
 import org.apache.calcite.avatica.remote.Service.ErrorResponse;
 import org.apache.calcite.avatica.remote.TypedValue;
-import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.NativeQuery;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryContexts;
@@ -70,9 +71,11 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-@LazySingleton
+@ManageLifecycle
 public class DruidMeta extends MetaImpl
 {
+  private static final Logger log = new Logger(DruidMeta.class);
+
   /**
    * Logs any throwable and string format message with args at the error level.
    *
@@ -187,6 +190,15 @@ public class DruidMeta extends MetaImpl
     this.exec = exec;
     this.authenticators = authenticators;
     this.fetcherFactory = fetcherFactory;
+  }
+
+  @LifecycleStop
+  public void stop() throws InterruptedException
+  {
+    exec.shutdownNow();
+    if (!exec.awaitTermination(1, TimeUnit.MINUTES)) {
+      log.warn("Timed out waiting for executor to shut down.");
+    }
   }
 
   @Override
