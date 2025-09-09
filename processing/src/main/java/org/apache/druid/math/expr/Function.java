@@ -252,14 +252,14 @@ public interface Function extends NamedFunction
     protected final ExprEval eval(ExprEval param)
     {
       if (param.isNumericNull()) {
-        return ExprEval.of(null);
-      }
-      if (param.type().is(ExprType.LONG)) {
+        return ExprEval.ofMissing();
+      } else if (param.type().is(ExprType.LONG)) {
         return eval(param.asLong());
       } else if (param.type().is(ExprType.DOUBLE)) {
         return eval(param.asDouble());
+      } else {
+        return ExprEval.ofMissing();
       }
-      return ExprEval.of(null);
     }
 
     protected ExprEval eval(long param)
@@ -317,13 +317,13 @@ public interface Function extends NamedFunction
     {
       // match the logic of BinaryEvalOpExprBase.eval, except there is no string handling so both strings is also null
       if (x.value() == null || y.value() == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofMissing();
       }
 
       ExpressionType type = ExpressionTypeConversion.autoDetect(x, y);
       switch (type.getType()) {
         case STRING:
-          return ExprEval.of(null);
+          return ExprEval.ofString(null);
         case LONG:
           return eval(x.asLong(), y.asLong());
         case DOUBLE:
@@ -380,12 +380,12 @@ public interface Function extends NamedFunction
       // this is a copy of the logic of BivariateMathFunction for string handling, which itself is a
       // remix of BinaryEvalOpExprBase.eval modified so that string inputs are always null outputs
       if (x.value() == null || y.value() == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofMissing();
       }
 
       ExpressionType type = ExpressionTypeConversion.autoDetect(x, y);
       if (type.is(ExprType.STRING)) {
-        return ExprEval.of(null);
+        return ExprEval.ofString(null);
       }
       return eval(x.asLong(), y.asLong());
     }
@@ -417,10 +417,10 @@ public interface Function extends NamedFunction
     {
       final String xString = x.asString();
       if (xString == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofString(null);
       }
       if (y.isNumericNull()) {
-        return ExprEval.of(null);
+        return ExprEval.ofString(null);
       }
       return eval(xString, y.asLong());
     }
@@ -463,7 +463,7 @@ public interface Function extends NamedFunction
       final ExprEval arrayExpr = getArrayArgument(args).eval(bindings);
       final ExprEval scalarExpr = getScalarArgument(args).eval(bindings);
       if (arrayExpr.asArray() == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofMissing();
       }
       return doApply(arrayExpr, scalarExpr);
     }
@@ -592,7 +592,7 @@ public interface Function extends NamedFunction
       final Object[] array2 = rhsExpr.asArray();
 
       if (array1 == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofMissing();
       }
       if (array2 == null) {
         return lhsExpr;
@@ -650,7 +650,7 @@ public interface Function extends NamedFunction
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       if (args.isEmpty()) {
-        return ExprEval.of(null);
+        return ExprEval.ofLong(null);
       }
 
       // evaluate arguments and collect output type
@@ -661,10 +661,12 @@ public interface Function extends NamedFunction
         ExprEval<?> exprEval = expr.eval(bindings);
         ExpressionType exprType = exprEval.type();
 
+        if (!isValidType(exprType)) {
+          throw validationFailed("does not accept %s types", exprType);
+        }
+        outputType = ExpressionTypeConversion.function(outputType, exprType);
+
         if (exprEval.value() != null) {
-          if (isValidType(exprType)) {
-            outputType = ExpressionTypeConversion.function(outputType, exprType);
-          }
           evals.add(exprEval);
         }
       }
@@ -676,19 +678,16 @@ public interface Function extends NamedFunction
         // databases (e.g., MySQL) return null if any expression is null.
         // https://www.postgresql.org/docs/9.5/functions-conditional.html
         // https://dev.mysql.com/doc/refman/8.0/en/comparison-operators.html#function_least
-        return ExprEval.of(null);
+        return ExprEval.ofType(outputType, null);
       }
 
       switch (outputType.getType()) {
         case DOUBLE:
-          //noinspection OptionalGetWithoutIsPresent (empty list handled earlier)
           return ExprEval.of(evals.stream().mapToDouble(ExprEval::asDouble).reduce(doubleReducer).getAsDouble());
         case LONG:
-          //noinspection OptionalGetWithoutIsPresent (empty list handled earlier)
           return ExprEval.of(evals.stream().mapToLong(ExprEval::asLong).reduce(longReducer).getAsLong());
         default:
-          //noinspection OptionalGetWithoutIsPresent (empty list handled earlier)
-          return ExprEval.of(evals.stream().map(ExprEval::asString).reduce(stringReducer).get());
+          return ExprEval.ofString(evals.stream().map(ExprEval::asString).reduce(stringReducer).get());
       }
     }
 
@@ -700,7 +699,7 @@ public interface Function extends NamedFunction
         case STRING:
           return true;
         default:
-          throw validationFailed("does not accept %s types", exprType);
+          return false;
       }
     }
   }
@@ -1501,7 +1500,7 @@ public interface Function extends NamedFunction
       ExprEval value1 = args.get(0).eval(bindings);
 
       if (value1.isNumericNull()) {
-        return ExprEval.of(null);
+        return ExprEval.ofLong(null);
       }
 
       if (!value1.type().anyOf(ExprType.LONG, ExprType.DOUBLE)) {
@@ -1551,7 +1550,7 @@ public interface Function extends NamedFunction
         BigDecimal decimal = safeGetFromDouble(param.asDouble());
         return ExprEval.of(decimal.setScale(scale, RoundingMode.HALF_UP).doubleValue());
       } else {
-        return ExprEval.of(null);
+        return ExprEval.ofLong(null);
       }
     }
 
@@ -1959,16 +1958,10 @@ public interface Function extends NamedFunction
     protected ExprEval eval(ExprEval x, ExprEval y)
     {
       if (x.value() == null || y.value() == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofDouble(null);
       }
 
-      ExpressionType type = ExpressionTypeConversion.autoDetect(x, y);
-      switch (type.getType()) {
-        case STRING:
-          return ExprEval.of(null);
-        default:
-          return ExprEval.of(Math.scalb(x.asDouble(), y.asInt()));
-      }
+      return ExprEval.of(Math.scalb(x.asDouble(), y.asInt()));
     }
 
     @Override
@@ -1995,9 +1988,6 @@ public interface Function extends NamedFunction
     @Override
     protected ExprEval eval(ExprEval x, ExprEval y)
     {
-      if (x.value() == null) {
-        return ExprEval.of(null);
-      }
       ExpressionType castTo;
       try {
         castTo = ExpressionType.fromString(StringUtils.toUpperCase(y.asString()));
@@ -2005,7 +1995,11 @@ public interface Function extends NamedFunction
       catch (IllegalArgumentException e) {
         throw validationFailed("Invalid type [%s]", y.asString());
       }
-      return x.castTo(castTo);
+      if (x.value() == null) {
+        return ExprEval.ofType(castTo, null);
+      } else {
+        return x.castTo(castTo);
+      }
     }
 
     @Override
@@ -2166,7 +2160,7 @@ public interface Function extends NamedFunction
         }
       }
 
-      return ExprEval.of(null);
+      return ExprEval.ofMissing();
     }
 
     @Override
@@ -2213,7 +2207,7 @@ public interface Function extends NamedFunction
         }
       }
 
-      return ExprEval.of(null);
+      return ExprEval.ofMissing();
     }
 
     @Override
@@ -2614,15 +2608,15 @@ public interface Function extends NamedFunction
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      if (args.size() == 0) {
-        return ExprEval.of(null);
+      if (args.isEmpty()) {
+        return ExprEval.ofString(null);
       } else {
         // Pass first argument in to the constructor to provide StringBuilder a little extra sizing hint.
         String first = args.get(0).eval(bindings).asString();
         if (first == null) {
           // Result of concatenation is null if any of the Values is null.
           // e.g. 'select CONCAT(null, "abc") as c;' will return null as per Standard SQL spec.
-          return ExprEval.of(null);
+          return ExprEval.ofString(null);
         }
         final StringBuilder builder = new StringBuilder(first);
         for (int i = 1; i < args.size(); i++) {
@@ -2630,12 +2624,12 @@ public interface Function extends NamedFunction
           if (s == null) {
             // Result of concatenation is null if any of the Values is null.
             // e.g. 'select CONCAT(null, "abc") as c;' will return null as per Standard SQL spec.
-            return ExprEval.of(null);
+            return ExprEval.ofString(null);
           } else {
             builder.append(s);
           }
         }
-        return ExprEval.of(builder.toString());
+        return ExprEval.ofString(builder.toString());
       }
     }
 
@@ -2711,7 +2705,7 @@ public interface Function extends NamedFunction
       final String formatString = args.get(0).eval(bindings).asString();
 
       if (formatString == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofString(null);
       }
 
       final Object[] formatArgs = new Object[args.size() - 1];
@@ -2719,7 +2713,7 @@ public interface Function extends NamedFunction
         formatArgs[i - 1] = args.get(i).eval(bindings).value();
       }
 
-      return ExprEval.of(StringUtils.nonStrictFormat(formatString, formatArgs));
+      return ExprEval.ofString(StringUtils.nonStrictFormat(formatString, formatArgs));
     }
 
     @Override
@@ -2751,7 +2745,7 @@ public interface Function extends NamedFunction
       final String needle = args.get(1).eval(bindings).asString();
 
       if (haystack == null || needle == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofLong(null);
       }
 
       final int fromIndex;
@@ -2793,7 +2787,7 @@ public interface Function extends NamedFunction
       final String arg = args.get(0).eval(bindings).asString();
 
       if (arg == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofString(null);
       }
 
       // Behaves like SubstringDimExtractionFn, not SQL SUBSTRING
@@ -2802,14 +2796,14 @@ public interface Function extends NamedFunction
 
       if (index < arg.length()) {
         if (length >= 0) {
-          return ExprEval.of(arg.substring(index, Math.min(index + length, arg.length())));
+          return ExprEval.ofString(arg.substring(index, Math.min(index + length, arg.length())));
         } else {
-          return ExprEval.of(arg.substring(index));
+          return ExprEval.ofString(arg.substring(index));
         }
       } else {
         // this is a behavior mismatch with SQL SUBSTRING to be consistent with SubstringDimExtractionFn
         // In SQL, something like 'select substring("abc", 4,5) as c;' will return an empty string
-        return ExprEval.of(null);
+        return ExprEval.ofString(null);
       }
     }
 
@@ -2850,7 +2844,7 @@ public interface Function extends NamedFunction
         throw validationFailed("needs a positive integer as the second argument");
       }
       int len = x.length();
-      return ExprEval.of(y < len ? x.substring(len - yInt) : x);
+      return ExprEval.ofString(y < len ? x.substring(len - yInt) : x);
     }
   }
 
@@ -2876,7 +2870,7 @@ public interface Function extends NamedFunction
       if (yInt < 0 || yInt != y) {
         throw validationFailed("needs a positive integer as the second argument");
       }
-      return ExprEval.of(y < x.length() ? x.substring(0, yInt) : x);
+      return ExprEval.ofString(y < x.length() ? x.substring(0, yInt) : x);
     }
   }
 
@@ -2895,9 +2889,9 @@ public interface Function extends NamedFunction
       final String pattern = args.get(1).eval(bindings).asString();
       final String replacement = args.get(2).eval(bindings).asString();
       if (arg == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofString(null);
       }
-      return ExprEval.of(StringUtils.replace(arg, pattern, replacement));
+      return ExprEval.ofString(StringUtils.replace(arg, pattern, replacement));
     }
 
     @Override
@@ -2927,9 +2921,9 @@ public interface Function extends NamedFunction
     {
       final String arg = args.get(0).eval(bindings).asString();
       if (arg == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofString(null);
       }
-      return ExprEval.of(StringUtils.toLowerCase(arg));
+      return ExprEval.ofString(StringUtils.toLowerCase(arg));
     }
 
     @Override
@@ -2959,9 +2953,9 @@ public interface Function extends NamedFunction
     {
       final String arg = args.get(0).eval(bindings).asString();
       if (arg == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofString(null);
       }
-      return ExprEval.of(StringUtils.toUpperCase(arg));
+      return ExprEval.ofString(StringUtils.toUpperCase(arg));
     }
 
     @Override
@@ -2996,11 +2990,8 @@ public interface Function extends NamedFunction
     @Override
     protected ExprEval eval(ExprEval param)
     {
-      if (!param.type().is(ExprType.STRING)) {
-        throw validationFailed("needs a STRING argument but got %s instead", param.type());
-      }
       final String arg = param.asString();
-      return ExprEval.of(arg == null ? null : new StringBuilder(arg).reverse().toString());
+      return ExprEval.ofString(arg == null ? null : new StringBuilder(arg).reverse().toString());
     }
   }
 
@@ -3026,7 +3017,7 @@ public interface Function extends NamedFunction
       if (yInt != y) {
         throw validationFailed("needs an integer as the second argument");
       }
-      return ExprEval.of(y < 1 ? null : StringUtils.repeat(x, yInt));
+      return ExprEval.ofString(y < 1 ? null : StringUtils.repeat(x, yInt));
     }
   }
 
@@ -3046,9 +3037,9 @@ public interface Function extends NamedFunction
       String pad = args.get(2).eval(bindings).asString();
 
       if (base == null || pad == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofString(null);
       } else {
-        return ExprEval.of(len == 0 ? null : StringUtils.lpad(base, len, pad));
+        return ExprEval.ofString(len == 0 ? null : StringUtils.lpad(base, len, pad));
       }
 
     }
@@ -3083,9 +3074,9 @@ public interface Function extends NamedFunction
       String pad = args.get(2).eval(bindings).asString();
 
       if (base == null || pad == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofString(null);
       } else {
-        return ExprEval.of(len == 0 ? null : StringUtils.rpad(base, len, pad));
+        return ExprEval.ofString(len == 0 ? null : StringUtils.rpad(base, len, pad));
       }
 
     }
@@ -3116,11 +3107,8 @@ public interface Function extends NamedFunction
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       ExprEval value = args.get(0).eval(bindings);
-      if (!value.type().is(ExprType.STRING)) {
-        throw validationFailed(
-            "first argument should be a STRING but got %s instead",
-            value.type()
-        );
+      if (value.value() == null) {
+        return ExprEval.ofLong(null);
       }
 
       DateTimes.UtcFormatter formatter = DateTimes.ISO_DATE_OPTIONAL_TIME;
@@ -3194,7 +3182,7 @@ public interface Function extends NamedFunction
       DateTimeZone timeZone = DateTimes.inferTzFromString(args.get(2).eval(bindings).asString());
 
       if (left == null || right == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofLong(null);
       } else {
         return ExprEval.of(DateTimes.subMonths(right, left, timeZone));
       }
@@ -3411,18 +3399,9 @@ public interface Function extends NamedFunction
 
       ExpressionType arrayElementType = null;
 
-      // Try first to determine the element type, only considering nonnull values.
+      // Determine the element type, considering null and nonnull values, for consistency with getOutputType.
       for (final ExprEval<?> eval : outEval) {
-        if (eval.value() != null) {
-          arrayElementType = ExpressionTypeConversion.leastRestrictiveType(arrayElementType, eval.type());
-        }
-      }
-
-      if (arrayElementType == null) {
-        // Try again to determine the element type, this time considering nulls.
-        for (final ExprEval<?> eval : outEval) {
-          arrayElementType = ExpressionTypeConversion.leastRestrictiveType(arrayElementType, eval.type());
-        }
+        arrayElementType = ExpressionTypeConversion.leastRestrictiveType(arrayElementType, eval.type());
       }
 
       final Object[] out = new Object[length];
@@ -3470,7 +3449,7 @@ public interface Function extends NamedFunction
       final ExprEval expr = args.get(0).eval(bindings);
       final Object[] array = expr.asArray();
       if (array == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofLong(null);
       }
 
       return ExprEval.ofLong(array.length);
@@ -3536,7 +3515,7 @@ public interface Function extends NamedFunction
       final ExprEval expr = args.get(0).eval(bindings);
       final String arrayString = expr.asString();
       if (arrayString == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofStringArray(null);
       }
 
       final String split = args.get(1).eval(bindings).asString();
@@ -3571,9 +3550,9 @@ public interface Function extends NamedFunction
       final String join = scalarExpr.asString();
       final Object[] raw = arrayExpr.asArray();
       if (raw == null || raw.length == 1 && raw[0] == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofString(null);
       }
-      return ExprEval.of(
+      return ExprEval.ofString(
           Arrays.stream(raw).map(String::valueOf).collect(Collectors.joining(join != null ? join : ""))
       );
     }
@@ -3603,7 +3582,7 @@ public interface Function extends NamedFunction
       if (array.length > position && position >= 0) {
         return ExprEval.ofType(arrayExpr.elementType(), array[position]);
       }
-      return ExprEval.of(null);
+      return ExprEval.ofType(arrayExpr.elementType(), null);
     }
   }
 
@@ -3631,7 +3610,7 @@ public interface Function extends NamedFunction
       if (array.length > position && position >= 0) {
         return ExprEval.ofType(arrayExpr.elementType(), array[position]);
       }
-      return ExprEval.of(null);
+      return ExprEval.ofType(arrayExpr.elementType(), null);
     }
   }
 
@@ -3803,7 +3782,7 @@ public interface Function extends NamedFunction
       @Override
       public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
       {
-        return ExprEval.of(null);
+        return ExprEval.ofLong(null);
       }
     }
 
@@ -4569,7 +4548,7 @@ public interface Function extends NamedFunction
       final ExprEval expr = args.get(0).eval(bindings);
       final Object[] array = expr.asArray();
       if (array == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofArray(expr.asArrayType(), null);
       }
 
       final int start = args.get(1).eval(bindings).asInt();
@@ -4580,7 +4559,7 @@ public interface Function extends NamedFunction
 
       if (start < 0 || start > array.length || start > end) {
         // Arrays.copyOfRange will throw exception in these cases
-        return ExprEval.of(null);
+        return ExprEval.ofArray(expr.asArrayType(), null);
       }
 
       return ExprEval.ofArray(expr.asArrayType(), Arrays.copyOfRange(expr.asArray(), start, end));
@@ -4596,7 +4575,7 @@ public interface Function extends NamedFunction
     {
       final ExprEval valueParam = args.get(0).eval(bindings);
       if (valueParam.isNumericNull()) {
-        return ExprEval.of(null);
+        return ExprEval.ofString(null);
       }
 
       /**
@@ -4616,22 +4595,19 @@ public interface Function extends NamedFunction
       long precision = 2;
       if (args.size() > 1) {
         ExprEval precisionParam = args.get(1).eval(bindings);
+        if (precisionParam.value() == null) {
+          throw validationFailed("needs a LONG as its second argument but got null", precisionParam.type());
+        }
         if (!precisionParam.type().is(ExprType.LONG)) {
-          throw validationFailed(
-              "needs a LONG as its second argument but got %s instead",
-              precisionParam.type()
-          );
+          throw validationFailed("needs a LONG as its second argument but got %s instead", precisionParam.type());
         }
         precision = precisionParam.asLong();
         if (precision < 0 || precision > 3) {
-          throw validationFailed(
-              "given precision[%d] must be in the range of [0,3]",
-              precision
-          );
+          throw validationFailed("given precision[%d] must be in the range of [0,3]", precision);
         }
       }
 
-      return ExprEval.of(HumanReadableBytes.format(valueParam.asLong(), precision, this.getUnitSystem()));
+      return ExprEval.ofString(HumanReadableBytes.format(valueParam.asLong(), precision, this.getUnitSystem()));
     }
 
     @Override

@@ -374,17 +374,29 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   @Test
   public void testArrayFns()
   {
-    try {
-      ExpressionProcessing.initializeForFallback();
-      testExpression("array(s1, s2)", types);
-      testExpression("array(l1, l2)", types);
-      testExpression("array(d1, d2)", types);
-      testExpression("array(l1, d2)", types);
-      testExpression("array(s1, l2)", types);
-    }
-    finally {
-      ExpressionProcessing.initializeForTests();
-    }
+    testExpression("array(s1, s2)", types);
+    testExpression("array(l1, l2)", types);
+    testExpression("array(d1, d2)", types);
+    testExpression("array(l1, d2)", types);
+    testExpression("array(s1, l2)", types);
+  }
+
+  @Test
+  public void testReduceFns()
+  {
+    testExpression("greatest(s1, s2)", types);
+    testExpression("greatest(l1, l2)", types);
+    testExpression("greatest(l1, nonexistent)", types);
+    testExpression("greatest(d1, d2)", types);
+    testExpression("greatest(l1, d2)", types);
+    testExpression("greatest(s1, l2)", types);
+
+    testExpression("least(s1, s2)", types);
+    testExpression("least(l1, l2)", types);
+    testExpression("least(l1, nonexistent)", types);
+    testExpression("least(d1, d2)", types);
+    testExpression("least(l1, d2)", types);
+    testExpression("least(s1, l2)", types);
   }
 
   @Test
@@ -532,11 +544,14 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
       NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> bindings = makeRandomizedBindings(VECTOR_SIZE, types);
       ExprEvalVector<?> vectorEval = processor.evalVector(bindings.rhs);
       final Object[] vectorVals = vectorEval.getObjectVector();
+      if (outputType != null) {
+        Assert.assertEquals("vector eval type", outputType, vectorEval.getType());
+      }
       for (int i = 0; i < VECTOR_SIZE; i++) {
         ExprEval<?> eval = parsed.eval(bindings.lhs[i]);
         // 'null' expressions can have an output type of null, but still evaluate in default mode, so skip type checks
-        if (outputType != null && !eval.isNumericNull()) {
-          Assert.assertEquals(eval.type(), outputType);
+        if (outputType != null && eval.value() != null) {
+          Assert.assertEquals("nonvector eval type", eval.type(), outputType);
         }
         if (outputType != null && outputType.isArray()) {
           Assert.assertArrayEquals(
@@ -637,6 +652,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   {
     SettableVectorInputBinding vectorBinding = new SettableVectorInputBinding(vectorSize);
     SettableObjectBinding[] objectBindings = new SettableObjectBinding[vectorSize];
+    Expr.InputBindingInspector inspector = InputBindings.inspectorFromTypeMap(types);
 
     for (Map.Entry<String, ExpressionType> entry : types.entrySet()) {
       boolean[] nulls = new boolean[vectorSize];
@@ -648,7 +664,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
             nulls[i] = nullsFn.getAsBoolean();
             longs[i] = nulls[i] ? 0L : longsFn.getAsLong();
             if (objectBindings[i] == null) {
-              objectBindings[i] = new SettableObjectBinding();
+              objectBindings[i] = new SettableObjectBinding().withInspector(inspector);
             }
             objectBindings[i].withBinding(entry.getKey(), nulls[i] ? null : longs[i]);
           }
@@ -660,7 +676,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
             nulls[i] = nullsFn.getAsBoolean();
             doubles[i] = nulls[i] ? 0.0 : doublesFn.getAsDouble();
             if (objectBindings[i] == null) {
-              objectBindings[i] = new SettableObjectBinding();
+              objectBindings[i] = new SettableObjectBinding().withInspector(inspector);
             }
             objectBindings[i].withBinding(entry.getKey(), nulls[i] ? null : doubles[i]);
           }
@@ -676,7 +692,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
               strings[i] = nulls[i] ? null : String.valueOf(stringFn.get());
             }
             if (objectBindings[i] == null) {
-              objectBindings[i] = new SettableObjectBinding();
+              objectBindings[i] = new SettableObjectBinding().withInspector(inspector);
             }
             objectBindings[i].withBinding(entry.getKey(), nulls[i] ? null : strings[i]);
           }
