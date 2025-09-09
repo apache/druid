@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.net.HostAndPort;
 import com.google.inject.name.Named;
+
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.common.utils.SocketUtil;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -79,6 +81,12 @@ public class DruidNode
 
   @JsonProperty
   private boolean enableTlsPort = false;
+
+  @JsonProperty
+  @NotNull
+  private final String version = GuavaUtils.firstNonNull(
+      DruidNode.class.getPackage().getImplementationVersion(),
+      "unknown");
 
   public DruidNode(
       String serviceName,
@@ -234,6 +242,10 @@ public class DruidNode
   public int getTlsPort()
   {
     return tlsPort;
+  }
+
+  public String getVersion() {
+    return version;
   }
 
   public DruidNode withService(String service)

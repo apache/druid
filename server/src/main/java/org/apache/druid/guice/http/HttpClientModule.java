@@ -21,20 +21,30 @@ package org.apache.druid.guice.http;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Binder;
 import com.google.inject.Binding;
 import com.google.inject.Inject;
 import com.google.inject.Module;
+
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Global;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.http.client.AbstractHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.HttpClientConfig;
 import org.apache.druid.java.util.http.client.HttpClientInit;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.Escalator;
+import org.joda.time.Duration;
 
 import javax.net.ssl.SSLContext;
 import java.lang.annotation.Annotation;
@@ -88,6 +98,10 @@ public class HttpClientModule implements Module
     private final boolean eagerByDefault;
     private Escalator escalator;
 
+    @Inject
+    @Self
+    private DruidNode node;
+
     public HttpClientProvider(Class<? extends Annotation> annotationClazz, boolean isEscalated, boolean eagerByDefault)
     {
       super(annotationClazz);
@@ -127,11 +141,22 @@ public class HttpClientModule implements Module
           builder.build(),
           getLifecycleProvider().get()
       );
+      HttpClient clientWithUserAgent = new AbstractHttpClient() {
+        @Override
+        public <Intermediate, Final> ListenableFuture<Final> go(
+            Request request,
+            HttpResponseHandler<Intermediate, Final> handler,
+            Duration readTimeout) {
+          request.setHeader(HttpHeaders.Names.USER_AGENT, StringUtils.format("%s/%s",
+              node.getServiceName(), node.getVersion()));
+          return client.go(request, handler, readTimeout);
+        }
+      };
 
       if (isEscalated) {
-        return escalator.createEscalatedClient(client);
+        return escalator.createEscalatedClient(clientWithUserAgent);
       } else {
-        return client;
+        return clientWithUserAgent;
       }
     }
   }
