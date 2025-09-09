@@ -17,12 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord.common;
+package org.apache.druid.k8s.overlord.common.httpclient.vertx;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.vertx.core.VertxOptions;
 
-public class DruidKubernetesHttpClientConfig
+public class DruidKubernetesVertxHttpClientConfig
 {
   @JsonProperty
   private int workerPoolSize = VertxOptions.DEFAULT_WORKER_POOL_SIZE;

@@ -124,12 +124,16 @@
       <artifactId>kubernetes-client</artifactId>
       <version>${fabric8.version}</version>
       <scope>runtime</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>io.fabric8</groupId>
-          <artifactId>kubernetes-httpclient-okhttp</artifactId>
-        </exclusion>
-      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>io.fabric8</groupId>
+      <artifactId>kubernetes-httpclient-jdk</artifactId>
+      <version>${fabric8.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.fabric8</groupId>
+      <artifactId>kubernetes-httpclient-okhttp</artifactId>
+      <version>${fabric8.version}</version>
     </dependency>
     <dependency>
       <groupId>io.fabric8</groupId>
