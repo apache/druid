@@ -71,7 +71,7 @@ public class IfDoubleVectorProcessor extends IfFunctionVectorProcessor<double[]>
     }
 
     final ExprEvalVector<double[]> thenVector = thenProcessor.evalVector(thenBindingFilterer);
-    final double[] thenValues =  thenVector.getDoubleVector();
+    final double[] thenValues = thenVector.getDoubleVector();
     final boolean[] thenNulls = thenVector.getNullVector();
     for (int i = 0; i < thens; i++) {
       final int outIndex = thenSelection[i];

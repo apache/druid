@@ -72,11 +72,8 @@ public class IfLongVectorProcessor extends IfFunctionVectorProcessor<long[]>
 
 
     final ExprEvalVector<long[]> thenVector = thenProcessor.evalVector(thenBindingFilterer);
-    final ExprEvalVector<long[]> elseVector = elseProcessor.evalVector(elseBindingFilterer);
-    final long[] thenValues =  thenVector.getLongVector();
+    final long[] thenValues = thenVector.getLongVector();
     final boolean[] thenNulls = thenVector.getNullVector();
-    final long[] elseValues = elseVector.getLongVector();
-    final boolean[] elseNulls = elseVector.getNullVector();
     for (int i = 0; i < thens; i++) {
       final int outIndex = thenSelection[i];
       if (thenNulls != null && thenNulls[i]) {
@@ -86,6 +83,10 @@ public class IfLongVectorProcessor extends IfFunctionVectorProcessor<long[]>
         outputNulls[outIndex] = false;
       }
     }
+
+    final ExprEvalVector<long[]> elseVector = elseProcessor.evalVector(elseBindingFilterer);
+    final long[] elseValues = elseVector.getLongVector();
+    final boolean[] elseNulls = elseVector.getNullVector();
     for (int i = 0; i < elses; i++) {
       final int outIndex = elseSelection[i];
       if (elseNulls != null && elseNulls[i]) {

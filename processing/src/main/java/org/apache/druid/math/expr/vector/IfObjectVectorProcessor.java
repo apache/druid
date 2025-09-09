@@ -65,13 +65,14 @@ public class IfObjectVectorProcessor extends IfFunctionVectorProcessor<Object[]>
     }
 
     final ExprEvalVector<Object[]> thenVector = thenProcessor.evalVector(thenBindingFilterer);
-    final ExprEvalVector<Object[]> elseVector = elseProcessor.evalVector(elseBindingFilterer);
-    final Object[] thenValues =  thenVector.getObjectVector();
-    final Object[] elseValues =  elseVector.getObjectVector();
+    final Object[] thenValues = thenVector.getObjectVector();
     for (int i = 0; i < thens; i++) {
       final int outIndex = thenSelection[i];
       output[outIndex] = thenValues[i];
     }
+
+    final ExprEvalVector<Object[]> elseVector = elseProcessor.evalVector(elseBindingFilterer);
+    final Object[] elseValues = elseVector.getObjectVector();
     for (int i = 0; i < elses; i++) {
       final int outIndex = elseSelection[i];
       output[outIndex] = elseValues[i];
