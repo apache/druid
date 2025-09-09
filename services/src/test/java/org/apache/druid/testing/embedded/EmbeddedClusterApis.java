@@ -282,7 +282,7 @@ public class EmbeddedClusterApis implements EmbeddedResource
 
   /**
    * Waits for all used segments (including overshadowed) of the given datasource
-   * to be loaded on historicals.
+   * to be queryable by Brokers.
    */
   public void waitForAllSegmentsToBeAvailable(String dataSource, EmbeddedCoordinator coordinator, EmbeddedBroker broker)
   {
@@ -291,14 +291,11 @@ public class EmbeddedClusterApis implements EmbeddedResource
         .segmentsMetadataStorage()
         .retrieveAllUsedSegments(dataSource, Segments.INCLUDING_OVERSHADOWED)
         .size();
-    coordinator.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("segment/loadQueue/success")
+
+    broker.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("segment/schemaCache/refresh/count")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(numSegments)
-    );
-    broker.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("segment/schemaCache/refresh/count")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
   }
 

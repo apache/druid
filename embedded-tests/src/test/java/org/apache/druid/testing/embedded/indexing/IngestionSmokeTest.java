@@ -87,8 +87,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
   /**
    * Broker with a short metadata refresh period.
    */
-  protected EmbeddedBroker broker = new EmbeddedBroker()
-      .addProperty("druid.sql.planner.metadataRefreshPeriod", "PT1s");
+  protected EmbeddedBroker broker = new EmbeddedBroker();
 
   /**
    * Event collector used to wait for metric events to occur.
@@ -178,6 +177,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
         agg -> agg.hasSumAtLeast(numSegments)
     );
 
+    // Wait for the Broker to remove this datasource from its schema cache
     eventCollector.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("segment/schemaCache/dataSource/removed")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)

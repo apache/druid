@@ -190,8 +190,7 @@ public class AutoCompactionTest extends CompactionTestBase
   private static final Period NO_SKIP_OFFSET = Period.seconds(0);
   private static final FixedIntervalOrderPolicy COMPACT_NOTHING_POLICY = new FixedIntervalOrderPolicy(List.of());
 
-  private final EmbeddedBroker broker = new EmbeddedBroker()
-      .addProperty("druid.sql.planner.metadataRefreshPeriod", "PT0.1s");
+  private final EmbeddedBroker broker = new EmbeddedBroker();
 
   public static List<CompactionEngine> getEngine()
   {

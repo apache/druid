@@ -41,8 +41,7 @@ public abstract class CompactionTestBase extends EmbeddedClusterTestBase
 {
   protected final EmbeddedOverlord overlord = new EmbeddedOverlord();
   protected final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
-  protected final EmbeddedBroker broker = new EmbeddedBroker()
-      .addProperty("druid.sql.planner.metadataRefreshPeriod", "PT0.1s");
+  protected final EmbeddedBroker broker = new EmbeddedBroker();
 
   @Override
   protected EmbeddedDruidCluster createCluster()
