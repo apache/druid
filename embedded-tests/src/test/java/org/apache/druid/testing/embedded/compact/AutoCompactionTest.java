@@ -74,7 +74,6 @@ import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
-import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
@@ -189,8 +188,6 @@ public class AutoCompactionTest extends CompactionTestBase
   private static final int MAX_ROWS_PER_SEGMENT_COMPACTED = 10000;
   private static final Period NO_SKIP_OFFSET = Period.seconds(0);
   private static final FixedIntervalOrderPolicy COMPACT_NOTHING_POLICY = new FixedIntervalOrderPolicy(List.of());
-
-  private final EmbeddedBroker broker = new EmbeddedBroker();
 
   public static List<CompactionEngine> getEngine()
   {
