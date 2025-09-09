@@ -65,31 +65,43 @@ public class OverlordClientTest2 extends EmbeddedClusterTestBase
   public void test_runTask_ofTypeNoop() throws Exception
   {
     final String taskId = IdUtils.newTaskId("sim_test_noop", TestDataSource.WIKI, null);
+    Thread.sleep(500);
     cluster.callApi().onLeaderOverlord(
         o -> o.runTask(taskId, new NoopTask(taskId, null, null, 2000L, 0L, null))
     );
     Thread.sleep(500);
 
-    System.out.println("----stop---");
-    indexer1.stop();
+    System.out.println("----stop:overlord---");
+    overlord.stop();
+    Thread.sleep(400);
+    overlord.start();
     Thread.sleep(400);
     System.out.println("----stop2---");
+    indexer1.stop();
+    Thread.sleep(400);
+    indexer1.start();
 //    EmbeddedIndexer indexer2 = new EmbeddedIndexer().addProperty("druid.worker.capacity", "3");
     // cluster.revoidServer(indexer1);
-    cluster.addServer(indexer2);
-    indexer2.start();
-    System.out.println("----stop3---");
-    Thread.sleep(500);
-    overlord.stop();
-    System.out.println("----stop4---");
-    Thread.sleep(500);
-    overlord.start();
+//    cluster.addServer(indexer2);
+//    indexer2.start();
+//    System.out.println("----stop3---");
+//    Thread.sleep(500);
+////    overlord.stop();
+//    System.out.println("----stop4---");
+//    Thread.sleep(500);
 
-    while(true) {
-      Thread.sleep(500);
-    Object r = cluster.callApi().onLeaderOverlord( oc -> oc.taskStatus(taskId));
-    System.out.println(r);
-    }
+    int cnt =0;
+while (true) {
+  cnt++;
+  Thread.sleep(500);
+  if(cnt==10) {
+
+    System.out.println("cancel task");
+    cluster.callApi().onLeaderOverlord(oc -> oc.cancelTask(taskId));
+  }
+  Object r = cluster.callApi().onLeaderOverlord(oc -> oc.taskStatus(taskId));
+  System.out.println(r);
+}
 
 //    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
   }

@@ -140,6 +140,7 @@ public class ChangeRequestHistory<T>
 
     Counter lastCounter = getLastCounter();
 
+    System.out.println("req: "+counter);
     if (counter.counter == lastCounter.counter) {
       if (!counter.matches(lastCounter)) {
         ChangeRequestsSnapshot<T> reset = ChangeRequestsSnapshot.fail(
