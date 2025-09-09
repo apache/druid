@@ -201,6 +201,7 @@ exports[`TasksView matches snapshot 1`] = `
           "Cell": [Function],
           "Header": "Created time",
           "accessor": "created_time",
+          "filterMethod": [Function],
           "show": true,
           "width": 220,
         },
