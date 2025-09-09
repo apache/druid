@@ -374,11 +374,17 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   @Test
   public void testArrayFns()
   {
-    testExpression("array(s1, s2)", types);
-    testExpression("array(l1, l2)", types);
-    testExpression("array(d1, d2)", types);
-    testExpression("array(l1, d2)", types);
-    testExpression("array(s1, l2)", types);
+    try {
+      ExpressionProcessing.initializeForFallback();
+      testExpression("array(s1, s2)", types);
+      testExpression("array(l1, l2)", types);
+      testExpression("array(d1, d2)", types);
+      testExpression("array(l1, d2)", types);
+      testExpression("array(s1, l2)", types);
+    }
+    finally {
+      ExpressionProcessing.initializeForTests();
+    }
   }
 
   @Test
