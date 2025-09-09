@@ -62,16 +62,4 @@ public class Initialization
   {
     return ServerInjectorBuilder.makeServerInjector(baseInjector, ImmutableSet.of(), modules);
   }
-
-  /**
-   * Rough bridge solution for Hadoop indexing that needs server-like Injector but can't run jetty 12
-   */
-  @Deprecated
-  public static Injector makeInjectorWithoutJettyModules(
-      final Injector baseInjector,
-      final Iterable<? extends Module> modules
-  )
-  {
-    return ServerInjectorBuilder.makeServerInjectorWithoutJettyModules(baseInjector, ImmutableSet.of(), modules);
-  }
 }
