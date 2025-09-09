@@ -284,7 +284,7 @@ public class EmbeddedClusterApis implements EmbeddedResource
    * Waits for all used segments (including overshadowed) of the given datasource
    * to be loaded on historicals.
    */
-  public void waitForAllSegmentsToBeAvailable(String dataSource, EmbeddedCoordinator coordinator)
+  public void waitForAllSegmentsToBeAvailable(String dataSource, EmbeddedCoordinator coordinator, EmbeddedBroker broker)
   {
     final int numSegments = coordinator
         .bindings()
@@ -295,6 +295,10 @@ public class EmbeddedClusterApis implements EmbeddedResource
         event -> event.hasMetricName("segment/loadQueue/success")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(numSegments)
+    );
+    broker.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("segment/schemaCache/refresh/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
   }
 

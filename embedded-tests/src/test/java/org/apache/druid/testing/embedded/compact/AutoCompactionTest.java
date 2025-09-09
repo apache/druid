@@ -1855,7 +1855,7 @@ public class AutoCompactionTest extends CompactionTestBase
       cluster.callApi().waitForTaskToSucceed(taskId, overlord);
     }
 
-    cluster.callApi().waitForAllSegmentsToBeAvailable(fullDatasourceName, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(fullDatasourceName, coordinator, broker);
     verifySegmentsCount(numExpectedSegmentsAfterCompaction);
   }
 

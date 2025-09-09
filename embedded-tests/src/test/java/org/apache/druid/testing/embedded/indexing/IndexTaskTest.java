@@ -99,10 +99,7 @@ public class IndexTaskTest extends EmbeddedClusterTestBase
       start = start.plusDays(1);
     }
 
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
-    broker.latchableEmitter().waitForEvent(
-        event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
-    );
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
     Assertions.assertEquals(
         Resources.InlineData.CSV_10_DAYS,
         cluster.runSql("SELECT * FROM %s", dataSource)
