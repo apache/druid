@@ -138,10 +138,45 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   // Executor for assigning pending tasks to workers.
   private final ExecutorService pendingTasksExec;
 
+
+  static class MyConcurrentHashMap<K,V> extends ConcurrentHashMap<K, V> {
+
+    @Override
+    public V put(K key, V value)
+    {
+      logCallSite();
+      return super.put(key, value);
+    }
+
+    private void logCallSite()
+    {
+      try {
+        throw new RuntimeException();
+
+      }
+      catch (Exception e) {
+        log.error("callSite", e);
+      }
+    }
+
+    @Override
+    public void putAll(Map<? extends K, ? extends V> m)
+    {
+      logCallSite();
+      super.putAll(m);
+    }
+
+    @Override
+    public void clear()
+    {
+      logCallSite();
+      super.clear();
+    }
+  }
   // All known tasks, TaskID -> HttpRemoteTaskRunnerWorkItem
   // This is a ConcurrentMap as some of the reads are done without holding the lock.
   @GuardedBy("statusLock")
-  private final ConcurrentMap<String, HttpRemoteTaskRunnerWorkItem> tasks = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, HttpRemoteTaskRunnerWorkItem> tasks = new MyConcurrentHashMap<>();
 
   // This is the list of pending tasks in the order they arrived, exclusively manipulated/used by thread that
   // gives a new task to this class and threads in pendingTasksExec that are responsible for assigning tasks to

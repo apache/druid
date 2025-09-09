@@ -36,7 +36,7 @@ import org.junit.jupiter.api.Test;
  * Tests all the REST APIs exposed by the Overlord using the
  * {@link OverlordClient}.
  */
-public class OverlordClientTest2 extends EmbeddedClusterTestBase
+public class OverlordClient2Test extends EmbeddedClusterTestBase
 {
   private static final String UNKNOWN_TASK_ID
       = IdUtils.newTaskId("sim_test_noop", "dummy", null);
