@@ -84,6 +84,7 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Max size',
     'Usage',
     'Start time',
+    'Version',
     'Detail',
   ],
   'no-sql': [
@@ -107,6 +108,7 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Max size',
     'Usage',
     'Start time',
+    'Version',
   ],
 };
 
@@ -143,6 +145,7 @@ interface ServiceResultRow {
   readonly plaintext_port: number;
   readonly tls_port: number;
   readonly start_time: string;
+  readonly version: string;
 }
 
 interface ServicesWithAuxiliaryInfo {
@@ -238,7 +241,8 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
   "curr_size",
   "max_size",
   "is_leader",
-  "start_time"
+  "start_time",
+  "version"
 FROM sys.servers
 ORDER BY
   (
@@ -614,6 +618,14 @@ ORDER BY
           accessor: 'start_time',
           width: 200,
           Cell: this.renderFilterableCell('start_time'),
+          Aggregated: () => '',
+        },
+        {
+          Header: 'Version',
+          show: visibleColumns.shown('Version'),
+          accessor: 'version',
+          width: 200,
+          Cell: this.renderFilterableCell('version'),
           Aggregated: () => '',
         },
         {
