@@ -92,7 +92,6 @@ import org.joda.time.chrono.ISOChronology;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -761,7 +760,6 @@ public class AutoCompactionTest extends CompactionTestBase
 
   @MethodSource("getEngine")
   @ParameterizedTest(name = "compactionEngine={0}")
-  @Disabled("Disabling due to timeouts")
   public void testAutoCompactionDutyWithSegmentGranularityAndWithDropExistingTrue(CompactionEngine engine) throws Exception
   {
     // Interval is "2013-08-31/2013-09-02", segment gran is DAY,
@@ -885,7 +883,6 @@ public class AutoCompactionTest extends CompactionTestBase
 
   @MethodSource("getEngine")
   @ParameterizedTest(name = "compactionEngine={0}")
-  @Disabled("Disabling due to timeouts")
   public void testAutoCompactionDutyWithSegmentGranularityAndWithDropExistingTrueThenFalse(CompactionEngine engine) throws Exception
   {
     // Interval is "2013-08-31/2013-09-02", segment gran is DAY,
@@ -1160,7 +1157,6 @@ public class AutoCompactionTest extends CompactionTestBase
 
   @MethodSource("getEngine")
   @ParameterizedTest(name = "compactionEngine={0}")
-  @Disabled("Disabling due to timeouts")
   public void testAutoCompactionDutyWithSegmentGranularityAndSmallerSegmentGranularityCoveringMultipleSegmentsInTimelineAndDropExistingTrue(CompactionEngine engine) throws Exception
   {
     loadData(INDEX_TASK);
@@ -1219,7 +1215,6 @@ public class AutoCompactionTest extends CompactionTestBase
   }
 
   @Test
-  @Disabled("Disabling due to timeouts")
   public void testAutoCompactionDutyWithSegmentGranularityAndSmallerSegmentGranularityCoveringMultipleSegmentsInTimelineAndDropExistingFalse() throws Exception
   {
     loadData(INDEX_TASK);
