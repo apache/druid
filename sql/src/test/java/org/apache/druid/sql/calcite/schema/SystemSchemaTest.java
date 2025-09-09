@@ -381,6 +381,8 @@ public class SystemSchemaTest extends CalciteTestBase
 
   private final DateTime startTime = DateTimes.nowUtc();
 
+  private final String version = new DruidNode("s1", "localhost", false, 8081, null, true, false).getVersion();
+
   private final DiscoveryDruidNode coordinator = new DiscoveryDruidNode(
       new DruidNode("s1", "localhost", false, 8081, null, true, false),
       NodeRole.COORDINATOR,
@@ -851,7 +853,8 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             0L,
             nonLeader,
-            startTimeStr
+            startTimeStr,
+            version
         )
     );
     expectedRows.add(
@@ -865,7 +868,8 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             1000L,
             nonLeader,
-            startTimeStr
+            startTimeStr,
+            version
         )
     );
     expectedRows.add(
@@ -879,7 +883,8 @@ public class SystemSchemaTest extends CalciteTestBase
             400L,
             1000L,
             nonLeader,
-            startTimeStr
+            startTimeStr,
+            version
         )
     );
     expectedRows.add(
@@ -893,7 +898,8 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             1000L,
             nonLeader,
-            startTimeStr
+            startTimeStr,
+            version
         )
     );
     expectedRows.add(
@@ -907,7 +913,8 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             1000L,
             nonLeader,
-            startTimeStr
+            startTimeStr,
+            version
         )
     );
     expectedRows.add(createExpectedRow(
@@ -920,7 +927,8 @@ public class SystemSchemaTest extends CalciteTestBase
         0L,
         1000L,
         nonLeader,
-        startTimeStr
+        startTimeStr,
+        version
     ));
     expectedRows.add(
         createExpectedRow(
@@ -933,7 +941,8 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             0L,
             1L,
-            startTimeStr
+            startTimeStr,
+            version
         )
     );
     expectedRows.add(
@@ -947,7 +956,8 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             0L,
             nonLeader,
-            startTimeStr
+            startTimeStr,
+            version
         )
     );
     expectedRows.add(
@@ -961,7 +971,8 @@ public class SystemSchemaTest extends CalciteTestBase
             200L,
             1000L,
             nonLeader,
-            startTimeStr
+            startTimeStr,
+            version
         )
     );
     expectedRows.add(
@@ -975,7 +986,8 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             0L,
             1L,
-            startTimeStr
+            startTimeStr,
+            version
         )
     );
     expectedRows.add(
@@ -989,7 +1001,8 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             0L,
             0L,
-            startTimeStr
+            startTimeStr,
+            version
         )
     );
     expectedRows.add(
@@ -1003,7 +1016,8 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             0L,
             0L,
-            startTimeStr
+            startTimeStr,
+            version
         )
     );
     expectedRows.add(
@@ -1017,7 +1031,8 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             0L,
             nonLeader,
-            startTimeStr
+            startTimeStr,
+            version
         )
     );
     expectedRows.add(
@@ -1031,7 +1046,8 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             0L,
             nonLeader,
-            startTimeStr
+            startTimeStr,
+            version
         )
     );
     expectedRows.add(createExpectedRow(
@@ -1044,7 +1060,8 @@ public class SystemSchemaTest extends CalciteTestBase
         0L,
         1000L,
         nonLeader,
-        startTimeStr
+        startTimeStr,
+        version
     ));
     Assert.assertEquals(expectedRows.size(), rows.size());
     for (int i = 0; i < rows.size(); i++) {
@@ -1077,7 +1094,8 @@ public class SystemSchemaTest extends CalciteTestBase
       @Nullable Long currSize,
       @Nullable Long maxSize,
       @Nullable Long isLeader,
-      String startTime
+      String startTime,
+      String version
   )
   {
     return new Object[]{
@@ -1090,7 +1108,8 @@ public class SystemSchemaTest extends CalciteTestBase
         currSize,
         maxSize,
         isLeader,
-        startTime
+        startTime,
+        version
     };
   }
 
