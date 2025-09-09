@@ -390,19 +390,25 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   @Test
   public void testReduceFns()
   {
-    testExpression("greatest(s1, s2)", types);
-    testExpression("greatest(l1, l2)", types);
-    testExpression("greatest(l1, nonexistent)", types);
-    testExpression("greatest(d1, d2)", types);
-    testExpression("greatest(l1, d2)", types);
-    testExpression("greatest(s1, l2)", types);
+    try {
+      ExpressionProcessing.initializeForFallback();
+      testExpression("greatest(s1, s2)", types);
+      testExpression("greatest(l1, l2)", types);
+      testExpression("greatest(l1, nonexistent)", types);
+      testExpression("greatest(d1, d2)", types);
+      testExpression("greatest(l1, d2)", types);
+      testExpression("greatest(s1, l2)", types);
 
-    testExpression("least(s1, s2)", types);
-    testExpression("least(l1, l2)", types);
-    testExpression("least(l1, nonexistent)", types);
-    testExpression("least(d1, d2)", types);
-    testExpression("least(l1, d2)", types);
-    testExpression("least(s1, l2)", types);
+      testExpression("least(s1, s2)", types);
+      testExpression("least(l1, l2)", types);
+      testExpression("least(l1, nonexistent)", types);
+      testExpression("least(d1, d2)", types);
+      testExpression("least(l1, d2)", types);
+      testExpression("least(s1, l2)", types);
+    }
+    finally {
+      ExpressionProcessing.initializeForTests();
+    }
   }
 
   @Test

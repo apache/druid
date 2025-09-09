@@ -4596,7 +4596,7 @@ public interface Function extends NamedFunction
       if (args.size() > 1) {
         ExprEval precisionParam = args.get(1).eval(bindings);
         if (precisionParam.value() == null) {
-          throw validationFailed("needs a LONG as its second argument but got null", precisionParam.type());
+          throw validationFailed("needs a LONG as its second argument but got null");
         }
         if (!precisionParam.type().is(ExprType.LONG)) {
           throw validationFailed("needs a LONG as its second argument but got %s instead", precisionParam.type());
