@@ -20,21 +20,16 @@
 package org.apache.druid.sql.avatica;
 
 import org.apache.calcite.avatica.AvaticaUtils;
-import org.apache.calcite.avatica.metrics.MetricsSystem;
 import org.apache.calcite.avatica.metrics.Timer;
 import org.apache.calcite.avatica.remote.JsonHandler;
-import org.apache.calcite.avatica.remote.LocalService;
-import org.apache.calcite.avatica.remote.MetricsHelper;
 import org.apache.calcite.avatica.remote.Service;
 import org.apache.calcite.avatica.server.AvaticaJsonHandler;
-import org.apache.calcite.avatica.server.MetricsAwareAvaticaHandler;
 import org.apache.calcite.avatica.util.UnsynchronizedBuffer;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
 import org.eclipse.jetty.io.Content;
-import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.util.Callback;
@@ -53,11 +48,7 @@ public class DruidAvaticaJsonHandler extends DruidAvaticaHandler
   public static final String AVATICA_PATH = AVATICA_PATH_NO_TRAILING_SLASH + "/";
 
 
-  private final Service service;
-  private final MetricsSystem metrics;
   private final JsonHandler jsonHandler;
-  private final Timer requestTimer;
-  private final ThreadLocal<UnsynchronizedBuffer> threadLocalBuffer;
 
   @Inject
   public DruidAvaticaJsonHandler(
@@ -66,18 +57,8 @@ public class DruidAvaticaJsonHandler extends DruidAvaticaHandler
       final AvaticaMonitor avaticaMonitor
   )
   {
-    super();
-    this.service = new LocalService(druidMeta);
-    this.metrics = Objects.requireNonNull(avaticaMonitor);
+    super(druidMeta, druidNode, Objects.requireNonNull(avaticaMonitor), AvaticaJsonHandler.class);
     this.jsonHandler = new JsonHandler(service, this.metrics);
-
-    // Metrics
-    this.requestTimer = this.metrics.getTimer(
-        MetricsHelper.concat(AvaticaJsonHandler.class, MetricsAwareAvaticaHandler.REQUEST_TIMER_NAME));
-
-    this.threadLocalBuffer = ThreadLocal.withInitial(UnsynchronizedBuffer::new);
-
-    setServerRpcMetadata(new Service.RpcMetadataResponse(druidNode.getHostAndPortToUse()));
   }
 
   @Override
@@ -136,15 +117,9 @@ public class DruidAvaticaJsonHandler extends DruidAvaticaHandler
   }
 
   @Override
-  public MetricsSystem getMetrics()
-  {
-    return metrics;
-  }
-
-  @Override
   public void setServerRpcMetadata(Service.RpcMetadataResponse metadata)
   {
-    service.setRpcMetadata(metadata);
+    super.setServerRpcMetadata(metadata);
     jsonHandler.setRpcMetadata(metadata);
   }
 }
