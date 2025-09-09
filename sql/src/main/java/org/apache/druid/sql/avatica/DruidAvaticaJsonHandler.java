@@ -45,7 +45,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
-public class DruidAvaticaJsonHandler extends Handler.Abstract implements MetricsAwareAvaticaHandler
+public class DruidAvaticaJsonHandler extends DruidAvaticaHandler
 {
   private static final Logger LOG = new Logger(DruidAvaticaJsonHandler.class);
 

@@ -46,7 +46,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
-public class DruidAvaticaProtobufHandler extends Handler.Abstract implements MetricsAwareAvaticaHandler
+public class DruidAvaticaProtobufHandler extends DruidAvaticaHandler
 {
 
   private static final Logger LOG = new Logger(DruidAvaticaProtobufHandler.class);
