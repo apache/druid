@@ -1650,7 +1650,10 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     if (isRealtime || segmentSortedByTime) {
       Assertions.assertEquals(TIMESTAMP.plusHours(1).plusMinutes(1), projectionsTimeBoundaryInspector.getMaxTime());
     } else {
-      Assertions.assertEquals(TIMESTAMP.plusHours(1).plusMinutes(1).plusMillis(1), projectionsTimeBoundaryInspector.getMaxTime());
+      Assertions.assertEquals(
+          TIMESTAMP.plusHours(1).plusMinutes(1).plusMillis(1),
+          projectionsTimeBoundaryInspector.getMaxTime()
+      );
     }
 
     Assume.assumeTrue(segmentSortedByTime);
