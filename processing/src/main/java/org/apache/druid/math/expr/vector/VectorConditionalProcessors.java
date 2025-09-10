@@ -57,4 +57,44 @@ public class VectorConditionalProcessors
     }
     return (ExprVectorProcessor<T>) processor;
   }
+
+  public static <T> ExprVectorProcessor<T> ifFunction(
+      Expr.VectorInputBindingInspector inspector,
+      Expr conditionExpr,
+      Expr thenExpr,
+      Expr elseExpr
+  )
+  {
+    // right now this function can only vectorize if then and else clause have same output type, if this changes then
+    // we'll need to switch this to use whatever output type logic that is using
+    final ExpressionType outputType = thenExpr.getOutputType(inspector);
+
+    final ExprVectorProcessor<?> processor;
+    if (outputType == null) {
+      // if output type is null, it means all the input types were null (non-existent), and if(null, null, null) is null
+      return VectorProcessors.constant((Long) null, inspector.getMaxVectorSize());
+    }
+    if (outputType.is(ExprType.LONG)) {
+      // long is most restrictive so both processors are definitely long typed if output is long
+      processor = new IfLongVectorProcessor(
+          conditionExpr.asVectorProcessor(inspector),
+          thenExpr.asVectorProcessor(inspector),
+          elseExpr.asVectorProcessor(inspector)
+      );
+    } else if (outputType.is(ExprType.DOUBLE)) {
+      processor = new IfDoubleVectorProcessor(
+          conditionExpr.asVectorProcessor(inspector),
+          thenExpr.asVectorProcessor(inspector),
+          elseExpr.asVectorProcessor(inspector)
+      );
+    } else {
+      processor = new IfObjectVectorProcessor(
+          outputType,
+          conditionExpr.asVectorProcessor(inspector),
+          thenExpr.asVectorProcessor(inspector),
+          elseExpr.asVectorProcessor(inspector)
+      );
+    }
+    return (ExprVectorProcessor<T>) processor;
+  }
 }
