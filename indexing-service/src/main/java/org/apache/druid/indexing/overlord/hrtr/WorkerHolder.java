@@ -343,6 +343,7 @@ public class WorkerHolder
         }
 
         for (TaskAnnouncement announcement : tasksSnapshotRef.get().values()) {
+
           if (!newSnapshot.containsKey(announcement.getTaskId()) && !announcement.getTaskStatus()
                                                                                  .isComplete()) {
             log.warn(
