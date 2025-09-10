@@ -48,6 +48,12 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-indexing-service</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
             <version>${mysql.version}</version>

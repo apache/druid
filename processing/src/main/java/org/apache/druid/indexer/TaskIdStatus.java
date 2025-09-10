@@ -17,30 +17,50 @@
  * under the License.
  */
 
-package org.apache.druid.metadata;
+package org.apache.druid.indexer;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.joda.time.DateTime;
 
-public class PostgreSQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
-    extends SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
+/**
+ * Contains a {@link TaskIdentifier} and its {@link TaskStatus}.
+ */
+public class TaskIdStatus
 {
-  public PostgreSQLMetadataStorageActionHandler(
-      SQLMetadataConnector connector,
-      ObjectMapper jsonMapper,
-      MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType> types,
-      String entryTypeName,
-      String entryTable,
-      String logTable,
-      String lockTable
+  private final TaskIdentifier taskId;
+  private final TaskStatus taskStatus;
+  private final String dataSource;
+  private final DateTime createdTime;
+
+  public TaskIdStatus(
+      TaskIdentifier taskId,
+      TaskStatus taskStatus,
+      String dataSource,
+      DateTime createdTime
   )
   {
-    super(connector, jsonMapper, types, entryTypeName, entryTable, logTable, lockTable);
+    this.taskId = taskId;
+    this.taskStatus = taskStatus;
+    this.dataSource = dataSource;
+    this.createdTime = createdTime;
   }
 
-  @Override
-  protected String decorateSqlWithLimit(String sql)
+  public TaskIdentifier getTaskIdentifier()
   {
-    return sql + " LIMIT :n";
+    return taskId;
   }
 
+  public TaskStatus getStatus()
+  {
+    return taskStatus;
+  }
+
+  public String getDataSource()
+  {
+    return dataSource;
+  }
+
+  public DateTime getCreatedTime()
+  {
+    return createdTime;
+  }
 }

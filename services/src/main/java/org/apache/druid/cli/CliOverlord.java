@@ -38,6 +38,7 @@ import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.DerbyTaskStorageModule;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.IndexingServiceTaskLogsModule;
@@ -198,6 +199,7 @@ public class CliOverlord extends ServerRunnable
   protected List<? extends Module> getModules(final boolean standalone)
   {
     return ImmutableList.of(
+        new DerbyTaskStorageModule(),
         standalone ? new MetadataManagerModule() : binder -> {},
         new Module()
         {
