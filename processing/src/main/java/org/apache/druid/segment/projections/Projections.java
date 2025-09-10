@@ -383,21 +383,26 @@ public class Projections
         if (projection.getEffectiveGranularity().equals(virtualGranularity)) {
           return matchBuilder.remapColumn(queryVirtualColumn.getOutputName(), ColumnHolder.TIME_COLUMN_NAME)
                              .addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
-        } else if (virtualGranularity.equals(Granularities.NONE)
-                   || projection.getEffectiveGranularity().equals(Granularities.ALL)) {
-          return null;
+        } else if (Granularities.ALL.equals(virtualGranularity)
+                   || Granularities.NONE.equals(projection.getEffectiveGranularity())) {
+          // if virtual gran is ALL or projection gran is NONE, it's guaranteed that projection gran can be mapped to virtual gran
+          return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
         } else if (virtualGranularity instanceof PeriodGranularity
                    && projection.getEffectiveGranularity() instanceof PeriodGranularity) {
           PeriodGranularity virtualGran = (PeriodGranularity) virtualGranularity;
           PeriodGranularity projectionGran = (PeriodGranularity) projection.getEffectiveGranularity();
           byte[] combinedKey = StringUtils.toUtf8(projectionGran + "->" + virtualGran);
-          if (!PERIOD_GRAN_CACHE.computeIfAbsent(combinedKey, (unused) -> projectionGran.canBeMappedTo(virtualGran))) {
-            return null;
+          if (PERIOD_GRAN_CACHE.computeIfAbsent(combinedKey, (unused) -> projectionGran.canBeMappedTo(virtualGran))) {
+            return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
           }
         }
-        return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
+        // if it reaches here, can be one of the following cases:
+        // 1. virtual gran is NONE, and projection gran is not
+        // 2. projection gran is ALL, and virtual gran is not
+        // 3. both are period granularities, but projection gran can't be mapped to virtual gran, e.x. PT2H can't be mapped to PT1H
+        return null;
       } else {
-        // anything else with __time requires none granularity
+        // we can't decide query granularity for the virtual column with __time, requires none granularity to be safe
         if (Granularities.NONE.equals(projection.getEffectiveGranularity())) {
           return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
         }
