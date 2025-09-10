@@ -50,6 +50,7 @@ public class CoordinatorPauseTest extends EmbeddedClusterTestBase
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator()
       .addProperty("druid.coordinator.period", COORDINATOR_DUTY_PERIOD.toString());
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
+  private final EmbeddedBroker broker = new EmbeddedBroker();
 
   @Override
   protected EmbeddedDruidCluster createCluster()
@@ -60,7 +61,7 @@ public class CoordinatorPauseTest extends EmbeddedClusterTestBase
         .addServer(overlord)
         .addServer(coordinator)
         .addServer(new EmbeddedIndexer())
-        .addServer(new EmbeddedBroker())
+        .addServer(broker)
         .addServer(new EmbeddedHistorical())
         .addServer(new EmbeddedRouter());
   }
@@ -98,6 +99,7 @@ public class CoordinatorPauseTest extends EmbeddedClusterTestBase
 
     // Verify that the last run was before the pause and all segments are unavailable
     final DutyGroupStatus historicalDutyStatus = matchingDutyStatus.get();
+
     Assertions.assertTrue(historicalDutyStatus.getLastRunStart().isBefore(pauseTime));
     cluster.callApi().verifySqlQuery(
         "SELECT COUNT(*) FROM sys.segments WHERE is_available = 0 AND datasource = '%s'",
@@ -113,7 +115,7 @@ public class CoordinatorPauseTest extends EmbeddedClusterTestBase
     );
 
     // Verify that segments are finally loaded on the Historical
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
     cluster.callApi().verifySqlQuery("SELECT COUNT(*) FROM %s", dataSource, "10");
   }
 }

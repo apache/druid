@@ -87,6 +87,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -300,6 +301,32 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                              )
                              .groupingColumns(new LongDimensionSchema("__vc2"), new StringDimensionSchema("__vc3"))
                              .aggregators(new LongSumAggregatorFactory("sum_c", "c"))
+                             .build(),
+      AggregateProjectionSpec.builder("a_hourly_c_sum_filter_a_to_a")
+                             .filter(
+                                 new EqualityFilter("a", ColumnType.STRING, "a", null)
+                             )
+                             .virtualColumns(Granularities.toVirtualColumn(Granularities.HOUR, "__gran"))
+                             .groupingColumns(
+                                 new StringDimensionSchema("a"),
+                                 new LongDimensionSchema("__gran")
+                             )
+                             .aggregators(
+                                 new LongSumAggregatorFactory("_c_sum", "c")
+                             )
+                             .build(),
+      AggregateProjectionSpec.builder("a_hourly_c_sum_filter_a_to_empty")
+                             .filter(
+                                 new EqualityFilter("a", ColumnType.STRING, "nomatch", null)
+                             )
+                             .virtualColumns(Granularities.toVirtualColumn(Granularities.HOUR, "__gran"))
+                             .groupingColumns(
+                                 new StringDimensionSchema("a"),
+                                 new LongDimensionSchema("__gran")
+                             )
+                             .aggregators(
+                                 new LongSumAggregatorFactory("_c_sum", "c")
+                             )
                              .build(),
       AggregateProjectionSpec.builder("time_and_a")
                              .groupingColumns(
@@ -778,7 +805,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         GroupByQuery.builder()
                     .setDataSource("test")
                     .setGranularity(Granularities.ALL)
-                    .setInterval(Intervals.ETERNITY)
+                    .setInterval(new Interval(UTC_MIDNIGHT, UTC_MIDNIGHT.plusDays(1)))
                     .addDimension("a")
                     .setDimFilter(new EqualityFilter("a", ColumnType.STRING, "a", null))
                     .addAggregator(new LongSumAggregatorFactory("c_sum", "c"))
@@ -795,6 +822,62 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         queryMetrics,
         Collections.singletonList(
             new Object[]{"a", 7L, Pair.of(UTC_01H31M.getMillis(), 2L)}
+        )
+    );
+  }
+
+  @Test
+  public void testProjectionSingleDimFilterWithPartialIntervalAligned()
+  {
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(new Interval(UTC_MIDNIGHT, UTC_MIDNIGHT.plusHours(1)))
+                    .addDimension("a")
+                    .setDimFilter(new EqualityFilter("a", ColumnType.STRING, "a", null))
+                    .addAggregator(new LongSumAggregatorFactory("c_sum", "c"))
+                    .addAggregator(new LongLastAggregatorFactory("c_last", "c", null))
+                    .build();
+    final ExpectedProjectionGroupBy queryMetrics =
+        new ExpectedProjectionGroupBy("a_hourly_c_sum_with_count_latest");
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, 1);
+
+    testGroupBy(
+        query,
+        queryMetrics,
+        Collections.singletonList(
+            new Object[]{"a", 4L, Pair.of(UTC_MIDNIGHT.plusMinutes(4).getMillis(), 2L)}
+        )
+    );
+  }
+
+  @Test
+  public void testProjectionSingleDimFilterWithPartialIntervalUnaligned()
+  {
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(new Interval(UTC_MIDNIGHT, UTC_MIDNIGHT.plusHours(1).minusMinutes(1)))
+                    .addDimension("a")
+                    .setDimFilter(new EqualityFilter("a", ColumnType.STRING, "a", null))
+                    .addAggregator(new LongSumAggregatorFactory("c_sum", "c"))
+                    .addAggregator(new LongLastAggregatorFactory("c_last", "c", null))
+                    .build();
+    final ExpectedProjectionGroupBy queryMetrics =
+        new ExpectedProjectionGroupBy(null);
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, 3);
+
+    testGroupBy(
+        query,
+        queryMetrics,
+        Collections.singletonList(
+            new Object[]{"a", 4L, Pair.of(UTC_MIDNIGHT.plusMinutes(4).getMillis(), 2L)}
         )
     );
   }
@@ -1340,6 +1423,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
   @Test
   public void testTimeseriesQueryGranularityFinerThanProjectionGranularity()
   {
+    // timeseries query only works on base table if base table is sorted by time
     Assume.assumeTrue(segmentSortedByTime);
     final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                         .dataSource("test")
@@ -1556,6 +1640,156 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testProjectionFilteredProjectionMatch()
+  {
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.ETERNITY)
+                    .setDimFilter(new EqualityFilter("a", ColumnType.STRING, "a", null))
+                    .addDimension("a")
+                    .build();
+
+    final boolean isRealtime = projectionsCursorFactory instanceof IncrementalIndexCursorFactory;
+    // realtime projections don't have row count, so abfoo is chosen because of how projection sorting happens
+    final ExpectedProjectionGroupBy queryMetrics = new ExpectedProjectionGroupBy(isRealtime ? "abfoo" : "a_hourly_c_sum_filter_a_to_a");
+
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, isRealtime ? 4 : 2);
+
+    testGroupBy(
+        query,
+        queryMetrics,
+        makeArrayResultSet(
+            new Object[]{"a"}
+        )
+    );
+  }
+
+  @Test
+  public void testProjectionFilteredNoFilteredProjectionMatch()
+  {
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.ETERNITY)
+                    .setDimFilter(new EqualityFilter("a", ColumnType.STRING, "b", null))
+                    .addDimension("a")
+                    .build();
+
+    final boolean isRealtime = projectionsCursorFactory instanceof IncrementalIndexCursorFactory;
+    final ExpectedProjectionGroupBy queryMetrics = new ExpectedProjectionGroupBy(isRealtime ? "abfoo" : "a_hourly_c_sum_with_count_latest");
+
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, isRealtime ? 2 : 1);
+
+    testGroupBy(
+        query,
+        queryMetrics,
+        makeArrayResultSet(
+            new Object[]{"b"}
+        )
+    );
+  }
+
+  @Test
+  public void testProjectionFilteredToEmpty()
+  {
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.ETERNITY)
+                    .setDimFilter(new EqualityFilter("a", ColumnType.STRING, "nomatch", null))
+                    .setContext(Map.of("useProjection", "a_hourly_c_sum_filter_a_to_empty"))
+                    .addDimension("a")
+                    .build();
+
+    final ExpectedProjectionGroupBy queryMetrics = new ExpectedProjectionGroupBy("a_hourly_c_sum_filter_a_to_empty");
+
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, 0);
+
+    testGroupBy(
+        query,
+        queryMetrics,
+        makeArrayResultSet()
+    );
+  }
+
+  @Test
+  public void testProjectionFilteredToEmptyTimeseries()
+  {
+    final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                        .dataSource("test")
+                                        .intervals(ImmutableList.of(Intervals.ETERNITY))
+                                        .granularity(Granularities.ALL)
+                                        .filters(new EqualityFilter("a", ColumnType.STRING, "nomatch", null))
+                                        .aggregators(new LongSumAggregatorFactory("c_sum", "c"))
+                                        .context(ImmutableMap.of(QueryContexts.USE_PROJECTION, "a_hourly_c_sum_filter_a_to_empty"))
+                                        .build();
+
+    final ExpectedProjectionTimeseries queryMetrics =
+        new ExpectedProjectionTimeseries("a_hourly_c_sum_filter_a_to_empty");
+
+    final CursorBuildSpec buildSpec = TimeseriesQueryEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, 0);
+
+    // realltime results are inconsistent between projection and base table since projection is totally empty, but base
+    // table is reduced with filter
+    final boolean isRealtime = projectionsCursorFactory instanceof IncrementalIndexCursorFactory;
+    final List<Object[]> expectedResults = Collections.singletonList(new Object[]{UTC_MIDNIGHT, null});
+    final List<Object[]> expectedRealtimeResults = List.of();
+
+    final Sequence<Result<TimeseriesResultValue>> resultRows = timeseriesEngine.process(
+        query,
+        projectionsCursorFactory,
+        projectionsTimeBoundaryInspector,
+        queryMetrics
+    );
+
+    queryMetrics.assertProjection();
+
+    final List<Result<TimeseriesResultValue>> results = resultRows.toList();
+    assertTimeseriesResults(
+        query.getResultRowSignature(RowSignature.Finalization.YES),
+        isRealtime ? expectedRealtimeResults : expectedResults,
+        results
+    );
+
+
+    Assertions.assertEquals(UTC_MIDNIGHT, projectionsTimeBoundaryInspector.getMinTime());
+    if (isRealtime || segmentSortedByTime) {
+      Assertions.assertEquals(UTC_01H31M, projectionsTimeBoundaryInspector.getMaxTime());
+    } else {
+      // min and max time are inexact for non time ordered segments
+      Assertions.assertEquals(UTC_01H31M.plusMillis(1), projectionsTimeBoundaryInspector.getMaxTime());
+    }
+
+    // timeseries query only works on base table if base table is sorted by time
+    Assume.assumeTrue(segmentSortedByTime);
+    final Sequence<Result<TimeseriesResultValue>> resultRowsNoProjection = timeseriesEngine.process(
+        query.withOverriddenContext(Map.of(QueryContexts.NO_PROJECTIONS, true)),
+        projectionsCursorFactory,
+        projectionsTimeBoundaryInspector,
+        queryMetrics
+    );
+
+    final List<Result<TimeseriesResultValue>> resultsNoProjection = resultRowsNoProjection.toList();
+    assertTimeseriesResults(
+        query.getResultRowSignature(RowSignature.Finalization.YES),
+        expectedResults,
+        resultsNoProjection
+    );
+  }
+
+  @Test
   public void testProjectionGroupOnTime()
   {
     final GroupByQuery query =
@@ -1710,6 +1944,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     final List<Result<TimeseriesResultValue>> results = resultRows.toList();
     assertTimeseriesResults(query.getResultRowSignature(RowSignature.Finalization.YES), expectedResults, results);
 
+    // timeseries query only works on base table if base table is sorted by time
     Assume.assumeTrue(segmentSortedByTime);
     final Sequence<Result<TimeseriesResultValue>> resultRowsNoProjection = timeseriesEngine.process(
         query.withOverriddenContext(Map.of(QueryContexts.NO_PROJECTIONS, true)),
@@ -1771,9 +2006,11 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       queryMetrics.assertProjection();
       final Cursor cursor = cursorHolder.asCursor();
       int rowCount = 0;
-      while (!cursor.isDone()) {
-        rowCount++;
-        cursor.advance();
+      if (cursor != null) {
+        while (!cursor.isDone()) {
+          rowCount++;
+          cursor.advance();
+        }
       }
       Assert.assertEquals(expectedRowCount, rowCount);
     }

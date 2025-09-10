@@ -42,8 +42,7 @@ public class HttpEmitterEventCollectorTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
-  private final EmbeddedBroker broker = new EmbeddedBroker()
-      .addProperty("druid.sql.planner.metadataRefreshPeriod", "PT0.1s");
+  private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedEventCollector eventCollector = new EmbeddedEventCollector()
       .addProperty("druid.emitter", "latching");
 
