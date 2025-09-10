@@ -59,18 +59,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
 
   public static RowSignature getAndValidateSignature(final ScanQuery scanQuery, final ObjectMapper jsonMapper)
   {
-    RowSignature scanSignature;
-    try {
-      final String s = scanQuery.context().getString(DruidQuery.CTX_SCAN_SIGNATURE);
-      if (s == null) {
-        scanSignature = scanQuery.getRowSignature();
-      } else {
-        scanSignature = jsonMapper.readValue(s, RowSignature.class);
-      }
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
+    RowSignature scanSignature  = scanQuery.getRowSignature();
     // Verify the signature prior to any actual processing.
     QueryKitUtils.verifyRowSignature(scanSignature);
     return scanSignature;

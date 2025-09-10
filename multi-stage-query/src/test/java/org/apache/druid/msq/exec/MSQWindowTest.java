@@ -578,12 +578,6 @@ public class MSQWindowTest extends MSQTestBase
     };
     WindowFramedAggregateProcessor proc = new WindowFramedAggregateProcessor(theFrame, theAggs);
 
-    final Map<String, Object> contextWithRowSignature =
-        ImmutableMap.<String, Object>builder()
-                    .putAll(DEFAULT_MSQ_CONTEXT)
-                    .put(DruidQuery.CTX_SCAN_SIGNATURE, "[{\"name\":\"m1\",\"type\":\"FLOAT\"}]")
-                    .build();
-
     final WindowOperatorQuery query = new WindowOperatorQuery(
         new QueryDataSource(
             newScanQueryBuilder()
@@ -592,7 +586,7 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("m1")
                 .columnTypes(ColumnType.FLOAT)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .context(contextWithRowSignature)
+                .context(DEFAULT_MSQ_CONTEXT)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         DEFAULT_MSQ_CONTEXT,
@@ -643,15 +637,6 @@ public class MSQWindowTest extends MSQTestBase
     };
     WindowFramedAggregateProcessor proc = new WindowFramedAggregateProcessor(theFrame, theAggs);
 
-    final Map<String, Object> contextWithRowSignature =
-        ImmutableMap.<String, Object>builder()
-                    .putAll(DEFAULT_MSQ_CONTEXT)
-                    .put(
-                        DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"m2\",\"type\":\"DOUBLE\"}]"
-                    )
-                    .build();
-
     final WindowOperatorQuery query = new WindowOperatorQuery(
         new QueryDataSource(
             newScanQueryBuilder()
@@ -660,7 +645,7 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("m1", "m2")
                 .columnTypes(ColumnType.FLOAT, ColumnType.DOUBLE)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .context(contextWithRowSignature)
+                .context(DEFAULT_MSQ_CONTEXT)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         DEFAULT_MSQ_CONTEXT,
@@ -714,15 +699,6 @@ public class MSQWindowTest extends MSQTestBase
     };
     WindowFramedAggregateProcessor proc = new WindowFramedAggregateProcessor(theFrame, theAggs);
 
-    final Map<String, Object> contextWithRowSignature =
-        ImmutableMap.<String, Object>builder()
-                    .putAll(DEFAULT_MSQ_CONTEXT)
-                    .put(
-                        DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"m2\",\"type\":\"DOUBLE\"}]"
-                    )
-                    .build();
-
     final WindowOperatorQuery query = new WindowOperatorQuery(
         new QueryDataSource(
             newScanQueryBuilder()
@@ -731,7 +707,7 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("m1", "m2")
                 .columnTypes(ColumnType.FLOAT, ColumnType.DOUBLE)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .context(contextWithRowSignature)
+                .context(DEFAULT_MSQ_CONTEXT)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         DEFAULT_MSQ_CONTEXT,
@@ -845,15 +821,6 @@ public class MSQWindowTest extends MSQTestBase
   @Test
   public void testWindowOnFooWithNoGroupByAndPartitionAndVirtualColumns()
   {
-    final Map<String, Object> contextWithRowSignature =
-        ImmutableMap.<String, Object>builder()
-                    .putAll(DEFAULT_MSQ_CONTEXT)
-                    .put(
-                        DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"v0\",\"type\":\"LONG\"}]"
-                    )
-                    .build();
-
     RowSignature rowSignature = RowSignature.builder()
                                             .add("ld", ColumnType.LONG)
                                             .add("m1", ColumnType.FLOAT)
@@ -875,7 +842,7 @@ public class MSQWindowTest extends MSQTestBase
                 .columnTypes(ColumnType.FLOAT, ColumnType.LONG)
                 .virtualColumns(expressionVirtualColumn("v0", "strlen(\"dim1\")", ColumnType.LONG))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .context(contextWithRowSignature)
+                .context(DEFAULT_MSQ_CONTEXT)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         DEFAULT_MSQ_CONTEXT,
@@ -921,13 +888,6 @@ public class MSQWindowTest extends MSQTestBase
   @Test
   public void testWindowOnFooWithNoGroupByAndEmptyOver()
   {
-
-    final Map<String, Object> contextWithRowSignature =
-        ImmutableMap.<String, Object>builder()
-                    .putAll(DEFAULT_MSQ_CONTEXT)
-                    .put(DruidQuery.CTX_SCAN_SIGNATURE, "[{\"name\":\"m1\",\"type\":\"FLOAT\"}]")
-                    .build();
-
     RowSignature rowSignature = RowSignature.builder()
                                             .add("m1", ColumnType.FLOAT)
                                             .add("cc", ColumnType.DOUBLE)
@@ -947,7 +907,7 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("m1")
                 .columnTypes(ColumnType.FLOAT)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .context(contextWithRowSignature)
+                .context(DEFAULT_MSQ_CONTEXT)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         DEFAULT_MSQ_CONTEXT,
@@ -986,24 +946,6 @@ public class MSQWindowTest extends MSQTestBase
   @Test
   public void testWindowOnFooWithPartitionByOrderBYWithJoin()
   {
-    final Map<String, Object> contextWithRowSignature =
-        ImmutableMap.<String, Object>builder()
-                    .putAll(DEFAULT_MSQ_CONTEXT)
-                    .put(
-                        DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"j0.m2\",\"type\":\"DOUBLE\"}]"
-                    )
-                    .build();
-
-    final Map<String, Object> contextWithRowSignature1 =
-        ImmutableMap.<String, Object>builder()
-                    .putAll(DEFAULT_MSQ_CONTEXT)
-                    .put(
-                        DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"m2\",\"type\":\"DOUBLE\"},{\"name\":\"v0\",\"type\":\"FLOAT\"}]"
-                    )
-                    .build();
-
     RowSignature rowSignature = RowSignature.builder()
                                             .add("m1", ColumnType.FLOAT)
                                             .add("cc", ColumnType.DOUBLE)
@@ -1030,7 +972,7 @@ public class MSQWindowTest extends MSQTestBase
                                 .columns("m2", "v0")
                                 .columnTypes(ColumnType.DOUBLE, ColumnType.FLOAT)
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                .context(contextWithRowSignature1)
+                                .context(DEFAULT_MSQ_CONTEXT)
                                 .build()
                         ),
                         "j0.",
@@ -1045,7 +987,7 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("m1", "j0.m2")
                 .columnTypes(ColumnType.FLOAT, ColumnType.DOUBLE)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .context(contextWithRowSignature)
+                .context(DEFAULT_MSQ_CONTEXT)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         DEFAULT_MSQ_CONTEXT,
@@ -1091,24 +1033,6 @@ public class MSQWindowTest extends MSQTestBase
   @Test
   public void testWindowOnFooWithEmptyOverWithJoin()
   {
-    final Map<String, Object> contextWithRowSignature =
-        ImmutableMap.<String, Object>builder()
-                    .putAll(DEFAULT_MSQ_CONTEXT)
-                    .put(
-                        DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"j0.m2\",\"type\":\"DOUBLE\"}]"
-                    )
-                    .build();
-
-    final Map<String, Object> contextWithRowSignature1 =
-        ImmutableMap.<String, Object>builder()
-                    .putAll(DEFAULT_MSQ_CONTEXT)
-                    .put(
-                        DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"m2\",\"type\":\"DOUBLE\"},{\"name\":\"v0\",\"type\":\"FLOAT\"}]"
-                    )
-                    .build();
-
     RowSignature rowSignature = RowSignature.builder()
                                             .add("m1", ColumnType.FLOAT)
                                             .add("cc", ColumnType.DOUBLE)
@@ -1135,7 +1059,7 @@ public class MSQWindowTest extends MSQTestBase
                                 .columns("m2", "v0")
                                 .columnTypes(ColumnType.DOUBLE, ColumnType.FLOAT)
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                .context(contextWithRowSignature1)
+                                .context(DEFAULT_MSQ_CONTEXT)
                                 .build()
                         ),
                         "j0.",
@@ -1150,7 +1074,7 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("m1", "j0.m2")
                 .columnTypes(ColumnType.FLOAT, ColumnType.DOUBLE)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .context(contextWithRowSignature)
+                .context(DEFAULT_MSQ_CONTEXT)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         DEFAULT_MSQ_CONTEXT,
@@ -1206,15 +1130,6 @@ public class MSQWindowTest extends MSQTestBase
     };
     WindowFramedAggregateProcessor proc = new WindowFramedAggregateProcessor(theFrame, theAggs);
 
-    final Map<String, Object> contextWithRowSignature =
-        ImmutableMap.<String, Object>builder()
-                    .putAll(DEFAULT_MSQ_CONTEXT)
-                    .put(
-                        DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"dim2\",\"type\":\"STRING\"},{\"name\":\"m1\",\"type\":\"FLOAT\"}]"
-                    )
-                    .build();
-
     final WindowOperatorQuery query = new WindowOperatorQuery(
         new QueryDataSource(
             newScanQueryBuilder()
@@ -1223,7 +1138,7 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("dim2", "m1")
                 .columnTypes(ColumnType.STRING, ColumnType.FLOAT)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .context(contextWithRowSignature)
+                .context(DEFAULT_MSQ_CONTEXT)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         DEFAULT_MSQ_CONTEXT,
@@ -1264,16 +1179,6 @@ public class MSQWindowTest extends MSQTestBase
   @Test
   public void testWindowOnFooWithEmptyOverWithUnnest()
   {
-    final Map<String, Object> contextWithRowSignature =
-        ImmutableMap.<String, Object>builder()
-                    .putAll(DEFAULT_MSQ_CONTEXT)
-                    .put(
-                        DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"j0.unnest\",\"type\":\"STRING\"}]"
-                    )
-                    .build();
-
-
     RowSignature rowSignature = RowSignature.builder()
                                             .add("m1", ColumnType.FLOAT)
                                             .add("cc", ColumnType.DOUBLE)
@@ -1300,7 +1205,7 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("m1", "j0.unnest")
                 .columnTypes(ColumnType.FLOAT, ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .context(contextWithRowSignature)
+                .context(DEFAULT_MSQ_CONTEXT)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         DEFAULT_MSQ_CONTEXT,
@@ -1347,16 +1252,6 @@ public class MSQWindowTest extends MSQTestBase
   @Test
   public void testWindowOnFooWithPartitionByAndWithUnnest()
   {
-    final Map<String, Object> contextWithRowSignature =
-        ImmutableMap.<String, Object>builder()
-                    .putAll(DEFAULT_MSQ_CONTEXT)
-                    .put(
-                        DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"j0.unnest\",\"type\":\"STRING\"}]"
-                    )
-                    .build();
-
-
     RowSignature rowSignature = RowSignature.builder()
                                             .add("m1", ColumnType.FLOAT)
                                             .add("cc", ColumnType.DOUBLE)
@@ -1383,7 +1278,7 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("m1", "j0.unnest")
                 .columnTypes(ColumnType.FLOAT, ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .context(contextWithRowSignature)
+                .context(DEFAULT_MSQ_CONTEXT)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         DEFAULT_MSQ_CONTEXT,
@@ -1737,15 +1632,6 @@ public class MSQWindowTest extends MSQTestBase
     };
     WindowFramedAggregateProcessor proc = new WindowFramedAggregateProcessor(theFrame, theAggs);
 
-    final Map<String, Object> contextWithRowSignature =
-        ImmutableMap.<String, Object>builder()
-                    .putAll(DEFAULT_MSQ_CONTEXT)
-                    .put(
-                        DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"added\",\"type\":\"LONG\"}]"
-                    )
-                    .build();
-
     final WindowOperatorQuery query = new WindowOperatorQuery(
         new QueryDataSource(
             newScanQueryBuilder()
@@ -1755,7 +1641,7 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("cityName", "added")
                 .columnTypes(ColumnType.STRING, ColumnType.LONG)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .context(contextWithRowSignature)
+                .context(DEFAULT_MSQ_CONTEXT)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         DEFAULT_MSQ_CONTEXT,
@@ -1827,15 +1713,6 @@ public class MSQWindowTest extends MSQTestBase
     };
     WindowFramedAggregateProcessor proc = new WindowFramedAggregateProcessor(theFrame, theAggs);
 
-    final Map<String, Object> innerContextWithRowSignature =
-        ImmutableMap.<String, Object>builder()
-                    .putAll(DEFAULT_MSQ_CONTEXT)
-                    .put(
-                        DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},{\"name\":\"added\",\"type\":\"LONG\"}]"
-                    )
-                    .build();
-
     final WindowOperatorQuery query = new WindowOperatorQuery(
         new QueryDataSource(
             newScanQueryBuilder()
@@ -1845,7 +1722,7 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("cityName", "countryIsoCode", "added")
                 .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.LONG)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .context(innerContextWithRowSignature)
+                .context(DEFAULT_MSQ_CONTEXT)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         DEFAULT_MSQ_CONTEXT,
@@ -1860,14 +1737,6 @@ public class MSQWindowTest extends MSQTestBase
         ImmutableList.of()
     );
 
-    final Map<String, Object> outerContextWithRowSignature =
-        ImmutableMap.<String, Object>builder()
-                    .putAll(DEFAULT_MSQ_CONTEXT)
-                    .put(
-                        DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"added\",\"type\":\"LONG\"},{\"name\":\"w0\",\"type\":\"LONG\"}]"
-                    )
-                    .build();
     final Query scanQuery = Druids.newScanQueryBuilder()
                                   .dataSource(new QueryDataSource(query))
                                   .intervals(querySegmentSpec(Filtration.eternity()))
@@ -1875,7 +1744,7 @@ public class MSQWindowTest extends MSQTestBase
                                   .columnTypes(ColumnType.STRING, ColumnType.LONG, ColumnType.LONG)
                                   .limit(5)
                                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                  .context(outerContextWithRowSignature)
+                                  .context(DEFAULT_MSQ_CONTEXT)
                                   .build();
 
     testSelectQuery()
@@ -2028,15 +1897,6 @@ public class MSQWindowTest extends MSQTestBase
                                             .add("c2", ColumnType.LONG)
                                             .build();
 
-    final Map<String, Object> contextWithRowSignature =
-        ImmutableMap.<String, Object>builder()
-                    .putAll(multipleWorkerContext)
-                    .put(
-                        DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"d0\",\"type\":\"STRING\"},{\"name\":\"d1\",\"type\":\"STRING\"},{\"name\":\"d2\",\"type\":\"STRING\"},{\"name\":\"w0\",\"type\":\"LONG\"},{\"name\":\"w1\",\"type\":\"LONG\"}]"
-                    )
-                    .build();
-
     final GroupByQuery groupByQuery = GroupByQuery.builder()
                                            .setDataSource(CalciteTests.WIKIPEDIA)
                                            .setInterval(querySegmentSpec(Filtration
@@ -2103,7 +1963,7 @@ public class MSQWindowTest extends MSQTestBase
                                   .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.LONG)
                                   .limit(Long.MAX_VALUE)
                                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                  .context(contextWithRowSignature)
+                                  .context(multipleWorkerContext)
                                   .build();
 
     final String sql = "select countryName, cityName, channel, \n"

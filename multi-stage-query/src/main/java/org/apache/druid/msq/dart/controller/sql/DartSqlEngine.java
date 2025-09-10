@@ -146,7 +146,6 @@ public class DartSqlEngine implements SqlEngine
     switch (feature) {
       case CAN_SELECT:
       case SCAN_ORDER_BY_NON_TIME:
-      case SCAN_NEEDS_SIGNATURE:
       case WINDOW_FUNCTIONS:
       case WINDOW_LEAF_OPERATOR:
       case UNNEST:
