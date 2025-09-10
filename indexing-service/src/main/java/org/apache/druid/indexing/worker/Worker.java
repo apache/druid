@@ -22,6 +22,8 @@ package org.apache.druid.indexing.worker;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.DruidNodeId;
 
 /**
  * A container for worker metadata.
@@ -29,15 +31,29 @@ import org.apache.druid.guice.annotations.PublicApi;
 @PublicApi
 public class Worker
 {
-  private final String scheme;
-  private final String host;
+  private final DruidNodeId node;
   private final String ip;
   private final int capacity;
   private final String version;
   private final String category;
 
-  @JsonCreator
   public Worker(
+      DruidNodeId node,
+      String ip,
+      int capacity,
+      String version,
+      String category
+  )
+  {
+    this.node = node;
+    this.ip = ip;
+    this.capacity = capacity;
+    this.version = version;
+    this.category = category;
+  }
+
+  @JsonCreator
+  Worker(
       @JsonProperty("scheme") String scheme,
       @JsonProperty("host") String host,
       @JsonProperty("ip") String ip,
@@ -46,24 +62,20 @@ public class Worker
       @JsonProperty("category") String category
   )
   {
-    this.scheme = scheme == null ? "http" : scheme; // needed for backwards compatibility with older workers (pre-#4270)
-    this.host = host;
-    this.ip = ip;
-    this.capacity = capacity;
-    this.version = version;
-    this.category = category;
+    this(new DruidNodeId(scheme, host), ip, capacity, version,category);
+
   }
 
   @JsonProperty
   public String getScheme()
   {
-    return scheme;
+    return node.getScheme();
   }
 
   @JsonProperty
   public String getHost()
   {
-    return host;
+    return node.getHost();
   }
 
   @JsonProperty

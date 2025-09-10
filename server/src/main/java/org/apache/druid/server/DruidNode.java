@@ -40,7 +40,7 @@ import java.util.Objects;
 /**
  *
  */
-public class DruidNode
+public class DruidNode extends DruidNodeId
 {
   @JsonProperty("service")
   @NotNull
