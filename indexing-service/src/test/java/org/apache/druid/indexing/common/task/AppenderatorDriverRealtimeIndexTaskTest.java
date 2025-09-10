@@ -797,7 +797,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
             RowIngestionMeters.PROCESSED_BYTES, 0,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 1,
             RowIngestionMeters.UNPARSEABLE, 2,
-            RowIngestionMeters.THROWN_AWAY, 0
+            RowIngestionMeters.THROWN_AWAY, 0,
+            RowIngestionMeters.FILTERED, 0
         )
     );
 
@@ -901,7 +902,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
             RowIngestionMeters.PROCESSED_BYTES, 0,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 2,
             RowIngestionMeters.UNPARSEABLE, 2,
-            RowIngestionMeters.THROWN_AWAY, 0
+            RowIngestionMeters.THROWN_AWAY, 0,
+            RowIngestionMeters.FILTERED, 0
         )
     );
 
@@ -998,7 +1000,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
             RowIngestionMeters.PROCESSED_BYTES, 0,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 2,
             RowIngestionMeters.UNPARSEABLE, 2,
-            RowIngestionMeters.THROWN_AWAY, 0
+            RowIngestionMeters.THROWN_AWAY, 0,
+            RowIngestionMeters.FILTERED, 0
         )
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
@@ -1261,7 +1264,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
               RowIngestionMeters.PROCESSED, 0,
               RowIngestionMeters.PROCESSED_BYTES, 0,
               RowIngestionMeters.UNPARSEABLE, 0,
-              RowIngestionMeters.THROWN_AWAY, 0
+              RowIngestionMeters.THROWN_AWAY, 0,
+              RowIngestionMeters.FILTERED, 0
           )
       );
 

@@ -39,6 +39,7 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
 import javax.annotation.Nonnull;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -110,8 +111,13 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
       props.put("auto.offset.reset", "none");
 
       final KafkaRecordSupplier recordSupplier =
-          new KafkaRecordSupplier(props, configMapper, kafkaIndexTaskIOConfig.getConfigOverrides(),
-                                  kafkaIndexTaskIOConfig.isMultiTopic());
+          new KafkaRecordSupplier(
+              props,
+              configMapper,
+              kafkaIndexTaskIOConfig.getConfigOverrides(),
+              kafkaIndexTaskIOConfig.isMultiTopic(),
+              kafkaIndexTaskIOConfig.getHeaderBasedFilteringConfig()
+          );
 
       if (toolbox.getMonitorScheduler() != null) {
         toolbox.getMonitorScheduler().addMonitor(recordSupplier.monitor());

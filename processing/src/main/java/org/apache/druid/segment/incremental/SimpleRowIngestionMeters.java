@@ -27,6 +27,7 @@ public class SimpleRowIngestionMeters implements RowIngestionMeters
   private long processedWithError;
   private long unparseable;
   private long thrownAway;
+  private long filtered;
   private long processedBytes;
 
   @Override
@@ -90,6 +91,18 @@ public class SimpleRowIngestionMeters implements RowIngestionMeters
   }
 
   @Override
+  public long getFiltered()
+  {
+    return filtered;
+  }
+
+  @Override
+  public void incrementFiltered()
+  {
+    filtered++;
+  }
+
+  @Override
   public RowIngestionMetersTotals getTotals()
   {
     return new RowIngestionMetersTotals(
@@ -97,7 +110,8 @@ public class SimpleRowIngestionMeters implements RowIngestionMeters
         processedBytes,
         processedWithError,
         thrownAway,
-        unparseable
+        unparseable,
+        filtered
     );
   }
 
@@ -113,6 +127,7 @@ public class SimpleRowIngestionMeters implements RowIngestionMeters
     this.processedWithError += rowIngestionMetersTotals.getProcessedWithError();
     this.unparseable += rowIngestionMetersTotals.getUnparseable();
     this.thrownAway += rowIngestionMetersTotals.getThrownAway();
+    this.filtered += rowIngestionMetersTotals.getFiltered();
     this.processedBytes += rowIngestionMetersTotals.getProcessedBytes();
   }
 }

@@ -320,6 +320,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
+            null,
             new IdleConfig(true, 1000L),
             1
     );
@@ -480,6 +481,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         ),
         new KafkaIndexTaskTuningConfig(
@@ -4847,6 +4849,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         earlyMessageRejectionPeriod,
         null,
         null,
+        null,
         idleConfig,
         null
     );
@@ -4959,6 +4962,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new Period("PT30M"),
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
+        null,
         null,
         null,
         null,
@@ -5076,6 +5080,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new Period("PT30M"),
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
+        null,
         null,
         null,
         null,
@@ -5222,13 +5227,14 @@ public class KafkaSupervisorTest extends EasyMockSupport
             minimumMessageTime,
             maximumMessageTime,
             INPUT_FORMAT,
+            null,
             null
         ),
         Collections.emptyMap(),
         OBJECT_MAPPER
     );
   }
-  
+
   private static ImmutableMap<KafkaTopicPartition, Long> singlePartitionMap(String topic, int partition, long offset)
   {
     return ImmutableMap.of(new KafkaTopicPartition(false, topic, partition), offset);

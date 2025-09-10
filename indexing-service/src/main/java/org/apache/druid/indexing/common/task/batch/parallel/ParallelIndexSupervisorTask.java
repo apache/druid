@@ -1596,7 +1596,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
           ((Number) buildSegmentsRowStatsMap.get("processedBytes")).longValue(),
           ((Number) buildSegmentsRowStatsMap.get("processedWithError")).longValue(),
           ((Number) buildSegmentsRowStatsMap.get("thrownAway")).longValue(),
-          ((Number) buildSegmentsRowStatsMap.get("unparseable")).longValue()
+          ((Number) buildSegmentsRowStatsMap.get("unparseable")).longValue(),
+          buildSegmentsRowStatsMap.containsKey("filtered") ?
+              ((Number) buildSegmentsRowStatsMap.get("filtered")).longValue() : 0
       );
     } else {
       // should never happen

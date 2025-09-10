@@ -357,6 +357,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -413,6 +414,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -461,6 +463,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -493,6 +496,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             kafkaServer.consumerProperties(),
             KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
+            null,
             null,
             null,
             null,
@@ -537,6 +541,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -588,6 +593,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -665,6 +671,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -768,6 +775,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -894,6 +902,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -972,6 +981,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -1035,6 +1045,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -1051,6 +1062,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -1117,6 +1129,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             DateTimes.of("2010"),
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -1165,6 +1178,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             DateTimes.of("2010"),
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -1222,6 +1236,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -1294,6 +1309,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             new TestKafkaInputFormat(INPUT_FORMAT),
+             null,
             null
         )
     );
@@ -1367,6 +1383,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             KAFKA_INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -1418,6 +1435,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -1453,6 +1471,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -1499,6 +1518,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -1550,6 +1570,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -1588,6 +1609,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -1624,7 +1646,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             RowIngestionMeters.PROCESSED_BYTES, (int) totalRecordBytes,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 3,
             RowIngestionMeters.UNPARSEABLE, 3,
-            RowIngestionMeters.THROWN_AWAY, 1
+            RowIngestionMeters.THROWN_AWAY, 1,
+            RowIngestionMeters.FILTERED, 0
         )
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
@@ -1676,6 +1699,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -1704,7 +1728,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             RowIngestionMeters.PROCESSED_BYTES, (int) totalBytes,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
             RowIngestionMeters.UNPARSEABLE, 3,
-            RowIngestionMeters.THROWN_AWAY, 0
+            RowIngestionMeters.THROWN_AWAY, 0,
+            RowIngestionMeters.FILTERED, 0
         )
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
@@ -1738,6 +1763,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -1754,6 +1780,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -1802,6 +1829,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -1818,6 +1846,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -1868,6 +1897,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -1884,6 +1914,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -1932,6 +1963,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -1978,6 +2010,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -1994,6 +2027,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -2044,6 +2078,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -2078,6 +2113,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -2128,6 +2164,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -2171,6 +2208,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -2222,6 +2260,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -2293,6 +2332,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -2330,6 +2370,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -2377,6 +2418,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         ),
         context
@@ -2421,6 +2463,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -2460,6 +2503,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -2541,6 +2585,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
                     null,
                     null,
                     INPUT_FORMAT,
+                    null,
                     null
             )
     );
@@ -2601,6 +2646,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -2624,6 +2670,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -2670,6 +2717,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -2702,6 +2750,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -2975,6 +3024,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -3036,6 +3086,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             new TestKafkaFormatWithMalformedDataDetection(INPUT_FORMAT),
+            null,
             null
         )
     );
@@ -3104,6 +3155,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             new TestKafkaFormatWithMalformedDataDetection(INPUT_FORMAT),
+            null,
             null
         )
     );
@@ -3178,6 +3230,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             new TestKafkaFormatWithMalformedDataDetection(INPUT_FORMAT),
+            null,
             null
         )
     );
@@ -3225,6 +3278,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );
@@ -3273,6 +3327,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
+            null,
             null
         )
     );

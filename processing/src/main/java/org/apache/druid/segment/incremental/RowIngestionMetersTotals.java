@@ -31,6 +31,7 @@ public class RowIngestionMetersTotals
   private final long processedWithError;
   private final long thrownAway;
   private final long unparseable;
+  private final long filtered;
 
   @JsonCreator
   public RowIngestionMetersTotals(
@@ -38,7 +39,8 @@ public class RowIngestionMetersTotals
       @JsonProperty("processedBytes") long processedBytes,
       @JsonProperty("processedWithError") long processedWithError,
       @JsonProperty("thrownAway") long thrownAway,
-      @JsonProperty("unparseable") long unparseable
+      @JsonProperty("unparseable") long unparseable,
+      @JsonProperty("filtered") long filtered
   )
   {
     this.processed = processed;
@@ -46,6 +48,7 @@ public class RowIngestionMetersTotals
     this.processedWithError = processedWithError;
     this.thrownAway = thrownAway;
     this.unparseable = unparseable;
+    this.filtered = filtered;
   }
 
   @JsonProperty
@@ -78,6 +81,12 @@ public class RowIngestionMetersTotals
     return unparseable;
   }
 
+  @JsonProperty
+  public long getFiltered()
+  {
+    return filtered;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -92,13 +101,14 @@ public class RowIngestionMetersTotals
            && processedBytes == that.processedBytes
            && processedWithError == that.processedWithError
            && thrownAway == that.thrownAway
-           && unparseable == that.unparseable;
+           && unparseable == that.unparseable
+           && filtered == that.filtered;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(processed, processedBytes, processedWithError, thrownAway, unparseable);
+    return Objects.hash(processed, processedBytes, processedWithError, thrownAway, unparseable, filtered);
   }
 
   @Override
@@ -110,6 +120,7 @@ public class RowIngestionMetersTotals
            ", processedWithError=" + processedWithError +
            ", thrownAway=" + thrownAway +
            ", unparseable=" + unparseable +
+           ", filtered=" + filtered +
            '}';
   }
 }

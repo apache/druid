@@ -47,6 +47,7 @@
   "ingest/events/duplicate" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of events rejected because the events are duplicated."},
   "ingest/events/processed" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of events successfully processed per emission period." },
   "ingest/events/processedWithError" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of events processed with some partial errors per emission period" },
+  "ingest/events/filtered" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of events rejected by header-based filtering before parsing." },
   "ingest/events/messageGap" : { "dimensions" : ["dataSource"], "type" : "gauge", "help": "Time gap in milliseconds between the latest ingested event timestamp and the current system timestamp of metrics emission."},
   "ingest/notices/queueSize" : { "dimensions" : ["dataSource"], "type" : "gauge", "help": "Number of pending notices to be processed by the coordinator."},
   "ingest/rows/output" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of Druid rows persisted."},

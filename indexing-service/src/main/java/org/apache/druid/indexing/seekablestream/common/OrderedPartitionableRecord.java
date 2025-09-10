@@ -41,12 +41,24 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
   private final PartitionIdType partitionId;
   private final SequenceOffsetType sequenceNumber;
   private final List<RecordType> data;
+  private final boolean filtered;
 
   public OrderedPartitionableRecord(
       String stream,
       PartitionIdType partitionId,
       SequenceOffsetType sequenceNumber,
       List<RecordType> data
+  )
+  {
+    this(stream, partitionId, sequenceNumber, data, false);
+  }
+
+  public OrderedPartitionableRecord(
+      String stream,
+      PartitionIdType partitionId,
+      SequenceOffsetType sequenceNumber,
+      List<RecordType> data,
+      boolean filtered
   )
   {
     Preconditions.checkNotNull(stream, "stream");
@@ -56,6 +68,7 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
     this.partitionId = partitionId;
     this.sequenceNumber = sequenceNumber;
     this.data = data == null ? ImmutableList.of() : data;
+    this.filtered = filtered;
   }
 
   public String getStream()
@@ -86,6 +99,18 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
   public List<? extends ByteEntity> getData()
   {
     return data;
+  }
+
+  /**
+   * Returns whether this record was filtered by pre-ingestion filtering (e.g., header-based filtering).
+   * Filtered records are used for offset advancement but should be excluded from ingestion metrics
+   * like "thrownAway" and instead tracked separately as "filtered".
+   *
+   * @return true if this record was filtered, false otherwise
+   */
+  public boolean isFiltered()
+  {
+    return filtered;
   }
 
   public StreamPartition<PartitionIdType> getStreamPartition()
