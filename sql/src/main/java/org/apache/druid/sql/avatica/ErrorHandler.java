@@ -23,6 +23,7 @@ import com.google.inject.Inject;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.SanitizableException;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.QueryException;
@@ -72,6 +73,9 @@ class ErrorHandler
     // catch any non explicit sanitizable exceptions
     if (error instanceof SanitizableException) {
       return new RuntimeException(errorResponseTransformStrategy.transformIfNeeded((SanitizableException) error));
+    }
+    if (error instanceof DruidException) {
+      return new RuntimeException(errorResponseTransformStrategy.transformIfNeeded((DruidException) error));
     }
     // cannot check cause of the throwable because it cannot be cast back to the original's type
     // so this only checks runtime exceptions for causes

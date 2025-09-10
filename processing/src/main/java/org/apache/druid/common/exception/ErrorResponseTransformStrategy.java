@@ -21,6 +21,7 @@ package org.apache.druid.common.exception;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.error.DruidException;
 
 import javax.validation.constraints.NotNull;
 import java.util.function.Function;
@@ -29,7 +30,7 @@ import java.util.function.Function;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "none", value = NoErrorResponseTransformStrategy.class),
     @JsonSubTypes.Type(name = "allowedRegex", value = AllowedRegexErrorResponseTransformStrategy.class),
-    @JsonSubTypes.Type(name = "roleBased", value = PersonaBasedErrorTransformStrategy.class),
+    @JsonSubTypes.Type(name = "persona", value = PersonaBasedErrorTransformStrategy.class),
 })
 public interface ErrorResponseTransformStrategy
 {
@@ -40,6 +41,15 @@ public interface ErrorResponseTransformStrategy
   default Exception transformIfNeeded(SanitizableException exception)
   {
     return exception.sanitize(getErrorMessageTransformFunction());
+  }
+
+  /**
+   * For a given {@link DruidException} apply the transformation strategy and return a sanitized Exception
+   * if the transformation stategy was applied.
+   */
+  default Exception transformIfNeeded(DruidException exception)
+  {
+    throw new UnsupportedOperationException();
   }
 
   /**

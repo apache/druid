@@ -24,9 +24,15 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 
+/**
+ * {@link ErrorResponseTransformStrategy} that modifies the error message of a {@link DruidException} based on the
+ * persona. For non-user error messages, this logs the exception with a randomly generated id and returns a new exception
+ * containing the id instead.
+ */
 public class PersonaBasedErrorTransformStrategy implements ErrorResponseTransformStrategy
 {
   private static final String ERROR_WITH_ID_TEMPLATE = "Could not process the query, please contact your administrator "
@@ -36,24 +42,35 @@ public class PersonaBasedErrorTransformStrategy implements ErrorResponseTransfor
   public static final PersonaBasedErrorTransformStrategy INSTANCE = new PersonaBasedErrorTransformStrategy();
 
   @Override
-  public Exception transformIfNeeded(SanitizableException exception)
+  public Exception transformIfNeeded(DruidException druidException)
   {
-    if (exception instanceof DruidException) {
-      final DruidException druidException = (DruidException) exception;
-      if (druidException.getTargetPersona() == DruidException.Persona.USER) {
-        return druidException;
-      } else {
-        return exception.sanitize(s -> {
-          final String errorId = UUID.randomUUID().toString();
-          LOG.makeAlert(druidException, StringUtils.format("Error ID: [%s]", errorId))
-             .addData(druidException.getContext())
-             .severity(AlertEvent.Severity.ANOMALY)
-             .emit();
-          return StringUtils.format(ERROR_WITH_ID_TEMPLATE, errorId);
-        });
-      }
+    String errorId = UUID.randomUUID().toString();
+    Optional<Exception> maybeMaskedException = maybeTransform(druidException, errorId);
+
+    if (maybeMaskedException.isEmpty()) {
+      return druidException;
     } else {
-      return (Exception) exception;
+      LOG.makeAlert(druidException, StringUtils.format("Error ID: [%s]", errorId))
+         .addData(druidException.getContext())
+         .severity(AlertEvent.Severity.ANOMALY)
+         .emit();
+      return maybeMaskedException.get();
+    }
+  }
+
+  /**
+   * Transforms the {@link DruidException} if required. Returns an optional with a new Druid exception if the
+   * exception was modified. Returns an empty optional if no transformation was performed.
+   */
+  private Optional<Exception> maybeTransform(DruidException druidException, String errorId)
+  {
+    if (druidException.getTargetPersona() == DruidException.Persona.USER) {
+      return Optional.of(druidException);
+    } else {
+      return Optional.of(DruidException.forPersona(DruidException.Persona.USER)
+                                       .ofCategory(druidException.getCategory())
+                                       .withErrorCode(druidException.getErrorCode())
+                                       .build(StringUtils.format(ERROR_WITH_ID_TEMPLATE, errorId)));
     }
   }
 
