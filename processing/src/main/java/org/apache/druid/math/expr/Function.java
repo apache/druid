@@ -2144,6 +2144,8 @@ public interface Function extends NamedFunction
     @Override
     public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
     {
+      // vector engine requires consistent typing, but native if function does not coerce then and else expressions,
+      // so for now we can only vectorize if both args have the same output type to not have a behavior change
       final ExpressionType thenType = args.get(1).getOutputType(inspector);
       return Objects.equals(thenType, args.get(2).getOutputType(inspector));
     }

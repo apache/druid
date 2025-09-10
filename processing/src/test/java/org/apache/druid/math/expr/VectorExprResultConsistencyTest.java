@@ -361,6 +361,8 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     testExpression("if(boolString1, s1, s2)", types);
     testExpression("if(boolString1, l1, l2)", types);
     testExpression("if(boolString1, d1, d2)", types);
+    // make sure eval of else is lazy, else this would be divide by zero error
+    testExpression("if(l1 % 2 == 0, -1, l2 / (l1 % 2))", types);
     // cannot vectorize mixed types
     Assertions.assertFalse(
         Parser.parse("if(s1, l1, d2)", MACRO_TABLE).canVectorize(InputBindings.inspectorFromTypeMap(types))

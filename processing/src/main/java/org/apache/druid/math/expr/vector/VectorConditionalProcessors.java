@@ -66,6 +66,7 @@ public class VectorConditionalProcessors
   )
   {
     // right now this function can only vectorize if then and else clause have same output type, if this changes then
+    // we'll need to switch this to use whatever output type logic that is using
     final ExpressionType outputType = thenExpr.getOutputType(inspector);
 
     final ExprVectorProcessor<?> processor;
