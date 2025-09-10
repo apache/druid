@@ -244,8 +244,7 @@ public class AggregateProjectionSpec
         } else if (maybeGranularity.getClass().equals(PeriodGranularity.class)
             && maybeGranularity.getTimeZone().equals(DateTimeZone.UTC)
             && ((PeriodGranularity) maybeGranularity).getOrigin() == null
-            && (granularity == null
-                || maybeGranularity.isFinerThan (granularity))) {
+            && (granularity == null || maybeGranularity.isFinerThan(granularity))) {
           // found a finer period granularity than the existing granularity, or it's the first one
           timeColumnName = dimension.getName();
           granularity = maybeGranularity;
