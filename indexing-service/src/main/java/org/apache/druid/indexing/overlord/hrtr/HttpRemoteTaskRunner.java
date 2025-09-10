@@ -655,16 +655,11 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                     TaskAnnouncement.create(
                         workItem.getTaskId(),
                         announcement.getTaskType(),
-                        null,//announcement.getTaskResource(),
+                        null,
                         TaskStatus.running(workItem.getTaskId()),
-                        announcement.getLocation(),//announcement.getTaskLocation(),
-                        null//announcement.getTaskDataSource()
+                        announcement.getLocation(),
+                        null
                     )
-//                    TaskAnnouncement.create(
-//                        workItem.getTask(),
-//                        TaskStatus.running(e.getKey()),
-//                        workItem.getLocation()
-//                    )
                 );
               }
             }
