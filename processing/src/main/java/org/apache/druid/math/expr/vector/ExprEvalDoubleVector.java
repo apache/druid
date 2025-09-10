@@ -75,7 +75,7 @@ public final class ExprEvalDoubleVector extends BaseExprEvalVector<double[]>
   public boolean elementAsBoolean(int index)
   {
     if (nulls != null && nulls[index]) {
-      return Evals.asBoolean(0.0);
+      return false;
     }
     return Evals.asBoolean(values[index]);
   }
