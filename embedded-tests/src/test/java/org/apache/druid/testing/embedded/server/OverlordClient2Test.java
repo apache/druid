@@ -19,7 +19,9 @@
 
 package org.apache.druid.testing.embedded.server;
 
+import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -31,6 +33,8 @@ import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests all the REST APIs exposed by the Overlord using the
@@ -65,22 +69,31 @@ public class OverlordClient2Test extends EmbeddedClusterTestBase
   public void test_runTask_ofTypeNoop() throws Exception
   {
     final String taskId = IdUtils.newTaskId("sim_test_noop", TestDataSource.WIKI, null);
-    Thread.sleep(500);
     cluster.callApi().onLeaderOverlord(
         o -> o.runTask(taskId, new NoopTask(taskId, null, null, 4000L, 0L, null))
     );
-    Thread.sleep(500);
-
-    System.out.println("----stop:overlord---");
+    // give some time for the overlord to dispatch the task to the worker
+    Thread.sleep(100);
     overlord.stop();
-    Thread.sleep(400);
     overlord.start();
-    Thread.sleep(400);
-    System.out.println("----stop2---");
+    // give some time for the overlord to load the task from the worker
+    Thread.sleep(100);
     indexer1.stop();
-    Thread.sleep(400);
     indexer1.start();
-//    EmbeddedIndexer indexer2 = new EmbeddedIndexer().addProperty("druid.worker.capacity", "3");
+    // give time for the overlord to realize that the task is not there anymore
+    Thread.sleep(100);
+
+    TaskStatusResponse jobStatus = cluster.callApi().onLeaderOverlord(oc -> oc.taskStatus(taskId));
+    // the task should have failed
+    assertEquals(TaskState.FAILED, jobStatus.getStatus().getStatusCode());
+    assertEquals(
+        "This task disappeared on the worker where it was assigned. See overlord logs for more details.",
+        jobStatus.getStatus().getErrorMsg()
+    );
+
+    // give some time for the overlord to load the task from the worker
+
+    //    EmbeddedIndexer indexer2 = new EmbeddedIndexer().addProperty("druid.worker.capacity", "3");
     // cluster.revoidServer(indexer1);
 //    cluster.addServer(indexer2);
 //    indexer2.start();
@@ -90,17 +103,17 @@ public class OverlordClient2Test extends EmbeddedClusterTestBase
 //    System.out.println("----stop4---");
 //    Thread.sleep(500);
 
-  int cnt = 0;
-  while (cnt < 100) {
-    cnt++;
-    Thread.sleep(1000);
-    if (cnt == 4) {
-      System.out.println("@@@cancel task");
-      cluster.callApi().onLeaderOverlord(oc -> oc.cancelTask(taskId));
-    }
-    Object r = cluster.callApi().onLeaderOverlord(oc -> oc.taskStatus(taskId));
-    System.out.println(r);
-  }
+//  int cnt = 0;
+//  while (cnt < 100) {
+//    cnt++;
+//    Thread.sleep(1000);
+//    if (cnt == 4) {
+//      System.out.println("@@@cancel task");
+//      cluster.callApi().onLeaderOverlord(oc -> oc.cancelTask(taskId));
+//    }
+//    Object r = cluster.callApi().onLeaderOverlord(oc -> oc.taskStatus(taskId));
+//    System.out.println(r);
+//  }
 
 //    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
   }
