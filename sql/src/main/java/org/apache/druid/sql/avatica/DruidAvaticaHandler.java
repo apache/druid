@@ -50,7 +50,6 @@ public abstract class DruidAvaticaHandler extends Handler.Abstract implements Me
     this.requestTimer = this.metrics.getTimer(
         MetricsHelper.concat(timerClass, MetricsAwareAvaticaHandler.REQUEST_TIMER_NAME)
     );
-    setServerRpcMetadata(new Service.RpcMetadataResponse(druidNode.getHostAndPortToUse()));
   }
 
   @Override

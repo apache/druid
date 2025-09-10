@@ -61,6 +61,7 @@ public class DruidAvaticaProtobufHandler extends DruidAvaticaHandler
     super(druidMeta, druidNode, metrics, AvaticaProtobufHandler.class);
     ProtobufTranslation protobufTranslation = new ProtobufTranslationImpl();
     this.pbHandler = new ProtobufHandler(service, protobufTranslation, this.metrics);
+    setServerRpcMetadata(new Service.RpcMetadataResponse(druidNode.getHostAndPortToUse()));
   }
 
   @Override
@@ -110,6 +111,8 @@ public class DruidAvaticaProtobufHandler extends DruidAvaticaHandler
   public void setServerRpcMetadata(Service.RpcMetadataResponse metadata)
   {
     super.setServerRpcMetadata(metadata);
-    pbHandler.setRpcMetadata(metadata);
+    if (pbHandler != null) {
+      pbHandler.setRpcMetadata(metadata);
+    }
   }
 }

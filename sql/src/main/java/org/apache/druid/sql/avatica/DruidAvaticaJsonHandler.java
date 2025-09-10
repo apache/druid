@@ -59,6 +59,7 @@ public class DruidAvaticaJsonHandler extends DruidAvaticaHandler
   {
     super(druidMeta, druidNode, Objects.requireNonNull(avaticaMonitor), AvaticaJsonHandler.class);
     this.jsonHandler = new JsonHandler(service, this.metrics);
+    setServerRpcMetadata(new Service.RpcMetadataResponse(druidNode.getHostAndPortToUse()));
   }
 
   @Override
@@ -120,6 +121,8 @@ public class DruidAvaticaJsonHandler extends DruidAvaticaHandler
   public void setServerRpcMetadata(Service.RpcMetadataResponse metadata)
   {
     super.setServerRpcMetadata(metadata);
-    jsonHandler.setRpcMetadata(metadata);
+    if (jsonHandler != null) {
+      jsonHandler.setRpcMetadata(metadata);
+    }
   }
 }
