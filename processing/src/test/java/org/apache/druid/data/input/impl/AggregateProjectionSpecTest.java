@@ -112,51 +112,44 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
         ColumnType.LONG,
         TestExprMacroTable.INSTANCE
     );
-    Assertions.assertEquals("hourly", new AggregateProjectionSpec(
-        "some_projection",
-        null,
-        VirtualColumns.create(hourly, daily),
-        List.of(new LongDimensionSchema("hourly"), new LongDimensionSchema("daily")),
-        new AggregatorFactory[]{}
-    ).toMetadataSchema().getTimeColumnName());
-    // the first time-like column is daily, which is coarser than hourly, not allowed.
-    DruidException e = Assertions.assertThrows(DruidException.class, () -> new AggregateProjectionSpec(
-        "some_projection",
-        null,
-        VirtualColumns.create(hourly, daily),
-        List.of(new LongDimensionSchema("daily"), new LongDimensionSchema("hourly")),
-        new AggregatorFactory[]{}
-    ));
-    Assertions.assertEquals(
-        "cannot map time granularity[{type=period, period=P1D, timeZone=UTC, origin=null}] on column[daily] to"
-        + " time granularity[{type=period, period=PT1H, timeZone=UTC, origin=null}] on column[hourly], failed to determine projection time column",
-        e.getMessage()
-    );
-
-    ExpressionVirtualColumn ptHourly = new ExpressionVirtualColumn(
-        "ptHourly",
-        "timestamp_floor(__time, 'PT1H', null, 'America/Los_Angeles')",
+    ExpressionVirtualColumn ptEvery10Min = new ExpressionVirtualColumn(
+        "ptEvery10Min",
+        "timestamp_floor(__time, 'PT10M', null, 'America/Los_Angeles')",
         ColumnType.LONG,
         TestExprMacroTable.INSTANCE
     );
-    // the first time-like column is non-UTC, not allowed.
-    DruidException e2 = Assertions.assertThrows(DruidException.class, () -> new AggregateProjectionSpec(
-        "some_projection",
-        null,
-        VirtualColumns.create(ptHourly),
-        List.of(new LongDimensionSchema("ptHourly")),
-        new AggregatorFactory[]{}
-    ));
-    Assertions.assertEquals(
-        "cannot use granularity[{type=period, period=PT1H, timeZone=America/Los_Angeles, origin=null}] on column[ptHourly] as projection time column",
-        e2.getMessage()
+    ExpressionVirtualColumn every90Min = new ExpressionVirtualColumn(
+        "every90Min",
+        "timestamp_floor(__time, 'PT1H30M', null, null)",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
     );
-    // happy path, the first time-like column is hourly, which is UTC and can be mapped to ptHourly.
+
     Assertions.assertEquals("hourly", new AggregateProjectionSpec(
         "some_projection",
         null,
-        VirtualColumns.create(hourly, ptHourly),
-        List.of(new LongDimensionSchema("hourly"), new LongDimensionSchema("ptHourly")),
+        VirtualColumns.create(daily, hourly, ptEvery10Min),
+        List.of(
+            new LongDimensionSchema("daily"),
+            new LongDimensionSchema("hourly"),
+            new LongDimensionSchema("ptEvery10Min")
+        ),
+        new AggregatorFactory[]{}
+    ).toMetadataSchema().getTimeColumnName());
+
+    Assertions.assertNull(new AggregateProjectionSpec(
+        "some_projection",
+        null,
+        VirtualColumns.create(ptEvery10Min),
+        List.of(new LongDimensionSchema("ptEvery10Min")),
+        new AggregatorFactory[]{}
+    ).toMetadataSchema().getTimeColumnName());
+
+    Assertions.assertEquals("every90Min", new AggregateProjectionSpec(
+        "some_projection",
+        null,
+        VirtualColumns.create(every90Min, ptEvery10Min),
+        List.of(new LongDimensionSchema("every90Min"), new LongDimensionSchema("ptEvery10Min")),
         new AggregatorFactory[]{}
     ).toMetadataSchema().getTimeColumnName());
   }

@@ -230,44 +230,25 @@ public class AggregateProjectionSpec
       ordering.add(OrderBy.ascending(dimension.getName()));
       if (ColumnHolder.TIME_COLUMN_NAME.equals(dimension.getName())) {
         timeColumnName = dimension.getName();
-        granularity = Granularities.NONE;
+        // already found exact __time grouping, skip assigning, granularity = Granularities.NONE;
+        break;
       } else {
         final VirtualColumn vc = virtualColumns.getVirtualColumn(dimension.getName());
         final Granularity maybeGranularity = Granularities.fromVirtualColumn(vc);
         if (maybeGranularity == null || maybeGranularity.equals(Granularities.ALL)) {
           // no __time in inputs or not supported, skip
-          continue;
-        }
-        if (granularity == null) {
-          if (maybeGranularity.getClass().equals(PeriodGranularity.class)
-              && maybeGranularity.getTimeZone().equals(DateTimeZone.UTC)
-              && ((PeriodGranularity) maybeGranularity).getOrigin() == null) {
-            granularity = maybeGranularity;
-            timeColumnName = dimension.getName();
-            continue;
-          } else {
-            // we don't allow:
-            // 1. virtual column on __time if there's no grouping on __time
-            // 2. non-UTC or non-epoch origin period granularity
-            throw InvalidInput.exception(
-                "cannot use granularity[%s] on column[%s] as projection time column",
-                maybeGranularity,
-                dimension.getName()
-            );
-          }
-        }
-        if (granularity.equals(Granularities.NONE) || (granularity.getClass().equals(PeriodGranularity.class)
-                                                       && maybeGranularity.getClass().equals(PeriodGranularity.class)
-                                                       && ((PeriodGranularity) granularity).canBeMappedTo((PeriodGranularity) maybeGranularity))) {
-          // keep existing granularity
-        } else {
-          throw InvalidInput.exception(
-              "cannot map time granularity[%s] on column[%s] to time granularity[%s] on column[%s], failed to determine projection time column",
-              granularity,
-              timeColumnName,
-              maybeGranularity,
-              dimension.getName()
-          );
+        } else if (Granularities.NONE.equals(maybeGranularity)) {
+          timeColumnName = dimension.getName();
+          // already found exact __time grouping, skip assigning, granularity = Granularities.NONE;
+          break;
+        } else if (maybeGranularity.getClass().equals(PeriodGranularity.class)
+            && maybeGranularity.getTimeZone().equals(DateTimeZone.UTC)
+            && ((PeriodGranularity) maybeGranularity).getOrigin() == null
+            && (granularity == null
+                || ((PeriodGranularity) maybeGranularity).canBeMappedTo((PeriodGranularity) granularity))) {
+          // found a mappable period granularity, that's either finer than the existing granularity or it's the first one
+          timeColumnName = dimension.getName();
+          granularity = maybeGranularity;
         }
       }
     }
