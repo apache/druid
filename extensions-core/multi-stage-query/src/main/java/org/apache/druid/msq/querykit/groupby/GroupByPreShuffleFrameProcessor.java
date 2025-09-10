@@ -178,6 +178,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
               Objects.requireNonNull(mappedSegment.as(CursorFactory.class)),
               mappedSegment.as(TimeBoundaryInspector.class),
               bufferPool,
+              null,
               null
           );
 
@@ -213,6 +214,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
                 Objects.requireNonNull(mappedSegment.as(CursorFactory.class)),
                 mappedSegment.as(TimeBoundaryInspector.class),
                 bufferPool,
+                null,
                 null
             );
 

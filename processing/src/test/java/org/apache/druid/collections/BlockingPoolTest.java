@@ -292,4 +292,14 @@ public class BlockingPoolTest
     r2.forEach(ReferenceCountingResourceHolder::close);
     Assert.assertEquals(pool.maxSize(), pool.getPoolSize());
   }
+
+  @Test(timeout = 60_000L)
+  public void testGetUsedBufferCount()
+  {
+    final List<ReferenceCountingResourceHolder<Integer>> holder = pool.takeBatch(6, 100L);
+    Assert.assertNotNull(holder);
+    Assert.assertEquals(6, pool.getUsedBufferCount());
+    holder.forEach(ReferenceCountingResourceHolder::close);
+    Assert.assertEquals(0, pool.getUsedBufferCount());
+  }
 }

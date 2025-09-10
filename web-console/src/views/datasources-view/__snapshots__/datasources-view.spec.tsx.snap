@@ -14,37 +14,23 @@ exports[`DatasourcesView matches snapshot 1`] = `
     <Memo(MoreButton)
       altExtra={
         <Blueprint5.MenuItem
-          active={false}
-          disabled={false}
           icon="compressed"
           intent="danger"
           label="(debug)"
-          multiline={false}
           onClick={[Function]}
-          popoverProps={{}}
-          shouldDismissPopover={true}
           text="Force compaction run"
         />
       }
     >
       <Blueprint5.MenuItem
-        active={false}
         disabled={true}
         icon="application"
-        multiline={false}
         onClick={[Function]}
-        popoverProps={{}}
-        shouldDismissPopover={true}
         text="View SQL query for table"
       />
       <Blueprint5.MenuItem
-        active={false}
-        disabled={false}
         icon="edit"
-        multiline={false}
         onClick={[Function]}
-        popoverProps={{}}
-        shouldDismissPopover={true}
         text="Edit default retention rules"
       />
     </Memo(MoreButton)>

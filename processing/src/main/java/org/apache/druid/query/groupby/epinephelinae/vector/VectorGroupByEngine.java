@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -85,7 +86,8 @@ public class VectorGroupByEngine
       @Nullable final DateTime fudgeTimestamp,
       final Interval interval,
       final GroupByQueryConfig config,
-      final DruidProcessingConfig processingConfig
+      final DruidProcessingConfig processingConfig,
+      ResponseContext responseContext
   )
   {
     return new BaseSequence<>(
@@ -150,7 +152,8 @@ public class VectorGroupByEngine
                 interval,
                 dimensions,
                 processingBuffer,
-                fudgeTimestamp
+                fudgeTimestamp,
+                responseContext
             );
           }
 
@@ -214,6 +217,7 @@ public class VectorGroupByEngine
     private final int keySize;
     private final WritableMemory keySpace;
     private final VectorGrouper vectorGrouper;
+    private final ResponseContext responseContext;
 
     @Nullable
     private final VectorCursorGranularizer granularizer;
@@ -244,7 +248,8 @@ public class VectorGroupByEngine
         final Interval queryInterval,
         final List<GroupByVectorColumnSelector> selectors,
         final ByteBuffer processingBuffer,
-        @Nullable final DateTime fudgeTimestamp
+        @Nullable final DateTime fudgeTimestamp,
+        ResponseContext responseContext
     )
     {
       this.query = query;
@@ -264,6 +269,7 @@ public class VectorGroupByEngine
           query.getGranularity(),
           queryInterval
       );
+      this.responseContext = responseContext;
 
       if (granularizer != null) {
         this.bucketIterator = granularizer.getBucketIterable().iterator();
@@ -372,6 +378,7 @@ public class VectorGroupByEngine
                                  ? fudgeTimestamp
                                  : query.getGranularity().toDateTime(bucketInterval.getStartMillis());
 
+      long numRowsScanned = 0l;
       while (!cursor.isDone()) {
         final int startOffset;
 
@@ -400,6 +407,7 @@ public class VectorGroupByEngine
               startOffset,
               granularizer.getEndOffset()
           );
+          numRowsScanned += granularizer.getEndOffset() - startOffset;
 
           if (result.isOk()) {
             partiallyAggregatedRows = -1;
@@ -423,6 +431,9 @@ public class VectorGroupByEngine
         } else if (selectorInternalFootprint > querySpecificConfig.getActualMaxSelectorDictionarySize(processingConfig)) {
           break;
         }
+      }
+      if (this.responseContext != null) {
+        this.responseContext.addRowScanCount(numRowsScanned);
       }
 
       final boolean resultRowHasTimestamp = query.getResultRowHasTimestamp();

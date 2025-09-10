@@ -36,13 +36,8 @@ exports[`ServicesView renders data 1`] = `
     />
     <Memo(MoreButton)>
       <Blueprint5.MenuItem
-        active={false}
-        disabled={false}
         icon="application"
-        multiline={false}
         onClick={[Function]}
-        popoverProps={{}}
-        shouldDismissPopover={true}
         text="View SQL query for table"
       />
     </Memo(MoreButton)>

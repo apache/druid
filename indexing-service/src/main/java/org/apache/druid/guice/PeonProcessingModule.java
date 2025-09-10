@@ -118,10 +118,15 @@ public class PeonProcessingModule implements Module
   @Provides
   @LazySingleton
   @Merging
-  public BlockingPool<ByteBuffer> getMergeBufferPool(Task task, DruidProcessingConfig config, RuntimeInfo runtimeInfo)
+  public BlockingPool<ByteBuffer> getMergeBufferPool(
+      Task task,
+      DruidProcessingConfig config,
+      RuntimeInfo runtimeInfo,
+      ExecutorServiceMonitor executorServiceMonitor
+  )
   {
     if (task.supportsQueries()) {
-      return DruidProcessingModule.createMergeBufferPool(config, runtimeInfo);
+      return DruidProcessingModule.createMergeBufferPool(config, runtimeInfo, executorServiceMonitor);
     } else {
       if (config.isNumMergeBuffersConfigured()) {
         log.warn(

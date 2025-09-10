@@ -48,23 +48,13 @@ exports[`TasksView matches snapshot 1`] = `
     />
     <Memo(MoreButton)>
       <Blueprint5.MenuItem
-        active={false}
-        disabled={false}
         icon="application"
-        multiline={false}
         onClick={[Function]}
-        popoverProps={{}}
-        shouldDismissPopover={true}
         text="View SQL query for table"
       />
       <Blueprint5.MenuItem
-        active={false}
-        disabled={false}
         icon="manually-entered-data"
-        multiline={false}
         onClick={[Function]}
-        popoverProps={{}}
-        shouldDismissPopover={true}
         text="Submit JSON task"
       />
     </Memo(MoreButton)>

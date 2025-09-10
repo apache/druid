@@ -141,6 +141,7 @@ exports[`AboutDialog matches snapshot 1`] = `
               class="bp5-button bp5-intent-primary"
               href="https://druid.apache.org"
               role="button"
+              tabindex="0"
               target="_blank"
             >
               <span

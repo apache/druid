@@ -128,7 +128,7 @@ public class QueryResourceQueryResultPusherFactory
           final String prevEtag = getPreviousEtag(req);
 
           if (prevEtag != null && prevEtag.equals(responseContext.getEntityTag())) {
-            queryLifecycle.emitLogsAndMetrics(null, req.getRemoteAddr(), -1);
+            queryLifecycle.emitLogsAndMetrics(null, req.getRemoteAddr(), -1, -1, -1);
             counter.incrementSuccess();
             return Response.status(Response.Status.NOT_MODIFIED);
           }
@@ -149,15 +149,15 @@ public class QueryResourceQueryResultPusherFactory
         }
 
         @Override
-        public void recordSuccess(long numBytes)
+        public void recordSuccess(long numBytes, long numRowsScanned, long cpuConsumedMillis)
         {
-          queryLifecycle.emitLogsAndMetrics(null, req.getRemoteAddr(), numBytes);
+          queryLifecycle.emitLogsAndMetrics(null, req.getRemoteAddr(), numBytes, numRowsScanned, cpuConsumedMillis);
         }
 
         @Override
         public void recordFailure(Exception e)
         {
-          queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), -1);
+          queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), -1, -1, -1);
         }
 
         @Override

@@ -1,0 +1,3 @@
+# Copyright 2020 Confluent Inc.
+
+io.confluent.druid.ConfluentExtensionsModule

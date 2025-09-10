@@ -53,6 +53,8 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 public abstract class QueryResultPusher
 {
@@ -169,7 +171,7 @@ public abstract class QueryResultPusher
 
       counter.incrementSuccess();
       accumulator.close();
-      resultsWriter.recordSuccess(accumulator.getNumBytesSent());
+      resultsWriter.recordSuccess(accumulator.getNumBytesSent(), accumulator.rowsScanned, accumulator.cpuConsumedMillis);
     }
     catch (DruidException e) {
       // Less than ideal. But, if we return the result as JSON, this is
@@ -347,7 +349,7 @@ public abstract class QueryResultPusher
 
     Writer makeWriter(OutputStream out) throws IOException;
 
-    void recordSuccess(long numBytes);
+    void recordSuccess(long numBytes, long numRowsScanned, long cpuTimeInMillis);
 
     void recordFailure(Exception e);
   }
@@ -381,6 +383,11 @@ public abstract class QueryResultPusher
     private boolean initialized = false;
     private CountingOutputStream out = null;
     private Writer writer = null;
+
+    private Long rowsScanned;
+    private Long cpuConsumedMillis;
+    private Long querySegmentCount;
+    private Long brokerQueryTime;
 
     public StreamingHttpResponseAccumulator(
         ResponseContext responseContext,
@@ -425,6 +432,19 @@ public abstract class QueryResultPusher
 
         validateAndWriteResponseContextHeader();
 
+        Object startTime = request.getAttribute(QueryResource.QUERY_START_TIME_ATTRIBUTE);
+
+        rowsScanned = responseContext.getValueOrDefaultZero(ResponseContext::getRowScanCount);
+        cpuConsumedMillis = TimeUnit.NANOSECONDS.toMillis(responseContext.getValueOrDefaultZero(ResponseContext::getCpuNanos));
+        querySegmentCount = responseContext.getValueOrDefaultZero(ResponseContext::getQuerySegmentCount);
+        brokerQueryTime = TimeUnit.NANOSECONDS.toMillis(Objects.nonNull(startTime) ? System.nanoTime() - (Long) startTime : -1L);
+
+        response.setHeader(QueryResource.NUM_SCANNED_ROWS, String.valueOf(rowsScanned));
+        // Emit Cpu time as a response header. Note that it doesn't include Cpu spent on serializing the response.
+        // Druid streams the output which results in the header being sent out before the response is fully serialized and sent to the client.
+        response.setHeader(QueryResource.QUERY_CPU_TIME, String.valueOf(cpuConsumedMillis));
+        response.setHeader(QueryResource.QUERY_SEGMENT_COUNT_HEADER, String.valueOf(querySegmentCount));
+        response.setHeader(QueryResource.BROKER_QUERY_TIME_RESPONSE_HEADER, String.valueOf(brokerQueryTime));
         response.setContentType(contentType.toString());
 
         if (response instanceof org.eclipse.jetty.server.Response) {

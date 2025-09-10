@@ -32,6 +32,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessor;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessorFactory;
@@ -78,7 +79,8 @@ public class TopNQueryEngine
   public Sequence<Result<TopNResultValue>> query(
       TopNQuery query,
       final Segment segment,
-      @Nullable final TopNQueryMetrics queryMetrics
+      @Nullable final TopNQueryMetrics queryMetrics,
+      final ResponseContext responseContext
   )
   {
     final CursorFactory cursorFactory = segment.as(CursorFactory.class);
@@ -144,7 +146,7 @@ public class TopNQueryEngine
           Sequences.simple(granularizer.getBucketIterable())
                    .map(bucketInterval -> {
                      granularizer.advanceToBucket(bucketInterval);
-                     return mapFn.apply(cursor, selectorPlus, granularizer, queryMetrics);
+                     return mapFn.apply(cursor, selectorPlus, granularizer, queryMetrics, responseContext);
                    }),
           Predicates.notNull()
       ).withBaggage(cursorHolder);

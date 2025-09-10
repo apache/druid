@@ -53,6 +53,7 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.last.LongLastAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
@@ -464,6 +465,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
   public final boolean segmentSortedByTime;
   public final boolean autoSchema;
 
+  private final ResponseContext responseContext = ResponseContext.createEmpty();
+
   @Rule
   public final CloserRule closer = new CloserRule(false);
 
@@ -540,7 +543,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         projectionsCursorFactory,
         projectionsTimeBoundaryInspector,
         nonBlockingPool,
-        null
+        null,
+        responseContext
     );
 
     final List<ResultRow> results = resultRows.toList();
@@ -619,7 +623,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         projectionsCursorFactory,
         projectionsTimeBoundaryInspector,
         nonBlockingPool,
-        null
+        null,
+        responseContext
     );
 
     final List<ResultRow> results = resultRows.toList();
@@ -682,7 +687,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         projectionsCursorFactory,
         projectionsTimeBoundaryInspector,
         nonBlockingPool,
-        null
+        null,
+        responseContext
     );
 
     final List<ResultRow> results = resultRows.toList();
@@ -767,7 +773,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         projectionsCursorFactory,
         projectionsTimeBoundaryInspector,
         nonBlockingPool,
-        null
+        null,
+        responseContext
     );
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(2, results.size());
@@ -809,7 +816,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         projectionsCursorFactory,
         projectionsTimeBoundaryInspector,
         nonBlockingPool,
-        null
+        null,
+        responseContext
     );
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(2, results.size());
@@ -850,7 +858,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         projectionsCursorFactory,
         projectionsTimeBoundaryInspector,
         nonBlockingPool,
-        null
+        null,
+        responseContext
     );
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(1, results.size());
@@ -889,7 +898,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         projectionsCursorFactory,
         projectionsTimeBoundaryInspector,
         nonBlockingPool,
-        null
+        null,
+        responseContext
     );
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(1, results.size());
@@ -927,7 +937,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         projectionsCursorFactory,
         projectionsTimeBoundaryInspector,
         nonBlockingPool,
-        null
+        null,
+        responseContext
     );
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(2, results.size());
@@ -963,7 +974,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         projectionsCursorFactory,
         projectionsTimeBoundaryInspector,
         nonBlockingPool,
-        null
+        null,
+        responseContext
     );
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(2, results.size());
@@ -1007,7 +1019,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         projectionsCursorFactory,
         projectionsTimeBoundaryInspector,
         nonBlockingPool,
-        null
+        null,
+        responseContext
     );
 
     final List<ResultRow> results = resultRows.toList();
@@ -1096,7 +1109,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         projectionsCursorFactory,
         projectionsTimeBoundaryInspector,
         nonBlockingPool,
-        null
+        null,
+        responseContext
     );
 
     final List<ResultRow> results = resultRows.toList();
@@ -1153,7 +1167,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         projectionsCursorFactory,
         projectionsTimeBoundaryInspector,
         nonBlockingPool,
-        null
+        null,
+        responseContext
     );
 
     final List<ResultRow> results = resultRows.toList();
@@ -1207,7 +1222,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         projectionsCursorFactory,
         projectionsTimeBoundaryInspector,
         nonBlockingPool,
-        null
+        null,
+        responseContext
     );
 
     final List<ResultRow> results = resultRows.toList();
@@ -1255,7 +1271,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         projectionsCursorFactory,
         projectionsTimeBoundaryInspector,
         nonBlockingPool,
-        null
+        null,
+        responseContext
     );
 
     final List<ResultRow> results = resultRows.toList();
@@ -1295,7 +1312,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         projectionsCursorFactory,
         projectionsTimeBoundaryInspector,
         nonBlockingPool,
-        null
+        null,
+        responseContext
     );
 
     final List<ResultRow> results = resultRows.toList();
@@ -1334,7 +1352,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         projectionsCursorFactory,
         projectionsTimeBoundaryInspector,
         nonBlockingPool,
-        null
+        null,
+        responseContext
     );
 
     final List<ResultRow> results = resultRows.toList();
@@ -1368,7 +1387,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         query,
         projectionsCursorFactory,
         projectionsTimeBoundaryInspector,
-        null
+        null,
+        responseContext
     );
 
     final List<Result<TimeseriesResultValue>> results = resultRows.toList();
@@ -1404,7 +1424,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         query,
         projectionsCursorFactory,
         projectionsTimeBoundaryInspector,
-        null
+        null,
+        responseContext
     );
 
     final List<Result<TimeseriesResultValue>> results = resultRows.toList();
@@ -1439,7 +1460,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         query,
         projectionsCursorFactory,
         projectionsTimeBoundaryInspector,
-        null
+        null,
+        responseContext
     );
 
     final List<Result<TimeseriesResultValue>> results = resultRows.toList();
@@ -1475,7 +1497,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         query,
         projectionsCursorFactory,
         projectionsTimeBoundaryInspector,
-        null
+        null,
+        responseContext
     );
 
     final List<Result<TimeseriesResultValue>> results = resultRows.toList();
@@ -1518,7 +1541,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         rollupProjectionsCursorFactory,
         rollupProjectionsTimeBoundaryInspector,
         nonBlockingPool,
-        null
+        null,
+        responseContext
     );
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(2, results.size());
@@ -1559,7 +1583,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         rollupProjectionsCursorFactory,
         rollupProjectionsTimeBoundaryInspector,
         nonBlockingPool,
-        null
+        null,
+        responseContext
     );
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(2, results.size());

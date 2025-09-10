@@ -33,6 +33,10 @@
     "dataSource",
     "type"
   ],
+  "query/planningTime": [
+    "dataSource",
+    "type"
+  ],
   "query/wait/time": [
     "dataSource",
     "type"

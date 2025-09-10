@@ -44,11 +44,7 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
     <p>
       General info for 
       <Blueprint5.Tag
-        active={false}
-        fill={false}
-        large={false}
         minimal={true}
-        round={false}
       >
         query-26d490c6-c06d-4cd2-938f-bc5f7f982754
       </Blueprint5.Tag>
@@ -56,11 +52,7 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
          
         ingesting into 
         <Blueprint5.Tag
-          active={false}
-          fill={false}
-          large={false}
           minimal={true}
-          round={false}
         >
           "kttm-blank-lines"
         </Blueprint5.Tag>
@@ -69,22 +61,14 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
     <p>
       Query took 
       <Blueprint5.Tag
-        active={false}
-        fill={false}
-        large={false}
         minimal={true}
-        round={false}
       >
         0:00:04
       </Blueprint5.Tag>
        
       (starting at 
       <Blueprint5.Tag
-        active={false}
-        fill={false}
-        large={false}
         minimal={true}
-        round={false}
       >
         2024-01-23 19:56:44
       </Blueprint5.Tag>

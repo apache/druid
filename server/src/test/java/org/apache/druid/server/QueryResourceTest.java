@@ -121,6 +121,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -274,8 +276,12 @@ public class QueryResourceTest
   public void testGoodQuery() throws IOException
   {
     expectPermissiveHappyPathAuth();
-
-    Assert.assertEquals(200, expectAsyncRequestFlow(SIMPLE_TIMESERIES_QUERY).getStatus());
+    MockHttpServletResponse response = expectAsyncRequestFlow(SIMPLE_TIMESERIES_QUERY);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertTrue(String.format(Locale.ENGLISH, "Successful query response must have header %s", QueryResource.QUERY_SEGMENT_COUNT_HEADER),
+            Objects.nonNull(response.getHeader(QueryResource.QUERY_SEGMENT_COUNT_HEADER)));
+    Assert.assertTrue(String.format(Locale.ENGLISH, "Successful query response must have header %s", QueryResource.BROKER_QUERY_TIME_RESPONSE_HEADER),
+            Objects.nonNull(response.getHeader(QueryResource.BROKER_QUERY_TIME_RESPONSE_HEADER)));
   }
 
   @Test
@@ -712,7 +718,7 @@ public class QueryResourceTest
             )
             {
               @Override
-              public void emitLogsAndMetrics(@Nullable Throwable e, @Nullable String remoteAddress, long bytesWritten)
+              public void emitLogsAndMetrics(@Nullable Throwable e, @Nullable String remoteAddress, long bytesWritten, long rowsScanned, long cpuConsumedMillis)
               {
                 Assert.assertTrue(Throwables.getStackTraceAsString(e).contains(embeddedExceptionMessage));
               }

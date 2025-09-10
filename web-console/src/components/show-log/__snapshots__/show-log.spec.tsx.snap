@@ -28,6 +28,7 @@ exports[`ShowLog describe show log 1`] = `
         download="test"
         href="/some/base_url/druid/index/test/log"
         role="button"
+        tabindex="0"
       >
         <span
           class="bp5-button-text"

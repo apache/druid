@@ -32,6 +32,7 @@ import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
@@ -73,6 +74,8 @@ public class CursorHolderPreaggTest extends InitializedNullHandlingTest
 
   private CursorFactory cursorFactory;
   private Segment segment;
+
+  private final ResponseContext responseContext = ResponseContext.createEmpty();
 
   @Rule
   public final CloserRule closer = new CloserRule(false);
@@ -220,7 +223,8 @@ public class CursorHolderPreaggTest extends InitializedNullHandlingTest
     Sequence<Result<TopNResultValue>> results = topNQueryEngine.query(
         topNQuery,
         segment,
-        null
+        null,
+        responseContext
     );
 
     List<Result<TopNResultValue>> rows = results.toList();
@@ -248,7 +252,8 @@ public class CursorHolderPreaggTest extends InitializedNullHandlingTest
         cursorFactory,
         null,
         bufferPool,
-        null
+        null,
+        responseContext
     );
     List<ResultRow> rows = results.toList();
     Assert.assertEquals(2, rows.size());
@@ -270,7 +275,8 @@ public class CursorHolderPreaggTest extends InitializedNullHandlingTest
         timeseriesQuery,
         cursorFactory,
         null,
-        null
+        null,
+        responseContext
     );
     List<Result<TimeseriesResultValue>> rows = results.toList();
     Assert.assertEquals(1, rows.size());

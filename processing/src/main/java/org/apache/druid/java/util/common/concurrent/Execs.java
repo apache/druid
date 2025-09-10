@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -50,6 +51,8 @@ public class Execs
   {
     return DummyExecutorService.INSTANCE;
   }
+
+  private static final EmittingLogger log = new EmittingLogger(Execs.class);
 
   public static ExecutorService singleThreaded(@NotNull String nameFormat)
   {

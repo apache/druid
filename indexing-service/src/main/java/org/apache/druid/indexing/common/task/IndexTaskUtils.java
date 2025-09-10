@@ -27,6 +27,8 @@ import org.apache.druid.java.util.emitter.service.SegmentMetadataEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 
 import java.util.Map;
 
@@ -96,10 +98,28 @@ public class IndexTaskUtils
       for (DataSegment segment : publishResult.getSegments()) {
         IndexTaskUtils.setSegmentDimensions(metricBuilder, segment);
         toolbox.getEmitter().emit(metricBuilder.setMetric("segment/added/bytes", segment.getSize()));
+        // Emit the segment related metadata using the configured emitters.
+        // There is a possibility that some segments' metadata event might get missed if the
+        // server crashes after commiting segment but before emitting the event.
+        emitSegmentMetadata(segment, toolbox);
         toolbox.getEmitter().emit(SegmentMetadataEvent.create(segment, DateTimes.nowUtc()));
       }
     } else {
       toolbox.getEmitter().emit(metricBuilder.setMetric("segment/txn/failure", 1));
     }
+  }
+
+  private static void emitSegmentMetadata(DataSegment segment, TaskActionToolbox toolbox)
+  {
+    SegmentMetadataEvent event = new SegmentMetadataEvent(
+            segment.getDataSource(),
+            DateTime.now(DateTimeZone.UTC),
+            segment.getInterval().getStart(),
+            segment.getInterval().getEnd(),
+            segment.getVersion(),
+            segment.getLastCompactionState() != null
+    );
+
+    toolbox.getEmitter().emit(event);
   }
 }

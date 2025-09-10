@@ -122,7 +122,8 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
           cursorFactory,
           timeBoundaryInspector,
           processingBufferPool,
-          (GroupByQueryMetrics) queryPlus.getQueryMetrics()
+          (GroupByQueryMetrics) queryPlus.getQueryMetrics(),
+          responseContext
       );
     }
   }

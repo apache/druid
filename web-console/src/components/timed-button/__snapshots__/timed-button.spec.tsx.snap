@@ -16,13 +16,8 @@ exports[`TimedButton matches snapshot 1`] = `
           title="Select delay"
         />
         <Blueprint5.MenuItem
-          active={false}
-          disabled={false}
           icon="tick-circle"
-          multiline={false}
           onClick={[Function]}
-          popoverProps={{}}
-          shouldDismissPopover={true}
           text="timeValue"
         />
       </Blueprint5.Menu>

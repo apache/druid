@@ -60,6 +60,7 @@ import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeAggregat
 import org.apache.druid.query.aggregation.datasketches.theta.SketchModule;
 import org.apache.druid.query.aggregation.datasketches.tuple.ArrayOfDoublesSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.tuple.ArrayOfDoublesSketchModule;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
@@ -311,7 +312,8 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
         projectionsCursorFactory,
         projectionsTimeBoundaryInspector,
         nonBlockingPool,
-        null
+        null,
+        ResponseContext.createEmpty()
     );
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(2, results.size());
@@ -360,7 +362,8 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
         projectionsCursorFactory,
         projectionsTimeBoundaryInspector,
         nonBlockingPool,
-        null
+        null,
+        ResponseContext.createEmpty()
     );
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(2, results.size());

@@ -36,6 +36,17 @@
   <properties>
     <fabric8.version>7.2.0</fabric8.version>
   </properties>
+  <dependencyManagement>
+    <dependencies>
+      <!-- This is an indirect dependency of io.fabric8:kubernetes-client
+      update to address vulnerability in transitive dependency okio -->
+      <dependency>
+        <groupId>com.squareup.okio</groupId>
+        <artifactId>okio</artifactId>
+        <version>1.17.6</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <dependency>

@@ -130,7 +130,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -366,8 +368,8 @@ public class SqlResourceTest extends CalciteTestBase
   {
     req = makeSuperUserReq();
     final List<Map<String, Object>> resultAsSuperUser = doPost(createSimpleQueryWithId(
-        "id",
-        "select count(*) as cnt from restrictedDatasource_m1_is_6"
+            "id",
+            "select count(*) as cnt from restrictedDatasource_m1_is_6"
     )).rhs;
     Assert.assertEquals(ImmutableList.of(ImmutableMap.of("cnt", 6)), resultAsSuperUser);
 
@@ -377,13 +379,24 @@ public class SqlResourceTest extends CalciteTestBase
 
     req = makeRegularUserReq();
     final List<Map<String, Object>> resultAsRegularUser = doPost(createSimpleQueryWithId(
-        "id",
-        "select count(*) as cnt from restrictedDatasource_m1_is_6"
+            "id",
+            "select count(*) as cnt from restrictedDatasource_m1_is_6"
     )).rhs;
     Assert.assertEquals(ImmutableList.of(ImmutableMap.of("cnt", 1)), resultAsRegularUser);
     checkSqlRequestLog(true);
     testRequestLogger.clear();
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
+  }
+
+  @Test
+  public void testGoodQuery() throws Exception
+  {
+    final MockHttpServletResponse response = postForAsyncResponse(createSimpleQueryWithId("id", "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo"), req.mimic());
+    Assert.assertNotNull(response);
+    Assert.assertTrue(String.format(Locale.ENGLISH, "Successful query response must have header %s", QueryResource.QUERY_SEGMENT_COUNT_HEADER),
+            Objects.nonNull(response.getHeader(QueryResource.QUERY_SEGMENT_COUNT_HEADER)));
+    Assert.assertTrue(String.format(Locale.ENGLISH, "Successful query response must have header %s", QueryResource.BROKER_QUERY_TIME_RESPONSE_HEADER),
+            Objects.nonNull(response.getHeader(QueryResource.BROKER_QUERY_TIME_RESPONSE_HEADER)));
   }
 
   @Test

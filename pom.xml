@@ -114,7 +114,7 @@
         <slf4j.version>2.0.16</slf4j.version>
         <jna.version>5.13.0</jna.version>
         <jna-platform.version>5.13.0</jna-platform.version>
-        <hadoop.compile.version>3.3.6</hadoop.compile.version>
+        <hadoop.compile.version>3.4.1</hadoop.compile.version>
         <graaljs.version>22.3.5</graaljs.version>
         <mockito.version>5.14.2</mockito.version>
         <aws.sdk.version>1.12.784</aws.sdk.version>
@@ -160,7 +160,8 @@
         <jdk.security.manager.allow.argLine><!-- empty placeholder --></jdk.security.manager.allow.argLine>
         <repoOrgId>maven.org</repoOrgId>
         <repoOrgName>Maven Central Repository</repoOrgName>
-        <repoOrgUrl>https://repo.maven.apache.org/maven2/</repoOrgUrl>
+        <repoOrgUrl>https://repo1.maven.org/maven2/</repoOrgUrl>
+        <opentelemetry.proto.version>0.19.0-alpha</opentelemetry.proto.version>
 
         <!-- Allow the handful of flaky tests with transient failures to pass. -->
         <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
@@ -261,6 +262,10 @@
         <module>extensions-contrib/spectator-histogram</module>
         <module>extensions-contrib/rabbit-stream-indexing-service</module>
         <module>extensions-contrib/druid-ranger-security</module>
+
+        <module>extensions-contrib/opencensus-extensions</module>
+        <module>extensions-contrib/confluent-extensions</module>
+        <module>extensions-contrib/opentelemetry-extensions</module>
         <!-- distribution packaging -->
         <module>distribution</module>
         <!-- Revised integration tests -->
@@ -345,7 +350,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
-                <version>3.17.0</version>
+                <version>3.18.0</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -887,6 +892,11 @@
             <dependency>
                 <groupId>com.google.protobuf</groupId>
                 <artifactId>protobuf-java</artifactId>
+                <version>${protobuf.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java-util</artifactId>
                 <version>${protobuf.version}</version>
             </dependency>
             <dependency>
@@ -1436,6 +1446,11 @@
                     </exclusion>
                 </exclusions>
             </dependency>
+            <dependency>
+                <groupId>io.opentelemetry.proto</groupId>
+                <artifactId>opentelemetry-proto</artifactId>
+                <version>${opentelemetry.proto.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -1622,7 +1637,7 @@
             <plugin>
                 <groupId>de.thetaphi</groupId>
                 <artifactId>forbiddenapis</artifactId>
-                <version>3.2</version>
+                <version>3.5.1</version>
                 <configuration>
                     <ignoreSignaturesOfMissingClasses>true</ignoreSignaturesOfMissingClasses>
                     <bundledSignatures>
@@ -1641,6 +1656,10 @@
                       <exclude>**/DruidSqlParserImpl.class</exclude>
                       <exclude>**/DruidSqlParserImplTokenManager.class</exclude>
                       <exclude>**/SimpleCharStream.class</exclude>
+                      <!-- Exclude JMH-generated classes -->
+                      <exclude>**/*_jmhType_*.class</exclude>
+                      <exclude>**/*_jmhTest_*.class</exclude>
+                      <exclude>**/*_generated*.class</exclude>
                     </excludes>
                     <suppressAnnotations>
                         <annotation>**.SuppressForbidden</annotation>
@@ -1854,12 +1873,12 @@
         </plugins>
         <pluginManagement>
             <plugins>
-              <plugin>
+                <plugin>
                     <groupId>com.googlecode.fmpp-maven-plugin</groupId>
                     <artifactId>fmpp-maven-plugin</artifactId>
                     <version>1.0</version>
-              </plugin>
-              <plugin>
+                </plugin>
+                <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.2.5</version>
@@ -1963,6 +1982,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>3.5.0</version>
                     <configuration>
                         <!-- jdk8 started linting javadocs by default; ours are not fully compliant -->
                         <doclint>none</doclint>

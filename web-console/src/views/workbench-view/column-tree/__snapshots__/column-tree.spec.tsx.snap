@@ -40,33 +40,18 @@ exports[`ColumnTree matches snapshot 1`] = `
                 title="Search in"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="tick"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="Tables and columns"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="Tables only"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="Columns only"
               />
             </Blueprint5.Menu>
@@ -109,12 +94,10 @@ exports[`ColumnTree matches snapshot 1`] = `
               {
                 "icon": <Blueprint5.Icon
                   aria-hidden={true}
-                  autoLoad={true}
                   className="bp5-tree-node-icon"
                   data-tooltip="TIMESTAMP"
                   icon="time"
                   tabIndex={-1}
-                  tagName="span"
                 />,
                 "id": "__time",
                 "label": <Blueprint5.Popover
@@ -150,12 +133,10 @@ exports[`ColumnTree matches snapshot 1`] = `
               {
                 "icon": <Blueprint5.Icon
                   aria-hidden={true}
-                  autoLoad={true}
                   className="bp5-tree-node-icon"
                   data-tooltip="BIGINT"
                   icon="numerical"
                   tabIndex={-1}
-                  tagName="span"
                 />,
                 "id": "added",
                 "label": <Blueprint5.Popover
@@ -191,12 +172,10 @@ exports[`ColumnTree matches snapshot 1`] = `
               {
                 "icon": <Blueprint5.Icon
                   aria-hidden={true}
-                  autoLoad={true}
                   className="bp5-tree-node-icon"
                   data-tooltip="FLOAT"
                   icon="floating-point"
                   tabIndex={-1}
-                  tagName="span"
                 />,
                 "id": "addedBy10",
                 "label": <Blueprint5.Popover

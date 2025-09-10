@@ -38,7 +38,7 @@ public class K8sDruidLeaderSelectorTest
   );
 
   private final K8sDiscoveryConfig discoveryConfig = new K8sDiscoveryConfig("druid-cluster", null, null,
-                                                                            "default", "default", Duration.millis(10_000), Duration.millis(7_000), Duration.millis(3_000));
+                                                                            "default", "default", Duration.millis(10_000), Duration.millis(7_000), Duration.millis(3_000), null, null);
 
   private final String lockResourceName = "druid-leader-election";
 

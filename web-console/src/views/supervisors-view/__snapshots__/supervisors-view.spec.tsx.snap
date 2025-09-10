@@ -14,54 +14,30 @@ exports[`SupervisorsView matches snapshot 1`] = `
     <React.Fragment>
       <Memo(MoreButton)>
         <Blueprint5.MenuItem
-          active={false}
           disabled={true}
           icon="application"
-          multiline={false}
           onClick={[Function]}
-          popoverProps={{}}
-          shouldDismissPopover={true}
           text="View SQL query for table"
         />
         <Blueprint5.MenuItem
-          active={false}
-          disabled={false}
           icon="manually-entered-data"
-          multiline={false}
           onClick={[Function]}
-          popoverProps={{}}
-          shouldDismissPopover={true}
           text="Submit JSON supervisor"
         />
         <Blueprint5.MenuItem
-          active={false}
-          disabled={false}
           icon="play"
-          multiline={false}
           onClick={[Function]}
-          popoverProps={{}}
-          shouldDismissPopover={true}
           text="Resume all supervisors"
         />
         <Blueprint5.MenuItem
-          active={false}
-          disabled={false}
           icon="pause"
-          multiline={false}
           onClick={[Function]}
-          popoverProps={{}}
-          shouldDismissPopover={true}
           text="Suspend all supervisors"
         />
         <Blueprint5.MenuItem
-          active={false}
-          disabled={false}
           icon="cross"
           intent="danger"
-          multiline={false}
           onClick={[Function]}
-          popoverProps={{}}
-          shouldDismissPopover={true}
           text="Terminate all supervisors"
         />
       </Memo(MoreButton)>

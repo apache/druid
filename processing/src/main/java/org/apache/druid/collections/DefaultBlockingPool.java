@@ -218,4 +218,10 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
       lock.unlock();
     }
   }
+
+  @Override
+  public int getUsedBufferCount()
+  {
+    return maxSize - objects.size();
+  }
 }

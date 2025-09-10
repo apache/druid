@@ -1,0 +1,30 @@
+syntax = "proto3";
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "org.apache.druid.emitter.proto";
+option java_outer_classname = "DruidSegmentEventMessage";
+
+/* Druid segment Event used by Druid to publish first level segment information.
+ * The message will be consumed by segment processing app. */
+message DruidSegmentEvent {
+    string dataSource = 1;
+
+    // When this event was created
+    google.protobuf.Timestamp createdTime = 2;
+
+    // Start time of the segment
+    google.protobuf.Timestamp startTime = 3;
+
+    // End time of the segment
+    google.protobuf.Timestamp endTime = 4;
+
+    // Segment version
+    string version = 5;
+
+    // Cluster name
+    string clusterName = 6;
+
+    // Is the segment compacted or not
+    bool isCompacted = 7;
+}

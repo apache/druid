@@ -19,74 +19,79 @@
 
 package org.apache.druid.security.pac4j;
 
-import org.apache.commons.io.IOUtils;
+import com.google.common.base.Preconditions;
+import com.google.common.io.ByteStreams;
 import org.apache.druid.crypto.CryptoService;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.pac4j.core.context.ContextHelper;
-import org.pac4j.core.context.Cookie;
 import org.pac4j.core.context.WebContext;
 import org.pac4j.core.context.session.SessionStore;
-import org.pac4j.core.exception.TechnicalException;
 import org.pac4j.core.profile.CommonProfile;
-import org.pac4j.core.util.JavaSerializationHelper;
 import org.pac4j.core.util.Pac4jConstants;
+import org.pac4j.jee.context.JEEContext;
+import org.pac4j.jee.context.session.JEESessionStore;
 
 import javax.annotation.Nullable;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 /**
- * Code here is slight adaptation from <a href="https://github.com/apache/knox/blob/master/gateway-provider-security-pac4j/src/main/java/org/apache/knox/gateway/pac4j/session/KnoxSessionStore.java">KnoxSessionStore</a>
- * for storing oauth session information in cookies.
+ * Code here is slight adaptation from Apache Knox KnoxSessionStore
+ * for storing oauth session information in encrypted cookies.
  */
-public class Pac4jSessionStore<T extends WebContext> implements SessionStore<T>
+public class Pac4jSessionStore implements SessionStore
 {
-
   private static final Logger LOGGER = new Logger(Pac4jSessionStore.class);
 
   public static final String PAC4J_SESSION_PREFIX = "pac4j.session.";
 
-  private final JavaSerializationHelper javaSerializationHelper;
+  private final JEESessionStore delegate = JEESessionStore.INSTANCE;
   private final CryptoService cryptoService;
 
   public Pac4jSessionStore(String cookiePassphrase)
   {
-    javaSerializationHelper = new JavaSerializationHelper();
-    cryptoService = new CryptoService(
-        cookiePassphrase,
-        "AES",
-        "CBC",
-        "PKCS5Padding",
-        "PBKDF2WithHmacSHA256",
-        128,
-        65536,
-        128
+    this.cryptoService = new CryptoService(
+            cookiePassphrase,
+            "AES",
+            "CBC",
+            "PKCS5Padding",
+            "PBKDF2WithHmacSHA256",
+            128,
+            65536,
+            128
     );
   }
 
   @Override
-  public String getOrCreateSessionId(WebContext context)
+  public Optional<String> getSessionId(WebContext context, boolean createSession)
   {
-    return null;
+    if (context instanceof JEEContext) {
+      return delegate.getSessionId(context, createSession);
+    }
+    return Optional.empty();
   }
 
-  @Nullable
   @Override
   public Optional<Object> get(WebContext context, String key)
   {
-    final Cookie cookie = ContextHelper.getCookie(context, PAC4J_SESSION_PREFIX + key);
+    final Cookie cookie = getCookie(context, PAC4J_SESSION_PREFIX + key);
     Object value = null;
-    if (cookie != null) {
+    if (cookie != null && cookie.getValue() != null) {
       value = uncompressDecryptBase64(cookie.getValue());
     }
-    LOGGER.debug("Get from session: [%s] = [%s]", key, value);
     return Optional.ofNullable(value);
   }
 
@@ -96,37 +101,102 @@ public class Pac4jSessionStore<T extends WebContext> implements SessionStore<T>
     Object profile = value;
     Cookie cookie;
 
-    if (value == null) {
-      cookie = new Cookie(PAC4J_SESSION_PREFIX + key, null);
+    // Check if value is null, empty string, or empty collection
+    boolean isEmpty = value == null || 
+                     (value instanceof String && ((String) value).isEmpty()) ||
+                     (value instanceof Collection && ((Collection<?>) value).isEmpty()) ||
+                     (value instanceof Map && ((Map<?, ?>) value).isEmpty());
+
+    if (isEmpty) {
+      cookie = new Cookie(PAC4J_SESSION_PREFIX + key, "");
+      cookie.setMaxAge(0);
     } else {
-      if (key.contentEquals(Pac4jConstants.USER_PROFILES)) {
+      if (Pac4jConstants.USER_PROFILES.equals(key)) {
         /* trim the profile object */
         profile = clearUserProfile(value);
       }
-      LOGGER.debug("Save in session: [%s] = [%s]", key, profile);
-      cookie = new Cookie(
-          PAC4J_SESSION_PREFIX + key,
-          compressEncryptBase64(profile)
-      );
+
+      String encryptedValue = compressEncryptBase64(profile);
+      cookie = new Cookie(PAC4J_SESSION_PREFIX + key, encryptedValue);
+      cookie.setMaxAge(900); // 15 minutes
     }
 
-    cookie.setDomain("");
     cookie.setHttpOnly(true);
-    cookie.setSecure(ContextHelper.isHttpsOrSecure(context));
+    // Always set secure flag for authentication cookies to prevent transmission over HTTP
+    // This ensures the cookie is only sent over HTTPS connections
+    boolean isSecure = isHttpsOrSecure(context);
+    if (!isSecure) {
+      LOGGER.warn("Setting authentication cookie over non-HTTPS connection. This is not recommended for production.");
+    }
+    cookie.setSecure(true); // Always set secure flag for authentication cookies
     cookie.setPath("/");
-    cookie.setMaxAge(900);
 
-    context.addResponseCookie(cookie);
+    if (context instanceof JEEContext) {
+      JEEContext jeeContext = (JEEContext) context;
+      HttpServletResponse response = jeeContext.getNativeResponse();
+      response.addCookie(cookie);
+      // Only delegate to JEESessionStore if we have a JEEContext
+      delegate.set(context, key, value);
+    } else {
+      // For non-JEE contexts (like test mocks), add cookie to response
+      org.pac4j.core.context.Cookie pac4jCookie = new org.pac4j.core.context.Cookie(
+              cookie.getName(), cookie.getValue()
+      );
+      pac4jCookie.setHttpOnly(cookie.isHttpOnly());
+      pac4jCookie.setSecure(cookie.getSecure());
+      pac4jCookie.setMaxAge(cookie.getMaxAge());
+      pac4jCookie.setPath(cookie.getPath());
+      if (cookie.getDomain() != null) {
+        pac4jCookie.setDomain(cookie.getDomain());
+      }
+      context.addResponseCookie(pac4jCookie);
+    }
+  }
+
+  @Override
+  public boolean destroySession(WebContext context)
+  {
+    if (context instanceof JEEContext) {
+      return delegate.destroySession(context);
+    }
+    return false;
+  }
+
+  @Override
+  public Optional<Object> getTrackableSession(WebContext context)
+  {
+    if (context instanceof JEEContext) {
+      return delegate.getTrackableSession(context);
+    }
+    return Optional.empty();
+  }
+
+  @Override
+  public Optional<SessionStore> buildFromTrackableSession(WebContext context, Object trackableSession)
+  {
+    if (context instanceof JEEContext) {
+      return delegate.buildFromTrackableSession(context, trackableSession);
+    }
+    return Optional.empty();
+  }
+
+  @Override
+  public boolean renewSession(WebContext context)
+  {
+    if (context instanceof JEEContext) {
+      return delegate.renewSession(context);
+    }
+    return false;
   }
 
   @Nullable
   private String compressEncryptBase64(final Object o)
   {
     if (o == null || "".equals(o)
-        || (o instanceof Map<?, ?> && ((Map<?, ?>) o).isEmpty())) {
+            || (o instanceof Map<?, ?> && ((Map<?, ?>) o).isEmpty())) {
       return null;
     } else {
-      byte[] bytes = javaSerializationHelper.serializeToBytes((Serializable) o);
+      byte[] bytes = serializeToBytes((Serializable) o);
 
       bytes = compress(bytes);
       if (bytes.length > 3000) {
@@ -141,9 +211,15 @@ public class Pac4jSessionStore<T extends WebContext> implements SessionStore<T>
   private Serializable uncompressDecryptBase64(final String v)
   {
     if (v != null && !v.isEmpty()) {
-      byte[] bytes = StringUtils.decodeBase64String(v);
-      if (bytes != null) {
-        return javaSerializationHelper.deserializeFromBytes(unCompress(cryptoService.decrypt(bytes)));
+      try {
+        byte[] bytes = StringUtils.decodeBase64String(v);
+        if (bytes != null) {
+          return deserializeFromBytes(uncompress(cryptoService.decrypt(bytes)));
+        }
+      }
+      catch (Exception e) {
+        LOGGER.debug("Failed to decrypt cookie value: %s", e.getMessage());
+        throw InvalidInput.exception(e, "Decryption failed. Check service logs.");
       }
     }
     return null;
@@ -158,55 +234,140 @@ public class Pac4jSessionStore<T extends WebContext> implements SessionStore<T>
       return byteStream.toByteArray();
     }
     catch (IOException ex) {
-      throw new TechnicalException(ex);
+      throw new RuntimeException("Compression failed", ex);
     }
   }
 
-  private byte[] unCompress(final byte[] data)
+  private byte[] uncompress(final byte[] data)
   {
     try (ByteArrayInputStream inputStream = new ByteArrayInputStream(data);
          GZIPInputStream gzip = new GZIPInputStream(inputStream)) {
-      return IOUtils.toByteArray(gzip);
+      return ByteStreams.toByteArray(gzip);
     }
     catch (IOException ex) {
-      throw new TechnicalException(ex);
+      throw new RuntimeException("Decompression failed", ex);
     }
   }
 
+  /**
+   * Serialize object using standard Java serialization
+   */
+  private byte[] serializeToBytes(Serializable obj)
+  {
+    Preconditions.checkNotNull(obj, "Object to serialize cannot be null");
+
+    try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+         ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+      oos.writeObject(obj);
+      oos.flush();
+      return baos.toByteArray();
+    }
+    catch (IOException e) {
+      throw new RuntimeException("Failed to serialize object", e);
+    }
+  }
+
+  /**
+   * Deserialize object using standard Java serialization
+   */
+  private Serializable deserializeFromBytes(byte[] data)
+  {
+    Preconditions.checkNotNull(data, "Data to deserialize cannot be null");
+
+    try (ByteArrayInputStream bais = new ByteArrayInputStream(data);
+         ObjectInputStream ois = new ObjectInputStream(bais)) {
+      return (Serializable) ois.readObject();
+    }
+    catch (IOException | ClassNotFoundException e) {
+      throw new RuntimeException("Failed to deserialize object", e);
+    }
+  }
+
+  /**
+   * Clear sensitive data from user profiles before storing in cookies
+   */
   private Object clearUserProfile(final Object value)
   {
     if (value instanceof Map<?, ?>) {
       final Map<String, CommonProfile> profiles = (Map<String, CommonProfile>) value;
-      profiles.forEach((name, profile) -> profile.removeLoginData());
+      profiles.forEach((name, profile) -> {
+        // In pac4j 5.x, we need to manually clear sensitive data
+        // since removeLoginData() is no longer available
+        if (profile != null) {
+          profile.removeAttribute("access_token");
+          profile.removeAttribute("refresh_token");
+          profile.removeAttribute("id_token");
+          profile.removeAttribute("credentials");
+        }
+      });
       return profiles;
-    } else {
+    } else if (value instanceof CommonProfile) {
       final CommonProfile profile = (CommonProfile) value;
-      profile.removeLoginData();
+      profile.removeAttribute("access_token");
+      profile.removeAttribute("refresh_token");
+      profile.removeAttribute("id_token");
+      profile.removeAttribute("credentials");
       return profile;
     }
+    return value;
   }
 
-  @Override
-  public Optional<SessionStore<T>> buildFromTrackableSession(WebContext arg0, Object arg1)
+  /**
+   * Get cookie from request - replacement for ContextHelper.getCookie
+   */
+  private Cookie getCookie(WebContext context, String name)
   {
-    return Optional.empty();
+    if (context instanceof JEEContext) {
+      JEEContext jeeContext = (JEEContext) context;
+      HttpServletRequest request = jeeContext.getNativeRequest();
+      Cookie[] cookies = request.getCookies();
+      if (cookies != null) {
+        for (Cookie cookie : cookies) {
+          if (name.equals(cookie.getName())) {
+            return cookie;
+          }
+        }
+      }
+    } else {
+      // For non-JEE contexts (like test mocks), check if context supports cookies
+      if (context != null) {
+        Collection<org.pac4j.core.context.Cookie> requestCookies = context.getRequestCookies();
+        if (requestCookies != null) {
+          for (org.pac4j.core.context.Cookie cookie : requestCookies) {
+            if (name.equals(cookie.getName())) {
+              // Convert pac4j Cookie to javax.servlet.http.Cookie
+              Cookie servletCookie = new Cookie(cookie.getName(), cookie.getValue());
+              servletCookie.setHttpOnly(cookie.isHttpOnly());
+              servletCookie.setSecure(cookie.isSecure());
+              servletCookie.setMaxAge(cookie.getMaxAge());
+              if (cookie.getPath() != null) {
+                servletCookie.setPath(cookie.getPath());
+              }
+              if (cookie.getDomain() != null) {
+                servletCookie.setDomain(cookie.getDomain());
+              }
+              return servletCookie;
+            }
+          }
+        }
+      }
+    }
+    return null;
   }
 
-  @Override
-  public boolean destroySession(WebContext arg0)
+  /**
+   * Check if connection is secure - replacement for ContextHelper.isHttpsOrSecure
+   */
+  private boolean isHttpsOrSecure(WebContext context)
   {
-    return false;
-  }
-
-  @Override
-  public Optional getTrackableSession(WebContext arg0)
-  {
-    return Optional.empty();
-  }
-
-  @Override
-  public boolean renewSession(final WebContext context)
-  {
-    return false;
+    if (context instanceof JEEContext) {
+      JEEContext jeeContext = (JEEContext) context;
+      HttpServletRequest request = jeeContext.getNativeRequest();
+      return request.isSecure() ||
+              "https".equalsIgnoreCase(request.getScheme()) ||
+              "https".equalsIgnoreCase(request.getHeader("X-Forwarded-Proto"));
+    }
+    // For non-JEE contexts (like test mocks), check the scheme
+    return "https".equalsIgnoreCase(context.getScheme());
   }
 }

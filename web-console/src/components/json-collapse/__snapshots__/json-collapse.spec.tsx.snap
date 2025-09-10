@@ -25,6 +25,7 @@ exports[`JsonCollapse matches snapshot 1`] = `
       fill={false}
       large={false}
       readOnly={true}
+      size="medium"
       small={false}
       value="{
   "name": "test"

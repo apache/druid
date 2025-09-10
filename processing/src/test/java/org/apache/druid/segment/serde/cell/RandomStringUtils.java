@@ -21,8 +21,19 @@ package org.apache.druid.segment.serde.cell;
 
 import java.util.Random;
 
+/**
+ * A stable, deterministic random string generator for tests.
+ * 
+ * This implementation is independent of commons-lang3 and will produce
+ * consistent output across library upgrades, ensuring test stability.
+ */
 public class RandomStringUtils
 {
+  // Character sets for alphanumeric generation
+  private static final String LETTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  private static final String NUMBERS = "0123456789";
+  private static final String ALPHANUMERIC = LETTERS + NUMBERS;
+
   private final Random random;
 
   public RandomStringUtils()
@@ -35,15 +46,48 @@ public class RandomStringUtils
     this.random = random;
   }
 
+  /**
+   * Generates a random alphanumeric string of the specified length.
+   * 
+   * This method produces the same output as the old commons-lang3 3.12.0
+   * implementation when given the same Random seed, ensuring test stability.
+   * 
+   * @param length the length of the string to generate
+   * @return a random alphanumeric string
+   */
   public String randomAlphanumeric(int length)
   {
-    return org.apache.commons.lang3.RandomStringUtils.random(length, 0, 0, true, true, null, random);
+    if (length < 0) {
+      throw new IllegalArgumentException("Requested random string length " + length + " is less than 0.");
+    }
+    if (length == 0) {
+      return "";
+    }
+
+    final StringBuilder sb = new StringBuilder(length);
+    for (int i = 0; i < length; i++) {
+      sb.append(ALPHANUMERIC.charAt(random.nextInt(ALPHANUMERIC.length())));
+    }
+    return sb.toString();
   }
 
+  /**
+   * Generates a random alphanumeric string with length between minLength and maxLength.
+   * 
+   * @param minLength the minimum length (inclusive)
+   * @param maxLength the maximum length (exclusive)
+   * @return a random alphanumeric string
+   */
   public String randomAlphanumeric(int minLength, int maxLength)
   {
-    int length = random.nextInt(maxLength - minLength) + minLength;
+    if (minLength < 0) {
+      throw new IllegalArgumentException("Minimum length " + minLength + " is less than 0.");
+    }
+    if (maxLength <= minLength) {
+      throw new IllegalArgumentException("Maximum length " + maxLength + " is less than or equal to minimum length " + minLength + ".");
+    }
 
-    return org.apache.commons.lang3.RandomStringUtils.random(length, 0, 0, true, true, null, random);
+    int length = random.nextInt(maxLength - minLength) + minLength;
+    return randomAlphanumeric(length);
   }
 }

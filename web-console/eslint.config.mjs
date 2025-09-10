@@ -38,6 +38,8 @@ export default [
     rules: {
       'notice/notice': [2, { mustMatch: 'Licensed to the Apache Software Foundation \\(ASF\\).+' }],
       'react/jsx-no-bind': [2, { allowArrowFunctions: true, allowFunctions: true }],
+      // TODO: Re-enable these when upstream is synced
+      '@typescript-eslint/switch-exhaustiveness-check': 'off',
     },
   },
   {

@@ -51,6 +51,7 @@ Additionally, this extension has following configuration.
 |`druid.discovery.k8s.leaseDuration`|`Duration`|Lease duration used by Leader Election algorithm. Candidates wait for this time before taking over previous Leader.|PT60S|No|
 |`druid.discovery.k8s.renewDeadline`|`Duration`|Lease renewal period used by Leader.|PT17S|No|
 |`druid.discovery.k8s.retryPeriod`|`Duration`|Retry wait used by Leader Election algorithm on failed operations.|PT5S|No|
+|`druid.discovery.k8s.periodicListInterval`|`Duration`|Interval between periodic pod listings for node discovery.|PT1M|No|
 
 ### Gotchas
 

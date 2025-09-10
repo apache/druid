@@ -26,3 +26,4 @@ echo "Webpacking everything..."
 NODE_ENV=production ./node_modules/.bin/webpack -c webpack.config.mjs --mode=production
 
 echo "Done! Have a good day."
+exit 0

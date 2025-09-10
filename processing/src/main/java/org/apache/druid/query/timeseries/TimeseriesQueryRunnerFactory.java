@@ -113,7 +113,8 @@ public class TimeseriesQueryRunnerFactory
           (TimeseriesQuery) input,
           cursorFactory,
           timeBoundaryInspector,
-          (TimeseriesQueryMetrics) queryPlus.getQueryMetrics()
+          (TimeseriesQueryMetrics) queryPlus.getQueryMetrics(),
+          responseContext
       );
     }
   }

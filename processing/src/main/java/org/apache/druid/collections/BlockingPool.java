@@ -54,4 +54,9 @@ public interface BlockingPool<T>
    * @return number of used buffers from the pool
    */
   long getUsedResourcesCount();
+
+  /**
+   * @return number of buffers used/polled from the pool at that time.
+   */
+  int getUsedBufferCount();
 }

@@ -42,6 +42,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.JavaScriptAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DimFilters;
@@ -109,6 +110,8 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
   private final TopNQueryEngine topnQueryEngine;
 
   private final NonBlockingPool<ByteBuffer> nonBlockingPool;
+
+  private final ResponseContext responseContext = ResponseContext.createEmpty();
 
 
   /**
@@ -225,7 +228,8 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
         cursorFactory,
         new IncrementalIndexTimeBoundaryInspector(index),
         nonBlockingPool,
-        null
+        null,
+        responseContext
     );
 
     final List<ResultRow> results = rows.toList();
@@ -288,7 +292,8 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
         cursorFactory,
         new IncrementalIndexTimeBoundaryInspector(index),
         nonBlockingPool,
-        null
+        null,
+        responseContext
     );
 
     final List<ResultRow> results = rows.toList();
@@ -393,7 +398,8 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
                 .aggregators(new LongSumAggregatorFactory("cnt", "cnt"))
                 .build(),
             new IncrementalIndexSegment(index, SegmentId.dummy("test")),
-            null
+            null,
+                responseContext
         )
         .toList();
 
@@ -437,7 +443,8 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
         cursorFactory,
         new IncrementalIndexTimeBoundaryInspector(index),
         nonBlockingPool,
-        null
+        null,
+        responseContext
     );
 
     final List<ResultRow> results = rows.toList();

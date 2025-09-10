@@ -185,6 +185,7 @@ public class SqlResource
   {
     final HttpStatement stmt;
     final QueryContext queryContext;
+    final long queryStartTime = System.nanoTime();
 
     try {
       final SqlQueryPlus sqlQueryPlus = makeSqlQueryPlus(sqlQuery, req);
@@ -192,6 +193,7 @@ public class SqlResource
       final String engineName = queryContext.getEngine();
       final SqlEngine engine = sqlEngineRegistry.getEngine(engineName);
       stmt = engine.getSqlStatementFactory().httpStatement(sqlQueryPlus, req);
+      req.setAttribute(QueryResource.QUERY_START_TIME_ATTRIBUTE, queryStartTime);
     }
     catch (Exception e) {
       // Can't use the queryContext with SETs since it might not have been created yet. Use the original one.
@@ -391,9 +393,9 @@ public class SqlResource
         }
 
         @Override
-        public void recordSuccess(long numBytes)
+        public void recordSuccess(long numBytes, long numRowsScanned, long cpuTimeInMillis)
         {
-          stmt.reporter().succeeded(numBytes);
+          stmt.reporter().succeeded(numBytes, numRowsScanned, cpuTimeInMillis);
         }
 
         @Override

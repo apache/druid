@@ -22,6 +22,8 @@ package org.apache.druid.java.util.http.client;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.java.util.emitter.core.NoopEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.eclipse.jetty.server.Connector;
@@ -95,7 +97,7 @@ public class FriendlyServersTest
     final Lifecycle lifecycle = new Lifecycle();
     try {
       final HttpClientConfig config = HttpClientConfig.builder().build();
-      final HttpClient client = HttpClientInit.createClient(config, lifecycle);
+      final HttpClient client = HttpClientInit.createClient(config, lifecycle, new ServiceEmitter("", "", new NoopEmitter()));
       final StatusResponseHolder response = client
           .go(
               new Request(
@@ -165,7 +167,7 @@ public class FriendlyServersTest
               new HttpClientProxyConfig("localhost", serverSocket.getLocalPort(), "bob", "sally")
           )
           .build();
-      final HttpClient client = HttpClientInit.createClient(config, lifecycle);
+      final HttpClient client = HttpClientInit.createClient(config, lifecycle, new ServiceEmitter("", "", new NoopEmitter()));
       final StatusResponseHolder response = client
           .go(
               new Request(
@@ -232,7 +234,7 @@ public class FriendlyServersTest
       final HttpClientConfig config = HttpClientConfig.builder()
                                                       .withCompressionCodec(HttpClientConfig.CompressionCodec.IDENTITY)
                                                       .build();
-      final HttpClient client = HttpClientInit.createClient(config, lifecycle);
+      final HttpClient client = HttpClientInit.createClient(config, lifecycle, new ServiceEmitter("", "", new NoopEmitter()));
       final StatusResponseHolder response = client
           .go(
               new Request(
@@ -283,12 +285,12 @@ public class FriendlyServersTest
     try {
       final SSLContext mySsl = HttpClientInit.sslContextWithTrustedKeyStore(keyStorePath, "abc123");
       final HttpClientConfig trustingConfig = HttpClientConfig.builder().withSslContext(mySsl).build();
-      final HttpClient trustingClient = HttpClientInit.createClient(trustingConfig, lifecycle);
+      final HttpClient trustingClient = HttpClientInit.createClient(trustingConfig, lifecycle, new ServiceEmitter("", "", new NoopEmitter()));
 
       final HttpClientConfig skepticalConfig = HttpClientConfig.builder()
                                                                .withSslContext(SSLContext.getDefault())
                                                                .build();
-      final HttpClient skepticalClient = HttpClientInit.createClient(skepticalConfig, lifecycle);
+      final HttpClient skepticalClient = HttpClientInit.createClient(skepticalConfig, lifecycle, new ServiceEmitter("", "", new NoopEmitter()));
 
       // Correct name ("localhost")
       {
@@ -364,7 +366,7 @@ public class FriendlyServersTest
     final Lifecycle lifecycle = new Lifecycle();
     try {
       final HttpClientConfig config = HttpClientConfig.builder().withSslContext(SSLContext.getDefault()).build();
-      final HttpClient client = HttpClientInit.createClient(config, lifecycle);
+      final HttpClient client = HttpClientInit.createClient(config, lifecycle, new ServiceEmitter("", "", new NoopEmitter()));
 
       {
         final HttpResponseStatus status = client

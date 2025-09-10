@@ -2278,6 +2278,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       coalesceAndAwait(stopFutures);
     }
 
+    log.debug("verifying Taskgroups for [%d] tasks", taskGroupsToVerify.size());
     // make sure the checkpoints are consistent with each other and with the metadata store
     verifyAndMergeCheckpoints(taskGroupsToVerify.values());
 
@@ -2448,6 +2449,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       } else if (checkpointResult.valueOrThrow().isEmpty()) {
         log.warn("Ignoring task [%s], as probably it is not started running yet", taskId);
       } else {
+        log.debug("Setting checkpointSequence for task [%s] to [%s]", taskId, checkpointResult.valueOrThrow());
         taskSequences.add(new Pair<>(taskId, checkpointResult.valueOrThrow()));
       }
     }

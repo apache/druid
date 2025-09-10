@@ -1968,8 +1968,8 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
                   IDENTIFIERS.get(0).asSegmentId().toString(),
                   IDENTIFIERS.get(1).asSegmentId().toString()
               )
-          )
-      );
+          ),
+              false);
 
       serviceEmitter.flush();
 
@@ -2010,8 +2010,8 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
                   IDENTIFIERS.get(1).asSegmentId().toString(),
                   IDENTIFIERS.get(2).asSegmentId().toString()
               )
-          )
-      );
+          ),
+              false);
 
       serviceEmitter.flush();
 
@@ -2056,8 +2056,8 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
                   IDENTIFIERS.get(1).asSegmentId().toString(),
                   IDENTIFIERS.get(2).asSegmentId().toString()
               )
-          )
-      );
+          ),
+              false);
     }
   }
 
@@ -2124,8 +2124,8 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
               Collections.singletonList(
                   IDENTIFIERS.get(2).asSegmentId().toString()
               )
-          )
-      );
+          ),
+              false);
 
       serviceEmitter.flush();
 
@@ -2171,8 +2171,8 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
               Collections.singletonList(
                   IDENTIFIERS.get(2).asSegmentId().toString()
               )
-          )
-      );
+          ),
+              false);
 
       serviceEmitter.flush();
 
@@ -2223,8 +2223,8 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
               Collections.singletonList(
                   IDENTIFIERS.get(2).asSegmentId().toString()
               )
-          )
-      );
+          ),
+              false);
 
       serviceEmitter.flush();
 
@@ -2270,22 +2270,25 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
               Collections.singletonList(
                   IDENTIFIERS.get(2).asSegmentId().toString()
               )
-          )
-      );
+          ),
+              true);
 
       serviceEmitter.flush();
     }
   }
 
-  private void verifySinkMetrics(StubServiceEmitter emitter, Set<String> segmentIds)
+  private void verifySinkMetrics(StubServiceEmitter emitter, Set<String> segmentIds, boolean isScanQuery)
   {
     Map<String, Queue<StubServiceEmitter.ServiceMetricEventSnapshot>> events = emitter.getMetricEvents();
     int segments = segmentIds.size();
-    Assert.assertEquals(4, events.size());
+    Assert.assertEquals(isScanQuery ? 5 : 4, events.size());
     Assert.assertTrue(events.containsKey("query/cpu/time"));
     Assert.assertEquals(segments, events.get("query/segment/time").size());
     Assert.assertEquals(segments, events.get("query/segmentAndCache/time").size());
     Assert.assertEquals(segments, events.get("query/wait/time").size());
+    if (isScanQuery) {
+      Assert.assertEquals(segments, events.get("query/segment/rows").size());
+    }
     for (String id : segmentIds) {
       Assert.assertTrue(events.get("query/segment/time").stream().anyMatch(value -> value.getUserDims().containsValue(id)));
       Assert.assertTrue(events.get("query/segmentAndCache/time").stream().anyMatch(value -> value.getUserDims().containsValue(id)));

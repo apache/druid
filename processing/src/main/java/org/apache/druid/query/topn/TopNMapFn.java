@@ -22,6 +22,7 @@ package org.apache.druid.query.topn;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.Result;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessor;
 import org.apache.druid.segment.Cursor;
 
@@ -47,7 +48,8 @@ public class TopNMapFn
       final Cursor cursor,
       ColumnSelectorPlus<TopNColumnAggregatesProcessor<?>> selectorPlus,
       final CursorGranularizer granularizer,
-      final @Nullable TopNQueryMetrics queryMetrics
+      final @Nullable TopNQueryMetrics queryMetrics,
+      ResponseContext responseContext
   )
   {
     TopNParams params = null;
@@ -60,7 +62,7 @@ public class TopNMapFn
 
       TopNResultBuilder resultBuilder = BaseTopNAlgorithm.makeResultBuilder(params, query);
 
-      topNAlgorithm.run(params, resultBuilder, null, queryMetrics);
+      topNAlgorithm.run(params, resultBuilder, null, queryMetrics, responseContext);
 
       return resultBuilder.build();
     }

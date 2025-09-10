@@ -34,12 +34,12 @@
   </parent>
 
   <properties>
-    <pac4j.version>4.5.7</pac4j.version>
+    <pac4j.version>5.7.3</pac4j.version>
 
     <!-- Following must be updated along with any updates to pac4j version. One can find the compatible version of nimbus libraries in org.pac4j:pac4j-oidc dependencies-->
     <nimbus.lang.tag.version>1.7</nimbus.lang.tag.version>
-    <nimbus.jose.jwt.version>8.22.1</nimbus.jose.jwt.version>
-    <oauth2.oidc.sdk.version>8.22</oauth2.oidc.sdk.version>
+    <nimbus.jose.jwt.version>10.0.2</nimbus.jose.jwt.version>
+    <oauth2.oidc.sdk.version>10.8</oauth2.oidc.sdk.version>
   </properties>
 
   <dependencies>
@@ -71,6 +71,13 @@
           <artifactId>mockito-core</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+
+    <!-- Add pac4j-javaee dependency for JEE components -->
+    <dependency>
+      <groupId>org.pac4j</groupId>
+      <artifactId>pac4j-javaee</artifactId>
+      <version>${pac4j.version}</version>
     </dependency>
 
     <dependency>

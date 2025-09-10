@@ -54,6 +54,8 @@ public class SqlExecutionReporter
   private Throwable e;
   private long bytesWritten;
   private long planningTimeNanos;
+  private long numRowsScanned;
+  private long cpuTimeInMillis;
 
   public SqlExecutionReporter(
       final AbstractStatement stmt,
@@ -74,6 +76,13 @@ public class SqlExecutionReporter
   public void succeeded(final long bytesWritten)
   {
     this.bytesWritten = bytesWritten;
+  }
+
+  public void succeeded(final long bytesWritten, final long numRowsScanned, final long cpuTimeInMillis)
+  {
+    this.bytesWritten = bytesWritten;
+    this.numRowsScanned = numRowsScanned;
+    this.cpuTimeInMillis = cpuTimeInMillis;
   }
 
   public void planningTimeNanos(final long planningTimeNanos)
@@ -123,10 +132,26 @@ public class SqlExecutionReporter
         ));
       }
 
+      if (numRowsScanned >= 0) {
+        emitter.emit(metricBuilder.setMetric(
+                "query/rowsScanned",
+                numRowsScanned
+        ));
+      }
+
+      if (cpuTimeInMillis >= 0) {
+        emitter.emit(metricBuilder.setMetric(
+                "query/cpu/time",
+                cpuTimeInMillis
+        ));
+      }
+
       final Map<String, Object> statsMap = new LinkedHashMap<>();
       statsMap.put("sqlQuery/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs));
       statsMap.put("sqlQuery/planningTimeMs", TimeUnit.NANOSECONDS.toMillis(planningTimeNanos));
       statsMap.put("sqlQuery/bytes", bytesWritten);
+      statsMap.put("query/rowsScanned", numRowsScanned);
+      statsMap.put("query/cpu/time", cpuTimeInMillis);
       statsMap.put("success", success);
       Map<String, Object> queryContext = stmt.queryContext;
       if (plannerContext != null) {

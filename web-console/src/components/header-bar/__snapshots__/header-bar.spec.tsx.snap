@@ -28,47 +28,28 @@ exports[`HeaderBar matches snapshot 1`] = `
       content={
         <Blueprint5.Menu>
           <Blueprint5.MenuItem
-            active={false}
-            disabled={false}
             href="#streaming-data-loader"
             icon="feed"
-            multiline={false}
-            popoverProps={{}}
             selected={false}
-            shouldDismissPopover={true}
             text="Streaming"
           />
           <Blueprint5.MenuItem
-            active={false}
-            disabled={false}
             href="#sql-data-loader"
             icon="clean"
             labelElement={
               <Blueprint5.Tag
-                active={false}
-                fill={false}
-                large={false}
                 minimal={true}
-                round={false}
               >
                 multi-stage-query
               </Blueprint5.Tag>
             }
-            multiline={false}
-            popoverProps={{}}
             selected={false}
-            shouldDismissPopover={true}
             text="Batch - SQL"
           />
           <Blueprint5.MenuItem
-            active={false}
-            disabled={false}
             href="#classic-batch-data-loader"
             icon="list"
-            multiline={false}
-            popoverProps={{}}
             selected={false}
-            shouldDismissPopover={true}
             text="Batch - classic"
           />
         </Blueprint5.Menu>
@@ -152,35 +133,25 @@ exports[`HeaderBar matches snapshot 1`] = `
       content={
         <Blueprint5.Menu>
           <Blueprint5.MenuItem
-            active={false}
             disabled={false}
             href="#lookups"
             icon="properties"
-            multiline={false}
-            popoverProps={{}}
             selected={false}
-            shouldDismissPopover={true}
             text="Lookups"
           />
           <Blueprint5.MenuDivider />
           <Blueprint5.MenuItem
-            active={false}
             disabled={false}
             href="#explore"
             icon="map"
             labelElement={
               <Blueprint5.Icon
-                autoLoad={true}
                 data-tooltip="Experimental"
                 icon="lab-test"
                 intent="warning"
-                tagName="span"
               />
             }
-            multiline={false}
-            popoverProps={{}}
             selected={false}
-            shouldDismissPopover={true}
             target="_blank"
             text="Explore"
           />
@@ -235,89 +206,48 @@ exports[`HeaderBar matches snapshot 1`] = `
       content={
         <Blueprint5.Menu>
           <Blueprint5.MenuItem
-            active={false}
             disabled={false}
             icon="pulse"
-            multiline={false}
             onClick={[Function]}
-            popoverProps={{}}
-            shouldDismissPopover={true}
             text="Druid Doctor"
           />
           <Blueprint5.MenuItem
-            active={false}
             disabled={false}
             icon="settings"
-            multiline={false}
             onClick={[Function]}
-            popoverProps={{}}
-            shouldDismissPopover={true}
             text="Coordinator dynamic config"
           />
           <Blueprint5.MenuItem
-            active={false}
             disabled={false}
             icon="wrench"
-            multiline={false}
             onClick={[Function]}
-            popoverProps={{}}
-            shouldDismissPopover={true}
             text="Overlord dynamic config"
           />
           <Blueprint5.MenuItem
-            active={false}
             disabled={false}
             icon="compressed"
-            multiline={false}
             onClick={[Function]}
-            popoverProps={{}}
-            shouldDismissPopover={true}
             text="Compaction dynamic config"
           />
           <Blueprint5.MenuDivider />
           <Blueprint5.MenuItem
-            active={false}
-            disabled={false}
             icon="high-priority"
-            multiline={false}
-            popoverProps={{}}
-            shouldDismissPopover={true}
             text="Capabilty detection"
           >
             <Blueprint5.MenuItem
-              active={false}
-              disabled={false}
-              multiline={false}
               onClick={[Function]}
-              popoverProps={{}}
-              shouldDismissPopover={true}
               text="Manually set Coordinator/Overlord mode"
             />
             <Blueprint5.MenuItem
-              active={false}
-              disabled={false}
-              multiline={false}
               onClick={[Function]}
-              popoverProps={{}}
-              shouldDismissPopover={true}
               text="Manually set Coordinator mode"
             />
             <Blueprint5.MenuItem
-              active={false}
-              disabled={false}
-              multiline={false}
               onClick={[Function]}
-              popoverProps={{}}
-              shouldDismissPopover={true}
               text="Manually set Overlord mode"
             />
             <Blueprint5.MenuItem
-              active={false}
-              disabled={false}
-              multiline={false}
               onClick={[Function]}
-              popoverProps={{}}
-              shouldDismissPopover={true}
               text="Manually set Router with no management proxy mode"
             />
           </Blueprint5.MenuItem>
@@ -354,56 +284,31 @@ exports[`HeaderBar matches snapshot 1`] = `
       content={
         <Blueprint5.Menu>
           <Blueprint5.MenuItem
-            active={false}
-            disabled={false}
             icon="graph"
-            multiline={false}
             onClick={[Function]}
-            popoverProps={{}}
-            shouldDismissPopover={true}
             text="About"
           />
           <Blueprint5.MenuItem
-            active={false}
-            disabled={false}
             href="https://druid.apache.org/docs/34.0.0"
             icon="th"
-            multiline={false}
-            popoverProps={{}}
-            shouldDismissPopover={true}
             target="_blank"
             text="Docs"
           />
           <Blueprint5.MenuItem
-            active={false}
-            disabled={false}
             href="https://groups.google.com/forum/#!forum/druid-user"
             icon="user"
-            multiline={false}
-            popoverProps={{}}
-            shouldDismissPopover={true}
             target="_blank"
             text="User group"
           />
           <Blueprint5.MenuItem
-            active={false}
-            disabled={false}
             href="https://druid.apache.org/community/join-slack"
             icon="chat"
-            multiline={false}
-            popoverProps={{}}
-            shouldDismissPopover={true}
             target="_blank"
             text="Slack channel"
           />
           <Blueprint5.MenuItem
-            active={false}
-            disabled={false}
             href="https://github.com/apache/druid"
             icon="git-branch"
-            multiline={false}
-            popoverProps={{}}
-            shouldDismissPopover={true}
             target="_blank"
             text="GitHub"
           />

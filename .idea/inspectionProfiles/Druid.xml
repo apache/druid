@@ -39,9 +39,13 @@
       <option name="SUGGEST_NULLABLE_ANNOTATIONS" value="false" />
       <option name="DONT_REPORT_TRUE_ASSERT_STATEMENTS" value="true" />
     </inspection_tool>
+    <inspection_tool class="ConstantValue" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="DONT_REPORT_TRUE_ASSERT_STATEMENTS" value="true" />
+    </inspection_tool>
     <inspection_tool class="Contract" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="CopyConstructorMissesField" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="CovariantEquals" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="DataFlowIssueMerged" />
     <inspection_tool class="DuplicateBooleanBranch" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="DuplicateCondition" enabled="true" level="ERROR" enabled_by_default="true">
       <option name="ignoreSideEffectConditions" value="true" />
@@ -59,6 +63,7 @@
     <inspection_tool class="EqualsUsesNonFinalVariable" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="EqualsWhichDoesntCheckParameterClass" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="EqualsWithItself" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="Eslint" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="FieldAccessNotGuarded" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="FieldCanBeLocal" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="EXCLUDE_ANNOS">
@@ -70,7 +75,6 @@
       </option>
       <option name="IGNORE_FIELDS_USED_IN_MULTIPLE_METHODS" value="true" />
     </inspection_tool>
-    <inspection_tool class="FieldMayBeFinal" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="FinalStaticMethod" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="FlowJSError" enabled="false" level="Non-TeamCity Error" enabled_by_default="false" />
     <inspection_tool class="ForCanBeForeach" enabled="true" level="WARNING" enabled_by_default="true">
@@ -82,7 +86,6 @@
       <option name="ignoreUntypedCollections" value="false" />
     </inspection_tool>
     <inspection_tool class="ForLoopThatDoesntUseLoopVariable" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="Guava" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="HashCodeUsesNonFinalVariable" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="ImplicitArrayToString" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="IndexOfReplaceableByContains" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -154,6 +157,7 @@
     </inspection_tool>
     <inspection_tool class="ObjectEqualsNull" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ObjectToString" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="OptionalOfNullableMisuseMerged" />
     <inspection_tool class="OverwrittenKey" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="PointlessIndexOfComparison" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="PrimitiveArrayArgumentToVariableArgMethod" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -177,105 +181,6 @@
       <option name="m_ignorePrivateMethods" value="false" />
     </inspection_tool>
     <inspection_tool class="SSBasedInspection" enabled="true" level="ERROR" enabled_by_default="true">
-      <searchConfiguration name="Suboptimal IndexedInts iteration" text="$x$ &lt; $y$.size()" recursive="false" caseInsensitive="true" type="JAVA">
-        <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="x" within="" contains="" />
-        <constraint name="y" nameOfExprType="IndexedInts" exprTypeWithinHierarchy="true" within="" contains="" />
-      </searchConfiguration>
-      <searchConfiguration name="Lists.newArrayList() with a single argument. Use Collections.singletonList() instead" created="1532737126203" text="Lists.newArrayList($x$)" recursive="false" caseInsensitive="true" type="JAVA">
-        <constraint name="x" nameOfExprType="java\.lang\.Iterable|java\.util\.Iterator|Object\[\]" exprTypeWithinHierarchy="true" negateName="true" negateExprType="true" within="" contains="" />
-        <constraint name="__context__" target="true" within="" contains="" />
-      </searchConfiguration>
-      <searchConfiguration name="Math.abs(rnd.nextInt()) doensn't guarantee positive result. Use nextInt() &amp; Integer.MAX_VALUE or nextInt(Integer.MAX_VALUE)" created="1535067616084" text="$Math$.abs($x$.nextInt())" recursive="false" caseInsensitive="true" type="JAVA">
-        <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="x" nameOfFormalType="java\.util\.Random" exprTypeWithinHierarchy="true" formalTypeWithinHierarchy="true" within="" contains="" />
-        <constraint name="Math" within="" contains="" />
-      </searchConfiguration>
-      <searchConfiguration name="Math.abs(rnd.nextLong()) doesn't guarantee positive result. Use nextLong() &amp; Long.MAX_VALUE" created="1535067616084" text="$Math$.abs($x$.nextLong())" recursive="false" caseInsensitive="true" type="JAVA">
-        <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="x" nameOfFormalType="java\.util\.Random" exprTypeWithinHierarchy="true" formalTypeWithinHierarchy="true" within="" contains="" />
-        <constraint name="Math" within="" contains="" />
-      </searchConfiguration>
-      <searchConfiguration name="Use nextInt(bound) instead" created="1535068047572" text="$x$.nextInt() % $a$" recursive="false" caseInsensitive="true" type="JAVA">
-        <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="x" nameOfFormalType="java\.util\.Random" exprTypeWithinHierarchy="true" formalTypeWithinHierarchy="true" within="" contains="" />
-        <constraint name="a" within="" contains="" />
-      </searchConfiguration>
-      <searchConfiguration name="Use ZKPaths.makePath() with many arguments" created="1537504371779" text="org.apache.curator.utils.ZKPaths.makePath(org.apache.curator.utils.ZKPaths.makePath($x$, $y$), $z$)" recursive="false" caseInsensitive="true" type="JAVA">
-        <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="x" within="" contains="" />
-        <constraint name="y" within="" contains="" />
-        <constraint name="z" within="" contains="" />
-      </searchConfiguration>
-      <searchConfiguration name="Use RE (a Druid's class)" created="1539352150701" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$))" recursive="false" caseInsensitive="true" type="JAVA">
-        <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="E" regexp="java\.lang\.RuntimeException" within="" contains="" />
-        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
-      </searchConfiguration>
-      <searchConfiguration name="Use RE (a Druid's class) with cause" created="1539353059868" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$),$y$)" recursive="false" caseInsensitive="true" type="JAVA">
-        <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="E" regexp="java\.lang\.RuntimeException" within="" contains="" />
-        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
-        <constraint name="y" minCount="0" maxCount="2147483647" within="" contains="" />
-      </searchConfiguration>
-      <searchConfiguration name="Use ISE (a Druid's class)" created="1539353519594" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$))" recursive="false" caseInsensitive="true" type="JAVA">
-        <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="E" regexp="java\.lang\.IllegalStateException" within="" contains="" />
-        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
-      </searchConfiguration>
-      <searchConfiguration name="Use ISE (a Druid's class) with cause" created="1539353595734" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$),$y$)" recursive="false" caseInsensitive="true" type="JAVA">
-        <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="E" regexp="java\.lang\.IllegalStateException" within="" contains="" />
-        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
-        <constraint name="y" minCount="0" maxCount="2147483647" within="" contains="" />
-      </searchConfiguration>
-      <searchConfiguration name="Use IAE (a Druid's class)" created="1539353691746" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$))" recursive="false" caseInsensitive="true" type="JAVA">
-        <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="E" regexp="java\.lang\.IllegalArgumentException" within="" contains="" />
-        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
-      </searchConfiguration>
-      <searchConfiguration name="Use IAE (a Druid's class) with cause" created="1539353766336" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$),$y$)" recursive="false" caseInsensitive="true" type="JAVA">
-        <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="E" regexp="java\.lang\.IllegalArgumentException" within="" contains="" />
-        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
-        <constraint name="y" minCount="0" maxCount="2147483647" within="" contains="" />
-      </searchConfiguration>
-      <searchConfiguration name="Use IOE (a Druid's class)" created="1539353913074" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$))" recursive="false" caseInsensitive="true" type="JAVA">
-        <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="E" regexp="java\.io\.IOException" within="" contains="" />
-        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
-      </searchConfiguration>
-      <searchConfiguration name="Use IOE (a Druid's class) with cause" created="1539354009031" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$),$y$)" recursive="false" caseInsensitive="true" type="JAVA">
-        <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="E" regexp="java\.io\.IOException" within="" contains="" />
-        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
-        <constraint name="y" minCount="0" maxCount="2147483647" within="" contains="" />
-      </searchConfiguration>
-      <searchConfiguration name="Use UOE (a Druid's class)" created="1539354091201" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$))" recursive="false" caseInsensitive="true" type="JAVA">
-        <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="E" regexp="java\.lang\.UnsupportedOperationException" within="" contains="" />
-        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
-      </searchConfiguration>
-      <searchConfiguration name="Use TypeReference&lt;List&lt;...&gt;&gt; instead" created="1539884261626" text="TypeReference&lt;ArrayList&lt;$E$&gt;&gt;" recursive="false" caseInsensitive="true" type="JAVA">
-        <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="E" within="" contains="" />
-      </searchConfiguration>
-      <searchConfiguration name="Use TypeReference&lt;Map&lt;...&gt;&gt; instead" created="1539884261626" text="TypeReference&lt;HashMap&lt;$K$, $V$&gt;&gt;" recursive="false" caseInsensitive="true" type="JAVA">
-        <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="K" within="" contains="" />
-        <constraint name="V" within="" contains="" />
-      </searchConfiguration>
-      <searchConfiguration name="Use TypeReference&lt;Set&lt;...&gt;&gt; instead" created="1539884261626" text="TypeReference&lt;HashSet&lt;$E$&gt;&gt;" recursive="false" caseInsensitive="true" type="JAVA">
-        <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="E" within="" contains="" />
-      </searchConfiguration>
-      <searchConfiguration name="Concurrent maps should be assigned into variables of ConcurrentMap type or more specific" text="Map&lt;$K$, $V$&gt; $x$ = $y$;" recursive="true" caseInsensitive="true" type="JAVA">
-        <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="K" within="" contains="" />
-        <constraint name="V" within="" contains="" />
-        <constraint name="x" within="" contains="" />
-        <constraint name="y" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" exprTypeWithinHierarchy="true" within="" contains="" />
-      </searchConfiguration>
       <searchConfiguration name="A ConcurrentHashMap on which compute() is called should be assinged into variables of ConcurrentHashMap type, not ConcurrentMap" text="$x$.compute($y$, $z$)" recursive="true" caseInsensitive="true" type="JAVA">
         <constraint name="__context__" target="true" within="" contains="" />
         <constraint name="x" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" within="" contains="" />
@@ -301,11 +206,46 @@
         <constraint name="b" within="" contains="" />
         <constraint name="c" within="" contains="" />
       </searchConfiguration>
-      <searchConfiguration name="No need to wrap a collection as unmodifiable before addAll()" text="$c$.addAll(Collections.$unmodifiableMethod$($c2$))" recursive="true" caseInsensitive="true" type="JAVA">
+      <searchConfiguration name="Assign an ExecutorService instance to an ExecutorService variable, not an Executor variable" text="$x$ = $y$;" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" within="" contains="" />
+        <constraint name="x" nameOfExprType="java\.util\.concurrent\.Executor" within="" contains="" />
+        <constraint name="y" nameOfExprType="java\.util\.concurrent\.ExecutorService" exprTypeWithinHierarchy="true" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Concurrent maps should be assigned into variables of ConcurrentMap type or more specific" text="Map&lt;$K$, $V$&gt; $x$ = $y$;" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="K" within="" contains="" />
+        <constraint name="V" within="" contains="" />
+        <constraint name="x" within="" contains="" />
+        <constraint name="y" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" exprTypeWithinHierarchy="true" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Create a simple ExecutorService (not scheduled)" text="$x$ = $y$;" recursive="true" caseInsensitive="true" type="JAVA" pattern_context="default">
+        <constraint name="__context__" within="" contains="" />
+        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ExecutorService" within="" contains="" />
+        <constraint name="y" nameOfExprType="java\.util\.concurrent\.ScheduledExecutorService" exprTypeWithinHierarchy="true" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Intialize an ExecutorService instance to an ExecutorService variable, not an Executor variable" text="Executor $x$ = $y$;" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" within="" contains="" />
+        <constraint name="x" within="" contains="" />
+        <constraint name="y" nameOfExprType="java\.util\.concurrent\.ExecutorService" exprTypeWithinHierarchy="true" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Lists.newArrayList() with a single argument. Use Collections.singletonList() instead" created="1532737126203" text="Lists.newArrayList($x$)" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="x" nameOfExprType="java\.lang\.Iterable|java\.util\.Iterator|Object\[\]" exprTypeWithinHierarchy="true" negateName="true" negateExprType="true" within="" contains="" />
+        <constraint name="__context__" target="true" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Math.abs(rnd.nextInt()) doensn't guarantee positive result. Use nextInt() &amp; Integer.MAX_VALUE or nextInt(Integer.MAX_VALUE)" created="1535067616084" text="$Math$.abs($x$.nextInt())" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="x" nameOfFormalType="java\.util\.Random" exprTypeWithinHierarchy="true" formalTypeWithinHierarchy="true" within="" contains="" />
+        <constraint name="Math" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Math.abs(rnd.nextLong()) doesn't guarantee positive result. Use nextLong() &amp; Long.MAX_VALUE" created="1535067616084" text="$Math$.abs($x$.nextLong())" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="x" nameOfFormalType="java\.util\.Random" exprTypeWithinHierarchy="true" formalTypeWithinHierarchy="true" within="" contains="" />
+        <constraint name="Math" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="new Collection(Arrays.asList()), or some utility from CollectionUtils (or create an utility)" text="Stream.of($x$).collect($c$())" recursive="true" caseInsensitive="true" type="JAVA">
         <constraint name="__context__" target="true" within="" contains="" />
         <constraint name="c" within="" contains="" />
-        <constraint name="unmodifiableMethod" regexp="unmodifiable.*" within="" contains="" />
-        <constraint name="c2" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="No need to copy a collection as immutable before addAll()" text="$m$.addAll($ImmutableCollection$.copyOf($x$))" recursive="true" caseInsensitive="true" type="JAVA">
         <constraint name="__context__" target="true" within="" contains="" />
@@ -313,22 +253,23 @@
         <constraint name="x" maxCount="2147483647" within="" contains="" />
         <constraint name="ImmutableCollection" regexp="Immutable.*" within="" contains="" />
       </searchConfiguration>
-      <searchConfiguration name="No need to wrap a map as unmodifiable before putAll()" text="$m$.putAll(Collections.$unmodifiableMapMethod$($m2$))" recursive="true" caseInsensitive="true" type="JAVA">
-        <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="m" within="" contains="" />
-        <constraint name="m2" within="" contains="" />
-        <constraint name="unmodifiableMapMethod" regexp="unmodifiable.*" within="" contains="" />
-      </searchConfiguration>
       <searchConfiguration name="No need to copy a map to immutable before putAll()" text="$m$.putAll($ImmutableMap$.copyOf($x$))" recursive="true" caseInsensitive="true" type="JAVA">
         <constraint name="__context__" target="true" within="" contains="" />
         <constraint name="m" within="" contains="" />
         <constraint name="x" maxCount="2147483647" within="" contains="" />
         <constraint name="ImmutableMap" regexp="Immutable.*" within="" contains="" />
       </searchConfiguration>
-      <searchConfiguration name="Use map.putIfAbsent(k,v) or map.computeIfAbsent(k,v) where appropriate instead of containsKey() + put(). If computing v is expensive or has side effects use map.computeIfAbsent() instead" created="1558868694225" text="if (!$m$.containsKey($k$)) {&#10;    $m$.put($k$, $v$);&#10;}" recursive="false" caseInsensitive="true" type="JAVA">
+      <searchConfiguration name="No need to wrap a collection as unmodifiable before addAll()" text="$c$.addAll(Collections.$unmodifiableMethod$($c2$))" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="c" within="" contains="" />
+        <constraint name="unmodifiableMethod" regexp="unmodifiable.*" within="" contains="" />
+        <constraint name="c2" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="No need to wrap a map as unmodifiable before putAll()" text="$m$.putAll(Collections.$unmodifiableMapMethod$($m2$))" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
         <constraint name="m" within="" contains="" />
-        <constraint name="k" within="" contains="" />
-        <constraint name="v" within="" contains="" />
+        <constraint name="m2" within="" contains="" />
+        <constraint name="unmodifiableMapMethod" regexp="unmodifiable.*" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="Prohibit Thread.getState() != TERMINATED antipattern" text="$t$.getState()!=Thread.State.$state$" recursive="true" caseInsensitive="true" type="JAVA">
         <constraint name="t" within="" contains="" />
@@ -338,16 +279,10 @@
         <constraint name="t" within="" contains="" />
         <constraint name="state" within="" contains="" />
       </searchConfiguration>
-      <searchConfiguration name="Use CollectionUtils.mapValues(Map&lt;K,V&gt;, Function&lt;V,V2&gt;)" text="$x$.entrySet().stream().collect(Collectors.toMap($k$ -&gt; $k$.getKey(), $y$))" recursive="true" caseInsensitive="true" type="JAVA">
-        <constraint name="x" within="" contains="" />
-        <constraint name="y" within="" contains="" />
-        <constraint name="k" within="" contains="" />
+      <searchConfiguration name="Suboptimal IndexedInts iteration" text="$x$ &lt; $y$.size()" recursive="false" caseInsensitive="true" type="JAVA">
         <constraint name="__context__" target="true" within="" contains="" />
-      </searchConfiguration>
-      <searchConfiguration name="Use CollectionUtils.mapValues(Map&lt;k,v&gt;, Function&lt;v,v2&gt;)" text="$x$.entrySet().stream().collect(Collectors.toMap(Entry::getKey, $y$))" recursive="true" caseInsensitive="true" type="JAVA">
         <constraint name="x" within="" contains="" />
-        <constraint name="y" within="" contains="" />
-        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="y" nameOfExprType="IndexedInts" exprTypeWithinHierarchy="true" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="Use CollectionUtils.mapKeys(Map&lt;K,V&gt;, Function&lt;K,K2&gt;)" text="$x$.entrySet().stream().collect(Collectors.toMap($y$, $v$ -&gt; $v$.getValue()))" recursive="true" caseInsensitive="true" type="JAVA">
         <constraint name="x" within="" contains="" />
@@ -360,10 +295,16 @@
         <constraint name="y" within="" contains="" />
         <constraint name="__context__" target="true" within="" contains="" />
       </searchConfiguration>
-      <searchConfiguration name="new Collection(Arrays.asList()), or some utility from CollectionUtils (or create an utility)" text="Stream.of($x$).collect($c$())" recursive="true" caseInsensitive="true" type="JAVA">
+      <searchConfiguration name="Use CollectionUtils.mapValues(Map&lt;K,V&gt;, Function&lt;V,V2&gt;)" text="$x$.entrySet().stream().collect(Collectors.toMap($k$ -&gt; $k$.getKey(), $y$))" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="x" within="" contains="" />
+        <constraint name="y" within="" contains="" />
+        <constraint name="k" within="" contains="" />
         <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="c" within="" contains="" />
-        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use CollectionUtils.mapValues(Map&lt;k,v&gt;, Function&lt;v,v2&gt;)" text="$x$.entrySet().stream().collect(Collectors.toMap(Entry::getKey, $y$))" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="x" within="" contains="" />
+        <constraint name="y" within="" contains="" />
+        <constraint name="__context__" target="true" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="Use computeIfAbsent(...).somethingElse(...) chain instead" text="$m$.putIfAbsent($k$, $l$);&#10;$m$.get($k$).$x$($y$);" recursive="true" caseInsensitive="true" type="JAVA">
         <constraint name="__context__" target="true" within="" contains="" />
@@ -373,27 +314,7 @@
         <constraint name="l" within="" contains="" />
         <constraint name="y" minCount="0" maxCount="2147483647" within="" contains="" />
       </searchConfiguration>
-      <searchConfiguration name="Assign an ExecutorService instance to an ExecutorService variable, not an Executor variable" text="$x$ = $y$;" recursive="true" caseInsensitive="true" type="JAVA" >
-        <constraint name="__context__" within="" contains="" />
-        <constraint name="x" nameOfExprType="java\.util\.concurrent\.Executor" within="" contains="" />
-        <constraint name="y" nameOfExprType="java\.util\.concurrent\.ExecutorService" exprTypeWithinHierarchy="true" within="" contains="" />
-      </searchConfiguration>
-      <searchConfiguration name="Intialize an ExecutorService instance to an ExecutorService variable, not an Executor variable" text="Executor $x$ = $y$;" recursive="true" caseInsensitive="true" type="JAVA" >
-        <constraint name="__context__" within="" contains="" />
-        <constraint name="x"  within="" contains="" />
-        <constraint name="y" nameOfExprType="java\.util\.concurrent\.ExecutorService" exprTypeWithinHierarchy="true"  within="" contains="" />
-      </searchConfiguration>
-      <searchConfiguration name="Create a simple ExecutorService (not scheduled)" text="$x$ = $y$;" recursive="true" caseInsensitive="true" type="JAVA" pattern_context="default">
-        <constraint name="__context__" within="" contains="" />
-        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ExecutorService" within="" contains="" />
-        <constraint name="y" nameOfExprType="java\.util\.concurrent\.ScheduledExecutorService" exprTypeWithinHierarchy="true" within="" contains="" />
-      </searchConfiguration>
       <searchConfiguration name="Use equals on Pattern.toString()" text="$a$.equals($b$)" recursive="true" caseInsensitive="true" type="JAVA" pattern_context="default">
-        <constraint name="__context__" within="" contains="" />
-        <constraint name="a" nameOfExprType="Pattern" within="" contains="" />
-        <constraint name="b" within="" contains="" />
-      </searchConfiguration>
-      <searchConfiguration name="Use Objects.equals() on Pattern.toString()" text="java.util.Objects.equals($a$, $b$)" recursive="true" caseInsensitive="true" type="JAVA" pattern_context="default">
         <constraint name="__context__" within="" contains="" />
         <constraint name="a" nameOfExprType="Pattern" within="" contains="" />
         <constraint name="b" within="" contains="" />
@@ -402,10 +323,93 @@
         <constraint name="__context__" within="" contains="" />
         <constraint name="a" nameOfExprType="java\.util\.regex\.Pattern" within="" contains="" />
       </searchConfiguration>
+      <searchConfiguration name="Use IAE (a Druid's class)" created="1539353691746" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$))" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.lang\.IllegalArgumentException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use IAE (a Druid's class) with cause" created="1539353766336" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$),$y$)" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.lang\.IllegalArgumentException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+        <constraint name="y" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use IOE (a Druid's class)" created="1539353913074" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$))" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.io\.IOException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use IOE (a Druid's class) with cause" created="1539354009031" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$),$y$)" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.io\.IOException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+        <constraint name="y" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use ISE (a Druid's class)" created="1539353519594" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$))" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.lang\.IllegalStateException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use ISE (a Druid's class) with cause" created="1539353595734" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$),$y$)" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.lang\.IllegalStateException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+        <constraint name="y" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use map.putIfAbsent(k,v) or map.computeIfAbsent(k,v) where appropriate instead of containsKey() + put(). If computing v is expensive or has side effects use map.computeIfAbsent() instead" created="1558868694225" text="if (!$m$.containsKey($k$)) {&#10;    $m$.put($k$, $v$);&#10;}" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="m" within="" contains="" />
+        <constraint name="k" within="" contains="" />
+        <constraint name="v" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use nextInt(bound) instead" created="1535068047572" text="$x$.nextInt() % $a$" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="x" nameOfFormalType="java\.util\.Random" exprTypeWithinHierarchy="true" formalTypeWithinHierarchy="true" within="" contains="" />
+        <constraint name="a" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use Objects.equals() on Pattern.toString()" text="java.util.Objects.equals($a$, $b$)" recursive="true" caseInsensitive="true" type="JAVA" pattern_context="default">
+        <constraint name="__context__" within="" contains="" />
+        <constraint name="a" nameOfExprType="Pattern" within="" contains="" />
+        <constraint name="b" within="" contains="" />
+      </searchConfiguration>
       <searchConfiguration name="Use Objects.hash() on Pattern.toString() instead" text="java.util.Objects.hash($b$,$a$)" recursive="true" caseInsensitive="true" type="JAVA" pattern_context="default">
         <constraint name="__context__" within="" contains="" />
         <constraint name="a" nameOfExprType="java\.util\.regex\.Pattern" within="" contains="" />
         <constraint name="b" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use RE (a Druid's class)" created="1539352150701" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$))" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.lang\.RuntimeException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use RE (a Druid's class) with cause" created="1539353059868" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$),$y$)" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.lang\.RuntimeException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+        <constraint name="y" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use TypeReference&lt;List&lt;...&gt;&gt; instead" created="1539884261626" text="TypeReference&lt;ArrayList&lt;$E$&gt;&gt;" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use TypeReference&lt;Map&lt;...&gt;&gt; instead" created="1539884261626" text="TypeReference&lt;HashMap&lt;$K$, $V$&gt;&gt;" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="K" within="" contains="" />
+        <constraint name="V" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use TypeReference&lt;Set&lt;...&gt;&gt; instead" created="1539884261626" text="TypeReference&lt;HashSet&lt;$E$&gt;&gt;" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use UOE (a Druid's class)" created="1539354091201" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$))" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="E" regexp="java\.lang\.UnsupportedOperationException" within="" contains="" />
+        <constraint name="x" minCount="0" maxCount="2147483647" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use ZKPaths.makePath() with many arguments" created="1537504371779" text="org.apache.curator.utils.ZKPaths.makePath(org.apache.curator.utils.ZKPaths.makePath($x$, $y$), $z$)" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="x" within="" contains="" />
+        <constraint name="y" within="" contains="" />
+        <constraint name="z" within="" contains="" />
       </searchConfiguration>
     </inspection_tool>
     <inspection_tool class="SimplifyStreamApiCallChains" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -427,6 +431,7 @@
     <inspection_tool class="StringEquality" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="StringEqualsCharSequence" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="StringTokenizerDelimiter" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="Stylelint" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="SubtractionInCompareTo" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="SuspiciousArrayCast" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="SuspiciousArrayMethodCall" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -481,8 +486,8 @@
     <inspection_tool class="XmlHighlighting" enabled="true" level="Non-TeamCity Warning" enabled_by_default="true" />
     <inspection_tool class="XmlInvalidId" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
     <inspection_tool class="XmlPathReference" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
-    <inspection_tool class="unused" enabled="true" level="WARNING" enabled_by_default="true" isSelected="false">
-      <scope name="UnusedInspectionsScope" level="ERROR" enabled="true" isSelected="false">
+    <inspection_tool class="unused" enabled="true" level="WARNING" enabled_by_default="true" checkParameterExcludingHierarchy="false">
+      <scope name="UnusedInspectionsScope" level="ERROR" enabled="true" checkParameterExcludingHierarchy="false">
         <option name="LOCAL_VARIABLE" value="true" />
         <option name="FIELD" value="true" />
         <option name="METHOD" value="true" />

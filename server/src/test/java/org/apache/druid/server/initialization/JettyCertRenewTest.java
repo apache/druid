@@ -34,6 +34,8 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
+import org.apache.druid.java.util.emitter.core.NoopEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.HttpClientConfig;
 import org.apache.druid.java.util.http.client.HttpClientInit;
@@ -385,7 +387,8 @@ public class JettyCertRenewTest extends BaseJettyTest
     try {
       client = HttpClientInit.createClient(
           getSslConfig(),
-          lifecycle
+          lifecycle,
+          new ServiceEmitter("", "", new NoopEmitter())
       );
     }
     catch (Exception e) {

@@ -35,6 +35,7 @@ import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -52,6 +53,7 @@ import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.RowCountingCursorDecorator;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
@@ -101,13 +103,15 @@ public class GroupByQueryEngine
       final ByteBuffer processingBuffer,
       @Nullable final DateTime fudgeTimestamp,
       final GroupByQueryConfig querySpecificConfig,
-      final DruidProcessingConfig processingConfig
+      final DruidProcessingConfig processingConfig,
+      ResponseContext responseContext
   )
   {
-    final Cursor cursor = cursorHolder.asCursor();
-    if (cursor == null) {
+    final Cursor rawCursor = cursorHolder.asCursor();
+    if (rawCursor == null) {
       return Sequences.empty();
     }
+    final Cursor cursor = new RowCountingCursorDecorator(rawCursor, responseContext);
     final CursorGranularizer granularizer = CursorGranularizer.create(
         cursor,
         timeBoundaryInspector,
@@ -575,9 +579,9 @@ public class GroupByQueryEngine
         for (GroupByColumnSelectorPlus dim : dims) {
           final GroupByColumnSelectorStrategy strategy = dim.getColumnSelectorStrategy();
           selectorInternalFootprint += strategy.writeToKeyBuffer(
-              dim.getKeyBufferPosition(),
-              dim.getSelector(),
-              keyBuffer
+                  dim.getKeyBufferPosition(),
+                  dim.getSelector(),
+                  keyBuffer
           );
         }
         keyBuffer.rewind();
@@ -616,16 +620,16 @@ public class GroupByQueryEngine
           for (int i = 0; i < dims.length; i++) {
             GroupByColumnSelectorStrategy strategy = dims[i].getColumnSelectorStrategy();
             selectorInternalFootprint += strategy.initColumnValues(
-                dims[i].getSelector(),
-                i,
-                valuess
+                    dims[i].getSelector(),
+                    i,
+                    valuess
             );
             strategy.initGroupingKeyColumnValue(
-                dims[i].getKeyBufferPosition(),
-                i,
-                valuess[i],
-                keyBuffer,
-                stack
+                    dims[i].getKeyBufferPosition(),
+                    i,
+                    valuess[i],
+                    keyBuffer,
+                    stack
             );
           }
         }
@@ -646,10 +650,10 @@ public class GroupByQueryEngine
 
           if (stackPointer >= 0) {
             doAggregate = dims[stackPointer].getColumnSelectorStrategy().checkRowIndexAndAddValueToGroupingKey(
-                dims[stackPointer].getKeyBufferPosition(),
-                valuess[stackPointer],
-                stack[stackPointer],
-                keyBuffer
+                    dims[stackPointer].getKeyBufferPosition(),
+                    valuess[stackPointer],
+                    stack[stackPointer],
+                    keyBuffer
             );
 
             if (doAggregate) {
@@ -659,11 +663,11 @@ public class GroupByQueryEngine
               stack[stackPointer]++;
               for (int i = stackPointer + 1; i < stack.length; i++) {
                 dims[i].getColumnSelectorStrategy().initGroupingKeyColumnValue(
-                    dims[i].getKeyBufferPosition(),
-                    i,
-                    valuess[i],
-                    keyBuffer,
-                    stack
+                        dims[i].getKeyBufferPosition(),
+                        i,
+                        valuess[i],
+                        keyBuffer,
+                        stack
                 );
               }
               stackPointer = stack.length - 1;

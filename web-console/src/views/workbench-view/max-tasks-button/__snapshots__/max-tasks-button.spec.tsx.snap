@@ -12,78 +12,48 @@ exports[`MaxTasksButton matches snapshot 1`] = `
           title="Maximum number of tasks to launch"
         />
         <Blueprint5.MenuItem
-          active={false}
-          disabled={false}
           icon="tick"
-          multiline={false}
           onClick={[Function]}
-          popoverProps={{}}
           shouldDismissPopover={true}
           text="6 (full cluster capacity)"
         />
         <Blueprint5.MenuItem
-          active={false}
-          disabled={false}
           icon="blank"
           label="(1 controller + 1 worker)"
-          multiline={false}
           onClick={[Function]}
-          popoverProps={{}}
           shouldDismissPopover={true}
           text="2"
         />
         <Blueprint5.MenuItem
-          active={false}
-          disabled={false}
           icon="blank"
           label="(1 controller + max 2 workers)"
-          multiline={false}
           onClick={[Function]}
-          popoverProps={{}}
           shouldDismissPopover={true}
           text="3"
         />
         <Blueprint5.MenuItem
-          active={false}
-          disabled={false}
           icon="blank"
           label="(1 controller + max 3 workers)"
-          multiline={false}
           onClick={[Function]}
-          popoverProps={{}}
           shouldDismissPopover={true}
           text="4"
         />
         <Blueprint5.MenuItem
-          active={false}
-          disabled={false}
           icon="blank"
           label="(1 controller + max 4 workers)"
-          multiline={false}
           onClick={[Function]}
-          popoverProps={{}}
           shouldDismissPopover={true}
           text="5"
         />
         <Blueprint5.MenuItem
-          active={false}
-          disabled={false}
           icon="blank"
-          multiline={false}
           onClick={[Function]}
-          popoverProps={{}}
-          shouldDismissPopover={true}
           text="Custom"
         />
         <Blueprint5.MenuDivider />
         <Blueprint5.MenuItem
-          active={false}
-          disabled={false}
           icon="flow-branch"
           label="Max"
-          multiline={false}
-          popoverProps={{}}
-          shouldDismissPopover={true}
           submenuProps={
             {
               "style": {
@@ -94,13 +64,9 @@ exports[`MaxTasksButton matches snapshot 1`] = `
           text="Task assignment"
         >
           <Blueprint5.MenuItem
-            active={false}
-            disabled={false}
             icon="tick"
             multiline={true}
             onClick={[Function]}
-            popoverProps={{}}
-            shouldDismissPopover={true}
             text={
               <React.Fragment>
                 <strong>
@@ -111,13 +77,9 @@ exports[`MaxTasksButton matches snapshot 1`] = `
             }
           />
           <Blueprint5.MenuItem
-            active={false}
-            disabled={false}
             icon="blank"
             multiline={true}
             onClick={[Function]}
-            popoverProps={{}}
-            shouldDismissPopover={true}
             text={
               <React.Fragment>
                 <strong>

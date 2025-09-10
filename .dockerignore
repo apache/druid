@@ -17,7 +17,6 @@
 # under the License.
 
 .git
-**/*.jar
 **/*.class
 dist
 target

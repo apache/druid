@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.kafka;
 
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.KafkaEntity;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexing.kafka.KafkaRecordSupplier;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -34,7 +35,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
  * <p>
  * NOTE: Any records with null values will be skipped, even if they contain non-null keys, or headers
  */
-public class KafkaRecordEntity extends ByteEntity
+public class KafkaRecordEntity extends ByteEntity implements KafkaEntity
 {
   private final ConsumerRecord<byte[], byte[]> record;
 
@@ -47,5 +48,11 @@ public class KafkaRecordEntity extends ByteEntity
   public ConsumerRecord<byte[], byte[]> getRecord()
   {
     return record;
+  }
+  
+  @Override
+  public long getRecordTimestampMillis()
+  {
+    return record.timestamp();
   }
 }

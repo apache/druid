@@ -9,7 +9,7 @@ target
 *.swo
 *.pyc
 .classpath
-.idea
+.idea/
 .project
 .PVS-Studio
 .settings/
@@ -44,7 +44,6 @@ website/build/
 **/druidapi.egg-info/
 examples/quickstart/jupyter-notebooks/docker-jupyter/notebooks
 website/i18n/*
-# ignore NetBeans IDE specific files
 nbproject
 nbactions.xml
 nb-configuration.xml

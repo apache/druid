@@ -352,16 +352,6 @@
   </suppress>
 
   <suppress>
-    <!-- 4.5.5 is a fixed version as per https://nvd.nist.gov/vuln/detail/CVE-2021-44878. -->
-    <!-- However, vulnerability scan still shows this CVE. Pac4j release notes mention 5.3.1 as "fully fixed" version. -->
-    <!-- Remove suppression once upgraded to 5.3.1. -->
-    <notes><![CDATA[
-   file name: pac4j-core-4.5.7.jar
-   ]]></notes>
-    <cve>CVE-2021-44878</cve>
-  </suppress>
-
-  <suppress>
     <!-- package-lock.json?d3-color -->
     <notes><![CDATA[
    file name: d3-color:2.0.0
@@ -461,15 +451,6 @@
     ]]></notes>
     <packageUrl regex="true">^pkg:maven/.*/.*@.*$</packageUrl>
     <cve>CVE-2021-4277</cve>
-  </suppress>
-
-<!-- the remaining uses of vulnerable okio are in contrib-extensions -->
-  <suppress>
-    <notes><![CDATA[
-      file name: okio-1.17.2.jar, okio-1.15.0.jar
-    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/com\.squareup\.okio/okio@..*$</packageUrl>
-    <cve>CVE-2023-3635</cve>  <!-- Suppressed since okio requests in Druid are internal, and not user-facing -->
   </suppress>
 
   <!-- CVE-2022-4244 is affecting plexus-utils package, plexus-interpolation is wrongly matched - https://github.com/jeremylong/DependencyCheck/issues/5973 -->

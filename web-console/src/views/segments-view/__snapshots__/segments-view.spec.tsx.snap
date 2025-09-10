@@ -30,13 +30,9 @@ exports[`SegmentsView matches snapshot 1`] = `
     </Blueprint5.ButtonGroup>
     <Memo(MoreButton)>
       <Blueprint5.MenuItem
-        active={false}
         disabled={true}
         icon="application"
-        multiline={false}
         onClick={[Function]}
-        popoverProps={{}}
-        shouldDismissPopover={true}
         text="View SQL query for table"
       />
     </Memo(MoreButton)>

@@ -169,7 +169,7 @@ public class DruidCoordinatorConfigTest
         true,
         Period.parse("PT60M").toStandardDuration(),
         500,
-        Period.days(2)
+        Period.parse("P30D")
     );
     CoordinatorKillConfigs killConfigs = createKillConfig().unusedSegments(inputConfig).build();
 
@@ -180,6 +180,7 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(Duration.standardMinutes(60), config.getBufferPeriod());
     Assert.assertEquals(Duration.standardHours(12), config.getDurationToRetain());
     Assert.assertEquals(500, config.getMaxSegments());
+    Assert.assertEquals(Period.days(30), config.getMaxInterval());
   }
 
   @Test

@@ -300,7 +300,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
                 query, resource,
                 finalizingResults,
                 false,
-                perQueryStats
+                perQueryStats,
+                context
             ),
             perQueryStats
         );
@@ -312,7 +313,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
                 resource,
                 finalizingResults,
                 false,
-                perQueryStats
+                perQueryStats,
+                context
             ),
             query
         );
@@ -350,7 +352,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
             resource,
             finalizedResults,
             true,
-            perQueryStats
+            perQueryStats,
+            context
         ),
         query
     );

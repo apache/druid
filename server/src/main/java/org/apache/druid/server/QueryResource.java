@@ -83,6 +83,11 @@ public class QueryResource implements QueryCountStatsProvider
   public static final String QUERY_ID_RESPONSE_HEADER = "X-Druid-Query-Id";
   public static final String ERROR_MESSAGE_TRAILER_HEADER = "X-Error-Message";
   public static final String RESPONSE_COMPLETE_TRAILER_HEADER = "X-Druid-Response-Complete";
+  public static final String QUERY_SEGMENT_COUNT_HEADER = "X-Druid-Query-Segment-Count";
+  public static final String BROKER_QUERY_TIME_RESPONSE_HEADER = "X-Broker-Query-Time";
+  public static final String QUERY_CPU_TIME = "X-Druid-Query-Cpu-Time";
+  public static final String NUM_SCANNED_ROWS = "X-Num-Scanned-Rows";
+  public static final String QUERY_START_TIME_ATTRIBUTE = "queryStartTime";
   public static final String HEADER_ETAG = "ETag";
 
   protected final QueryLifecycleFactory queryLifecycleFactory;
@@ -158,9 +163,11 @@ public class QueryResource implements QueryCountStatsProvider
     final ResourceIOReaderWriterFactory.ResourceIOReaderWriter io = resourceIOReaderWriterFactory.factorize(req, pretty != null);
 
     final String currThreadName = Thread.currentThread().getName();
+    final long queryStartTime = System.nanoTime();
     try {
       final Query<?> query;
       try {
+        req.setAttribute(QUERY_START_TIME_ATTRIBUTE, queryStartTime);
         query = readQuery(req, in, io);
       }
       catch (QueryException e) {
