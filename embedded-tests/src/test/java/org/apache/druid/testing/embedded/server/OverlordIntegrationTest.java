@@ -23,8 +23,6 @@ import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.common.task.NoopTask;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -36,33 +34,20 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * Tests all the REST APIs exposed by the Overlord using the
- * {@link OverlordClient}.
- */
-public class OverlordClient2Test extends EmbeddedClusterTestBase
+public class OverlordIntegrationTest extends EmbeddedClusterTestBase
 {
-  private static final String UNKNOWN_TASK_ID
-      = IdUtils.newTaskId("sim_test_noop", "dummy", null);
-  private static final String UNKNOWN_TASK_ERROR
-      = StringUtils.format("Cannot find any task with id: [%s]", UNKNOWN_TASK_ID);
-
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
-  private final EmbeddedIndexer indexer1 = new EmbeddedIndexer().addProperty("druid.worker.capacity", "3");
-  private final EmbeddedIndexer indexer2 = new EmbeddedIndexer().addProperty("druid.worker.capacity", "3");
-//  private final EmbeddedIndexer indexer1 = new EmbeddedIndexer().addProperty("druid.worker.capacity", "3");
-//      .addProperty("druid.plaintextPort", "17083");
+  private final EmbeddedIndexer indexer = new EmbeddedIndexer().addProperty("druid.worker.capacity", "3");
 
   @Override
   public EmbeddedDruidCluster createCluster()
   {
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
-                               .useLatchableEmitter()
-                               .addServer(new EmbeddedCoordinator())
-                               .addServer(new EmbeddedBroker())
-                               .addServer(overlord)
-                               .addServer(indexer1)
-                               ;
+        .useLatchableEmitter()
+        .addServer(new EmbeddedCoordinator())
+        .addServer(new EmbeddedBroker())
+        .addServer(overlord)
+        .addServer(indexer);
   }
 
   @Test
@@ -70,7 +55,7 @@ public class OverlordClient2Test extends EmbeddedClusterTestBase
   {
     final String taskId = IdUtils.newTaskId("sim_test_noop", TestDataSource.WIKI, null);
     cluster.callApi().onLeaderOverlord(
-        o -> o.runTask(taskId, new NoopTask(taskId, null, null, 4000L, 0L, null))
+        o -> o.runTask(taskId, new NoopTask(taskId, null, null, 8000L, 0L, null))
     );
     // give some time for the overlord to dispatch the task to the worker
     Thread.sleep(100);
@@ -78,8 +63,8 @@ public class OverlordClient2Test extends EmbeddedClusterTestBase
     overlord.start();
     // give some time for the overlord to load the task from the worker
     Thread.sleep(100);
-    indexer1.stop();
-    indexer1.start();
+    indexer.stop();
+    indexer.start();
     // give time for the overlord to realize that the task is not there anymore
     Thread.sleep(100);
 
@@ -90,48 +75,5 @@ public class OverlordClient2Test extends EmbeddedClusterTestBase
         "This task disappeared on the worker where it was assigned. See overlord logs for more details.",
         jobStatus.getStatus().getErrorMsg()
     );
-
-    // give some time for the overlord to load the task from the worker
-
-    //    EmbeddedIndexer indexer2 = new EmbeddedIndexer().addProperty("druid.worker.capacity", "3");
-    // cluster.revoidServer(indexer1);
-//    cluster.addServer(indexer2);
-//    indexer2.start();
-//    System.out.println("----stop3---");
-//    Thread.sleep(500);
-////    overlord.stop();
-//    System.out.println("----stop4---");
-//    Thread.sleep(500);
-
-//  int cnt = 0;
-//  while (cnt < 100) {
-//    cnt++;
-//    Thread.sleep(1000);
-//    if (cnt == 4) {
-//      System.out.println("@@@cancel task");
-//      cluster.callApi().onLeaderOverlord(oc -> oc.cancelTask(taskId));
-//    }
-//    Object r = cluster.callApi().onLeaderOverlord(oc -> oc.taskStatus(taskId));
-//    System.out.println(r);
-//  }
-
-//    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
   }
-//
-//  @Test
-//  public void test_runKillTask() throws Exception
-//  {
-//    final String taskId = cluster.callApi().onLeaderOverlord(
-//        o -> o.runKillTask("sim_test", TestDataSource.WIKI, Intervals.ETERNITY, null, null, null)
-//    );
-//
-////    indexer1.stop();
-////    indexer1.start();
-////    cluster.addServer(indexer2);
-////    indexer2.start();
-//
-//    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
-//  }
-
-
 }
