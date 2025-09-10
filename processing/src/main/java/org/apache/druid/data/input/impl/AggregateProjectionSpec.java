@@ -245,8 +245,8 @@ public class AggregateProjectionSpec
             && maybeGranularity.getTimeZone().equals(DateTimeZone.UTC)
             && ((PeriodGranularity) maybeGranularity).getOrigin() == null
             && (granularity == null
-                || ((PeriodGranularity) maybeGranularity).canBeMappedTo((PeriodGranularity) granularity))) {
-          // found a mappable period granularity, that's either finer than the existing granularity or it's the first one
+                || maybeGranularity.isFinerThan (granularity))) {
+          // found a finer period granularity than the existing granularity, or it's the first one
           timeColumnName = dimension.getName();
           granularity = maybeGranularity;
         }
