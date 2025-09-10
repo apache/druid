@@ -153,7 +153,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   protected SeekableStreamIndexTaskIOConfig<String, String> createUpdatedTaskIoConfig(
       Set<String> partitions,
       TaskGroup existingTaskGroup,
-      Map<String, String> latestCommittedOffsets
+      Map<String, String> latestCommittedOffsets,
+      Map<String, String> latestTaskOffsetsOnPause
   )
   {
     throw new UnsupportedOperationException("Not implemented");

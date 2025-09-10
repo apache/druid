@@ -91,6 +91,8 @@ public interface SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetTy
    */
   ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> pauseAsync(String id);
 
+  ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> pauseAndCheckpointAsync(String id);
+
   /**
    * Set end offsets for a task. Retries on failure.
    *

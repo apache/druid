@@ -2952,7 +2952,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     protected SeekableStreamIndexTaskIOConfig<String, String> createUpdatedTaskIoConfig(
         Set<String> partitions,
         SeekableStreamSupervisor<String, String, ByteEntity>.TaskGroup existingTaskGroup,
-        Map<String, String> latestCommittedOffsets
+        Map<String, String> latestCommittedOffsets,
+        Map<String, String> latestTaskOffsetsOnPause
     )
     {
       // dummy implementation
@@ -3178,7 +3179,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     protected SeekableStreamIndexTaskIOConfig<String, String> createUpdatedTaskIoConfig(
         Set<String> partitions,
         SeekableStreamSupervisor<String, String, ByteEntity>.TaskGroup existingTaskGroup,
-        Map<String, String> latestCommittedOffsets
+        Map<String, String> latestCommittedOffsets,
+        Map<String, String> latestTaskOffsetsOnPause
     )
     {
       return null;
@@ -3225,7 +3227,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     protected SeekableStreamIndexTaskIOConfig<String, String> createUpdatedTaskIoConfig(
         Set<String> partitions,
         SeekableStreamSupervisor<String, String, ByteEntity>.TaskGroup existingTaskGroup,
-        Map<String, String> latestCommittedOffsets
+        Map<String, String> latestCommittedOffsets,
+        Map<String, String> latestTaskOffsetsOnPause
     )
     {
       return null;

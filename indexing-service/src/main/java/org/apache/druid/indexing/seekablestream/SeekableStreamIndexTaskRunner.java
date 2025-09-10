@@ -119,7 +119,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -254,7 +253,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private volatile DateTime minMessageTime;
   private volatile DateTime maxMessageTime;
   private final ScheduledExecutorService rejectionPeriodUpdaterExec;
-  private volatile boolean isConfigChangeOngoing = false;
+  private volatile boolean isPausedForCheckpointCompletion = false;
 
   public SeekableStreamIndexTaskRunner(
       final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task,
@@ -1738,27 +1737,20 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       throws InterruptedException
   {
     authorizationCheck(req);
+    if (this.isPausedForCheckpointCompletion) {
+      return Response.status(409).entity("Another config change is ongoing").build();
+    }
     try {
       log.info("Attempting to update config to [%s]", request.getIoConfig());
       pause();
-      isConfigChangeOngoing = true;
+      this.isPausedForCheckpointCompletion = true;
       checkpointSequences();
 
-      SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig;
-      if (request.getIoConfig() instanceof LinkedHashMap) {
-        newIoConfig =(SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType>)
-            toolbox.getJsonMapper().convertValue(request.getIoConfig(), SeekableStreamIndexTaskIOConfig.class);
-      } else {
-        newIoConfig = (SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType>) request.getIoConfig();
-      }
-      this.ioConfig = newIoConfig;
-      this.stream = ioConfig.getStartSequenceNumbers().getStream();
-      this.endOffsets = new ConcurrentHashMap<>(ioConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap());
-      minMessageTime = Configs.valueOrDefault(ioConfig.getMinimumMessageTime(), DateTimes.MIN);
-      maxMessageTime = Configs.valueOrDefault(ioConfig.getMaximumMessageTime(), DateTimes.MAX);
-
+      SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig = (SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType>)
+          toolbox.getJsonMapper().convertValue(request.getIoConfig(), SeekableStreamIndexTaskIOConfig.class);
+      setIOConfig(newIoConfig);
       createNewSequenceFromIoConfig(newIoConfig);
-      isConfigChangeOngoing = false;
+      this.isPausedForCheckpointCompletion = false;
       log.info("Config updated to [%s]", this.ioConfig);
       toolbox.getEmitter().emit(ServiceMetricEvent.builder()
                                     .setDimension(DruidMetrics.TASK_ID, task.getId())
@@ -1766,12 +1758,25 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                                     .setDimension(DruidMetrics.DATASOURCE, task.getDataSource())
                                     .build("task/config/update/success", String.valueOf(1)));
       resume();
+      this.isPausedForCheckpointCompletion = false;
       return Response.ok().build();
     }
     catch (Exception e) {
       log.makeAlert(e, "Failed to update task config");
+      this.isPausedForCheckpointCompletion = false;
       return Response.serverError().entity(e.getMessage()).build();
     }
+  }
+
+  private void setIOConfig(
+      SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig
+  ) throws IOException
+  {
+    this.ioConfig = ioConfig;
+    this.stream = ioConfig.getStartSequenceNumbers().getStream();
+    this.endOffsets = new ConcurrentHashMap<>(ioConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap());
+    this.minMessageTime = Configs.valueOrDefault(ioConfig.getMinimumMessageTime(), DateTimes.MIN);
+    this.maxMessageTime = Configs.valueOrDefault(ioConfig.getMaximumMessageTime(), DateTimes.MAX);
   }
 
   /**
@@ -1862,8 +1867,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                      .build();
     } else {
       try {
-        // Don't acquire a lock if a config change is ongoing, as the runner is already paused.
-        if (!isConfigChangeOngoing) {
+        // Don't acquire a lock if the task is already paused for checkpoint completion, avoiding deadlock
+        if (!this.isPausedForCheckpointCompletion) {
           pauseLock.lockInterruptibly();
         }
         // Perform all sequence related checks before checking for isPaused()
@@ -1889,7 +1894,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             || (latestSequence.getEndOffsets().equals(sequenceNumbers) && finish)) {
           log.warn("Ignoring duplicate request, end offsets already set for sequences [%s]", sequenceNumbers);
           resetNextCheckpointTime();
-          if (!isConfigChangeOngoing) {
+          if (!this.isPausedForCheckpointCompletion) {
             resume();
           }
           return Response.ok(sequenceNumbers).build();
@@ -1925,7 +1930,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         resetNextCheckpointTime();
         latestSequence.setEndOffsets(sequenceNumbers);
 
-        if (finish) {
+        // if this is the final checkpoint, or if the task is paused for checkpoint completion and updateConfig is supposed to
+        // finish the current sequence, we just update the end offsets of the latest sequence.
+        if (finish || this.isPausedForCheckpointCompletion) {
           log.info(
               "Sequence[%s] end offsets updated from [%s] to [%s].",
               latestSequence.getSequenceName(),
@@ -1966,11 +1973,13 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                        .build();
       }
       finally {
-        pauseLock.unlock();
+        if (!this.isPausedForCheckpointCompletion) {
+          pauseLock.unlock();
+        }
       }
     }
 
-    if (!isConfigChangeOngoing) {
+    if (!isPausedForCheckpointCompletion) {
       resume();
     }
 
@@ -2024,6 +2033,21 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     authorizationCheck(req);
     return pause();
+  }
+
+  @POST
+  @Path("/pauseAndCheckpoint")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response pauseAndCheckpointHTTP(
+      @Context final HttpServletRequest req
+  ) throws InterruptedException, JsonProcessingException
+  {
+    authorizationCheck(req);
+    log.info("Received pause and checkpoint request");
+    pause();
+    this.isPausedForCheckpointCompletion = true;
+    checkpointSequences();
+    return Response.ok().entity(toolbox.getJsonMapper().writeValueAsString(getCurrentOffsets())).build();
   }
 
   @VisibleForTesting

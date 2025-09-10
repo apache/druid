@@ -185,9 +185,9 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
   public void test_ingest30kRows_ofSelfClusterMetricsWithScaleOuts_andVerifyValues()
   {
     final int maxRowsPerSegment = 1000;
-    final int expectedSegmentsHandedOff = 30;
+    final int expectedSegmentsHandedOff = 50;
 
-    final int taskCount = 2;
+    final int taskCount = 1;
 
     // Submit and start a supervisor
     final String supervisorId = dataSource + "_supe";
@@ -195,7 +195,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
         .withLagCollectionIntervalMillis(100)
         .withLagCollectionRangeMillis(100)
         .withEnableTaskAutoScaler(true)
-        .withScaleActionPeriodMillis(3000)
+        .withScaleActionPeriodMillis(60000)
         .withScaleActionStartDelayMillis(1000)
         .withScaleOutThreshold(0)
         .withScaleInThreshold(10000)
@@ -473,7 +473,9 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     return MoreResources.Supervisor.KAFKA_JSON
         .get()
         .withDataSchema(schema -> schema.withTimestamp(new TimestampSpec("timestamp", "iso", null)))
-        .withTuningConfig(tuningConfig -> tuningConfig.withMaxRowsPerSegment(maxRowsPerSegment))
+        .withTuningConfig(tuningConfig -> tuningConfig
+            .withMaxRowsPerSegment(maxRowsPerSegment)
+            .withReleaseLocksOnHandoff(true))
         .withIoConfig(
             ioConfig -> ioConfig
                 .withConsumerProperties(kafkaServer.consumerProperties())

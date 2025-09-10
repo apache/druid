@@ -124,6 +124,7 @@ import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
@@ -584,7 +585,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       final Stopwatch scaleActionStopwatch = Stopwatch.createStarted();
       
       if (spec.usePerpetuallyRunningTasks()) {
-        return changeTaskCountForPerpetualTasks(desiredActiveTaskCount, scaleActionStopwatch);
+        return changeTaskCountForPerpetualTasks(desiredActiveTaskCount);
       } else {
         gracefulShutdownInternal();
         changeTaskCountInIOConfig(desiredActiveTaskCount);
@@ -629,17 +630,27 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * Handles task count changes for perpetual tasks using updateConfig instead of graceful shutdown.
    * This approach pauses tasks, recalculates partition assignments, and sends config updates.
    */
-  private boolean changeTaskCountForPerpetualTasks(int desiredActiveTaskCount, Stopwatch scaleActionStopwatch)
+  private boolean changeTaskCountForPerpetualTasks(int desiredActiveTaskCount)
       throws InterruptedException, ExecutionException
   {
+    if (this.isDynamicAllocationOngoing) {
+      log.info("A dynamic allocation is already ongoing, skipping this request.");
+      return false;
+    }
+    this.isDynamicAllocationOngoing = true;
     log.info("Handling task count change for perpetual tasks from [%d] to [%d]", 
              activelyReadingTaskGroups.size(), desiredActiveTaskCount);
 
-    pauseAllTasks();
+    Map<PartitionIdType, SequenceOffsetType> offsetsFromTasks = pauseAndCheckpointAllTasks();
+    if (taskCheckpointWait.await(60, TimeUnit.SECONDS)) {
+      log.info("All tasks have been checkpointed successfully");
+    } else {
+      log.warn("Timeout waiting for tasks to pause and checkpoint");
+    }
     changeTaskCountInIOConfig(desiredActiveTaskCount);
     Map<Integer, Set<PartitionIdType>> newPartitionGroups = calculateNewPartitionGroups();
 
-    boolean success = sendConfigUpdatesToTasks(newPartitionGroups);
+    boolean success = sendConfigUpdatesToTasks(newPartitionGroups, offsetsFromTasks);
 
     if (success) {
       updatePartitionGroupsForPerpetualTasks(newPartitionGroups);
@@ -647,11 +658,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     } else {
       log.error("Failed to update task configurations for perpetual tasks");
     }
-
+    this.isDynamicAllocationOngoing = false;
     return success;
   }
 
-  private void pauseAllTasks() throws InterruptedException, ExecutionException
+  private Map<PartitionIdType, SequenceOffsetType> pauseAndCheckpointAllTasks() throws InterruptedException, ExecutionException
   {
     log.info("Pausing all tasks for perpetual task scaling");
     List<ListenableFuture<Map<PartitionIdType, SequenceOffsetType>>> pauseFutures = new ArrayList<>();
@@ -659,12 +670,32 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
       for (String taskId : taskGroup.taskIds()) {
         log.debug("Pausing task [%s]", taskId);
-        pauseFutures.add(taskClient.pauseAsync(taskId));
+        pauseFutures.add(taskClient.pauseAndCheckpointAsync(taskId));
       }
     }
-    
-    coalesceAndAwait(pauseFutures);
-    log.info("Successfully paused [%d] tasks", pauseFutures.size());
+
+    Map<PartitionIdType, SequenceOffsetType> consolidatedLatestOffsets = new HashMap<>();
+
+    this.taskCheckpointWait = new CountDownLatch(pauseFutures.size());
+    log.info("Staring a task checkpoint wait with count [%d]", pauseFutures.size());
+    List<Either<Throwable, Map<PartitionIdType, SequenceOffsetType>>> latestOffsets = coalesceAndAwait(pauseFutures);
+    for (Either<Throwable, Map<PartitionIdType, SequenceOffsetType>> result : latestOffsets) {
+      if (result.isError()) {
+        log.warn("Failed to pause and checkpoint task[%s]", result.error().getMessage());
+      } else {
+        Map<PartitionIdType, SequenceOffsetType> offsets = result.valueOrThrow();
+        offsets.forEach((partition, offset) ->
+                            consolidatedLatestOffsets.merge(
+                                partition, offset, (key, existingOffset) -> {
+                                  OrderedSequenceNumber<SequenceOffsetType> existing = makeSequenceNumber(existingOffset);
+                                  OrderedSequenceNumber<SequenceOffsetType> incoming = makeSequenceNumber(offset);
+                                  return existing.compareTo(incoming) >= 0 ? existingOffset : offset;
+                                }
+                            ));
+      }
+    }
+    log.info("Successfully paused & requested checkpointed from [%d] tasks", pauseFutures.size());
+    return consolidatedLatestOffsets;
   }
 
   /**
@@ -700,7 +731,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * Sends configuration updates to tasks with new partition assignments.
    * Also handles cleanup of obsolete task groups when scaling down.
    */
-  private boolean sendConfigUpdatesToTasks(Map<Integer, Set<PartitionIdType>> newPartitionGroups)
+  private boolean sendConfigUpdatesToTasks(Map<Integer, Set<PartitionIdType>> newPartitionGroups, Map<PartitionIdType, SequenceOffsetType> latestTaskOffsetsOnPause)
       throws InterruptedException, ExecutionException
   {
     log.info("Sending configuration updates to tasks");
@@ -716,7 +747,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig = createUpdatedTaskIoConfig(
               partitions,
               existingTaskGroup,
-              latestCommittedOffsets
+              latestCommittedOffsets,
+              latestTaskOffsetsOnPause
           );
           TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(newIoConfig);
 
@@ -817,7 +849,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   protected abstract SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> createUpdatedTaskIoConfig(
       Set<PartitionIdType> partitions,
       TaskGroup existingTaskGroup,
-      Map<PartitionIdType, SequenceOffsetType> latestCommittedOffsets
+      Map<PartitionIdType, SequenceOffsetType> latestCommittedOffsets,
+      Map<PartitionIdType, SequenceOffsetType> latestTaskOffsetsOnPause
   );
 
   private void changeTaskCountInIOConfig(int desiredActiveTaskCount)
@@ -1084,6 +1117,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   protected final String dataSource;
+  private volatile CountDownLatch taskCheckpointWait;
+  private volatile boolean isDynamicAllocationOngoing;
 
   private final Set<PartitionIdType> subsequentlyDiscoveredPartitions = new HashSet<>();
   private final TaskStorage taskStorage;
@@ -3765,6 +3800,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                         taskGroup.tasks.remove(taskId);
                       }
                     }
+                    latchCountdown();
+                    log.info("Current latch count: %d", taskCheckpointWait.getCount());
                   }
                   catch (Exception e) {
                     log.error("An exception occurred while setting end offsets: [%s]", e.getMessage());
@@ -3786,6 +3823,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     );
   }
 
+  private void latchCountdown() {
+    log.info("Latching down");
+    this.taskCheckpointWait.countDown();
+  }
   private ListenableFuture<Void> stopTasksInGroup(
       @Nullable TaskGroup taskGroup,
       String stopReasonFormat,

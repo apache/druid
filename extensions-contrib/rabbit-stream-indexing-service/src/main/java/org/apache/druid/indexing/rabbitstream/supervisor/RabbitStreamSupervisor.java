@@ -406,7 +406,8 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
   protected SeekableStreamIndexTaskIOConfig<String, Long> createUpdatedTaskIoConfig(
       Set<String> partitions,
       SeekableStreamSupervisor<String, Long, ByteEntity>.TaskGroup existingTaskGroup,
-      Map<String, Long> latestCommittedOffsets
+      Map<String, Long> latestCommittedOffsets,
+      Map<String, Long> latestTaskOffsetsOnPause
   )
   {
     throw new UnsupportedOperationException("not implemented");

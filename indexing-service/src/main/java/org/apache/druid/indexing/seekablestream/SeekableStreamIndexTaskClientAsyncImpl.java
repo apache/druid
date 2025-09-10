@@ -326,6 +326,51 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   }
 
   @Override
+  public ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> pauseAndCheckpointAsync(String id)
+  {
+    final ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> pauseFuture =
+        makeRequest(id, new RequestBuilder(HttpMethod.POST, "/pauseAndCheckpoint"))
+            .handler(new BytesFullResponseHandler())
+            .onSuccess(r -> {
+              if (r.getStatus().equals(HttpResponseStatus.OK)) {
+                log.info("Task [%s] paused successfully & Checkpoint requested succesffully", id);
+                return deserializeOffsetsMap(r.getContent());
+              } else if (r.getStatus().equals(HttpResponseStatus.ACCEPTED)) {
+                // Return null, which triggers a loop later to wait for the task to enter PAUSED state.
+                return null;
+              } else {
+                throw new ISE(
+                    "Pause & Checkpoint request for task [%s] failed with response [%s]",
+                    id,
+                    r.getStatus()
+                );
+              }
+            })
+            .onNotAvailable(e -> Either.value(Collections.emptyMap()))
+            .go();
+
+    return FutureUtils.transformAsync(
+        pauseFuture,
+        result -> {
+          if (result != null) {
+            return Futures.immediateFuture(result);
+          } else {
+            return getOffsetsWhenPaused(
+                id,
+                new RetryPolicyFactory(
+                    new RetryPolicyConfig()
+                        .setMinWait(Period.seconds(MIN_RETRY_WAIT_SECONDS))
+                        .setMaxWait(Period.seconds(MAX_RETRY_WAIT_SECONDS))
+                        .setMaxRetryCount(httpRetries)
+                ).makeRetryPolicy()
+            );
+          }
+        }
+    );
+  }
+
+
+  @Override
   public ListenableFuture<Map<String, Object>> getMovingAveragesAsync(String id)
   {
     return makeRequest(id, new RequestBuilder(HttpMethod.GET, "/rowStats"))

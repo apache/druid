@@ -32,18 +32,18 @@ import java.util.Objects;
  */
 public class TaskConfigUpdateRequest
 {
-  private final Object ioConfig;
+  private final SeekableStreamIndexTaskIOConfig ioConfig;
 
   @JsonCreator
   public TaskConfigUpdateRequest(
-      @JsonProperty("ioConfig") @Nullable Object ioConfig
+      @JsonProperty("ioConfig") @Nullable SeekableStreamIndexTaskIOConfig ioConfig
   )
   {
     this.ioConfig = ioConfig;
   }
 
   @JsonProperty
-  public Object getIoConfig()
+  public SeekableStreamIndexTaskIOConfig getIoConfig()
   {
     return ioConfig;
   }

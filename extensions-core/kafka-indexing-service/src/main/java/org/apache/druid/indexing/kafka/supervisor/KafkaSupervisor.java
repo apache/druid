@@ -256,7 +256,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   protected SeekableStreamIndexTaskIOConfig<KafkaTopicPartition, Long> createUpdatedTaskIoConfig(
       Set<KafkaTopicPartition> partitions,
       TaskGroup existingTaskGroup,
-      Map<KafkaTopicPartition, Long> latestCommittedOffsets
+      Map<KafkaTopicPartition, Long> latestCommittedOffsets,
+      Map<KafkaTopicPartition, Long> latestTaskOffsetsOnPause
   )
   {
     log.info("Creating updated task IO config for task group [%s]", existingTaskGroup.getId());
@@ -264,14 +265,10 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
     Set<KafkaTopicPartition> exclusiveStartSequenceNumberPartitions = new HashSet<>();
 
     for (KafkaTopicPartition partition : partitions) {
-      Long offset;
-      if (!latestCommittedOffsets.containsKey(partition)) {
-        log.warn("No committed offset found for partition [%s], using NOT_SET", partition);
-        offset = NOT_SET;
-      } else {
-        offset = latestCommittedOffsets.get(partition);
-      }
-
+      Long offset = Math.max(
+          latestTaskOffsetsOnPause.getOrDefault(partition, 0L),
+          latestCommittedOffsets.getOrDefault(partition, 0L)
+      );
       startingSequences.put(partition, offset);
     }
 
@@ -285,7 +282,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
     // For end sequences, use NOT_SET to indicate open-ended reading
     Map<KafkaTopicPartition, Long> endingSequences = new HashMap<>();
     for (KafkaTopicPartition partition : partitions) {
-      endingSequences.put(partition, NOT_SET);
+      endingSequences.put(partition, END_OF_PARTITION);
     }
 
     SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long> endSequenceNumbers =
