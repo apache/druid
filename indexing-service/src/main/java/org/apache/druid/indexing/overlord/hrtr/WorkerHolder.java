@@ -83,12 +83,14 @@ public class WorkerHolder
   private final HttpClient httpClient;
   private final HttpRemoteTaskRunnerConfig config;
 
+  private final Listener listener;
+
   public WorkerHolder(
       ObjectMapper smileMapper,
       HttpClient httpClient,
       HttpRemoteTaskRunnerConfig config,
       ScheduledExecutorService workersSyncExec,
-      ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> listener,
+      Listener listener,
       Worker worker,
       List<TaskAnnouncement> knownAnnouncements
   )
@@ -96,6 +98,7 @@ public class WorkerHolder
     this.smileMapper = smileMapper;
     this.httpClient = httpClient;
     this.config = config;
+    this.listener = listener;
     this.worker = worker;
     //worker holder is created disabled and gets enabled after first sync success.
     this.disabled = new AtomicBoolean(true);
@@ -109,7 +112,7 @@ public class WorkerHolder
         WORKER_SYNC_RESP_TYPE_REF,
         config.getSyncRequestTimeout().toStandardDuration().getMillis(),
         config.getServerUnstabilityTimeout().toStandardDuration().getMillis(),
-        listener
+        createSyncListener()
     );
 
     ConcurrentMap<String, TaskAnnouncement> announcements = new ConcurrentHashMap<>();
@@ -425,7 +428,7 @@ public class WorkerHolder
       {
         for (TaskAnnouncement announcement : announcements) {
           try {
-//            listener.taskAddedOrUpdated(announcement, WorkerHolder.this);
+            listener.taskAddedOrUpdated(announcement, WorkerHolder.this);
           }
           catch (Exception ex) {
             log.error(
