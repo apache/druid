@@ -44,11 +44,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 public class Projections
 {
-  private static final Map<byte[], Boolean> PERIOD_GRAN_CACHE = new HashMap<>();
+  private static final ConcurrentHashMap<byte[], Boolean> PERIOD_GRAN_CACHE = new ConcurrentHashMap<>();
 
   @Nullable
   public static <T> QueryableProjection<T> findMatchingProjection(
