@@ -51,6 +51,7 @@ import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.EqualDistributionWorkerSelectStrategy;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.indexing.worker.WorkerHistoryItem;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -297,7 +298,7 @@ public class HttpRemoteTaskRunnerTest
           HttpClient httpClient,
           HttpRemoteTaskRunnerConfig config,
           ScheduledExecutorService workersSyncExec,
-          WorkerHolder.Listener listener,
+          ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> listener,
           Worker worker,
           List<TaskAnnouncement> knownAnnouncements
       )
@@ -366,7 +367,7 @@ public class HttpRemoteTaskRunnerTest
           HttpClient httpClient,
           HttpRemoteTaskRunnerConfig config,
           ScheduledExecutorService workersSyncExec,
-          WorkerHolder.Listener listener,
+          ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> listener,
           Worker worker,
           List<TaskAnnouncement> knownAnnouncements
       )
@@ -471,7 +472,7 @@ public class HttpRemoteTaskRunnerTest
           HttpClient httpClient,
           HttpRemoteTaskRunnerConfig config,
           ScheduledExecutorService workersSyncExec,
-          WorkerHolder.Listener listener,
+          ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> listener,
           Worker worker,
           List<TaskAnnouncement> knownAnnouncements
       )
@@ -614,7 +615,7 @@ public class HttpRemoteTaskRunnerTest
           HttpClient httpClient,
           HttpRemoteTaskRunnerConfig config,
           ScheduledExecutorService workersSyncExec,
-          WorkerHolder.Listener listener,
+          ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> listener,
           Worker worker,
           List<TaskAnnouncement> knownAnnouncements
       )
@@ -790,7 +791,7 @@ public class HttpRemoteTaskRunnerTest
           HttpClient httpClient,
           HttpRemoteTaskRunnerConfig config,
           ScheduledExecutorService workersSyncExec,
-          WorkerHolder.Listener listener,
+          ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> listener,
           Worker worker,
           List<TaskAnnouncement> knownAnnouncements
       )
@@ -988,7 +989,7 @@ public class HttpRemoteTaskRunnerTest
           HttpClient httpClient,
           HttpRemoteTaskRunnerConfig config,
           ScheduledExecutorService workersSyncExec,
-          WorkerHolder.Listener listener,
+          ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> listener,
           Worker worker,
           List<TaskAnnouncement> knownAnnouncements
       )
@@ -1489,7 +1490,7 @@ public class HttpRemoteTaskRunnerTest
           HttpClient httpClient,
           HttpRemoteTaskRunnerConfig config,
           ScheduledExecutorService workersSyncExec,
-          WorkerHolder.Listener listener,
+          ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> listener,
           Worker worker,
           List<TaskAnnouncement> knownAnnouncements
       )
@@ -1602,7 +1603,7 @@ public class HttpRemoteTaskRunnerTest
           HttpClient httpClient,
           HttpRemoteTaskRunnerConfig config,
           ScheduledExecutorService workersSyncExec,
-          WorkerHolder.Listener listener,
+          ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> listener,
           Worker worker,
           List<TaskAnnouncement> knownAnnouncements
       )
@@ -1763,7 +1764,7 @@ public class HttpRemoteTaskRunnerTest
           HttpClient httpClient,
           HttpRemoteTaskRunnerConfig config,
           ScheduledExecutorService workersSyncExec,
-          WorkerHolder.Listener listener,
+          ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> listener,
           Worker worker,
           List<TaskAnnouncement> knownAnnouncements
       )
@@ -1945,7 +1946,7 @@ public class HttpRemoteTaskRunnerTest
       HttpClient httpClient,
       HttpRemoteTaskRunnerConfig config,
       ScheduledExecutorService workersSyncExec,
-      WorkerHolder.Listener listener,
+      ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> listener,
       Worker worker,
       List<TaskAnnouncement> knownAnnouncements,
 
@@ -2163,7 +2164,7 @@ public class HttpRemoteTaskRunnerTest
         HttpClient httpClient,
         HttpRemoteTaskRunnerConfig config,
         ScheduledExecutorService workersSyncExec,
-        WorkerHolder.Listener listener,
+        ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> listener,
         Worker worker,
         List<TaskAnnouncement> knownAnnouncements
     );
@@ -2199,7 +2200,7 @@ public class HttpRemoteTaskRunnerTest
           HttpClient httpClient,
           HttpRemoteTaskRunnerConfig config,
           ScheduledExecutorService workersSyncExec,
-          WorkerHolder.Listener listener,
+          ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> listener,
           Worker worker,
           List<TaskAnnouncement> knownAnnouncements
       )
