@@ -294,7 +294,6 @@ public class ChangeRequestHttpSyncer<T>
                     listener.deltaSync(changes.getRequests());
                   }
 
-                  log.info("SSSS [%s] ==> [%s]", counter, changes.getCounter());
                   counter = changes.getCounter();
 
                   if (initializationLatch.getCount() > 0) {

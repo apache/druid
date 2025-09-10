@@ -679,7 +679,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
     stopwatch.stop();
     emitMetric("segment/poll/time", stopwatch.millisElapsed());
-    log.debug(
+    log.info(
         "Polled and found [%,d] segments in the database in [%,d]ms.",
         segments.size(), stopwatch.millisElapsed()
     );
