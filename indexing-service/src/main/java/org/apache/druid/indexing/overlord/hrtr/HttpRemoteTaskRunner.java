@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -138,45 +139,10 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   // Executor for assigning pending tasks to workers.
   private final ExecutorService pendingTasksExec;
 
-
-  static class MyConcurrentHashMap<K,V> extends ConcurrentHashMap<K, V> {
-
-    @Override
-    public V put(K key, V value)
-    {
-      logCallSite();
-      return super.put(key, value);
-    }
-
-    private void logCallSite()
-    {
-      try {
-        throw new RuntimeException();
-
-      }
-      catch (Exception e) {
-        log.error("callSite", e);
-      }
-    }
-
-    @Override
-    public void putAll(Map<? extends K, ? extends V> m)
-    {
-      logCallSite();
-      super.putAll(m);
-    }
-
-    @Override
-    public void clear()
-    {
-      logCallSite();
-      super.clear();
-    }
-  }
   // All known tasks, TaskID -> HttpRemoteTaskRunnerWorkItem
   // This is a ConcurrentMap as some of the reads are done without holding the lock.
   @GuardedBy("statusLock")
-  private final ConcurrentMap<String, HttpRemoteTaskRunnerWorkItem> tasks = new MyConcurrentHashMap<>();
+  private final ConcurrentMap<String, HttpRemoteTaskRunnerWorkItem> tasks = new ConcurrentHashMap<>();
 
   // This is the list of pending tasks in the order they arrived, exclusively manipulated/used by thread that
   // gives a new task to this class and threads in pendingTasksExec that are responsible for assigning tasks to
@@ -647,21 +613,17 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           // manages the task syncing with that worker.
           for (Map.Entry<String, HttpRemoteTaskRunnerWorkItem> e : tasks.entrySet()) {
             HttpRemoteTaskRunnerWorkItem workItem = e.getValue();
-            if (workItem.getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {
-              Worker w = workItem.getWorker();
-              HttpRemoteTaskRunnerWorkItem announcement = workItem;
-              if (w != null && w.getHost().equals(worker.getHost())) {
-                expectedAnnouncements.add(
-                    TaskAnnouncement.create(
-                        workItem.getTaskId(),
-                        announcement.getTaskType(),
-                        null,
-                        TaskStatus.running(workItem.getTaskId()),
-                        announcement.getLocation(),
-                        null
-                    )
-                );
-              }
+            if (workItem.isRunningOnWorker(worker)) {
+              expectedAnnouncements.add(
+                  TaskAnnouncement.create(
+                      workItem.getTaskId(),
+                      workItem.getTaskType(),
+                      null,
+                      TaskStatus.running(workItem.getTaskId()),
+                      workItem.getLocation(),
+                      null
+                  )
+              );
             }
           }
         }
@@ -1923,6 +1885,13 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       // It is possible to have it null when the TaskRunner is just started and discovered this taskId from a worker,
       // notifications don't contain whole Task instance but just metadata about the task.
       this.task = task;
+    }
+
+    public boolean isRunningOnWorker(Worker candidateWorker)
+    {
+      return getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING &&
+          getWorker() != null &&
+          Objects.equal(getWorker().getHost(), candidateWorker.getHost());
     }
 
     public Task getTask()
