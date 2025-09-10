@@ -646,15 +646,25 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           // tasks that we think are running on this worker. Provide that information to WorkerHolder that
           // manages the task syncing with that worker.
           for (Map.Entry<String, HttpRemoteTaskRunnerWorkItem> e : tasks.entrySet()) {
-            if (e.getValue().getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {
-              Worker w = e.getValue().getWorker();
-              if (w != null && w.getHost().equals(worker.getHost()) && e.getValue().getTask() != null) {
+            HttpRemoteTaskRunnerWorkItem workItem = e.getValue();
+            if (workItem.getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {
+              Worker w = workItem.getWorker();
+              HttpRemoteTaskRunnerWorkItem announcement = workItem;
+              if (w != null && w.getHost().equals(worker.getHost())) {
                 expectedAnnouncements.add(
                     TaskAnnouncement.create(
-                        e.getValue().getTask(),
-                        TaskStatus.running(e.getKey()),
-                        e.getValue().getLocation()
+                        workItem.getTaskId(),
+                        announcement.getTaskType(),
+                        null,//announcement.getTaskResource(),
+                        TaskStatus.running(workItem.getTaskId()),
+                        announcement.getLocation(),//announcement.getTaskLocation(),
+                        null//announcement.getTaskDataSource()
                     )
+//                    TaskAnnouncement.create(
+//                        workItem.getTask(),
+//                        TaskStatus.running(e.getKey()),
+//                        workItem.getLocation()
+//                    )
                 );
               }
             }
