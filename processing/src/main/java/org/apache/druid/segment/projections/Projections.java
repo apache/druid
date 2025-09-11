@@ -21,12 +21,12 @@ package org.apache.druid.segment.projections;
 
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.InvalidInput;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.CursorBuildSpec;
@@ -70,7 +70,12 @@ public class Projections
         if (name != null && !name.equals(spec.getSchema().getName())) {
           continue;
         }
-        final ProjectionMatch match = matchAggregateProjection(spec.getSchema(), cursorBuildSpec, dataInterval, physicalChecker);
+        final ProjectionMatch match = matchAggregateProjection(
+            spec.getSchema(),
+            cursorBuildSpec,
+            dataInterval,
+            physicalChecker
+        );
         if (match != null) {
           if (cursorBuildSpec.getQueryMetrics() != null) {
             cursorBuildSpec.getQueryMetrics().projection(spec.getSchema().getName());
@@ -400,7 +405,9 @@ public class Projections
                    && projection.getEffectiveGranularity() instanceof PeriodGranularity) {
           PeriodGranularity virtualGran = (PeriodGranularity) virtualGranularity;
           PeriodGranularity projectionGran = (PeriodGranularity) projection.getEffectiveGranularity();
-          byte[] combinedKey = StringUtils.toUtf8(projectionGran + "->" + virtualGran);
+          byte[] combinedKey = new CacheKeyBuilder((byte) 0x0).appendCacheable(projectionGran)
+                                                              .appendCacheable(virtualGran)
+                                                              .build();
           if (PERIOD_GRAN_CACHE.computeIfAbsent(combinedKey, (unused) -> projectionGran.canBeMappedTo(virtualGran))) {
             return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
           }

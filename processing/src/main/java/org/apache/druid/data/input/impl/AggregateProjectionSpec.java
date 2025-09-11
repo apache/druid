@@ -224,8 +224,7 @@ public class AggregateProjectionSpec
     String timeColumnName = null;
     Granularity granularity = null;
 
-    // determine the granularity and time column name for the projection, based on the first time-like grouping column.
-    // if there are multiple time-like grouping columns, they must be "coarser" than the first time-like grouping column.
+    // determine the granularity and time column name for the projection, based on the finest time-like grouping column.
     for (final DimensionSchema dimension : groupingColumns) {
       ordering.add(OrderBy.ascending(dimension.getName()));
       if (ColumnHolder.TIME_COLUMN_NAME.equals(dimension.getName())) {
