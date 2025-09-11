@@ -39,7 +39,6 @@ public abstract class DruidAvaticaHandler extends Handler.Abstract implements Me
 
   protected DruidAvaticaHandler(
       final DruidMeta druidMeta,
-      @Self final DruidNode druidNode,
       final AvaticaMonitor avaticaMonitor,
       final Class<?> timerClass
   )

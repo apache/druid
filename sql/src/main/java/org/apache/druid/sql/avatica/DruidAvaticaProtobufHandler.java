@@ -58,7 +58,7 @@ public class DruidAvaticaProtobufHandler extends DruidAvaticaHandler
       final AvaticaMonitor metrics
   )
   {
-    super(druidMeta, druidNode, metrics, AvaticaProtobufHandler.class);
+    super(druidMeta, metrics, AvaticaProtobufHandler.class);
     ProtobufTranslation protobufTranslation = new ProtobufTranslationImpl();
     this.pbHandler = new ProtobufHandler(service, protobufTranslation, this.metrics);
     setServerRpcMetadata(new Service.RpcMetadataResponse(druidNode.getHostAndPortToUse()));

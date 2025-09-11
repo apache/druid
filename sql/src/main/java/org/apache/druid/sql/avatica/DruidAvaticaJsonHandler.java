@@ -57,7 +57,7 @@ public class DruidAvaticaJsonHandler extends DruidAvaticaHandler
       final AvaticaMonitor avaticaMonitor
   )
   {
-    super(druidMeta, druidNode, Objects.requireNonNull(avaticaMonitor), AvaticaJsonHandler.class);
+    super(druidMeta, Objects.requireNonNull(avaticaMonitor), AvaticaJsonHandler.class);
     this.jsonHandler = new JsonHandler(service, this.metrics);
     setServerRpcMetadata(new Service.RpcMetadataResponse(druidNode.getHostAndPortToUse()));
   }
