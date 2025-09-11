@@ -19,12 +19,9 @@
 
 package org.apache.druid.math.expr.vector;
 
-import org.apache.druid.error.DruidException;
-import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExpressionType;
-import org.apache.druid.query.filter.vector.VectorMatch;
 
-public class CaseSearchedDoubleVectorProcessor extends CaseSearchedFunctionVectorProcessor<double[]>
+public final class CaseSearchedDoubleVectorProcessor extends CaseSearchedFunctionVectorProcessor<double[]>
 {
   private final double[] output;
   private final boolean[] outputNulls;
@@ -40,89 +37,50 @@ public class CaseSearchedDoubleVectorProcessor extends CaseSearchedFunctionVecto
   }
 
   @Override
-  public ExprEvalVector<double[]> evalVector(Expr.VectorInputBinding bindings)
+  protected void processThenVector(ExprEvalVector<double[]> thenVector, int currentMatches, int[] thenSelection)
   {
-    conditionBindingFilterer.setBindings(bindings);
-    // reset condition match to all true
-    conditionBindingFilterer.getVectorMatch().copyFrom(VectorMatch.allTrue(bindings.getCurrentVectorSize()));
-    thenBindingFilterer.setBindings(bindings);
-
-    int totalMatches = 0;
-    int currentMatches = 0;
-    int currentMisses = 0;
-    int condition = 0;
-    final int[] conditionSelection = conditionBindingFilterer.getVectorMatch().getSelection();
-    final int[] thenSelection = thenBindingFilterer.getVectorMatch().getSelection();
-    while (totalMatches < bindings.getCurrentVectorSize() && condition < conditionProcessors.length) {
-      // evaluate the condition clause, for each match we set the position in the 'then' bindings, else we set the
-      // position in the 'condition' bindings to prepare for the next condition to evaluate only rows which were not
-      // previously matched
-      final ExprEvalVector<?> conditionVector = conditionProcessors[condition].evalVector(conditionBindingFilterer);
-      for (int i = 0; i < conditionBindingFilterer.getCurrentVectorSize(); i++) {
-        int index = conditionSelection[i];
-        if (conditionVector.elementAsBoolean(i)) {
-          thenSelection[currentMatches++] = index;
-        } else {
-          conditionSelection[currentMisses++] = index;
-        }
-      }
-      thenBindingFilterer.getVectorMatch().setSelectionSize(currentMatches);
-      conditionBindingFilterer.getVectorMatch().setSelectionSize(currentMisses);
-
-      // evaluate the result vector for the condition using the now filtered bindings to only evaluate the rows
-      // matching the condition, and populate these to the correct positions in the output value and null vectors
-      final ExprEvalVector<?> thenVector = thenProcessors[condition].evalVector(thenBindingFilterer);
-      final double[] thenValues = thenVector.getDoubleVector();
-      final boolean[] thenNulls = thenVector.getNullVector();
-      for (int i = 0; i < currentMatches; i++) {
-        final int outIndex = thenSelection[i];
-        output[outIndex] = thenValues[i];
-        if (thenNulls != null) {
-          outputNulls[outIndex] = thenNulls[i];
-        }
-      }
-
-      // prepare for next loop
-      condition++;
-      totalMatches += currentMatches;
-      currentMisses = 0;
-      currentMatches = 0;
-    }
-
-    // if there are still rows to match, we need to evaluate the 'else' clause
-    if (totalMatches < bindings.getCurrentVectorSize()) {
-      // if there is an explict else clause, evaluate it by using the conditional bindings against the result
-      // processor (the rows which still need to be processed were set by the previous loop).
-      if (thenProcessors.length > conditionProcessors.length) {
-        final ExprEvalVector<?> elseVector = thenProcessors[condition].evalVector(conditionBindingFilterer);
-        final double[] elseValues = elseVector.getDoubleVector();
-        final boolean[] elseNulls = elseVector.getNullVector();
-        for (int i = 0; i < conditionBindingFilterer.getCurrentVectorSize(); i++) {
-          final int outIndex = conditionSelection[i];
-          output[outIndex] = elseValues[i];
-          if (elseNulls != null) {
-            outputNulls[outIndex] = elseNulls[i];
-          }
-        }
+    final double[] thenValues = thenVector.getDoubleVector();
+    final boolean[] thenNulls = thenVector.getNullVector();
+    for (int i = 0; i < currentMatches; i++) {
+      final int outIndex = thenSelection[i];
+      output[outIndex] = thenValues[i];
+      if (thenNulls != null) {
+        outputNulls[outIndex] = thenNulls[i];
       } else {
-        // no explicit else clause, the remaining values are all null
-        for (int i = 0; i < conditionBindingFilterer.getCurrentVectorSize(); i++) {
-          final int outIndex = conditionSelection[i];
-          output[outIndex] = 0;
-          outputNulls[outIndex] = true;
-        }
+        outputNulls[outIndex] = false;
       }
-      totalMatches += conditionBindingFilterer.getCurrentVectorSize();
     }
+  }
 
-    if (totalMatches < bindings.getCurrentVectorSize()) {
-      throw DruidException.defensive(
-          "output vector only populated with [%s] out of [%s] values",
-          totalMatches,
-          bindings.getCurrentVectorSize()
-      );
+  @Override
+  protected void processElseVector(ExprEvalVector<double[]> elseVector, int[] conditionSelection)
+  {
+    final double[] elseValues = elseVector.getDoubleVector();
+    final boolean[] elseNulls = elseVector.getNullVector();
+    for (int i = 0; i < conditionBindingFilterer.getCurrentVectorSize(); i++) {
+      final int outIndex = conditionSelection[i];
+      output[outIndex] = elseValues[i];
+      if (elseNulls != null) {
+        outputNulls[outIndex] = elseNulls[i];
+      } else {
+        outputNulls[outIndex] = false;
+      }
     }
+  }
 
+  @Override
+  protected void processElseNull(int[] conditionSelection)
+  {
+    for (int i = 0; i < conditionBindingFilterer.getCurrentVectorSize(); i++) {
+      final int outIndex = conditionSelection[i];
+      output[outIndex] = 0;
+      outputNulls[outIndex] = true;
+    }
+  }
+
+  @Override
+  protected ExprEvalVector<double[]> makeResultVector()
+  {
     return new ExprEvalDoubleVector(output, outputNulls);
   }
 }

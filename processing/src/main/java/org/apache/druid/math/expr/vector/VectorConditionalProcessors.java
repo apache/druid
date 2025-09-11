@@ -119,10 +119,10 @@ public class VectorConditionalProcessors
       // right now canVectorize verifies that all args have the same output type, but this is aspirational towards what
       // the logic probably should be and is using least restrictive type. if the canVectorize logic changes to
       // something other than least restrictive type, then so should this
-      outputType = ExpressionTypeConversion.leastRestrictiveType(outputType,  args.get(i).getOutputType(inspector));
       if ((i % 2) == 0 && j < conditionProcessorsCount) {
         conditionProcessors[j++] = args.get(i).asVectorProcessor(inspector);
       } else {
+        outputType = ExpressionTypeConversion.leastRestrictiveType(outputType,  args.get(i).getOutputType(inspector));
         thenProcessors[k++] = args.get(i).asVectorProcessor(inspector);
       }
     }

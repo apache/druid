@@ -379,6 +379,14 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     testExpression("case_searched(boolString1, l1, boolString2, l2, l2)", types);
     testExpression("case_searched(boolString1, d1, boolString2, d2, d1)", types);
     testExpression("case_searched(l1 % 2 == 0, -1, l1 % 2 == 1, l2 / (l1 % 2))", types);
+    Assertions.assertFalse(
+        Parser.parse("case_searched(boolString1, d1, boolString2, d2, l1)", MACRO_TABLE)
+              .canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
+    Assertions.assertFalse(
+        Parser.parse("case_searched(boolString1, d1, boolString2, l1, d1)", MACRO_TABLE)
+              .canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
   }
 
 
