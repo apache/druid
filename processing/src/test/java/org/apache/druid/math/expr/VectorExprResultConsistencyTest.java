@@ -29,6 +29,8 @@ import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.query.expression.LookupExprMacro;
 import org.apache.druid.query.expression.NestedDataExpressions;
+import org.apache.druid.query.expression.TimestampCeilExprMacro;
+import org.apache.druid.query.expression.TimestampExtractExprMacro;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.query.expression.TimestampShiftExprMacro;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
@@ -85,6 +87,8 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
 
   private static final ExprMacroTable MACRO_TABLE = new ExprMacroTable(
       ImmutableList.of(
+          new TimestampCeilExprMacro(),
+          new TimestampExtractExprMacro(),
           new TimestampFloorExprMacro(),
           new TimestampShiftExprMacro(),
           new NestedDataExpressions.JsonObjectExprMacro(),
@@ -422,7 +426,20 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   @Test
   public void testTimeFunctions()
   {
+    testExpression("timestamp_ceil(l1, 'P1D')", types);
+    testExpression("timestamp_ceil(l1, 'PT1H')", types);
+    testExpression("timestamp_floor(l1, 'P1D')", types);
     testExpression("timestamp_floor(l1, 'PT1H')", types);
+    testExpression("timestamp_extract(l1, 'MILLENNIUM')", types);
+    testExpression("timestamp_extract(l1, 'CENTURY')", types);
+    testExpression("timestamp_extract(l1, 'YEAR')", types);
+    testExpression("timestamp_extract(l1, 'MONTH')", types);
+    testExpression("timestamp_extract(l1, 'DAY')", types);
+    testExpression("timestamp_extract(l1, 'HOUR')", types);
+    testExpression("timestamp_extract(l1, 'MINUTE')", types);
+    testExpression("timestamp_extract(l1, 'SECOND')", types);
+    testExpression("timestamp_extract(l1, 'MILLISECOND')", types);
+    testExpression("timestamp_extract(l1, 'EPOCH')", types);
     testExpression("timestamp_shift(l1, 'P1M', 1)", types);
   }
 
