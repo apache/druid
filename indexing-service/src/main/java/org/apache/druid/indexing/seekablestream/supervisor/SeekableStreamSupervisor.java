@@ -130,6 +130,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
@@ -614,23 +615,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                    ));
   }
 
-  private Map<PartitionIdType, SequenceOffsetType> getLatestOffsetsFromMetadataStore()
-  {
-    try {
-      DataSourceMetadata metadata = indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(dataSource);
-      if (metadata instanceof SeekableStreamDataSourceMetadata) {
-        @SuppressWarnings("unchecked")
-        SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> streamMetadata =
-            (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) metadata;
-        return streamMetadata.getSeekableStreamSequenceNumbers().getPartitionSequenceNumberMap();
-      }
-    }
-    catch (Exception e) {
-      log.warn(e, "Failed to retrieve latest offsets from metadata store, using current partition state");
-    }
-    return Collections.emptyMap();
-  }
-
   /**
    * Handles task count changes for perpetual tasks using updateConfig instead of graceful shutdown.
    * This approach pauses tasks, recalculates partition assignments, and sends config updates.
@@ -638,17 +622,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private boolean changeTaskCountForPerpetualTasks(int desiredActiveTaskCount)
       throws InterruptedException, ExecutionException
   {
-    if (isDynamicAllocationOngoing) {
+    if (!isDynamicAllocationOngoing.compareAndSet(false, true)) {
       log.info("A dynamic allocation is already ongoing, skipping this request.");
       return false;
     }
     final Stopwatch scaleActionStopwatch = Stopwatch.createStarted();
-    isDynamicAllocationOngoing = true;
-    log.info("Handling task count change for perpetual tasks from [%d] to [%d]", 
+    log.info("Handling task count change for perpetual tasks from [%d] to [%d]",
              activelyReadingTaskGroups.size(), desiredActiveTaskCount);
 
     Map<PartitionIdType, SequenceOffsetType> offsetsFromTasks = pauseAndCheckpointAllTasks();
-    final CountDownLatch currentLatch = taskCheckpointWait;
+    final CountDownLatch currentLatch = checkpointsForConfigUpdateLatch;
     if (currentLatch.await(CHECKPOINT_COMPLETION_LATCH_TIMEOUT, TimeUnit.SECONDS)) {
       log.info("All tasks have been checkpointed successfully");
     } else {
@@ -665,7 +648,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     } else {
       log.error("Failed to update task configurations for perpetual tasks");
     }
-    this.isDynamicAllocationOngoing = false;
+    isDynamicAllocationOngoing.set(false);
     emitAutoScalerRunMetric(scaleActionStopwatch);
     return success;
   }
@@ -684,7 +667,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     Map<PartitionIdType, SequenceOffsetType> consolidatedLatestOffsets = new HashMap<>();
 
-    taskCheckpointWait = new CountDownLatch(pauseFutures.size());
+    checkpointsForConfigUpdateLatch = new CountDownLatch(pauseFutures.size());
     log.info("Staring a task checkpoint wait with count [%d]", pauseFutures.size());
     List<Either<Throwable, Map<PartitionIdType, SequenceOffsetType>>> latestOffsets = coalesceAndAwait(pauseFutures);
     for (Either<Throwable, Map<PartitionIdType, SequenceOffsetType>> result : latestOffsets) {
@@ -704,12 +687,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                             ));
       }
     }
-    log.info("Successfully paused & requested checkpointed from [%d] tasks", pauseFutures.size());
+    log.info("Successfully paused & checkpoints requested from [%d] tasks", pauseFutures.size());
     return consolidatedLatestOffsets;
   }
 
   /**
-   * Calculates new partition groups using the existing getTaskGroupIdForPartition() logic.
+   * Calculates new partition groups.
    */
   private Map<Integer, Set<PartitionIdType>> calculateNewPartitionGroups()
   {
@@ -741,9 +724,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       throws InterruptedException, ExecutionException
   {
     log.info("Sending configuration updates to the following partition groups %s", newPartitionGroups);
-    log.info("Actively reading task groups right now %s", activelyReadingTaskGroups);
     List<ListenableFuture<Boolean>> updateFutures = new ArrayList<>();
-    Map<PartitionIdType, SequenceOffsetType> latestCommittedOffsets = getLatestOffsetsFromMetadataStore();
+    Map<PartitionIdType, SequenceOffsetType> latestCommittedOffsets = getOffsetsFromMetadataStorage();
     for (Map.Entry<Integer, Set<PartitionIdType>> entry : newPartitionGroups.entrySet()) {
       int taskGroupId = entry.getKey();
       Set<PartitionIdType> partitions = entry.getValue();
@@ -1124,8 +1106,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   protected final String dataSource;
-  private volatile CountDownLatch taskCheckpointWait = new CountDownLatch(0);
-  private volatile boolean isDynamicAllocationOngoing;
+  private volatile CountDownLatch checkpointsForConfigUpdateLatch;
+  private final AtomicBoolean isDynamicAllocationOngoing = new AtomicBoolean(false);
 
   private final Set<PartitionIdType> subsequentlyDiscoveredPartitions = new HashSet<>();
   private final TaskStorage taskStorage;
@@ -3831,11 +3813,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private void latchCountdown()
   {
-    log.debug("In latchCountdown method, isDynamicAllocationOngoing: %s", isDynamicAllocationOngoing);
-    if (isDynamicAllocationOngoing) {
-      taskCheckpointWait.countDown();
+    log.debug("In latchCountdown method, isDynamicAllocationOngoing: %s", isDynamicAllocationOngoing.get());
+    if (isDynamicAllocationOngoing.get()) {
+      checkpointsForConfigUpdateLatch.countDown();
     }
   }
+
   private ListenableFuture<Void> stopTasksInGroup(
       @Nullable TaskGroup taskGroup,
       String stopReasonFormat,

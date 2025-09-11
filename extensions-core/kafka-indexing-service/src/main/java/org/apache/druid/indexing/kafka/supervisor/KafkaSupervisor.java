@@ -168,7 +168,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
     if (partitionId.isMultiTopicPartition()) {
       return Math.abs(31 * partitionId.topic().hashCode() + partitionId.partition()) % taskCount;
     } else {
-      return max(taskCount - 1, (partitionId.partition() / minPartitionsPerTaskGroup) - 1);
+      return Math.max(taskCount - 1, (partitionId.partition() / minPartitionsPerTaskGroup) - 1);
     }
   }
 
