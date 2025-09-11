@@ -122,7 +122,7 @@ public class VectorConditionalProcessors
       if ((i % 2) == 0 && j < conditionProcessorsCount) {
         conditionProcessors[j++] = args.get(i).asVectorProcessor(inspector);
       } else {
-        outputType = ExpressionTypeConversion.leastRestrictiveType(outputType,  args.get(i).getOutputType(inspector));
+        outputType = ExpressionTypeConversion.leastRestrictiveType(outputType, args.get(i).getOutputType(inspector));
         thenProcessors[k++] = args.get(i).asVectorProcessor(inspector);
       }
     }
