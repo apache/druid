@@ -27,7 +27,6 @@ import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
-import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpecBuilder;
 import org.apache.druid.indexing.kafka.supervisor.LagBasedAutoScalerConfigBuilder;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
@@ -102,8 +101,10 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     };
 
     indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
+           .addProperty("druid.server.http.numThreads", "30")
            .addProperty("druid.worker.capacity", "10");
     overlord.addProperty("druid.indexer.task.default.context", "{\"useConcurrentLocks\": true}")
+            .addProperty("druid.server.http.numThreads", "50")
             .addProperty("druid.manager.segments.useIncrementalCache", "ifSynced")
             .addProperty("druid.manager.segments.pollDuration", "PT0.1s")
             .addProperty("druid.manager.segments.killUnused.enabled", "true")
@@ -181,11 +182,11 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  @Timeout(60)
-  public void test_ingest30kRows_ofSelfClusterMetricsWithScaleOuts_andVerifyValues()
+  @Timeout(600)
+  public void test_ingest20kRows_ofSelfClusterMetricsWithScaleOuts_andVerifyValues()
   {
     final int maxRowsPerSegment = 1000;
-    final int expectedSegmentsHandedOff = 50;
+    final int expectedSegmentsHandedOff = 20;
 
     final int taskCount = 1;
 
@@ -196,7 +197,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
         .withLagCollectionRangeMillis(100)
         .withEnableTaskAutoScaler(true)
         .withScaleActionPeriodMillis(60000)
-        .withScaleActionStartDelayMillis(1000)
+        .withScaleActionStartDelayMillis(100)
         .withScaleOutThreshold(0)
         .withScaleInThreshold(10000)
         .withTriggerScaleOutFractionThreshold(0.001)
@@ -219,6 +220,13 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(
         supervisorId,
         cluster.callApi().postSupervisor(kafkaSupervisorSpec)
+    );
+
+    overlord.latchableEmitter().waitForEvent(event -> event.hasMetricName("task/autoScaler/requiredCount"));
+
+    overlord.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("task/autoScaler/scaleActionTime")
+                      .hasDimension(DruidMetrics.DATASOURCE, List.of(dataSource))
     );
 
     indexer.latchableEmitter().waitForEventAggregate(

@@ -1737,33 +1737,32 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       throws InterruptedException
   {
     authorizationCheck(req);
-    if (this.isPausedForCheckpointCompletion) {
-      return Response.status(409).entity("Another config change is ongoing").build();
+    if (!isPausedForCheckpointCompletion) {
+      return Response.status(409).entity("Task must be paused for checkpoint completion before updating config").build();
     }
     try {
       log.info("Attempting to update config to [%s]", request.getIoConfig());
-      pause();
-      this.isPausedForCheckpointCompletion = true;
-      checkpointSequences();
+      System.out.printf("Attempting to update config to [%s]%n", request.getIoConfig());
 
       SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig = (SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType>)
           toolbox.getJsonMapper().convertValue(request.getIoConfig(), SeekableStreamIndexTaskIOConfig.class);
       setIOConfig(newIoConfig);
       createNewSequenceFromIoConfig(newIoConfig);
-      this.isPausedForCheckpointCompletion = false;
+
       log.info("Config updated to [%s]", this.ioConfig);
+      System.out.printf("Config updated to [%s]%n", this.ioConfig);
       toolbox.getEmitter().emit(ServiceMetricEvent.builder()
                                     .setDimension(DruidMetrics.TASK_ID, task.getId())
                                     .setDimension(DruidMetrics.TASK_TYPE, task.getType())
                                     .setDimension(DruidMetrics.DATASOURCE, task.getDataSource())
                                     .build("task/config/update/success", String.valueOf(1)));
       resume();
-      this.isPausedForCheckpointCompletion = false;
+      isPausedForCheckpointCompletion = false;
       return Response.ok().build();
     }
     catch (Exception e) {
       log.makeAlert(e, "Failed to update task config");
-      this.isPausedForCheckpointCompletion = false;
+      isPausedForCheckpointCompletion = false;
       return Response.serverError().entity(e.getMessage()).build();
     }
   }
@@ -1868,7 +1867,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     } else {
       try {
         // Don't acquire a lock if the task is already paused for checkpoint completion, avoiding deadlock
-        if (!this.isPausedForCheckpointCompletion) {
+        if (!isPausedForCheckpointCompletion) {
           pauseLock.lockInterruptibly();
         }
         // Perform all sequence related checks before checking for isPaused()
@@ -1894,7 +1893,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             || (latestSequence.getEndOffsets().equals(sequenceNumbers) && finish)) {
           log.warn("Ignoring duplicate request, end offsets already set for sequences [%s]", sequenceNumbers);
           resetNextCheckpointTime();
-          if (!this.isPausedForCheckpointCompletion) {
+          if (!isPausedForCheckpointCompletion) {
             resume();
           }
           return Response.ok(sequenceNumbers).build();
@@ -1932,7 +1931,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
         // if this is the final checkpoint, or if the task is paused for checkpoint completion and updateConfig is supposed to
         // finish the current sequence, we just update the end offsets of the latest sequence.
-        if (finish || this.isPausedForCheckpointCompletion) {
+        if (finish || isPausedForCheckpointCompletion) {
           log.info(
               "Sequence[%s] end offsets updated from [%s] to [%s].",
               latestSequence.getSequenceName(),
@@ -1973,7 +1972,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                        .build();
       }
       finally {
-        if (!this.isPausedForCheckpointCompletion) {
+        if (!isPausedForCheckpointCompletion) {
           pauseLock.unlock();
         }
       }
@@ -2043,9 +2042,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   ) throws InterruptedException, JsonProcessingException
   {
     authorizationCheck(req);
-    log.info("Received pause and checkpoint request");
+    if (isPausedForCheckpointCompletion) {
+      return Response.ok().entity("Task is already paused for checkpoint completion").build();
+    }
     pause();
-    this.isPausedForCheckpointCompletion = true;
+    isPausedForCheckpointCompletion = true;
     checkpointSequences();
     return Response.ok().entity(toolbox.getJsonMapper().writeValueAsString(getCurrentOffsets())).build();
   }

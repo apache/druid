@@ -76,8 +76,6 @@ import java.util.TreeMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static java.lang.Math.max;
-
 /**
  * Supervisor responsible for managing the KafkaIndexTasks for a single dataSource. At a high level, the class accepts a
  * {@link KafkaSupervisorSpec} which includes the Kafka topic and configuration as well as an ingestion spec which will
@@ -170,7 +168,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
     if (partitionId.isMultiTopicPartition()) {
       return Math.abs(31 * partitionId.topic().hashCode() + partitionId.partition()) % taskCount;
     } else {
-      return max(taskCount - 1, partitionId.partition() / minPartitionsPerTaskGroup);
+      return max(taskCount - 1, (partitionId.partition() / minPartitionsPerTaskGroup) - 1);
     }
   }
 

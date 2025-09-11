@@ -215,7 +215,6 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   {
     final RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.POST, "/updateConfig")
         .jsonContent(jsonMapper, updateRequest);
-
     return makeRequest(taskId, requestBuilder)
         .handler(IgnoreHttpResponseHandler.INSTANCE)
         .onSuccess(r -> true)

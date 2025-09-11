@@ -372,6 +372,7 @@ public class SupervisorManager
       Preconditions.checkNotNull(supervisor, "supervisor could not be found");
 
       final StreamSupervisor streamSupervisor = requireStreamSupervisor(supervisorId, "checkPoint");
+      log.info("Checkpointing datasource metadata for supervisor [%s]", supervisorId);
       streamSupervisor.checkpoint(taskGroupId, previousDataSourceMetadata);
       return true;
     }
