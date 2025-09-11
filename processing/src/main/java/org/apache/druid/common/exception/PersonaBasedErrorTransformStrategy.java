@@ -65,7 +65,7 @@ public class PersonaBasedErrorTransformStrategy implements ErrorResponseTransfor
   private Optional<Exception> maybeTransform(DruidException druidException, String errorId)
   {
     if (druidException.getTargetPersona() == DruidException.Persona.USER) {
-      return Optional.of(druidException);
+      return Optional.empty();
     } else {
       return Optional.of(DruidException.forPersona(DruidException.Persona.USER)
                                        .ofCategory(druidException.getCategory())
