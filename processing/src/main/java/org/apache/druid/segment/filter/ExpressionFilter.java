@@ -189,7 +189,8 @@ public class ExpressionFilter implements Filter
   @Override
   public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
-    return expr.get().asBitmapColumnIndex(selector);
+    return null;
+//    return expr.get().asBitmapColumnIndex(selector);
   }
 
   @Override

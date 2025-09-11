@@ -372,6 +372,15 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     );
   }
 
+  @Test
+  public void testCaseSearchedFunction()
+  {
+    testExpression("case_searched(boolString1, s1, boolString2, s2, s1)", types);
+    testExpression("case_searched(boolString1, l1, boolString2, l2, l2)", types);
+    testExpression("case_searched(boolString1, d1, boolString2, d2, d1)", types);
+    testExpression("case_searched(l1 % 2 == 0, -1, l1 % 2 == 1, l2 / (l1 % 2))", types);
+  }
+
 
   @Test
   public void testStringFns()

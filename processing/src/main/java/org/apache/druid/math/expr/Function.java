@@ -2147,7 +2147,7 @@ public interface Function extends NamedFunction
       // vector engine requires consistent typing, but native if function does not coerce then and else expressions,
       // so for now we can only vectorize if both args have the same output type to not have a behavior change
       final ExpressionType thenType = args.get(1).getOutputType(inspector);
-      return Objects.equals(thenType, args.get(2).getOutputType(inspector));
+      return Objects.equals(thenType, args.get(2).getOutputType(inspector)) && inspector.canVectorize(args);
     }
 
     @Override
@@ -2201,6 +2201,31 @@ public interface Function extends NamedFunction
       // add else
       results.add(args.get(args.size() - 1));
       return ExpressionTypeConversion.conditional(inspector, results);
+    }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      // vector engine requires consistent typing, but non-vectorized function does not coerce then/else expressions,
+      // so for now we can only vectorize if all args have the same output type to not have a behavior change
+      ExpressionType thenType = args.get(1).getOutputType(inspector);
+      for (int i = 3; i < args.size(); i += 2) {
+        final ExpressionType argType = args.get(i).getOutputType(inspector);
+        if (thenType != null) {
+          if (!Objects.equals(thenType, argType)) {
+            return false;
+          }
+        } else {
+          thenType = argType;
+        }
+      }
+      return inspector.canVectorize(args);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorConditionalProcessors.caseSearchedFunction(inspector, args);
     }
   }
 
