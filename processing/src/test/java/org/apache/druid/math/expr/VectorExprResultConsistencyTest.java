@@ -393,6 +393,20 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     );
   }
 
+  @Test
+  public void testCaseSimpleFunction()
+  {
+    testExpression("case_simple(s1, s2, s2, s1, s2)", types);
+    testExpression("case_simple(s1, s2, s2, s1, s2, s1)", types);
+    testExpression("case_simple(s1, s2, l1, s1, l2)", types);
+    testExpression("case_simple(s1, s2, d1, s1, d2, d1)", types);
+    testExpression("case_simple(s1, l1, d1, d1, d2, d1)", types);
+    Assertions.assertFalse(
+        Parser.parse("case_simple(s1, d1, s1, l1, d1)", MACRO_TABLE)
+              .canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
+  }
+
 
   @Test
   public void testStringFns()
@@ -746,5 +760,4 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
 
     return new NonnullPair<>(objectBindings, vectorBinding);
   }
-
 }
