@@ -75,13 +75,16 @@ class ErrorHandler
       return new RuntimeException(errorResponseTransformStrategy.transformIfNeeded((SanitizableException) error));
     }
     if (error instanceof DruidException) {
-      return new RuntimeException(errorResponseTransformStrategy.transformIfNeeded((DruidException) error));
     }
     // cannot check cause of the throwable because it cannot be cast back to the original's type
     // so this only checks runtime exceptions for causes
     if (error instanceof RuntimeException && error.getCause() instanceof SanitizableException) {
       // could do `throw sanitize(error);` but just sanitizing immediately avoids unnecessary going down multiple levels
       return new RuntimeException(errorResponseTransformStrategy.transformIfNeeded((SanitizableException) error.getCause()));
+    }
+    if (error instanceof DruidException) {
+      QueryInterruptedException wrappedError = QueryInterruptedException.wrapIfNeeded(errorResponseTransformStrategy.transformIfNeeded((DruidException) error));
+      return (QueryException) errorResponseTransformStrategy.transformIfNeeded(wrappedError);
     }
     QueryInterruptedException wrappedError = QueryInterruptedException.wrapIfNeeded(error);
     return (QueryException) errorResponseTransformStrategy.transformIfNeeded(wrappedError);
