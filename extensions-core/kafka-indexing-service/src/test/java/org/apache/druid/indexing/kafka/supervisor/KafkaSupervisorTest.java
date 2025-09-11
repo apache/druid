@@ -5042,6 +5042,38 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.replay(differentTaskType);
   }
 
+  @Test
+  public void test_getTaskGroupIdForPartition() throws Exception
+  {
+    int taskCount = 3;
+    supervisor = getTestableSupervisor(
+        "test-supervisor",
+        1,
+        taskCount,
+        true,
+        false,
+        "PT1H",
+        null,
+        null,
+        false,
+        kafkaHost,
+        null,
+        true
+    );
+
+    int totalPartitions = 10;
+    Assert.assertEquals(0, supervisor.getRangeBasedTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 0), taskCount, totalPartitions));
+    Assert.assertEquals(0, supervisor.getRangeBasedTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 1), taskCount, totalPartitions));
+    Assert.assertEquals(0, supervisor.getRangeBasedTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 2), taskCount, totalPartitions));
+    Assert.assertEquals(1, supervisor.getRangeBasedTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 3), taskCount, totalPartitions));
+    Assert.assertEquals(1, supervisor.getRangeBasedTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 4), taskCount, totalPartitions));
+    Assert.assertEquals(1, supervisor.getRangeBasedTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 5), taskCount, totalPartitions));
+    Assert.assertEquals(2, supervisor.getRangeBasedTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 6), taskCount, totalPartitions));
+    Assert.assertEquals(2, supervisor.getRangeBasedTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 7), taskCount, totalPartitions));
+    Assert.assertEquals(2, supervisor.getRangeBasedTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 8), taskCount, totalPartitions));
+    Assert.assertEquals(2, supervisor.getRangeBasedTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 9), taskCount, totalPartitions));
+  }
+
   private void addSomeEvents(int numEventsPerPartition) throws Exception
   {
     // create topic manually
@@ -5223,6 +5255,37 @@ public class KafkaSupervisorTest extends EasyMockSupport
       IdleConfig idleConfig
   )
   {
+    return getTestableSupervisor(
+        id,
+        replicas,
+        taskCount,
+        useEarliestOffset,
+        false,
+        duration,
+        lateMessageRejectionPeriod,
+        earlyMessageRejectionPeriod,
+        suspended,
+        kafkaHost,
+        null,
+        null
+    );
+  }
+
+  private TestableKafkaSupervisor getTestableSupervisor(
+      @Nullable String id,
+      int replicas,
+      int taskCount,
+      boolean useEarliestOffset,
+      boolean resetOffsetAutomatically,
+      String duration,
+      Period lateMessageRejectionPeriod,
+      Period earlyMessageRejectionPeriod,
+      boolean suspended,
+      String kafkaHost,
+      IdleConfig idleConfig,
+      Boolean usePerpetuallyRunningTasks
+  )
+  {
     final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
     consumerProperties.put("myCustomKey", "myCustomValue");
     consumerProperties.put("bootstrap.servers", kafkaHost);
@@ -5288,7 +5351,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             kafkaSupervisorIOConfig,
             null,
             suspended,
-            null,
+            usePerpetuallyRunningTasks,
             taskStorage,
             taskMaster,
             indexerMetadataStorageCoordinator,
