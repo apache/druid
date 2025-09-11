@@ -26,8 +26,6 @@ import org.apache.calcite.avatica.remote.MetricsHelper;
 import org.apache.calcite.avatica.remote.Service;
 import org.apache.calcite.avatica.server.MetricsAwareAvaticaHandler;
 import org.apache.calcite.avatica.util.UnsynchronizedBuffer;
-import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.server.DruidNode;
 import org.eclipse.jetty.server.Handler;
 
 public abstract class DruidAvaticaHandler extends Handler.Abstract implements MetricsAwareAvaticaHandler
