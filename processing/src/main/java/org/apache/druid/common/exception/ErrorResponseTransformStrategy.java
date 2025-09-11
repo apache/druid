@@ -49,7 +49,7 @@ public interface ErrorResponseTransformStrategy
    */
   default Exception transformIfNeeded(DruidException exception)
   {
-    throw new UnsupportedOperationException();
+    return exception;
   }
 
   /**

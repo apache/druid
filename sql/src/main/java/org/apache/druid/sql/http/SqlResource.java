@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.sun.jersey.api.core.HttpContext;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
-import org.apache.druid.common.exception.SanitizableException;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -314,7 +313,7 @@ public class SqlResource
     if (e instanceof DruidException) {
       final String sqlQueryId = queryContext.getString(QueryContexts.CTX_SQL_QUERY_ID);
       return QueryResultPusher.handleDruidExceptionBeforeResponseStarted(
-          (DruidException) strategy.transformIfNeeded((SanitizableException) e),
+          (DruidException) strategy.transformIfNeeded((DruidException) e),
           MediaType.APPLICATION_JSON_TYPE,
           sqlQueryId != null
           ? ImmutableMap.<String, String>builder()
