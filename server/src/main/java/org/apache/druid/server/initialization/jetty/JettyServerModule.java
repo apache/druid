@@ -480,6 +480,9 @@ public class JettyServerModule extends JerseyServletModule
       });
     }
 
+    log.info("Configuraing Jetty Request log for server");
+    server.setRequestLog(new JettyRequestLog());
+
     return server;
   }
 
