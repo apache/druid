@@ -61,7 +61,6 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
-import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.CoreMatchers;

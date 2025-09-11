@@ -20,25 +20,12 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Inject;
-import org.apache.calcite.rel.RelRoot;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.CalciteScanSignatureTest.ScanSignatureComponentSupplier;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.run.EngineFeature;
-import org.apache.druid.sql.calcite.run.NativeSqlEngine;
-import org.apache.druid.sql.calcite.run.QueryMaker;
-import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
-import org.apache.druid.sql.destination.IngestDestination;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -48,10 +35,8 @@ import java.util.Map;
 public class CalciteScanSignatureTest extends BaseCalciteQueryTest
 {
   @Test
-  @Disabled
   public void testScanSignature()
   {
-    // TODO: fix
     final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
 
     testQuery(
@@ -115,82 +100,6 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
     public ScanSignatureComponentSupplier(TempDirProducer tempFolderProducer)
     {
       super(tempFolderProducer);
-    }
-
-
-    @Override
-    public Class<? extends SqlEngine> getSqlEngineClass()
-    {
-      return ScanSignatureTestSqlEngine.class;
-    }
-
-    // Create an engine that says yes to EngineFeature.SCAN_NEEDS_SIGNATURE.
-    private static class ScanSignatureTestSqlEngine implements SqlEngine
-    {
-      private final SqlEngine parent;
-
-      @Inject
-      public ScanSignatureTestSqlEngine(final NativeSqlEngine parent)
-      {
-        this.parent = parent;
-      }
-
-      @Override
-      public String name()
-      {
-        return getClass().getName();
-      }
-
-      @Override
-      public boolean featureAvailable(EngineFeature feature)
-      {
-        return parent.featureAvailable(feature);
-      }
-
-      @Override
-      public void validateContext(Map<String, Object> queryContext)
-      {
-        // No validation.
-      }
-
-      @Override
-      public RelDataType resultTypeForSelect(
-          RelDataTypeFactory typeFactory,
-          RelDataType validatedRowType,
-          Map<String, Object> queryContext
-      )
-      {
-        return validatedRowType;
-      }
-
-      @Override
-      public RelDataType resultTypeForInsert(
-          RelDataTypeFactory typeFactory,
-          RelDataType validatedRowType,
-          Map<String, Object> queryContext
-      )
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public QueryMaker buildQueryMakerForSelect(RelRoot relRoot, PlannerContext plannerContext)
-          throws ValidationException
-      {
-        return parent.buildQueryMakerForSelect(relRoot, plannerContext);
-      }
-
-      @Override
-      public QueryMaker buildQueryMakerForInsert(IngestDestination destination, RelRoot relRoot, PlannerContext plannerContext)
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public SqlStatementFactory getSqlStatementFactory()
-      {
-        throw new UnsupportedOperationException();
-      }
     }
   }
 }
