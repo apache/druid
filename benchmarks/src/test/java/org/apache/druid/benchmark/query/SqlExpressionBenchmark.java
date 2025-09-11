@@ -157,7 +157,6 @@ public class SqlExpressionBenchmark extends SqlBaseQueryBenchmark
       "SELECT NVL(long1, long3), SUM(double1) FROM expressions GROUP BY 1 ORDER BY 2",
       "SELECT NVL(long1, long5 + long3), SUM(double1) FROM expressions GROUP BY 1 ORDER BY 2",
       "SELECT CASE WHEN MOD(long1, 2) = 0 THEN -1 WHEN MOD(long1, 2) = 1 THEN long2 / MOD(long1, 2) ELSE long3 END FROM expressions GROUP BY 1"
-      //case_searched(l1 % 2 == 0, -1, l1 % 2 == 1, l2 / (l1 % 2))
 
   );
 
