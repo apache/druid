@@ -19,6 +19,7 @@
 
 package org.apache.druid.math.expr.vector;
 
+import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
@@ -130,6 +131,7 @@ public class VectorConditionalProcessors
     return caseSearchedFunction(inspector, outputType, conditionProcessors, thenProcessors);
   }
 
+  @SuppressFBWarnings("IM_BAD_CHECK_FOR_ODD")
   public static <T> ExprVectorProcessor<T> caseSimpleFunction(
       Expr.VectorInputBindingInspector inspector,
       List<Expr> args

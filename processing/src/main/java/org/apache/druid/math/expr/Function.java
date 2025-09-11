@@ -2209,6 +2209,7 @@ public interface Function extends NamedFunction
       return ExpressionTypeConversion.conditional(inspector, results);
     }
 
+    @SuppressFBWarnings("IM_BAD_CHECK_FOR_ODD")
     @Override
     public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
     {
