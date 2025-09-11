@@ -2147,7 +2147,11 @@ public interface Function extends NamedFunction
       // vector engine requires consistent typing, but native if function does not coerce then and else expressions,
       // so for now we can only vectorize if both args have the same output type to not have a behavior change
       final ExpressionType thenType = args.get(1).getOutputType(inspector);
-      return Objects.equals(thenType, args.get(2).getOutputType(inspector)) && inspector.canVectorize(args);
+      final ExpressionType elseType = args.get(2).getOutputType(inspector);
+      if (thenType != null && elseType != null && !Objects.equals(thenType, elseType)) {
+        return false;
+      }
+      return inspector.canVectorize(args);
     }
 
     @Override
@@ -2213,7 +2217,7 @@ public interface Function extends NamedFunction
         if (i % 2 == 1 || i == args.size() - 1) {
           final ExpressionType argType = args.get(i).getOutputType(inspector);
           if (thenType != null) {
-            if (!Objects.equals(thenType, argType)) {
+            if (argType != null && !Objects.equals(thenType, argType)) {
               return false;
             }
           } else {
