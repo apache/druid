@@ -14,15 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Determine if docker compose is available. If not, assume Docker supports
-# the compose subcommand
-set +e
-if which docker-compose > /dev/null
-then
-  DOCKER_COMPOSE='docker-compose'
-else
-  DOCKER_COMPOSE='docker compose'
-fi
 set -e
 
 . $(dirname "$0")/script/docker_compose_args.sh
@@ -48,9 +39,9 @@ fi
 # bring down using the same compose args we started with
 if [ -z "$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH" ]
 then
-  OVERRIDE_ENV=environment-configs/empty-config $DOCKER_COMPOSE $(getComposeArgs) down
+  OVERRIDE_ENV=environment-configs/empty-config docker compose $(getComposeArgs) down
 else
-  OVERRIDE_ENV=$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH $DOCKER_COMPOSE $(getComposeArgs) down
+  OVERRIDE_ENV=$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH docker compose $(getComposeArgs) down
 fi
 
 if [ ! -z "$(docker network ls -q -f name=druid-it-net)" ]
