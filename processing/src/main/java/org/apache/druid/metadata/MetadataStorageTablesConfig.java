@@ -21,6 +21,8 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.java.util.common.StringUtils;
 
 /**
@@ -31,7 +33,27 @@ public class MetadataStorageTablesConfig
 
   public static MetadataStorageTablesConfig fromBase(String base)
   {
-    return new MetadataStorageTablesConfig(base, null, null, null, null, null, null, null, null, null, null, null);
+    return new MetadataStorageTablesConfig(base, null, null, null, null, null, null, null, null, null, null, null, null);
+  }
+
+  @VisibleForTesting
+  static MetadataStorageTablesConfig fromBase(String base, boolean truncateIndexIdentifiers)
+  {
+    return new MetadataStorageTablesConfig(
+        base,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        truncateIndexIdentifiers
+    );
   }
 
   private static final String DEFAULT_BASE = "druid";
@@ -72,6 +94,9 @@ public class MetadataStorageTablesConfig
   @JsonProperty("segmentSchemas")
   private final String segmentSchemasTable;
 
+  @JsonProperty("truncateIndexIdentifiers")
+  private final Boolean truncateIndexIdentifiers;
+
   @JsonCreator
   public MetadataStorageTablesConfig(
       @JsonProperty("base") String base,
@@ -85,7 +110,8 @@ public class MetadataStorageTablesConfig
       @JsonProperty("audit") String auditTable,
       @JsonProperty("supervisors") String supervisorTable,
       @JsonProperty("upgradeSegments") String upgradeSegmentsTable,
-      @JsonProperty("segmentSchemas") String segmentSchemasTable
+      @JsonProperty("segmentSchemas") String segmentSchemasTable,
+      @JsonProperty("truncateIndexIdentifiers") Boolean truncateIndexIdentifiers
   )
   {
     this.base = (base == null) ? DEFAULT_BASE : base;
@@ -101,6 +127,7 @@ public class MetadataStorageTablesConfig
     this.auditTable = makeTableName(auditTable, "audit");
     this.supervisorTable = makeTableName(supervisorTable, "supervisors");
     this.segmentSchemasTable = makeTableName(segmentSchemasTable, "segmentSchemas");
+    this.truncateIndexIdentifiers = Configs.valueOrDefault(truncateIndexIdentifiers, false);
   }
 
   private String makeTableName(String explicitTableName, String defaultSuffix)
@@ -173,5 +200,10 @@ public class MetadataStorageTablesConfig
   public String getSegmentSchemasTable()
   {
     return segmentSchemasTable;
+  }
+
+  public Boolean getTruncateIndexIdentifiers()
+  {
+    return truncateIndexIdentifiers;
   }
 }

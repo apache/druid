@@ -31,6 +31,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
@@ -303,6 +305,43 @@ public class SQLMetadataConnectorTest
             new UnableToExecuteStatementException(new SQLException())
         )
     );
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  public void testIndexIdentifierTruncation(boolean truncate)
+  {
+    String longTableName = "this_is_a_long_table_name_for_testing";
+    String identifierTemplate = "idx_%1$s_datasource_upgraded_from_segment_id";
+
+    tablesConfig = MetadataStorageTablesConfig.fromBase(longTableName, truncate);
+    MetadataStorageConnectorConfig config =
+        MetadataStorageConnectorConfig.create("connectURI", "user", "password", Collections.emptyMap());
+
+    TestSQLMetadataConnector testSQLMetadataConnector = new TestSQLMetadataConnector(
+        Suppliers.ofInstance(config),
+        Suppliers.ofInstance(tablesConfig),
+        CentralizedDatasourceSchemaConfig.create()
+    )
+    {
+      @Override
+      public int indexIdentifierLengthLimit()
+      {
+        return 64;
+      }
+    };
+
+    if (truncate) {
+      Assert.assertEquals(
+          "idx_this_is_a_long_table_nam_datasource_upgraded_from_segment_id",
+          testSQLMetadataConnector.getIndexIdentifier(identifierTemplate, longTableName)
+      );
+    } else {
+      Assert.assertEquals(
+          "idx_this_is_a_long_table_name_for_testing_datasource_upgraded_from_segment_id",
+          testSQLMetadataConnector.getIndexIdentifier(identifierTemplate, longTableName)
+      );
+    }
   }
 
   static class TestSQLMetadataConnector extends SQLMetadataConnector
