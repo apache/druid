@@ -45,6 +45,7 @@ public class LagBasedAutoScalerConfigBuilder
   private boolean enableTaskAutoScaler;
   private long minTriggerScaleActionFrequencyMillis;
   private AggregateFunction lagAggregate;
+  private double stopTaskCountRatio;
 
   public LagBasedAutoScalerConfigBuilder withLagCollectionIntervalMillis(long lagCollectionIntervalMillis)
   {
@@ -142,6 +143,12 @@ public class LagBasedAutoScalerConfigBuilder
     return this;
   }
 
+  public LagBasedAutoScalerConfigBuilder withStopTaskCountRatio(double stopTaskCountRatio)
+  {
+    this.stopTaskCountRatio = stopTaskCountRatio;
+    return this;
+  }
+
   public LagBasedAutoScalerConfig build()
   {
     return new LagBasedAutoScalerConfig(
@@ -160,7 +167,8 @@ public class LagBasedAutoScalerConfigBuilder
         scaleOutStep,
         enableTaskAutoScaler,
         minTriggerScaleActionFrequencyMillis,
-        lagAggregate
+        lagAggregate,
+        stopTaskCountRatio
     );
   }
 }
