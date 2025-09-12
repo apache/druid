@@ -19,94 +19,186 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.collections.bitmap.BitmapFactory;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.segment.column.BaseColumn;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.SelectableColumn;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
 
-public class ColumnCache implements ColumnSelector
+/**
+ * Wraps {@link QueryableIndex} and {@link VirtualColumns}, providing a unified view of physical and virtual columns,
+ * as well as lifecycle management for physical columns.
+ */
+public class ColumnCache implements ColumnIndexSelector
 {
   private final HashMap<String, ColumnHolder> holderCache;
   private final QueryableIndex index;
+  private final VirtualColumns virtualColumns;
   private final Closer closer;
 
-  public ColumnCache(QueryableIndex index, Closer closer)
+  public ColumnCache(
+      QueryableIndex index,
+      VirtualColumns virtualColumns,
+      Closer closer
+  )
   {
     this.index = index;
     this.closer = closer;
+    this.virtualColumns = virtualColumns;
 
     this.holderCache = new HashMap<>();
   }
-
 
   @Nullable
   @Override
   public ColumnHolder getColumnHolder(String columnName)
   {
-    return holderCache.computeIfAbsent(columnName, dimension -> {
+    return holderCache.computeIfAbsent(columnName, this::makeNewColumnHolder);
+  }
+
+  @Override
+  public int getNumRows()
+  {
+    return index.getNumRows();
+  }
+
+  @Override
+  public BitmapFactory getBitmapFactory()
+  {
+    return index.getBitmapFactoryForDimensions();
+  }
+
+  @Override
+  @Nullable
+  public ColumnIndexSupplier getIndexSupplier(String column)
+  {
+    final ColumnHolder holder = getColumnHolder(column);
+    if (holder != null) {
+      return holder.getIndexSupplier();
+    } else {
+      return null;
+    }
+  }
+
+  @Nullable
+  private ColumnHolder makeNewColumnHolder(final String columnName)
+  {
+    final VirtualColumn virtualColumn = virtualColumns.getVirtualColumn(columnName);
+    if (virtualColumn != null) {
+      final SelectableColumn selectableColumn = virtualColumn.toSelectableColumn(this);
+      return new VirtualColumnHolder(virtualColumn, selectableColumn);
+    }
+
+    final BaseColumnHolder holder = index.getColumnHolder(columnName);
+    if (holder != null) {
       // Here we do a funny little dance to memoize the BaseColumn and register it with the closer.
       // It would probably be cleaner if the ColumnHolder itself was `Closeable` and did its own memoization,
       // but that change is much wider and runs the risk of even more things that need to close the thing
       // not actually closing it.  So, maybe this is a hack, maybe it's a wise decision, who knows, but at
       // least for now, we grab the holder, grab the column, register the column with the closer and then return
       // a new holder that always returns the same reference for the column.
+      return new WrappedBaseColumnHolder(holder);
+    }
 
-      final ColumnHolder holder = index.getColumnHolder(columnName);
-      if (holder == null) {
-        return null;
-      }
-
-      return new ColumnHolder()
-      {
-        @Nullable
-        private BaseColumn theColumn = null;
-
-        @Override
-        public ColumnCapabilities getCapabilities()
-        {
-          return holder.getCapabilities();
-        }
-
-        @Override
-        public int getLength()
-        {
-          return holder.getLength();
-        }
-
-        @Override
-        public BaseColumn getColumn()
-        {
-          if (theColumn == null) {
-            theColumn = closer.register(holder.getColumn());
-          }
-          return theColumn;
-        }
-
-        @Nullable
-        @Override
-        public ColumnIndexSupplier getIndexSupplier()
-        {
-          return holder.getIndexSupplier();
-        }
-
-        @Override
-        public SettableColumnValueSelector makeNewSettableColumnValueSelector()
-        {
-          return holder.makeNewSettableColumnValueSelector();
-        }
-      };
-    });
+    return null;
   }
 
-  @Nullable
-  public BaseColumn getColumn(String columnName)
+  private class WrappedBaseColumnHolder implements BaseColumnHolder
   {
-    final ColumnHolder retVal = getColumnHolder(columnName);
-    return retVal == null ? null : retVal.getColumn();
+    private final BaseColumnHolder baseHolder;
+
+    @Nullable
+    private BaseColumn theColumn = null;
+
+    WrappedBaseColumnHolder(BaseColumnHolder baseHolder)
+    {
+      this.baseHolder = baseHolder;
+    }
+
+    @Override
+    public ColumnCapabilities getCapabilities()
+    {
+      return baseHolder.getCapabilities();
+    }
+
+    @Override
+    public int getLength()
+    {
+      return baseHolder.getLength();
+    }
+
+    @Override
+    public BaseColumn getColumn()
+    {
+      if (theColumn == null) {
+        theColumn = closer.register(baseHolder.getColumn());
+      }
+      return theColumn;
+    }
+
+    @Nullable
+    @Override
+    public ColumnIndexSupplier getIndexSupplier()
+    {
+      return baseHolder.getIndexSupplier();
+    }
+
+    @Override
+    public SettableColumnValueSelector makeNewSettableColumnValueSelector()
+    {
+      return baseHolder.makeNewSettableColumnValueSelector();
+    }
+  }
+
+  private class VirtualColumnHolder implements ColumnHolder
+  {
+    private final VirtualColumn virtualColumn;
+    private final SelectableColumn selectableColumn;
+
+    VirtualColumnHolder(final VirtualColumn virtualColumn, final SelectableColumn selectableColumn)
+    {
+      this.virtualColumn = virtualColumn;
+      this.selectableColumn = selectableColumn;
+    }
+
+    @Override
+    public ColumnCapabilities getCapabilities()
+    {
+      return virtualColumn.capabilities(virtualColumns.wrapInspector(index), virtualColumn.getOutputName());
+    }
+
+    @Override
+    public int getLength()
+    {
+      return index.getNumRows();
+    }
+
+    @Override
+    public SelectableColumn getColumn()
+    {
+      return selectableColumn;
+    }
+
+    @Override
+    @Nullable
+    public ColumnIndexSupplier getIndexSupplier()
+    {
+      return virtualColumn.getIndexSupplier(virtualColumn.getOutputName(), ColumnCache.this);
+    }
+
+    @Override
+    public SettableColumnValueSelector makeNewSettableColumnValueSelector()
+    {
+      throw DruidException.defensive("Not implemented. This method is expected to only be used with physical columns.");
+    }
   }
 }
