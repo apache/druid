@@ -172,12 +172,6 @@ public class VirtualColumnRegistry
            : expression.toVirtualColumn(virtualColumnName, columnType, expressionParser);
   }
 
-  @Nullable
-  public String getVirtualColumnByExpression(DruidExpression expression, RelDataType typeHint)
-  {
-    return virtualColumnsByExpression.get(wrap(expression, Calcites.getColumnTypeForRelDataType(typeHint)));
-  }
-
   /**
    * Get a signature representing the base signature plus all registered virtual columns.
    */
@@ -196,7 +190,7 @@ public class VirtualColumnRegistry
       // expression type inference
       final ColumnCapabilities virtualCapabilities = virtualColumn.getValue().getExpression().toVirtualColumn(
           columnName,
-          typeHint,
+          null,
           expressionParser
       ).capabilities(baseSignature, columnName);
 
@@ -285,20 +279,6 @@ public class VirtualColumnRegistry
         expression,
         Calcites.getColumnTypeForRelDataType(dataType)
     );
-  }
-
-  /**
-   * @deprecated use {@link #getVirtualColumnByExpression(DruidExpression, RelDataType)} instead
-   */
-  @Deprecated
-  @Nullable
-  public VirtualColumn getVirtualColumnByExpression(String expression, RelDataType type)
-  {
-    final ColumnType columnType = Calcites.getColumnTypeForRelDataType(type);
-    ExpressionAndTypeHint wrapped = wrap(DruidExpression.fromExpression(expression), columnType);
-    return Optional.ofNullable(virtualColumnsByExpression.get(wrapped))
-                   .map(this::getVirtualColumn)
-                   .orElse(null);
   }
 
   private static ExpressionAndTypeHint wrap(DruidExpression expression, ColumnType typeHint)
