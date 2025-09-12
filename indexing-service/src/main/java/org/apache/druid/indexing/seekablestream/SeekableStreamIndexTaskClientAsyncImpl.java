@@ -332,7 +332,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
             .handler(new BytesFullResponseHandler())
             .onSuccess(r -> {
               if (r.getStatus().equals(HttpResponseStatus.OK)) {
-                log.info("Task [%s] paused successfully & Checkpoint requested succesffully", id);
+                log.info("Task [%s] paused successfully & Checkpoint requested successffully", id);
                 return deserializeOffsetsMap(r.getContent());
               } else if (r.getStatus().equals(HttpResponseStatus.ACCEPTED)) {
                 // Return null, which triggers a loop later to wait for the task to enter PAUSED state.

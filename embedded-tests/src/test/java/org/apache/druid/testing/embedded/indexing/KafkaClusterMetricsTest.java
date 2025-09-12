@@ -196,8 +196,8 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
         .withLagCollectionIntervalMillis(100)
         .withLagCollectionRangeMillis(100)
         .withEnableTaskAutoScaler(true)
-        .withScaleActionPeriodMillis(60000)
-        .withScaleActionStartDelayMillis(100)
+        .withScaleActionPeriodMillis(5000)
+        .withScaleActionStartDelayMillis(10000)
         .withScaleOutThreshold(0)
         .withScaleInThreshold(10000)
         .withTriggerScaleOutFractionThreshold(0.001)
@@ -206,7 +206,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
         .withTaskCountMin(taskCount)
         .withScaleOutStep(1)
         .withScaleInStep(0)
-        .withMinTriggerScaleActionFrequencyMillis(100)
+        .withMinTriggerScaleActionFrequencyMillis(5000)
         .build();
 
     final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(
@@ -483,6 +483,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
         .withDataSchema(schema -> schema.withTimestamp(new TimestampSpec("timestamp", "iso", null)))
         .withTuningConfig(tuningConfig -> tuningConfig
             .withMaxRowsPerSegment(maxRowsPerSegment)
+            .withWorkerThreads(10)
             .withReleaseLocksOnHandoff(true))
         .withIoConfig(
             ioConfig -> ioConfig

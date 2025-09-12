@@ -124,7 +124,6 @@ import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
@@ -176,7 +175,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       = Comparator.comparingLong(ParseExceptionReport::getTimeOfExceptionMillis)
                   .thenComparing(ParseExceptionReport::getErrorType, StringComparators.LEXICOGRAPHIC)
                   .thenComparing(ParseExceptionReport::getInput, StringComparators.LEXICOGRAPHIC);
-  private static final int CHECKPOINT_COMPLETION_LATCH_TIMEOUT = 60;
 
   // Internal data structures
   // --------------------------------------------------------
@@ -534,8 +532,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             emitter.emit(event.setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
           }
 
-          boolean allocationSuccess = changeTaskCount(desiredTaskCount);
-          if (allocationSuccess) {
+          boolean allocationSuccess = changeTaskCount(desiredTaskCount, onSuccessfulScale);
+          if (allocationSuccess && !spec.usePerpetuallyRunningTasks()) {
             onSuccessfulScale.run();
             dynamicTriggerLastRunTime = nowTime;
           }
@@ -562,12 +560,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * After the taskCount is changed in SeekableStreamSupervisorIOConfig, next RunNotice will create scaled number of ingest tasks without resubmitting the supervisor.
    *
    * @param desiredActiveTaskCount desired taskCount computed from AutoScaler
+   * @param successfulScaleAutoScalerCallback callback to be triggered on successful scale action for AutoScaler to reset its queue.
    * @return Boolean flag indicating if scale action was executed or not. If true, it will wait at least 'minTriggerScaleActionFrequencyMillis' before next 'changeTaskCount'.
    * If false, it will do 'changeTaskCount' again after 'scaleActionPeriodMillis' millis.
    * @throws InterruptedException
    * @throws ExecutionException
    */
-  private boolean changeTaskCount(int desiredActiveTaskCount)
+  private boolean changeTaskCount(int desiredActiveTaskCount, Runnable successfulScaleAutoScalerCallback)
       throws InterruptedException, ExecutionException
   {
     int currentActiveTaskCount;
@@ -587,7 +586,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       final Stopwatch scaleActionStopwatch = Stopwatch.createStarted();
       
       if (spec.usePerpetuallyRunningTasks()) {
-        return changeTaskCountForPerpetualTasks(desiredActiveTaskCount);
+        return changeTaskCountForPerpetualTasks(desiredActiveTaskCount, successfulScaleAutoScalerCallback);
       } else {
         gracefulShutdownInternal();
         changeTaskCountInIOConfig(desiredActiveTaskCount);
@@ -619,7 +618,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * Handles task count changes for perpetual tasks using updateConfig instead of graceful shutdown.
    * This approach pauses tasks, recalculates partition assignments, and sends config updates.
    */
-  private boolean changeTaskCountForPerpetualTasks(int desiredActiveTaskCount)
+  private boolean changeTaskCountForPerpetualTasks(int desiredActiveTaskCount,
+                                                   Runnable successfulScaleAutoScalerCallback
+  )
       throws InterruptedException, ExecutionException
   {
     if (!isDynamicAllocationOngoing.compareAndSet(false, true)) {
@@ -631,12 +632,30 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
              activelyReadingTaskGroups.size(), desiredActiveTaskCount);
 
     Map<PartitionIdType, SequenceOffsetType> offsetsFromTasks = pauseAndCheckpointAllTasks();
-    final CountDownLatch currentLatch = checkpointsForConfigUpdateLatch;
-    if (currentLatch.await(CHECKPOINT_COMPLETION_LATCH_TIMEOUT, TimeUnit.SECONDS)) {
-      log.info("All tasks have been checkpointed successfully");
-    } else {
-      log.warn("Timeout waiting for tasks to pause and checkpoint");
+    if (offsetsFromTasks.isEmpty()) {
+      isDynamicAllocationOngoing.set(false);
+      return false;
     }
+    pendingConfigUpdateHook = () -> updateTaskConfigsAndCompleteAutoScaleEvent(
+        offsetsFromTasks,
+        scaleActionStopwatch,
+        desiredActiveTaskCount,
+        successfulScaleAutoScalerCallback
+    );
+    return true;
+  }
+
+  /**
+   * This function sends the config updates to all the tasks with new partition assignments and offsets. In an auto-scaling
+   * lifecycle, this marks the end of the scale action.
+   */
+  private boolean updateTaskConfigsAndCompleteAutoScaleEvent(
+      Map<PartitionIdType, SequenceOffsetType> offsetsFromTasks,
+      Stopwatch scaleActionStopwatch,
+      int desiredActiveTaskCount,
+      Runnable successfulScaleAutoScalerCallback
+  ) throws InterruptedException, ExecutionException
+  {
     changeTaskCountInIOConfig(desiredActiveTaskCount);
     Map<Integer, Set<PartitionIdType>> newPartitionGroups = calculateNewPartitionGroups();
 
@@ -648,10 +667,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     } else {
       log.error("Failed to update task configurations for perpetual tasks");
     }
+
     isDynamicAllocationOngoing.set(false);
     emitAutoScalerRunMetric(scaleActionStopwatch);
+
+    // You need to set the auto scaler specific stuff here.
+    successfulScaleAutoScalerCallback.run();
+    dynamicTriggerLastRunTime = System.currentTimeMillis();
     return success;
   }
+
 
   private Map<PartitionIdType, SequenceOffsetType> pauseAndCheckpointAllTasks() throws InterruptedException, ExecutionException
   {
@@ -665,10 +690,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
 
+    if (pauseFutures.isEmpty()) {
+      log.warn("No tasks found to pause for perpetual task scaling");
+      return Collections.emptyMap();
+    }
+
     Map<PartitionIdType, SequenceOffsetType> consolidatedLatestOffsets = new HashMap<>();
 
-    checkpointsForConfigUpdateLatch = new CountDownLatch(pauseFutures.size());
-    log.info("Staring a task checkpoint wait with count [%d]", pauseFutures.size());
+    int tasksToWaitFor = pauseFutures.size();
+    checkpointsToWaitFor = tasksToWaitFor;
+    log.info("Broadcasting pauseAndCheckpoint to [%d] tasks", tasksToWaitFor);
+
     List<Either<Throwable, Map<PartitionIdType, SequenceOffsetType>>> latestOffsets = coalesceAndAwait(pauseFutures);
     for (Either<Throwable, Map<PartitionIdType, SequenceOffsetType>> result : latestOffsets) {
       if (result.isError()) {
@@ -687,6 +719,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                             ));
       }
     }
+
     log.info("Successfully paused & checkpoints requested from [%d] tasks", pauseFutures.size());
     return consolidatedLatestOffsets;
   }
@@ -709,7 +742,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     for (PartitionIdType partition : allPartitions) {
       int taskGroupId = getTaskGroupIdForPartition(partition);
       newPartitionGroups.computeIfAbsent(taskGroupId, k -> new HashSet<>()).add(partition);
-      log.info("received taskGroupid [%d] and newPartitionGroup so far: %s", taskGroupId, newPartitionGroups);
     }
 
     log.info("Created [%d] new partition groups: %s", newPartitionGroups.size(), newPartitionGroups);
@@ -731,6 +763,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       Set<PartitionIdType> partitions = entry.getValue();
 
       TaskGroup existingTaskGroup = activelyReadingTaskGroups.get(taskGroupId);
+      log.info("Latest Committed Offsets from Metadata Storage: %s", latestCommittedOffsets);
+      log.info("Latest Committed Offsets from Task Pause: %s", latestTaskOffsetsOnPause);
       if (existingTaskGroup != null) {
         for (String taskId : existingTaskGroup.taskIds()) {
           SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig = createUpdatedTaskIoConfig(
@@ -1106,8 +1140,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   protected final String dataSource;
-  private volatile CountDownLatch checkpointsForConfigUpdateLatch;
   private final AtomicBoolean isDynamicAllocationOngoing = new AtomicBoolean(false);
+  private int checkpointsToWaitFor = 0;
+  private Callable<Boolean> pendingConfigUpdateHook;
 
   private final Set<PartitionIdType> subsequentlyDiscoveredPartitions = new HashSet<>();
   private final TaskStorage taskStorage;
@@ -1969,6 +2004,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   @VisibleForTesting
   public void runInternal()
   {
+    if (isDynamicAllocationOngoing.get()) {
+      log.info("Skipping run because dynamic allocation is ongoing.");
+      return;
+    }
     try {
       possiblyRegisterListener();
 
@@ -3789,7 +3828,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                         taskGroup.tasks.remove(taskId);
                       }
                     }
-                    latchCountdown();
+                    if (isDynamicAllocationOngoing.get()) {
+                      checkpointsToWaitFor -= setEndOffsetFutures.size();
+                      if (checkpointsToWaitFor <= 0) {
+                        log.info("All tasks in current task groups have been checkpointed, resuming dynamic allocation");
+                        boolean configUpdateResult = pendingConfigUpdateHook.call();
+                        checkpointsToWaitFor = 0;
+                        pendingConfigUpdateHook.call();
+                      } else {
+                        log.info("Waiting for [%d] more checkpoints before resuming dynamic allocation", checkpointsToWaitFor);
+                      }
+                    }
                   }
                   catch (Exception e) {
                     log.error("An exception occurred while setting end offsets: [%s]", e.getMessage());
@@ -3809,14 +3858,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         },
         workerExec
     );
-  }
-
-  private void latchCountdown()
-  {
-    log.debug("In latchCountdown method, isDynamicAllocationOngoing: %s", isDynamicAllocationOngoing.get());
-    if (isDynamicAllocationOngoing.get()) {
-      checkpointsForConfigUpdateLatch.countDown();
-    }
   }
 
   private ListenableFuture<Void> stopTasksInGroup(

@@ -1803,6 +1803,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         exclusiveStartPartitions,
         getTaskLockType()
     );
+    log.info("Attempting adding new sequence [%s]", newSequence);
 
     currOffsets.clear();
     currOffsets.putAll(partitionStartOffsets);
@@ -1929,7 +1930,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
         // if this is the final checkpoint, or if the task is paused for checkpoint completion and updateConfig is supposed to
         // finish the current sequence, we just update the end offsets of the latest sequence.
-        if (finish || waitForConfigUpdate) {
+        if (finish) {
           log.info(
               "Sequence[%s] end offsets updated from [%s] to [%s].",
               latestSequence.getSequenceName(),
