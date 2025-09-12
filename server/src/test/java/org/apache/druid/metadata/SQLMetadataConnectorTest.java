@@ -21,6 +21,7 @@ package org.apache.druid.metadata;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -118,8 +119,8 @@ public class SQLMetadataConnectorTest
     connector.createTaskTables();
     Set<String> createdIndexSet = connector.getIndexOnTable(entryTableName);
     Set<String> expectedIndexSet = Sets.newHashSet(
-        StringUtils.format("idx_%1$s_active_created_date", entryTableName),
-        StringUtils.format("idx_%1$s_datasource_active", entryTableName)
+        connector.generateSHABasedIndexIdentifier(entryTableName, ImmutableList.of("active", "created_date")),
+        connector.generateSHABasedIndexIdentifier(entryTableName, ImmutableList.of("datasource", "active"))
     ).stream().map(StringUtils::toUpperCase).collect(Collectors.toSet());
 
     for (String expectedIndex : expectedIndexSet) {
@@ -303,6 +304,125 @@ public class SQLMetadataConnectorTest
             new UnableToExecuteStatementException(new SQLException())
         )
     );
+  }
+
+  @Test
+  public void testLegacyIndicesAreNotReplacedForAllTables()
+  {
+    final String segmentsTable = tablesConfig.getSegmentsTable();
+    final List<String> legacyIndexTemplates = Arrays.asList(
+        "idx_%1$s_used",
+        "idx_%1$s_datasource_used_end_start",
+        "idx_%1$s_datasource_upgraded_from_segment_id"
+    );
+    final List<String> legacyIndexNames = legacyIndexTemplates.stream()
+                                                              .map(template -> StringUtils.format(
+                                                                  template,
+                                                                  segmentsTable
+                                                              ).toUpperCase())
+                                                              .collect(Collectors.toList());
+    final List<List<String>> indexColumns = ImmutableList.of(
+        ImmutableList.of("used"),
+        ImmutableList.of(
+            "dataSource",
+            "used",
+            StringUtils.format("%send%S", connector.getQuoteString(), connector.getQuoteString()),
+            "start"
+        ),
+        ImmutableList.of("dataSource", "upgraded_from_segment_id")
+    );
+
+    connector.createSegmentTable(segmentsTable);
+    connector.alterSegmentTable();
+
+    // drop SHA-based indices and create legacy ones to mock existing behavior
+    connector.getDBI().withHandle(handle -> {
+      for (int i = 0; i < legacyIndexNames.size(); i++) {
+        try {
+          handle.execute(StringUtils.format(
+              "DROP INDEX %s",
+              connector.generateSHABasedIndexIdentifier(
+                  segmentsTable,
+                  indexColumns.get(i)
+              ).toUpperCase()
+          ));
+        }
+        catch (Exception ignore) {
+        }
+        try {
+          handle.execute(StringUtils.format(
+              "CREATE INDEX %s ON %s(%s)",
+              legacyIndexNames.get(i),
+              segmentsTable,
+              String.join(",", indexColumns.get(i))
+          ));
+        }
+        catch (Exception ignore) {
+        }
+      }
+      return null;
+    });
+
+    // run again to simulate legacy index name checks
+    connector.createSegmentTable(segmentsTable);
+    connector.alterSegmentTable();
+    assertIndicesPresentOnTable(segmentsTable, legacyIndexNames);
+
+    dropTable(segmentsTable);
+  }
+
+  @Test
+  public void testNonExistentLegacyIndicesAreNotCreatedForAllTables()
+  {
+    final String segmentsTable = tablesConfig.getSegmentsTable();
+    final List<List<String>> indexColumns = ImmutableList.of(
+        ImmutableList.of("used"),
+        ImmutableList.of(
+            "dataSource",
+            "used",
+            StringUtils.format("%send%S", connector.getQuoteString(), connector.getQuoteString()),
+            "start"
+        ),
+        ImmutableList.of("dataSource", "upgraded_from_segment_id")
+    );
+
+    connector.createSegmentTable(segmentsTable);
+    connector.alterSegmentTable();
+
+    final List<String> indexNames = indexColumns.stream()
+                                                .map(cols -> connector.generateSHABasedIndexIdentifier(
+                                                    segmentsTable,
+                                                    cols
+                                                ).toUpperCase())
+                                                .collect(Collectors.toList());
+    assertIndicesPresentOnTable(segmentsTable, indexNames);
+    dropTable(segmentsTable);
+  }
+
+  private void assertIndicesPresentOnTable(String tableName, List<String> indexTemplates)
+  {
+    // Fetch list of user-created indices, ignoring things like Derby-generated constraint indices, etc.
+    final Set<String> actualIndices = connector.getIndexOnTable(tableName)
+                                               .stream()
+                                               .filter(name -> !name.startsWith("SQL"))
+                                               .collect(Collectors.toSet());
+    Assert.assertEquals(
+        StringUtils.format(
+            "Received unexpected table index count for table[%s]. Got [%s], expected [%s].",
+            tableName,
+            actualIndices,
+            indexTemplates
+        ),
+        actualIndices.size(),
+        indexTemplates.size()
+    );
+    for (String template : indexTemplates) {
+      String expectedIndex = StringUtils.format(template, tableName).toUpperCase();
+      Assert.assertTrue(
+          StringUtils.format("Expected index[%s] not found in table[%s]", expectedIndex, tableName),
+          actualIndices.contains(expectedIndex)
+      );
+    }
   }
 
   static class TestSQLMetadataConnector extends SQLMetadataConnector
