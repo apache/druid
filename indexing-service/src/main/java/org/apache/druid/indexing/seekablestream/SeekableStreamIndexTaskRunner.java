@@ -1278,7 +1278,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       if (!sequences.isEmpty()) {
         final SequenceOffsetType priorOffset = getLastSequenceMetadata().endOffsets.get(partition);
 
-        if (!startOffset.equals(priorOffset)) {
+        if (priorOffset != null && !startOffset.equals(priorOffset)) {
           throw new ISE(
               "New sequence startOffset[%s] does not equal expected prior offset[%s]",
               startOffset,
@@ -1753,7 +1753,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                                     .setDimension(DruidMetrics.TASK_ID, task.getId())
                                     .setDimension(DruidMetrics.TASK_TYPE, task.getType())
                                     .setDimension(DruidMetrics.DATASOURCE, task.getDataSource())
-                                    .build("task/config/update/success", String.valueOf(1)));
+                                    .setMetric("task/config/update/success", 1)
+                                    .build(ImmutableMap.of()));
       resume();
       waitForConfigUpdate = false;
       return Response.ok().build();
@@ -1927,10 +1928,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
         resetNextCheckpointTime();
         latestSequence.setEndOffsets(sequenceNumbers);
-
+        log.info("Latest sequence after setting end offsets: [%s]", latestSequence);
         // if this is the final checkpoint, or if the task is paused for checkpoint completion and updateConfig is supposed to
         // finish the current sequence, we just update the end offsets of the latest sequence.
-        if (finish) {
+        if (finish || waitForConfigUpdate) {
           log.info(
               "Sequence[%s] end offsets updated from [%s] to [%s].",
               latestSequence.getSequenceName(),
