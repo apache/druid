@@ -47,7 +47,6 @@ public class Tasks
   public static final long DEFAULT_SUB_TASK_TIMEOUT_MILLIS = 0;
   public static final boolean DEFAULT_FORCE_TIME_CHUNK_LOCK = true;
   public static final boolean DEFAULT_STORE_COMPACTION_STATE = false;
-  public static final boolean DEFAULT_USE_MAX_MEMORY_ESTIMATES = false;
   public static final TaskLockType DEFAULT_TASK_LOCK_TYPE = TaskLockType.EXCLUSIVE;
   public static final boolean DEFAULT_USE_CONCURRENT_LOCKS = false;
 

@@ -24,13 +24,18 @@ import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.client.DataSourcesSnapshot;
+import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
+import org.apache.druid.indexing.input.DruidDatasourceDestination;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
@@ -40,6 +45,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.server.compaction.CompactionRunSimulator;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
@@ -52,17 +58,19 @@ import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
-import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.Duration;
 
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of {@link CompactionScheduler}.
@@ -81,16 +89,19 @@ public class OverlordCompactionScheduler implements CompactionScheduler
 {
   private static final Logger log = new Logger(OverlordCompactionScheduler.class);
 
-  private static final long SCHEDULE_PERIOD_SECONDS = 5;
   private static final Duration METRIC_EMISSION_PERIOD = Duration.standardMinutes(5);
 
   private final SegmentsMetadataManager segmentManager;
   private final LocalOverlordClient overlordClient;
+  private final BrokerClient brokerClient;
   private final ServiceEmitter emitter;
+  private final ObjectMapper objectMapper;
   private final TaskMaster taskMaster;
 
   private final Supplier<DruidCompactionConfig> compactionConfigSupplier;
-  private final ConcurrentHashMap<String, DataSourceCompactionConfig> activeDatasourceConfigs;
+  private final ConcurrentHashMap<String, CompactionSupervisor> activeSupervisors;
+
+  private final AtomicReference<Map<String, AutoCompactionSnapshot>> datasourceToCompactionSnapshot;
 
   /**
    * Single-threaded executor to process the compaction queue.
@@ -98,6 +109,9 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   private final ScheduledExecutorService executor;
 
   private final CompactionStatusTracker statusTracker;
+  private final TaskActionClientFactory taskActionClientFactory;
+  private final DruidInputSourceFactory druidInputSourceFactory;
+  private final GlobalTaskLockbox taskLockbox;
 
   /**
    * Listener to watch task completion events and update CompactionStatusTracker.
@@ -107,7 +121,6 @@ public class OverlordCompactionScheduler implements CompactionScheduler
 
   private final AtomicBoolean isLeader = new AtomicBoolean(false);
   private final AtomicBoolean started = new AtomicBoolean(false);
-  private final CompactSegments duty;
 
   /**
    * The scheduler should enable/disable polling of segments only if the Overlord
@@ -115,25 +128,37 @@ public class OverlordCompactionScheduler implements CompactionScheduler
    * class itself.
    */
   private final boolean shouldPollSegments;
+  private final long schedulePeriodMillis;
 
   private final Stopwatch sinceStatsEmitted = Stopwatch.createUnstarted();
 
   @Inject
   public OverlordCompactionScheduler(
       TaskMaster taskMaster,
+      GlobalTaskLockbox taskLockbox,
       TaskQueryTool taskQueryTool,
       SegmentsMetadataManager segmentManager,
+      SegmentsMetadataManagerConfig segmentManagerConfig,
       Supplier<DruidCompactionConfig> compactionConfigSupplier,
       CompactionStatusTracker statusTracker,
       CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig,
+      TaskActionClientFactory taskActionClientFactory,
+      DruidInputSourceFactory druidInputSourceFactory,
       ScheduledExecutorFactory executorFactory,
+      BrokerClient brokerClient,
       ServiceEmitter emitter,
       ObjectMapper objectMapper
   )
   {
+    final long segmentPollPeriodSeconds =
+        segmentManagerConfig.getPollDuration().toStandardDuration().getMillis();
+    this.schedulePeriodMillis = Math.min(5_000, segmentPollPeriodSeconds);
+
     this.segmentManager = segmentManager;
     this.emitter = emitter;
+    this.objectMapper = objectMapper;
     this.taskMaster = taskMaster;
+    this.taskLockbox = taskLockbox;
     this.compactionConfigSupplier = compactionConfigSupplier;
 
     this.executor = executorFactory.create(1, "CompactionScheduler-%s");
@@ -141,9 +166,12 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     this.shouldPollSegments = segmentManager != null
                               && !coordinatorOverlordServiceConfig.isEnabled();
     this.overlordClient = new LocalOverlordClient(taskMaster, taskQueryTool, objectMapper);
-    this.duty = new CompactSegments(this.statusTracker, overlordClient);
-    this.activeDatasourceConfigs = new ConcurrentHashMap<>();
+    this.brokerClient = brokerClient;
+    this.activeSupervisors = new ConcurrentHashMap<>();
+    this.datasourceToCompactionSnapshot = new AtomicReference<>();
 
+    this.taskActionClientFactory = taskActionClientFactory;
+    this.druidInputSourceFactory = druidInputSourceFactory;
     this.taskRunnerListener = new TaskRunnerListener()
     {
       @Override
@@ -184,7 +212,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   public void becomeLeader()
   {
     if (isLeader.compareAndSet(false, true)) {
-      scheduleOnExecutor(this::scheduledRun, SCHEDULE_PERIOD_SECONDS);
+      scheduleOnExecutor(this::scheduledRun, schedulePeriodMillis);
     }
   }
 
@@ -208,25 +236,25 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     } else {
       return ClientCompactionRunnerInfo.validateCompactionConfig(
           compactionConfig,
-          getLatestConfig().getEngine()
+          getLatestClusterConfig().getEngine()
       );
     }
   }
 
   @Override
-  public void startCompaction(String dataSourceName, DataSourceCompactionConfig config)
+  public void startCompaction(String dataSourceName, CompactionSupervisor supervisor)
   {
     // Track active datasources even if scheduler has not started yet because
     // SupervisorManager is started before the scheduler
     if (isEnabled()) {
-      activeDatasourceConfigs.put(dataSourceName, config);
+      activeSupervisors.put(dataSourceName, supervisor);
     }
   }
 
   @Override
   public void stopCompaction(String dataSourceName)
   {
-    activeDatasourceConfigs.remove(dataSourceName);
+    activeSupervisors.remove(dataSourceName);
     statusTracker.removeDatasource(dataSourceName);
   }
 
@@ -264,7 +292,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       taskRunnerOptional.get().unregisterListener(taskRunnerListener.getListenerId());
     }
     statusTracker.stop();
-    activeDatasourceConfigs.clear();
+    activeSupervisors.clear();
 
     if (shouldPollSegments) {
       segmentManager.stopPollingDatabasePeriodically();
@@ -296,49 +324,72 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       catch (Exception e) {
         log.error(e, "Error processing compaction queue. Continuing schedule.");
       }
-      scheduleOnExecutor(this::scheduledRun, SCHEDULE_PERIOD_SECONDS);
+      scheduleOnExecutor(this::scheduledRun, schedulePeriodMillis);
     } else {
       cleanupState();
-      scheduleOnExecutor(this::scheduledRun, SCHEDULE_PERIOD_SECONDS * 4);
+      scheduleOnExecutor(this::scheduledRun, schedulePeriodMillis * 4);
     }
   }
 
   /**
-   * Runs the compaction duty and emits stats if {@link #METRIC_EMISSION_PERIOD}
-   * has elapsed.
+   * Creates and runs eligible compaction jobs.
    */
   private synchronized void runCompactionDuty()
   {
-    final CoordinatorRunStats stats = new CoordinatorRunStats();
-    duty.run(getLatestConfig(), getDatasourceSnapshot(), getLatestConfig().getEngine(), stats);
+    final DataSourcesSnapshot dataSourcesSnapshot = getDatasourceSnapshot();
+    final CompactionJobQueue queue = new CompactionJobQueue(
+        dataSourcesSnapshot,
+        getLatestClusterConfig(),
+        statusTracker,
+        taskActionClientFactory,
+        taskLockbox,
+        overlordClient,
+        brokerClient,
+        objectMapper
+    );
+    statusTracker.resetActiveDatasources(activeSupervisors.keySet());
+    statusTracker.onSegmentTimelineUpdated(dataSourcesSnapshot.getSnapshotTime());
+    activeSupervisors.forEach(
+        (datasource, supervisor) -> queue.createAndEnqueueJobs(
+            supervisor,
+            druidInputSourceFactory.create(datasource, Intervals.ETERNITY),
+            new DruidDatasourceDestination(datasource)
+        )
+    );
+    queue.runReadyJobs();
 
+    datasourceToCompactionSnapshot.set(queue.getCompactionSnapshots());
+    emitStatsIfPeriodHasElapsed(queue.getRunStats());
+  }
+
+  /**
+   * Emits stats if {@link #METRIC_EMISSION_PERIOD} has elapsed.
+   */
+  private void emitStatsIfPeriodHasElapsed(CoordinatorRunStats stats)
+  {
     // Emit stats only if emission period has elapsed
     if (!sinceStatsEmitted.isRunning() || sinceStatsEmitted.hasElapsed(METRIC_EMISSION_PERIOD)) {
-      stats.forEachStat(
-          (stat, dimensions, value) -> {
-            if (stat.shouldEmit()) {
-              emitStat(stat, dimensions.getValues(), value);
-            }
-          }
-      );
+      stats.forEachStat(this::emitStat);
       sinceStatsEmitted.restart();
     } else {
-      // Always emit number of submitted tasks
-      long numSubmittedTasks = stats.get(Stats.Compaction.SUBMITTED_TASKS);
-      emitStat(Stats.Compaction.SUBMITTED_TASKS, Collections.emptyMap(), numSubmittedTasks);
+      // Always emit number of submitted tasks and interval statuses
+      stats.forEachEntry(Stats.Compaction.SUBMITTED_TASKS, this::emitNonZeroStat);
+      stats.forEachEntry(Stats.Compaction.COMPACTED_INTERVALS, this::emitNonZeroStat);
+      stats.forEachEntry(Stats.Compaction.SKIPPED_INTERVALS, this::emitNonZeroStat);
+      stats.forEachEntry(Stats.Compaction.PENDING_INTERVALS, this::emitStat);
     }
   }
 
   @Override
   public AutoCompactionSnapshot getCompactionSnapshot(String dataSource)
   {
-    if (!activeDatasourceConfigs.containsKey(dataSource)) {
+    if (!activeSupervisors.containsKey(dataSource)) {
       return AutoCompactionSnapshot.builder(dataSource)
                                    .withStatus(AutoCompactionSnapshot.ScheduleStatus.NOT_ENABLED)
                                    .build();
     }
 
-    final AutoCompactionSnapshot snapshot = duty.getAutoCompactionSnapshot(dataSource);
+    final AutoCompactionSnapshot snapshot = datasourceToCompactionSnapshot.get().get(dataSource);
     if (snapshot == null) {
       final AutoCompactionSnapshot.ScheduleStatus status =
           isEnabled()
@@ -353,7 +404,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   @Override
   public Map<String, AutoCompactionSnapshot> getAllCompactionSnapshots()
   {
-    return duty.getAutoCompactionSnapshot();
+    return Map.copyOf(datasourceToCompactionSnapshot.get());
   }
 
   @Override
@@ -363,17 +414,28 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       return new CompactionRunSimulator(statusTracker, overlordClient).simulateRunWithConfig(
           getLatestConfig().withClusterConfig(updateRequest),
           getDatasourceSnapshot(),
-          getLatestConfig().getEngine()
+          updateRequest.getEngine()
       );
     } else {
       return new CompactionSimulateResult(Collections.emptyMap());
     }
   }
 
-  private void emitStat(CoordinatorStat stat, Map<Dimension, String> dimensionValues, long value)
+  private void emitNonZeroStat(CoordinatorStat stat, RowKey rowKey, long value)
   {
+    if (value > 0) {
+      emitStat(stat, rowKey, value);
+    }
+  }
+
+  private void emitStat(CoordinatorStat stat, RowKey rowKey, long value)
+  {
+    if (!stat.shouldEmit()) {
+      return;
+    }
+
     ServiceMetricEvent.Builder eventBuilder = new ServiceMetricEvent.Builder();
-    dimensionValues.forEach(
+    rowKey.getValues().forEach(
         (dim, dimValue) -> eventBuilder.setDimension(dim.reportedName(), dimValue)
     );
     emitter.emit(eventBuilder.setMetric(stat.getMetricName(), value));
@@ -381,10 +443,20 @@ public class OverlordCompactionScheduler implements CompactionScheduler
 
   private DruidCompactionConfig getLatestConfig()
   {
+    final List<DataSourceCompactionConfig> configs = activeSupervisors
+        .values()
+        .stream()
+        .map(s -> s.getSpec().getSpec())
+        .collect(Collectors.toList());
     return DruidCompactionConfig
         .empty()
-        .withClusterConfig(compactionConfigSupplier.get().clusterConfig())
-        .withDatasourceConfigs(new ArrayList<>(activeDatasourceConfigs.values()));
+        .withClusterConfig(getLatestClusterConfig())
+        .withDatasourceConfigs(configs);
+  }
+
+  private ClusterCompactionConfig getLatestClusterConfig()
+  {
+    return compactionConfigSupplier.get().clusterConfig();
   }
 
   private DataSourcesSnapshot getDatasourceSnapshot()
@@ -392,7 +464,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     return segmentManager.getRecentDataSourcesSnapshot();
   }
 
-  private void scheduleOnExecutor(Runnable runnable, long delaySeconds)
+  private void scheduleOnExecutor(Runnable runnable, long delayMillis)
   {
     executor.schedule(
         () -> {
@@ -403,8 +475,8 @@ public class OverlordCompactionScheduler implements CompactionScheduler
             log.error(t, "Error while executing runnable");
           }
         },
-        delaySeconds,
-        TimeUnit.SECONDS
+        delayMillis,
+        TimeUnit.MILLISECONDS
     );
   }
 }
