@@ -91,6 +91,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -2464,6 +2465,26 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             0
         )
     );
+  }
+
+  @Test
+  public void testJoinOfTwoJoinsWithSubQueries()
+  {
+    skipVectorize();
+
+    String sql = "with\n"
+        + "l1 as (SELECT f.dim1, sum(n.dbl1) s1 from foo f join numfoo n on n.dim2=f.dim2 group by f.dim1),\n"
+        + "r1 as (SELECT f.dim2, sum(n.dbl2) s2 from foo f join numfoo n on n.dim1=f.dim1 group by f.dim2)\n"
+        + "select dim1, s1+s2 FROM l1 join r1 on dim1=dim2";
+
+    testBuilder()
+        .sql(sql)
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{"", 1.0D}
+            )
+        )
+        .run();
   }
 
   @MethodSource("provideQueryContexts")
@@ -5124,6 +5145,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.DD_RESTRICTED_DATASOURCE_SUPPORT2)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testJoinOnRestrictedBroadcast(Map<String, Object> queryContext)
@@ -5174,9 +5196,13 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             ImmutableList.of()
         )
     );
-    Assert.assertTrue(e.getMessage()
-                       .contains(
-                           "Restricted data source [GlobalTableDataSource{name='restrictedBroadcastDatasource_m1_is_6'}] with policy [RowFilterPolicy{rowFilter=m1 = 6 (LONG)}] is not supported"));
+
+    assertThat(
+        e.getMessage(),
+        CoreMatchers.containsString(
+            "Restricted data source [GlobalTableDataSource{name='restrictedBroadcastDatasource_m1_is_6'}] with policy [RowFilterPolicy{rowFilter=m1 = 6 (LONG)}] is not supported"
+        )
+    );
   }
 
   @MethodSource("provideQueryContexts")
@@ -5686,7 +5712,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.SORT_REMOVE_TROUBLE)
+  @NotYetSupported({Modes.SORT_REMOVE_TROUBLE, Modes.DD_SORT_REMOVE_TROUBLE})
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testRegressionFilteredAggregatorsSubqueryJoins(Map<String, Object> queryContext)
@@ -6230,13 +6256,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   public void testSelfJoinsWithUnnestOnLeftAndRight()
   {
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    testQuery(
-        "with t1 as (\n"
+    String sql = "with t1 as (\n"
         + "select * from foo, unnest(MV_TO_ARRAY(\"dim3\")) as u(d3)\n"
         + ")\n"
         + "select t1.dim3, t1.d3, t2.dim2 from t1 JOIN t1 as t2\n"
-        + "ON t1.d3 = t2.d3",
-        context,
+        + "ON t1.d3 = t2.d3";
+    ImmutableList<Query<?>> expectedQueries =
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(
@@ -6269,20 +6294,24 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
                 .context(context)
                 .build()
-        ),
-        sortIfSortBased(
-            ImmutableList.of(
-                new Object[]{"[\"a\",\"b\"]", "a", "a"},
-                new Object[]{"[\"a\",\"b\"]", "b", "a"},
-                new Object[]{"[\"a\",\"b\"]", "b", null},
-                new Object[]{"[\"b\",\"c\"]", "b", "a"},
-                new Object[]{"[\"b\",\"c\"]", "b", null},
-                new Object[]{"[\"b\",\"c\"]", "c", null},
-                new Object[]{"d", "d", ""},
-                new Object[]{"", "", "a"}
-            ), 0
-        )
+        );
+    ImmutableList<Object[]> expectedResults = ImmutableList.of(
+        new Object[] {"[\"a\",\"b\"]", "a", "a"},
+        new Object[] {"[\"a\",\"b\"]", "b", "a"},
+        new Object[] {"[\"a\",\"b\"]", "b", null},
+        new Object[] {"[\"b\",\"c\"]", "b", "a"},
+        new Object[] {"[\"b\",\"c\"]", "b", null},
+        new Object[] {"[\"b\",\"c\"]", "c", null},
+        new Object[] {"d", "d", ""},
+        new Object[] {"", "", "a"}
     );
+
+    testBuilder()
+        .queryContext(context)
+        .sql(sql)
+        .expectedQueries(expectedQueries)
+        .expectedResults(new UnorderedResultsVerifier(expectedResults, ResultMatchMode.RELAX_NULLS, null))
+        .run();
   }
 
   @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.UNNEST_EXTRA_SCANQUERY)
