@@ -418,6 +418,7 @@ The following table lists the context parameters for the MSQ task engine:
 | `storeCompactionState` | REPLACE<br /><br /> When set to true, a REPLACE query stores as part of each segment's metadata a `lastCompactionState` field that captures the various specs used to create the segment. Future compaction jobs skip segments whose `lastCompactionState` matches the desired compaction state. Works the same as [`storeCompactionState`](../ingestion/tasks.md#context-parameters) task context flag. | `false` |
 | `removeNullBytes` | SELECT, INSERT or REPLACE<br /><br /> The MSQ engine cannot process null bytes in strings and throws `InvalidNullByteFault` if it encounters them in the source data. If the parameter is set to true, The MSQ engine will remove the null bytes in string fields when reading the data. | `false` |
 | `maxFrameSize` | SELECT, INSERT or REPLACE<br /><br />Size of frames used for data transfer within the MSQ engine. You generally do not need to change this unless you have very large rows. | `1000000` (1 MB) |
+| `maxThreads` | SELECT, INSERT or REPLACE<br /><br />Maximum number of threads to use for processing. Acts as a cap on the number of threads that workers will use. If not specified, workers use their default thread count based on system configuration. | Not set (no limit) |
 
 ## Joins
 
