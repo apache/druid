@@ -95,4 +95,12 @@ public interface MetadataStorageConnector
    * SegmentSchema table is created only when CentralizedDatasourceSchema feature is enabled.
    */
   void createSegmentSchemasTable();
+
+  /**
+   * Returns the maximum identifier length for table indices in this MetadataStorageConnector implementation.
+   */
+  default int indexIdentifierLengthLimit()
+  {
+    return Integer.MAX_VALUE;
+  }
 }

@@ -290,4 +290,11 @@ public class MySQLConnector extends SQLMetadataConnector
       return null;
     }
   }
+
+  @Override
+  public int indexIdentifierLengthLimit()
+  {
+    // https://dev.mysql.com/doc/refman/9.4/en/identifier-length.html
+    return 64;
+  }
 }
