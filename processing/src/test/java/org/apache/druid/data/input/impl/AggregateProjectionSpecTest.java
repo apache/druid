@@ -27,10 +27,12 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -59,12 +61,15 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
             new FloatDimensionSchema("c"),
             new DoubleDimensionSchema("d")
         ),
-        new AggregatorFactory[] {
+        new AggregatorFactory[]{
             new CountAggregatorFactory("count"),
             new LongSumAggregatorFactory("e", "e")
         }
     );
-    Assertions.assertEquals(spec, JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(spec), AggregateProjectionSpec.class));
+    Assertions.assertEquals(
+        spec,
+        JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(spec), AggregateProjectionSpec.class)
+    );
   }
 
   @Test
@@ -75,12 +80,78 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
         null,
         VirtualColumns.EMPTY,
         List.of(),
-        new AggregatorFactory[] {
+        new AggregatorFactory[]{
             new CountAggregatorFactory("count"),
             new LongSumAggregatorFactory("e", "e")
         }
     );
     Assertions.assertTrue(spec.getOrdering().isEmpty());
+  }
+
+  @Test
+  void testComputeOrdering_granularity()
+  {
+    AggregateProjectionSpec spec = new AggregateProjectionSpec(
+        "some_projection",
+        null,
+        VirtualColumns.EMPTY,
+        List.of(new LongDimensionSchema("__time")),
+        new AggregatorFactory[]{}
+    );
+    Assertions.assertEquals("__time", spec.toMetadataSchema().getTimeColumnName());
+
+    ExpressionVirtualColumn hourly = new ExpressionVirtualColumn(
+        "hourly",
+        "timestamp_floor(__time, 'PT1H', null, null)",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+    ExpressionVirtualColumn daily = new ExpressionVirtualColumn(
+        "daily",
+        "timestamp_floor(__time, 'P1D', null, null)",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+    ExpressionVirtualColumn ptEvery10Min = new ExpressionVirtualColumn(
+        "ptEvery10Min",
+        "timestamp_floor(__time, 'PT10M', null, 'America/Los_Angeles')",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+    ExpressionVirtualColumn every90Min = new ExpressionVirtualColumn(
+        "every90Min",
+        "timestamp_floor(__time, 'PT1H30M', null, null)",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+
+    Assertions.assertEquals("hourly", new AggregateProjectionSpec(
+        "some_projection",
+        null,
+        VirtualColumns.create(daily, hourly, ptEvery10Min),
+        List.of(
+            new LongDimensionSchema("daily"),
+            new LongDimensionSchema("hourly"),
+            new LongDimensionSchema("ptEvery10Min")
+        ),
+        new AggregatorFactory[]{}
+    ).toMetadataSchema().getTimeColumnName());
+
+    Assertions.assertNull(new AggregateProjectionSpec(
+        "some_projection",
+        null,
+        VirtualColumns.create(ptEvery10Min),
+        List.of(new LongDimensionSchema("ptEvery10Min")),
+        new AggregatorFactory[]{}
+    ).toMetadataSchema().getTimeColumnName());
+
+    Assertions.assertEquals("every90Min", new AggregateProjectionSpec(
+        "some_projection",
+        null,
+        VirtualColumns.create(every90Min, ptEvery10Min),
+        List.of(new LongDimensionSchema("every90Min"), new LongDimensionSchema("ptEvery10Min")),
+        new AggregatorFactory[]{}
+    ).toMetadataSchema().getTimeColumnName());
   }
 
   @Test
@@ -125,7 +196,10 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
             null
         )
     );
-    Assertions.assertEquals("projection[other_projection] groupingColumns and aggregators must not both be null or empty", t.getMessage());
+    Assertions.assertEquals(
+        "projection[other_projection] groupingColumns and aggregators must not both be null or empty",
+        t.getMessage()
+    );
 
     t = Assertions.assertThrows(
         DruidException.class,
@@ -137,7 +211,10 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
             null
         )
     );
-    Assertions.assertEquals("projection[other_projection] groupingColumns and aggregators must not both be null or empty", t.getMessage());
+    Assertions.assertEquals(
+        "projection[other_projection] groupingColumns and aggregators must not both be null or empty",
+        t.getMessage()
+    );
   }
 
   @Test
