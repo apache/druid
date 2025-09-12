@@ -158,7 +158,6 @@ public class NestedDataExpressions
                 ((Map<?, ?>) retVal).putAll((Map) argAsObject);
               } else {
                 throw JsonMergeExprMacro.this.processingFailed(
-                    null,
                     "bad input[%s] in position[%d], expected object but got array",
                     argAsObject,
                     i
@@ -170,7 +169,6 @@ public class NestedDataExpressions
                 ((List<?>) retVal).addAll((List) argAsObject);
               } else {
                 throw JsonMergeExprMacro.this.processingFailed(
-                    null,
                     "bad input[%s] in position[%d], expected array but got object",
                     argAsObject,
                     i
@@ -210,7 +208,7 @@ public class NestedDataExpressions
               if (obj == null || obj instanceof Map || obj instanceof List) {
                 return obj;
               } else {
-                throw JsonMergeExprMacro.this.processingFailed(null, "bad string input [%s]", arg.asString());
+                throw JsonMergeExprMacro.this.processingFailed("bad string input [%s]", arg.asString());
               }
             }
             catch (JsonProcessingException e) {
@@ -227,12 +225,11 @@ public class NestedDataExpressions
             } else if (unwrapped instanceof Object[]) {
               return shallowCopy ? new ArrayList<>(Arrays.asList(((Object[]) unwrapped))) : unwrapped;
             } else {
-              throw JsonMergeExprMacro.this.processingFailed(null, "bad complex input [%s]", arg.asString());
+              throw JsonMergeExprMacro.this.processingFailed("bad complex input [%s]", arg.asString());
             }
           }
 
           throw JsonMergeExprMacro.this.processingFailed(
-              null,
               "invalid input expected %s but got %s instead",
               ExpressionType.STRING,
               arg.type()
