@@ -223,6 +223,7 @@ public interface VirtualColumn extends Cacheable
   /**
    * @deprecated use {@link #makeSingleValueVectorDimensionSelector(DimensionSpec, ColumnSelector, ReadableVectorOffset)}
    */
+  @Deprecated
   default SingleValueDimensionVectorSelector makeSingleValueVectorDimensionSelector(
       DimensionSpec dimensionSpec,
       VectorColumnSelectorFactory factory
@@ -234,6 +235,7 @@ public interface VirtualColumn extends Cacheable
   /**
    * @deprecated use {@link #makeSingleValueVectorDimensionSelector(DimensionSpec, ColumnSelector, ReadableVectorOffset)}
    */
+  @Deprecated
   @Nullable
   default SingleValueDimensionVectorSelector makeSingleValueVectorDimensionSelector(
       DimensionSpec dimensionSpec,
