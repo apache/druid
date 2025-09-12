@@ -123,4 +123,158 @@ public class TimestampExtractExprMacroTest
     );
     Assert.assertEquals(5, expression.eval(bindings).asInt());
   }
+
+  @Test
+  public void testApplyExtractEpochShouldExtractTheCorrectEpochSeconds()
+  {
+    Expr expression = target.apply(
+        ImmutableList.of(
+            ExprEval.of("2001-01-01T00:00:00Z").toExpr(),
+            ExprEval.of(TimestampExtractExprMacro.Unit.EPOCH.toString()).toExpr()
+        ));
+    Assert.assertEquals(978307200, expression.eval(InputBindings.nilBindings()).asInt());
+  }
+
+  @Test
+  public void testApplyExtractMillisecondShouldExtractTheCorrectMillisecond()
+  {
+    Expr expression = target.apply(
+        ImmutableList.of(
+            ExprEval.of("2001-02-16T12:34:56.789Z").toExpr(),
+            ExprEval.of(TimestampExtractExprMacro.Unit.MILLISECOND.toString()).toExpr()
+        ));
+    Assert.assertEquals(789, expression.eval(InputBindings.nilBindings()).asInt());
+  }
+
+  @Test
+  public void testApplyExtractSecondShouldExtractTheCorrectSecond()
+  {
+    Expr expression = target.apply(
+        ImmutableList.of(
+            ExprEval.of("2001-02-16T12:34:45Z").toExpr(),
+            ExprEval.of(TimestampExtractExprMacro.Unit.SECOND.toString()).toExpr()
+        ));
+    Assert.assertEquals(45, expression.eval(InputBindings.nilBindings()).asInt());
+  }
+
+  @Test
+  public void testApplyExtractMinuteShouldExtractTheCorrectMinute()
+  {
+    Expr expression = target.apply(
+        ImmutableList.of(
+            ExprEval.of("2001-02-16T12:34:56Z").toExpr(),
+            ExprEval.of(TimestampExtractExprMacro.Unit.MINUTE.toString()).toExpr()
+        ));
+    Assert.assertEquals(34, expression.eval(InputBindings.nilBindings()).asInt());
+  }
+
+  @Test
+  public void testApplyExtractHourShouldExtractTheCorrectHour()
+  {
+    Expr expression = target.apply(
+        ImmutableList.of(
+            ExprEval.of("2001-02-16T12:34:56Z").toExpr(),
+            ExprEval.of(TimestampExtractExprMacro.Unit.HOUR.toString()).toExpr()
+        ));
+    Assert.assertEquals(12, expression.eval(InputBindings.nilBindings()).asInt());
+  }
+
+  @Test
+  public void testApplyExtractDayShouldExtractTheCorrectDay()
+  {
+    Expr expression = target.apply(
+        ImmutableList.of(
+            ExprEval.of("2001-02-16T12:34:56Z").toExpr(),
+            ExprEval.of(TimestampExtractExprMacro.Unit.DAY.toString()).toExpr()
+        ));
+    Assert.assertEquals(16, expression.eval(InputBindings.nilBindings()).asInt());
+  }
+
+  @Test
+  public void testApplyExtractIsodowShouldExtractTheCorrectIsoDayOfWeek()
+  {
+    Expr expression = target.apply(
+        ImmutableList.of(
+            ExprEval.of("2023-12-15").toExpr(),
+            ExprEval.of(TimestampExtractExprMacro.Unit.ISODOW.toString()).toExpr()
+        ));
+    Assert.assertEquals(5, expression.eval(InputBindings.nilBindings()).asInt());
+  }
+
+  @Test
+  public void testApplyExtractDoyShouldExtractTheCorrectDayOfYear()
+  {
+    Expr expression = target.apply(
+        ImmutableList.of(
+            ExprEval.of("2001-02-16").toExpr(),
+            ExprEval.of(TimestampExtractExprMacro.Unit.DOY.toString()).toExpr()
+        ));
+    Assert.assertEquals(47, expression.eval(InputBindings.nilBindings()).asInt());
+  }
+
+  @Test
+  public void testApplyExtractWeekShouldExtractTheCorrectWeek()
+  {
+    Expr expression = target.apply(
+        ImmutableList.of(
+            ExprEval.of("2001-02-16").toExpr(),
+            ExprEval.of(TimestampExtractExprMacro.Unit.WEEK.toString()).toExpr()
+        ));
+    Assert.assertEquals(7, expression.eval(InputBindings.nilBindings()).asInt());
+  }
+
+  @Test
+  public void testApplyExtractMonthShouldExtractTheCorrectMonth()
+  {
+    Expr expression = target.apply(
+        ImmutableList.of(
+            ExprEval.of("2001-02-16").toExpr(),
+            ExprEval.of(TimestampExtractExprMacro.Unit.MONTH.toString()).toExpr()
+        ));
+    Assert.assertEquals(2, expression.eval(InputBindings.nilBindings()).asInt());
+  }
+
+  @Test
+  public void testApplyExtractQuarterShouldExtractTheCorrectQuarter()
+  {
+    Expr expression = target.apply(
+        ImmutableList.of(
+            ExprEval.of("2001-02-16").toExpr(),
+            ExprEval.of(TimestampExtractExprMacro.Unit.QUARTER.toString()).toExpr()
+        ));
+    Assert.assertEquals(1, expression.eval(InputBindings.nilBindings()).asInt());
+  }
+
+  @Test
+  public void testApplyExtractQuarterSecondQuarterShouldExtractTheCorrectQuarter()
+  {
+    Expr expression = target.apply(
+        ImmutableList.of(
+            ExprEval.of("2001-05-16").toExpr(),
+            ExprEval.of(TimestampExtractExprMacro.Unit.QUARTER.toString()).toExpr()
+        ));
+    Assert.assertEquals(2, expression.eval(InputBindings.nilBindings()).asInt());
+  }
+
+  @Test
+  public void testApplyExtractYearShouldExtractTheCorrectYear()
+  {
+    Expr expression = target.apply(
+        ImmutableList.of(
+            ExprEval.of("2001-02-16").toExpr(),
+            ExprEval.of(TimestampExtractExprMacro.Unit.YEAR.toString()).toExpr()
+        ));
+    Assert.assertEquals(2001, expression.eval(InputBindings.nilBindings()).asInt());
+  }
+
+  @Test
+  public void testApplyExtractIsoYearShouldExtractTheCorrectIsoYear()
+  {
+    Expr expression = target.apply(
+        ImmutableList.of(
+            ExprEval.of("2001-02-16").toExpr(),
+            ExprEval.of(TimestampExtractExprMacro.Unit.ISOYEAR.toString()).toExpr()
+        ));
+    Assert.assertEquals(2001, expression.eval(InputBindings.nilBindings()).asInt());
+  }
 }

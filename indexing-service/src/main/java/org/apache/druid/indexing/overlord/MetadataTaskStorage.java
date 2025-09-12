@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.overlord;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -30,7 +29,6 @@ import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskLock;
-import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.DateTimes;
@@ -40,9 +38,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataStorageActionHandler;
 import org.apache.druid.metadata.MetadataStorageActionHandlerFactory;
-import org.apache.druid.metadata.MetadataStorageActionHandlerTypes;
 import org.apache.druid.metadata.MetadataStorageConnector;
-import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
@@ -57,31 +53,9 @@ import java.util.stream.Collectors;
 
 public class MetadataTaskStorage implements TaskStorage
 {
-
-  private static final MetadataStorageActionHandlerTypes<Task, TaskStatus, TaskAction, TaskLock> TASK_TYPES = new MetadataStorageActionHandlerTypes<>()
-  {
-    @Override
-    public TypeReference<Task> getEntryType()
-    {
-      return new TypeReference<>() {};
-    }
-
-    @Override
-    public TypeReference<TaskStatus> getStatusType()
-    {
-      return new TypeReference<>() {};
-    }
-
-    @Override
-    public TypeReference<TaskLock> getLockType()
-    {
-      return new TypeReference<>() {};
-    }
-  };
-
   private final MetadataStorageConnector metadataStorageConnector;
   private final TaskStorageConfig config;
-  private final MetadataStorageActionHandler<Task, TaskStatus, TaskAction, TaskLock> handler;
+  private final MetadataStorageActionHandler handler;
 
   private static final EmittingLogger log = new EmittingLogger(MetadataTaskStorage.class);
 
@@ -94,7 +68,7 @@ public class MetadataTaskStorage implements TaskStorage
   {
     this.metadataStorageConnector = metadataStorageConnector;
     this.config = config;
-    this.handler = factory.create(MetadataStorageTablesConfig.TASK_ENTRY_TYPE, TASK_TYPES);
+    this.handler = factory.create();
   }
 
   @LifecycleStart
@@ -112,7 +86,7 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
-  public TaskInfo<Task, TaskStatus> insert(final Task task, final TaskStatus status)
+  public TaskInfo insert(final Task task, final TaskStatus status)
   {
     Preconditions.checkNotNull(task, "task");
     Preconditions.checkNotNull(status, "status");
@@ -145,11 +119,9 @@ public class MetadataTaskStorage implements TaskStorage
       throw new RuntimeException(e);
     }
 
-    return new TaskInfo<>(
-        task.getId(),
+    return new TaskInfo(
         insertionTime,
         status,
-        task.getDataSource(),
         task
     );
   }
@@ -182,7 +154,7 @@ public class MetadataTaskStorage implements TaskStorage
 
   @Nullable
   @Override
-  public TaskInfo<Task, TaskStatus> getTaskInfo(String taskId)
+  public TaskInfo getTaskInfo(String taskId)
   {
     return handler.getTaskInfo(taskId);
   }
@@ -198,24 +170,24 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfos()
+  public List<TaskInfo> getActiveTaskInfos()
   {
     return handler.getTaskInfos(Map.of(TaskLookupType.ACTIVE, ActiveTaskLookup.getInstance()), null)
                   .stream()
-                  .filter(taskInfo -> taskInfo.getStatus().isRunnable() && taskInfo.getTask() != null)
+                  .filter(taskInfo -> taskInfo.getStatus().isRunnable())
                   .collect(Collectors.toList());
   }
 
   @Override
   public List<Task> getActiveTasksByDatasource(String datasource)
   {
-    List<TaskInfo<Task, TaskStatus>> activeTaskInfos = handler.getTaskInfos(
+    List<TaskInfo> activeTaskInfos = handler.getTaskInfos(
         Collections.singletonMap(TaskLookupType.ACTIVE, ActiveTaskLookup.getInstance()),
         datasource
     );
     ImmutableList.Builder<Task> tasksBuilder = ImmutableList.builder();
-    for (TaskInfo<Task, TaskStatus> taskInfo : activeTaskInfos) {
-      if (taskInfo.getStatus().isRunnable() && taskInfo.getTask() != null) {
+    for (TaskInfo taskInfo : activeTaskInfos) {
+      if (taskInfo.getStatus().isRunnable()) {
         tasksBuilder.add(taskInfo.getTask());
       }
     }
@@ -223,7 +195,7 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskInfo<Task, TaskStatus>> getTaskInfos(
+  public List<TaskInfo> getTaskInfos(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String datasource
   )
@@ -248,12 +220,10 @@ public class MetadataTaskStorage implements TaskStorage
             DateTimes.nowUtc().minus(config.getRecentlyFinishedThreshold())
         );
 
-    return Collections.unmodifiableList(
-        handler.getTaskStatusList(processedTaskLookups, datasource)
-               .stream()
-               .map(TaskStatusPlus::fromTaskIdentifierInfo)
-               .collect(Collectors.toList())
-    );
+    return handler.getTaskStatusList(processedTaskLookups, datasource)
+                  .stream()
+                  .map(TaskStatusPlus::fromTaskIdentifierInfo)
+                  .collect(Collectors.toList());
   }
 
   @Override

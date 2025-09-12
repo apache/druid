@@ -40,6 +40,7 @@ import java.util.Map;
 
 public class MSQKeyStatisticsSketchMergeModeTest extends EmbeddedClusterTestBase
 {
+  private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer()
@@ -56,7 +57,7 @@ public class MSQKeyStatisticsSketchMergeModeTest extends EmbeddedClusterTestBase
         .addServer(overlord)
         .addServer(coordinator)
         .addServer(indexer)
-        .addServer(new EmbeddedBroker())
+        .addServer(broker)
         .addServer(new EmbeddedHistorical())
         .addServer(new EmbeddedRouter());
   }
@@ -83,7 +84,7 @@ public class MSQKeyStatisticsSketchMergeModeTest extends EmbeddedClusterTestBase
 
     final SqlTaskStatus sqlTaskStatus = msqApis.submitTaskSql(context, queryLocal);
     cluster.callApi().waitForTaskToSucceed(sqlTaskStatus.getTaskId(), overlord);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     cluster.callApi().verifySqlQuery(
         "SELECT __time, isRobot, added, delta, deleted, namespace FROM %s",
@@ -110,7 +111,7 @@ public class MSQKeyStatisticsSketchMergeModeTest extends EmbeddedClusterTestBase
 
     SqlTaskStatus sqlTaskStatus = msqApis.submitTaskSql(context, queryLocal);
     cluster.callApi().waitForTaskToSucceed(sqlTaskStatus.getTaskId(), overlord);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     cluster.callApi().verifySqlQuery(
         "SELECT __time, isRobot, added, delta, deleted, namespace FROM %s",
@@ -178,7 +179,7 @@ public class MSQKeyStatisticsSketchMergeModeTest extends EmbeddedClusterTestBase
 
     SqlTaskStatus sqlTaskStatus = msqApis.submitTaskSql(context, queryLocal);
     cluster.callApi().waitForTaskToSucceed(sqlTaskStatus.getTaskId(), overlord);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     cluster.callApi().verifySqlQuery(
         "SELECT __time, isRobot, added, delta, deleted, namespace FROM %s",
