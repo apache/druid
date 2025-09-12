@@ -20,7 +20,8 @@
 package org.apache.druid.segment.virtual;
 
 import org.apache.druid.segment.column.SelectableColumn;
-import org.jetbrains.annotations.Nullable;
+
+import javax.annotation.Nullable;
 
 /**
  * Selectable column that does not support anything. Its {@link #as(Class)} method always returns null.

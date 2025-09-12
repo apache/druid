@@ -671,6 +671,9 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       ReadableVectorOffset readableOffset
   )
   {
+    if (path.isEmpty()) {
+      return makeVectorObjectSelector(readableOffset);
+    }
     final String field = getField(path);
     Preconditions.checkNotNull(field, "Null field");
     final int fieldIndex = fields.indexOf(field);
@@ -678,7 +681,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       BaseColumn col = getColumnHolder(field, fieldIndex).getColumn();
       return col.makeVectorObjectSelector(readableOffset);
     }
-    if (!path.isEmpty() && path.get(path.size() - 1) instanceof NestedPathArrayElement) {
+    if (path.get(path.size() - 1) instanceof NestedPathArrayElement) {
       final NestedPathPart lastPath = path.get(path.size() - 1);
       final String arrayField = getField(path.subList(0, path.size() - 1));
       final int arrayFieldIndex = fields.indexOf(arrayField);

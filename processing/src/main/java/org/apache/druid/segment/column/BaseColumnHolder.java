@@ -20,7 +20,8 @@
 package org.apache.druid.segment.column;
 
 import com.google.common.base.Supplier;
-import org.jetbrains.annotations.Nullable;
+
+import javax.annotation.Nullable;
 
 /**
  * Specialized holder for {@link BaseColumn} (physical column).

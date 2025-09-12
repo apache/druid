@@ -295,9 +295,8 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     if (hasNegativeArrayIndex) {
       // negative array elements in a path expression mean that values should be fetched 'from the end' of the array
       // if the path has negative array elements, then we have to use the 'raw' processing of the FieldDimensionSelector
-      // created with the column selector factory instead of using the optimized nested field column, return null
-      // to fall through
-      return null;
+      // created with the column selector factory instead of using the optimized nested field column, so fall back
+      return makeDimensionSelector(dimensionSpec, selectorFactory);
     }
 
     return dimensionSpec.decorate(
@@ -516,7 +515,6 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     return NilVectorSelector.create(offset);
   }
 
-  @Nullable
   @Override
   public VectorObjectSelector makeVectorObjectSelector(
       String columnName,
