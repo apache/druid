@@ -102,8 +102,8 @@ public class ConstantExprTest extends InitializedNullHandlingTest
         new NullDoubleExpr(),
         "null",
         "null",
-        // the expressions 'null' is always parsed as a StringExpr(null)
-        new StringExpr(null)
+        // the expressions 'null' is always parsed as a NullLongExpr()
+        new NullLongExpr()
     );
   }
 
@@ -114,8 +114,8 @@ public class ConstantExprTest extends InitializedNullHandlingTest
         new NullLongExpr(),
         "null",
         "null",
-        // the expressions 'null' is always parsed as a StringExpr(null)
-        new StringExpr(null)
+        // the expressions 'null' is always parsed as a NullLongExpr()
+        new NullLongExpr()
     );
   }
 
@@ -148,7 +148,8 @@ public class ConstantExprTest extends InitializedNullHandlingTest
         new StringExpr(null),
         null,
         "null",
-        new StringExpr(null)
+        // the expressions 'null' is always parsed as a NullLongExpr()
+        new NullLongExpr()
     );
   }
 

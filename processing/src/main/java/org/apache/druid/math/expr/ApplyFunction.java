@@ -183,7 +183,7 @@ public interface ApplyFunction extends NamedFunction
 
       Object[] array = arrayEval.asArray();
       if (array == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofMissing();
       }
       if (array.length == 0) {
         return arrayEval;
@@ -246,7 +246,7 @@ public interface ApplyFunction extends NamedFunction
         arrayInputs.add(Arrays.asList(array));
       }
       if (hadNull) {
-        return ExprEval.of(null);
+        return ExprEval.ofMissing();
       }
       if (hadEmpty) {
         return ExprEval.ofStringArray(new String[0]);
@@ -334,7 +334,7 @@ public interface ApplyFunction extends NamedFunction
 
       Object[] array = arrayEval.asArray();
       if (array == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofMissing();
       }
       Object accumulator = accEval.value();
 
@@ -401,7 +401,7 @@ public interface ApplyFunction extends NamedFunction
         arrayInputs.add(Arrays.asList(array));
       }
       if (hadNull) {
-        return ExprEval.of(null);
+        return ExprEval.ofMissing();
       }
       if (hadEmpty) {
         return ExprEval.ofStringArray(new Object[0]);

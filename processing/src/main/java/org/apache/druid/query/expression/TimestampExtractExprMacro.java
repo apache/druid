@@ -182,7 +182,7 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
       final ExprEval<?> eval = args.get(0).eval(bindings);
       if (eval.value() == null) {
         // Return null if the argument if null.
-        return ExprEval.of(null);
+        return ExprEval.ofType(getOutputExpressionType(unit), null);
       }
       final DateTime dateTime = new DateTime(eval.value(), chronology);
       switch (getOutputExpressionType(unit).getType()) {
@@ -246,7 +246,7 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
       final ExprEval<?> eval = args.get(0).eval(bindings);
       if (eval.value() == null) {
         // Return null if the argument if null.
-        return ExprEval.of(null);
+        return ExprEval.ofType(getOutputExpressionType(unit), null);
       }
       final Chronology chronology = computeChronology(args, bindings);
       final DateTime dateTime = new DateTime(eval.value(), chronology);

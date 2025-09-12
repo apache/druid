@@ -385,7 +385,7 @@ public class ExprListenerImpl extends ExprBaseListener
   @Override
   public void exitNull(ExprParser.NullContext ctx)
   {
-    nodes.put(ctx, new StringExpr(null));
+    nodes.put(ctx, new NullLongExpr());
   }
 
   @Override

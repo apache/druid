@@ -135,7 +135,7 @@ class UnaryMinusExpr extends UnaryExpr
     }
     ExprEval ret = expr.eval(bindings);
     if (ret.value() == null) {
-      return ExprEval.of(null);
+      return ExprEval.ofType(ret.type(), null);
     }
     if (ret.type().is(ExprType.LONG)) {
       return ExprEval.of(-ret.asLong());
@@ -178,7 +178,7 @@ class UnaryNotExpr extends UnaryExpr
   {
     ExprEval ret = expr.eval(bindings);
     if (ret.value() == null) {
-      return ExprEval.of(null);
+      return ExprEval.ofLong(null);
     }
     return ExprEval.ofLongBoolean(!ret.asBoolean());
   }

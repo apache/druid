@@ -102,7 +102,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterLookupOfFunction()
   {
-    cannotVectorize();
+    cannotVectorizeUnlessFallback();
 
     testQuery(
         buildFilterTestSql("LOOKUP(LOWER(dim1), 'lookyloo') = 'xabc'"),
@@ -118,7 +118,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterFunctionOfLookup()
   {
-    cannotVectorize();
+    cannotVectorizeUnlessFallback();
 
     testQuery(
         buildFilterTestSql("LOWER(LOOKUP(dim1, 'lookyloo')) = 'xabc'"),
@@ -686,7 +686,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterMvContainsNull()
   {
-    cannotVectorize();
+    cannotVectorizeUnlessFallback();
 
     testQuery(
         buildFilterTestSql("MV_CONTAINS(LOOKUP(dim1, 'lookyloo'), NULL)"),
@@ -700,7 +700,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterMvContainsNullInjective()
   {
-    cannotVectorize();
+    cannotVectorizeUnlessFallback();
 
     testQuery(
         buildFilterTestSql("MV_CONTAINS(LOOKUP(dim1, 'lookyloo121'), NULL)"),
@@ -724,7 +724,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterMvOverlapNull()
   {
-    cannotVectorize();
+    cannotVectorizeUnlessFallback();
 
     testQuery(
         buildFilterTestSql("MV_OVERLAP(lookup(dim1, 'lookyloo'), ARRAY['xabc', 'x6', 'nonexistent', NULL])"),
@@ -755,7 +755,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterNotMvContains()
   {
-    cannotVectorize();
+    cannotVectorizeUnlessFallback();
 
     testQuery(
         buildFilterTestSql("NOT MV_CONTAINS(lookup(dim1, 'lookyloo'), 'xabc')"),
@@ -797,7 +797,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterNotMvOverlap()
   {
-    cannotVectorize();
+    cannotVectorizeUnlessFallback();
 
     testQuery(
         buildFilterTestSql("NOT MV_OVERLAP(lookup(dim1, 'lookyloo'), ARRAY['xabc', 'x6', 'nonexistent'])"),
@@ -1119,7 +1119,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterMvContainsCoalesceSameLiteral()
   {
-    cannotVectorize();
+    cannotVectorizeUnlessFallback();
 
     testQuery(
         buildFilterTestSql("MV_CONTAINS(COALESCE(LOOKUP(dim1, 'lookyloo'), 'x6'), 'x6')"),
@@ -1134,7 +1134,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterMvOverlapCoalesceSameLiteral()
   {
-    cannotVectorize();
+    cannotVectorizeUnlessFallback();
 
     testQuery(
         buildFilterTestSql("MV_OVERLAP(COALESCE(LOOKUP(dim1, 'lookyloo'), 'x6'), ARRAY['xabc', 'x6', 'nonexistent'])"),

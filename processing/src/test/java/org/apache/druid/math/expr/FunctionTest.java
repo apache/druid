@@ -953,7 +953,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testSizeForatInvalidArgumentType()
+  public void testSizeFormatInvalidArgumentType()
   {
     // x = "foo"
     Throwable t = Assert.assertThrows(
@@ -981,7 +981,7 @@ public class FunctionTest extends InitializedNullHandlingTest
                     .eval(bestEffortBindings)
     );
     Assert.assertEquals(
-        "Function[human_readable_binary_byte_format] needs a LONG as its second argument but got STRING instead",
+        "Function[human_readable_binary_byte_format] needs a LONG as its second argument but got null",
         t.getMessage()
     );
   }

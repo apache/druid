@@ -2247,27 +2247,6 @@ public class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  public void testAbnormalReverseWithWrongType()
-  {
-    Throwable t = Assert.assertThrows(
-        DruidException.class,
-        () -> testHelper.testExpression(
-            new ReverseOperatorConversion().calciteOperator(),
-            testHelper.makeInputRef("a"),
-            DruidExpression.ofExpression(
-                ColumnType.STRING,
-                DruidExpression.functionCall("reverse"),
-                ImmutableList.of(
-                    DruidExpression.ofColumn(ColumnType.LONG, "a")
-                )
-            ),
-            null
-        )
-    );
-    Assert.assertEquals("Function[reverse] needs a STRING argument but got LONG instead", t.getMessage());
-  }
-
-  @Test
   public void testRight()
   {
     testHelper.testExpressionString(

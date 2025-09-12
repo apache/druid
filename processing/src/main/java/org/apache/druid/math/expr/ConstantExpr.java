@@ -412,7 +412,7 @@ class StringExpr extends ConstantExpr<String>
   @Override
   protected ExprEval realEval()
   {
-    return ExprEval.of(value);
+    return ExprEval.ofString(value);
   }
 
   @Override

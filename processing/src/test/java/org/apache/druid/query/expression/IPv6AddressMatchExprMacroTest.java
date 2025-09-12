@@ -32,8 +32,8 @@ import java.util.Collections;
  
 public class IPv6AddressMatchExprMacroTest extends MacroTestBase
 {
-  private static final Expr IPV6 = ExprEval.of("201:ef:168::").toExpr();
-  private static final Expr IPV6_CIDR = ExprEval.of("201:ef:168::/32").toExpr();
+  private static final Expr IPV6 = ExprEval.ofString("201:ef:168::").toExpr();
+  private static final Expr IPV6_CIDR = ExprEval.ofString("201:ef:168::/32").toExpr();
  
   public IPv6AddressMatchExprMacroTest()
   {
@@ -50,7 +50,7 @@ public class IPv6AddressMatchExprMacroTest extends MacroTestBase
   @Test
   public void testTooManyArgs()
   {
-    Expr extraArgument = ExprEval.of("An extra argument").toExpr();
+    Expr extraArgument = ExprEval.ofString("An extra argument").toExpr();
     expectException(ExpressionValidationException.class, "requires 2 arguments");
     apply(Arrays.asList(IPV6, IPV6_CIDR, extraArgument));
   }
@@ -59,14 +59,14 @@ public class IPv6AddressMatchExprMacroTest extends MacroTestBase
   public void testSubnetArgInvalid()
   {
     expectException(ExpressionProcessingException.class, "Function[ipv6_match] failed to parse address");
-    Expr invalidSubnet = ExprEval.of("201:ef:168::/invalid").toExpr();
+    Expr invalidSubnet = ExprEval.ofString("201:ef:168::/invalid").toExpr();
     apply(Arrays.asList(IPV6, invalidSubnet));
   }
 
   @Test
   public void testNullStringArg()
   {
-    Expr nullString = ExprEval.of(null).toExpr();
+    Expr nullString = ExprEval.ofString(null).toExpr();
     Assert.assertFalse(eval(nullString, IPV6_CIDR));
   }
 
@@ -79,14 +79,14 @@ public class IPv6AddressMatchExprMacroTest extends MacroTestBase
   @Test
   public void testNotMatchingStringArgIPv6()
   {
-    Expr nonMatchingIpv6 = ExprEval.of("2002:ef:168::").toExpr();
+    Expr nonMatchingIpv6 = ExprEval.ofString("2002:ef:168::").toExpr();
     Assert.assertFalse(eval(nonMatchingIpv6, IPV6_CIDR));
   }
  
   @Test
   public void testNotIpAddress()
   {
-    Expr notIpAddress = ExprEval.of("druid.apache.org").toExpr();
+    Expr notIpAddress = ExprEval.ofString("druid.apache.org").toExpr();
     Assert.assertFalse(eval(notIpAddress, IPV6_CIDR));
   }
  

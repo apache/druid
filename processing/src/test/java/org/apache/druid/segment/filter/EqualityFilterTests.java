@@ -1624,7 +1624,7 @@ public class EqualityFilterTests
                         "optimizedFilterNoIncludeUnknown"
                     )
                     .withPrefabValues(ColumnType.class, ColumnType.STRING, ColumnType.DOUBLE)
-                    .withPrefabValues(ExprEval.class, ExprEval.of("hello"), ExprEval.of(1.0))
+                    .withPrefabValues(ExprEval.class, ExprEval.ofString("hello"), ExprEval.of(1.0))
                     .withIgnoredFields(
                         "predicateFactory",
                         "optimizedFilterIncludeUnknown",

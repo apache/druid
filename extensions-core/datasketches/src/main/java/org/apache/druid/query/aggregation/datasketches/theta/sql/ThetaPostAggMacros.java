@@ -85,7 +85,7 @@ public class ThetaPostAggMacros
       ExprEval eval = estimateExpr.eval(bindings);
       final Object valObj = eval.value();
       if (valObj == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofDouble(null);
       }
       if (valObj instanceof SketchHolder) {
         SketchHolder thetaSketchHolder = (SketchHolder) valObj;

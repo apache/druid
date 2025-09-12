@@ -73,7 +73,7 @@ public class TimestampShiftMacroTest extends MacroTestBase
     apply(
         ImmutableList.of(
             ExprEval.of(timestamp.getMillis()).toExpr(),
-            ExprEval.of("P1M").toExpr()
+            ExprEval.ofString("P1M").toExpr()
         ));
   }
 
@@ -84,10 +84,10 @@ public class TimestampShiftMacroTest extends MacroTestBase
     apply(
         ImmutableList.of(
             ExprEval.of(timestamp.getMillis()).toExpr(),
-            ExprEval.of("P1M").toExpr(),
-            ExprEval.of("1").toExpr(),
-            ExprEval.of("+08:00").toExpr(),
-            ExprEval.of("extra").toExpr()
+            ExprEval.ofString("P1M").toExpr(),
+            ExprEval.ofString("1").toExpr(),
+            ExprEval.ofString("+08:00").toExpr(),
+            ExprEval.ofString("extra").toExpr()
         ));
   }
 
@@ -98,7 +98,7 @@ public class TimestampShiftMacroTest extends MacroTestBase
     Expr expr = apply(
         ImmutableList.of(
             ExprEval.of(timestamp.getMillis()).toExpr(),
-            ExprEval.of("P1M").toExpr(),
+            ExprEval.ofString("P1M").toExpr(),
             ExprEval.of(step).toExpr()
         ));
 
@@ -115,7 +115,7 @@ public class TimestampShiftMacroTest extends MacroTestBase
     Expr expr = apply(
         ImmutableList.of(
             ExprEval.of(timestamp.getMillis()).toExpr(),
-            ExprEval.of("P1M").toExpr(),
+            ExprEval.ofString("P1M").toExpr(),
             ExprEval.of(step).toExpr()
         ));
 
@@ -132,7 +132,7 @@ public class TimestampShiftMacroTest extends MacroTestBase
     Expr expr = apply(
         ImmutableList.of(
             ExprEval.of(timestamp.getMillis()).toExpr(),
-            ExprEval.of("P1M").toExpr(),
+            ExprEval.ofString("P1M").toExpr(),
             ExprEval.of(step).toExpr()
         ));
 
@@ -148,7 +148,7 @@ public class TimestampShiftMacroTest extends MacroTestBase
     Expr expr = apply(
         ImmutableList.of(
             ExprEval.of(timestamp.getMillis()).toExpr(),
-            ExprEval.of("PT1M").toExpr(),
+            ExprEval.ofString("PT1M").toExpr(),
             ExprEval.of(1).toExpr()
         ));
 
@@ -164,7 +164,7 @@ public class TimestampShiftMacroTest extends MacroTestBase
     Expr expr = apply(
         ImmutableList.of(
             ExprEval.of(timestamp.getMillis()).toExpr(),
-            ExprEval.of("P1D").toExpr(),
+            ExprEval.ofString("P1D").toExpr(),
             ExprEval.of(1).toExpr()
         ));
 
@@ -180,9 +180,9 @@ public class TimestampShiftMacroTest extends MacroTestBase
     Expr expr = apply(
         ImmutableList.of(
             ExprEval.of(timestamp.getMillis()).toExpr(),
-            ExprEval.of("P1Y").toExpr(),
+            ExprEval.ofString("P1Y").toExpr(),
             ExprEval.of(1).toExpr(),
-            ExprEval.of("America/Los_Angeles").toExpr()
+            ExprEval.ofString("America/Los_Angeles").toExpr()
         ));
 
     Assert.assertEquals(
@@ -198,9 +198,9 @@ public class TimestampShiftMacroTest extends MacroTestBase
     Expr expr = apply(
         ImmutableList.of(
             ExprEval.of(timestamp.getMillis()).toExpr(),
-            ExprEval.of("P1Y").toExpr(),
+            ExprEval.ofString("P1Y").toExpr(),
             Parser.parse("\"step\"", ExprMacroTable.nil()), // "step" is not a literal
-            ExprEval.of("America/Los_Angeles").toExpr()
+            ExprEval.ofString("America/Los_Angeles").toExpr()
         ));
 
     final int step = 3;
@@ -235,7 +235,7 @@ public class TimestampShiftMacroTest extends MacroTestBase
     Expr expr = apply(
         ImmutableList.of(
             ExprEval.ofLong(null).toExpr(),
-            ExprEval.of("P1M").toExpr(),
+            ExprEval.ofString("P1M").toExpr(),
             ExprEval.of(1L).toExpr()
         )
     );

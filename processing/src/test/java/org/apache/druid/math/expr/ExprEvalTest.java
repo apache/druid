@@ -77,7 +77,7 @@ public class ExprEvalTest extends InitializedNullHandlingTest
         10,
         16
     ));
-    assertExpr(0, ExprEval.of("hello world"), 10);
+    assertExpr(0, ExprEval.ofString("hello world"), 10);
   }
 
 
@@ -541,7 +541,7 @@ public class ExprEvalTest extends InitializedNullHandlingTest
   @Test
   public void testCastString()
   {
-    ExprEval<?> eval = ExprEval.of("hello");
+    ExprEval<?> eval = ExprEval.ofString("hello");
 
     ExprEval<?> cast = eval.castTo(ExpressionType.DOUBLE);
     Assert.assertNull(cast.value());
@@ -564,7 +564,7 @@ public class ExprEvalTest extends InitializedNullHandlingTest
     cast = eval.castTo(ExpressionTypeFactory.getInstance().ofArray(ExpressionType.NESTED_DATA));
     Assert.assertArrayEquals(new Object[]{"hello"}, (Object[]) cast.value());
 
-    eval = ExprEval.of("1234.3");
+    eval = ExprEval.ofString("1234.3");
 
     cast = eval.castTo(ExpressionType.DOUBLE);
     Assert.assertEquals(1234.3, cast.value());
