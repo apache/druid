@@ -57,7 +57,7 @@ jobs:
       fail-fast: false
       matrix:
         # Use JDK 21.0.4 to work around https://github.com/apache/druid/issues/17429
-        jdk: [ '11', '17', '21.0.4' ]
+        jdk: [ '17', '21.0.4' ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch

@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.HumanReadableBytesRange;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.utils.JvmUtils;
+import org.eclipse.jetty.http.UriCompliance;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -73,7 +74,8 @@ public class ServerConfig
       boolean showDetailedJettyErrors,
       @NotNull ErrorResponseTransformStrategy errorResponseTransformStrategy,
       @Nullable String contentSecurityPolicy,
-      boolean enableHSTS
+      boolean enableHSTS,
+      @Nullable String uriCompliance
   )
   {
     this.numThreads = numThreads;
@@ -97,6 +99,7 @@ public class ServerConfig
     this.errorResponseTransformStrategy = errorResponseTransformStrategy;
     this.contentSecurityPolicy = contentSecurityPolicy;
     this.enableHSTS = enableHSTS;
+    this.uriCompliance = uriCompliance;
   }
 
   public ServerConfig()
@@ -184,6 +187,9 @@ public class ServerConfig
 
   @JsonProperty
   private boolean enableHSTS = false;
+
+  @JsonProperty
+  private String uriCompliance = UriCompliance.LEGACY.getName();
 
   /**
    * This feature flag enables query requests queuing when admins want to reserve some threads for
@@ -306,6 +312,11 @@ public class ServerConfig
     return enableQueryRequestsQueuing;
   }
 
+  public String getUriCompliance()
+  {
+    return uriCompliance;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -337,7 +348,8 @@ public class ServerConfig
            errorResponseTransformStrategy.equals(that.errorResponseTransformStrategy) &&
            Objects.equals(contentSecurityPolicy, that.getContentSecurityPolicy()) &&
            enableHSTS == that.enableHSTS &&
-           enableQueryRequestsQueuing == that.enableQueryRequestsQueuing;
+           enableQueryRequestsQueuing == that.enableQueryRequestsQueuing &&
+           Objects.equals(uriCompliance, that.uriCompliance);
   }
 
   @Override
@@ -365,7 +377,8 @@ public class ServerConfig
         showDetailedJettyErrors,
         contentSecurityPolicy,
         enableHSTS,
-        enableQueryRequestsQueuing
+        enableQueryRequestsQueuing,
+        uriCompliance
     );
   }
 
@@ -395,6 +408,7 @@ public class ServerConfig
            ", contentSecurityPolicy=" + contentSecurityPolicy +
            ", enableHSTS=" + enableHSTS +
            ", enableQueryRequestsQueuing=" + enableQueryRequestsQueuing +
+           ", uriCompliance=" + uriCompliance +
            '}';
   }
 

@@ -73,6 +73,22 @@ public class ServerInjectorBuilder
         .build();
   }
 
+  /**
+   * Needed for Hadoop indexing that needs server-like Injector but can't run jetty 12
+   */
+  @VisibleForTesting
+  public static Injector makeServerInjectorWithoutJettyModules(
+      final Injector baseInjector,
+      final Set<NodeRole> nodeRoles,
+      final Iterable<? extends Module> modules
+  )
+  {
+    return new ServerInjectorBuilder(baseInjector)
+        .nodeRoles(nodeRoles)
+        .serviceModules(modules)
+        .buildWithoutJettyModules();
+  }
+
   public ServerInjectorBuilder(Injector baseInjector)
   {
     this.baseInjector = baseInjector;
@@ -92,30 +108,15 @@ public class ServerInjectorBuilder
 
   public Injector build()
   {
-    Preconditions.checkNotNull(baseInjector);
-    Preconditions.checkNotNull(nodeRoles);
+    return this.build(true);
+  }
 
-    Module registerNodeRoleModule = registerNodeRoleModule(nodeRoles);
-
-    // Child injector, with the registered node roles
-    Injector childInjector = baseInjector.createChildInjector(registerNodeRoleModule);
-
-    // Create the core set of modules shared by all services.
-    // Here and below, the modules are filtered by the load modules list and
-    // the set of roles which this server provides.
-    CoreInjectorBuilder coreBuilder = new CoreInjectorBuilder(childInjector, nodeRoles).forServer();
-
-    // Override with the per-service modules.
-    ServiceInjectorBuilder serviceBuilder = (ServiceInjectorBuilder) new ServiceInjectorBuilder(coreBuilder).addAll(
-        Iterables.concat(
-            // bind nodeRoles for the new injector as well
-            ImmutableList.of(registerNodeRoleModule),
-            modules
-        )
-    );
-
-    // Override again with extensions.
-    return new ExtensionInjectorBuilder(serviceBuilder).build();
+  /**
+   * Needed for Hadoop indexing that needs server-like Injector but can't run jetty 12
+   */
+  public Injector buildWithoutJettyModules()
+  {
+    return this.build(false);
   }
 
   public static Module registerNodeRoleModule(Set<NodeRole> nodeRoles)
@@ -130,5 +131,38 @@ public class ServerInjectorBuilder
           new TypeLiteral<Set<Class<? extends DruidService>>>(){}
       );
     };
+  }
+
+  private Injector build(boolean withJettyModules)
+  {
+    Preconditions.checkNotNull(baseInjector);
+    Preconditions.checkNotNull(nodeRoles);
+
+    Module registerNodeRoleModule = registerNodeRoleModule(nodeRoles);
+
+    // Child injector, with the registered node roles
+    Injector childInjector = baseInjector.createChildInjector(registerNodeRoleModule);
+
+    // Create the core set of modules shared by all services.
+    // Here and below, the modules are filtered by the load modules list and
+    // the set of roles which this server provides.
+    CoreInjectorBuilder coreBuilder;
+    if (withJettyModules) {
+      coreBuilder = new CoreInjectorBuilder(childInjector, nodeRoles).forServer();
+    } else {
+      coreBuilder = new CoreInjectorBuilder(childInjector, nodeRoles).forServerWithoutJetty();
+    }
+
+    // Override with the per-service modules.
+    ServiceInjectorBuilder serviceBuilder = (ServiceInjectorBuilder) new ServiceInjectorBuilder(coreBuilder).addAll(
+        Iterables.concat(
+            // bind nodeRoles for the new injector as well
+            ImmutableList.of(registerNodeRoleModule),
+            modules
+        )
+    );
+
+    // Override again with extensions.
+    return new ExtensionInjectorBuilder(serviceBuilder).build();
   }
 }
