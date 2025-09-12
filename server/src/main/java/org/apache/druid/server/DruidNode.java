@@ -66,7 +66,7 @@ public class DruidNode
   @Deprecated
   @JsonProperty
   @Max(0xffff)
-  private final int port = -1;
+  private int port = -1;
 
   @JsonProperty
   @Max(0xffff)
@@ -136,7 +136,7 @@ public class DruidNode
         bindOnHost,
         plaintextPort != null ? plaintextPort : port,
         tlsPort,
-        enablePlaintextPort == null || enablePlaintextPort.booleanValue(),
+        enablePlaintextPort == null ? true : enablePlaintextPort.booleanValue(),
         enableTlsPort
     );
   }
@@ -177,8 +177,8 @@ public class DruidNode
       host = getDefaultHost();
     }
 
-    if (enablePlaintextPort && enableTlsPort && ((plainTextPort == null || tlsPort == null) || plainTextPort.equals(
-        tlsPort))) {
+    if (enablePlaintextPort && enableTlsPort && ((plainTextPort == null || tlsPort == null)
+                                                 || plainTextPort.equals(tlsPort))) {
       // If both plainTExt and tls are enabled then do not allow plaintextPort to be null or
       throw new IAE("plaintextPort and tlsPort cannot be null or same if both http and https connectors are enabled");
     }
@@ -327,14 +327,14 @@ public class DruidNode
       return false;
     }
     DruidNode druidNode = (DruidNode) o;
-    return port == druidNode.port
-           && bindOnHost == druidNode.bindOnHost
-           && plaintextPort == druidNode.plaintextPort
-           && enablePlaintextPort == druidNode.enablePlaintextPort
-           && tlsPort == druidNode.tlsPort
-           && enableTlsPort == druidNode.enableTlsPort
-           && Objects.equals(serviceName, druidNode.serviceName)
-           && Objects.equals(host, druidNode.host);
+    return port == druidNode.port &&
+           bindOnHost == druidNode.bindOnHost &&
+           plaintextPort == druidNode.plaintextPort &&
+           enablePlaintextPort == druidNode.enablePlaintextPort &&
+           tlsPort == druidNode.tlsPort &&
+           enableTlsPort == druidNode.enableTlsPort &&
+           Objects.equals(serviceName, druidNode.serviceName) &&
+           Objects.equals(host, druidNode.host);
   }
 
   @Override
@@ -346,25 +346,15 @@ public class DruidNode
   @Override
   public String toString()
   {
-    return "DruidNode{"
-           + "serviceName='"
-           + serviceName
-           + '\''
-           + ", host='"
-           + host
-           + '\''
-           + ", bindOnHost="
-           + bindOnHost
-           + ", port="
-           + port
-           + ", plaintextPort="
-           + plaintextPort
-           + ", enablePlaintextPort="
-           + enablePlaintextPort
-           + ", tlsPort="
-           + tlsPort
-           + ", enableTlsPort="
-           + enableTlsPort
-           + '}';
+    return "DruidNode{" +
+           "serviceName='" + serviceName + '\'' +
+           ", host='" + host + '\'' +
+           ", bindOnHost=" + bindOnHost +
+           ", port=" + port +
+           ", plaintextPort=" + plaintextPort +
+           ", enablePlaintextPort=" + enablePlaintextPort +
+           ", tlsPort=" + tlsPort +
+           ", enableTlsPort=" + enableTlsPort +
+           '}';
   }
 }

@@ -53,7 +53,7 @@ public class DruidNodeTest
     // Hosts which report only ipv6 will have getDefaultHost() report something like fe80::6e40:8ff:fe93:9230
     // but getHostAndPort() reports [fe80::6e40:8ff:fe93:9230]
     Assert.assertEquals(HostAndPort.fromString(DruidNode.getDefaultHost()).toString(), node.getHostAndPort());
-    Assert.assertEquals("unknown", node.getVersion());
+    Assert.assertEquals("unknown", node.getVersion()); // unknown because not compiled with version
 
     node = new DruidNode(service, "2001:db8:85a3::8a2e:370:7334", false, -1, null, true, false);
     Assert.assertEquals("2001:db8:85a3::8a2e:370:7334", node.getHost());
@@ -260,18 +260,10 @@ public class DruidNodeTest
     final String serviceName = "serviceName";
     final String host = "some.host";
     final int port = 9898;
-    Assert.assertEquals(
-        new DruidNode(serviceName, host, false, port, null, true, false),
-        new DruidNode(serviceName, host, false, port, null, true, false));
-    Assert.assertNotEquals(
-        new DruidNode(serviceName, host, false, port, null, true, false),
-        new DruidNode(serviceName, host, false, -1, null, true, false));
-    Assert.assertNotEquals(
-        new DruidNode(serviceName, host, false, port, null, true, false),
-        new DruidNode(serviceName, "other.host", false, port, null, true, false));
-    Assert.assertNotEquals(
-        new DruidNode(serviceName, host, false, port, null, true, false),
-        new DruidNode("otherServiceName", host, false, port, null, true, false));
+    Assert.assertEquals(new DruidNode(serviceName, host, false, port, null, true, false), new DruidNode(serviceName, host, false, port, null, true, false));
+    Assert.assertNotEquals(new DruidNode(serviceName, host, false, port, null, true, false), new DruidNode(serviceName, host, false, -1, null, true, false));
+    Assert.assertNotEquals(new DruidNode(serviceName, host, false, port, null, true, false), new DruidNode(serviceName, "other.host", false, port, null, true, false));
+    Assert.assertNotEquals(new DruidNode(serviceName, host, false, port, null, true, false), new DruidNode("otherServiceName", host, false, port, null, true, false));
   }
 
   @Test
@@ -281,19 +273,11 @@ public class DruidNodeTest
     final String serviceName = "serviceName";
     final String host = "some.host";
     final int port = 9898;
-    Assert.assertEquals(
-        new DruidNode(serviceName, host, false, port, null, true, false).hashCode(),
-        new DruidNode(serviceName, host, false, port, null, true, false).hashCode());
+    Assert.assertEquals(new DruidNode(serviceName, host, false, port, null, true, false).hashCode(), new DruidNode(serviceName, host, false, port, null, true, false).hashCode());
     // Potential hash collision if hashCode method ever changes
-    Assert.assertNotEquals(
-        new DruidNode(serviceName, host, false, port, null, true, false).hashCode(),
-        new DruidNode(serviceName, host, false, -1, null, true, false).hashCode());
-    Assert.assertNotEquals(
-        new DruidNode(serviceName, host, false, port, null, true, false).hashCode(),
-        new DruidNode(serviceName, "other.host", false, port, null, true, false).hashCode());
-    Assert.assertNotEquals(
-        new DruidNode(serviceName, host, false, port, null, true, false).hashCode(),
-        new DruidNode("otherServiceName", host, false, port, null, true, false).hashCode());
+    Assert.assertNotEquals(new DruidNode(serviceName, host, false, port, null, true, false).hashCode(), new DruidNode(serviceName, host, false, -1, null, true, false).hashCode());
+    Assert.assertNotEquals(new DruidNode(serviceName, host, false, port, null, true, false).hashCode(), new DruidNode(serviceName, "other.host", false, port, null, true, false).hashCode());
+    Assert.assertNotEquals(new DruidNode(serviceName, host, false, port, null, true, false).hashCode(), new DruidNode("otherServiceName", host, false, port, null, true, false).hashCode());
   }
 
 
