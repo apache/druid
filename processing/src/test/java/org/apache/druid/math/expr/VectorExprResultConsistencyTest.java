@@ -376,6 +376,37 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     );
   }
 
+  @Test
+  public void testCaseSearchedFunction()
+  {
+    testExpression("case_searched(boolString1, s1, boolString2, s2, s1)", types);
+    testExpression("case_searched(boolString1, l1, boolString2, l2, l2)", types);
+    testExpression("case_searched(boolString1, d1, boolString2, d2, d1)", types);
+    testExpression("case_searched(l1 % 2 == 0, -1, l1 % 2 == 1, l2 / (l1 % 2))", types);
+    Assertions.assertFalse(
+        Parser.parse("case_searched(boolString1, d1, boolString2, d2, l1)", MACRO_TABLE)
+              .canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
+    Assertions.assertFalse(
+        Parser.parse("case_searched(boolString1, d1, boolString2, l1, d1)", MACRO_TABLE)
+              .canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
+  }
+
+  @Test
+  public void testCaseSimpleFunction()
+  {
+    testExpression("case_simple(s1, s2, s2, s1, s2)", types);
+    testExpression("case_simple(s1, s2, s2, s1, s2, s1)", types);
+    testExpression("case_simple(s1, s2, l1, s1, l2)", types);
+    testExpression("case_simple(s1, s2, d1, s1, d2, d1)", types);
+    testExpression("case_simple(s1, l1, d1, d1, d2, d1)", types);
+    Assertions.assertFalse(
+        Parser.parse("case_simple(s1, d1, s1, l1, d1)", MACRO_TABLE)
+              .canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
+  }
+
 
   @Test
   public void testStringFns()
@@ -729,5 +760,4 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
 
     return new NonnullPair<>(objectBindings, vectorBinding);
   }
-
 }
