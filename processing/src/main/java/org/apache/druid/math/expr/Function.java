@@ -28,9 +28,9 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.FallbackVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorConditionalProcessors;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
 import org.apache.druid.math.expr.vector.VectorProcessors;
@@ -141,11 +141,11 @@ public interface Function extends NamedFunction
    * batches to use with vectorized query engines.
    *
    * @see Expr#canVectorize(Expr.InputBindingInspector)
-   * @see ApplyFunction#canVectorize(Expr.InputBindingInspector, Expr, List)
+   * @see ApplyFunction#canVectorize(Expr.InputBindingInspector, LambdaExpr, List)
    */
   default boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
   {
-    return false;
+    return FallbackVectorProcessor.canFallbackVectorize(getOutputType(inspector, args), inspector, args);
   }
 
   /**
@@ -153,11 +153,15 @@ public interface Function extends NamedFunction
    * using {@link Expr#asVectorProcessor}, for use in vectorized query engines.
    *
    * @see Expr#asVectorProcessor(Expr.VectorInputBindingInspector)
-   * @see ApplyFunction#asVectorProcessor(Expr.VectorInputBindingInspector, Expr, List)
+   * @see ApplyFunction#asVectorProcessor(Expr.VectorInputBindingInspector, LambdaExpr, List)
    */
   default <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
   {
-    throw new UOE("Function[%s] is not vectorized", name());
+    if (ExpressionProcessing.allowVectorizeFallback()) {
+      return FallbackVectorProcessor.create(this, args, inspector);
+    } else {
+      throw Exprs.cannotVectorize(this);
+    }
   }
 
   /**
