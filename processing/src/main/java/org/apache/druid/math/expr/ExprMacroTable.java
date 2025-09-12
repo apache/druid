@@ -178,13 +178,17 @@ public class ExprMacroTable
     @Override
     public boolean canVectorize(InputBindingInspector inspector)
     {
-      return canFallbackVectorize(inspector, args);
+      return FallbackVectorProcessor.canFallbackVectorize(getOutputType(inspector), inspector, args);
     }
 
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
     {
-      return FallbackVectorProcessor.create(macro, args, inspector);
+      if (ExpressionProcessing.allowVectorizeFallback()) {
+        return FallbackVectorProcessor.create(macro, args, inspector);
+      } else {
+        throw Exprs.cannotVectorize(this);
+      }
     }
 
     /**

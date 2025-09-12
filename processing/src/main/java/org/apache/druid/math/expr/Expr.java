@@ -189,13 +189,6 @@ public interface Expr extends Cacheable
     return false;
   }
 
-
-  default boolean canFallbackVectorize(InputBindingInspector inspector, List<Expr> args)
-  {
-    return ExpressionProcessing.allowVectorizeFallback() &&
-           getOutputType(inspector) != null &&
-           inspector.canVectorize(args);
-  }
   /**
    * Possibly convert the {@link Expr} into an optimized, possibly not thread-safe {@link Expr}. Does not convert
    * child {@link Expr}. Most callers should use {@link Expr#singleThreaded(Expr, InputBindingInspector)} to convert
