@@ -33,6 +33,7 @@ import org.apache.druid.segment.loading.TombstoneSegmentizerFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -82,7 +83,7 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
   }
 
   @Override
-  public List<DataSegment> getCachedSegments()
+  public Collection<DataSegment> getCachedSegments()
   {
     return cachedSegments;
   }
