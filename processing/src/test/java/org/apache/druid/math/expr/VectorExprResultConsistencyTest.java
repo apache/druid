@@ -410,6 +410,31 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
       testExpression("array(d1, d2)", types);
       testExpression("array(l1, d2)", types);
       testExpression("array(s1, l2)", types);
+
+      testExpression("map((x) -> x + 1, array(l1, l2))", types);
+      testExpression("map((x) -> x * 2.0, array(d1, d2))", types);
+      testExpression("map((x) -> concat(x, '_mapped'), array(s1, s2))", types);
+
+      testExpression("cartesian_map((x, y) -> x + y, array(l1, l2), array(d1, d2))", types);
+      testExpression("cartesian_map((x, y) -> concat(x, cast(y, 'STRING')), array(s1, s2), array(l1, l2))", types);
+
+      testExpression("fold((x, acc) -> x + acc, array(l1, l2), 0)", types);
+      testExpression("fold((x, acc) -> x + acc, array(d1, d2), 0.0)", types);
+      testExpression("fold((x, acc) -> concat(acc, x), array(s1, s2), '')", types);
+
+      testExpression("cartesian_fold((x, y, acc) -> acc + x + y, array(l1, l2), array(d1, d2), 0)", types);
+
+      testExpression("filter((x) -> x > 0, array(l1, l2))", types);
+      testExpression("filter((x) -> x > 0.0, array(d1, d2))", types);
+      testExpression("filter((x) -> strlen(x) > 0, array(s1, s2))", types);
+
+      testExpression("any((x) -> x > 0, array(l1, l2))", types);
+      testExpression("any((x) -> x > 0.0, array(d1, d2))", types);
+      testExpression("any((x) -> strlen(x) > 0, array(s1, s2))", types);
+
+      testExpression("all((x) -> x != null, array(l1, l2))", types);
+      testExpression("all((x) -> x != null, array(d1, d2))", types);
+      testExpression("all((x) -> x != null, array(s1, s2))", types);
     }
     finally {
       ExpressionProcessing.initializeForTests();
