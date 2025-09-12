@@ -38,6 +38,7 @@ import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import javax.net.ssl.SSLContext;
+
 import java.lang.annotation.Annotation;
 
 /**
@@ -105,7 +106,8 @@ public class JettyHttpClientModule implements Module
       httpClient.setExecutor(pool);
       httpClient.setUserAgentField(new HttpField(
           HttpHeaders.Names.USER_AGENT,
-          StringUtils.format("%s/%s", node.getServiceName(), node.getVersion())));
+          StringUtils.format("%s/%s", node.getServiceName(), node.getVersion())
+      ));
 
       final Lifecycle lifecycle = getLifecycleProvider().get();
 
