@@ -1666,13 +1666,14 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
-        ImmutableMap.of(
-            RowIngestionMeters.PROCESSED, 4,
-            RowIngestionMeters.PROCESSED_BYTES, (int) totalRecordBytes,
-            RowIngestionMeters.PROCESSED_WITH_ERROR, 3,
-            RowIngestionMeters.UNPARSEABLE, 3,
-            RowIngestionMeters.THROWN_AWAY, 1
-        )
+        ImmutableMap.<String, Integer>builder()
+                .put(RowIngestionMeters.PROCESSED, 4)
+                .put(RowIngestionMeters.PROCESSED_BYTES, (int) totalRecordBytes)
+                .put(RowIngestionMeters.PROCESSED_WITH_ERROR, 3)
+                .put(RowIngestionMeters.UNPARSEABLE, 3)
+                .put(RowIngestionMeters.THROWN_AWAY, 1)
+                .put(RowIngestionMeters.FILTERED, 0)
+                .build()
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
@@ -1752,13 +1753,14 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
-        ImmutableMap.of(
-            RowIngestionMeters.PROCESSED, 3,
-            RowIngestionMeters.PROCESSED_BYTES, (int) totalBytes,
-            RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
-            RowIngestionMeters.UNPARSEABLE, 3,
-            RowIngestionMeters.THROWN_AWAY, 0
-        )
+        ImmutableMap.<String, Integer>builder()
+                .put(RowIngestionMeters.PROCESSED, 3)
+                .put(RowIngestionMeters.PROCESSED_BYTES, (int) totalBytes)
+                .put(RowIngestionMeters.PROCESSED_WITH_ERROR, 0)
+                .put(RowIngestionMeters.UNPARSEABLE, 3)
+                .put(RowIngestionMeters.THROWN_AWAY, 0)
+                .put(RowIngestionMeters.FILTERED, 0)
+                .build()
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
