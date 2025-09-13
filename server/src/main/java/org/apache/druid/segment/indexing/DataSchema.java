@@ -51,7 +51,6 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.transform.TransformSpec;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -416,43 +415,7 @@ public class DataSchema
       }
     }
 
-    return checkErrors(fields);
-  }
-
-  @Nonnull
-  private static Set<String> checkErrors(Map<String, Multiset<String>> fields)
-  {
-    final List<String> errors = new ArrayList<>();
-
-    for (Map.Entry<String, Multiset<String>> fieldEntry : fields.entrySet()) {
-      if (fieldEntry.getValue().entrySet().stream().mapToInt(Multiset.Entry::getCount).sum() > 1) {
-        errors.add(
-            StringUtils.format(
-                "[%s] seen in %s",
-                fieldEntry.getKey(),
-                fieldEntry.getValue().entrySet().stream().map(
-                    entry ->
-                        StringUtils.format(
-                            "%s%s",
-                            entry.getElement(),
-                            entry.getCount() == 1 ? "" : StringUtils.format(
-                                " (%d occurrences)",
-                                entry.getCount()
-                            )
-                        )
-                ).collect(Collectors.joining(", "))
-            )
-        );
-      }
-    }
-
-    if (errors.isEmpty()) {
-      return fields.keySet();
-    } else {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build("Cannot specify a column more than once: %s", String.join("; ", errors));
-    }
+    return checkValidateSetErrors(fields);
   }
 
   public static void validateProjections(
@@ -509,8 +472,43 @@ public class DataSchema
           position++;
         }
 
-        checkErrors(fields);
+        checkValidateSetErrors(fields);
       }
+    }
+  }
+
+  private static Set<String> checkValidateSetErrors(Map<String, Multiset<String>> fields)
+  {
+    final List<String> errors = new ArrayList<>();
+
+    for (Map.Entry<String, Multiset<String>> fieldEntry : fields.entrySet()) {
+      if (fieldEntry.getValue().entrySet().stream().mapToInt(Multiset.Entry::getCount).sum() > 1) {
+        errors.add(
+            StringUtils.format(
+                "[%s] seen in %s",
+                fieldEntry.getKey(),
+                fieldEntry.getValue().entrySet().stream().map(
+                    entry ->
+                        StringUtils.format(
+                            "%s%s",
+                            entry.getElement(),
+                            entry.getCount() == 1 ? "" : StringUtils.format(
+                                " (%d occurrences)",
+                                entry.getCount()
+                            )
+                        )
+                ).collect(Collectors.joining(", "))
+            )
+        );
+      }
+    }
+
+    if (errors.isEmpty()) {
+      return fields.keySet();
+    } else {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("Cannot specify a column more than once: %s", String.join("; ", errors));
     }
   }
 
