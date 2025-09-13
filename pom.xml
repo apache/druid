@@ -2211,6 +2211,7 @@
                                 <exclude>**/.project</exclude> <!-- Eclipse -->
                                 <exclude>**/*.iq</exclude> <!-- quidem testfiles -->
                                 <exclude>**/*.iq.out</exclude> <!-- quidem testfiles -->
+                                <exclude>**/*.sum</exclude> <!-- go.sum is excluded -->
                             </excludes>
                         </configuration>
                     </plugin>
