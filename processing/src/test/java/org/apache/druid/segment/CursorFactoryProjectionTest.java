@@ -129,6 +129,12 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                                         .add("f", ColumnType.NESTED_DATA)
                                                         .build();
 
+  private static final Set<String> PROJECTION_TIME_COLUMNS = Set.of(
+      ColumnHolder.TIME_COLUMN_NAME,
+      Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
+      "__gran"
+  );
+
   public static List<InputRow> makeRows(List<String> dimensions)
   {
     return Arrays.asList(
@@ -373,7 +379,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                                 .groupingColumns(
                                                     projection.getGroupingColumns()
                                                               .stream()
-                                                              .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                              .map(CursorFactoryProjectionTest::toAutoColumn)
                                                               .collect(Collectors.toList())
                                                 )
                                                 .build()
@@ -388,7 +394,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                     .builder(projection)
                                     .groupingColumns(projection.getGroupingColumns()
                                                                .stream()
-                                                               .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                               .map(CursorFactoryProjectionTest::toAutoColumn)
                                                                .collect(Collectors.toList()))
                                     .build()
                         )
@@ -436,12 +442,12 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     List<DimensionSchema> autoDims = dimsOrdered.getDimensions()
                                                 .stream()
-                                                .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                .map(CursorFactoryProjectionTest::toAutoColumn)
                                                 .collect(Collectors.toList());
 
     List<DimensionSchema> rollupAutoDims = rollupDimsOrdered.getDimensions()
                                                             .stream()
-                                                            .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                            .map(CursorFactoryProjectionTest::toAutoColumn)
                                                             .collect(Collectors.toList());
 
     for (boolean incremental : new boolean[]{true, false}) {
@@ -2014,6 +2020,14 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       }
       Assert.assertEquals(expectedRowCount, rowCount);
     }
+  }
+  
+  private static AutoTypeColumnSchema toAutoColumn(DimensionSchema x)
+  {
+    if (PROJECTION_TIME_COLUMNS.contains(x.getName())) {
+      return new AutoTypeColumnSchema(x.getName(), ColumnType.LONG);
+    }
+    return new AutoTypeColumnSchema(x.getName(), null);
   }
 
   private static IndexBuilder makeBuilder(DimensionsSpec dimensionsSpec, boolean autoSchema, boolean writeNullColumns)

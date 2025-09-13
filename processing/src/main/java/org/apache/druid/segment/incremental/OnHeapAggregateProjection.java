@@ -133,7 +133,7 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
         bob.addTimeColumn();
       }
       for (String groupingColumn : projectionSchema.getGroupingColumns()) {
-        if (projectionSchema.getTimeColumnName().equals(groupingColumn)) {
+        if (groupingColumn.equals(projectionSchema.getTimeColumnName())) {
           bob.addTimeColumn();
         } else {
           bob.add(groupingColumn, dimensionsMap.get(groupingColumn).getCapabilities().toColumnType());

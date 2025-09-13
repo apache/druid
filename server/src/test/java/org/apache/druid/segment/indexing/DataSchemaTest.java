@@ -49,6 +49,7 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.TestHelper;
@@ -941,6 +942,79 @@ class DataSchemaTest extends InitializedNullHandlingTest
         "projection[bad granularity] has granularity[{type=period, period=P1D, timeZone=UTC, origin=null}]"
         + " which must be finer than or equal to segment granularity[{type=period, period=PT1H, timeZone=UTC,"
         + " origin=null}]",
+        t.getMessage()
+    );
+  }
+
+  @Test
+  void testInvalidProjectionDupeGroupingNames()
+  {
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> DataSchema.builder()
+                        .withDataSource("dataSource")
+                        .withGranularity(
+                            new UniformGranularitySpec(
+                                Granularities.HOUR,
+                                Granularities.NONE,
+                                false,
+                                List.of(Intervals.of("2014/2015"))
+                            )
+                        )
+                        .withProjections(
+                            List.of(
+                                AggregateProjectionSpec.builder("some projection")
+                                                       .virtualColumns(
+                                                           Granularities.toVirtualColumn(Granularities.HOUR, "g")
+                                                       )
+                                                       .groupingColumns(new LongDimensionSchema("g"), new StringDimensionSchema("g"))
+                                                       .aggregators(new CountAggregatorFactory("count"))
+                                                       .build()
+                            )
+                        )
+                        .build()
+    );
+
+    Assertions.assertEquals(
+        "Cannot specify a column more than once: [g] seen in projection[some projection] grouping column list (2 occurrences)",
+        t.getMessage()
+    );
+  }
+
+  @Test
+  void testInvalidProjectionDupeAggNames()
+  {
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> DataSchema.builder()
+                        .withDataSource("dataSource")
+                        .withGranularity(
+                            new UniformGranularitySpec(
+                                Granularities.HOUR,
+                                Granularities.NONE,
+                                false,
+                                List.of(Intervals.of("2014/2015"))
+                            )
+                        )
+                        .withProjections(
+                            List.of(
+                                AggregateProjectionSpec.builder("some projection")
+                                                       .virtualColumns(
+                                                           Granularities.toVirtualColumn(Granularities.HOUR, "g")
+                                                       )
+                                                       .groupingColumns(new LongDimensionSchema("g"))
+                                                       .aggregators(
+                                                           new LongSumAggregatorFactory("a0", "added"),
+                                                           new DoubleSumAggregatorFactory("a0", "added")
+                                                       )
+                                                       .build()
+                            )
+                        )
+                        .build()
+    );
+
+    Assertions.assertEquals(
+        "Cannot specify a column more than once: [a0] seen in projection[some projection] aggregators list (2 occurrences)",
         t.getMessage()
     );
   }
