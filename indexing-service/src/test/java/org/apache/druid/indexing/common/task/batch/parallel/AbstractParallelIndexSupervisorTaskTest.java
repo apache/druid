@@ -764,7 +764,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         "processedBytes", 0.0,
         "unparseable", 0.0,
         "thrownAway", 0.0,
-        "processedWithError", 0.0
+        "processedWithError", 0.0,
+        "filtered", 0.0
     );
 
     Map<String, Object> emptyAverages = ImmutableMap.of(

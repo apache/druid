@@ -88,6 +88,7 @@ public class KafkaIOConfigBuilder extends SupervisorIOConfigBuilder<KafkaIOConfi
         earlyMessageRejectionPeriod,
         lateMessageRejectionStartDateTime,
         null,
+        null,
         idleConfig,
         stopTaskCount,
         null
