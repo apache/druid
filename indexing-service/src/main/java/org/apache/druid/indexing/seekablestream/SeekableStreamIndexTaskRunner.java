@@ -78,7 +78,9 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.PendingSegmentRecord;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -161,7 +163,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   static final String METADATA_NEXT_PARTITIONS = "nextPartitions";
   static final String METADATA_PUBLISH_PARTITIONS = "publishPartitions";
 
-  private final Map<PartitionIdType, SequenceOffsetType> endOffsets;
+  private Map<PartitionIdType, SequenceOffsetType> endOffsets;
 
   // lastReadOffsets are the last offsets that were read and processed.
   private final Map<PartitionIdType, SequenceOffsetType> lastReadOffsets = new HashMap<>();
@@ -206,14 +208,14 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   protected final Condition isAwaitingRetry = pollRetryLock.newCondition();
 
   private final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task;
-  private final SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig;
+  private SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig;
   private final SeekableStreamIndexTaskTuningConfig tuningConfig;
   private final InputRowSchema inputRowSchema;
   @Nullable
   private final InputFormat inputFormat;
   @Nullable
   private final InputRowParser<ByteBuffer> parser;
-  private final String stream;
+  private String stream;
 
   private final Set<String> publishingSequences = Sets.newConcurrentHashSet();
   private final Set<String> publishedSequences = Sets.newConcurrentHashSet();
@@ -251,6 +253,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private volatile DateTime minMessageTime;
   private volatile DateTime maxMessageTime;
   private final ScheduledExecutorService rejectionPeriodUpdaterExec;
+  private volatile boolean waitForConfigUpdate = false;
 
   public SeekableStreamIndexTaskRunner(
       final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task,
@@ -1275,7 +1278,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       if (!sequences.isEmpty()) {
         final SequenceOffsetType priorOffset = getLastSequenceMetadata().endOffsets.get(partition);
 
-        if (!startOffset.equals(priorOffset)) {
+        if (priorOffset != null && !startOffset.equals(priorOffset)) {
           throw new ISE(
               "New sequence startOffset[%s] does not equal expected prior offset[%s]",
               startOffset,
@@ -1600,6 +1603,15 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     return endOffsets;
   }
 
+  @GET
+  @Path("/config")
+  @Produces(MediaType.APPLICATION_JSON)
+  public SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> getIOConfigHTTP(@Context final HttpServletRequest req)
+  {
+    authorizationCheck(req);
+    return ioConfig;
+  }
+
   @POST
   @Path("/offsets/end")
   @Consumes(MediaType.APPLICATION_JSON)
@@ -1717,6 +1729,122 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     return Response.ok(parseExceptionHandler.getSavedParseExceptionReports()).build();
   }
 
+  @POST
+  @Path("/updateConfig")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response updateConfig(TaskConfigUpdateRequest request, @Context final HttpServletRequest req)
+      throws InterruptedException
+  {
+    authorizationCheck(req);
+    if (!waitForConfigUpdate) {
+      return Response.status(409).entity("Task must be paused for checkpoint completion before updating config").build();
+    }
+    try {
+      log.info("Attempting to update config to [%s]", request.getIoConfig());
+
+      SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig = (SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType>)
+          toolbox.getJsonMapper().convertValue(request.getIoConfig(), SeekableStreamIndexTaskIOConfig.class);
+      setIOConfig(newIoConfig);
+      createNewSequenceFromIoConfig(newIoConfig);
+
+      log.info("Config updated to [%s]", this.ioConfig);
+      toolbox.getEmitter().emit(ServiceMetricEvent.builder()
+                                    .setDimension(DruidMetrics.TASK_ID, task.getId())
+                                    .setDimension(DruidMetrics.TASK_TYPE, task.getType())
+                                    .setDimension(DruidMetrics.DATASOURCE, task.getDataSource())
+                                    .setMetric("task/config/update/success", 1)
+                                    .build(ImmutableMap.of()));
+      resume();
+      waitForConfigUpdate = false;
+      return Response.ok().build();
+    }
+    catch (Exception e) {
+      log.makeAlert(e, "Failed to update task config");
+      waitForConfigUpdate = false;
+      return Response.serverError().entity(e.getMessage()).build();
+    }
+  }
+
+  private void setIOConfig(
+      SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig
+  ) throws IOException
+  {
+    this.ioConfig = ioConfig;
+    this.stream = ioConfig.getStartSequenceNumbers().getStream();
+    this.endOffsets = new ConcurrentHashMap<>(ioConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap());
+    this.minMessageTime = Configs.valueOrDefault(ioConfig.getMinimumMessageTime(), DateTimes.MIN);
+    this.maxMessageTime = Configs.valueOrDefault(ioConfig.getMaximumMessageTime(), DateTimes.MAX);
+  }
+
+  /**
+   * Creates new sequences for the ingestion process. It currently accepts the ioConfig given by the request as the correct offsets
+   * and ignores the offsets it may have stored in currOffsets and endOffsets.
+   */
+  private void createNewSequenceFromIoConfig(SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig)
+      throws IOException
+  {
+    Map<PartitionIdType, SequenceOffsetType> partitionStartOffsets = ioConfig.getStartSequenceNumbers()
+                                                                             .getPartitionSequenceNumberMap();
+    Map<PartitionIdType, SequenceOffsetType> partitionEndSequences = ioConfig.getEndSequenceNumbers()
+                                                                             .getPartitionSequenceNumberMap();
+
+    final Set<PartitionIdType> exclusiveStartPartitions = computeExclusiveStartPartitionsForSequence(
+        partitionStartOffsets);
+    final SequenceMetadata<PartitionIdType, SequenceOffsetType> newSequence = new SequenceMetadata<>(
+        sequences.isEmpty() ? 0 : getLastSequenceMetadata().getSequenceId() + 1,
+        StringUtils.format(
+            "%s_%d",
+            ioConfig.getBaseSequenceName(),
+            sequences.isEmpty() ? 0 : getLastSequenceMetadata().getSequenceId() + 1
+        ),
+        partitionStartOffsets,
+        partitionEndSequences,
+        false,
+        exclusiveStartPartitions,
+        getTaskLockType()
+    );
+    log.info("Attempting adding new sequence [%s]", newSequence);
+
+    currOffsets.clear();
+    currOffsets.putAll(partitionStartOffsets);
+    endOffsets.clear();
+    endOffsets.putAll(partitionEndSequences);
+
+    addSequence(newSequence);
+    persistSequences();
+    log.info(
+        "Created new sequence [%s] with start offsets [%s]",
+        newSequence.getSequenceName(), partitionStartOffsets
+    );
+  }
+
+  private void checkpointSequences()
+  {
+    try {
+      final SequenceMetadata<PartitionIdType, SequenceOffsetType> latestSequence = getLastSequenceMetadata();
+      if (!latestSequence.isCheckpointed()) {
+        final CheckPointDataSourceMetadataAction checkpointAciton = new CheckPointDataSourceMetadataAction(
+            getSupervisorId(),
+            ioConfig.getTaskGroupId(),
+            null,
+            createDataSourceMetadata(
+                new SeekableStreamStartSequenceNumbers<>(
+                    stream,
+                    latestSequence.getStartOffsets(),
+                    latestSequence.getExclusiveStartPartitions()
+                )
+            )
+        );
+        toolbox.getTaskActionClient().submit(checkpointAciton);
+      }
+    }
+    catch (Exception e) {
+      log.error(e, "Failed to checkpoint sequences.");
+      backgroundThreadException = e;
+    }
+  }
+
   @VisibleForTesting
   public Response setEndOffsets(
       Map<PartitionIdType, SequenceOffsetType> sequenceNumbers,
@@ -1738,7 +1866,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                      .build();
     } else {
       try {
-        pauseLock.lockInterruptibly();
+        // Don't acquire a lock if the task is already paused for checkpoint completion, avoiding deadlock
+        if (!waitForConfigUpdate) {
+          pauseLock.lockInterruptibly();
+        }
         // Perform all sequence related checks before checking for isPaused()
         // and after acquiring pauseLock to correctly guard against duplicate requests
         Preconditions.checkState(sequenceNumbers.size() > 0, "No sequences found to set end sequences");
@@ -1762,7 +1893,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             || (latestSequence.getEndOffsets().equals(sequenceNumbers) && finish)) {
           log.warn("Ignoring duplicate request, end offsets already set for sequences [%s]", sequenceNumbers);
           resetNextCheckpointTime();
-          resume();
+          if (!waitForConfigUpdate) {
+            resume();
+          }
           return Response.ok(sequenceNumbers).build();
         } else if (latestSequence.isCheckpointed()) {
           return Response.status(Response.Status.BAD_REQUEST)
@@ -1795,8 +1928,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
         resetNextCheckpointTime();
         latestSequence.setEndOffsets(sequenceNumbers);
-
-        if (finish) {
+        log.info("Latest sequence after setting end offsets: [%s]", latestSequence);
+        // if this is the final checkpoint, or if the task is paused for checkpoint completion and updateConfig is supposed to
+        // finish the current sequence, we just update the end offsets of the latest sequence.
+        if (finish || waitForConfigUpdate) {
           log.info(
               "Sequence[%s] end offsets updated from [%s] to [%s].",
               latestSequence.getSequenceName(),
@@ -1837,11 +1972,15 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                        .build();
       }
       finally {
-        pauseLock.unlock();
+        if (!waitForConfigUpdate) {
+          pauseLock.unlock();
+        }
       }
     }
 
-    resume();
+    if (!waitForConfigUpdate) {
+      resume();
+    }
 
     return Response.ok(sequenceNumbers).build();
   }
@@ -1893,6 +2032,23 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     authorizationCheck(req);
     return pause();
+  }
+
+  @POST
+  @Path("/pauseAndCheckpoint")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response pauseAndCheckpointHTTP(
+      @Context final HttpServletRequest req
+  ) throws InterruptedException, JsonProcessingException
+  {
+    authorizationCheck(req);
+    if (waitForConfigUpdate) {
+      return Response.ok().entity("Task is already paused for checkpoint completion").build();
+    }
+    pause();
+    waitForConfigUpdate = true;
+    checkpointSequences();
+    return Response.ok().entity(toolbox.getJsonMapper().writeValueAsString(getCurrentOffsets())).build();
   }
 
   @VisibleForTesting

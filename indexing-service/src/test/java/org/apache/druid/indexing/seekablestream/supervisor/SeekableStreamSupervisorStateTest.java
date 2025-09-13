@@ -2955,7 +2955,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           tuningConfig,
           ioConfig,
           context,
-          groupId
+          groupId,
+          null
       );
       this.streamingTaskRunner = streamingTaskRunner;
     }
@@ -2995,6 +2996,18 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           rowIngestionMetersFactory,
           false
       );
+    }
+
+    @Override
+    protected SeekableStreamIndexTaskIOConfig<String, String> createUpdatedTaskIoConfig(
+        Set<String> partitions,
+        SeekableStreamSupervisor<String, String, ByteEntity>.TaskGroup existingTaskGroup,
+        Map<String, String> latestCommittedOffsets,
+        Map<String, String> latestTaskOffsetsOnPause
+    )
+    {
+      // dummy implementation
+      return null;
     }
 
     @Override
@@ -3213,6 +3226,17 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }
 
     @Override
+    protected SeekableStreamIndexTaskIOConfig<String, String> createUpdatedTaskIoConfig(
+        Set<String> partitions,
+        SeekableStreamSupervisor<String, String, ByteEntity>.TaskGroup existingTaskGroup,
+        Map<String, String> latestCommittedOffsets,
+        Map<String, String> latestTaskOffsetsOnPause
+    )
+    {
+      return null;
+    }
+
+    @Override
     protected Map<String, String> getLatestSequencesFromStream()
     {
       return streamOffsets;
@@ -3247,6 +3271,17 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       this.metricFlag = metricFlag;
       this.partitionsRecordLag = partitionsRecordLag;
       this.partitionsTimeLag = partitionsTimeLag;
+    }
+
+    @Override
+    protected SeekableStreamIndexTaskIOConfig<String, String> createUpdatedTaskIoConfig(
+        Set<String> partitions,
+        SeekableStreamSupervisor<String, String, ByteEntity>.TaskGroup existingTaskGroup,
+        Map<String, String> latestCommittedOffsets,
+        Map<String, String> latestTaskOffsetsOnPause
+    )
+    {
+      return null;
     }
 
     @Nullable
