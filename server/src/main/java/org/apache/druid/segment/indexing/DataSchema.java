@@ -415,7 +415,7 @@ public class DataSchema
       }
     }
 
-    return checkValidateSetErrors(fields);
+    return getFieldsOrThrowIfErrors(fields);
   }
 
   public static void validateProjections(
@@ -472,16 +472,16 @@ public class DataSchema
           position++;
         }
 
-        checkValidateSetErrors(fields);
+        getFieldsOrThrowIfErrors(fields);
       }
     }
   }
 
-  private static Set<String> checkValidateSetErrors(Map<String, Multiset<String>> fields)
+  private static Set<String> getFieldsOrThrowIfErrors(Map<String, Multiset<String>> validatedFields)
   {
     final List<String> errors = new ArrayList<>();
 
-    for (Map.Entry<String, Multiset<String>> fieldEntry : fields.entrySet()) {
+    for (Map.Entry<String, Multiset<String>> fieldEntry : validatedFields.entrySet()) {
       if (fieldEntry.getValue().entrySet().stream().mapToInt(Multiset.Entry::getCount).sum() > 1) {
         errors.add(
             StringUtils.format(
@@ -504,7 +504,7 @@ public class DataSchema
     }
 
     if (errors.isEmpty()) {
-      return fields.keySet();
+      return validatedFields.keySet();
     } else {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
