@@ -51,6 +51,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.transform.TransformSpec;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -415,6 +416,12 @@ public class DataSchema
       }
     }
 
+    return checkErrors(fields);
+  }
+
+  @Nonnull
+  private static Set<String> checkErrors(Map<String, Multiset<String>> fields)
+  {
     final List<String> errors = new ArrayList<>();
 
     for (Map.Entry<String, Multiset<String>> fieldEntry : fields.entrySet()) {
@@ -461,20 +468,48 @@ public class DataSchema
         }
         names.add(projection.getName());
         final AggregateProjectionMetadata.Schema schema = projection.toMetadataSchema();
-        if (schema.getTimeColumnName() == null) {
-          continue;
-        }
-        final Granularity projectionGranularity = schema.getEffectiveGranularity();
-        if (segmentGranularity != null) {
-          if (segmentGranularity.isFinerThan(projectionGranularity)) {
-            throw InvalidInput.exception(
-                "projection[%s] has granularity[%s] which must be finer than or equal to segment granularity[%s]",
-                projection.getName(),
-                projectionGranularity,
-                segmentGranularity
-            );
+
+        if (schema.getTimeColumnName() != null) {
+          final Granularity projectionGranularity = schema.getEffectiveGranularity();
+          if (segmentGranularity != null) {
+            if (segmentGranularity.isFinerThan(projectionGranularity)) {
+              throw InvalidInput.exception(
+                  "projection[%s] has granularity[%s] which must be finer than or equal to segment granularity[%s]",
+                  projection.getName(),
+                  projectionGranularity,
+                  segmentGranularity
+              );
+            }
           }
         }
+
+        final Map<String, Multiset<String>> fields = new TreeMap<>();
+        int position = 0;
+        for (DimensionSchema grouping : projection.getGroupingColumns()) {
+          final String field = grouping.getName();
+          if (Strings.isNullOrEmpty(field)) {
+            throw DruidException
+                .forPersona(DruidException.Persona.USER)
+                .ofCategory(DruidException.Category.INVALID_INPUT)
+                .build("Encountered grouping column with null or empty name at position[%d]", position);
+          }
+          fields.computeIfAbsent(field, k -> TreeMultiset.create()).add("projection[" + projection.getName() + "] grouping column list");
+          position++;
+        }
+        for (AggregatorFactory aggregator : projection.getAggregators()) {
+          final String field = aggregator.getName();
+          if (Strings.isNullOrEmpty(field)) {
+            throw DruidException
+                .forPersona(DruidException.Persona.USER)
+                .ofCategory(DruidException.Category.INVALID_INPUT)
+                .build("Encountered aggregator with null or empty name at position[%d]", position);
+          }
+
+          fields.computeIfAbsent(field, k -> TreeMultiset.create()).add("projection[" + projection.getName() + "] aggregators list");
+          position++;
+        }
+
+        checkErrors(fields);
       }
     }
   }
