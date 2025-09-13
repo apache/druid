@@ -225,6 +225,11 @@ public class MultiStageQueryContext
    */
   public static final String CTX_MAX_FRAME_SIZE = "maxFrameSize";
 
+  /**
+   * Maximum number of threads to use for processing. Acts as a cap on the value of {@link WorkerContext#threadCount()}.
+   */
+  public static final String CTX_MAX_THREADS = "maxThreads";
+
   private static final Pattern LOOKS_LIKE_JSON_ARRAY = Pattern.compile("^\\s*\\[.*", Pattern.DOTALL);
 
   public static String getMSQMode(final QueryContext queryContext)
@@ -506,6 +511,11 @@ public class MultiStageQueryContext
   public static int getFrameSize(final QueryContext queryContext)
   {
     return queryContext.getInt(CTX_MAX_FRAME_SIZE, WorkerMemoryParameters.DEFAULT_FRAME_SIZE);
+  }
+
+  public static Integer getMaxThreads(final QueryContext queryContext)
+  {
+    return queryContext.getInt(CTX_MAX_THREADS);
   }
 
   /**

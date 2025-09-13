@@ -97,12 +97,12 @@ public interface WorkerContext extends Closeable
   File tempDir();
 
   /**
-   * Create a context with useful objects required by {@link StageProcessor#makeProcessors}.
+   * Create a context with useful objects required by {@link StageProcessor#execute(ExecutionContext)}.
    */
   FrameContext frameContext(WorkOrder workOrder);
 
   /**
-   * Number of available processing threads.
+   * Number of available processing threads. Workers must not use more than this number of threads.
    */
   int threadCount();
 
@@ -110,11 +110,6 @@ public interface WorkerContext extends Closeable
    * Fetch node info about self.
    */
   DruidNode selfNode();
-
-  /**
-   * Returns the factory for {@link DataServerQueryHandler} from the context. Used to query realtime tasks.
-   */
-  DataServerQueryHandlerFactory dataServerQueryHandlerFactory();
 
   /**
    * Whether to include all counters in reports. See {@link MultiStageQueryContext#CTX_INCLUDE_ALL_COUNTERS} for detail.

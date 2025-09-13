@@ -49,6 +49,7 @@ import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_FAULT_TOLERAN
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MAX_FRAME_SIZE;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MAX_NUM_TASKS;
+import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MAX_THREADS;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MSQ_MODE;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_REMOVE_NULL_BYTES;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_ROWS_IN_MEMORY;
@@ -359,6 +360,19 @@ public class MultiStageQueryContextTest
   {
     Map<String, Object> propertyMap = ImmutableMap.of(CTX_MAX_FRAME_SIZE, 500000);
     Assert.assertEquals(500000, MultiStageQueryContext.getFrameSize(QueryContext.of(propertyMap)));
+  }
+
+  @Test
+  public void getMaxThreads_unset_returnsNull()
+  {
+    Assert.assertNull(MultiStageQueryContext.getMaxThreads(QueryContext.empty()));
+  }
+
+  @Test
+  public void getMaxThreads_set_returnsCorrectValue()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(CTX_MAX_THREADS, 4);
+    Assert.assertEquals(Integer.valueOf(4), MultiStageQueryContext.getMaxThreads(QueryContext.of(propertyMap)));
   }
 
   private static List<String> decodeSortOrder(@Nullable final String input)

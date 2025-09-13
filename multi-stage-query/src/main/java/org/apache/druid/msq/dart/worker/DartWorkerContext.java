@@ -80,6 +80,7 @@ public class DartWorkerContext implements WorkerContext
   private final File tempDir;
   private final QueryContext queryContext;
   private final ServiceEmitter emitter;
+  private final int threadCount;
 
   /**
    * Lazy initialized upon call to {@link #frameContext(WorkOrder)}.
@@ -128,6 +129,11 @@ public class DartWorkerContext implements WorkerContext
     this.tempDir = tempDir;
     this.queryContext = Preconditions.checkNotNull(queryContext, "queryContext");
     this.emitter = emitter;
+    
+    // Compute thread count once in constructor
+    final int baseThreadCount = processingConfig.getNumThreads();
+    final Integer maxThreads = MultiStageQueryContext.getMaxThreads(queryContext);
+    this.threadCount = (maxThreads != null) ? Math.min(baseThreadCount, maxThreads) : baseThreadCount;
   }
 
   @Override
@@ -242,13 +248,7 @@ public class DartWorkerContext implements WorkerContext
   @Override
   public int threadCount()
   {
-    return processingConfig.getNumThreads();
-  }
-
-  @Override
-  public DataServerQueryHandlerFactory dataServerQueryHandlerFactory()
-  {
-    return dataServerQueryHandlerFactory;
+    return threadCount;
   }
 
   @Override

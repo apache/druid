@@ -190,12 +190,6 @@ public class MSQTestWorkerContext implements WorkerContext
   }
 
   @Override
-  public DataServerQueryHandlerFactory dataServerQueryHandlerFactory()
-  {
-    return injector.getInstance(DataServerQueryHandlerFactory.class);
-  }
-
-  @Override
   public boolean includeAllCounters()
   {
     return true;
