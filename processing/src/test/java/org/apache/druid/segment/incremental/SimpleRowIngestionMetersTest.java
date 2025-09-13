@@ -33,14 +33,15 @@ public class SimpleRowIngestionMetersTest
     rowIngestionMeters.incrementProcessedWithError();
     rowIngestionMeters.incrementUnparseable();
     rowIngestionMeters.incrementThrownAway();
-    Assert.assertEquals(rowIngestionMeters.getTotals(), new RowIngestionMetersTotals(1, 5, 1, 1, 1));
+    rowIngestionMeters.incrementFiltered();
+    Assert.assertEquals(rowIngestionMeters.getTotals(), new RowIngestionMetersTotals(1, 5, 1, 1, 1, 1));
   }
 
   @Test
   public void testAddRowIngestionMetersTotals()
   {
     SimpleRowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
-    RowIngestionMetersTotals rowIngestionMetersTotals = new RowIngestionMetersTotals(10, 0, 1, 0, 1);
+    RowIngestionMetersTotals rowIngestionMetersTotals = new RowIngestionMetersTotals(10, 0, 1, 0, 1, 2);
     rowIngestionMeters.addRowIngestionMetersTotals(rowIngestionMetersTotals);
     Assert.assertEquals(rowIngestionMeters.getTotals(), rowIngestionMetersTotals);
   }
