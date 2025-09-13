@@ -25,10 +25,10 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ConstantExprEvalSelector;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.CapabilitiesBasedFormat;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.ReadableOffset;
@@ -38,7 +38,7 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 
 public class ConstantTimeColumn implements NumericColumn
 {
-  public static Supplier<ColumnHolder> makeConstantTimeSupplier(int numRows, long constant)
+  public static Supplier<BaseColumnHolder> makeConstantTimeSupplier(int numRows, long constant)
   {
     return Suppliers.memoize(
         () -> new ColumnBuilder().setNumericColumnSupplier(() -> new ConstantTimeColumn(numRows, constant))

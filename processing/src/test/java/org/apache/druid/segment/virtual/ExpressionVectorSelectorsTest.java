@@ -33,11 +33,11 @@ import org.apache.druid.query.groupby.DeferExpressionDimensions;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnSelector;
+import org.apache.druid.segment.ColumnCache;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
-import org.apache.druid.segment.DeprecatedQueryableIndexColumnSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
@@ -196,7 +196,7 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
   public void setup()
   {
     Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
-    outputType = parsed.getOutputType(new DeprecatedQueryableIndexColumnSelector(queryableIndexToUse));
+    outputType = parsed.getOutputType(new ColumnCache(queryableIndexToUse, VirtualColumns.EMPTY, perTestCloser));
     if (outputType == null) {
       outputType = ExpressionType.STRING;
     }
@@ -212,14 +212,13 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
   @Test
   public void sanityTestVectorizedExpressionSelector()
   {
-    sanityTestVectorizedExpressionSelectors(expression, outputType, queryableIndexToUse, perTestCloser, ROWS_PER_SEGMENT);
+    sanityTestVectorizedExpressionSelectors(expression, outputType, queryableIndexToUse, ROWS_PER_SEGMENT);
   }
 
   public static void sanityTestVectorizedExpressionSelectors(
       String expression,
       @Nullable ExpressionType outputType,
       QueryableIndex index,
-      Closer closer,
       int rowsPerSegment
   )
   {

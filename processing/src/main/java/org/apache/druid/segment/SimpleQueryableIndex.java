@@ -31,6 +31,7 @@ import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
@@ -57,11 +58,11 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
   private final List<String> columnNames;
   private final Indexed<String> availableDimensions;
   private final BitmapFactory bitmapFactory;
-  private final Map<String, Supplier<ColumnHolder>> columns;
+  private final Map<String, Supplier<BaseColumnHolder>> columns;
   private final List<OrderBy> ordering;
   private final Map<String, AggregateProjectionMetadata> projectionsMap;
   private final SortedSet<AggregateProjectionMetadata> projections;
-  private final Map<String, Map<String, Supplier<ColumnHolder>>> projectionColumns;
+  private final Map<String, Map<String, Supplier<BaseColumnHolder>>> projectionColumns;
   private final SmooshedFileMapper fileMapper;
   private final Supplier<Map<String, DimensionHandler>> dimensionHandlers;
 
@@ -69,7 +70,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
       Interval dataInterval,
       Indexed<String> dimNames,
       BitmapFactory bitmapFactory,
-      Map<String, Supplier<ColumnHolder>> columns,
+      Map<String, Supplier<BaseColumnHolder>> columns,
       SmooshedFileMapper fileMapper
   )
   {
@@ -80,10 +81,10 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
       Interval dataInterval,
       Indexed<String> dimNames,
       BitmapFactory bitmapFactory,
-      Map<String, Supplier<ColumnHolder>> columns,
+      Map<String, Supplier<BaseColumnHolder>> columns,
       SmooshedFileMapper fileMapper,
       @Nullable Metadata metadata,
-      @Nullable Map<String, Map<String, Supplier<ColumnHolder>>> projectionColumns
+      @Nullable Map<String, Map<String, Supplier<BaseColumnHolder>>> projectionColumns
   )
   {
     Preconditions.checkNotNull(columns.get(ColumnHolder.TIME_COLUMN_NAME));
@@ -171,14 +172,14 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
 
   @Nullable
   @Override
-  public ColumnHolder getColumnHolder(String columnName)
+  public BaseColumnHolder getColumnHolder(String columnName)
   {
-    Supplier<ColumnHolder> columnHolderSupplier = columns.get(columnName);
+    Supplier<BaseColumnHolder> columnHolderSupplier = columns.get(columnName);
     return columnHolderSupplier == null ? null : columnHolderSupplier.get();
   }
 
   @VisibleForTesting
-  public Map<String, Supplier<ColumnHolder>> getColumns()
+  public Map<String, Supplier<BaseColumnHolder>> getColumns()
   {
     return columns;
   }

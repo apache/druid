@@ -79,6 +79,7 @@ import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.column.BaseColumn;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
@@ -456,7 +457,7 @@ public class DumpSegment extends GuiceRunnable
               jg.writeFieldName(columnName);
               jg.writeStartObject();
               {
-                final ColumnHolder columnHolder = index.getColumnHolder(columnName);
+                final BaseColumnHolder columnHolder = index.getColumnHolder(columnName);
                 final BaseColumn baseColumn = columnHolder.getColumn();
                 Preconditions.checkArgument(baseColumn instanceof CompressedNestedDataComplexColumn);
                 final CompressedNestedDataComplexColumn<?> nestedDataColumn =
@@ -587,7 +588,7 @@ public class DumpSegment extends GuiceRunnable
               jg.writeFieldName(columnName);
               jg.writeStartObject();
               {
-                final ColumnHolder columnHolder = index.getColumnHolder(columnName);
+                final BaseColumnHolder columnHolder = index.getColumnHolder(columnName);
                 final BaseColumn column = columnHolder.getColumn();
                 Preconditions.checkArgument(column instanceof CompressedNestedDataComplexColumn);
                 final CompressedNestedDataComplexColumn nestedDataColumn = (CompressedNestedDataComplexColumn) column;
@@ -601,11 +602,8 @@ public class DumpSegment extends GuiceRunnable
 
                 SimpleAscendingOffset offset = new SimpleAscendingOffset(index.getNumRows());
                 final ColumnValueSelector rawSelector = nestedDataColumn.makeColumnValueSelector(offset);
-                final DimensionSelector fieldSelector = nestedDataColumn.makeDimensionSelector(
-                    pathParts,
-                    offset,
-                    null
-                );
+                final DimensionSelector fieldSelector =
+                    nestedDataColumn.makeDimensionSelector(pathParts, null, null, offset);
                 if (indexSupplier == null) {
                   jg.writeNullField(path);
                 } else {

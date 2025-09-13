@@ -26,10 +26,9 @@ import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
-import javax.annotation.Nullable;
 import java.io.Closeable;
 
-public interface BaseColumn extends Closeable
+public interface BaseColumn extends SelectableColumn, Closeable
 {
   ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset);
 
@@ -41,12 +40,5 @@ public interface BaseColumn extends Closeable
   default VectorObjectSelector makeVectorObjectSelector(ReadableVectorOffset offset)
   {
     throw new UOE("Cannot make VectorObjectSelector for column with class[%s]", getClass().getName());
-  }
-
-  @SuppressWarnings("unused")
-  @Nullable
-  default <T> T as(Class<? extends T> clazz)
-  {
-    return null;
   }
 }

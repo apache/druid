@@ -154,7 +154,7 @@ public class ColumnBuilder
     return this;
   }
 
-  public ColumnHolder build()
+  public BaseColumnHolder build()
   {
     Preconditions.checkState(capabilitiesBuilder.getType() != null, "Type must be set.");
 

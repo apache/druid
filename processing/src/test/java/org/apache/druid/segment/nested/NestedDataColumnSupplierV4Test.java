@@ -202,8 +202,8 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
     final List<NestedPathPart> xPath = NestedPathFinder.parseJsonPath("$.x");
     Assert.assertEquals(ImmutableSet.of(ColumnType.LONG), column.getFieldTypes(xPath));
     Assert.assertEquals(ColumnType.LONG, column.getColumnHolder(xPath).getCapabilities().toColumnType());
-    ColumnValueSelector<?> xSelector = column.makeColumnValueSelector(xPath, offset);
-    DimensionSelector xDimSelector = column.makeDimensionSelector(xPath, offset, null);
+    ColumnValueSelector<?> xSelector = column.makeColumnValueSelector(xPath, null, offset);
+    DimensionSelector xDimSelector = column.makeDimensionSelector(xPath, null, null, offset);
     ColumnIndexSupplier xIndexSupplier = column.getColumnIndexSupplier(xPath);
     Assert.assertNotNull(xIndexSupplier);
     StringValueSetIndexes xValueIndex = xIndexSupplier.as(StringValueSetIndexes.class);
@@ -212,8 +212,8 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
     final List<NestedPathPart> yPath = NestedPathFinder.parseJsonPath("$.y");
     Assert.assertEquals(ImmutableSet.of(ColumnType.DOUBLE), column.getFieldTypes(yPath));
     Assert.assertEquals(ColumnType.DOUBLE, column.getColumnHolder(yPath).getCapabilities().toColumnType());
-    ColumnValueSelector<?> ySelector = column.makeColumnValueSelector(yPath, offset);
-    DimensionSelector yDimSelector = column.makeDimensionSelector(yPath, offset, null);
+    ColumnValueSelector<?> ySelector = column.makeColumnValueSelector(yPath, null, offset);
+    DimensionSelector yDimSelector = column.makeDimensionSelector(yPath, null, null, offset);
     ColumnIndexSupplier yIndexSupplier = column.getColumnIndexSupplier(yPath);
     Assert.assertNotNull(yIndexSupplier);
     StringValueSetIndexes yValueIndex = yIndexSupplier.as(StringValueSetIndexes.class);
@@ -222,8 +222,8 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
     final List<NestedPathPart> zPath = NestedPathFinder.parseJsonPath("$.z");
     Assert.assertEquals(ImmutableSet.of(ColumnType.STRING), column.getFieldTypes(zPath));
     Assert.assertEquals(ColumnType.STRING, column.getColumnHolder(zPath).getCapabilities().toColumnType());
-    ColumnValueSelector<?> zSelector = column.makeColumnValueSelector(zPath, offset);
-    DimensionSelector zDimSelector = column.makeDimensionSelector(zPath, offset, null);
+    ColumnValueSelector<?> zSelector = column.makeColumnValueSelector(zPath, null, offset);
+    DimensionSelector zDimSelector = column.makeDimensionSelector(zPath, null, null, offset);
     ColumnIndexSupplier zIndexSupplier = column.getColumnIndexSupplier(zPath);
     Assert.assertNotNull(zIndexSupplier);
     StringValueSetIndexes zValueIndex = zIndexSupplier.as(StringValueSetIndexes.class);
@@ -235,8 +235,8 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
         column.getFieldTypes(vPath)
     );
     Assert.assertEquals(ColumnType.STRING, column.getColumnHolder(vPath).getCapabilities().toColumnType());
-    ColumnValueSelector<?> vSelector = column.makeColumnValueSelector(vPath, offset);
-    DimensionSelector vDimSelector = column.makeDimensionSelector(vPath, offset, null);
+    ColumnValueSelector<?> vSelector = column.makeColumnValueSelector(vPath, null, offset);
+    DimensionSelector vDimSelector = column.makeDimensionSelector(vPath, null, null, offset);
     ColumnIndexSupplier vIndexSupplier = column.getColumnIndexSupplier(vPath);
     Assert.assertNotNull(vIndexSupplier);
     StringValueSetIndexes vValueIndex = vIndexSupplier.as(StringValueSetIndexes.class);
@@ -245,8 +245,8 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
     final List<NestedPathPart> nullishPath = NestedPathFinder.parseJsonPath("$.nullish");
     Assert.assertEquals(ImmutableSet.of(ColumnType.STRING), column.getFieldTypes(nullishPath));
     Assert.assertEquals(ColumnType.STRING, column.getColumnHolder(nullishPath).getCapabilities().toColumnType());
-    ColumnValueSelector<?> nullishSelector = column.makeColumnValueSelector(nullishPath, offset);
-    DimensionSelector nullishDimSelector = column.makeDimensionSelector(nullishPath, offset, null);
+    ColumnValueSelector<?> nullishSelector = column.makeColumnValueSelector(nullishPath, null, offset);
+    DimensionSelector nullishDimSelector = column.makeDimensionSelector(nullishPath, null, null, offset);
     ColumnIndexSupplier nullishIndexSupplier = column.getColumnIndexSupplier(nullishPath);
     Assert.assertNotNull(nullishIndexSupplier);
     StringValueSetIndexes nullishValueIndex = nullishIndexSupplier.as(StringValueSetIndexes.class);

@@ -79,7 +79,7 @@ public class LongsColumn implements NumericColumn
 
   @Override
   @Nullable
-  public <T> T as(Class<? extends T> clazz)
+  public <T> T as(Class<T> clazz)
   {
     return column.as(clazz);
   }

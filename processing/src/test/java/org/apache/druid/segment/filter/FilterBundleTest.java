@@ -33,7 +33,6 @@ import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.segment.ColumnCache;
-import org.apache.druid.segment.ColumnSelectorColumnIndexSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.VirtualColumns;
@@ -63,11 +62,7 @@ public class FilterBundleTest extends InitializedNullHandlingTest
     final QueryableIndex index = TestIndex.getMMappedWikipediaIndex();
     closer = Closer.create();
     bitmapFactory = index.getBitmapFactoryForDimensions();
-    indexSelector = new ColumnSelectorColumnIndexSelector(
-        bitmapFactory,
-        VirtualColumns.EMPTY,
-        new ColumnCache(index, closer)
-    );
+    indexSelector = new ColumnCache(index, VirtualColumns.EMPTY, closer);
   }
 
   @After

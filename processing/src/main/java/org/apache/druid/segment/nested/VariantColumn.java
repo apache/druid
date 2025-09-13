@@ -1019,7 +1019,7 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
   @SuppressWarnings("unchecked")
   @Nullable
   @Override
-  public <T> T as(Class<? extends T> clazz)
+  public <T> T as(Class<T> clazz)
   {
     //noinspection ReturnOfNull
     return (T) AS_MAP.getOrDefault(clazz, arg -> null).apply(this);

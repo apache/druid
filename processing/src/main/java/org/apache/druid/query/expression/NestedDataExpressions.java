@@ -22,7 +22,7 @@ package org.apache.druid.query.expression;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -41,7 +41,9 @@ import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class NestedDataExpressions
@@ -135,74 +137,102 @@ public class NestedDataExpressions
         }
 
         @Override
-        public ExprEval eval(ObjectBinding bindings)
+        public ExprEval<?> eval(ObjectBinding bindings)
         {
-          ExprEval arg = args.get(0).eval(bindings);
-          String argAsJson = getArgAsJson(arg);
-          if (argAsJson == null) {
+          final Object retVal = getArgAsObject(args.get(0).eval(bindings), true);
+
+          if (retVal == null) {
+            // If any argument is null, the return of the entire function is null.
             return ExprEval.ofComplex(ExpressionType.NESTED_DATA, null);
           }
-          Object obj;
-          try {
-            obj = jsonMapper.readValue(argAsJson, Object.class);
-          }
-          catch (JsonProcessingException e) {
-            throw JsonMergeExprMacro.this.processingFailed(e, "bad string input [%s]", arg.asString());
-          }
-
-          ObjectReader updater = jsonMapper.readerForUpdating(obj);
 
           for (int i = 1; i < args.size(); i++) {
-            ExprEval argSub = args.get(i).eval(bindings);
-            String str = getArgAsJson(argSub);
-            if (str == null) {
+            final Object argAsObject = getArgAsObject(args.get(i).eval(bindings), false);
+
+            if (argAsObject == null) {
+              // If any argument is null, the return of the entire function is null.
               return ExprEval.ofComplex(ExpressionType.NESTED_DATA, null);
-            }
-            try {
-              obj = updater.readValue(str);
-              updater = jsonMapper.readerForUpdating(obj);
-            }
-            catch (JsonProcessingException e) {
-              throw JsonMergeExprMacro.this.processingFailed(e, "bad string input [%s]", argSub.asString());
+            } else if (retVal instanceof Map) {
+              // Allow merging maps into maps.
+              if (argAsObject instanceof Map) {
+                ((Map<?, ?>) retVal).putAll((Map) argAsObject);
+              } else {
+                throw JsonMergeExprMacro.this.processingFailed(
+                    "bad input[%s] in position[%d], expected object but got array",
+                    argAsObject,
+                    i
+                );
+              }
+            } else if (retVal instanceof List) {
+              // Allow merging lists into lists.
+              if (argAsObject instanceof List) {
+                ((List<?>) retVal).addAll((List) argAsObject);
+              } else {
+                throw JsonMergeExprMacro.this.processingFailed(
+                    "bad input[%s] in position[%d], expected array but got object",
+                    argAsObject,
+                    i
+                );
+              }
+            } else {
+              // Always expecting Map or List from getArgAsObject. Should never get to this case.
+              throw DruidException.defensive("Unexpected type[%s]", retVal.getClass());
             }
           }
 
-          return ExprEval.ofComplex(ExpressionType.NESTED_DATA, obj);
+          return ExprEval.ofComplex(ExpressionType.NESTED_DATA, retVal);
         }
 
-
-
-        @Nullable
         @Override
         public ExpressionType getOutputType(InputBindingInspector inspector)
         {
           return ExpressionType.NESTED_DATA;
         }
 
+        /**
+         * Returns either null, {@code Map<String, Object>}, or {@code List<Object>}.
+         *
+         * @param arg         original arg
+         * @param shallowCopy whether to shallow-copy the object
+         */
         @Nullable
-        private String getArgAsJson(ExprEval arg)
+        private Object getArgAsObject(ExprEval<?> arg, boolean shallowCopy)
         {
           if (arg.value() == null) {
             return null;
           }
 
           if (arg.type().is(ExprType.STRING)) {
-            return arg.asString();
-          } 
-          
-          if (arg.type().is(ExprType.COMPLEX)) {
             try {
-              return jsonMapper.writeValueAsString(unwrap(arg));
+              final Object obj = jsonMapper.readValue(arg.asString(), Object.class);
+              if (obj == null || obj instanceof Map || obj instanceof List) {
+                return obj;
+              } else {
+                throw JsonMergeExprMacro.this.processingFailed("bad string input [%s]", arg.asString());
+              }
             }
             catch (JsonProcessingException e) {
-              throw JsonMergeExprMacro.this.processingFailed(e, "bad complex input [%s]", arg.asString());
-            } 
-          } 
-          
-          throw JsonMergeExprMacro.this.validationFailed(
-            "invalid input expected %s but got %s instead",
-            ExpressionType.STRING,
-            arg.type()
+              throw JsonMergeExprMacro.this.processingFailed(e, "bad string input [%s]", arg.asString());
+            }
+          }
+
+          if (arg.type().is(ExprType.COMPLEX)) {
+            final Object unwrapped = unwrap(arg.value());
+            if (unwrapped instanceof Map) {
+              return shallowCopy ? new LinkedHashMap<String, Object>((Map) unwrapped) : unwrapped;
+            } else if (unwrapped instanceof List) {
+              return shallowCopy ? new ArrayList<>((List) unwrapped) : unwrapped;
+            } else if (unwrapped instanceof Object[]) {
+              return shallowCopy ? new ArrayList<>(Arrays.asList(((Object[]) unwrapped))) : unwrapped;
+            } else {
+              throw JsonMergeExprMacro.this.processingFailed("bad complex input [%s]", arg.asString());
+            }
+          }
+
+          throw JsonMergeExprMacro.this.processingFailed(
+              "invalid input expected %s but got %s instead",
+              ExpressionType.STRING,
+              arg.type()
           );
         }
       }

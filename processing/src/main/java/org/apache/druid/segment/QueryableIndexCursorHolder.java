@@ -36,6 +36,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterBundle;
 import org.apache.druid.query.filter.RangeFilter;
@@ -337,7 +338,6 @@ public class QueryableIndexCursorHolder implements CursorHolder
   )
   {
     return new QueryableIndexVectorColumnSelectorFactory(
-        index,
         baseOffset,
         columnCache,
         virtualColumns
@@ -676,13 +676,8 @@ public class QueryableIndexCursorHolder implements CursorHolder
     )
     {
       this.closer = Closer.create();
-      this.columnCache = new ColumnCache(index, closer);
+      this.columnCache = new ColumnCache(index, virtualColumns, closer);
       this.timeBoundaryInspector = timeBoundaryInspector;
-      final ColumnSelectorColumnIndexSelector bitmapIndexSelector = new ColumnSelectorColumnIndexSelector(
-          index.getBitmapFactoryForDimensions(),
-          virtualColumns,
-          columnCache
-      );
       try {
         this.numRows = index.getNumRows();
         this.filterBundle = makeFilterBundle(
@@ -693,7 +688,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
                 filter
             ),
             cursorAutoArrangeFilters,
-            bitmapIndexSelector,
+            columnCache,
             numRows,
             metrics
         );
@@ -707,7 +702,10 @@ public class QueryableIndexCursorHolder implements CursorHolder
     public NumericColumn getTimestampsColumn()
     {
       if (timestamps == null) {
-        timestamps = (NumericColumn) columnCache.getColumn(ColumnHolder.TIME_COLUMN_NAME);
+        final ColumnHolder columnHolder = columnCache.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME);
+        if (columnHolder != null) {
+          timestamps = (NumericColumn) columnHolder.getColumn();
+        }
       }
       return timestamps;
     }
@@ -729,7 +727,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
   private static FilterBundle makeFilterBundle(
       @Nullable final Filter filter,
       boolean cursorAutoArrangeFilters,
-      final ColumnSelectorColumnIndexSelector bitmapIndexSelector,
+      final ColumnIndexSelector bitmapIndexSelector,
       final int numRows,
       @Nullable final QueryMetrics<?> metrics
   )

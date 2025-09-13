@@ -30,10 +30,10 @@ import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.SelectableColumn;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerde;
@@ -319,7 +319,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         final Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier;
         if (parent != null) {
-          final Supplier<? extends BaseColumn> parentSupplier = parent.getColumnSupplier();
+          final Supplier<? extends SelectableColumn> parentSupplier = parent.getColumnSupplier();
           dictionarySupplier = ((StringUtf8DictionaryEncodedColumnSupplier<?>) parentSupplier).getDictionary();
         } else {
           dictionarySupplier = StringEncodingStrategies.getStringDictionarySupplier(

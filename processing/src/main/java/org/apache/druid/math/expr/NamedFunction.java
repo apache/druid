@@ -51,6 +51,11 @@ public interface NamedFunction
     throw new ExpressionValidationException(this, e, reasonFormat, args);
   }
 
+  default ExpressionProcessingException processingFailed(String reasonFormat, Object... args)
+  {
+    throw new ExpressionProcessingException(this, reasonFormat, args);
+  }
+
   default ExpressionProcessingException processingFailed(Throwable e, String reasonFormat, Object... args)
   {
     throw new ExpressionProcessingException(this, e, reasonFormat, args);

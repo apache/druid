@@ -96,7 +96,7 @@ public class ColumnDescriptor implements Serializer
     }
   }
 
-  public ColumnHolder read(
+  public BaseColumnHolder read(
       ByteBuffer buffer,
       ColumnConfig columnConfig,
       SmooshedFileMapper smooshedFiles,

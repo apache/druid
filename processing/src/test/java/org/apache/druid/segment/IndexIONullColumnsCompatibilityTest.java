@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.io.smoosh.Smoosh;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.IndexIO.IndexLoader;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -185,7 +186,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
         segmentBitmapSerdeFactory = new BitmapSerde.LegacyBitmapSerdeFactory();
       }
 
-      Map<String, Supplier<ColumnHolder>> columns = new HashMap<>();
+      Map<String, Supplier<BaseColumnHolder>> columns = new HashMap<>();
 
       for (String columnName : cols) {
         if (Strings.isNullOrEmpty(columnName)) {
@@ -207,7 +208,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
               }
           ));
         } else {
-          ColumnHolder columnHolder = deserializeColumn(mapper, colBuffer, smooshedFiles);
+          BaseColumnHolder columnHolder = deserializeColumn(mapper, colBuffer, smooshedFiles);
           columns.put(columnName, () -> columnHolder);
         }
 
@@ -228,7 +229,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
             }
         ));
       } else {
-        ColumnHolder columnHolder = deserializeColumn(mapper, timeBuffer, smooshedFiles);
+        BaseColumnHolder columnHolder = deserializeColumn(mapper, timeBuffer, smooshedFiles);
         columns.put(ColumnHolder.TIME_COLUMN_NAME, () -> columnHolder);
       }
 
@@ -263,7 +264,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
       return index;
     }
 
-    private ColumnHolder deserializeColumn(
+    private BaseColumnHolder deserializeColumn(
         ObjectMapper mapper,
         ByteBuffer byteBuffer,
         SmooshedFileMapper smooshedFiles

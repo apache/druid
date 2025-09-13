@@ -24,7 +24,7 @@ import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.BaseColumn;
-import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.ReadableOffset;
 
@@ -49,13 +49,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class ColumnHolderRACColumn implements Column, Closeable
 {
-  private final ColumnHolder holder;
+  private final BaseColumnHolder holder;
 
   private BaseColumn baseColumn;
 
-  public ColumnHolderRACColumn(
-      ColumnHolder holder
-  )
+  public ColumnHolderRACColumn(BaseColumnHolder holder)
   {
     this.holder = holder;
   }

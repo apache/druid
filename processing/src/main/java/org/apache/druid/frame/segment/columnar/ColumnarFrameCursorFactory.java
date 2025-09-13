@@ -158,7 +158,7 @@ public class ColumnarFrameCursorFactory implements CursorFactory
     public Cursor asCursor()
     {
       final FrameQueryableIndex index = new FrameQueryableIndex(frame, signature, columnReaders);
-      final ColumnCache columnCache = new ColumnCache(index, closer);
+      final ColumnCache columnCache = new ColumnCache(index, spec.getVirtualColumns(), closer);
       final Filter filterToUse = FrameCursorUtils.buildFilter(spec.getFilter(), spec.getInterval());
       final SimpleSettableOffset baseOffset = new SimpleAscendingOffset(frame.numRows());
 
@@ -200,11 +200,10 @@ public class ColumnarFrameCursorFactory implements CursorFactory
           0,
           frame.numRows()
       );
-      final ColumnCache columnCache = new ColumnCache(index, closer);
+      final ColumnCache columnCache = new ColumnCache(index, spec.getVirtualColumns(), closer);
 
       // baseSelectorFactory using baseOffset is the column selector for filtering.
       final VectorColumnSelectorFactory baseSelectorFactory = new QueryableIndexVectorColumnSelectorFactory(
-          index,
           baseOffset,
           columnCache,
           spec.getVirtualColumns()
@@ -220,7 +219,6 @@ public class ColumnarFrameCursorFactory implements CursorFactory
         );
 
         final VectorColumnSelectorFactory filteredSelectorFactory = new QueryableIndexVectorColumnSelectorFactory(
-            index,
             filteredOffset,
             columnCache,
             spec.getVirtualColumns()
