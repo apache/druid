@@ -69,7 +69,7 @@ public class AlertBuilder extends ServiceEventBuilder<AlertEvent>
     return this;
   }
 
-  public AlertBuilder addData(Map<String, Object> data)
+  public AlertBuilder addData(Map<String, ?> data)
   {
     dataMap.putAll(data);
     return this;

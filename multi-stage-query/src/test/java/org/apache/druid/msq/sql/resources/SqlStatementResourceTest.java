@@ -73,6 +73,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -700,7 +701,8 @@ public class SqlStatementResourceTest extends MSQTestBase
         overlordClient,
         tempDir -> localFileStorageConnector,
         authorizerMapper,
-        new DefaultQueryConfig(Map.of("debug", "true"))
+        new DefaultQueryConfig(Map.of("debug", "true")),
+        new ServerConfig()
     );
   }
 

@@ -23,6 +23,7 @@ import com.google.inject.Inject;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.SanitizableException;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.QueryException;
@@ -73,11 +74,17 @@ class ErrorHandler
     if (error instanceof SanitizableException) {
       return new RuntimeException(errorResponseTransformStrategy.transformIfNeeded((SanitizableException) error));
     }
+    if (error instanceof DruidException) {
+    }
     // cannot check cause of the throwable because it cannot be cast back to the original's type
     // so this only checks runtime exceptions for causes
     if (error instanceof RuntimeException && error.getCause() instanceof SanitizableException) {
       // could do `throw sanitize(error);` but just sanitizing immediately avoids unnecessary going down multiple levels
       return new RuntimeException(errorResponseTransformStrategy.transformIfNeeded((SanitizableException) error.getCause()));
+    }
+    if (error instanceof DruidException) {
+      QueryInterruptedException wrappedError = QueryInterruptedException.wrapIfNeeded(errorResponseTransformStrategy.transformIfNeeded((DruidException) error));
+      return (QueryException) errorResponseTransformStrategy.transformIfNeeded(wrappedError);
     }
     QueryInterruptedException wrappedError = QueryInterruptedException.wrapIfNeeded(error);
     return (QueryException) errorResponseTransformStrategy.transformIfNeeded(wrappedError);
