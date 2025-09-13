@@ -386,14 +386,6 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                  )
                  .collect(Collectors.toList());
 
-  private static AutoTypeColumnSchema toAutoColumn(DimensionSchema x)
-  {
-    if (PROJECTION_TIME_COLUMNS.contains(x.getName())) {
-      return new AutoTypeColumnSchema(x.getName(), ColumnType.LONG);
-    }
-    return new AutoTypeColumnSchema(x.getName(), null);
-  }
-
   private static final List<AggregateProjectionSpec> AUTO_ROLLUP_PROJECTIONS =
       ROLLUP_PROJECTIONS.stream()
                         .map(
@@ -2028,6 +2020,14 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       }
       Assert.assertEquals(expectedRowCount, rowCount);
     }
+  }
+  
+  private static AutoTypeColumnSchema toAutoColumn(DimensionSchema x)
+  {
+    if (PROJECTION_TIME_COLUMNS.contains(x.getName())) {
+      return new AutoTypeColumnSchema(x.getName(), ColumnType.LONG);
+    }
+    return new AutoTypeColumnSchema(x.getName(), null);
   }
 
   private static IndexBuilder makeBuilder(DimensionsSpec dimensionsSpec, boolean autoSchema, boolean writeNullColumns)
