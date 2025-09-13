@@ -185,7 +185,6 @@ import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
@@ -649,26 +648,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
   protected CatalogResolver createMockCatalogResolver()
   {
     return CatalogResolver.NULL_RESOLVER;
-  }
-
-  /**
-   * Returns query context expected for a scan query. Same as {@link #DEFAULT_MSQ_CONTEXT}, but
-   * includes {@link DruidQuery#CTX_SCAN_SIGNATURE}.
-   */
-  protected Map<String, Object> defaultScanQueryContext(Map<String, Object> context, final RowSignature signature)
-  {
-    try {
-      return ImmutableMap.<String, Object>builder()
-                         .putAll(context)
-                         .put(
-                             DruidQuery.CTX_SCAN_SIGNATURE,
-                             queryFramework().queryJsonMapper().writeValueAsString(signature)
-                         )
-                         .build();
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
   }
 
   /**
