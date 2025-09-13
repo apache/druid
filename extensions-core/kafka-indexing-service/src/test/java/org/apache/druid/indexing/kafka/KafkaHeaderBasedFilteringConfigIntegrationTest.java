@@ -80,7 +80,7 @@ public class KafkaHeaderBasedFilteringConfigIntegrationTest
   private RecordHeaders headers(String... keyValuePairs)
   {
     RecordHeaders headers = new RecordHeaders();
-    for (int i = 0; i < keyValuePairs.length; i += 2) {
+    for (int i = 0; i < keyValuePairs.length - 1; i += 2) {
       headers.add(new RecordHeader(keyValuePairs[i], keyValuePairs[i + 1].getBytes(StandardCharsets.UTF_8)));
     }
     return headers;
