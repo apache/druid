@@ -433,7 +433,7 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
             .andReturn(Cursors.ascendingTimeOrder())
             .atLeastOnce();
 
-    BaseColumnHolder holder = EasyMock.createMock(ColumnHolder.class);
+    BaseColumnHolder holder = EasyMock.createMock(BaseColumnHolder.class);
     EasyMock.expect(mockIndex.getColumnHolder("x")).andReturn(holder).atLeastOnce();
 
     StringUtf8DictionaryEncodedColumn dictionaryEncodedColumn = EasyMock.createMock(StringUtf8DictionaryEncodedColumn.class);

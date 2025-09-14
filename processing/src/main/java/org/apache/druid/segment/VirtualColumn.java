@@ -115,7 +115,8 @@ public interface VirtualColumn extends Cacheable
     throw DruidException
         .forPersona(DruidException.Persona.DEVELOPER)
         .ofCategory(DruidException.Category.UNSUPPORTED)
-        .build("Implement makeDimensionSelector(DimensionSpec, ColumnSelector, ColumnSelectorFactory, ReadableOffset)");
+        .build("Implement makeDimensionSelector(DimensionSpec, ColumnSelector, ColumnSelectorFactory, ReadableOffset) "
+               + "for[%s]", getClass());
   }
 
   /**
@@ -167,7 +168,8 @@ public interface VirtualColumn extends Cacheable
     throw DruidException
         .forPersona(DruidException.Persona.DEVELOPER)
         .ofCategory(DruidException.Category.UNSUPPORTED)
-        .build("Implement makeColumnValueSelector(String, ColumnSelectorFactory, ColumnSelector, ReadableOffset)");
+        .build("Implement makeColumnValueSelector(String, ColumnSelectorFactory, ColumnSelector, ReadableOffset) "
+               + "for[%s]", getClass());
   }
 
   /**

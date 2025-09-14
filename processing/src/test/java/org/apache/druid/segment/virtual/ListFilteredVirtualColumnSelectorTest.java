@@ -171,8 +171,8 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
     );
 
     QueryableIndex queryableIndex = EasyMock.createMock(QueryableIndex.class);
-    BaseColumnHolder holder = EasyMock.createMock(ColumnHolder.class);
-    BaseColumnHolder timeHolder = EasyMock.createMock(ColumnHolder.class);
+    BaseColumnHolder holder = EasyMock.createMock(BaseColumnHolder.class);
+    BaseColumnHolder timeHolder = EasyMock.createMock(BaseColumnHolder.class);
     DictionaryEncodedStringValueIndex index = EasyMock.createMock(DictionaryEncodedStringValueIndex.class);
     ImmutableBitmap bitmap = EasyMock.createMock(ImmutableBitmap.class);
     BitmapFactory bitmapFactory = EasyMock.createMock(BitmapFactory.class);
@@ -235,8 +235,8 @@ public class ListFilteredVirtualColumnSelectorTest extends InitializedNullHandli
 
 
     QueryableIndex queryableIndex = EasyMock.createMock(QueryableIndex.class);
-    BaseColumnHolder holder = EasyMock.createMock(ColumnHolder.class);
-    BaseColumnHolder timeHolder = EasyMock.createMock(ColumnHolder.class);
+    BaseColumnHolder holder = EasyMock.createMock(BaseColumnHolder.class);
+    BaseColumnHolder timeHolder = EasyMock.createMock(BaseColumnHolder.class);
     DictionaryEncodedStringValueIndex index = EasyMock.createMock(DictionaryEncodedStringValueIndex.class);
     ImmutableBitmap bitmap = EasyMock.createMock(ImmutableBitmap.class);
     ColumnIndexSupplier indexSupplier = EasyMock.createMock(ColumnIndexSupplier.class);

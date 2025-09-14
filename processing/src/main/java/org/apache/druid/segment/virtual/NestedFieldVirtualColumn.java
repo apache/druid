@@ -236,55 +236,15 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   @Override
   public DimensionSelector makeDimensionSelector(
       DimensionSpec dimensionSpec,
-      ColumnSelectorFactory factory
-  )
-  {
-    // this dimension selector is used for realtime queries, nested paths are not themselves dictionary encoded until
-    // written to segment, so we fall back to processing the structured data from a column value selector on the
-    // complex column
-    ColumnValueSelector<?> valueSelector = makeColumnValueSelector(dimensionSpec.getOutputName(), factory);
-    return dimensionSpec.decorate(new FieldDimensionSelector(valueSelector));
-  }
-
-  @Override
-  public ColumnValueSelector<?> makeColumnValueSelector(
-      String columnName,
-      ColumnSelectorFactory factory
-  )
-  {
-    // realtime selectors have no optimization, fallback to json_query/json_value expressions
-    final Expr identifier = Parser.identifier(fieldSpec.columnName);
-    final Expr path = Parser.constant(NestedPathFinder.toNormalizedJsonPath(fieldSpec.parts));
-    final Expr jsonExpr;
-    if (fieldSpec.processFromRaw) {
-      // processFromRaw is true that means JSON_QUERY, which can return partial object results
-      jsonExpr = JSON_QUERY.apply(List.of(identifier, path));
-    } else {
-      // otherwise, this virtual column is JSON_VALUE which only returns primitives
-      final List<Expr> args;
-      if (fieldSpec.expectedType != null) {
-        final Expr castType = Parser.constant(
-            ExpressionType.fromColumnTypeStrict(fieldSpec.expectedType).asTypeString()
-        );
-        args = List.of(identifier, path, castType);
-      } else {
-        args = List.of(identifier, path);
-      }
-      jsonExpr = JSON_VALUE.apply(args);
-    }
-    return ExpressionSelectors.makeColumnValueSelector(factory, jsonExpr);
-  }
-
-  @Override
-  public DimensionSelector makeDimensionSelector(
-      DimensionSpec dimensionSpec,
       ColumnSelectorFactory selectorFactory,
       @Nullable ColumnSelector columnSelector,
       @Nullable ReadableOffset offset
   )
   {
     if (columnSelector == null) {
-      return makeDimensionSelector(dimensionSpec, selectorFactory);
+      return dimensionSpec.decorate(
+          new FieldDimensionSelector(makeColumnValueSelectorUsingColumnSelectorFactory(selectorFactory))
+      );
     }
 
     ColumnHolder holder = columnSelector.getColumnHolder(fieldSpec.columnName);
@@ -296,7 +256,9 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       // negative array elements in a path expression mean that values should be fetched 'from the end' of the array
       // if the path has negative array elements, then we have to use the 'raw' processing of the FieldDimensionSelector
       // created with the column selector factory instead of using the optimized nested field column, so fall back
-      return makeDimensionSelector(dimensionSpec, selectorFactory);
+      return dimensionSpec.decorate(
+          new FieldDimensionSelector(makeColumnValueSelectorUsingColumnSelectorFactory(selectorFactory))
+      );
     }
 
     return dimensionSpec.decorate(
@@ -389,7 +351,6 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     return DimensionSelector.constant(null, extractionFn);
   }
 
-
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(
       String columnName,
@@ -399,7 +360,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   )
   {
     if (columnSelector == null) {
-      return makeColumnValueSelector(columnName, selectorFactory);
+      return makeColumnValueSelectorUsingColumnSelectorFactory(selectorFactory);
     }
 
     ColumnHolder holder = columnSelector.getColumnHolder(fieldSpec.columnName);
@@ -412,7 +373,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       // if the path has negative array elements, or has set the flag to process 'raw' values explicitly (JSON_QUERY),
       // then we use the 'raw' processing of the RawFieldColumnSelector/RawFieldLiteralColumnValueSelector created
       // with the column selector factory instead of using the optimized nested field column
-      return makeColumnValueSelector(columnName, selectorFactory);
+      return makeColumnValueSelectorUsingColumnSelectorFactory(selectorFactory);
     }
 
     // "JSON_VALUE", which only returns literals, on a NestedDataComplexColumn, so we can use the fields value selector
@@ -537,7 +498,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
         // processFromRaw is true, that means JSON_QUERY, which can return partial results, otherwise this virtual column
         // is JSON_VALUE which only returns literals, so we can use the nested columns value selector
         return new RawFieldVectorObjectSelector(
-            nestedColumnSelectorFactory.makeVectorObjectSelector(List.of(), selectorFactory, offset),
+            selectorFactory.makeObjectSelector(fieldSpec.columnName),
             fieldSpec.parts
         );
       }
@@ -866,6 +827,31 @@ public class NestedFieldVirtualColumn implements VirtualColumn
            ", pathParts='" + fieldSpec.parts + '\'' +
            ", allowFallback=" + fieldSpec.processFromRaw +
            '}';
+  }
+
+  private ColumnValueSelector<?> makeColumnValueSelectorUsingColumnSelectorFactory(ColumnSelectorFactory factory)
+  {
+    // realtime selectors have no optimization, fallback to json_query/json_value expressions
+    final Expr identifier = Parser.identifier(fieldSpec.columnName);
+    final Expr path = Parser.constant(NestedPathFinder.toNormalizedJsonPath(fieldSpec.parts));
+    final Expr jsonExpr;
+    if (fieldSpec.processFromRaw) {
+      // processFromRaw is true that means JSON_QUERY, which can return partial object results
+      jsonExpr = JSON_QUERY.apply(List.of(identifier, path));
+    } else {
+      // otherwise, this virtual column is JSON_VALUE which only returns primitives
+      final List<Expr> args;
+      if (fieldSpec.expectedType != null) {
+        final Expr castType = Parser.constant(
+            ExpressionType.fromColumnTypeStrict(fieldSpec.expectedType).asTypeString()
+        );
+        args = List.of(identifier, path, castType);
+      } else {
+        args = List.of(identifier, path);
+      }
+      jsonExpr = JSON_VALUE.apply(args);
+    }
+    return ExpressionSelectors.makeColumnValueSelector(factory, jsonExpr);
   }
 
   /**
