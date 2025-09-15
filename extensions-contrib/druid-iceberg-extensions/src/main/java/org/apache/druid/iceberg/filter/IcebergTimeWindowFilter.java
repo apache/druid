@@ -76,12 +76,14 @@ public class IcebergTimeWindowFilter implements IcebergFilter
     Long lookforwardDurationinMicros = (baseTime.getMillis() + lookaheadDuration.getMillis()) * 1000L;
     Expression finalExpr = Expressions.and(
         Expressions.greaterThanOrEqual(
-            filterColumn, Literal.of(lookbackDurationinMicros)
+            filterColumn,
+            Literal.of(lookbackDurationinMicros)
                                  .to(Types.TimestampType.withZone())
                                  .value()
         ),
         Expressions.lessThanOrEqual(
-            filterColumn, Literal.of(lookforwardDurationinMicros)
+            filterColumn,
+            Literal.of(lookforwardDurationinMicros)
                                  .to(Types.TimestampType.withZone())
                                  .value()
         )
