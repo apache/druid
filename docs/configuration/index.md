@@ -627,6 +627,12 @@ On the other hand, if `druid.server.http.errorResponseTransform.allowedRegex` is
 {"error":"Plan validation failed","errorMessage":"org.apache.calcite.runtime.CalciteContextException: From line 1, column 15 to line 1, column 38: Object 'nonexistent-datasource' not found","errorClass":null,"host":null}
 ```
 
+##### Persona based error response transform strategy
+
+In this mode, Druid transforms any exceptions which are targeted at non-users personas. Instead of returning such exception directly, the strategy logs the exception against a random id and returns the id along with a generic error message to the user.
+
+To enable this strategy, set `druid.server.http.errorResponseTransform.strategy` to `persona`.
+
 ### Overlord discovery
 
 This config is used to find the [Overlord](../design/overlord.md) using Curator service discovery. Only required if you are actually running an Overlord.
