@@ -101,6 +101,7 @@ import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
@@ -193,13 +194,14 @@ public class QueryStackTests
   }
 
   public static TestClusterQuerySegmentWalker createClusterQuerySegmentWalker(
-      Map<String, VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>> timelines,
+      Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines,
+      Map<DataSegment, ReferenceCountedSegmentProvider> referenceProviders,
       QueryRunnerFactoryConglomerate conglomerate,
       @Nullable QueryScheduler scheduler,
       Injector injector
   )
   {
-    return new TestClusterQuerySegmentWalker(timelines, conglomerate, scheduler, injector.getInstance(EtagProvider.KEY));
+    return new TestClusterQuerySegmentWalker(timelines, referenceProviders, conglomerate, scheduler, injector.getInstance(EtagProvider.KEY));
   }
 
   public static LocalQuerySegmentWalker createLocalQuerySegmentWalker(

@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.expression;
 
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -29,7 +30,6 @@ import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.LongUnivariateLongFunctionVectorProcessor;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.joda.time.Period;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -38,9 +38,13 @@ import java.util.Objects;
 
 public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
 {
-  public static String forQueryGranularity(Period period)
+  public static String forQueryGranularity(PeriodGranularity period)
   {
-    return FN_NAME + "(" + ColumnHolder.TIME_COLUMN_NAME + ",'" + period + "')";
+    return FN_NAME + "(" + ColumnHolder.TIME_COLUMN_NAME
+           + "," + StringUtils.format("'%s'", period.getPeriod())
+           + "," + (period.getOrigin() == null ? "null" : StringUtils.format("'%s'", period.getOrigin()))
+           + "," + StringUtils.format("'%s'", period.getTimeZone())
+           + ")";
   }
 
   private static final String FN_NAME = "timestamp_floor";

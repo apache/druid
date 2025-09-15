@@ -92,7 +92,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
       }
       catch (Exception e) {
         // Did not want to load the segment for exception handling, hence adding the descriptor in the log to figure out failures.
-        log.error("Error processing segment descriptor: [%s]", baseInput.getSegment().getDescriptor());
+        log.error(e, "Error processing segment descriptor: [%s]", baseInput.getSegment().getDescriptor());
         throw e;
       }
     } else if (baseInput.hasDataServerQuery()) {
@@ -141,8 +141,8 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
    */
   protected Optional<Segment> mapSegment(final Segment segment)
   {
-    // we use wrapUnmanaged here because segment reference tracking and lifecycle management happens elsewhere, so all
+    // we use a new reference counted segment because segment reference tracking and lifecycle management happens elsewhere, so all
     // we need to be able to do here is apply a segment map function since we don't care about the provider
-    return segmentMapFn.apply(ReferenceCountedSegmentProvider.wrapUnmanaged(segment));
+    return segmentMapFn.apply(ReferenceCountedSegmentProvider.unmanaged(segment));
   }
 }

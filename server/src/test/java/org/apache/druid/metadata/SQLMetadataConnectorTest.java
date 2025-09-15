@@ -70,12 +70,11 @@ public class SQLMetadataConnectorTest
   public void testCreateTables()
   {
     final List<String> tables = new ArrayList<>();
-    final String entryType = tablesConfig.getTaskEntryType();
     tables.add(tablesConfig.getConfigTable());
     tables.add(tablesConfig.getSegmentsTable());
     tables.add(tablesConfig.getRulesTable());
-    tables.add(tablesConfig.getLockTable(entryType));
-    tables.add(tablesConfig.getEntryTable(entryType));
+    tables.add(tablesConfig.getTaskLockTable());
+    tables.add(tablesConfig.getTasksTable());
     tables.add(tablesConfig.getAuditTable());
     tables.add(tablesConfig.getSupervisorTable());
 
@@ -115,8 +114,7 @@ public class SQLMetadataConnectorTest
   @Test
   public void testIndexCreationOnTaskTable()
   {
-    final String entryType = tablesConfig.getTaskEntryType();
-    String entryTableName = tablesConfig.getEntryTable(entryType);
+    String entryTableName = tablesConfig.getTasksTable();
     connector.createTaskTables();
     Set<String> createdIndexSet = connector.getIndexOnTable(entryTableName);
     Set<String> expectedIndexSet = Sets.newHashSet(

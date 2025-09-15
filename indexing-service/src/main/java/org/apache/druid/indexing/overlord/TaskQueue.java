@@ -403,13 +403,13 @@ public class TaskQueue
       updateTaskEntry(taskId, entry -> {
         if (entry == null) {
           unknownTaskIds.add(taskId);
-          shutdownUnknownTaskOnRunner(taskId);
+          shutdownTaskOnRunner(taskId, "Task is not present in queue anymore.");
         } else {
           runnerTaskFutures.put(taskId, workItem.getResult());
         }
       });
     }
-    log.info("Cleaned up [%,d] tasks on task runner with IDs[%s].", unknownTaskIds.size(), unknownTaskIds);
+    log.info("Notified task runner to clean up [%,d] tasks with IDs[%s].", unknownTaskIds.size(), unknownTaskIds);
 
     // Attain futures for all active tasks (assuming they are ready to run).
     // Copy tasks list, as notifyStatus may modify it.
@@ -472,14 +472,21 @@ public class TaskQueue
     }
   }
 
-  private void shutdownUnknownTaskOnRunner(String taskId)
+  /**
+   * Triggers a shutdown of the given Task on the {@link TaskRunner}.
+   * The shutdown is invoked on {@link #taskCompleteCallbackExecutor} to avoid
+   * blocking critical paths as task shutdown on the runner may sometimes be slow.
+   */
+  private void shutdownTaskOnRunner(String taskId, String reasonFormat, Object... args)
   {
-    try {
-      taskRunner.shutdown(taskId, "Task is not present in queue anymore.");
-    }
-    catch (Exception e) {
-      log.warn(e, "TaskRunner failed to clean up task[%s].", taskId);
-    }
+    taskCompleteCallbackExecutor.submit(() -> {
+      try {
+        taskRunner.shutdown(taskId, reasonFormat, args);
+      }
+      catch (Throwable e) {
+        log.error(e, "TaskRunner failed to cleanup task[%s] after completion.", taskId);
+      }
+    });
   }
 
   private boolean isTaskPending(Task task)
@@ -536,7 +543,7 @@ public class TaskQueue
       // If this throws with any sort of exception, including TaskExistsException, we don't want to
       // insert the task into our queue. So don't catch it.
       final DateTime insertTime = DateTimes.nowUtc();
-      final TaskInfo<Task, TaskStatus> taskInfo = taskStorage.insert(task, TaskStatus.running(task.getId()));
+      final TaskInfo taskInfo = taskStorage.insert(task, TaskStatus.running(task.getId()));
       // Note: the TaskEntry created for this task doesn't actually use the `insertTime` timestamp, it uses a new
       // timestamp created in the ctor. This prevents races from occurring while syncFromStorage() is happening.
       addTaskInternal(taskInfo, insertTime);
@@ -549,7 +556,7 @@ public class TaskQueue
   }
 
   @GuardedBy("startStopLock")
-  private void addTaskInternal(final TaskInfo<Task, TaskStatus> taskInfo, final DateTime updateTime)
+  private void addTaskInternal(final TaskInfo taskInfo, final DateTime updateTime)
   {
     final AtomicBoolean added = new AtomicBoolean(false);
     final TaskEntry entry = addOrUpdateTaskEntry(
@@ -585,7 +592,7 @@ public class TaskQueue
   @GuardedBy("startStopLock")
   private boolean removeTaskInternal(final String taskId, final DateTime deleteTime)
   {
-    final AtomicReference<TaskInfo<Task, TaskStatus>> removedTask = new AtomicReference<>();
+    final AtomicReference<TaskInfo> removedTask = new AtomicReference<>();
 
     addOrUpdateTaskEntry(
         taskId,
@@ -734,14 +741,7 @@ public class TaskQueue
          .emit();
     }
 
-    // Inform taskRunner that this task can be shut down.
-    try {
-      taskRunner.shutdown(task.getId(), reasonFormat, args);
-    }
-    catch (Throwable e) {
-      // If task runner shutdown fails, continue with the task shutdown routine.
-      log.warn(e, "TaskRunner failed to cleanup task after completion: %s", task.getId());
-    }
+    shutdownTaskOnRunner(task.getId(), reasonFormat, args);
 
     removeTaskLock(task);
     requestManagement();
@@ -837,26 +837,26 @@ public class TaskQueue
 
     try {
       if (active) {
-        final Map<String, TaskInfo<Task, TaskStatus>> newTasks =
+        final Map<String, TaskInfo> newTasks =
             CollectionUtils.toMap(taskStorage.getActiveTaskInfos(), TaskInfo::getId, Function.identity());
-        final Map<String, TaskInfo<Task, TaskStatus>> oldTasks =
+        final Map<String, TaskInfo> oldTasks =
             CollectionUtils.mapValues(activeTasks, entry -> entry.taskInfo);
 
         // Identify the tasks that have been added or removed from the storage
-        final MapDifference<String, TaskInfo<Task, TaskStatus>> mapDifference = Maps.difference(oldTasks, newTasks);
-        final Collection<TaskInfo<Task, TaskStatus>> addedTasks = mapDifference.entriesOnlyOnRight().values();
-        final Collection<TaskInfo<Task, TaskStatus>> removedTasks = mapDifference.entriesOnlyOnLeft().values();
+        final MapDifference<String, TaskInfo> mapDifference = Maps.difference(oldTasks, newTasks);
+        final Collection<TaskInfo> addedTasks = mapDifference.entriesOnlyOnRight().values();
+        final Collection<TaskInfo> removedTasks = mapDifference.entriesOnlyOnLeft().values();
 
         // Remove tasks not present in metadata store if their lastUpdatedTime is before syncStartTime
         int numTasksRemoved = 0;
-        for (TaskInfo<Task, TaskStatus> task : removedTasks) {
+        for (TaskInfo task : removedTasks) {
           if (removeTaskInternal(task.getId(), syncStartTime)) {
             ++numTasksRemoved;
           }
         }
 
         // Add new tasks present in metadata store if their lastUpdatedTime is before syncStartTime
-        for (TaskInfo<Task, TaskStatus> task : addedTasks) {
+        for (TaskInfo task : addedTasks) {
           addTaskInternal(task, syncStartTime);
         }
 
@@ -991,7 +991,7 @@ public class TaskQueue
    */
   public Optional<Task> getActiveTask(String id)
   {
-    final Optional<TaskInfo<Task, TaskStatus>> taskInfo = getActiveTaskInfo(id);
+    final Optional<TaskInfo> taskInfo = getActiveTaskInfo(id);
     if (!taskInfo.isPresent()) {
       return Optional.absent();
     }
@@ -1016,7 +1016,7 @@ public class TaskQueue
    * Gets the {@link TaskInfo} for the given {@code taskId} from {@link #activeTasks} if present,
    * otherwise returns an empty optional.
    */
-  public Optional<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(String taskId)
+  public Optional<TaskInfo> getActiveTaskInfo(String taskId)
   {
     final TaskEntry entry = activeTasks.get(taskId);
     return entry == null ? Optional.absent() : Optional.of(entry.taskInfo);
@@ -1025,7 +1025,7 @@ public class TaskQueue
   /**
    * List of all active and completed task infos currently being managed by this TaskQueue.
    */
-  public List<TaskInfo<Task, TaskStatus>> getTaskInfos()
+  public List<TaskInfo> getTaskInfos()
   {
     return activeTasks.values().stream().map(entry -> entry.taskInfo).collect(Collectors.toList());
   }
@@ -1148,13 +1148,13 @@ public class TaskQueue
    */
   static class TaskEntry
   {
-    private TaskInfo<Task, TaskStatus> taskInfo;
+    private TaskInfo taskInfo;
 
     private DateTime lastUpdatedTime;
     private ListenableFuture<TaskStatus> future = null;
     private boolean isComplete = false;
 
-    TaskEntry(TaskInfo<Task, TaskStatus> taskInfo)
+    TaskEntry(TaskInfo taskInfo)
     {
       this.taskInfo = taskInfo;
       this.lastUpdatedTime = DateTimes.nowUtc();

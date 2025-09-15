@@ -29,6 +29,8 @@ import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.query.expression.LookupExprMacro;
 import org.apache.druid.query.expression.NestedDataExpressions;
+import org.apache.druid.query.expression.TimestampCeilExprMacro;
+import org.apache.druid.query.expression.TimestampExtractExprMacro;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.query.expression.TimestampShiftExprMacro;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
@@ -38,6 +40,7 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -84,6 +87,8 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
 
   private static final ExprMacroTable MACRO_TABLE = new ExprMacroTable(
       ImmutableList.of(
+          new TimestampCeilExprMacro(),
+          new TimestampExtractExprMacro(),
           new TimestampFloorExprMacro(),
           new TimestampShiftExprMacro(),
           new NestedDataExpressions.JsonObjectExprMacro(),
@@ -349,6 +354,61 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testIfFunction()
+  {
+    testExpression("if(l1, l1, l2)", types);
+    testExpression("if(l1, s1, s2)", types);
+    testExpression("if(l1, d1, d2)", types);
+    testExpression("if(d1, l1, l2)", types);
+    testExpression("if(d1, s1, s2)", types);
+    testExpression("if(d1, d1, d2)", types);
+    testExpression("if(boolString1, s1, s2)", types);
+    testExpression("if(boolString1, l1, l2)", types);
+    testExpression("if(boolString1, d1, d2)", types);
+    // make sure eval of else is lazy, else this would be divide by zero error
+    testExpression("if(l1 % 2 == 0, -1, l2 / (l1 % 2))", types);
+    // cannot vectorize mixed types
+    Assertions.assertFalse(
+        Parser.parse("if(s1, l1, d2)", MACRO_TABLE).canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
+    Assertions.assertFalse(
+        Parser.parse("if(s1, d1, s2)", MACRO_TABLE).canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
+  }
+
+  @Test
+  public void testCaseSearchedFunction()
+  {
+    testExpression("case_searched(boolString1, s1, boolString2, s2, s1)", types);
+    testExpression("case_searched(boolString1, l1, boolString2, l2, l2)", types);
+    testExpression("case_searched(boolString1, d1, boolString2, d2, d1)", types);
+    testExpression("case_searched(l1 % 2 == 0, -1, l1 % 2 == 1, l2 / (l1 % 2))", types);
+    Assertions.assertFalse(
+        Parser.parse("case_searched(boolString1, d1, boolString2, d2, l1)", MACRO_TABLE)
+              .canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
+    Assertions.assertFalse(
+        Parser.parse("case_searched(boolString1, d1, boolString2, l1, d1)", MACRO_TABLE)
+              .canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
+  }
+
+  @Test
+  public void testCaseSimpleFunction()
+  {
+    testExpression("case_simple(s1, s2, s2, s1, s2)", types);
+    testExpression("case_simple(s1, s2, s2, s1, s2, s1)", types);
+    testExpression("case_simple(s1, s2, l1, s1, l2)", types);
+    testExpression("case_simple(s1, s2, d1, s1, d2, d1)", types);
+    testExpression("case_simple(s1, l1, d1, d1, d2, d1)", types);
+    Assertions.assertFalse(
+        Parser.parse("case_simple(s1, d1, s1, l1, d1)", MACRO_TABLE)
+              .canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
+  }
+
+
+  @Test
   public void testStringFns()
   {
     testExpression("s1 + s2", types);
@@ -397,7 +457,20 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   @Test
   public void testTimeFunctions()
   {
+    testExpression("timestamp_ceil(l1, 'P1D')", types);
+    testExpression("timestamp_ceil(l1, 'PT1H')", types);
+    testExpression("timestamp_floor(l1, 'P1D')", types);
     testExpression("timestamp_floor(l1, 'PT1H')", types);
+    testExpression("timestamp_extract(l1, 'MILLENNIUM')", types);
+    testExpression("timestamp_extract(l1, 'CENTURY')", types);
+    testExpression("timestamp_extract(l1, 'YEAR')", types);
+    testExpression("timestamp_extract(l1, 'MONTH')", types);
+    testExpression("timestamp_extract(l1, 'DAY')", types);
+    testExpression("timestamp_extract(l1, 'HOUR')", types);
+    testExpression("timestamp_extract(l1, 'MINUTE')", types);
+    testExpression("timestamp_extract(l1, 'SECOND')", types);
+    testExpression("timestamp_extract(l1, 'MILLISECOND')", types);
+    testExpression("timestamp_extract(l1, 'EPOCH')", types);
     testExpression("timestamp_shift(l1, 'P1M', 1)", types);
   }
 
@@ -687,5 +760,4 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
 
     return new NonnullPair<>(objectBindings, vectorBinding);
   }
-
 }

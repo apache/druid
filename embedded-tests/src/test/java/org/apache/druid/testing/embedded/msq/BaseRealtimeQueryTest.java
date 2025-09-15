@@ -41,14 +41,13 @@ import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.joda.time.Period;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
 /**
  * Base test for Kafka related embedded test.
@@ -71,12 +70,20 @@ public class BaseRealtimeQueryTest extends EmbeddedClusterTestBase
         .addResource(kafka);
   }
 
-  @BeforeEach
-  void setupCreateKafkaTopic()
+  @BeforeAll
+  void setupCreateKafkaTopicAndDatasource()
   {
     // Create Kafka topic.
     topic = EmbeddedClusterApis.createTestDatasourceName();
     kafka.createTopicWithPartitions(topic, 2);
+
+    super.refreshDatasourceName();
+  }
+
+  @Override
+  protected void refreshDatasourceName()
+  {
+    // Do not refresh datasource name to allow reuse
   }
 
   /**
@@ -123,8 +130,8 @@ public class BaseRealtimeQueryTest extends EmbeddedClusterTestBase
     );
   }
 
-  @AfterEach
-  void tearDownEach() throws ExecutionException, InterruptedException, IOException
+  @AfterAll
+  void tearDownAll() throws IOException
   {
     final Map<String, String> terminateSupervisorResult =
         cluster.callApi().onLeaderOverlord(o -> o.terminateSupervisor(dataSource));

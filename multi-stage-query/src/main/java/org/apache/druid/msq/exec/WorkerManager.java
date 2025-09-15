@@ -20,7 +20,9 @@
 package org.apache.druid.msq.exec;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import it.unimi.dsi.fastutil.ints.IntObjectPair;
 import org.apache.druid.msq.indexing.WorkerCount;
+import org.apache.druid.msq.indexing.error.MSQFault;
 
 import java.util.List;
 import java.util.Map;
@@ -42,19 +44,23 @@ public interface WorkerManager
    * resolves to an exception if one of the workers fails without being explicitly canceled, or if something else
    * goes wrong.
    */
-  ListenableFuture<?> start(WorkerFailureListener workerFailureListener);
+  ListenableFuture<?> start();
 
   /**
    * Launch additional workers, if needed, to bring the number of running workers up to {@code workerCount}.
    * Blocks until the requested workers are launched. If enough workers are already running, this method does nothing.
+   *
+   * @return Worker numbers and the fault that caused them to fail. An empty set means all requested workers were launched successfully.
    */
-  void launchWorkersIfNeeded(int workerCount) throws InterruptedException;
+  Set<IntObjectPair<MSQFault>> launchWorkersIfNeeded(int workerCount) throws InterruptedException;
 
   /**
    * Blocks until workers with the provided worker numbers (indexes into {@link #getWorkerIds()} are ready to be
    * contacted for work.
+   *
+   * @return Worker numbers and the fault that caused them to fail. An empty set means all requested workers were launched successfully.
    */
-  void waitForWorkers(Set<Integer> workerNumbers) throws InterruptedException;
+  Set<IntObjectPair<MSQFault>> waitForWorkers(Set<Integer> workerNumbers) throws InterruptedException;
 
 
   /**

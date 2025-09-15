@@ -81,8 +81,7 @@ public class UnnestDimensionCursor implements Cursor
   public UnnestDimensionCursor(
       Cursor cursor,
       ColumnSelectorFactory baseColumnSelectorFactory,
-      VirtualColumn unnestColumn,
-      String outputColumnName
+      VirtualColumn unnestColumn
   )
   {
     this.baseCursor = cursor;
@@ -91,9 +90,9 @@ public class UnnestDimensionCursor implements Cursor
         DefaultDimensionSpec.of(unnestColumn.getOutputName()),
         this.baseColumnSelectorFactory
     );
-    this.unnestColumn = unnestColumn;
     this.index = 0;
-    this.outputName = outputColumnName;
+    this.unnestColumn = unnestColumn;
+    this.outputName = unnestColumn.getOutputName();
     this.needInitialization = true;
     // this shouldn't happen, but just in case...
     final IdLookup lookup = Preconditions.checkNotNull(dimSelector.idLookup());

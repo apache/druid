@@ -318,7 +318,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
     SimpleThreadingTaskRunner(String threadNameBase)
     {
-      service = MoreExecutors.listeningDecorator(Execs.multiThreaded(5, threadNameBase + "-%d"));
+      service = MoreExecutors.listeningDecorator(Execs.multiThreaded(20, threadNameBase + "-%d"));
       taskKiller.scheduleAtFixedRate(
           () -> {
             for (TaskContainer taskContainer : tasks.values()) {

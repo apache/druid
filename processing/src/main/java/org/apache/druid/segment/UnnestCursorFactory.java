@@ -22,8 +22,8 @@ package org.apache.druid.segment;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.DimFilter;
@@ -51,7 +51,6 @@ import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -79,43 +78,19 @@ public class UnnestCursorFactory implements CursorFactory
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
     final String input = getUnnestInputIfDirectAccess(unnestColumn);
-    final Pair<Filter, Filter> filterPair = computeBaseAndPostUnnestFilters(
+    final UnnestFilterSplit filterSplit = computeBaseAndPostUnnestFilters(
         spec.getFilter(),
         filter != null ? filter.toFilter() : null,
         spec.getVirtualColumns(),
+        unnestColumn,
         input,
-        input == null ? null : spec.getVirtualColumns()
-                                   .getColumnCapabilitiesWithFallback(baseCursorFactory, input)
+        input == null ? null : spec.getVirtualColumns().getColumnCapabilitiesWithFallback(baseCursorFactory, input)
     );
-    final Set<String> physicalColumns;
-    if (spec.getPhysicalColumns() == null) {
-      physicalColumns = null;
-    } else {
-      physicalColumns = new HashSet<>();
-      for (String column : unnestColumn.requiredColumns()) {
-        if (!spec.getVirtualColumns().exists(column)) {
-          physicalColumns.add(column);
-        }
-      }
-      if (filter != null) {
-        for (String column : filter.getRequiredColumns()) {
-          if (!spec.getVirtualColumns().exists(column)) {
-            physicalColumns.add(column);
-          }
-        }
-      }
-      for (String column : spec.getPhysicalColumns()) {
-        if (!column.equals(unnestColumn.getOutputName())) {
-          physicalColumns.add(column);
-        }
-      }
-    }
-    final CursorBuildSpec unnestBuildSpec =
-        CursorBuildSpec.builder(spec)
-                       .setFilter(filterPair.lhs)
-                       .setPhysicalColumns(physicalColumns)
-                       .setVirtualColumns(VirtualColumns.create(Collections.singletonList(unnestColumn)))
-                       .build();
+    final CursorBuildSpec unnestBuildSpec = transformCursorBuildSpec(
+        spec,
+        unnestColumn,
+        filterSplit.getBaseTableFilter()
+    );
 
     return new CursorHolder()
     {
@@ -141,21 +116,19 @@ public class UnnestCursorFactory implements CursorFactory
           unnestCursor = new UnnestDimensionCursor(
               cursor,
               cursor.getColumnSelectorFactory(),
-              unnestColumn,
-              unnestColumn.getOutputName()
+              unnestColumn
           );
         } else {
           unnestCursor = new UnnestColumnValueSelectorCursor(
               cursor,
               cursor.getColumnSelectorFactory(),
-              unnestColumn,
-              unnestColumn.getOutputName()
+              unnestColumn
           );
         }
         return PostJoinCursor.wrap(
             unnestCursor,
             spec.getVirtualColumns(),
-            filterPair.rhs
+            filterSplit.getPostUnnestFilter()
         );
       }
 
@@ -235,10 +208,11 @@ public class UnnestCursorFactory implements CursorFactory
    * @return pair of pre- and post-unnest filters
    */
   @VisibleForTesting
-  public Pair<Filter, Filter> computeBaseAndPostUnnestFilters(
+  static UnnestFilterSplit computeBaseAndPostUnnestFilters(
       @Nullable final Filter queryFilter,
       @Nullable final Filter unnestFilter,
       final VirtualColumns queryVirtualColumns,
+      final VirtualColumn unnestColumn,
       @Nullable final String inputColumn,
       @Nullable final ColumnCapabilities inputColumnCapabilites
   )
@@ -290,6 +264,7 @@ public class UnnestCursorFactory implements CursorFactory
         if (queryFilter instanceof BooleanFilter) {
           List<Filter> preFilterList = recursiveRewriteOnUnnestFilters(
               (BooleanFilter) queryFilter,
+              unnestColumn,
               inputColumn,
               inputColumnCapabilites,
               filterSplitter
@@ -316,7 +291,7 @@ public class UnnestCursorFactory implements CursorFactory
     }
     filterSplitter.addPostFilterWithPreFilterIfRewritePossible(unnestFilter, false);
 
-    return Pair.of(
+    return new UnnestFilterSplit(
         Filters.maybeAnd(filterSplitter.filtersPushedDownToBaseCursor).orElse(null),
         Filters.maybeAnd(filterSplitter.filtersForPostUnnestCursor).orElse(null)
     );
@@ -343,8 +318,9 @@ public class UnnestCursorFactory implements CursorFactory
    * @param inputColumn            input column to unnest if it's a direct access; otherwise null
    * @param inputColumnCapabilites input column capabilities if known; otherwise null
    */
-  private List<Filter> recursiveRewriteOnUnnestFilters(
+  private static List<Filter> recursiveRewriteOnUnnestFilters(
       BooleanFilter queryFilter,
+      VirtualColumn unnestColumn,
       final String inputColumn,
       final ColumnCapabilities inputColumnCapabilites,
       final FilterSplitter filterSplitter
@@ -356,6 +332,7 @@ public class UnnestCursorFactory implements CursorFactory
         if (filter instanceof AndFilter) {
           List<Filter> andChildFilters = recursiveRewriteOnUnnestFilters(
               (BooleanFilter) filter,
+              unnestColumn,
               inputColumn,
               inputColumnCapabilites,
               filterSplitter
@@ -366,6 +343,7 @@ public class UnnestCursorFactory implements CursorFactory
         } else if (filter instanceof OrFilter) {
           List<Filter> orChildFilters = recursiveRewriteOnUnnestFilters(
               (BooleanFilter) filter,
+              unnestColumn,
               inputColumn,
               inputColumnCapabilites,
               filterSplitter
@@ -449,7 +427,7 @@ public class UnnestCursorFactory implements CursorFactory
    * Computes the capabilities of {@link #unnestColumn}, after unnesting.
    */
   @Nullable
-  public static ColumnCapabilities computeOutputColumnCapabilities(
+  static ColumnCapabilities computeOutputColumnCapabilities(
       final ColumnInspector baseColumnInspector,
       final VirtualColumn unnestColumn
   )
@@ -473,6 +451,74 @@ public class UnnestCursorFactory implements CursorFactory
                                    .setDictionaryEncoded(useDimensionCursor)
                                    .setDictionaryValuesUnique(useDimensionCursor);
     }
+  }
+
+  /**
+   * Converts a {@link CursorBuildSpec} to the base table {@link CursorBuildSpec}, ensuring that all required columns
+   * of the original spec are added to {@link CursorBuildSpec#getPhysicalColumns()} and the unnest column is added to
+   * {@link CursorBuildSpec#getVirtualColumns()}
+   */
+  @VisibleForTesting
+  static CursorBuildSpec transformCursorBuildSpec(
+      CursorBuildSpec spec,
+      VirtualColumn unnestColumn,
+      @Nullable Filter baseTableFilter
+  )
+  {
+    final Set<String> physicalColumns;
+    if (spec.getPhysicalColumns() == null) {
+      physicalColumns = null;
+    } else {
+      physicalColumns = new HashSet<>();
+
+      // add all physical columns, skip unnest column if specified as a physical column, we'll deal with it next
+      for (String column : spec.getPhysicalColumns()) {
+        if (!column.equals(unnestColumn.getOutputName())) {
+          physicalColumns.add(column);
+        }
+      }
+
+      // add all unnest input physical columns
+      for (String input : unnestColumn.requiredColumns()) {
+        if (!spec.getVirtualColumns().exists(input)) {
+          physicalColumns.add(input);
+        }
+      }
+
+      // add all the base table filter columns. this is probably unecessary - while part of the filter might have been
+      // on the unnest rather than the query and so its required columns missing from the physical column list, it is
+      // likely the unnest filter is only referencing the unnest column, which is already covered by the physical
+      // column substitution... however just in case something wild happened on the spec we add all these too
+      if (baseTableFilter != null) {
+        for (String column : baseTableFilter.getRequiredColumns()) {
+          if (!spec.getVirtualColumns().exists(column)) {
+            physicalColumns.add(column);
+          }
+        }
+      }
+    }
+
+    // trim off the grouping, aggregators, and ordering (other than time) to turn this into a plain scan cursor build
+    // spec this could be improved in the future to be able to match projections. in some cases, we could push this
+    // through as a grouping, but would need to push in all the query virtual columns, and ensure that aggregators do
+    // not refer to the unnest column (the filter has already been preprocessed and passed in as a separate argument to
+    // this method)
+    Order timeOrder = Cursors.getTimeOrdering(spec.getPreferredOrdering());
+    List<OrderBy> maybeOrderByTime = List.of();
+    if (timeOrder == Order.DESCENDING) {
+      maybeOrderByTime = Cursors.descendingTimeOrder();
+    } else if (timeOrder == Order.ASCENDING) {
+      maybeOrderByTime = Cursors.ascendingTimeOrder();
+    }
+    return CursorBuildSpec.builder()
+                          .setInterval(spec.getInterval())
+                          .setFilter(baseTableFilter)
+                          .setPhysicalColumns(physicalColumns)
+                          .setVirtualColumns(VirtualColumns.create(List.of(unnestColumn)))
+                          .setPreferredOrdering(maybeOrderByTime)
+                          .setQueryContext(spec.getQueryContext())
+                          .setQueryMetrics(spec.getQueryMetrics())
+                          .build();
   }
 
   /**
@@ -616,6 +662,33 @@ public class UnnestCursorFactory implements CursorFactory
     public int getPreFilterCount()
     {
       return preFilterCount;
+    }
+  }
+
+  @VisibleForTesting
+  static final class UnnestFilterSplit
+  {
+    @Nullable
+    private final Filter baseTableFilter;
+    @Nullable
+    private final Filter postUnnestFilter;
+
+    private UnnestFilterSplit(@Nullable Filter baseTableFilter, @Nullable Filter postUnnestFilter)
+    {
+      this.baseTableFilter = baseTableFilter;
+      this.postUnnestFilter = postUnnestFilter;
+    }
+
+    @Nullable
+    public Filter getBaseTableFilter()
+    {
+      return baseTableFilter;
+    }
+
+    @Nullable
+    public Filter getPostUnnestFilter()
+    {
+      return postUnnestFilter;
     }
   }
 }

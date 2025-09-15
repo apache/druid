@@ -75,11 +75,6 @@
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>druid-kafka-indexing-service</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
             <groupId>org.apache.druid.integration-tests</groupId>
             <artifactId>druid-it-tools</artifactId>
             <version>${project.parent.version}</version>
@@ -249,11 +244,6 @@
 
         <dependency>
             <groupId>org.apache.druid</groupId>
-            <artifactId>druid-sql</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid</groupId>
             <artifactId>druid-multi-stage-query</artifactId>
             <version>${project.parent.version}</version>
             <scope>provided</scope>
@@ -261,12 +251,6 @@
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-catalog</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid.extensions.contrib</groupId>
-            <artifactId>druid-exact-count-bitmap</artifactId>
             <version>${project.parent.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -400,30 +384,12 @@
             </properties>
         </profile>
         <profile>
-            <id>IT-Query</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <properties>
-                <it.category>Query</it.category>
-            </properties>
-        </profile>
-        <profile>
             <id>IT-MultiStageQuery</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
             </activation>
             <properties>
                 <it.category>MultiStageQuery</it.category>
-            </properties>
-        </profile>
-        <profile>
-            <id>IT-MultiStageQueryWithMM</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <properties>
-                <it.category>MultiStageQueryWithMM</it.category>
             </properties>
         </profile>
         <profile>
@@ -442,15 +408,6 @@
             </activation>
             <properties>
                 <it.category>GcsDeepStorage</it.category>
-            </properties>
-        </profile>
-        <profile>
-            <id>IT-BackwardCompatibilityMain</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <properties>
-                <it.category>BackwardCompatibilityMain</it.category>
             </properties>
         </profile>
         <profile>
@@ -540,15 +497,6 @@
                     </plugin>
                 </plugins>
             </build>
-        </profile>
-        <profile>
-            <id>IT-DruidExactCountBitmap</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <properties>
-                <it.category>DruidExactCountBitmap</it.category>
-            </properties>
         </profile>
     </profiles>
 </project>

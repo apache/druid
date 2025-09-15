@@ -310,6 +310,7 @@ public class RowBasedFrameWriter implements FrameWriter
       catch (Exception e) {
         throw InvalidFieldException.builder().column(signature.getColumnName(i))
                                    .errorMsg(e.getMessage())
+                                   .cause(e)
                                    .build();
       }
 

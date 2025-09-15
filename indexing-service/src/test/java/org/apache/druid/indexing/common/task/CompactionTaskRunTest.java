@@ -1606,6 +1606,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     List<String> rowsFromSegment = new ArrayList<>();
     for (DataSegment segment : segments) {
+      segmentCacheManager.load(segment);
       final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
 
       final WindowedCursorFactory windowed = new WindowedCursorFactory(
@@ -1726,6 +1727,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     List<String> rowsFromSegment = new ArrayList<>();
     for (DataSegment segment : segments) {
+      segmentCacheManager.load(segment);
       final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
 
       final WindowedCursorFactory windowed = new WindowedCursorFactory(
@@ -1851,6 +1853,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir);
 
     List<String> rowsFromSegment = new ArrayList<>();
+    segmentCacheManager.load(compactSegment);
     final File segmentFile = segmentCacheManager.getSegmentFiles(compactSegment);
 
     final QueryableIndex queryableIndex = testUtils.getTestIndexIO().loadIndex(segmentFile);
@@ -2107,6 +2110,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     List<String> rowsFromSegment = new ArrayList<>();
     for (DataSegment segment : segments) {
+      segmentCacheManager.load(segment);
       final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
 
       final WindowedCursorFactory windowed = new WindowedCursorFactory(

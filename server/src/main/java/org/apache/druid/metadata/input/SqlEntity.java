@@ -28,7 +28,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.SQLInputSourceDatabaseConnector;
-import org.apache.druid.metadata.SQLMetadataStorageActionHandler;
+import org.apache.druid.metadata.SQLMetadataConnector;
 import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.exceptions.ResultSetException;
 
@@ -162,7 +162,7 @@ public class SqlEntity implements InputEntity
             return null;
           },
           (exception) -> sqlInputSourceDatabaseConnector.isTransientException(exception)
-                         && !(SQLMetadataStorageActionHandler.isStatementException(exception))
+                         && !(SQLMetadataConnector.isStatementException(exception))
       );
       return new CleanableFile()
       {

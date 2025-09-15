@@ -699,7 +699,10 @@ public class IndexIO
         Interval dataInterval
     ) throws IOException
     {
+      final String timeColumnName = projectionSpec.getSchema().getTimeColumnName();
+      final boolean renameTime = !ColumnHolder.TIME_COLUMN_NAME.equals(timeColumnName);
       final Map<String, Supplier<ColumnHolder>> projectionColumns = new LinkedHashMap<>();
+
       for (String groupingColumn : projectionSpec.getSchema().getGroupingColumns()) {
         final String smooshName = Projections.getProjectionSmooshV9FileName(projectionSpec, groupingColumn);
         final ByteBuffer colBuffer = smooshedFiles.mapFile(smooshName);
@@ -721,7 +724,7 @@ public class IndexIO
             loadFailed
         );
 
-        if (groupingColumn.equals(projectionSpec.getSchema().getTimeColumnName())) {
+        if (groupingColumn.equals(timeColumnName) && renameTime) {
           projectionColumns.put(ColumnHolder.TIME_COLUMN_NAME, projectionColumns.get(groupingColumn));
           projectionColumns.remove(groupingColumn);
         }
@@ -740,7 +743,7 @@ public class IndexIO
             loadFailed
         );
       }
-      if (projectionSpec.getSchema().getTimeColumnName() == null) {
+      if (timeColumnName == null) {
         projectionColumns.put(
             ColumnHolder.TIME_COLUMN_NAME,
             ConstantTimeColumn.makeConstantTimeSupplier(projectionSpec.getNumRows(), dataInterval.getStartMillis())
