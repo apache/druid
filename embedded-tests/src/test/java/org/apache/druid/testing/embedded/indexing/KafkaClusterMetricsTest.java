@@ -202,11 +202,12 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
         .withScaleInThreshold(10000)
         .withTriggerScaleOutFractionThreshold(0.001)
         .withTriggerScaleInFractionThreshold(0.1)
-        .withTaskCountMax(10)
+        .withTaskCountMax(3)
         .withTaskCountMin(taskCount)
         .withScaleOutStep(1)
         .withScaleInStep(0)
         .withMinTriggerScaleActionFrequencyMillis(5000)
+        .withStopTaskCountRatio(1.0)
         .build();
 
     final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(
@@ -221,8 +222,6 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
         supervisorId,
         cluster.callApi().postSupervisor(kafkaSupervisorSpec)
     );
-
-    overlord.latchableEmitter().waitForEvent(event -> event.hasMetricName("task/autoScaler/requiredCount"));
 
     overlord.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("task/autoScaler/scaleActionTime")

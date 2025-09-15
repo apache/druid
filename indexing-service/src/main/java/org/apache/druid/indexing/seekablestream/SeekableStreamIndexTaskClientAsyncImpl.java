@@ -217,7 +217,10 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
         .jsonContent(jsonMapper, updateRequest);
     return makeRequest(taskId, requestBuilder)
         .handler(IgnoreHttpResponseHandler.INSTANCE)
-        .onSuccess(r -> true)
+        .onSuccess(r -> {
+          log.info("Successfully updated config for task [%s]", taskId);
+          return true;
+        })
         .onHttpError(e -> {
           log.warn("Task [%s] config update failed due to http request failure [%s].", taskId, e.getMessage());
           return Either.value(false);

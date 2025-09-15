@@ -758,29 +758,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     log.info("Sending configuration updates to the following partition groups %s", newPartitionGroups);
     List<ListenableFuture<Boolean>> updateFutures = new ArrayList<>();
     Map<PartitionIdType, SequenceOffsetType> latestCommittedOffsets = getOffsetsFromMetadataStorage();
-    for (Map.Entry<Integer, Set<PartitionIdType>> entry : newPartitionGroups.entrySet()) {
+    for (Map.Entry<Integer, TaskGroup> entry: activelyReadingTaskGroups.entrySet()) {
       int taskGroupId = entry.getKey();
-      Set<PartitionIdType> partitions = entry.getValue();
+      TaskGroup existingTaskGroup = entry.getValue();
 
-      TaskGroup existingTaskGroup = activelyReadingTaskGroups.get(taskGroupId);
-      log.info("Latest Committed Offsets from Metadata Storage: %s", latestCommittedOffsets);
-      log.info("Latest Committed Offsets from Task Pause: %s", latestTaskOffsetsOnPause);
-      if (existingTaskGroup != null) {
-        for (String taskId : existingTaskGroup.taskIds()) {
-          SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig = createUpdatedTaskIoConfig(
-              partitions,
-              existingTaskGroup,
-              latestCommittedOffsets,
-              latestTaskOffsetsOnPause
-          );
-          TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(newIoConfig);
-
-          log.debug("Updating config for task [%s] with partitions [%s]", taskId, partitions);
-          updateFutures.add(taskClient.updateConfigAsync(taskId, updateRequest));
-        }
+      Set<PartitionIdType> partitionsForThisTask = new HashSet<>(newPartitionGroups.get(taskGroupId));
+      SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig = createUpdatedTaskIoConfig(
+          partitionsForThisTask,
+          existingTaskGroup,
+          latestCommittedOffsets,
+          latestTaskOffsetsOnPause
+      );
+      TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(newIoConfig);
+      for (String taskId : existingTaskGroup.taskIds()) {
+        log.info("Updating config for task [%s] with partitions [%s]", taskId, partitionsForThisTask);
+        updateFutures.add(taskClient.updateConfigAsync(taskId, updateRequest));
       }
     }
-
 
     if (updateFutures.isEmpty()) {
       log.info("No configuration updates needed");
@@ -1051,13 +1045,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
         // check validity of previousCheckpoint
         int index = checkpoints.size();
+        // latest checkpoints are being compared first.
         for (int sequenceId : checkpoints.descendingKeySet()) {
           Map<PartitionIdType, SequenceOffsetType> checkpoint = checkpoints.get(sequenceId);
           // We have already verified the stream of the current checkpoint is same with that in ioConfig.
           // See checkpoint().
-          if (checkpoint.equals(checkpointMetadata.getSeekableStreamSequenceNumbers()
-                                                  .getPartitionSequenceNumberMap()
-          )) {
+          if (isCheckpointSignatureValid(checkpoint, checkpointMetadata)) {
             break;
           }
           index--;
@@ -1109,6 +1102,31 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     {
       return TYPE;
     }
+  }
+
+  /**
+   * This function verifies whether the checkpoint received from a task is valid or not.
+   * In non-perpetual tasks, the checkpoint is valid if it matches one of the partition <> sequence numbers in the task checkpoints.
+   * In perpetual tasks, this does not hold valid anymore because partition assignments can change during dynamic scaling. We'll compare
+   * it with supervisor level partition group's partition assignments now.
+   */
+  private boolean isCheckpointSignatureValid(
+      Map<PartitionIdType, SequenceOffsetType> checkpoint,
+      SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> checkpointMetadata
+  )
+  {
+    var checkpointPresentAlready = checkpoint;
+    var checkpointProposed = checkpointMetadata.getSeekableStreamSequenceNumbers().getPartitionSequenceNumberMap();
+    // TODO: Think about what we can do here for now.
+    if (spec.usePerpetuallyRunningTasks()) {
+//      Set<PartitionIdType> assignedPartitions = partitionGroups.getOrDefault(
+//          checkpointMetadata.getTaskGroupId(),
+//          Collections.emptySet()
+//      );
+      return true;
+    }
+
+    return checkpoint.equals(checkpointMetadata.getSeekableStreamSequenceNumbers().getPartitionSequenceNumberMap());
   }
 
   // Map<{group id}, {actively reading task group}>; see documentation for TaskGroup class
@@ -3832,9 +3850,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                       checkpointsToWaitFor -= setEndOffsetFutures.size();
                       if (checkpointsToWaitFor <= 0) {
                         log.info("All tasks in current task groups have been checkpointed, resuming dynamic allocation");
-                        boolean configUpdateResult = pendingConfigUpdateHook.call();
-                        checkpointsToWaitFor = 0;
                         pendingConfigUpdateHook.call();
+                        checkpointsToWaitFor = 0;
+                        pendingConfigUpdateHook = null;
                       } else {
                         log.info("Waiting for [%d] more checkpoints before resuming dynamic allocation", checkpointsToWaitFor);
                       }
