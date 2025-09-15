@@ -964,11 +964,14 @@ Each line can be further parsed using [`parseSpec`](#parsespec).
 
 :::caution[Deprecated]
 
-Hadoop-based ingestion is deprecated. We recommend one of Druid's other supported ingestion methods, such as [SQL-based ingestion](../multi-stage-query/index.md) or [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md)
+Hadoop-based ingestion is deprecated and scheduled to be removed with Druid 37.0.0.
 
-You must now explicitly opt-in to using the deprecated `index_hadoop` task type. To opt-in, set `druid.indexer.task.allowHadoopTaskExecution` to `true` in your `common.runtime.properties` file. For more information, see [#18239](https://github.com/apache/druid/pull/18239)
+We recommend one of Druid's other supported ingestion methods, such as [SQL-based ingestion](../multi-stage-query/index.md) or [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md)
+
+You must now explicitly opt-in to using the deprecated `index_hadoop` task type. To opt-in, set `druid.indexer.task.allowHadoopTaskExecution` to `true` in your `common.runtime.properties` file. For more information, see [#18239](https://github.com/apache/druid/pull/18239).
 
 :::
+
 
 :::info
 You need to include [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Hadoop Parser.
@@ -1030,6 +1033,17 @@ For example, using Avro Hadoop parser with custom reader's schema file:
 ```
 
 ### ORC Hadoop Parser
+
+:::caution[Deprecated]
+
+Hadoop-based ingestion is deprecated and scheduled to be removed with Druid 37.0.0.
+
+We recommend one of Druid's other supported ingestion methods, such as [SQL-based ingestion](../multi-stage-query/index.md) or [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md)
+
+You must now explicitly opt-in to using the deprecated `index_hadoop` task type. To opt-in, set `druid.indexer.task.allowHadoopTaskExecution` to `true` in your `common.runtime.properties` file. For more information, see [#18239](https://github.com/apache/druid/pull/18239).
+
+:::
+
 
 :::info
  You need to include the [`druid-orc-extensions`](../development/extensions-core/orc.md) as an extension to use the ORC Hadoop Parser.
@@ -1276,6 +1290,17 @@ setting `"mapreduce.job.user.classpath.first": "true"`, then this will not be an
 
 ### Parquet Hadoop Parser
 
+:::caution[Deprecated]
+
+Hadoop-based ingestion is deprecated and scheduled to be removed with Druid 37.0.0.
+
+We recommend one of Druid's other supported ingestion methods, such as [SQL-based ingestion](../multi-stage-query/index.md) or [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md)
+
+You must now explicitly opt-in to using the deprecated `index_hadoop` task type. To opt-in, set `druid.indexer.task.allowHadoopTaskExecution` to `true` in your `common.runtime.properties` file. For more information, see [#18239](https://github.com/apache/druid/pull/18239).
+
+:::
+
+
 :::info
  You need to include the [`druid-parquet-extensions`](../development/extensions-core/parquet.md) as an extension to use the Parquet Hadoop Parser.
 :::
@@ -1419,6 +1444,17 @@ However, the Parquet Avro Hadoop Parser was the original basis for supporting th
 ```
 
 ### Parquet Avro Hadoop Parser
+
+:::caution[Deprecated]
+
+Hadoop-based ingestion is deprecated and scheduled to be removed with Druid 37.0.0.
+
+We recommend one of Druid's other supported ingestion methods, such as [SQL-based ingestion](../multi-stage-query/index.md) or [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md)
+
+You must now explicitly opt-in to using the deprecated `index_hadoop` task type. To opt-in, set `druid.indexer.task.allowHadoopTaskExecution` to `true` in your `common.runtime.properties` file. For more information, see [#18239](https://github.com/apache/druid/pull/18239).
+
+:::
+
 
 :::info
  Consider using the [Parquet Hadoop Parser](#parquet-hadoop-parser) over this parser to ingest

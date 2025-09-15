@@ -42,7 +42,15 @@ If you're already using this feature, you don't need to take any action.
 
 ### Upgrade notes
 
+#### Java 11 support
+
+**Update**: Support for Java 11 is scheduled to end with Druid 37.0.0. 
+
+Java 11 support has been deprecated since Druid 32.0, and official support will be removed as early as Druid 35.0.0
+
 #### Hadoop-based ingestion
+
+**Update**: Support for Hadoop-based ingestion is scheduled to end with Druid 37.0.0.
 
 Hadoop-based ingestion has been deprecated since Druid 32.0 and will be removed as early as Druid 35.0.0. 
 
