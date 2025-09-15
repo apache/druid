@@ -38,6 +38,85 @@ For more information, see [Migration guide: front-coded dictionaries](./migr-fro
 
 If you're already using this feature, you don't need to take any action. 
 
+## 34.0.0
+
+### Upgrade notes
+
+#### Hadoop-based ingestion
+
+Hadoop-based ingestion has been deprecated since Druid 32.0 and will be removed as early as Druid 35.0.0. 
+
+We recommend one of Druid's other supported ingestion methods, such as [SQL-based ingestion](../multi-stage-query/index.md) or [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md).
+
+As part of this change, you must now opt-in to using the deprecated `index_hadoop` task type. If you don't do this, your Hadoop-based ingestion tasks will fail.
+
+To opt-in, set `druid.indexer.task.allowHadoopTaskExecution` to `true` in your `common.runtime.properties` file.
+[#18239](https://github.com/apache/druid/pull/18239)
+
+#### `groupBy` and `topN` queries
+
+Druid now uses the `groupBy` native query type, rather than `topN`, for SQL queries that group
+by and order by the same column, have `LIMIT`, and don't have `HAVING`. This speeds up execution
+of such queries since `groupBy` is vectorized while `topN` is not. 
+
+You can restore the previous behavior by setting the query context parameter `useLexicographicTopN` to `true`. Behavior for `useApproximateTopN` is unchanged, and the default remains `true`.
+
+#### `IS_INCREMENTAL_HANDOFF_SUPPORTED` config removed
+
+Removed the `IS_INCREMENTAL_HANDOFF_SUPPORTED` context reference from supervisors, as incremental publishing has been the default behavior since version 0.16.0. This context was originally introduced to support rollback to `LegacyKafkaIndexTaskRunner` in versions earlier than 0.16.0, which has since been removed.
+
+#### `useMaxMemoryEstimates` config removed 
+
+Removed the `useMaxMemoryEstimates` config. When set to false, Druid used a much more accurate memory estimate that was introduced in Druid 0.23.0. That more accurate method is the only available method now. The config has defaulted to false for several releases. 
+
+[#17936](https://github.com/apache/druid/pull/17936)
+
+## 33.0.0 
+
+### Upgrade notes
+
+#### `useMaxMemoryEstimates`
+
+`useMaxMemoryEstimates` is now set to false for MSQ task engine tasks. Additionally, the property has been deprecated and will be removed in a future release. Setting this to false allows for better on-heap memory estimation.
+
+[#17792](https://github.com/apache/druid/pull/17792)
+
+#### Automatic kill tasks interval
+
+Automatic kill tasks are now limited to 30 days or fewer worth of segments per task.
+
+The previous behavior (no limit on interval per kill task) can be restored by setting `druid.coordinator.kill.maxInterval = P0D`.
+
+[#17680](https://github.com/apache/druid/pull/17680)
+
+#### Kubernetes deployments
+
+By default, the Docker image now uses the canonical hostname if you're running Druid in Kubernetes. Otherwise, it uses the IP address otherwise [#17697](https://github.com/apache/druid/pull/17697) 
+
+#### Updated configs
+
+Various configs were deprecated in a previous release and have now been removed. The following table lists the removed configs and their replacements:
+
+| Removed config | Replacement config|
+|-|-|
+|`druid.processing.merge.task.initialYieldNumRows `|`druid.processing.merge.initialYieldNumRows`|
+|`druid.processing.merge.task.targetRunTimeMillis`|`druid.processing.merge.targetRunTimeMillis`|
+|`druid.processing.merge.task.smallBatchNumRows`|`druid.processing.merge.smallBatchNumRows`|
+|`druid.processing.merge.pool.awaitShutdownMillis`|
+|`druid.processing.merge.awaitShutdownMillis`|
+|`druid.processing.merge.pool.parallelism`|`druid.processing.merge.parallelism`|
+|`druid.processing.merge.pool.defaultMaxQueryParallelism`|`druid.processing.merge.defaultMaxQueryParallelism`|
+
+[#17776](https://github.com/apache/druid/pull/17776)
+
+#### Segment metadata cache configs
+
+If you need to downgrade to a version where Druid doesn't support the segment metadata cache, you must set the `druid.manager.segments.useCache` config to false or remove it prior to the upgrade.
+
+This feature is introduced in Druid 33.0.
+
+[#17653](https://github.com/apache/druid/pull/17653)
+
 ## 32.0.0
 
 ### Incompatible changes
