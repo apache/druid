@@ -1119,7 +1119,7 @@ Sample:
 
 ### Iceberg filter object
 
-This input source provides the following filters: `and`, `equals`, `interval`, and `or`. You can use these filters to filter out data files from a snapshot, reducing the number of files Druid has to ingest.
+This input source provides the following filters: `and`, `equals`, `interval`, `timeWindow`, `range` and `or`. You can use these filters to filter out data files from a snapshot, reducing the number of files Druid has to ingest.
 It is strongly recommended to apply filtering only on Iceberg partition columns. When filtering on non-partition columns, Iceberg filters may return rows that do not fully match the expression. To address this, it may help to define an additional filter in the [`transformSpec`](./ingestion-spec.md#transformspec) to remove residual rows.
 
 `equals` Filter:
@@ -1169,6 +1169,16 @@ It is strongly recommended to apply filtering only on Iceberg partition columns.
 |upper|Upper bound value to match. |None|no. At least one of `lower` or `upper` must not be null.|
 |lowerOpen|Boolean indicating if lower bound is open in the interval of values defined by the range (`>` instead of `>=`). |false|no|
 |upperOpen|Boolean indicating if upper bound is open on the interval of values defined by range (`<` instead of `<=`). |false|no|
+
+`timeWindow` Filter:
+
+| Property|Description|Default| Required |
+|---------|-----------|-------|----------|
+|type| Set this value to `timeWindow`.|None|yes|
+|filterColumn|The column name from the iceberg table schema based on which filtering needs to happen.|None|yes|
+|baseTime|Determines the reference timestamp from which the lookback and lookforward durations are applied to define the time window.|Current UTC timestamp|no|
+|lookbackDuration|Defines the duration that determines how far backward should the filter include data relative to `baseTime`.|P1D|no|
+|lookaheadDuration|Defines the duration that determines how far ahead should the filter include data relative to `baseTime`.|Zero|yes|
 
 ## Delta Lake input source
 
