@@ -156,7 +156,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
     return ioConfig;
   }
 
-  @JsonProperty
+  @JsonProperty("isPerpetuallyRunning")
   public boolean isPerpetuallyRunning()
   {
     return isPerpetuallyRunning;
