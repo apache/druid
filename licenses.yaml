@@ -2554,7 +2554,7 @@ name: Gson
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 2.10.1
+version: 2.12.0
 libraries:
   - com.google.code.gson: gson
 
