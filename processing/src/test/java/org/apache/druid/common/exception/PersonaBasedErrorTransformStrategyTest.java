@@ -19,29 +19,23 @@
 
 package org.apache.druid.common.exception;
 
-import com.google.common.collect.Iterables;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
-import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Map;
 import java.util.Optional;
 
 public class PersonaBasedErrorTransformStrategyTest
 {
   private PersonaBasedErrorTransformStrategy target;
-  private StubServiceEmitter emitter;
 
   @Before
   public void setUp() throws Exception
   {
     target = new PersonaBasedErrorTransformStrategy();
-    emitter = new StubServiceEmitter();
-    EmittingLogger.registerEmitter(emitter);
   }
 
   @Test
@@ -65,8 +59,13 @@ public class PersonaBasedErrorTransformStrategyTest
     ).expectMessageContains("Could not process the query, please contact your administrator with Error ID");
 
     druidExceptionMatcher.matches(target.maybeTransform(druidException, Optional.of("the-error")).get());
-    Map<String, Object> alertEvent = Iterables.getOnlyElement(emitter.getAlerts()).getDataMap();
-    Assert.assertEquals(DruidException.class.getName(), alertEvent.get("exceptionType"));
-    Assert.assertEquals("Test Defensive exception", alertEvent.get("exceptionMessage"));
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(PersonaBasedErrorTransformStrategy.class)
+                  .usingGetClass()
+                  .verify();
   }
 }

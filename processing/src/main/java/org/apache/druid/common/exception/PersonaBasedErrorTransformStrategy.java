@@ -21,8 +21,6 @@ package org.apache.druid.common.exception;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.service.AlertEvent;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -37,8 +35,6 @@ public class PersonaBasedErrorTransformStrategy implements ErrorResponseTransfor
 {
   private static final String ERROR_WITH_ID_TEMPLATE = "Internal server error, please contact your administrator "
                                                        + "with Error ID [%s] if the issue persists.";
-  private static final EmittingLogger LOG = new EmittingLogger(PersonaBasedErrorTransformStrategy.class);
-
   public static final PersonaBasedErrorTransformStrategy INSTANCE = new PersonaBasedErrorTransformStrategy();
 
   /**
@@ -52,10 +48,6 @@ public class PersonaBasedErrorTransformStrategy implements ErrorResponseTransfor
       return Optional.empty();
     }
     String errorId = optionalErrorId.orElse(UUID.randomUUID().toString());
-    LOG.makeAlert(druidException, StringUtils.format("External Error ID: [%s]", errorId))
-       .addData(druidException.getContext())
-       .severity(AlertEvent.Severity.ANOMALY)
-       .emit();
 
     return Optional.of(DruidException.forPersona(DruidException.Persona.USER)
                                      .ofCategory(DruidException.Category.RUNTIME_FAILURE)

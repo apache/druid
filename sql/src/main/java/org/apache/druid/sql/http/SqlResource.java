@@ -68,6 +68,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Path(SqlResource.PATH)
@@ -313,7 +314,12 @@ public class SqlResource
   {
     if (e instanceof DruidException) {
       final String sqlQueryId = queryContext.getString(QueryContexts.CTX_SQL_QUERY_ID);
-      Optional<Exception> transformed = strategy.maybeTransform((DruidException) e, Optional.ofNullable(sqlQueryId));
+      String errorId = sqlQueryId == null ? UUID.randomUUID().toString() : sqlQueryId;
+      Optional<Exception> transformed = strategy.maybeTransform((DruidException) e, Optional.of(errorId));
+      if (transformed.isPresent()) {
+        // Log the exception here itself, since the error has been transformed.
+        log.error(e, StringUtils.format("External Error ID: [%s]", errorId));
+      }
       return QueryResultPusher.handleDruidExceptionBeforeResponseStarted(
           (DruidException) transformed.orElse(e),
           MediaType.APPLICATION_JSON_TYPE,

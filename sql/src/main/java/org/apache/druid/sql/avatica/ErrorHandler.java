@@ -25,13 +25,16 @@ import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.SanitizableException;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.ForbiddenException;
 
 import java.util.Optional;
+import java.util.UUID;
 
 
 /**
@@ -40,6 +43,7 @@ import java.util.Optional;
 class ErrorHandler
 {
   private final ErrorResponseTransformStrategy errorResponseTransformStrategy;
+  private static final Logger log = new Logger(ErrorHandler.class);
 
   @Inject
   ErrorHandler(final ServerConfig serverConfig)
@@ -83,10 +87,16 @@ class ErrorHandler
       return new RuntimeException(errorResponseTransformStrategy.transformIfNeeded((SanitizableException) error.getCause()));
     }
     if (error instanceof DruidException) {
+      String errorId = UUID.randomUUID().toString();
       Optional<Exception> transformedException = errorResponseTransformStrategy.maybeTransform(
           (DruidException) error,
-          Optional.empty()
+          Optional.of(errorId)
       );
+
+      if (transformedException.isPresent()) {
+        // Log the exception here itself, since the error has been transformed.
+        log.error(error, StringUtils.format("External Error ID: [%s]", errorId));
+      }
       QueryInterruptedException wrappedError = QueryInterruptedException.wrapIfNeeded(transformedException.orElse((Exception) error));
       return (QueryException) errorResponseTransformStrategy.transformIfNeeded(wrappedError);
     }
