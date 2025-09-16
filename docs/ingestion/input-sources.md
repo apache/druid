@@ -1176,7 +1176,7 @@ It is strongly recommended to apply filtering only on Iceberg partition columns.
 |---------|-----------|-------|----------|
 |type| Set this value to `timeWindow`.|None|yes|
 |filterColumn|The column name from the iceberg table schema based on which filtering needs to happen.|None|yes|
-|baseTime|Determines the reference timestamp from which the lookback and lookforward durations are applied to define the time window.|Current UTC timestamp|no|
+|baseTime|Determines the reference timestamp from which the lookback and lookahead durations are applied to define the time window.|Current UTC timestamp|no|
 |lookbackDuration|Defines the duration that determines how far backward should the filter include data relative to `baseTime`.|P1D|no|
 |lookaheadDuration|Defines the duration that determines how far ahead should the filter include data relative to `baseTime`.|Zero|no|
 
