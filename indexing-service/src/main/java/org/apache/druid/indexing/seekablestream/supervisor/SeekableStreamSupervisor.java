@@ -769,10 +769,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           latestCommittedOffsets,
           latestTaskOffsetsOnPause
       );
-      TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(newIoConfig);
       for (String taskId : existingTaskGroup.taskIds()) {
         log.info("Updating config for task [%s] with partitions [%s]", taskId, partitionsForThisTask);
-        updateFutures.add(taskClient.updateConfigAsync(taskId, updateRequest));
+        updateFutures.add(persistThenUpdateTaskConfig(taskId, newIoConfig));
       }
     }
 
@@ -799,6 +798,34 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     return allSucceeded;
   }
+
+  private ListenableFuture<Boolean> persistThenUpdateTaskConfig(
+      String taskId,
+      SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig
+  )
+  {
+    return Futures.transformAsync(
+        workerExec.submit(() -> {
+          Optional<Task> existingTaskOpt = taskStorage.getTask(taskId);
+          if (!existingTaskOpt.isPresent()) {
+            throw new ISE("Task [%s] not found in storage", taskId);
+          }
+          SeekableStreamIndexTask existingTask =
+              (SeekableStreamIndexTask) existingTaskOpt.get();
+          SeekableStreamIndexTask updatedTask  = existingTask.withNewIoConfig(newIoConfig);
+          log.info("Persisting updated config for task [%s] to storage", taskId);
+          taskStorage.updateTask(updatedTask);
+          return updatedTask;
+        }),
+        (persistedTask) -> {
+          log.info("Sending config update to running task [%s]", taskId);
+          TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(newIoConfig);
+          return taskClient.updateConfigAsync(taskId, updateRequest);
+        },
+        workerExec
+    );
+  }
+
 
   /**
    * Handles obsolete task groups when scaling down.

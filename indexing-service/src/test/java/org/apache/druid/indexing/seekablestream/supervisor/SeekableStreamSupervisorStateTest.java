@@ -2975,6 +2975,12 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }
 
     @Override
+    public SeekableStreamIndexTask<String, String, ?> withNewIoConfig(SeekableStreamIndexTaskIOConfig<String, String> newIoConfig)
+    {
+      return this;
+    }
+
+    @Override
     public String getType()
     {
       return "test";

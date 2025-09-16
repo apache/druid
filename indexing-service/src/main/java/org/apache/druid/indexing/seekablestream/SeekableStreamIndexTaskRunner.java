@@ -258,7 +258,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private AtomicBoolean waitForConfigUpdate = new AtomicBoolean(false);
   private ScheduledExecutorService publishingExec;
   private ScheduledFuture<?> publishingTask;
-  private final long PUBLISH_INTERVAL_MS = 5000;
+  private final long PUBLISH_INTERVAL_MS = 2000;
   private Supplier<Committer> committerSupplier;
 
 
@@ -466,6 +466,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     //milliseconds waited for created segments to be handed off
     long handoffWaitMs = 0L;
+    log.info("Task perpetually running: %s", task.isPerpetuallyRunning());
     if (task.isPerpetuallyRunning()) {
       startContinuousPublishing();
     }

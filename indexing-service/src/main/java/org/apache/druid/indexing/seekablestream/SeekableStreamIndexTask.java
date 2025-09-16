@@ -39,6 +39,7 @@ import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -318,4 +319,8 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   {
     return runnerSupplier.get();
   }
+
+  public abstract SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, ?> withNewIoConfig(
+      SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig
+  );
 }

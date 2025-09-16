@@ -395,6 +395,12 @@ public class SeekableStreamIndexTaskRunnerAuthTest
     {
       return null;
     }
+
+    @Override
+    public SeekableStreamIndexTask<String, String, ?> withNewIoConfig(SeekableStreamIndexTaskIOConfig<String, String> newIoConfig)
+    {
+      return null;
+    }
   }
 
   private static class TestSeekableStreamIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<String, String>

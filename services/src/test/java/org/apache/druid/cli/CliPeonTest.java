@@ -282,6 +282,12 @@ public class CliPeonTest
     }
 
     @Override
+    public SeekableStreamIndexTask<String, String, ?> withNewIoConfig(SeekableStreamIndexTaskIOConfig<String, String> newIoConfig)
+    {
+      return this;
+    }
+
+    @Override
     public String getCurrentRunnerStatus()
     {
       return STATUS;
