@@ -488,7 +488,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               if (desiredTaskCount > 0) {
                 emitter.emit(event.setDimension(
                                       AUTOSCALER_SKIP_REASON_DIMENSION,
-                                      "pendingCompletionTaskGroups non-empty"
+                                      "There are tasks pending completion"
                                   )
                                   .setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
               }

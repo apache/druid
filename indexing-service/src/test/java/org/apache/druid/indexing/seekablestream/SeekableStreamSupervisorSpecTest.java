@@ -853,7 +853,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   }
 
   @Test
-  public void testScalingSkippedWhenPublishingTasks_EmitsCorrectSkipReason() throws InterruptedException
+  public void test_dynamicAllocationNotice_skipsScalingAndEmitsReason_ifTasksArePublishing() throws InterruptedException
   {
     EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
@@ -909,7 +909,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
             .stream()
             .map(metric -> metric.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION))
             .filter(Objects::nonNull)
-            .anyMatch("pendingCompletionTaskGroups non-empty"::equals)
+            .anyMatch("There are tasks pending completion"::equals)
     );
 
     emitter.verifyNotEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC);
