@@ -82,6 +82,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -847,6 +848,71 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
             .anyMatch("Already at max task count"::equals));
     emitter.verifyNotEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC);
 
+    autoScaler.reset();
+    autoScaler.stop();
+  }
+
+  @Test
+  public void testScalingSkippedWhenPublishingTasks_EmitsCorrectSkipReason() throws InterruptedException
+  {
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(1, true)).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.replay(spec);
+
+    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
+    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
+    EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
+    EasyMock.replay(ingestionSchema);
+
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.replay(taskMaster);
+
+    StubServiceEmitter dynamicActionEmitter = new StubServiceEmitter();
+    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(10);
+
+    LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
+        supervisor,
+        DATASOURCE,
+        mapper.convertValue(
+            getScaleOutProperties(2),
+            LagBasedAutoScalerConfig.class
+        ),
+        spec,
+        dynamicActionEmitter
+    );
+
+    supervisor.addTaskGroupToPendingCompletionTaskGroup(
+        0,
+        ImmutableMap.of("0", "0"),
+        null,
+        null,
+        Set.of("dummyTask"),
+        Collections.emptySet()
+    );
+
+    supervisor.start();
+    autoScaler.start();
+
+    supervisor.runInternal();
+    Thread.sleep(1000); // ensure a dynamic allocation notice completes
+
+    Assert.assertEquals(1, supervisor.getIoConfig().getTaskCount().intValue());
+    Assert.assertTrue(
+        dynamicActionEmitter
+            .getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC)
+            .stream()
+            .map(metric -> metric.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION))
+            .filter(Objects::nonNull)
+            .anyMatch("pendingCompletionTaskGroups non-empty"::equals)
+    );
+
+    emitter.verifyNotEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC);
     autoScaler.reset();
     autoScaler.stop();
   }

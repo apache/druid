@@ -472,6 +472,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     supervisorId,
                     dataSource
           );
+          final Integer desiredTaskCount = computeDesiredTaskCount.call();
+          ServiceMetricEvent.Builder event = ServiceMetricEvent.builder()
+                                                               .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
+                                                               .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                                                               .setDimension(DruidMetrics.STREAM, getIoConfig().getStream());
           for (CopyOnWriteArrayList<TaskGroup> list : pendingCompletionTaskGroups.values()) {
             if (!list.isEmpty()) {
               log.info(
@@ -480,14 +485,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   dataSource,
                   list
               );
+              if (desiredTaskCount > 0) {
+                emitter.emit(event.setDimension(
+                                      AUTOSCALER_SKIP_REASON_DIMENSION,
+                                      "pendingCompletionTaskGroups non-empty"
+                                  )
+                                  .setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
+              }
               return;
             }
           }
-          final Integer desiredTaskCount = computeDesiredTaskCount.call();
-          ServiceMetricEvent.Builder event = ServiceMetricEvent.builder()
-                                                               .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
-                                                               .setDimension(DruidMetrics.DATASOURCE, dataSource)
-              .setDimension(DruidMetrics.STREAM, getIoConfig().getStream());
           if (nowTime - dynamicTriggerLastRunTime < autoScalerConfig.getMinTriggerScaleActionFrequencyMillis()) {
             log.info(
                 "DynamicAllocationTasksNotice submitted again in [%d] millis, minTriggerDynamicFrequency is [%s] for supervisor[%s] for dataSource[%s], skipping it! desired task count is [%s], active task count is [%s]",
