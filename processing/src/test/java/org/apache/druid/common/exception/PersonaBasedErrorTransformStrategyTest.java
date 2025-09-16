@@ -29,6 +29,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Map;
+import java.util.Optional;
 
 public class PersonaBasedErrorTransformStrategyTest
 {
@@ -49,7 +50,7 @@ public class PersonaBasedErrorTransformStrategyTest
     DruidException druidException = DruidException.forPersona(DruidException.Persona.USER)
                                                   .ofCategory(DruidException.Category.FORBIDDEN)
                                                   .build("Permission exception");
-    Assert.assertEquals(druidException, target.transformIfNeeded(druidException));
+    Assert.assertEquals(Optional.empty(), target.maybeTransform(druidException, Optional.empty()));
   }
 
   @Test
@@ -63,7 +64,7 @@ public class PersonaBasedErrorTransformStrategyTest
         druidException.getErrorCode()
     ).expectMessageContains("Could not process the query, please contact your administrator with Error ID");
 
-    druidExceptionMatcher.matches(target.transformIfNeeded(druidException));
+    druidExceptionMatcher.matches(target.maybeTransform(druidException, Optional.of("the-error")).get());
     Map<String, Object> alertEvent = Iterables.getOnlyElement(emitter.getAlerts()).getDataMap();
     Assert.assertEquals(DruidException.class.getName(), alertEvent.get("exceptionType"));
     Assert.assertEquals("Test Defensive exception", alertEvent.get("exceptionMessage"));

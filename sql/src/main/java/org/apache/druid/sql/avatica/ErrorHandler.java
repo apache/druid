@@ -31,6 +31,8 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.ForbiddenException;
 
+import java.util.Optional;
+
 
 /**
  * ErrorHandler is a utility class that is used to sanitize exceptions.
@@ -74,8 +76,6 @@ class ErrorHandler
     if (error instanceof SanitizableException) {
       return new RuntimeException(errorResponseTransformStrategy.transformIfNeeded((SanitizableException) error));
     }
-    if (error instanceof DruidException) {
-    }
     // cannot check cause of the throwable because it cannot be cast back to the original's type
     // so this only checks runtime exceptions for causes
     if (error instanceof RuntimeException && error.getCause() instanceof SanitizableException) {
@@ -83,7 +83,11 @@ class ErrorHandler
       return new RuntimeException(errorResponseTransformStrategy.transformIfNeeded((SanitizableException) error.getCause()));
     }
     if (error instanceof DruidException) {
-      QueryInterruptedException wrappedError = QueryInterruptedException.wrapIfNeeded(errorResponseTransformStrategy.transformIfNeeded((DruidException) error));
+      Optional<Exception> transformedException = errorResponseTransformStrategy.maybeTransform(
+          (DruidException) error,
+          Optional.empty()
+      );
+      QueryInterruptedException wrappedError = QueryInterruptedException.wrapIfNeeded(transformedException.orElse((Exception) error));
       return (QueryException) errorResponseTransformStrategy.transformIfNeeded(wrappedError);
     }
     QueryInterruptedException wrappedError = QueryInterruptedException.wrapIfNeeded(error);
@@ -93,7 +97,7 @@ class ErrorHandler
   /**
    * Check to see if something needs to be sanitized.
    * <p>
-   * Done by checking to see if the ErrorResponse is different than a NoOp Error response transform strategy.
+   * Done by checking to see if the ErrorResponse is different from a NoOp Error response transform strategy.
    *
    * @return a boolean that returns true if error handler has an error response strategy other than the NoOp error
    * response strategy

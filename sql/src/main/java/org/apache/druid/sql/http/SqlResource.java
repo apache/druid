@@ -66,6 +66,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -312,8 +313,9 @@ public class SqlResource
   {
     if (e instanceof DruidException) {
       final String sqlQueryId = queryContext.getString(QueryContexts.CTX_SQL_QUERY_ID);
+      Optional<Exception> transformed = strategy.maybeTransform((DruidException) e, Optional.ofNullable(sqlQueryId));
       return QueryResultPusher.handleDruidExceptionBeforeResponseStarted(
-          (DruidException) strategy.transformIfNeeded((DruidException) e),
+          (DruidException) transformed.orElse(e),
           MediaType.APPLICATION_JSON_TYPE,
           sqlQueryId != null
           ? ImmutableMap.<String, String>builder()

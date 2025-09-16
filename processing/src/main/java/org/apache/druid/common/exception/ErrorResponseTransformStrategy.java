@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.error.DruidException;
 
 import javax.validation.constraints.NotNull;
+import java.util.Optional;
 import java.util.function.Function;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "strategy", defaultImpl = NoErrorResponseTransformStrategy.class)
@@ -44,12 +45,12 @@ public interface ErrorResponseTransformStrategy
   }
 
   /**
-   * For a given {@link DruidException} apply the transformation strategy and return a sanitized Exception
-   * if the transformation stategy was applied.
+   * For a given {@link DruidException} apply the transformation strategy and return an optional containing a
+   * sanitized exception if the transformation stategy was applied. Returns an empty optional otherwise.
    */
-  default Exception transformIfNeeded(DruidException exception)
+  default Optional<Exception> maybeTransform(DruidException exception, Optional<String> errorId)
   {
-    return exception;
+    return Optional.empty();
   }
 
   /**
