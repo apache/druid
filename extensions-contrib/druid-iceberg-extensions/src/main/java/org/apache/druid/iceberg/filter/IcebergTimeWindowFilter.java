@@ -72,9 +72,9 @@ public class IcebergTimeWindowFilter implements IcebergFilter
   public Expression getFilterExpression()
   {
     // Convert milliseconds to microseconds because Iceberg TimestampType uses microsecond precision
-    Long lookbackDurationinMicros = (baseTime.getMillis() - lookbackDuration.getMillis()) * 1000L;
-    Long lookforwardDurationinMicros = (baseTime.getMillis() + lookaheadDuration.getMillis()) * 1000L;
-    Expression finalExpr = Expressions.and(
+    long lookbackDurationinMicros = (baseTime.getMillis() - lookbackDuration.getMillis()) * 1000L;
+    long lookforwardDurationinMicros = (baseTime.getMillis() + lookaheadDuration.getMillis()) * 1000L;
+    return Expressions.and(
         Expressions.greaterThanOrEqual(
             filterColumn,
             Literal.of(lookbackDurationinMicros)
@@ -88,6 +88,5 @@ public class IcebergTimeWindowFilter implements IcebergFilter
                                  .value()
         )
     );
-    return finalExpr;
   }
 }
