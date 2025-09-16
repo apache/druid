@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type { AxiosResponse, CancelToken } from 'axios';
+import type { AxiosResponse } from 'axios';
 import axios from 'axios';
 import { C } from 'druid-query-toolkit';
 
@@ -324,11 +324,11 @@ export class DruidError extends Error {
 
 export async function queryDruidRune(
   runeQuery: Record<string, any>,
-  cancelToken?: CancelToken,
+  signal?: AbortSignal,
 ): Promise<any> {
   let runeResultResp: AxiosResponse;
   try {
-    runeResultResp = await Api.instance.post('/druid/v2', runeQuery, { cancelToken });
+    runeResultResp = await Api.instance.post('/druid/v2', runeQuery, { signal });
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
@@ -337,19 +337,19 @@ export async function queryDruidRune(
 
 export async function queryDruidSql<T = any>(
   sqlQueryPayload: Record<string, any>,
-  cancelToken?: CancelToken,
+  signal?: AbortSignal,
 ): Promise<T[]> {
   let sqlResultResp: AxiosResponse;
   try {
-    sqlResultResp = await Api.instance.post('/druid/v2/sql', sqlQueryPayload, { cancelToken });
+    sqlResultResp = await Api.instance.post('/druid/v2/sql', sqlQueryPayload, { signal });
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
   return sqlResultResp.data;
 }
 
-export async function getApiArray<T = any>(url: string, cancelToken?: CancelToken): Promise<T[]> {
-  const result = (await Api.instance.get(url, { cancelToken })).data;
+export async function getApiArray<T = any>(url: string, signal?: AbortSignal): Promise<T[]> {
+  const result = (await Api.instance.get(url, { signal })).data;
   if (!Array.isArray(result)) throw new Error('unexpected result');
   return result;
 }
@@ -357,9 +357,9 @@ export async function getApiArray<T = any>(url: string, cancelToken?: CancelToke
 export async function getApiArrayFromKey<T = any>(
   url: string,
   key: string,
-  cancelToken?: CancelToken,
+  signal?: AbortSignal,
 ): Promise<T[]> {
-  const result = (await Api.instance.get(url, { cancelToken })).data?.[key];
+  const result = (await Api.instance.get(url, { signal })).data?.[key];
   if (!Array.isArray(result)) throw new Error('unexpected result');
   return result;
 }

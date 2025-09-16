@@ -433,6 +433,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       throw
           builder.source(ParseExceptionUtils.generateReadableInputSourceNameFromMappedSegment(this.segment)) // frame segment
                  .rowNumber(this.cursorOffset.getOffset() + 1)
+                 .cause(ffwe.getCause())
                  .build();
     }
     catch (Exception e) {

@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-import type { Canceler, CancelToken } from 'axios';
 import axios from 'axios';
 import debounce from 'lodash.debounce';
 
@@ -30,13 +29,13 @@ export interface QueryManagerOptions<Q, R, I = never, E extends Error = Error> {
   initState?: QueryState<R, E, I>;
   processQuery: (
     query: Q,
-    cancelToken: CancelToken,
+    signal: AbortSignal,
     setIntermediateQuery: (intermediateQuery: any) => void,
   ) => Promise<R | IntermediateQueryState<I> | ResultWithAuxiliaryWork<R>>;
   backgroundStatusCheck?: (
     state: I,
     query: Q,
-    cancelToken: CancelToken,
+    signal: AbortSignal,
   ) => Promise<R | IntermediateQueryState<I> | ResultWithAuxiliaryWork<R>>;
   onStateChange?: (queryResolve: QueryState<R, E, I>) => void;
   debounceInit?: number;
@@ -56,14 +55,14 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
 
   private readonly processQuery: (
     query: Q,
-    cancelToken: CancelToken,
+    signal: AbortSignal,
     setIntermediateQuery: (intermediateQuery: any) => void,
   ) => Promise<R | IntermediateQueryState<I> | ResultWithAuxiliaryWork<R>>;
 
   private readonly backgroundStatusCheck?: (
     state: I,
     query: Q,
-    cancelToken: CancelToken,
+    signal: AbortSignal,
   ) => Promise<R | IntermediateQueryState<I> | ResultWithAuxiliaryWork<R>>;
 
   private readonly onStateChange?: (queryResolve: QueryState<R, E, I>) => void;
@@ -75,7 +74,7 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
   private nextQuery: Q | undefined;
   private lastQuery: Q | undefined;
   private lastIntermediateQuery: any;
-  private currentRunCancelFn?: Canceler;
+  private currentRunCancelFn?: (reason?: string) => void;
   private state: QueryState<R, E, I>;
   private currentQueryId = 0;
 
@@ -124,14 +123,14 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
     if (this.currentRunCancelFn) {
       this.currentRunCancelFn();
     }
-    const cancelToken = new axios.CancelToken(cancelFn => {
-      this.currentRunCancelFn = cancelFn;
-    });
+    const controller = new AbortController();
+    this.currentRunCancelFn = (reason: string | undefined) => controller.abort(reason);
+    const signal = controller.signal;
 
     const query = this.lastQuery;
     let data: R | IntermediateQueryState<I> | ResultWithAuxiliaryWork<R>;
     try {
-      data = await this.processQuery(query, cancelToken, (intermediateQuery: any) => {
+      data = await this.processQuery(query, signal, (intermediateQuery: any) => {
         this.lastIntermediateQuery = intermediateQuery;
       });
     } catch (e) {
@@ -155,7 +154,7 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
             'backgroundStatusCheck must be set if intermediate query state is returned',
           );
         }
-        cancelToken.throwIfRequested();
+        signal.throwIfAborted();
         if (this.currentQueryId !== myQueryId) return;
 
         this.setState(
@@ -175,11 +174,11 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
 
         if (delay) {
           await wait(delay);
-          cancelToken.throwIfRequested();
+          signal.throwIfAborted();
           if (this.currentQueryId !== myQueryId) return;
         }
 
-        data = await this.backgroundStatusCheck(data.state, query, cancelToken);
+        data = await this.backgroundStatusCheck(data.state, query, signal);
         intermediateError = undefined; // Clear the intermediate error if there was one
       } catch (e) {
         if (this.currentQueryId !== myQueryId) return;
@@ -222,10 +221,10 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
 
       try {
         for (let i = 0; i < numAuxiliaryQueries; i++) {
-          cancelToken.throwIfRequested();
+          signal.throwIfAborted();
           if (this.currentQueryId !== myQueryId) return;
 
-          data = await auxiliaryQueries[i](data, cancelToken);
+          data = await auxiliaryQueries[i](data, signal);
 
           if (this.currentQueryId !== myQueryId) return;
           if (i < numAuxiliaryQueries - 1) {

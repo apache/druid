@@ -17,7 +17,6 @@
  */
 
 import type { IconName } from '@blueprintjs/icons';
-import type { CancelToken } from 'axios';
 import type { Timezone } from 'chronoshift';
 import type { QueryResult, SqlExpression, SqlQuery } from 'druid-query-toolkit';
 
@@ -43,7 +42,7 @@ interface ModuleComponentProps<P> {
   setParameterValues: (parameters: Partial<P>) => void;
   runSqlQuery(
     query: string | SqlQuery | { query: string | SqlQuery; timezone?: Timezone },
-    cancelToken?: CancelToken,
+    signal?: AbortSignal,
   ): Promise<QueryResult>;
 }
 
