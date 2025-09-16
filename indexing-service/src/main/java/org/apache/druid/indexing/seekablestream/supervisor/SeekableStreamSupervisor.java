@@ -197,7 +197,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // this task group has completed successfully, at which point this will be destroyed and a new task group will be
     // created with new starting sequences. This allows us to create replacement tasks for failed tasks that process the
     // same sequences, even if the values in [partitionGroups] has been changed.
-    final ImmutableMap<PartitionIdType, SequenceOffsetType> startingSequences;
+    // In perpetually-running tasks mode, the actively running task groups will be replaced with new task groups with updated starting sequences.
+    ImmutableMap<PartitionIdType, SequenceOffsetType> startingSequences;
 
     // We don't include closed partitions in the starting offsets. However, we keep the full unfiltered map of
     // partitions, only used for generating the sequence name, to avoid ambiguity in sequence names if mulitple
@@ -316,6 +317,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
              "groupId=" + groupId +
              ", tasks=" + tasks +
              '}';
+    }
+
+    public TaskGroup withStartingSequences(Map<PartitionIdType,SequenceOffsetType> newStartingSequences)
+    {
+      this.startingSequences = ImmutableMap.copyOf(newStartingSequences);
+      return this;
     }
   }
 
@@ -632,6 +639,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
              activelyReadingTaskGroups.size(), desiredActiveTaskCount);
 
     Map<PartitionIdType, SequenceOffsetType> offsetsFromTasks = pauseAndCheckpointAllTasks();
+
     if (offsetsFromTasks.isEmpty()) {
       isDynamicAllocationOngoing.set(false);
       return false;
@@ -663,6 +671,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     if (success) {
       updatePartitionGroupsForPerpetualTasks(newPartitionGroups);
+
       log.info("Successfully updated task configurations for perpetual tasks scaling");
     } else {
       log.error("Failed to update task configurations for perpetual tasks");
@@ -769,10 +778,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           latestCommittedOffsets,
           latestTaskOffsetsOnPause
       );
+      Map<PartitionIdType, SequenceOffsetType> newStartingSequences = newIoConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap();
+      TaskGroup newTaskGroup = existingTaskGroup.withStartingSequences(newStartingSequences);
       for (String taskId : existingTaskGroup.taskIds()) {
         log.info("Updating config for task [%s] with partitions [%s]", taskId, partitionsForThisTask);
         updateFutures.add(persistThenUpdateTaskConfig(taskId, newIoConfig));
       }
+      activelyReadingTaskGroups.put(taskGroupId, newTaskGroup);
     }
 
     if (updateFutures.isEmpty()) {
@@ -814,7 +826,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               (SeekableStreamIndexTask) existingTaskOpt.get();
           SeekableStreamIndexTask updatedTask  = existingTask.withNewIoConfig(newIoConfig);
           log.info("Persisting updated config for task [%s] to storage", taskId);
-          taskStorage.updateTask(updatedTask);
+          updateTaskIoConfigInQueueOrStorage(updatedTask);
           return updatedTask;
         }),
         (persistedTask) -> {
@@ -824,6 +836,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         },
         workerExec
     );
+  }
+
+  private void updateTaskIoConfigInQueueOrStorage(SeekableStreamIndexTask updatedTask)
+  {
+    Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
+    if (taskQueue.isPresent()) {
+      taskQueue.get().update(updatedTask);
+    } else {
+      taskStorage.updateTask(updatedTask);
+    }
   }
 
 
