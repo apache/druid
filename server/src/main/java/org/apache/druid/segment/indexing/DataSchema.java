@@ -418,6 +418,11 @@ public class DataSchema
     return getFieldsOrThrowIfErrors(fields);
   }
 
+  /**
+   * Validates that each {@link AggregateProjectionSpec} does not have duplicate column names in
+   * {@link AggregateProjectionSpec#groupingColumns} and {@link AggregateProjectionSpec#aggregators} and that segment
+   * {@link Granularity} is at least as coarse as {@link AggregateProjectionMetadata.Schema#effectiveGranularity}
+   */
   public static void validateProjections(
       @Nullable List<AggregateProjectionSpec> projections,
       @Nullable Granularity segmentGranularity
@@ -477,6 +482,16 @@ public class DataSchema
     }
   }
 
+  /**
+   * Helper method that processes a validation result stored as a {@link Map} of field names to {@link Multiset} of
+   * where they were defined. An error is indicated by the multi-set having more than a single entry
+   * (such as if a field is defined as both a dimension and an aggregator). If all fields have only a single entry, this
+   * method returns the list of output field names. If there are duplicates, this method throws a {@link DruidException}
+   * collecting all validation errors to help indicate where a field is defined
+   *
+   * @see #computeAndValidateOutputFieldNames
+   * @see #validateProjections(List, Granularity)
+   */
   private static Set<String> getFieldsOrThrowIfErrors(Map<String, Multiset<String>> validatedFields)
   {
     final List<String> errors = new ArrayList<>();
