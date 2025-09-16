@@ -59,9 +59,13 @@ This section contains important information about new and existing features.
 
 ### Java 11 support
 
+**Update**: Support for Java 11 is scheduled to end with Druid 37.0.0. 
+
 Java 11 support has been deprecated since Druid 32.0, and official support will be removed as early as Druid 35.0.0
 
 ### Hadoop-based ingestion
+
+**Update**: Support for Hadoop-based ingestion is scheduled to end with Druid 37.0.0.
 
 Hadoop-based ingestion has been deprecated since Druid 32.0 and will be removed as early as Druid 35.0.0. 
 We recommend one of Druid's other supported ingestion methods, such as [SQL-based ingestion](../multi-stage-query/index.md) or [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md).
@@ -377,7 +381,15 @@ Additionally, MSQ task engine metrics now include the following dimensions:
 
 ### Upgrade notes
 
+#### Java 11 support
+
+**Update**: Support for Java 11 is scheduled to end with Druid 37.0.0. 
+
+Java 11 support has been deprecated since Druid 32.0, and official support will be removed as early as Druid 35.0.0
+
 #### Hadoop-based ingestion
+
+**Update**: Support for Hadoop-based ingestion is scheduled to end with Druid 37.0.0.
 
 Hadoop-based ingestion has been deprecated since Druid 32.0 and will be removed as early as Druid 35.0.0. 
 
