@@ -45,8 +45,9 @@ public interface ErrorResponseTransformStrategy
   }
 
   /**
-   * For a given {@link DruidException} apply the transformation strategy and return an optional containing a
-   * sanitized exception if the transformation stategy was applied. Returns an empty optional otherwise.
+   * For a given {@link DruidException} apply the transformation strategy and return a sanitized Exception
+   * if the transformation stategy was applied. Returns Optional.empty() if no transformation was applied.
+   * The errorId is provided to be used in the transformed Exception if needed.
    */
   default Optional<Exception> maybeTransform(DruidException exception, Optional<String> errorId)
   {

@@ -35,7 +35,7 @@ import java.util.function.Function;
  */
 public class PersonaBasedErrorTransformStrategy implements ErrorResponseTransformStrategy
 {
-  private static final String ERROR_WITH_ID_TEMPLATE = "Could not process the query, please contact your administrator "
+  private static final String ERROR_WITH_ID_TEMPLATE = "Internal server error, please contact your administrator "
                                                        + "with Error ID [%s] if the issue persists.";
   private static final EmittingLogger LOG = new EmittingLogger(PersonaBasedErrorTransformStrategy.class);
 
