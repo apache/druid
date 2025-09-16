@@ -235,7 +235,7 @@ public class CursorBuildSpec
       return false;
     }
     for (int i = 0; i < preferredOrdering.size(); i++) {
-      if (!ordering.get(i).equals(preferredOrdering.get(i))) {
+      if (!ordering.get(i).getColumnName().equals(preferredOrdering.get(i).getColumnName())) {
         return false;
       }
     }
