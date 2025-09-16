@@ -1352,6 +1352,7 @@ listDelimiter
 lowerOpen
 timestamp
 timestampColumnName
+TimestampType
 timestampSpec
 upperOpen
 urls
