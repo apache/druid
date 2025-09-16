@@ -77,6 +77,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.PendingSegmentRecord;
@@ -130,6 +131,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -149,7 +151,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     implements ChatHandler
 {
   private static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
-
   public enum Status
   {
     NOT_STARTED,
@@ -158,7 +159,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     PAUSED,
     PUBLISHING
   }
-
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamIndexTaskRunner.class);
   static final String METADATA_NEXT_PARTITIONS = "nextPartitions";
   static final String METADATA_PUBLISH_PARTITIONS = "publishPartitions";
@@ -256,6 +256,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private volatile DateTime maxMessageTime;
   private final ScheduledExecutorService rejectionPeriodUpdaterExec;
   private AtomicBoolean waitForConfigUpdate = new AtomicBoolean(false);
+  private ScheduledExecutorService publishingExec;
+  private ScheduledFuture<?> publishingTask;
+  private final long PUBLISH_INTERVAL_MS = 5000;
+  private Supplier<Committer> committerSupplier;
+
 
   public SeekableStreamIndexTaskRunner(
       final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task,
@@ -292,6 +297,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       );
     }
     resetNextCheckpointTime();
+    this.publishingExec = ScheduledExecutors.fixed(
+        1,
+        StringUtils.encodeForFormat("Publisher-" + task.getId()) + "-%d"
+    );
   }
 
   public TaskStatus run(TaskToolbox toolbox)
@@ -457,6 +466,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     //milliseconds waited for created segments to be handed off
     long handoffWaitMs = 0L;
+    if (task.isPerpetuallyRunning()) {
+      startContinuousPublishing();
+    }
 
     try (final RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier =
              task.newTaskRecordSupplier(toolbox)) {
@@ -581,7 +593,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       }
 
       // Set up committer.
-      final Supplier<Committer> committerSupplier = () -> {
+      committerSupplier = () -> {
         final Map<PartitionIdType, SequenceOffsetType> snapshot = ImmutableMap.copyOf(currOffsets);
         lastPersistedOffsets.clear();
         lastPersistedOffsets.putAll(snapshot);
@@ -603,7 +615,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       };
 
       // restart publishing of sequences (if any)
-      maybePersistAndPublishSequences(committerSupplier);
+      if (!task.isPerpetuallyRunning()) {
+        maybePersistAndPublishSequences(committerSupplier);
+      }
 
       assignment = assignPartitions(this.recordSupplier);
       possiblyResetDataSourceMetadata(toolbox, this.recordSupplier, assignment);
@@ -628,13 +642,17 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             possiblyResetDataSourceMetadata(toolbox, this.recordSupplier, assignment);
 
             if (assignment.isEmpty()) {
-              log.debug("All partitions have been fully read.");
-              publishOnStop.set(true);
-              stopRequested.set(true);
+              if (!task.isPerpetuallyRunning()) {
+                log.debug("All partitions have been fully read.");
+                publishOnStop.set(true);
+                stopRequested.set(true);
+              }
             }
           }
 
           // if stop is requested or task's end sequence is set by call to setEndOffsets method with finish set to true
+          // TODO: When the last sequence metadata is checkpointed, do we really want to transition to PUBLISHING for perpetually running tasks?
+          // I understand first 2 points of PUBLISHING state, a stop was requested, sequences are finished, but what has a last sequence metadata being checkpointed got to do with it?
           if (stopRequested.get() || sequences.size() == 0 || getLastSequenceMetadata().isCheckpointed()) {
             status = Status.PUBLISHING;
           }
@@ -855,66 +873,15 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       // We need to copy sequences here, because the success callback in publishAndRegisterHandoff removes items from
       // the sequence list. If a publish finishes before we finish iterating through the sequence list, we can
       // end up skipping some sequences.
-      List<SequenceMetadata<PartitionIdType, SequenceOffsetType>> sequencesSnapshot = new ArrayList<>(sequences);
-      for (int i = 0; i < sequencesSnapshot.size(); i++) {
-        final SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata = sequencesSnapshot.get(i);
-        if (!publishingSequences.contains(sequenceMetadata.getSequenceName())
-            && !publishedSequences.contains(sequenceMetadata.getSequenceName())) {
-          final boolean isLast = i == (sequencesSnapshot.size() - 1);
-          if (isLast) {
-            // Shorten endOffsets of the last sequence to match currOffsets.
-            sequenceMetadata.setEndOffsets(currOffsets);
-          }
-
-          // Update assignments of the sequence, which should clear them. (This will be checked later, when the
-          // Committer is built.)
-          sequenceMetadata.updateAssignments(currOffsets, this::isMoreToReadAfterReadingRecord);
-          publishingSequences.add(sequenceMetadata.getSequenceName());
-          // persist already done in finally, so directly add to publishQueue
-          publishAndRegisterHandoff(sequenceMetadata);
-        }
-      }
+      populateSequencesToPublish();
 
       if (backgroundThreadException != null) {
         throw new RuntimeException(backgroundThreadException);
       }
 
-      // Wait for publish futures to complete.
-      Futures.allAsList(publishWaitList).get();
-
-      // Wait for handoff futures to complete.
-      // Note that every publishing task (created by calling AppenderatorDriver.publish()) has a corresponding
-      // handoffFuture. handoffFuture can throw an exception if 1) the corresponding publishFuture failed or 2) it
-      // failed to persist sequences. It might also return null if handoff failed, but was recoverable.
-      // See publishAndRegisterHandoff() for details.
-      List<SegmentsAndCommitMetadata> handedOffList = Collections.emptyList();
-      ingestionState = IngestionState.SEGMENT_AVAILABILITY_WAIT;
-      if (tuningConfig.getHandoffConditionTimeout() == 0) {
-        handedOffList = Futures.allAsList(handOffWaitList).get();
-      } else {
-        final long start = System.nanoTime();
-        try {
-          handedOffList = Futures.allAsList(handOffWaitList)
-                                 .get(tuningConfig.getHandoffConditionTimeout(), TimeUnit.MILLISECONDS);
-        }
-        catch (TimeoutException e) {
-          // Handoff timeout is not an indexing failure, but coordination failure. We simply ignore timeout exception
-          // here.
-          log.makeAlert("Timeout waiting for handoff")
-             .addData("taskId", task.getId())
-             .addData("handoffConditionTimeout", tuningConfig.getHandoffConditionTimeout())
-             .emit();
-        }
-        finally {
-          handoffWaitMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
-        }
-      }
-
-      for (SegmentsAndCommitMetadata handedOff : handedOffList) {
-        log.info(
-            "Handoff complete for segments: %s",
-            String.join(", ", Lists.transform(handedOff.getSegments(), DataSegment::toString))
-        );
+      // Wait for publish futures to complete if it's a standard task.
+      if (!task.isPerpetuallyRunning()) {
+        handoffWaitMs = waitForPublishAndHandoffCompletion();
       }
 
       appenderator.close();
@@ -986,6 +953,102 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     ingestionState = IngestionState.COMPLETED;
     toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(null, handoffWaitMs));
     return TaskStatus.success(task.getId());
+  }
+
+  private long waitForPublishAndHandoffCompletion() throws ExecutionException, InterruptedException
+  {
+    long handoffWaitMs = 0L;
+    Futures.allAsList(publishWaitList).get();
+
+    // Wait for handoff futures to complete.
+    // Note that every publishing task (created by calling AppenderatorDriver.publish()) has a corresponding
+    // handoffFuture. handoffFuture can throw an exception if 1) the corresponding publishFuture failed or 2) it
+    // failed to persist sequences. It might also return null if handoff failed, but was recoverable.
+    // See publishAndRegisterHandoff() for details.
+    List<SegmentsAndCommitMetadata> handedOffList = Collections.emptyList();
+    ingestionState = IngestionState.SEGMENT_AVAILABILITY_WAIT;
+    if (tuningConfig.getHandoffConditionTimeout() == 0) {
+      handedOffList = Futures.allAsList(handOffWaitList).get();
+    } else {
+      final long start = System.nanoTime();
+      try {
+        handedOffList = Futures.allAsList(handOffWaitList)
+                               .get(tuningConfig.getHandoffConditionTimeout(), TimeUnit.MILLISECONDS);
+      }
+      catch (TimeoutException e) {
+        // Handoff timeout is not an indexing failure, but coordination failure. We simply ignore timeout exception
+        // here.
+        log.makeAlert("Timeout waiting for handoff")
+           .addData("taskId", task.getId())
+           .addData("handoffConditionTimeout", tuningConfig.getHandoffConditionTimeout())
+           .emit();
+      }
+      finally {
+        handoffWaitMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+      }
+    }
+
+    for (SegmentsAndCommitMetadata handedOff : handedOffList) {
+      log.info(
+          "Handoff complete for segments: %s",
+          String.join(", ", Lists.transform(handedOff.getSegments(), DataSegment::toString))
+      );
+    }
+    return handoffWaitMs;
+  }
+
+  private void populateSequencesToPublish()
+  {
+    List<SequenceMetadata<PartitionIdType, SequenceOffsetType>> sequencesSnapshot = new ArrayList<>(sequences);
+    for (int i = 0; i < sequencesSnapshot.size(); i++) {
+      final SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata = sequencesSnapshot.get(i);
+      if (!publishingSequences.contains(sequenceMetadata.getSequenceName())
+          && !publishedSequences.contains(sequenceMetadata.getSequenceName())) {
+        final boolean isLast = i == (sequencesSnapshot.size() - 1);
+        if (isLast) {
+          // Shorten endOffsets of the last sequence to match currOffsets.
+          sequenceMetadata.setEndOffsets(currOffsets);
+        }
+
+        // Update assignments of the sequence, which should clear them. (This will be checked later, when the
+        // Committer is built.)
+        sequenceMetadata.updateAssignments(currOffsets, this::isMoreToReadAfterReadingRecord);
+        publishingSequences.add(sequenceMetadata.getSequenceName());
+        // persist already done in finally, so directly add to publishQueue
+        publishAndRegisterHandoff(sequenceMetadata);
+      }
+    }
+  }
+
+  /**
+   * Start the continuous publishing executor for perpetual tasks
+   * Call this after the main reading loop starts
+   */
+  private void startContinuousPublishing()
+  {
+    log.info("Starting continuous publishing for perpetual task [%s]", task.getId());
+
+    publishingTask = publishingExec.scheduleAtFixedRate(
+        this::performContinuousPublishing,
+        PUBLISH_INTERVAL_MS,
+        PUBLISH_INTERVAL_MS,
+        TimeUnit.MILLISECONDS
+    );
+  }
+
+  /**
+   * The method that runs periodically to check if there are sequences to be published
+   * for perpetual tasks
+   */
+  private void performContinuousPublishing()
+  {
+    try {
+      maybePersistAndPublishSequences(committerSupplier);
+      waitForPublishAndHandoffCompletion();
+    }
+    catch (Exception e) {
+      log.error(e, "Encountered exception while publishing in background thread");
+    }
   }
 
   private TaskLockType getTaskLockType()
@@ -1507,6 +1570,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     if (runThread != null) {
       runThread.interrupt();
     }
+    if (publishingExec != null) {
+      publishingExec.shutdownNow();
+    }
   }
 
   public void stopGracefully()
@@ -1552,6 +1618,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     }
     catch (Exception e) {
       throw new RuntimeException(e);
+    }
+    if (publishingExec != null) {
+      publishingExec.shutdown();
     }
   }
 
