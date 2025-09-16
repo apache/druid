@@ -122,7 +122,7 @@ public class IndexerWorkerContext implements WorkerContext
     // Compute thread count once in constructor
     final int baseThreadCount = memoryIntrospector.numProcessingThreads();
     final Integer maxThreads = MultiStageQueryContext.getMaxThreads(queryContext);
-    this.threadCount = (maxThreads != null) ? Math.min(baseThreadCount, maxThreads) : baseThreadCount;
+    this.threadCount = (maxThreads != null && maxThreads > 0) ? Math.min(baseThreadCount, maxThreads) : baseThreadCount;
     final StorageConnectorProvider storageConnectorProvider = injector.getInstance(Key.get(
         StorageConnectorProvider.class,
         MultiStageQuery.class

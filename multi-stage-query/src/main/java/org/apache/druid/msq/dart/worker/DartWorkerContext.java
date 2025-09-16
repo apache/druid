@@ -129,11 +129,11 @@ public class DartWorkerContext implements WorkerContext
     this.tempDir = tempDir;
     this.queryContext = Preconditions.checkNotNull(queryContext, "queryContext");
     this.emitter = emitter;
-    
+
     // Compute thread count once in constructor
     final int baseThreadCount = processingConfig.getNumThreads();
     final Integer maxThreads = MultiStageQueryContext.getMaxThreads(queryContext);
-    this.threadCount = (maxThreads != null) ? Math.min(baseThreadCount, maxThreads) : baseThreadCount;
+    this.threadCount = (maxThreads != null && maxThreads > 0) ? Math.min(baseThreadCount, maxThreads) : baseThreadCount;
   }
 
   @Override
