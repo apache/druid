@@ -29,34 +29,30 @@ import java.util.List;
 
 public class VectorConditionalProcessors
 {
-  public static <T> ExprVectorProcessor<T> nvl(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
+  public static <T> ExprVectorProcessor<T> coalesce(Expr.VectorInputBindingInspector inspector, List<Expr> args)
   {
-    final ExpressionType leftType = left.getOutputType(inspector);
-    final ExpressionType rightType = right.getOutputType(inspector);
-    final ExpressionType outputType = ExpressionTypeConversion.leastRestrictiveType(leftType, rightType);
+    ExpressionType outputType = null;
+    for (Expr arg : args) {
+      outputType = ExpressionTypeConversion.leastRestrictiveType(outputType, arg.getOutputType(inspector));
+    }
 
     final ExprVectorProcessor<?> processor;
     if (outputType == null) {
       // if output type is null, it means all the input types were null (non-existent), and nvl(null, null) is null
       return VectorProcessors.constant((Long) null, inspector.getMaxVectorSize());
     }
+
+    ExprVectorProcessor[] processors = new ExprVectorProcessor[args.size()];
+    for (int i = 0; i < args.size(); i++) {
+      processors[i] = CastToTypeVectorProcessor.cast(args.get(i).asVectorProcessor(inspector), outputType);
+    }
     if (outputType.is(ExprType.LONG)) {
       // long is most restrictive so both processors are definitely long typed if output is long
-      processor = new NvlLongVectorProcessor(
-          left.asVectorProcessor(inspector),
-          right.asVectorProcessor(inspector)
-      );
+      processor = new CoalesceLongVectorProcessor(processors);
     } else if (outputType.is(ExprType.DOUBLE)) {
-      processor = new NvlDoubleVectorProcessor(
-          CastToTypeVectorProcessor.cast(left.asVectorProcessor(inspector), ExpressionType.DOUBLE),
-          CastToTypeVectorProcessor.cast(right.asVectorProcessor(inspector), ExpressionType.DOUBLE)
-      );
+      processor = new CoalesceDoubleVectorProcessor(processors);
     } else {
-      processor = new NvlVectorObjectProcessor(
-          outputType,
-          CastToTypeVectorProcessor.cast(left.asVectorProcessor(inspector), outputType),
-          CastToTypeVectorProcessor.cast(right.asVectorProcessor(inspector), outputType)
-      );
+      processor = new CoalesceVectorObjectProcessor(outputType, processors);
     }
     return (ExprVectorProcessor<T>) processor;
   }

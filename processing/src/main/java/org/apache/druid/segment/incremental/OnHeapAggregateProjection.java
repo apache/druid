@@ -36,8 +36,6 @@ import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.EncodedKeyComponent;
-import org.apache.druid.segment.RowAdapters;
-import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.CapabilitiesBasedFormat;
@@ -46,7 +44,6 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
@@ -128,28 +125,7 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
     initializeAndValidateAggregators(projectionSpec, getBaseTableDimensionDesc, getBaseTableAggregatorFactory);
 
     if (projectionSpec.getFilter() != null) {
-      RowSignature.Builder bob = RowSignature.builder();
-      if (projectionSchema.getTimeColumnPosition() < 0) {
-        bob.addTimeColumn();
-      }
-      for (String groupingColumn : projectionSchema.getGroupingColumns()) {
-        if (groupingColumn.equals(projectionSchema.getTimeColumnName())) {
-          bob.addTimeColumn();
-        } else {
-          bob.add(groupingColumn, dimensionsMap.get(groupingColumn).getCapabilities().toColumnType());
-        }
-      }
-      valueMatcher = projectionSchema.getFilter()
-                                     .toFilter()
-                                     .makeMatcher(
-                                         RowBasedColumnSelectorFactory.create(
-                                             RowAdapters.standardRow(),
-                                             inputRowHolder::getRow,
-                                             bob.build(),
-                                             false,
-                                             false
-                                         )
-                                     );
+      valueMatcher = projectionSchema.getFilter().toFilter().makeMatcher(virtualSelectorFactory);
     } else {
       valueMatcher = null;
     }

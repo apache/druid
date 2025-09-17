@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
-import org.apache.druid.math.expr.vector.FallbackVectorProcessor;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
@@ -104,17 +103,13 @@ class FunctionExpr implements Expr
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
-    return function.canVectorize(inspector, args) || canFallbackVectorize(inspector, args);
+    return function.canVectorize(inspector, args);
   }
 
   @Override
   public ExprVectorProcessor<?> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    if (function.canVectorize(inspector, args)) {
-      return function.asVectorProcessor(inspector, args);
-    } else {
-      return FallbackVectorProcessor.create(function, args, inspector);
-    }
+    return function.asVectorProcessor(inspector, args);
   }
 
   @Nullable
@@ -248,25 +243,13 @@ class ApplyFunctionExpr implements Expr
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
-    return canVectorizeNative(inspector) ||
-           (canFallbackVectorize(inspector, argsExpr) && lambdaExpr.canVectorize(inspector));
+    return function.canVectorize(inspector, lambdaExpr, argsExpr);
   }
 
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    if (canVectorizeNative(inspector)) {
-      return function.asVectorProcessor(inspector, lambdaExpr, argsExpr);
-    } else {
-      return FallbackVectorProcessor.create(function, lambdaExpr, argsExpr, inspector);
-    }
-  }
-
-  private boolean canVectorizeNative(InputBindingInspector inspector)
-  {
-    return function.canVectorize(inspector, lambdaExpr, argsExpr) &&
-           lambdaExpr.canVectorize(inspector) &&
-           argsExpr.stream().allMatch(expr -> expr.canVectorize(inspector));
+    return function.asVectorProcessor(inspector, lambdaExpr, argsExpr);
   }
 
   @Override
