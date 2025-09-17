@@ -1699,10 +1699,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                     .addDimension("a")
                     .build();
 
-    final boolean isRealtime = projectionsCursorFactory instanceof IncrementalIndexCursorFactory;
-    // realtime projections don't have row count, so abfoo is chosen because of how projection sorting happens
-    final ExpectedProjectionGroupBy queryMetrics =
-        new ExpectedProjectionGroupBy(isRealtime ? "abfoo" : "a_hourly_c_sum_filter_a_to_empty");
+    final ExpectedProjectionGroupBy queryMetrics = new ExpectedProjectionGroupBy("a_hourly_c_sum_filter_a_to_empty");
 
     final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
 
