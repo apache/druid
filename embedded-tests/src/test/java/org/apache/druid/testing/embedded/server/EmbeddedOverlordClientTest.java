@@ -228,7 +228,7 @@ public class EmbeddedOverlordClientTest extends EmbeddedClusterTestBase
             new JsonInputFormat(null, null, null, null, null),
             null, null, null,
             Map.of("bootstrap.servers", "localhost:9092"),
-            null, null, null, null, null, null, null, null, null, null, null, null, null, null
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
         ),
         Map.of(),
         null, null, null, null, null, null, null, null, null, null

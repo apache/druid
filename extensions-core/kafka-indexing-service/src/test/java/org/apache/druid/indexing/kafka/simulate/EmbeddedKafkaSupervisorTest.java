@@ -147,7 +147,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
             kafkaServer.consumerProperties(),
             null, null, null, null, null,
             true,
-            null, null, null, null, null, null, null, null
+            null, null, null, null, null, null, null, null, null
         ),
         null, null, null, null, null, null, null, null, null, null, null
     );

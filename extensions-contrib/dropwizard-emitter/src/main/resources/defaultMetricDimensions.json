@@ -156,6 +156,12 @@
     ],
     "type": "counter"
   },
+  "ingest/events/filtered": {
+    "dimensions": [
+      "dataSource"
+    ],
+    "type": "counter"
+  },
   "ingest/rows/output": {
     "dimensions": [
       "dataSource"

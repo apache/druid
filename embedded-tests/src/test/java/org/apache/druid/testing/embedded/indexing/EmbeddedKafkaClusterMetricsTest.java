@@ -365,7 +365,7 @@ public class EmbeddedKafkaClusterMetricsTest extends EmbeddedClusterTestBase
             supervisorRunPeriod,
             useEarliestOffset,
             Period.millis(taskCompletionTimeoutMillis),
-            null, null, null, null, null, null, null
+            null, null, null, null, null, null, null, null
         ),
         null, null, null, null, null, null, null, null, null, null, null
     );

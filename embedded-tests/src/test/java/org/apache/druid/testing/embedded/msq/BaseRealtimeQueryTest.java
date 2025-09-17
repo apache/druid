@@ -178,6 +178,7 @@ public class BaseRealtimeQueryTest extends EmbeddedClusterTestBase
             null,
             null,
             null,
+            null,
             null
         ),
         null,
