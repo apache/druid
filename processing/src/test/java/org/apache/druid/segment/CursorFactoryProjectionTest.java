@@ -1692,9 +1692,11 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                     .setGranularity(Granularities.ALL)
                     .setInterval(Intervals.ETERNITY)
                     .setDimFilter(new EqualityFilter("a", ColumnType.STRING, "nomatch", null))
-                    .setContext(Map.of("useProjection", "a_hourly_c_sum_filter_a_to_empty"))
+                    .setContext(Map.of(
+                        "useProjection", "a_hourly_c_sum_filter_a_to_empty",
+                        QueryContexts.QUERY_RESOURCE_ID, RESOURCE_ID
+                    ))
                     .addDimension("a")
-                    .setContext(Map.of(QueryContexts.QUERY_RESOURCE_ID, RESOURCE_ID))
                     .build();
 
     final boolean isRealtime = projectionsCursorFactory instanceof IncrementalIndexCursorFactory;
