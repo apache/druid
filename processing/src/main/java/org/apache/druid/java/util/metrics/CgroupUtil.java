@@ -54,7 +54,7 @@ public class CgroupUtil
       return lines.stream().map(Longs::tryParse).filter(Objects::nonNull).findFirst().orElse(defaultValue);
     }
     catch (RuntimeException | IOException ex) {
-      LOG.warn(ex, "Unable to fetch %s", fileName);
+      LOG.noStackTrace().warn(ex, "Unable to fetch %s", fileName);
       return defaultValue;
     }
   }

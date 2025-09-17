@@ -116,9 +116,10 @@ public class DartWorkerManagerTest
   @Test
   public void test_launchWorkersIfNeeded()
   {
-    workerManager.launchWorkersIfNeeded(0); // Does nothing, less than WORKERS.size()
-    workerManager.launchWorkersIfNeeded(1); // Does nothing, less than WORKERS.size()
-    workerManager.launchWorkersIfNeeded(2); // Does nothing, equal to WORKERS.size()
+    // Test successful launch returns empty set
+    Assertions.assertTrue(workerManager.launchWorkersIfNeeded(0).isEmpty()); // Does nothing, less than WORKERS.size()
+    Assertions.assertTrue(workerManager.launchWorkersIfNeeded(1).isEmpty()); // Does nothing, less than WORKERS.size()
+    Assertions.assertTrue(workerManager.launchWorkersIfNeeded(2).isEmpty()); // Does nothing, equal to WORKERS.size()
     Assert.assertThrows(
         DruidException.class,
         () -> workerManager.launchWorkersIfNeeded(3)
@@ -129,7 +130,26 @@ public class DartWorkerManagerTest
   public void test_waitForWorkers()
   {
     workerManager.launchWorkersIfNeeded(2);
-    workerManager.waitForWorkers(IntSet.of(0, 1)); // Returns immediately
+    // Test successful wait returns empty set
+    Assertions.assertTrue(workerManager.waitForWorkers(IntSet.of(0, 1)).isEmpty()); // Returns immediately
+  }
+
+  @Test
+  public void test_launchWorkersIfNeeded_returnsEmptySet()
+  {
+    // Dart workers are always available, so should always return empty set
+    var result = workerManager.launchWorkersIfNeeded(2);
+    Assertions.assertTrue(result.isEmpty());
+    Assertions.assertEquals(0, result.size());
+  }
+
+  @Test
+  public void test_waitForWorkers_returnsEmptySet()
+  {
+    // Dart workers are always available, so should always return empty set
+    var result = workerManager.waitForWorkers(IntSet.of(0, 1));
+    Assertions.assertTrue(result.isEmpty());
+    Assertions.assertEquals(0, result.size());
   }
 
   @Test
@@ -140,7 +160,7 @@ public class DartWorkerManagerTest
     Mockito.when(workerClient.stopWorker(WORKERS.get(1)))
            .thenReturn(Futures.immediateFuture(null));
 
-    final ListenableFuture<?> future = workerManager.start(null);
+    final ListenableFuture<?> future = workerManager.start();
     workerManager.stop(false);
 
     // Ensure the future from start() resolves.
@@ -155,7 +175,7 @@ public class DartWorkerManagerTest
     Mockito.when(workerClient.stopWorker(WORKERS.get(1)))
            .thenReturn(Futures.immediateFuture(null));
 
-    final ListenableFuture<?> future = workerManager.start(null);
+    final ListenableFuture<?> future = workerManager.start();
     workerManager.stop(true);
 
     // Ensure the future from start() resolves.
@@ -170,7 +190,7 @@ public class DartWorkerManagerTest
     Mockito.when(workerClient.stopWorker(WORKERS.get(1)))
            .thenReturn(Futures.immediateFuture(null));
 
-    final ListenableFuture<?> future = workerManager.start(null);
+    final ListenableFuture<?> future = workerManager.start();
     workerManager.stop(true);
 
     // Ensure the future from start() resolves.

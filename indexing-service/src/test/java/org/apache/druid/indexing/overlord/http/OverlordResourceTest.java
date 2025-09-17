@@ -999,21 +999,26 @@ public class OverlordResourceTest
     final Task task = NoopTask.create();
     final String taskId = task.getId();
     final TaskStatus status = TaskStatus.running(taskId);
+    final TaskInfo taskInfo = new TaskInfo(
+        DateTimes.of("2018-01-01"),
+        status,
+        task
+    );
 
-    EasyMock.expect(taskQueryTool.getTaskInfo(taskId))
-            .andReturn(new TaskInfo(
-                task.getId(),
-                DateTimes.of("2018-01-01"),
-                status,
-                task.getDataSource(),
-                task
-            ));
+    // For noop, simulate in-memory hit
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).once();
+    EasyMock.expect(taskQueue.getActiveTaskInfo(taskId)).andReturn(Optional.of(taskInfo)).once();
 
-    EasyMock.expect(taskQueryTool.getTaskInfo("othertask"))
-            .andReturn(null);
-
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).once();
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getKnownTasks())
-        .andReturn(ImmutableList.of());
+            .andReturn(ImmutableList.of(new MockTaskRunnerWorkItem(taskId))).anyTimes();
+    EasyMock.expect(taskRunner.getRunnerTaskState(taskId)).andReturn(RunnerTaskState.RUNNING).once();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).once();
+
+    // For "othertask", simulate in-memory miss, then task storage read
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).once();
+    EasyMock.expect(taskQueue.getActiveTaskInfo("othertask")).andReturn(Optional.absent()).once();
+    EasyMock.expect(taskStorage.getTaskInfo("othertask")).andReturn(null).once();
 
     replayAll();
 
@@ -1187,19 +1192,15 @@ public class OverlordResourceTest
     EasyMock.expect(
         taskStorage.getTaskInfos(TaskLookup.activeTasksOnly(), "datasource")
     ).andStubReturn(ImmutableList.of(
-        new TaskInfo<>(
-            "id_1",
+        new TaskInfo(
             DateTime.now(ISOChronology.getInstanceUTC()),
             TaskStatus.success("id_1"),
-            "datasource",
-            NoopTask.create()
+            new NoopTask("id_1", null, "datasource", 1L, 0L, null)
         ),
-        new TaskInfo<>(
-            "id_2",
+        new TaskInfo(
             DateTime.now(ISOChronology.getInstanceUTC()),
             TaskStatus.success("id_2"),
-            "datasource",
-            NoopTask.create()
+            new NoopTask("id_2", null, "datasource", 1L, 0L, null)
         )
     ));
     mockQueue.shutdown("id_1", "Shutdown request from user");
@@ -1210,7 +1211,7 @@ public class OverlordResourceTest
     replayAll();
     EasyMock.replay(mockQueue);
 
-    final Map<String, Integer> response = (Map<String, Integer>) overlordResource
+    final Map<String, String> response = (Map<String, String>) overlordResource
         .shutdownTasksForDataSource("datasource")
         .getEntity();
     Assert.assertEquals("datasource", response.get("dataSource"));

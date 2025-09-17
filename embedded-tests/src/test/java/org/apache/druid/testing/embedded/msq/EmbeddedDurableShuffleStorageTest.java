@@ -111,7 +111,7 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
   }
 
   @Override
-  protected void beforeEachTest()
+  protected void refreshDatasourceName()
   {
     // do nothing here, the super version of this method generates a new value for dataSource field each time, but
     // we are setting that in our @BeforeAll where we are just inserting data once and re-using between runs

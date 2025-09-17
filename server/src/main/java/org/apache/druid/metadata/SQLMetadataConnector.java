@@ -38,7 +38,9 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionIsolationLevel;
 import org.skife.jdbi.v2.TransactionStatus;
+import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.exceptions.DBIException;
+import org.skife.jdbi.v2.exceptions.StatementException;
 import org.skife.jdbi.v2.exceptions.UnableToExecuteStatementException;
 import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
@@ -537,7 +539,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
-  public void createLockTable(final String tableName, final String entryTypeName)
+  public void createLockTable(final String tableName)
   {
     createTable(
         tableName,
@@ -545,13 +547,13 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
                 + "  id %2$s NOT NULL,\n"
-                + "  %4$s_id VARCHAR(255) DEFAULT NULL,\n"
+                + "  task_id VARCHAR(255) DEFAULT NULL,\n"
                 + "  lock_payload %3$s,\n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",
-                tableName, getSerialType(), getPayloadType(), entryTypeName
+                tableName, getSerialType(), getPayloadType()
             ),
-            StringUtils.format("CREATE INDEX idx_%1$s_%2$s_id ON %1$s(%2$s_id)", tableName, entryTypeName)
+            StringUtils.format("CREATE INDEX idx_%1$s_task_id ON %1$s(task_id)", tableName)
         )
     );
   }
@@ -812,9 +814,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     if (config.get().isCreateTables()) {
       final MetadataStorageTablesConfig tablesConfig = tablesConfigSupplier.get();
-      final String entryType = tablesConfig.getTaskEntryType();
-      prepareTaskEntryTable(tablesConfig.getEntryTable(entryType));
-      createLockTable(tablesConfig.getLockTable(entryType), entryType);
+      prepareTaskEntryTable(tablesConfig.getTasksTable());
+      createLockTable(tablesConfig.getTaskLockTable());
     }
   }
 
@@ -1198,5 +1199,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
           tablesConfigSupplier.get().getSegmentsTable()
       );
     }
+  }
+
+  public static boolean isStatementException(Throwable e)
+  {
+    return e instanceof StatementException ||
+           (e instanceof CallbackFailedException && e.getCause() instanceof StatementException);
   }
 }

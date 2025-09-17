@@ -40,8 +40,9 @@ public interface TaskStorage
    *
    * @param task   task to add
    * @param status task status
+   * @return a TaskInfo object representing the task information that was committed to the storage facility
    */
-  void insert(Task task, TaskStatus status);
+  TaskInfo insert(Task task, TaskStatus status);
 
   /**
    * Persists task status in the storage facility. This method should throw an exception if the task status lifecycle
@@ -107,7 +108,7 @@ public interface TaskStorage
   Optional<TaskStatus> getStatus(String taskid);
 
   @Nullable
-  TaskInfo<Task, TaskStatus> getTaskInfo(String taskId);
+  TaskInfo getTaskInfo(String taskId);
 
   /**
    * Returns a list of currently running or pending tasks as stored in the storage facility. No particular order
@@ -116,6 +117,14 @@ public interface TaskStorage
    * @return list of active tasks
    */
   List<Task> getActiveTasks();
+
+  /**
+   * Returns a list of currently running or pending task infos as stored in the storage facility. No particular order
+   * is guaranteed, but implementations are encouraged to return tasks in ascending order of creation.
+   *
+   * @return list of active task infos
+   */
+  List<TaskInfo> getActiveTaskInfos();
 
   /**
    * Returns a list of currently running or pending tasks as stored in the storage facility. No particular order
@@ -152,12 +161,12 @@ public interface TaskStorage
    * @param taskLookups lookup types and filters
    * @param datasource  datasource filter
    */
-  List<TaskInfo<Task, TaskStatus>> getTaskInfos(
+  List<TaskInfo> getTaskInfos(
       Map<TaskLookupType, TaskLookup> taskLookups,
       @Nullable String datasource
   );
 
-  default List<TaskInfo<Task, TaskStatus>> getTaskInfos(
+  default List<TaskInfo> getTaskInfos(
       TaskLookup taskLookup,
       @Nullable String datasource
   )

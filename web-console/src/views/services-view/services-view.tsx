@@ -271,12 +271,12 @@ ORDER BY
     };
 
     this.serviceQueryManager = new QueryManager({
-      processQuery: async ({ capabilities, visibleColumns }, cancelToken) => {
+      processQuery: async ({ capabilities, visibleColumns }, signal) => {
         let services: ServiceResultRow[];
         if (capabilities.hasSql()) {
-          services = await queryDruidSql({ query: ServicesView.SERVICE_SQL }, cancelToken);
+          services = await queryDruidSql({ query: ServicesView.SERVICE_SQL }, signal);
         } else if (capabilities.hasCoordinatorAccess()) {
-          services = (await getApiArray('/druid/coordinator/v1/servers?simple', cancelToken)).map(
+          services = (await getApiArray('/druid/coordinator/v1/servers?simple', signal)).map(
             (s: any): ServiceResultRow => {
               const hostParts = s.host.split(':');
               const port = parseInt(hostParts[1], 10);
@@ -301,12 +301,12 @@ ORDER BY
         const auxiliaryQueries: AuxiliaryQueryFn<ServicesWithAuxiliaryInfo>[] = [];
 
         if (capabilities.hasCoordinatorAccess() && visibleColumns.shown('Detail')) {
-          auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, cancelToken) => {
+          auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, signal) => {
             try {
               const loadQueueInfos = (
                 await Api.instance.get<Record<string, LoadQueueInfo>>(
                   '/druid/coordinator/v1/loadqueue?simple',
-                  { cancelToken },
+                  { signal },
                 )
               ).data;
               return {
@@ -325,11 +325,11 @@ ORDER BY
         }
 
         if (capabilities.hasOverlordAccess()) {
-          auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, cancelToken) => {
+          auxiliaryQueries.push(async (servicesWithAuxiliaryInfo, signal) => {
             try {
               const workerInfos = await getApiArray<WorkerInfo>(
                 '/druid/indexer/v1/workers',
-                cancelToken,
+                signal,
               );
 
               const workerInfoLookup: Record<string, WorkerInfo> = lookupBy(

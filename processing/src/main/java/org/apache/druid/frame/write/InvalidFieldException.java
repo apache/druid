@@ -122,6 +122,8 @@ public class InvalidFieldException extends RuntimeException
     private String source;
     @Nullable
     private String errorMsg;
+    @Nullable
+    private Throwable cause;
 
     public Builder()
     {
@@ -133,11 +135,16 @@ public class InvalidFieldException extends RuntimeException
       rowNumber = invalidFieldException.rowNumber;
       column = invalidFieldException.column;
       errorMsg = invalidFieldException.errorMsg;
+      cause = invalidFieldException.getCause();
     }
 
     public InvalidFieldException build()
     {
-      return new InvalidFieldException(source, column, rowNumber, errorMsg);
+      InvalidFieldException invalidFieldException = new InvalidFieldException(source, column, rowNumber, errorMsg);
+      if (cause != null) {
+        invalidFieldException.initCause(cause);
+      }
+      return invalidFieldException;
     }
 
     public Builder column(String val)
@@ -161,6 +168,12 @@ public class InvalidFieldException extends RuntimeException
     public Builder errorMsg(String val)
     {
       errorMsg = val;
+      return this;
+    }
+
+    public Builder cause(Throwable val)
+    {
+      cause = val;
       return this;
     }
   }

@@ -401,14 +401,14 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
 
   const [existingTableState] = useQueryManager<string, string[]>({
     initQuery: '',
-    processQuery: async (_, cancelToken) => {
+    processQuery: async (_, signal) => {
       // Check if datasource already exists
       const tables = await queryDruidSql(
         {
           query: `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'druid' ORDER BY TABLE_NAME ASC`,
           resultFormat: 'array',
         },
-        cancelToken,
+        signal,
       );
 
       return tables.map(t => t[0]);
@@ -423,7 +423,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
 
   const [sampleState] = useQueryManager<ExternalConfig, QueryResult, Execution>({
     query: sampleExternalConfig,
-    processQuery: async (sampleExternalConfig, cancelToken) => {
+    processQuery: async (sampleExternalConfig, signal) => {
       const sampleResponse = await postToSampler(
         {
           type: 'index_parallel',
@@ -466,7 +466,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
           },
         },
         'sample',
-        cancelToken,
+        signal,
       );
 
       const columns = getHeaderFromSampleResponse(sampleResponse).map(({ name, type }) => {
@@ -501,7 +501,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
 
   const [previewResultState] = useQueryManager<string, QueryResult, Execution>({
     query: previewQueryString,
-    processQuery: async (previewQueryString, cancelToken) => {
+    processQuery: async (previewQueryString, signal) => {
       if (WorkbenchQuery.isTaskEngineNeeded(previewQueryString)) {
         return extractResult(
           await submitTaskQuery({
@@ -511,7 +511,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
               finalizeAggregations: false,
               sqlOuterLimit: 25,
             },
-            cancelToken,
+            signal,
           }),
         );
       } else {
@@ -520,7 +520,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
           result = await queryRunner.runQuery({
             query: previewQueryString,
             extraQueryContext: { sqlOuterLimit: 25, sqlStringifyArrays: false },
-            cancelToken,
+            signal,
           });
         } catch (e) {
           throw new DruidError(e);
