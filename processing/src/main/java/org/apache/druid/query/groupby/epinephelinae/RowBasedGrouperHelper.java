@@ -158,13 +158,13 @@ public class RowBasedGrouperHelper
   /**
    * Create a {@link Grouper} that groups according to the dimensions and aggregators in "query", along with
    * an {@link Accumulator} that accepts ResultRows and forwards them to the grouper.
-   *
+   * <p>
    * The pair will operate in one of two modes:
-   *
+   * <p>
    * 1) Combining mode (used if "subquery" is null). In this mode, filters from the "query" are ignored, and
    * its aggregators are converted into combining form. The input ResultRows are assumed to be partially-grouped
    * results originating from the provided "query".
-   *
+   * <p>
    * 2) Subquery mode (used if "subquery" is nonnull). In this mode, filters from the "query" (both intervals
    * and dim filters) are respected, and its aggregators are used in standard (not combining) form. The input
    * ResultRows are assumed to be results originating from the provided "subquery".
@@ -758,7 +758,10 @@ public class RowBasedGrouperHelper
         case COMPLEX:
           return (InputRawSupplierColumnSelectorStrategy<ColumnValueSelector>)
               columnSelector ->
-                  () -> DimensionHandlerUtils.convertObjectToType(columnSelector.getObject(), capabilities.toColumnType());
+                  () -> DimensionHandlerUtils.convertObjectToType(
+                      columnSelector.getObject(),
+                      capabilities.toColumnType()
+                  );
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
       }
@@ -1619,6 +1622,11 @@ public class RowBasedGrouperHelper
         final Object obj = key.getKey()[idx];
         int id = getReverseDictionary().getInt(obj);
         if (id == DimensionDictionary.ABSENT_VALUE_ID) {
+          int size = estimatedKeySize(key);
+          if (currentEstimatedSize + size > maxDictionarySize) {
+            return false;
+          }
+          currentEstimatedSize += size;
           id = getDictionary().size();
           getReverseDictionary().put(obj, id);
           getDictionary().add(obj);
@@ -1626,6 +1634,8 @@ public class RowBasedGrouperHelper
         keyBuffer.putInt(id);
         return true;
       }
+
+      abstract int estimatedKeySize(RowBasedKey key);
 
       @Override
       public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
@@ -1693,6 +1703,23 @@ public class RowBasedGrouperHelper
       }
 
       @Override
+      int estimatedKeySize(RowBasedKey key)
+      {
+        Object[] obj = key.getKey();
+        int size = 0;
+        for (Object o : obj) {
+          if (o instanceof String) {
+            size += estimateStringKeySize((String) o);
+          } else if (o != null) {
+            size += estimateStringKeySize(String.valueOf(o));
+          } else {
+            size += DictionaryBuildingUtils.estimateEntryFootprint(0);
+          }
+        }
+        return size;
+      }
+
+      @Override
       public BufferComparator getBufferComparator()
       {
         return bufferComparator;
@@ -1720,6 +1747,7 @@ public class RowBasedGrouperHelper
 
     private class ArrayNumericRowBasedKeySerdeHelper extends DictionaryBuildingSingleValuedRowBasedKeySerdeHelper
     {
+      private final int elementSize;
       private final BufferComparator bufferComparator;
       private final List<Object[]> dictionary;
       private final Object2IntMap<Object[]> reverseDictionary;
@@ -1732,6 +1760,19 @@ public class RowBasedGrouperHelper
       {
         super(keyBufferPosition);
         final TypeSignature<ValueType> elementType = arrayType.getElementType();
+        switch (elementType.getType()) {
+          case LONG:
+            elementSize = Long.BYTES;
+            break;
+          case FLOAT:
+            elementSize = Float.BYTES;
+            break;
+          case DOUBLE:
+            elementSize = Double.BYTES;
+            break;
+          default:
+            throw DruidException.defensive("Expecting primitive numeric types");
+        }
         this.dictionary = getDictionaryForType(elementType);
         this.reverseDictionary = getReverseDictionaryForType(elementType);
         this.bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
@@ -1777,6 +1818,13 @@ public class RowBasedGrouperHelper
           default:
             throw DruidException.defensive("Expecting primitive numeric types");
         }
+      }
+
+      @Override
+      int estimatedKeySize(RowBasedKey key)
+      {
+        Object[] numericKey = key.getKey();
+        return numericKey.length * elementSize;
       }
 
       @Override
@@ -1827,6 +1875,17 @@ public class RowBasedGrouperHelper
                 stringArrayDictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
                 stringArrayDictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
             );
+      }
+
+      @Override
+      int estimatedKeySize(RowBasedKey key)
+      {
+        Object[] stringKey = key.getKey();
+        int size = 0;
+        for (Object obj : stringKey) {
+          size += (int) estimateStringKeySize((String) obj);
+        }
+        return size;
       }
 
       @Override
@@ -1936,7 +1995,6 @@ public class RowBasedGrouperHelper
        * this returns -1.
        *
        * @param s a string
-       *
        * @return id for this string, or -1
        */
       private int addToDictionary(final String s)
