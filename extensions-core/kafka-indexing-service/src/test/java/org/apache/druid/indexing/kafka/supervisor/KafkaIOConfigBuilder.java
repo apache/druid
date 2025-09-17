@@ -33,6 +33,7 @@ public class KafkaIOConfigBuilder extends SupervisorIOConfigBuilder<KafkaIOConfi
   private String topic;
   private String topicPattern;
   private Map<String, Object> consumerProperties;
+  private KafkaHeaderBasedFilteringConfig headerBasedFilteringConfig;
 
   public KafkaIOConfigBuilder withTopic(String topic)
   {
@@ -49,6 +50,12 @@ public class KafkaIOConfigBuilder extends SupervisorIOConfigBuilder<KafkaIOConfi
   public KafkaIOConfigBuilder withConsumerProperties(Map<String, Object> consumerProperties)
   {
     this.consumerProperties = consumerProperties;
+    return this;
+  }
+
+  public KafkaIOConfigBuilder withHeaderBasedFilteringConfig(KafkaHeaderBasedFilteringConfig headerBasedFilteringConfig)
+  {
+    this.headerBasedFilteringConfig = headerBasedFilteringConfig;
     return this;
   }
 
@@ -88,7 +95,7 @@ public class KafkaIOConfigBuilder extends SupervisorIOConfigBuilder<KafkaIOConfi
         earlyMessageRejectionPeriod,
         lateMessageRejectionStartDateTime,
         null,
-        null,
+        headerBasedFilteringConfig,
         idleConfig,
         stopTaskCount,
         null
