@@ -27,7 +27,7 @@ public class DruidKubernetesOkHttpHttpClientConfig
   private boolean useCustomDispatcherExecutor = false;
 
   @JsonProperty
-  private int maxWorkerThreads = 100;
+  private int maxWorkerThreads = 20;
 
   @JsonProperty
   private int coreWorkerThreads = 20;

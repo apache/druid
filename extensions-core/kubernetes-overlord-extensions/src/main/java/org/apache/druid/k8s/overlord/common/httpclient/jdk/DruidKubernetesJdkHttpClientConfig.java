@@ -26,7 +26,7 @@ public class DruidKubernetesJdkHttpClientConfig
 {
 
   @JsonProperty
-  private int maxWorkerThreads = 100;
+  private int maxWorkerThreads = 20;
 
   @JsonProperty
   private int coreWorkerThreads = 20;
