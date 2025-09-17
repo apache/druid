@@ -1655,7 +1655,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
 
     assertCursorProjection(buildSpec, queryMetrics, isRealtime ? 4 : 2);
-    // List.of auto unpack Object[] to Object, so use ImmutableList.of
+    // List.of automatically unpacks Object[] to Object, so use ImmutableList.of
     testGroupBy(query, queryMetrics, ImmutableList.of(new Object[]{"a"}));
   }
 
