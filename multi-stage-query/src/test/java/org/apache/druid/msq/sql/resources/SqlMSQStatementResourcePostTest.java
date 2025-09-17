@@ -44,6 +44,7 @@ import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.ExecutionMode;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlQuery;
@@ -77,7 +78,8 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         indexingServiceClient,
         s -> localFileStorageConnector,
         authorizerMapper,
-        new DefaultQueryConfig(Map.of("debug", "false"))
+        new DefaultQueryConfig(Map.of("debug", "false")),
+        new ServerConfig()
     );
   }
 
@@ -332,7 +334,8 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         indexingServiceClient,
         s -> NilStorageConnector.getInstance(),
         authorizerMapper,
-        DefaultQueryConfig.NIL
+        DefaultQueryConfig.NIL,
+        new ServerConfig()
     );
 
     String errorMessage = "The sql statement api cannot read from the select destination [durableStorage] provided in "
