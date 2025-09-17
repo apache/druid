@@ -85,6 +85,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.ValueMatchers;
+import org.apache.druid.segment.nested.StructuredData;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -1405,7 +1406,11 @@ public class RowBasedGrouperHelper
                 jp.currentToken() != JsonToken.END_ARRAY,
                 "Unexpected end of array when deserializing timestamp from the spilled files"
             );
-            objects[dimsReadSoFar] = JacksonUtils.readObjectUsingDeserializationContext(jp, deserializationContext, Long.class);
+            objects[dimsReadSoFar] = JacksonUtils.readObjectUsingDeserializationContext(
+                jp,
+                deserializationContext,
+                Long.class
+            );
 
             ++dimsReadSoFar;
             jp.nextToken();
@@ -1622,7 +1627,7 @@ public class RowBasedGrouperHelper
         final Object obj = key.getKey()[idx];
         int id = getReverseDictionary().getInt(obj);
         if (id == DimensionDictionary.ABSENT_VALUE_ID) {
-          int size = estimatedKeySize(key);
+          int size = estimatedKeySize(key.getKey());
           if (currentEstimatedSize + size > maxDictionarySize) {
             return false;
           }
@@ -1635,7 +1640,7 @@ public class RowBasedGrouperHelper
         return true;
       }
 
-      abstract int estimatedKeySize(RowBasedKey key);
+      abstract int estimatedKeySize(Object[] key);
 
       @Override
       public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
@@ -1703,17 +1708,18 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      int estimatedKeySize(RowBasedKey key)
+      int estimatedKeySize(Object[] key)
       {
-        Object[] obj = key.getKey();
         int size = 0;
-        for (Object o : obj) {
-          if (o instanceof String) {
-            size += estimateStringKeySize((String) o);
-          } else if (o != null) {
-            size += estimateStringKeySize(String.valueOf(o));
-          } else {
-            size += DictionaryBuildingUtils.estimateEntryFootprint(0);
+        for (Object obj : key) {
+          if (obj instanceof StructuredData) {
+            Object o = ((StructuredData) obj).getValue();
+            if (o instanceof String) {
+              size += (int) estimateStringKeySize((String) o);
+            } else {
+              // fall back to string representation for other types, this might be under-estimating for map
+              size += (int) estimateStringKeySize(String.valueOf(o));
+            }
           }
         }
         return size;
@@ -1821,10 +1827,15 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      int estimatedKeySize(RowBasedKey key)
+      int estimatedKeySize(Object[] key)
       {
-        Object[] numericKey = key.getKey();
-        return numericKey.length * elementSize;
+        int size = 0;
+        for (Object obj : key) {
+          if (obj instanceof Object[]) {
+            size += ((Object[]) obj).length * elementSize;
+          }
+        }
+        return size;
       }
 
       @Override
@@ -1878,12 +1889,15 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      int estimatedKeySize(RowBasedKey key)
+      int estimatedKeySize(Object[] key)
       {
-        Object[] stringKey = key.getKey();
         int size = 0;
-        for (Object obj : stringKey) {
-          size += (int) estimateStringKeySize((String) obj);
+        for (Object obj : key) {
+          if (obj instanceof Object[]) {
+            for (Object o : (Object[]) obj) {
+              size += (int) estimateStringKeySize((String) o);
+            }
+          }
         }
         return size;
       }
