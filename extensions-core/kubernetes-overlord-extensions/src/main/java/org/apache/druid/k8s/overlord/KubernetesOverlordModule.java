@@ -85,10 +85,11 @@ public class KubernetesOverlordModule implements DruidModule
                                                                + ".k8sAndWorker";
   private static final String RUNNERSTRATEGY_PROPERTIES_FORMAT_STRING = K8SANDWORKER_PROPERTIES_PREFIX
                                                                         + ".runnerStrategy.%s";
-  private static final String HTTPCLIENT_TYPE_PROPERTY = K8SANDWORKER_PROPERTIES_PREFIX + ".http.httpClientType";
-  private static final String VERTX_HTTPCLIENT_PROPERITES_PREFIX = K8SANDWORKER_PROPERTIES_PREFIX + ".http.vertx";
-  private static final String OKHTTP_HTTPCLIENT_PROPERITES_PREFIX = K8SANDWORKER_PROPERTIES_PREFIX + ".http.okhttp";
-  public static final String JDK_HTTPCLIENT_PROPERITES_PREFIX = K8SANDWORKER_PROPERTIES_PREFIX + ".http.jdk";
+  private static final String K8SANDWORKER_HTTPCLIENT_PROPERTIES_PREFIX = K8SANDWORKER_PROPERTIES_PREFIX + ".http";
+  private static final String HTTPCLIENT_TYPE_PROPERTY = K8SANDWORKER_HTTPCLIENT_PROPERTIES_PREFIX + ".httpClientType";
+  private static final String VERTX_HTTPCLIENT_PROPERITES_PREFIX = K8SANDWORKER_HTTPCLIENT_PROPERTIES_PREFIX + ".vertx";
+  private static final String OKHTTP_HTTPCLIENT_PROPERITES_PREFIX = K8SANDWORKER_HTTPCLIENT_PROPERTIES_PREFIX + ".okhttp";
+  public static final String JDK_HTTPCLIENT_PROPERITES_PREFIX = K8SANDWORKER_HTTPCLIENT_PROPERTIES_PREFIX + ".jdk";
 
   @Override
   public void configure(Binder binder)
