@@ -182,11 +182,11 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  @Timeout(600)
-  public void test_ingest20kRows_ofSelfClusterMetricsWithScaleOuts_andVerifyValues()
+  @Timeout(60)
+  public void test_ingest30kRows_ofSelfClusterMetricsWithScaleOuts_andVerifyValues()
   {
     final int maxRowsPerSegment = 1000;
-    final int expectedSegmentsHandedOff = 20;
+    final int expectedSegmentsHandedOff = 30;
 
     final int taskCount = 1;
 
@@ -222,15 +222,13 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
         supervisorId,
         cluster.callApi().postSupervisor(kafkaSupervisorSpec)
     );
-
-    overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("task/autoScaler/scaleActionTime")
-                      .hasDimension(DruidMetrics.DATASOURCE, List.of(dataSource))
+    overlord.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("task/autoScaler/scaleActionTime"),
+        agg -> agg.hasSumAtLeast(2)
     );
 
     indexer.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("ingest/handoff/count")
-                      .hasDimension(DruidMetrics.DATASOURCE, List.of(dataSource)),
+        event -> event.hasMetricName("ingest/handoff/count"),
         agg -> agg.hasSumAtLeast(expectedSegmentsHandedOff)
     );
 
