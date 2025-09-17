@@ -186,7 +186,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
   public void test_ingest30kRows_ofSelfClusterMetricsWithScaleOuts_andVerifyValues()
   {
     final int maxRowsPerSegment = 1000;
-    final int expectedSegmentsHandedOff = 30;
+    final int expectedSegmentsHandedOff = 300;
 
     final int taskCount = 1;
 
@@ -487,7 +487,6 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
                 .withConsumerProperties(kafkaServer.consumerProperties())
                 .withTaskCount(taskCount)
                 .withAutoScalerConfig(autoScalerConfig)
-                .withTaskDuration(Period.hours(1))
         )
         .withId(supervisorId)
         .withUsePerpetuallyRunningTasks(usePerpetuallyRunningTasks)
