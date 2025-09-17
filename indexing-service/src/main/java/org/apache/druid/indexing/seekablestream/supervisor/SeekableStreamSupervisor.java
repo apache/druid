@@ -3657,6 +3657,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     } else {
       stopTasksEarly = false;
     }
+    // If using perpetually running tasks, we should not stop tasks based on duration
+    if (spec.usePerpetuallyRunningTasks()) {
+      return;
+    }
 
     final AtomicInteger numStoppedTasks = new AtomicInteger();
     // Sort task groups by start time to prioritize early termination of earlier groups, then iterate for processing
