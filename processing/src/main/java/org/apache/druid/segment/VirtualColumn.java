@@ -207,8 +207,8 @@ public interface VirtualColumn extends Cacheable
   default SingleValueDimensionVectorSelector makeSingleValueVectorDimensionSelector(
       DimensionSpec dimensionSpec,
       VectorColumnSelectorFactory factory,
-      ColumnSelector columnSelector,
-      ReadableVectorOffset offset
+      @Nullable ColumnSelector columnSelector,
+      @Nullable ReadableVectorOffset offset
   )
   {
     // Implementation for backwards compatibility with existing extensions.
@@ -320,8 +320,8 @@ public interface VirtualColumn extends Cacheable
   default VectorValueSelector makeVectorValueSelector(
       String columnName,
       VectorColumnSelectorFactory factory,
-      ColumnSelector columnSelector,
-      ReadableVectorOffset offset
+      @Nullable ColumnSelector columnSelector,
+      @Nullable ReadableVectorOffset offset
   )
   {
     // Implementation for backwards compatibility with existing extensions.
