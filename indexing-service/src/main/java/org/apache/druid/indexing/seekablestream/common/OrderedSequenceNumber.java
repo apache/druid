@@ -106,7 +106,8 @@ public abstract class OrderedSequenceNumber<SequenceOffsetType>
       }
       final int compareToEnd = this.compareTo(end);
       return isEndOffsetExclusive ? compareToEnd < 0 : compareToEnd <= 0;
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       // In case of any exception, we return false to avoid reading unwanted data.
       return false;
     }

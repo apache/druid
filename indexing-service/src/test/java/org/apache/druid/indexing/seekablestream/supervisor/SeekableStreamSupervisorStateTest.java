@@ -1111,6 +1111,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(spec.getIoConfig()).andReturn(ioConfig).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     EasyMock.expect(spec.getMonitorSchedulerConfig()).andReturn(new DruidMonitorSchedulerConfig() {
       @Override
       public Duration getEmissionDuration()
@@ -1323,6 +1324,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
     EasyMock.expect(spec.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.getMonitorSchedulerConfig()).andReturn(new DruidMonitorSchedulerConfig()

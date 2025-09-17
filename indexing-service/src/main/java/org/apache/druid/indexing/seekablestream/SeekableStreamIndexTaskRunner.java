@@ -149,6 +149,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     implements ChatHandler
 {
   private static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
+
   public enum Status
   {
     NOT_STARTED,

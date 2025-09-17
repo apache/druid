@@ -319,7 +319,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
              '}';
     }
 
-    public TaskGroup withStartingSequences(Map<PartitionIdType,SequenceOffsetType> newStartingSequences)
+    public TaskGroup withStartingSequences(Map<PartitionIdType, SequenceOffsetType> newStartingSequences)
     {
       this.startingSequences = ImmutableMap.copyOf(newStartingSequences);
       return this;
@@ -767,7 +767,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     log.info("Sending configuration updates to the following partition groups %s", newPartitionGroups);
     List<ListenableFuture<Boolean>> updateFutures = new ArrayList<>();
     Map<PartitionIdType, SequenceOffsetType> latestCommittedOffsets = getOffsetsFromMetadataStorage();
-    for (Map.Entry<Integer, TaskGroup> entry: activelyReadingTaskGroups.entrySet()) {
+    for (Map.Entry<Integer, TaskGroup> entry : activelyReadingTaskGroups.entrySet()) {
       int taskGroupId = entry.getKey();
       TaskGroup existingTaskGroup = entry.getValue();
 
@@ -824,7 +824,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           }
           SeekableStreamIndexTask existingTask =
               (SeekableStreamIndexTask) existingTaskOpt.get();
-          SeekableStreamIndexTask updatedTask  = existingTask.withNewIoConfig(newIoConfig);
+          SeekableStreamIndexTask updatedTask = existingTask.withNewIoConfig(newIoConfig);
           log.info("Persisting updated config for task [%s] to storage", taskId);
           updateTaskIoConfigInQueueOrStorage(updatedTask);
           return updatedTask;
@@ -1167,14 +1167,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> checkpointMetadata
   )
   {
-    var checkpointPresentAlready = checkpoint;
-    var checkpointProposed = checkpointMetadata.getSeekableStreamSequenceNumbers().getPartitionSequenceNumberMap();
-    // TODO: Think about what we can do here for now.
+    // Earlier checkpoints may no longer have the same partitions.
     if (spec.usePerpetuallyRunningTasks()) {
-//      Set<PartitionIdType> assignedPartitions = partitionGroups.getOrDefault(
-//          checkpointMetadata.getTaskGroupId(),
-//          Collections.emptySet()
-//      );
       return true;
     }
 
