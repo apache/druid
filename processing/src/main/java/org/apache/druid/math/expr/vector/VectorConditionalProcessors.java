@@ -19,41 +19,40 @@
 
 package org.apache.druid.math.expr.vector;
 
+import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.ExpressionTypeConversion;
 
+import java.util.List;
+
 public class VectorConditionalProcessors
 {
-  public static <T> ExprVectorProcessor<T> nvl(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
+  public static <T> ExprVectorProcessor<T> coalesce(Expr.VectorInputBindingInspector inspector, List<Expr> args)
   {
-    final ExpressionType leftType = left.getOutputType(inspector);
-    final ExpressionType rightType = right.getOutputType(inspector);
-    final ExpressionType outputType = ExpressionTypeConversion.leastRestrictiveType(leftType, rightType);
+    ExpressionType outputType = null;
+    for (Expr arg : args) {
+      outputType = ExpressionTypeConversion.leastRestrictiveType(outputType, arg.getOutputType(inspector));
+    }
 
     final ExprVectorProcessor<?> processor;
     if (outputType == null) {
       // if output type is null, it means all the input types were null (non-existent), and nvl(null, null) is null
       return VectorProcessors.constant((Long) null, inspector.getMaxVectorSize());
     }
+
+    ExprVectorProcessor[] processors = new ExprVectorProcessor[args.size()];
+    for (int i = 0; i < args.size(); i++) {
+      processors[i] = CastToTypeVectorProcessor.cast(args.get(i).asVectorProcessor(inspector), outputType);
+    }
     if (outputType.is(ExprType.LONG)) {
       // long is most restrictive so both processors are definitely long typed if output is long
-      processor = new NvlLongVectorProcessor(
-          left.asVectorProcessor(inspector),
-          right.asVectorProcessor(inspector)
-      );
+      processor = new CoalesceLongVectorProcessor(processors);
     } else if (outputType.is(ExprType.DOUBLE)) {
-      processor = new NvlDoubleVectorProcessor(
-          CastToTypeVectorProcessor.cast(left.asVectorProcessor(inspector), ExpressionType.DOUBLE),
-          CastToTypeVectorProcessor.cast(right.asVectorProcessor(inspector), ExpressionType.DOUBLE)
-      );
+      processor = new CoalesceDoubleVectorProcessor(processors);
     } else {
-      processor = new NvlVectorObjectProcessor(
-          outputType,
-          CastToTypeVectorProcessor.cast(left.asVectorProcessor(inspector), outputType),
-          CastToTypeVectorProcessor.cast(right.asVectorProcessor(inspector), outputType)
-      );
+      processor = new CoalesceVectorObjectProcessor(outputType, processors);
     }
     return (ExprVectorProcessor<T>) processor;
   }
@@ -65,9 +64,13 @@ public class VectorConditionalProcessors
       Expr elseExpr
   )
   {
-    // right now this function can only vectorize if then and else clause have same output type, if this changes then
-    // we'll need to switch this to use whatever output type logic that is using
-    final ExpressionType outputType = thenExpr.getOutputType(inspector);
+    // right now canVectorize verifies that all args have the same output type, but this is aspirational towards what
+    // the logic probably should be and is using least restrictive type. if the canVectorize logic changes to something
+    // other than least restrictive type, then so should this
+    final ExpressionType outputType = ExpressionTypeConversion.leastRestrictiveType(
+        thenExpr.getOutputType(inspector),
+        elseExpr.getOutputType(inspector)
+    );
 
     final ExprVectorProcessor<?> processor;
     if (outputType == null) {
@@ -93,6 +96,92 @@ public class VectorConditionalProcessors
           conditionExpr.asVectorProcessor(inspector),
           thenExpr.asVectorProcessor(inspector),
           elseExpr.asVectorProcessor(inspector)
+      );
+    }
+    return (ExprVectorProcessor<T>) processor;
+  }
+
+  public static <T> ExprVectorProcessor<T> caseSearchedFunction(
+      Expr.VectorInputBindingInspector inspector,
+      List<Expr> args
+  )
+  {
+    final int conditionProcessorsCount = (int) (double) (args.size() / 2);
+    final int thenProcessorsCount = args.size() - conditionProcessorsCount;
+    final ExprVectorProcessor<?>[] conditionProcessors = new ExprVectorProcessor<?>[conditionProcessorsCount];
+    final ExprVectorProcessor[] thenProcessors = new ExprVectorProcessor[thenProcessorsCount];
+
+    ExpressionType outputType = null;
+    for (int i = 0, j = 0, k = 0; i < args.size(); i++) {
+      // right now canVectorize verifies that all args have the same output type, but this is aspirational towards what
+      // the logic probably should be and is using least restrictive type. if the canVectorize logic changes to
+      // something other than least restrictive type, then so should this
+      if ((i % 2) == 0 && j < conditionProcessorsCount) {
+        conditionProcessors[j++] = args.get(i).asVectorProcessor(inspector);
+      } else {
+        outputType = ExpressionTypeConversion.leastRestrictiveType(outputType, args.get(i).getOutputType(inspector));
+        thenProcessors[k++] = args.get(i).asVectorProcessor(inspector);
+      }
+    }
+
+    return caseSearchedFunction(inspector, outputType, conditionProcessors, thenProcessors);
+  }
+
+  @SuppressFBWarnings("IM_BAD_CHECK_FOR_ODD")
+  public static <T> ExprVectorProcessor<T> caseSimpleFunction(
+      Expr.VectorInputBindingInspector inspector,
+      List<Expr> args
+  )
+  {
+    // rewrite case_simple into the form of case_searched
+    final int conditionProcessorsCount = (int) (double) ((args.size() - 1) / 2);
+    final int thenProcessorsCount = args.size() - 1 - conditionProcessorsCount;
+    final ExprVectorProcessor<?>[] conditionProcessors = new ExprVectorProcessor<?>[conditionProcessorsCount];
+    final ExprVectorProcessor[] thenProcessors = new ExprVectorProcessor[thenProcessorsCount];
+
+    ExpressionType outputType = null;
+    for (int i = 1, j = 0, k = 0; i < args.size(); i++) {
+      // right now canVectorize verifies that all args have the same output type, but this is aspirational towards what
+      // the logic probably should be and is using least restrictive type. if the canVectorize logic changes to
+      // something other than least restrictive type, then so should this
+      if ((i % 2) == 1 && j < conditionProcessorsCount) {
+        conditionProcessors[j++] = VectorComparisonProcessors.equals().asProcessor(inspector, args.get(0), args.get(i));
+      } else {
+        outputType = ExpressionTypeConversion.leastRestrictiveType(outputType, args.get(i).getOutputType(inspector));
+        thenProcessors[k++] = args.get(i).asVectorProcessor(inspector);
+      }
+    }
+    return caseSearchedFunction(inspector, outputType, conditionProcessors, thenProcessors);
+  }
+
+  private static <T> ExprVectorProcessor<T> caseSearchedFunction(
+      Expr.VectorInputBindingInspector inspector,
+      ExpressionType outputType,
+      ExprVectorProcessor<?>[] conditionProcessors,
+      ExprVectorProcessor[] thenProcessors
+  )
+  {
+    final ExprVectorProcessor<?> processor;
+    if (outputType == null) {
+      // if output type is null, it means all the input types were null (non-existent), and if(null, null, null) is null
+      return VectorProcessors.constant((Long) null, inspector.getMaxVectorSize());
+    }
+    if (outputType.is(ExprType.LONG)) {
+      // long is most restrictive so both processors are definitely long typed if output is long
+      processor = new CaseSearchedLongVectorProcessor(
+          conditionProcessors,
+          thenProcessors
+      );
+    } else if (outputType.is(ExprType.DOUBLE)) {
+      processor = new CaseSearchedDoubleVectorProcessor(
+          conditionProcessors,
+          thenProcessors
+      );
+    } else {
+      processor = new CaseSearchedObjectVectorProcessor(
+          outputType,
+          conditionProcessors,
+          thenProcessors
       );
     }
     return (ExprVectorProcessor<T>) processor;

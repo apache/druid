@@ -26,13 +26,16 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
@@ -86,6 +89,107 @@ class ProjectionsTest
         Map.of("c", "c_sum")
     );
     Assertions.assertEquals(expected, projectionMatch);
+  }
+
+  @Test
+  void testSchemaMatchDifferentTimeZone_hourlyMatches()
+  {
+    VirtualColumn ptHourlyFloor = new ExpressionVirtualColumn(
+        "__ptHourly",
+        "timestamp_floor(__time, 'PT1H', null, 'America/Los_Angeles')",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+    VirtualColumn hourlyFloor = new ExpressionVirtualColumn(
+        "__hourly",
+        "timestamp_floor(__time, 'PT1H', null, null)",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+    RowSignature baseTable = RowSignature.builder()
+                                         .addTimeColumn()
+                                         .add("a", ColumnType.LONG)
+                                         .add("b", ColumnType.STRING)
+                                         .add("c", ColumnType.LONG)
+                                         .build();
+    AggregateProjectionMetadata spec = new AggregateProjectionMetadata(
+        AggregateProjectionSpec.builder("some_projection")
+                               .virtualColumns(hourlyFloor)
+                               .groupingColumns(new LongDimensionSchema("__hourly"), new LongDimensionSchema("a"))
+                               .aggregators(new LongSumAggregatorFactory("c_sum", "c"))
+                               .build()
+                               .toMetadataSchema(),
+        12345
+    );
+    CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
+                                                     .setVirtualColumns(VirtualColumns.create(ptHourlyFloor))
+                                                     .setPhysicalColumns(Set.of("__time", "c"))
+                                                     .setPreferredOrdering(List.of())
+                                                     .setAggregators(List.of(new LongSumAggregatorFactory("c", "c")))
+                                                     .build();
+
+    ProjectionMatch projectionMatch = Projections.matchAggregateProjection(
+        spec.getSchema(),
+        cursorBuildSpec,
+        Intervals.ETERNITY,
+        new RowSignatureChecker(baseTable)
+    );
+    ProjectionMatch expected = new ProjectionMatch(
+        CursorBuildSpec.builder()
+                       .setAggregators(List.of(new LongSumAggregatorFactory("c", "c")))
+                       .setVirtualColumns(VirtualColumns.create(ptHourlyFloor))
+                       .setPhysicalColumns(Set.of("__time", "c_sum"))
+                       .setPreferredOrdering(List.of())
+                       .build(),
+        Map.of("c", "c_sum")
+    );
+    Assertions.assertEquals(expected, projectionMatch);
+  }
+
+  @Test
+  void testSchemaMatchDifferentTimeZone_dailyDoesNotMatch()
+  {
+    VirtualColumn ptDailyFloor = new ExpressionVirtualColumn(
+        "__ptDaily",
+        "timestamp_floor(__time, 'P1D', null, 'America/Los_Angeles')",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+    VirtualColumn dailyFloor = new ExpressionVirtualColumn(
+        "__daily",
+        "timestamp_floor(__time, 'P1D', null, null)",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+    RowSignature baseTable = RowSignature.builder()
+                                         .addTimeColumn()
+                                         .add("a", ColumnType.LONG)
+                                         .add("b", ColumnType.STRING)
+                                         .add("c", ColumnType.LONG)
+                                         .build();
+    AggregateProjectionMetadata spec = new AggregateProjectionMetadata(
+        AggregateProjectionSpec.builder("some_projection")
+                               .virtualColumns(dailyFloor)
+                               .groupingColumns(new LongDimensionSchema("__daily"), new LongDimensionSchema("a"))
+                               .aggregators(new LongSumAggregatorFactory("c_sum", "c"))
+                               .build()
+                               .toMetadataSchema(),
+        12345
+    );
+    CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
+                                                     .setVirtualColumns(VirtualColumns.create(ptDailyFloor))
+                                                     .setPhysicalColumns(Set.of("__time", "c"))
+                                                     .setPreferredOrdering(List.of())
+                                                     .setAggregators(List.of(new LongSumAggregatorFactory("c", "c")))
+                                                     .build();
+
+    ProjectionMatch projectionMatch = Projections.matchAggregateProjection(
+        spec.getSchema(),
+        cursorBuildSpec,
+        Intervals.ETERNITY,
+        new RowSignatureChecker(baseTable)
+    );
+    Assertions.assertNull(projectionMatch);
   }
 
   @Test

@@ -37,6 +37,7 @@ import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.server.QueryResponse;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.ForbiddenException;
@@ -82,17 +83,20 @@ public class SqlTaskResource
   private final SqlStatementFactory sqlStatementFactory;
   private final DefaultQueryConfig defaultQueryConfig;
   private final ObjectMapper jsonMapper;
+  private final ServerConfig serverConfig;
 
   @Inject
   public SqlTaskResource(
       final @MultiStageQuery SqlStatementFactory sqlStatementFactory,
       final DefaultQueryConfig defaultQueryConfig,
-      final ObjectMapper jsonMapper
+      final ObjectMapper jsonMapper,
+      final ServerConfig serverConfig
   )
   {
     this.sqlStatementFactory = sqlStatementFactory;
     this.defaultQueryConfig = defaultQueryConfig;
     this.jsonMapper = jsonMapper;
+    this.serverConfig = serverConfig;
   }
 
   /**
@@ -131,7 +135,11 @@ public class SqlTaskResource
       stmt = sqlStatementFactory.httpStatement(sqlQueryPlus, req);
     }
     catch (Exception e) {
-      return SqlResource.handleExceptionBeforeStatementCreated(e, sqlQuery.queryContext());
+      return SqlResource.handleExceptionBeforeStatementCreated(
+          e,
+          sqlQuery.queryContext(),
+          serverConfig.getErrorResponseTransformStrategy()
+      );
     }
 
     final String sqlQueryId = stmt.sqlQueryId();

@@ -24,13 +24,14 @@ import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
+import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.FallbackVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorConditionalProcessors;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
 import org.apache.druid.math.expr.vector.VectorProcessors;
@@ -141,11 +142,11 @@ public interface Function extends NamedFunction
    * batches to use with vectorized query engines.
    *
    * @see Expr#canVectorize(Expr.InputBindingInspector)
-   * @see ApplyFunction#canVectorize(Expr.InputBindingInspector, Expr, List)
+   * @see ApplyFunction#canVectorize(Expr.InputBindingInspector, LambdaExpr, List)
    */
   default boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
   {
-    return false;
+    return FallbackVectorProcessor.canFallbackVectorize(getOutputType(inspector, args), inspector, args);
   }
 
   /**
@@ -153,11 +154,15 @@ public interface Function extends NamedFunction
    * using {@link Expr#asVectorProcessor}, for use in vectorized query engines.
    *
    * @see Expr#asVectorProcessor(Expr.VectorInputBindingInspector)
-   * @see ApplyFunction#asVectorProcessor(Expr.VectorInputBindingInspector, Expr, List)
+   * @see ApplyFunction#asVectorProcessor(Expr.VectorInputBindingInspector, LambdaExpr, List)
    */
   default <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
   {
-    throw new UOE("Function[%s] is not vectorized", name());
+    if (ExpressionProcessing.allowVectorizeFallback()) {
+      return FallbackVectorProcessor.create(this, args, inspector);
+    } else {
+      throw Exprs.cannotVectorize(this);
+    }
   }
 
   /**
@@ -2144,10 +2149,14 @@ public interface Function extends NamedFunction
     @Override
     public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      // vector engine requires consistent typing, but native if function does not coerce then and else expressions,
+      // vector engine requires consistent typing, but non-vectorized if function does not coerce then/else expressions,
       // so for now we can only vectorize if both args have the same output type to not have a behavior change
       final ExpressionType thenType = args.get(1).getOutputType(inspector);
-      return Objects.equals(thenType, args.get(2).getOutputType(inspector));
+      final ExpressionType elseType = args.get(2).getOutputType(inspector);
+      if (thenType != null && elseType != null && !Objects.equals(thenType, elseType)) {
+        return false;
+      }
+      return inspector.canVectorize(args);
     }
 
     @Override
@@ -2168,6 +2177,7 @@ public interface Function extends NamedFunction
       return "case_searched";
     }
 
+    @SuppressFBWarnings("IM_BAD_CHECK_FOR_ODD")
     @Override
     public ExprEval apply(final List<Expr> args, final Expr.ObjectBinding bindings)
     {
@@ -2201,6 +2211,34 @@ public interface Function extends NamedFunction
       // add else
       results.add(args.get(args.size() - 1));
       return ExpressionTypeConversion.conditional(inspector, results);
+    }
+
+    @SuppressFBWarnings("IM_BAD_CHECK_FOR_ODD")
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      // vector engine requires consistent typing, but non-vectorized function does not coerce then/else expressions,
+      // so for now we can only vectorize if all args have the same output type to not have a behavior change
+      ExpressionType thenType = null;
+      for (int i = 0; i < args.size(); i++) {
+        if (i % 2 == 1 || i == args.size() - 1) {
+          final ExpressionType argType = args.get(i).getOutputType(inspector);
+          if (thenType != null) {
+            if (argType != null && !Objects.equals(thenType, argType)) {
+              return false;
+            }
+          } else {
+            thenType = argType;
+          }
+        }
+      }
+      return inspector.canVectorize(args);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorConditionalProcessors.caseSearchedFunction(inspector, args);
     }
   }
 
@@ -2248,6 +2286,33 @@ public interface Function extends NamedFunction
       // add else
       results.add(args.get(args.size() - 1));
       return ExpressionTypeConversion.conditional(inspector, results);
+    }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      // vector engine requires consistent typing, but non-vectorized function does not coerce then/else expressions,
+      // so for now we can only vectorize if all args have the same output type to not have a behavior change
+      ExpressionType thenType = null;
+      for (int i = 1; i < args.size(); i++) {
+        if (i % 2 == 0 || i == args.size() - 1) {
+          final ExpressionType argType = args.get(i).getOutputType(inspector);
+          if (thenType != null) {
+            if (argType != null && !Objects.equals(thenType, argType)) {
+              return false;
+            }
+          } else {
+            thenType = argType;
+          }
+        }
+      }
+      return inspector.canVectorize(args);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorConditionalProcessors.caseSimpleFunction(inspector, args);
     }
   }
 
@@ -2608,13 +2673,13 @@ public interface Function extends NamedFunction
     @Override
     public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return args.size() == 2 && inspector.canVectorize(args);
+      return inspector.canVectorize(args) && inspector.areSameTypes(args);
     }
 
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorConditionalProcessors.nvl(inspector, args.get(0), args.get(1));
+      return VectorConditionalProcessors.coalesce(inspector, args);
     }
   }
 

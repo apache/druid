@@ -28,6 +28,7 @@ import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.plan.hep.HepMatchOrder;
 import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.plan.volcano.AbstractConverter;
@@ -44,6 +45,7 @@ import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.JoinExtractFilterRule;
 import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
 import org.apache.calcite.rel.rules.ProjectMergeRule;
+import org.apache.calcite.rel.rules.ProjectRemoveRule;
 import org.apache.calcite.rel.rules.PruneEmptyRules;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
@@ -280,8 +282,9 @@ public class CalciteRulesManager
   private Program buildDecoupledLogicalOptimizationProgram(PlannerContext plannerContext)
   {
     final HepProgramBuilder builder = HepProgram.builder();
+    builder.addMatchOrder(HepMatchOrder.BOTTOM_UP);
     builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
-    builder.addRuleCollection(baseRuleSet(plannerContext));
+    builder.addRuleCollection(baseRuleSet(plannerContext, false));
     builder.addRuleInstance(CoreRules.UNION_MERGE);
     builder.addRuleInstance(FilterCorrelateRule.Config.DEFAULT.toRule());
     builder.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
@@ -290,6 +293,8 @@ public class CalciteRulesManager
     builder.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
     builder.addRuleInstance(new LogicalUnnestRule());
     builder.addRuleInstance(new UnnestInputCleanupRule());
+    builder.addRuleInstance(ProjectMergeRule.Config.DEFAULT.toRule());
+    builder.addRuleInstance(ProjectRemoveRule.Config.DEFAULT.toRule());
 
     final HepProgramBuilder cleanupRules = HepProgram.builder();
     cleanupRules.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
@@ -458,7 +463,7 @@ public class CalciteRulesManager
   {
     final ImmutableList.Builder<RelOptRule> retVal = ImmutableList
         .<RelOptRule>builder()
-        .addAll(baseRuleSet(plannerContext))
+        .addAll(baseRuleSet(plannerContext, plannerContext.getJoinAlgorithm().requiresSubquery()))
         .add(DruidRelToDruidRule.instance())
         .add(new DruidTableScanRule(plannerContext))
         .add(new DruidLogicalValuesRule(plannerContext))
@@ -483,7 +488,7 @@ public class CalciteRulesManager
   public List<RelOptRule> bindableConventionRuleSet(final PlannerContext plannerContext)
   {
     return ImmutableList.<RelOptRule>builder()
-                        .addAll(baseRuleSet(plannerContext))
+                        .addAll(baseRuleSet(plannerContext, false))
                         .addAll(Bindables.RULES)
                         .addAll(DEFAULT_BINDABLE_RULES)
                         .add(CoreRules.AGGREGATE_REDUCE_FUNCTIONS)
@@ -501,7 +506,7 @@ public class CalciteRulesManager
     return (bloat != null) ? bloat : DEFAULT_BLOAT;
   }
 
-  public List<RelOptRule> baseRuleSet(final PlannerContext plannerContext)
+  public List<RelOptRule> baseRuleSet(final PlannerContext plannerContext, boolean withJoinRules)
   {
     final PlannerConfig plannerConfig = plannerContext.getPlannerConfig();
     final ImmutableList.Builder<RelOptRule> rules = ImmutableList.builder();
@@ -513,7 +518,7 @@ public class CalciteRulesManager
     rules.add(new DruidAggregateCaseToFilterRule(plannerContext.queryContext().isExtendedFilteredSumRewrite()));
     rules.addAll(configurableRuleSet(plannerContext));
 
-    if (plannerContext.getJoinAlgorithm().requiresSubquery()) {
+    if (withJoinRules) {
       rules.addAll(FANCY_JOIN_RULES);
     }
 
