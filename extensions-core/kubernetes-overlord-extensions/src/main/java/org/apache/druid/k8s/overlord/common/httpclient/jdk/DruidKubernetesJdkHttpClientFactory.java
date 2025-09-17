@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 
 public class DruidKubernetesJdkHttpClientFactory extends JdkHttpClientFactory implements DruidKubernetesHttpClientFactory
 {
-  public static final String TYPE_NAME = "jdk";
+  public static final String TYPE_NAME = "javaStandardHttp";
   private final DruidKubernetesJdkHttpClientConfig config;
 
   public DruidKubernetesJdkHttpClientFactory(DruidKubernetesJdkHttpClientConfig config)

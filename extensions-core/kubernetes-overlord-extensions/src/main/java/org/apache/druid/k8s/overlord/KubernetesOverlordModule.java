@@ -87,9 +87,9 @@ public class KubernetesOverlordModule implements DruidModule
                                                                         + ".runnerStrategy.%s";
   private static final String K8SANDWORKER_HTTPCLIENT_PROPERTIES_PREFIX = K8SANDWORKER_PROPERTIES_PREFIX + ".http";
   private static final String HTTPCLIENT_TYPE_PROPERTY = K8SANDWORKER_HTTPCLIENT_PROPERTIES_PREFIX + ".httpClientType";
-  private static final String VERTX_HTTPCLIENT_PROPERITES_PREFIX = K8SANDWORKER_HTTPCLIENT_PROPERTIES_PREFIX + ".vertx";
-  private static final String OKHTTP_HTTPCLIENT_PROPERITES_PREFIX = K8SANDWORKER_HTTPCLIENT_PROPERTIES_PREFIX + ".okhttp";
-  public static final String JDK_HTTPCLIENT_PROPERITES_PREFIX = K8SANDWORKER_HTTPCLIENT_PROPERTIES_PREFIX + ".jdk";
+  private static final String VERTX_HTTPCLIENT_PROPERITES_PREFIX = K8SANDWORKER_HTTPCLIENT_PROPERTIES_PREFIX + "." + DruidKubernetesVertxHttpClientFactory.TYPE_NAME;
+  private static final String OKHTTP_HTTPCLIENT_PROPERITES_PREFIX = K8SANDWORKER_HTTPCLIENT_PROPERTIES_PREFIX + "." + DruidKubernetesOkHttpHttpClientFactory.TYPE_NAME;
+  public static final String JDK_HTTPCLIENT_PROPERITES_PREFIX = K8SANDWORKER_HTTPCLIENT_PROPERTIES_PREFIX + "." + DruidKubernetesJdkHttpClientFactory.TYPE_NAME;
 
   @Override
   public void configure(Binder binder)

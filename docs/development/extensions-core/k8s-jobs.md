@@ -336,7 +336,7 @@ The Druid developer community wants to reach a state where a stable default HTTP
 However, in the interim, Druid operators can select the HTTP client and configure some its parameters. This will help operators tailor the HTTP client to their use case and provide
 feedback to the Druid developer community on what works well in practice.
 
-#### Vert.x HTTP Client (default)
+#### vert.x HTTP Client (default)
 
 [vert.x](https://github.com/fabric8io/kubernetes-client/tree/main/httpclient-vertx)
 
@@ -347,7 +347,7 @@ feedback to the Druid developer community on what works well in practice.
   * The issue appears to be due to connections being closed on the server side, but the client side not cleaning them up before trying to use them in future requests.
   * [Related vert.x issue](https://github.com/fabric8io/kubernetes-client/issues/7252) has been opened with fabric8 to investigate exposing more configuration knobs to tune the connection pool.
 
-#### OkHttp Client
+#### okhttp Client
 
 [okhttp](https://github.com/fabric8io/kubernetes-client/tree/main/httpclient-okhttp)
 
@@ -360,7 +360,7 @@ feedback to the Druid developer community on what works well in practice.
 
 Uses `java.net.http.HttpClient` as the underlying client library.
 
-[native jdk](https://github.com/fabric8io/kubernetes-client/tree/main/httpclient-jdk)
+[`java.net.http.HttpClient`](https://github.com/fabric8io/kubernetes-client/tree/main/httpclient-jdk)
 
 ## Pod adapters
 The logic defining how the pod template is built for your Kubernetes Job depends on which pod adapter you have specified.
@@ -911,9 +911,9 @@ This configuration is experimental and subject to change. The Druid developer co
 
 |Property| Possible Values |Description| Default |required|
 |--------|-----------------|-----------|---------|--------|
-|`druid.indexer.runner.k8sAndWorker.http.httpClientType`|`String` (e.g., `okhttp`, `vertx`, `native jdk`)|Specifies the HTTP client library to be used by the worker task runner for communication with worker nodes.|`vertx`|No|
+|`druid.indexer.runner.k8sAndWorker.http.httpClientType`|`String` (e.g., `okhttp`, `vertx`, `javaStandardHttp`)|Specifies the HTTP client library to be used by the worker task runner for communication with worker nodes.|`vertx`|No|
 
-#### vertx HTTP Client
+#### vert.x HTTP Client
 
 |Property| Possible Values |Description| Default |required|
 |--------|-----------------|-----------|---------|--------|
@@ -925,7 +925,7 @@ This configuration is experimental and subject to change. The Druid developer co
 
 |Property| Possible Values |Description| Default |required|
 |--------|-----------------|-----------|---------|--------|
-|`druid.indexer.runner.k8sAndWorker.http.okhttp.useCustomDispatcherExecutor`|`Boolean`|Flag indicating if okhttp client will use a custom defined thread pool for Okhttp http client request dispatcher|false|No|
+|`druid.indexer.runner.k8sAndWorker.http.okhttp.useCustomDispatcherExecutor`|`Boolean`|Flag indicating if okhttp client will use a custom defined thread pool for okhttp http client request dispatcher|false|No|
 |`druid.indexer.runner.k8sAndWorker.http.okhttp.coreWorkerThreads`|`Integer`|The number of threads to keep in the pool, even if they are idle. Only applicable if `useCustomDispatcherExecutor` is true.|20|No|
 |`druid.indexer.runner.k8sAndWorker.http.okhttp.maxWorkerThreads`|`Integer`|Maximum number of threads in the custom thread pool for okhttp client request dispatcher. Only applicable if `useCustomDispatcherExecutor` is true.|20|No|
 |`druid.indexer.runner.k8sAndWorker.http.okhttp.workerThreadKeepAliveTime`|`Long`|Idle timeout in seconds for non-core threads in the worker thread pool. Only applicable if `useCustomDispatcherExecutor` is true.|60|No|
@@ -934,6 +934,6 @@ This configuration is experimental and subject to change. The Druid developer co
 
 |Property| Possible Values |Description| Default |required|
 |--------|-----------------|-----------|---------|--------|
-|`druid.indexer.runner.k8sAndWorker.http.jdk.coreWorkerThreads`|`Integer`|The number of threads to keep in the pool, even if they are idle.|20|No|
-|`druid.indexer.runner.k8sAndWorker.http.jdk.maxWorkerThreads`|`Integer`|Maximum number of threads in the custom thread pool for okhttp client request dispatcher.|20|No|
-|`druid.indexer.runner.k8sAndWorker.http.jdk.workerThreadKeepAliveTime`|`Long`|Idle timeout in seconds for non-core threads in the worker thread pool.|60|No|
+|`druid.indexer.runner.k8sAndWorker.http.javaStandardHttp.coreWorkerThreads`|`Integer`|The number of threads to keep in the pool, even if they are idle.|20|No|
+|`druid.indexer.runner.k8sAndWorker.http.javaStandardHttp.maxWorkerThreads`|`Integer`|Maximum number of threads in the custom thread pool for okhttp client request dispatcher.|20|No|
+|`druid.indexer.runner.k8sAndWorker.http.javaStandardHttp.workerThreadKeepAliveTime`|`Long`|Idle timeout in seconds for non-core threads in the worker thread pool.|60|No|

@@ -175,6 +175,7 @@ Kerberos
 KeyStores
 Kinesis
 Kubernetes
+KubernetesClient
 Lakehouse
 LDAPS
 LRU
@@ -451,6 +452,7 @@ numerics
 numShards
 parameterize
 objectGlob
+okhttp
 parameterized
 parse_json
 parseable
@@ -620,6 +622,7 @@ vectorizeVirtualColumns
 versioned
 versioning
 virtualColumns
+vert.x
 w.r.t.
 walkthrough
 whitelist
