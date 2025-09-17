@@ -341,6 +341,7 @@ endpointConfig
 enum
 expectedType
 expr
+fabric8
 failover
 failovers
 featureSpec

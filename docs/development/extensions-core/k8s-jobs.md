@@ -316,6 +316,52 @@ Host: http://ROUTER_IP:ROUTER_PORT
 ```
 </details>
 
+### Experimental HTTP Client Config
+
+:::warning
+
+This configuration is experimental and subject to change. The Druid developer community intends on selecting a stable default HTTP client and configuration in the future, simplifying configuration and distribution packaging. This means that not all exposed HTTP clients and their configurations will be supported long term. If you opt in to using this experimental configuration, please provide feedback to the Druid developer community (Apache mailing list: `dev@druid.apache.org`) on your experience to help guide our long term decisions.
+
+:::
+
+The extension uses [fabric8 KubernetesClient](https://github.com/fabric8io/kubernetes-client) to communicate with the Kubernetes API server. This client creates an
+underlying HTTP Client using a pluggable HTTP client library. By default, the client is [vert.x](https://github.com/fabric8io/kubernetes-client/tree/main/httpclient-vertx). The legacy default
+was [okhttp](https://github.com/fabric8io/kubernetes-client/tree/main/httpclient-okhttp).
+
+In the wild, Druid operators have reported issues with both the vert.x and okhttp clients.
+* vert.x: Issues with failures communicating with the API server due to unhealthy connections in the connection pool, leading to sporadic task failures.
+* okhttp: Issues with large amounts of threads being created and polluting memory if there are many tasks being launched.
+
+The Druid developer community wants to reach a state where a stable default HTTP client and configuration is identified, simplifying configuration and distribution packaging.
+However, in the interim, Druid operators can select the HTTP client and configure some its parameters. This will help operators tailor the HTTP client to their use case and provide
+feedback to the Druid developer community on what works well in practice.
+
+#### Vert.x HTTP Client (default)
+
+[vert.x](https://github.com/fabric8io/kubernetes-client/tree/main/httpclient-vertx)
+
+**Known issues**
+
+* Issues with K8s API requests failing with `ConnectionClosed` exceptions due to unhealthy connections in the underlying connection pool.
+  * This can lead to sporadic task failures.
+  * The issue appears to be due to connections being closed on the server side, but the client side not cleaning them up before trying to use them in future requests.
+  * [Related vert.x issue](https://github.com/fabric8io/kubernetes-client/issues/7252) has been opened with fabric8 to investigate exposing more configuration knobs to tune the connection pool.
+
+#### OkHttp Client
+
+[okhttp](https://github.com/fabric8io/kubernetes-client/tree/main/httpclient-okhttp)
+
+**Known issues**
+
+* With the default configuration, the client creates a large number of threads, which can lead to memory issues if there are many tasks being launched.
+  * Underlying issue appears to be related to an unbounded thread pool being used by the client. We are exposing experimental configuration knobs to tune the thread pool size to attempt to mitigate this issue.
+
+#### Native Java HTTP Client
+
+Uses `java.net.http.HttpClient` as the underlying client library.
+
+[native jdk](https://github.com/fabric8io/kubernetes-client/tree/main/httpclient-jdk)
+
 ## Pod adapters
 The logic defining how the pod template is built for your Kubernetes Job depends on which pod adapter you have specified.
 
@@ -855,3 +901,39 @@ To do this, set the following property.
 |`druid.indexer.runner.k8sAndWorker.runnerStrategy.taskType.default`| `String` (e.g., `k8s`, `worker`) | Specifies the default runner to use if no overrides apply. This setting ensures there is always a fallback runner available.|None|No|
 |`druid.indexer.runner.k8sAndWorker.runnerStrategy.taskType.overrides`| `JsonObject`(e.g., `{"index_kafka": "worker"}`)| Defines task-specific overrides for runner types. Each entry sets a task type to a specific runner, allowing fine control. |`{}`|No|
 
+### Experimental Fabric8 Http Client Configurations
+
+:::warning
+
+This configuration is experimental and subject to change. The Druid developer community intends on selecting a stable default HTTP client and configuration in the future, simplifying configuration and distribution packaging. This means that not all exposed HTTP clients and their configurations will be supported long term. If you opt in to using this experimental configuration, please provide feedback to the Druid developer community (Apache mailing list: `dev@druid.apache.org`) on your experience to help guide our long term decisions.
+
+:::
+
+|Property| Possible Values |Description| Default |required|
+|--------|-----------------|-----------|---------|--------|
+|`druid.indexer.runner.k8sAndWorker.http.httpClientType`|`String` (e.g., `okhttp`, `vertx`, `native jdk`)|Specifies the HTTP client library to be used by the worker task runner for communication with worker nodes.|`vertx`|No|
+
+#### vertx HTTP Client
+
+|Property| Possible Values |Description| Default |required|
+|--------|-----------------|-----------|---------|--------|
+|`druid.indexer.runner.k8sAndWorker.http.vertx.workerPoolSize`|`Integer`|...|20|No|
+|`druid.indexer.runner.k8sAndWorker.http.vertx.eventLoopPoolSize`|`Integer`|...|`2 * number cores`|No|
+|`druid.indexer.runner.k8sAndWorker.http.vertx.internalBlockingPoolSize`|`Integer`|...|20|No|
+
+#### OkHttp Client
+
+|Property| Possible Values |Description| Default |required|
+|--------|-----------------|-----------|---------|--------|
+|`druid.indexer.runner.k8sAndWorker.http.okhttp.useCustomDispatcherExecutor`|`Boolean`|Flag indicating if okhttp client will use a custom defined thread pool for Okhttp http client request dispatcher|false|No|
+|`druid.indexer.runner.k8sAndWorker.http.okhttp.coreWorkerThreads`|`Integer`|The number of threads to keep in the pool, even if they are idle. Only applicable if `useCustomDispatcherExecutor` is true.|20|No|
+|`druid.indexer.runner.k8sAndWorker.http.okhttp.maxWorkerThreads`|`Integer`|Maximum number of threads in the custom thread pool for okhttp client request dispatcher. Only applicable if `useCustomDispatcherExecutor` is true.|20|No|
+|`druid.indexer.runner.k8sAndWorker.http.okhttp.workerThreadKeepAliveTime`|`Long`|Idle timeout in seconds for non-core threads in the worker thread pool. Only applicable if `useCustomDispatcherExecutor` is true.|60|No|
+
+#### Native Java HTTP Client
+
+|Property| Possible Values |Description| Default |required|
+|--------|-----------------|-----------|---------|--------|
+|`druid.indexer.runner.k8sAndWorker.http.jdk.coreWorkerThreads`|`Integer`|The number of threads to keep in the pool, even if they are idle.|20|No|
+|`druid.indexer.runner.k8sAndWorker.http.jdk.maxWorkerThreads`|`Integer`|Maximum number of threads in the custom thread pool for okhttp client request dispatcher.|20|No|
+|`druid.indexer.runner.k8sAndWorker.http.jdk.workerThreadKeepAliveTime`|`Long`|Idle timeout in seconds for non-core threads in the worker thread pool.|60|No|
