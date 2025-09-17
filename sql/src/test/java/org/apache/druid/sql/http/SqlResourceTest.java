@@ -333,7 +333,8 @@ public class SqlResourceTest extends CalciteTestBase
             TEST_RESPONSE_CONTEXT_CONFIG,
             DUMMY_DRUID_NODE
         ),
-        DefaultQueryConfig.NIL
+        DefaultQueryConfig.NIL,
+        new ServerConfig()
     );
   }
 
@@ -601,7 +602,8 @@ public class SqlResourceTest extends CalciteTestBase
             TEST_RESPONSE_CONTEXT_CONFIG,
             DUMMY_DRUID_NODE
         ),
-        queryConfigWithTimezone
+        queryConfigWithTimezone,
+        new ServerConfig()
     );
 
     final List<Map<String, Object>> rows = doPost(
@@ -1712,7 +1714,8 @@ public class SqlResourceTest extends CalciteTestBase
             TEST_RESPONSE_CONTEXT_CONFIG,
             DUMMY_DRUID_NODE
         ),
-        DefaultQueryConfig.NIL
+        DefaultQueryConfig.NIL,
+        new ServerConfig()
     );
 
     String errorMessage = "This will be supported in Druid 9999";

@@ -27,6 +27,9 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
+import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.LongUnivariateLongFunctionVectorProcessor;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -88,6 +91,29 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     public ExpressionType getOutputType(InputBindingInspector inspector)
     {
       return ExpressionType.LONG;
+    }
+
+    @Override
+    public boolean canVectorize(InputBindingInspector inspector)
+    {
+      return args.get(0).canVectorize(inspector);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
+    {
+      final ExprVectorProcessor<?> processor = new LongUnivariateLongFunctionVectorProcessor(
+          CastToTypeVectorProcessor.cast(args.get(0).asVectorProcessor(inspector), ExpressionType.LONG),
+          argTime -> {
+            long bucketStartTime = granularity.bucketStart(argTime);
+            if (argTime == bucketStartTime) {
+              return bucketStartTime;
+            }
+            return granularity.increment(bucketStartTime);
+          }
+      );
+
+      return (ExprVectorProcessor<T>) processor;
     }
 
     @Override

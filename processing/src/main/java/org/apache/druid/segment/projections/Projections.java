@@ -23,8 +23,10 @@ import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.CursorBuildSpec;
@@ -42,10 +44,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 public class Projections
 {
+  private static final ConcurrentHashMap<byte[], Boolean> PERIOD_GRAN_CACHE = new ConcurrentHashMap<>();
+
   @Nullable
   public static <T> QueryableProjection<T> findMatchingProjection(
       CursorBuildSpec cursorBuildSpec,
@@ -65,7 +70,12 @@ public class Projections
         if (name != null && !name.equals(spec.getSchema().getName())) {
           continue;
         }
-        final ProjectionMatch match = matchAggregateProjection(spec.getSchema(), cursorBuildSpec, dataInterval, physicalChecker);
+        final ProjectionMatch match = matchAggregateProjection(
+            spec.getSchema(),
+            cursorBuildSpec,
+            dataInterval,
+            physicalChecker
+        );
         if (match != null) {
           if (cursorBuildSpec.getQueryMetrics() != null) {
             cursorBuildSpec.getQueryMetrics().projection(spec.getSchema().getName());
@@ -383,17 +393,32 @@ public class Projections
       // virtual column and underlying expression itself, but this will do for now
       final Granularity virtualGranularity = Granularities.fromVirtualColumn(queryVirtualColumn);
       if (virtualGranularity != null) {
-        if (virtualGranularity.isFinerThan(projection.getEffectiveGranularity())) {
-          return null;
-        }
         // same granularity, replace virtual column directly by remapping it to the physical column
         if (projection.getEffectiveGranularity().equals(virtualGranularity)) {
           return matchBuilder.remapColumn(queryVirtualColumn.getOutputName(), ColumnHolder.TIME_COLUMN_NAME)
                              .addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
+        } else if (Granularities.ALL.equals(virtualGranularity)
+                   || Granularities.NONE.equals(projection.getEffectiveGranularity())) {
+          // if virtual gran is ALL or projection gran is NONE, it's guaranteed that projection gran can be mapped to virtual gran
+          return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
+        } else if (virtualGranularity instanceof PeriodGranularity
+                   && projection.getEffectiveGranularity() instanceof PeriodGranularity) {
+          PeriodGranularity virtualGran = (PeriodGranularity) virtualGranularity;
+          PeriodGranularity projectionGran = (PeriodGranularity) projection.getEffectiveGranularity();
+          byte[] combinedKey = new CacheKeyBuilder((byte) 0x0).appendCacheable(projectionGran)
+                                                              .appendCacheable(virtualGran)
+                                                              .build();
+          if (PERIOD_GRAN_CACHE.computeIfAbsent(combinedKey, (unused) -> projectionGran.canBeMappedTo(virtualGran))) {
+            return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
+          }
         }
-        return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
+        // if it reaches here, can be one of the following cases:
+        // 1. virtual gran is NONE, and projection gran is not
+        // 2. projection gran is ALL, and virtual gran is not
+        // 3. both are period granularities, but projection gran can't be mapped to virtual gran, e.x. PT2H can't be mapped to PT1H
+        return null;
       } else {
-        // anything else with __time requires none granularity
+        // we can't decide query granularity for the virtual column with __time, requires none granularity to be safe
         if (Granularities.NONE.equals(projection.getEffectiveGranularity())) {
           return matchBuilder.addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
         }

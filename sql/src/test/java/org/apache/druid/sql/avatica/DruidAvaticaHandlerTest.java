@@ -90,6 +90,7 @@ import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
+import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.eclipse.jetty.server.Handler;
@@ -574,6 +575,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             ),
             row(
                 Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", TestDataSet.LARRY.getName()),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.DATASOURCE5),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
@@ -673,6 +680,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             row(
                 Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.FORBIDDEN_DATASOURCE),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", TestDataSet.LARRY.getName()),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             ),
