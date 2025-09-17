@@ -77,7 +77,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.PendingSegmentRecord;
@@ -131,7 +130,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -256,10 +254,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private volatile DateTime maxMessageTime;
   private final ScheduledExecutorService rejectionPeriodUpdaterExec;
   private AtomicBoolean waitForConfigUpdate = new AtomicBoolean(false);
-  private ScheduledExecutorService publishingExec;
-  private ScheduledFuture<?> publishingTask;
-  private final long PUBLISH_INTERVAL_MS = 2000;
-  private Supplier<Committer> committerSupplier;
 
 
   public SeekableStreamIndexTaskRunner(
@@ -297,10 +291,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       );
     }
     resetNextCheckpointTime();
-    this.publishingExec = ScheduledExecutors.fixed(
-        1,
-        StringUtils.encodeForFormat("Publisher-" + task.getId()) + "-%d"
-    );
   }
 
   public TaskStatus run(TaskToolbox toolbox)
@@ -467,10 +457,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     //milliseconds waited for created segments to be handed off
     long handoffWaitMs = 0L;
     log.info("Task perpetually running: %s", task.isPerpetuallyRunning());
-    if (task.isPerpetuallyRunning()) {
-      startContinuousPublishing();
-    }
-
     try (final RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier =
              task.newTaskRecordSupplier(toolbox)) {
       this.recordSupplier = recordSupplier;
@@ -594,7 +580,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       }
 
       // Set up committer.
-      committerSupplier = () -> {
+      final Supplier<Committer> committerSupplier = () -> {
         final Map<PartitionIdType, SequenceOffsetType> snapshot = ImmutableMap.copyOf(currOffsets);
         lastPersistedOffsets.clear();
         lastPersistedOffsets.putAll(snapshot);
@@ -616,9 +602,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       };
 
       // restart publishing of sequences (if any)
-      if (!task.isPerpetuallyRunning()) {
-        maybePersistAndPublishSequences(committerSupplier);
-      }
+      maybePersistAndPublishSequences(committerSupplier);
 
       assignment = assignPartitions(this.recordSupplier);
       possiblyResetDataSourceMetadata(toolbox, this.recordSupplier, assignment);
@@ -652,8 +636,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           }
 
           // if stop is requested or task's end sequence is set by call to setEndOffsets method with finish set to true
-          // TODO: When the last sequence metadata is checkpointed, do we really want to transition to PUBLISHING for perpetually running tasks?
-          // I understand first 2 points of PUBLISHING state, a stop was requested, sequences are finished, but what has a last sequence metadata being checkpointed got to do with it?
           if (stopRequested.get() || sequences.size() == 0 || getLastSequenceMetadata().isCheckpointed()) {
             status = Status.PUBLISHING;
           }
@@ -1018,37 +1000,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         // persist already done in finally, so directly add to publishQueue
         publishAndRegisterHandoff(sequenceMetadata);
       }
-    }
-  }
-
-  /**
-   * Start the continuous publishing executor for perpetual tasks
-   * Call this after the main reading loop starts
-   */
-  private void startContinuousPublishing()
-  {
-    log.info("Starting continuous publishing for perpetual task [%s]", task.getId());
-
-    publishingTask = publishingExec.scheduleAtFixedRate(
-        this::performContinuousPublishing,
-        PUBLISH_INTERVAL_MS,
-        PUBLISH_INTERVAL_MS,
-        TimeUnit.MILLISECONDS
-    );
-  }
-
-  /**
-   * The method that runs periodically to check if there are sequences to be published
-   * for perpetual tasks
-   */
-  private void performContinuousPublishing()
-  {
-    try {
-      maybePersistAndPublishSequences(committerSupplier);
-      waitForPublishAndHandoffCompletion();
-    }
-    catch (Exception e) {
-      log.error(e, "Encountered exception while publishing in background thread");
     }
   }
 
@@ -1571,9 +1522,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     if (runThread != null) {
       runThread.interrupt();
     }
-    if (publishingExec != null) {
-      publishingExec.shutdownNow();
-    }
   }
 
   public void stopGracefully()
@@ -1619,9 +1567,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     }
     catch (Exception e) {
       throw new RuntimeException(e);
-    }
-    if (publishingExec != null) {
-      publishingExec.shutdown();
     }
   }
 
