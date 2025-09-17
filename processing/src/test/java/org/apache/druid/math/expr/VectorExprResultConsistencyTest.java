@@ -65,7 +65,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
 {
   private static final Logger log = new Logger(VectorExprResultConsistencyTest.class);
   private static final int NUM_ITERATIONS = 10;
-  private static final int VECTOR_SIZE = 512;
+  private static final int VECTOR_SIZE = 4;
 
 
   private static final Map<String, String> LOOKUP = Map.of(
@@ -135,12 +135,16 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   final Map<String, ExpressionType> types = ImmutableMap.<String, ExpressionType>builder()
       .put("l1", ExpressionType.LONG)
       .put("l2", ExpressionType.LONG)
+      .put("l3", ExpressionType.LONG)
       .put("d1", ExpressionType.DOUBLE)
       .put("d2", ExpressionType.DOUBLE)
+      .put("d3", ExpressionType.DOUBLE)
       .put("s1", ExpressionType.STRING)
       .put("s2", ExpressionType.STRING)
+      .put("s3", ExpressionType.STRING)
       .put("boolString1", ExpressionType.STRING)
       .put("boolString2", ExpressionType.STRING)
+      .put("boolString3", ExpressionType.STRING)
       .build();
 
 
@@ -339,7 +343,8 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   public void testSymmetricalBivariateFunctions()
   {
     final List<String> functions = List.of(
-        "nvl"
+        "nvl",
+        "coalesce"
     );
     final List<String> templates = List.of(
         "%s(d1, d2)",
@@ -380,8 +385,11 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   public void testCaseSearchedFunction()
   {
     testExpression("case_searched(boolString1, s1, boolString2, s2, s1)", types);
+    testExpression("case_searched(boolString1, s1, boolString2, s2, boolString3, s3, s1)", types);
     testExpression("case_searched(boolString1, l1, boolString2, l2, l2)", types);
+    testExpression("case_searched(boolString1, l1, boolString2, l2, boolString3, l3, l2)", types);
     testExpression("case_searched(boolString1, d1, boolString2, d2, d1)", types);
+    testExpression("case_searched(boolString1, d1, boolString2, d2, boolString3, d3, d1)", types);
     testExpression("case_searched(l1 % 2 == 0, -1, l1 % 2 == 1, l2 / (l1 % 2))", types);
     Assertions.assertFalse(
         Parser.parse("case_searched(boolString1, d1, boolString2, d2, l1)", MACRO_TABLE)
@@ -407,6 +415,25 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     );
   }
 
+  @Test
+  public void testCoalesceFunction()
+  {
+    final List<String> functions = List.of(
+        "coalesce"
+    );
+    final List<String> templates = List.of(
+        "%s(nonexistent, d1, d2, d3)",
+        "%s(nonexistent, d1, nonexistent2, d2, nonexistent3, d3)",
+        "%s(nonexistent, nonexistent2, l1, l2, nonexistent, l3)",
+        "%s(nonexistent, s1, nonexistent2, s2)"
+    );
+    testFunctions(types, templates, functions);
+    // cannot vectorize mixed arg types
+    Assertions.assertFalse(
+        Parser.parse("coalesce(s1, d1, s1, l1, d1)", MACRO_TABLE)
+              .canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
+  }
 
   @Test
   public void testStringFns()

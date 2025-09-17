@@ -21,23 +21,20 @@ package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.math.expr.ExpressionType;
 
-public abstract class NvlFunctionVectorProcessor<T> implements ExprVectorProcessor<T>
+public abstract class CoalesceFunctionVectorProcessor<T> implements ExprVectorProcessor<T>
 {
   final ExpressionType outputType;
-  final ExprVectorProcessor<T> inputProcessor;
-  final ExprVectorProcessor<T> elseProcessor;
+  final ExprVectorProcessor<T>[] processors;
   final FilteredVectorInputBinding inputBindingFilterer;
 
-  public NvlFunctionVectorProcessor(
+  public CoalesceFunctionVectorProcessor(
       ExpressionType outputType,
-      ExprVectorProcessor<T> inputProcessor,
-      ExprVectorProcessor<T> elseProcessor
+      ExprVectorProcessor<T>[] processors
   )
   {
     this.outputType = outputType;
-    this.inputProcessor = inputProcessor;
-    this.elseProcessor = elseProcessor;
-    this.inputBindingFilterer = new FilteredVectorInputBinding(inputProcessor.maxVectorSize());
+    this.processors = processors;
+    this.inputBindingFilterer = new FilteredVectorInputBinding(processors[0].maxVectorSize());
   }
 
   @Override
@@ -49,6 +46,6 @@ public abstract class NvlFunctionVectorProcessor<T> implements ExprVectorProcess
   @Override
   public int maxVectorSize()
   {
-    return inputProcessor.maxVectorSize();
+    return processors[0].maxVectorSize();
   }
 }
