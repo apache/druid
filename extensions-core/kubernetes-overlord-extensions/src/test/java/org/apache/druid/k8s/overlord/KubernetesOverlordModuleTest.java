@@ -255,7 +255,7 @@ public class KubernetesOverlordModuleTest
   {
     Properties props = new Properties();
     props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
-    props.setProperty("druid.indexer.runner.k8sAndWorker.http.httpClientType", "jdk");
+    props.setProperty("druid.indexer.runner.k8sAndWorker.http.httpClientType", "javaStandardHttp");
 
     injector = makeInjectorWithProperties(props, false, true);
     DruidKubernetesHttpClientFactory factory = injector.getInstance(DruidKubernetesHttpClientFactory.class);
@@ -307,7 +307,7 @@ public class KubernetesOverlordModuleTest
   {
     Properties props = new Properties();
     props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
-    props.setProperty("druid.indexer.runner.k8sAndWorker.http.httpClientType", "jdk");
+    props.setProperty("druid.indexer.runner.k8sAndWorker.http.httpClientType", "javaStandardHttp");
 
     injector = makeInjectorWithProperties(props, false, true);
     DruidKubernetesClient client = injector.getInstance(DruidKubernetesClient.class);
