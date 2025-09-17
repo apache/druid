@@ -63,6 +63,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.query.filter.EqualityFilter;
+import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryMetrics;
@@ -274,33 +275,70 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                  new DoubleSumAggregatorFactory("d", "d")
                              )
                              .build(),
-      AggregateProjectionSpec
-          .builder("a_concat_b_d_plus_f_sum_c")
-          .virtualColumns(
-              new ExpressionVirtualColumn("__vc2", "d + e", ColumnType.LONG, TestExprMacroTable.INSTANCE),
-              new ExpressionVirtualColumn("__vc3", "concat(a, b)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
-          )
-          .groupingColumns(new LongDimensionSchema("__vc2"), new StringDimensionSchema("__vc3"))
-          .aggregators(new LongSumAggregatorFactory("sum_c", "c"))
-          .build(),
-      AggregateProjectionSpec
-          .builder("a_hourly_c_sum_filter_a_to_a")
-          .filter(new EqualityFilter("a", ColumnType.STRING, "a", null))
-          .virtualColumns(Granularities.toVirtualColumn(Granularities.HOUR, "__gran"))
-          .groupingColumns(new StringDimensionSchema("a"), new LongDimensionSchema("__gran"))
-          .aggregators(new LongSumAggregatorFactory("_c_sum", "c"))
-          .build(),
-      AggregateProjectionSpec
-          .builder("a_hourly_c_sum_filter_a_to_empty")
-          .filter(new EqualityFilter("a", ColumnType.STRING, "nomatch", null))
-          .virtualColumns(Granularities.toVirtualColumn(Granularities.HOUR, "__gran"))
-          .groupingColumns(new StringDimensionSchema("a"), new LongDimensionSchema("__gran"))
-          .aggregators(new LongSumAggregatorFactory("_c_sum", "c"))
-          .build(),
-      AggregateProjectionSpec
-          .builder("time_and_a")
-          .groupingColumns(new LongDimensionSchema(ColumnHolder.TIME_COLUMN_NAME), new StringDimensionSchema("a"))
-          .build()
+      AggregateProjectionSpec.builder("a_concat_b_d_plus_f_sum_c")
+                             .virtualColumns(
+                                 new ExpressionVirtualColumn(
+                                     "__vc2",
+                                     "d + e",
+                                     ColumnType.LONG,
+                                     TestExprMacroTable.INSTANCE
+                                 ),
+                                 new ExpressionVirtualColumn(
+                                     "__vc3",
+                                     "concat(a, b)",
+                                     ColumnType.STRING,
+                                     TestExprMacroTable.INSTANCE
+                                 )
+                             )
+                             .groupingColumns(new LongDimensionSchema("__vc2"), new StringDimensionSchema("__vc3"))
+                             .aggregators(new LongSumAggregatorFactory("sum_c", "c"))
+                             .build(),
+      AggregateProjectionSpec.builder("a_hourly_c_sum_filter_a_to_a")
+                             .filter(
+                                 new EqualityFilter("a", ColumnType.STRING, "a", null)
+                             )
+                             .virtualColumns(Granularities.toVirtualColumn(Granularities.HOUR, "__gran"))
+                             .groupingColumns(
+                                 new StringDimensionSchema("a"),
+                                 new LongDimensionSchema("__gran")
+                             )
+                             .aggregators(
+                                 new LongSumAggregatorFactory("_c_sum", "c")
+                             )
+                             .build(),
+      AggregateProjectionSpec.builder("a_hourly_c_sum_filter_a_to_empty")
+                             .filter(
+                                 new EqualityFilter("a", ColumnType.STRING, "nomatch", null)
+                             )
+                             .virtualColumns(Granularities.toVirtualColumn(Granularities.HOUR, "__gran"))
+                             .groupingColumns(
+                                 new StringDimensionSchema("a"),
+                                 new LongDimensionSchema("__gran")
+                             )
+                             .aggregators(
+                                 new LongSumAggregatorFactory("_c_sum", "c")
+                             )
+                             .build(),
+      AggregateProjectionSpec.builder("time_and_a")
+                             .groupingColumns(
+                                 new LongDimensionSchema(ColumnHolder.TIME_COLUMN_NAME),
+                                 new StringDimensionSchema("a")
+                             )
+                             .build(),
+      AggregateProjectionSpec.builder("filtered_c_plus_d")
+                             .virtualColumns(
+                                 Granularities.toVirtualColumn(Granularities.HOUR, "__gran"),
+                                 new ExpressionVirtualColumn(
+                                     "__c_plus_d",
+                                     "c + d",
+                                     ColumnType.DOUBLE,
+                                     TestExprMacroTable.INSTANCE
+                                 )
+                             )
+                             .filter(new TypedInFilter("__c_plus_d", ColumnType.DOUBLE, List.of(2.1, 4.2), null, null))
+                             .groupingColumns(new LongDimensionSchema("__gran"))
+                             .aggregators(new LongSumAggregatorFactory("sum_c", "c"))
+                             .build()
   );
 
   private static final List<AggregateProjectionSpec> ROLLUP_PROJECTIONS = Arrays.asList(
@@ -354,7 +392,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                         )
                         .collect(Collectors.toList());
 
-  @Parameterized.Parameters(name = "name: {0}, segmentTimeOrdered: {5}, autoSchema: {6}")
+  @Parameterized.Parameters(name = "name: {0}, segmentTimeOrdered: {5}, autoSchema: {6}, writeNullColumns: {7}")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -444,7 +482,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                   new IncrementalIndexCursorFactory(rollupIndex),
                   new IncrementalIndexTimeBoundaryInspector(rollupIndex),
                   !sortByDim,
-                  autoSchema
+                  autoSchema,
+                  writeNullColumns
               });
             } else {
               QueryableIndex index = CLOSER.register(makeBuilder(
@@ -462,7 +501,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                   new QueryableIndexCursorFactory(rollupIndex),
                   QueryableIndexTimeBoundaryInspector.create(rollupIndex),
                   !sortByDim,
-                  autoSchema
+                  autoSchema,
+                  writeNullColumns
               });
             }
           }
@@ -502,7 +542,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       CursorFactory rollupProjectionsCursorFactory,
       TimeBoundaryInspector rollupProjectionsTimeBoundaryInspector,
       boolean segmentSortedByTime,
-      boolean autoSchema
+      boolean autoSchema,
+      boolean writeNullColumns
   )
   {
     this.projectionsCursorFactory = projectionsCursorFactory;
@@ -1817,6 +1858,43 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         )
     );
   }
+
+  @Test
+  public void testProjectionGroupFilteredOnVirtualColumn()
+  {
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.ETERNITY)
+                    .setVirtualColumns(
+                        new ExpressionVirtualColumn(
+                            "v0",
+                            "c + d",
+                            ColumnType.DOUBLE,
+                            TestExprMacroTable.INSTANCE
+                        )
+                    )
+                    .setDimFilter(
+                        new TypedInFilter("v0", ColumnType.DOUBLE, List.of(2.1, 4.2), null, null)
+                    )
+                    .setAggregatorSpecs(new LongSumAggregatorFactory("c", "c"))
+                    .setContext(Map.of(QueryContexts.QUERY_RESOURCE_ID, RESOURCE_ID))
+                    .build();
+
+    final ExpectedProjectionGroupBy queryMetrics =
+        new ExpectedProjectionGroupBy("filtered_c_plus_d");
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, 2);
+
+    testGroupBy(
+        query,
+        queryMetrics,
+        ImmutableList.of(new Object[]{6L})
+    );
+  }
+
 
   private void testGroupBy(GroupByQuery query, ExpectedProjectionGroupBy queryMetrics, List<Object[]> expectedResults)
   {

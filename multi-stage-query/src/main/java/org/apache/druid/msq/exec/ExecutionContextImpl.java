@@ -148,9 +148,14 @@ public class ExecutionContextImpl implements ExecutionContext
   public Bouncer processingBouncer()
   {
     if (workOrder.getStageDefinition().getProcessor().usesProcessingBuffers()) {
-      return frameContext.processingBuffers().getBouncer();
+      final Bouncer baseBouncer = frameContext.processingBuffers().getBouncer();
+      if (maxOutstandingProcessors < baseBouncer.getMaxCount()) {
+        return new Bouncer(maxOutstandingProcessors, baseBouncer);
+      } else {
+        return baseBouncer;
+      }
     } else {
-      return Bouncer.unlimited();
+      return new Bouncer(maxOutstandingProcessors);
     }
   }
 

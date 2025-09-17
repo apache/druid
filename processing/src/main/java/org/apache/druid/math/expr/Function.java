@@ -2673,13 +2673,13 @@ public interface Function extends NamedFunction
     @Override
     public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return args.size() == 2 && inspector.canVectorize(args);
+      return inspector.canVectorize(args) && inspector.areSameTypes(args);
     }
 
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorConditionalProcessors.nvl(inspector, args.get(0), args.get(1));
+      return VectorConditionalProcessors.coalesce(inspector, args);
     }
   }
 
