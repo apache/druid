@@ -65,6 +65,7 @@ import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.OrDimFilter;
+import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryMetrics;
@@ -336,6 +337,20 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                  new LongDimensionSchema(ColumnHolder.TIME_COLUMN_NAME),
                                  new StringDimensionSchema("a")
                              )
+                             .build(),
+      AggregateProjectionSpec.builder("filtered_c_plus_d")
+                             .virtualColumns(
+                                 Granularities.toVirtualColumn(Granularities.HOUR, "__gran"),
+                                 new ExpressionVirtualColumn(
+                                     "__c_plus_d",
+                                     "c + d",
+                                     ColumnType.DOUBLE,
+                                     TestExprMacroTable.INSTANCE
+                                 )
+                             )
+                             .filter(new TypedInFilter("__c_plus_d", ColumnType.DOUBLE, List.of(2.1, 4.2), null, null))
+                             .groupingColumns(new LongDimensionSchema("__gran"))
+                             .aggregators(new LongSumAggregatorFactory("sum_c", "c"))
                              .build()
   );
 
@@ -397,7 +412,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                         )
                         .collect(Collectors.toList());
 
-  @Parameterized.Parameters(name = "name: {0}, segmentTimeOrdered: {5}, autoSchema: {6}")
+  @Parameterized.Parameters(name = "name: {0}, segmentTimeOrdered: {5}, autoSchema: {6}, writeNullColumns: {7}")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -487,7 +502,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                   new IncrementalIndexCursorFactory(rollupIndex),
                   new IncrementalIndexTimeBoundaryInspector(rollupIndex),
                   !sortByDim,
-                  autoSchema
+                  autoSchema,
+                  writeNullColumns
               });
             } else {
               QueryableIndex index = CLOSER.register(makeBuilder(
@@ -505,7 +521,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                   new QueryableIndexCursorFactory(rollupIndex),
                   QueryableIndexTimeBoundaryInspector.create(rollupIndex),
                   !sortByDim,
-                  autoSchema
+                  autoSchema,
+                  writeNullColumns
               });
             }
           }
@@ -544,7 +561,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       CursorFactory rollupProjectionsCursorFactory,
       TimeBoundaryInspector rollupProjectionsTimeBoundaryInspector,
       boolean segmentSortedByTime,
-      boolean autoSchema
+      boolean autoSchema,
+      boolean writeNullColumns
   )
   {
     this.projectionsCursorFactory = projectionsCursorFactory;
@@ -1934,6 +1952,42 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         )
     );
   }
+
+  @Test
+  public void testProjectionGroupFilteredOnVirtualColumn()
+  {
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.ETERNITY)
+                    .setVirtualColumns(
+                        new ExpressionVirtualColumn(
+                            "v0",
+                            "c + d",
+                            ColumnType.DOUBLE,
+                            TestExprMacroTable.INSTANCE
+                        )
+                    )
+                    .setDimFilter(
+                        new TypedInFilter("v0", ColumnType.DOUBLE, List.of(2.1, 4.2), null, null)
+                    )
+                    .setAggregatorSpecs(new LongSumAggregatorFactory("c", "c"))
+                    .build();
+
+    final ExpectedProjectionGroupBy queryMetrics =
+        new ExpectedProjectionGroupBy("filtered_c_plus_d");
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, 2);
+
+    testGroupBy(
+        query,
+        queryMetrics,
+        makeArrayResultSet(new Object[]{6L})
+    );
+  }
+
 
   private void testGroupBy(GroupByQuery query, ExpectedProjectionGroupBy queryMetrics, List<Object[]> expectedResults)
   {

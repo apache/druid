@@ -274,7 +274,8 @@ public class DartSqlResourceTest extends MSQTestBase
             ResponseContextConfig.newConfig(false),
             SELF_NODE
         ),
-        DefaultQueryConfig.NIL
+        DefaultQueryConfig.NIL,
+        new ServerConfig()
     );
 
     // Setup mocks
