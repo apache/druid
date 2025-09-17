@@ -1117,7 +1117,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           taskGroup.addNewCheckpoint(newCheckpoint);
           log.info("Handled checkpoint notice, new checkpoint is [%s] for taskGroup [%s]", newCheckpoint, taskGroupId);
         } else {
+          // It might be possible that the task has not been discovered to the taskgroup yet and have received a checkpoint before hand,
+          // For now, I will attempt to repush the checkpoint request in the handler.
           log.warn("New checkpoint is null for taskGroup [%s]", taskGroupId);
+          addNotice(this);
         }
       }
     }
