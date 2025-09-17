@@ -113,14 +113,14 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
         ColumnType.LONG,
         TestExprMacroTable.INSTANCE
     );
-    ExpressionVirtualColumn ptEvery10MinLA = new ExpressionVirtualColumn(
-        "ptEvery10MinLA",
+    ExpressionVirtualColumn every10MinLA = new ExpressionVirtualColumn(
+        "every10MinLA",
         "timestamp_floor(__time, 'PT10M', null, 'America/Los_Angeles')",
         ColumnType.LONG,
         TestExprMacroTable.INSTANCE
     );
-    ExpressionVirtualColumn ptEvery10Min = new ExpressionVirtualColumn(
-        "ptEvery10Min",
+    ExpressionVirtualColumn every10Min = new ExpressionVirtualColumn(
+        "every10Min",
         "timestamp_floor(__time, 'PT10M', null, null)",
         ColumnType.LONG,
         TestExprMacroTable.INSTANCE
@@ -135,11 +135,11 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
     Assertions.assertEquals("hourly", new AggregateProjectionSpec(
         "some_projection",
         null,
-        VirtualColumns.create(daily, hourly, ptEvery10MinLA),
+        VirtualColumns.create(daily, hourly, every10MinLA),
         List.of(
             new LongDimensionSchema("daily"),
             new LongDimensionSchema("hourly"),
-            new LongDimensionSchema("ptEvery10MinLA")
+            new LongDimensionSchema("every10MinLA")
         ),
         new AggregatorFactory[]{}
     ).toMetadataSchema().getTimeColumnName());
@@ -147,38 +147,38 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
     Assertions.assertNull(new AggregateProjectionSpec(
         "some_projection",
         null,
-        VirtualColumns.create(ptEvery10MinLA),
-        List.of(new LongDimensionSchema("ptEvery10MinLA")),
+        VirtualColumns.create(every10MinLA),
+        List.of(new LongDimensionSchema("every10MinLA")),
         new AggregatorFactory[]{}
     ).toMetadataSchema().getTimeColumnName());
 
     Assertions.assertEquals("every90Min", new AggregateProjectionSpec(
         "some_projection",
         null,
-        VirtualColumns.create(every90Min, ptEvery10MinLA),
-        List.of(new LongDimensionSchema("every90Min"), new LongDimensionSchema("ptEvery10MinLA")),
+        VirtualColumns.create(every90Min, every10MinLA),
+        List.of(new LongDimensionSchema("every90Min"), new LongDimensionSchema("every10MinLA")),
         new AggregatorFactory[]{}
     ).toMetadataSchema().getTimeColumnName());
 
-    Assertions.assertEquals("ptEvery10Min", new AggregateProjectionSpec(
+    Assertions.assertEquals("every10Min", new AggregateProjectionSpec(
         "some_projection",
         null,
-        VirtualColumns.create(daily, hourly, ptEvery10Min),
+        VirtualColumns.create(daily, hourly, every10Min),
         List.of(
             new LongDimensionSchema("daily"),
             new LongDimensionSchema("hourly"),
-            new LongDimensionSchema("ptEvery10Min")
+            new LongDimensionSchema("every10Min")
         ),
         new AggregatorFactory[]{}
     ).toMetadataSchema().getTimeColumnName());
     Assertions.assertEquals("hourly", new AggregateProjectionSpec(
         "some_projection",
         null,
-        VirtualColumns.create(daily, hourly, ptEvery10Min),
+        VirtualColumns.create(daily, hourly, every10Min),
         List.of(
             new LongDimensionSchema("daily"),
             new LongDimensionSchema("hourly"),
-            new StringDimensionSchema("ptEvery10Min")
+            new StringDimensionSchema("every10Min")
         ),
         new AggregatorFactory[]{}
     ).toMetadataSchema().getTimeColumnName());
