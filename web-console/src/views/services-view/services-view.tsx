@@ -291,7 +291,7 @@ ORDER BY
                 max_size: s.maxSize,
                 start_time: '1970:01:01T00:00:00Z',
                 is_leader: 0,
-                version: ''
+                version: '',
               };
             },
           );
