@@ -1895,7 +1895,11 @@ public class RowBasedGrouperHelper
         for (Object obj : key) {
           if (obj instanceof Object[]) {
             for (Object o : (Object[]) obj) {
-              size += (int) estimateStringKeySize((String) o);
+              if (o instanceof String) {
+                size += (int) estimateStringKeySize((String) o);
+              } else {
+                size += (int) estimateStringKeySize(String.valueOf(o));
+              }
             }
           }
         }
