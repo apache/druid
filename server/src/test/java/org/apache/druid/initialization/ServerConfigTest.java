@@ -44,6 +44,7 @@ public class ServerConfigTest
     Assert.assertEquals(defaultConfig, defaultConfig2);
     Assert.assertFalse(defaultConfig2.isEnableForwardedRequestCustomizer());
     Assert.assertFalse(defaultConfig2.isEnableHSTS());
+    Assert.assertEquals(UriCompliance.LEGACY, defaultConfig.getUriCompliance());
 
     ServerConfig modifiedConfig = new ServerConfig(
         999,
@@ -67,7 +68,7 @@ public class ServerConfigTest
         new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of(".*")),
         "my-cool-policy",
         true,
-        UriCompliance.RFC3986.getName()
+        UriCompliance.RFC3986
     );
     String modifiedConfigJson = OBJECT_MAPPER.writeValueAsString(modifiedConfig);
     ServerConfig modifiedConfig2 = OBJECT_MAPPER.readValue(modifiedConfigJson, ServerConfig.class);
@@ -81,7 +82,7 @@ public class ServerConfigTest
     Assert.assertEquals("my-cool-policy", modifiedConfig.getContentSecurityPolicy());
     Assert.assertEquals("my-cool-policy", modifiedConfig2.getContentSecurityPolicy());
     Assert.assertTrue(modifiedConfig2.isEnableHSTS());
-    Assert.assertEquals(UriCompliance.RFC3986.getName(), modifiedConfig2.getUriCompliance());
+    Assert.assertEquals(UriCompliance.RFC3986, modifiedConfig2.getUriCompliance());
   }
 
   @Test

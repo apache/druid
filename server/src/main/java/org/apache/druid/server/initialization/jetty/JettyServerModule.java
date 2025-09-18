@@ -58,7 +58,6 @@ import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.server.metrics.MonitorsConfig;
 import org.apache.druid.server.security.CustomCheckX509TrustManager;
 import org.apache.druid.server.security.TLSCertificateChecker;
-import org.eclipse.jetty.http.UriCompliance;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.ForwardedRequestCustomizer;
 import org.eclipse.jetty.server.Handler;
@@ -224,7 +223,7 @@ public class JettyServerModule extends JerseyServletModule
     if (node.isEnablePlaintextPort()) {
       log.info("Creating http connector with port [%d]", node.getPlaintextPort());
       HttpConfiguration httpConfiguration = new HttpConfiguration();
-      httpConfiguration.setUriCompliance(UriCompliance.from(config.getUriCompliance()));
+      httpConfiguration.setUriCompliance(config.getUriCompliance());
       if (config.isEnableForwardedRequestCustomizer()) {
         httpConfiguration.addCustomizer(new ForwardedRequestCustomizer());
       }
@@ -309,7 +308,7 @@ public class JettyServerModule extends JerseyServletModule
       }
 
       final HttpConfiguration httpsConfiguration = new HttpConfiguration();
-      httpsConfiguration.setUriCompliance(UriCompliance.from(config.getUriCompliance()));
+      httpsConfiguration.setUriCompliance(config.getUriCompliance());
       if (config.isEnableForwardedRequestCustomizer()) {
         httpsConfiguration.addCustomizer(new ForwardedRequestCustomizer());
       }
@@ -480,7 +479,6 @@ public class JettyServerModule extends JerseyServletModule
       });
     }
 
-    log.info("Configuraing Jetty Request log for server");
     server.setRequestLog(new JettyRequestLog());
 
     return server;

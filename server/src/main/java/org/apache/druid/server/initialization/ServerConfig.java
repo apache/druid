@@ -20,6 +20,10 @@
 package org.apache.druid.server.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
@@ -36,6 +40,7 @@ import javax.annotation.Nullable;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -75,7 +80,7 @@ public class ServerConfig
       @NotNull ErrorResponseTransformStrategy errorResponseTransformStrategy,
       @Nullable String contentSecurityPolicy,
       boolean enableHSTS,
-      @Nullable String uriCompliance
+      @Nullable UriCompliance uriCompliance
   )
   {
     this.numThreads = numThreads;
@@ -99,7 +104,7 @@ public class ServerConfig
     this.errorResponseTransformStrategy = errorResponseTransformStrategy;
     this.contentSecurityPolicy = contentSecurityPolicy;
     this.enableHSTS = enableHSTS;
-    this.uriCompliance = uriCompliance;
+    this.uriCompliance = uriCompliance != null ? uriCompliance : UriCompliance.LEGACY;
   }
 
   public ServerConfig()
@@ -189,7 +194,8 @@ public class ServerConfig
   private boolean enableHSTS = false;
 
   @JsonProperty
-  private String uriCompliance = UriCompliance.LEGACY.getName();
+  @JsonDeserialize(using = UriComplianceDeserializer.class)
+  private UriCompliance uriCompliance = UriCompliance.LEGACY;
 
   /**
    * This feature flag enables query requests queuing when admins want to reserve some threads for
@@ -312,7 +318,7 @@ public class ServerConfig
     return enableQueryRequestsQueuing;
   }
 
-  public String getUriCompliance()
+  public UriCompliance getUriCompliance()
   {
     return uriCompliance;
   }
@@ -415,5 +421,15 @@ public class ServerConfig
   public static int getDefaultNumThreads()
   {
     return Math.max(10, (JvmUtils.getRuntimeInfo().getAvailableProcessors() * 17) / 16 + 2) + 30;
+  }
+
+  public static class UriComplianceDeserializer extends JsonDeserializer<UriCompliance>
+  {
+    @Override
+    public UriCompliance deserialize(JsonParser p, DeserializationContext ctxt) throws IOException
+    {
+      String value = p.getValueAsString();
+      return UriCompliance.valueOf(value);
+    }
   }
 }

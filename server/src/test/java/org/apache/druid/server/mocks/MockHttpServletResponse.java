@@ -149,12 +149,10 @@ public class MockHttpServletResponse implements HttpServletResponse
     throw new UnsupportedOperationException();
   }
 
-  /**
-   * HttpServletResponse 4.0.1 spec dictates that setHeader  overwrites existing values.
-   */
   @Override
   public void setHeader(String name, String value)
   {
+    // HttpServletResponse 4.0.1 spec dictates that setHeader  overwrites existing values.
     headers.removeAll(name);
     headers.put(name, value);
   }
@@ -345,7 +343,6 @@ public class MockHttpServletResponse implements HttpServletResponse
   {
     throw new UnsupportedOperationException();
   }
-
 
   @Override
   public void setTrailerFields(Supplier<Map<String, String>> supplier)

@@ -536,7 +536,8 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
           JettyServerInitUtils.wrapWithDefaultGzipHandler(
               root,
               ServerConfig.DEFAULT_GZIP_INFLATE_BUFFER_SIZE,
-              Deflater.DEFAULT_COMPRESSION)
+              Deflater.DEFAULT_COMPRESSION
+          )
       );
       server.setHandler(handlerList);
     }

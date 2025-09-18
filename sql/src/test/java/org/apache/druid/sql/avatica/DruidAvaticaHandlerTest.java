@@ -93,7 +93,6 @@ import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
-import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -255,7 +254,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   }
 
   // Default implementation is for JSON to allow debugging of tests.
-  protected Handler.Abstract getAvaticaHandler(final DruidMeta druidMeta)
+  protected DruidAvaticaHandler getAvaticaHandler(final DruidMeta druidMeta)
   {
     return new DruidAvaticaJsonHandler(
         druidMeta,

@@ -28,6 +28,20 @@ import org.apache.calcite.avatica.server.MetricsAwareAvaticaHandler;
 import org.apache.calcite.avatica.util.UnsynchronizedBuffer;
 import org.eclipse.jetty.server.Handler;
 
+/**
+ * Base class for Druid's custom Avatica server handlers that are compatible with Jetty 12.
+ *
+ * <p>This class provides a Jetty 12-compatible implementation of {@link MetricsAwareAvaticaHandler}
+ * to enable Druid's JDBC support via Apache Calcite's Avatica server. Since Calcite's Avatica server
+ * does not natively support Jetty 12, this custom implementation allows Druid to continue using
+ * Avatica for JDBC connectivity during the Jetty 12 migration.
+ *
+ * <p>Concrete implementations handle different wire protocols:
+ * <ul>
+ *   <li>{@link DruidAvaticaJsonHandler} - JSON-based protocol</li>
+ *   <li>{@link DruidAvaticaProtobufHandler} - Protocol Buffers-based protocol</li>
+ * </ul>
+ */
 public abstract class DruidAvaticaHandler extends Handler.Abstract implements MetricsAwareAvaticaHandler
 {
   protected final Service service;

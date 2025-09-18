@@ -75,7 +75,7 @@ public class StandardResponseHeaderFilterHolder implements ServletFilterHolder
   {
     for (final String headerName : StandardResponseHeaderFilterHolder.STANDARD_HEADERS) {
       if (serverResponse.getHeaders().contains(headerName) && proxyResponse.containsHeader(headerName)) {
-        // In Jetty 12 EE8, use the standard servlet API method to remove headers
+        // In EE8 compatible Jetty 12 using servlet API 4.x, setting a header to null is the accepted way to remove it.
         proxyResponse.setHeader(headerName, null);
       }
     }

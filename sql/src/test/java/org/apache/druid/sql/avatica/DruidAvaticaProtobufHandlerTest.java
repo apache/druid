@@ -23,7 +23,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.DruidNode;
 import org.easymock.EasyMock;
 import org.eclipse.jetty.http.HttpURI;
-import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.util.Callback;
@@ -44,7 +43,7 @@ public class DruidAvaticaProtobufHandlerTest extends DruidAvaticaHandlerTest
   }
 
   @Override
-  protected Handler.Abstract getAvaticaHandler(final DruidMeta druidMeta)
+  protected DruidAvaticaProtobufHandler getAvaticaHandler(final DruidMeta druidMeta)
   {
     return new DruidAvaticaProtobufHandler(
             druidMeta,

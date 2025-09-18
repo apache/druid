@@ -22,7 +22,6 @@ package org.apache.druid.sql.avatica;
 import org.apache.druid.server.DruidNode;
 import org.easymock.EasyMock;
 import org.eclipse.jetty.http.HttpURI;
-import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.util.Callback;
@@ -40,7 +39,7 @@ public class DruidAvaticaJsonHandlerTest extends DruidAvaticaHandlerTest
   }
 
   @Override
-  protected Handler.Abstract getAvaticaHandler(final DruidMeta druidMeta)
+  protected DruidAvaticaHandler getAvaticaHandler(final DruidMeta druidMeta)
   {
     return new DruidAvaticaJsonHandler(
             druidMeta,

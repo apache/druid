@@ -76,7 +76,6 @@ public class ServerInjectorBuilder
   /**
    * Needed for Hadoop indexing that needs server-like Injector but can't run jetty 12
    */
-  @VisibleForTesting
   public static Injector makeServerInjectorWithoutJettyModules(
       final Injector baseInjector,
       final Set<NodeRole> nodeRoles,
@@ -119,20 +118,6 @@ public class ServerInjectorBuilder
     return this.build(false);
   }
 
-  public static Module registerNodeRoleModule(Set<NodeRole> nodeRoles)
-  {
-    return binder -> {
-      Multibinder<NodeRole> selfBinder = Multibinder.newSetBinder(binder, NodeRole.class, Self.class);
-      nodeRoles.forEach(nodeRole -> selfBinder.addBinding().toInstance(nodeRole));
-
-      MapBinder.newMapBinder(
-          binder,
-          new TypeLiteral<NodeRole>(){},
-          new TypeLiteral<Set<Class<? extends DruidService>>>(){}
-      );
-    };
-  }
-
   private Injector build(boolean withJettyModules)
   {
     Preconditions.checkNotNull(baseInjector);
@@ -164,5 +149,19 @@ public class ServerInjectorBuilder
 
     // Override again with extensions.
     return new ExtensionInjectorBuilder(serviceBuilder).build();
+  }
+
+  public static Module registerNodeRoleModule(Set<NodeRole> nodeRoles)
+  {
+    return binder -> {
+      Multibinder<NodeRole> selfBinder = Multibinder.newSetBinder(binder, NodeRole.class, Self.class);
+      nodeRoles.forEach(nodeRole -> selfBinder.addBinding().toInstance(nodeRole));
+
+      MapBinder.newMapBinder(
+          binder,
+          new TypeLiteral<NodeRole>(){},
+          new TypeLiteral<Set<Class<? extends DruidService>>>(){}
+      );
+    };
   }
 }

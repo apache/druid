@@ -49,7 +49,7 @@ public class DruidAvaticaProtobufHandler extends DruidAvaticaHandler
   public static final String AVATICA_PATH_NO_TRAILING_SLASH = "/druid/v2/sql/avatica-protobuf";
   public static final String AVATICA_PATH = AVATICA_PATH_NO_TRAILING_SLASH + "/";
 
-  private final ProtobufHandler pbHandler;
+  private final ProtobufHandler protobufHandler;
 
   @Inject
   public DruidAvaticaProtobufHandler(
@@ -60,7 +60,7 @@ public class DruidAvaticaProtobufHandler extends DruidAvaticaHandler
   {
     super(druidMeta, metrics, AvaticaProtobufHandler.class);
     ProtobufTranslation protobufTranslation = new ProtobufTranslationImpl();
-    this.pbHandler = new ProtobufHandler(service, protobufTranslation, this.metrics);
+    this.protobufHandler = new ProtobufHandler(service, protobufTranslation, this.metrics);
     setServerRpcMetadata(new Service.RpcMetadataResponse(druidNode.getHostAndPortToUse()));
   }
 
@@ -92,11 +92,11 @@ public class DruidAvaticaProtobufHandler extends DruidAvaticaHandler
 
         org.apache.calcite.avatica.remote.Handler.HandlerResponse<byte[]> handlerResponse;
         try {
-          handlerResponse = pbHandler.apply(requestBytes);
+          handlerResponse = protobufHandler.apply(requestBytes);
         }
         catch (Exception e) {
           LOG.debug(e, "Error invoking request");
-          handlerResponse = pbHandler.convertToErrorResponse(e);
+          handlerResponse = protobufHandler.convertToErrorResponse(e);
         }
 
         response.setStatus(handlerResponse.getStatusCode());
@@ -111,8 +111,8 @@ public class DruidAvaticaProtobufHandler extends DruidAvaticaHandler
   public void setServerRpcMetadata(Service.RpcMetadataResponse metadata)
   {
     super.setServerRpcMetadata(metadata);
-    if (pbHandler != null) {
-      pbHandler.setRpcMetadata(metadata);
+    if (protobufHandler != null) {
+      protobufHandler.setRpcMetadata(metadata);
     }
   }
 }
