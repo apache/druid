@@ -3361,6 +3361,60 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertTrue(reportData.getRecordsProcessed().values().containsAll(ImmutableSet.of(6L, 2L)));
   }
 
+  @Test
+  public void testWithNewIoConfig() throws Exception
+  {
+    final KafkaIndexTaskIOConfig originalIoConfig = new KafkaIndexTaskIOConfig(
+        0,
+        "sequence0",
+        new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 0L), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 5L)),
+        kafkaServer.consumerProperties(),
+        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+        true,
+        null,
+        null,
+        INPUT_FORMAT,
+        null,
+        Duration.standardHours(2).getStandardMinutes()
+    );
+
+    final KafkaIndexTask originalTask = createTask("testTask", originalIoConfig);
+
+    final KafkaIndexTaskIOConfig newIoConfig = new KafkaIndexTaskIOConfig(
+        1,
+        "sequence1",
+        new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 5L), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 10L)),
+        kafkaServer.consumerProperties(),
+        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+        false,
+        null,
+        null,
+        INPUT_FORMAT,
+        null,
+        Duration.standardHours(1).getStandardMinutes()
+    );
+
+    final KafkaIndexTask newTask = (KafkaIndexTask) originalTask.withNewIoConfig(newIoConfig);
+
+    Assert.assertNotSame("New task should be a different instance", originalTask, newTask);
+    Assert.assertEquals("Task ID should be preserved", originalTask.getId(), newTask.getId());
+    Assert.assertEquals("Supervisor ID should be preserved", originalTask.getSupervisorId(), newTask.getSupervisorId());
+    Assert.assertEquals("Task resource should be preserved", originalTask.getTaskResource(), newTask.getTaskResource());
+    Assert.assertEquals("Data schema should be preserved", originalTask.getDataSchema(), newTask.getDataSchema());
+    Assert.assertEquals("Tuning config should be preserved", originalTask.getTuningConfig(), newTask.getTuningConfig());
+    Assert.assertEquals("Context should be preserved", originalTask.getContext(), newTask.getContext());
+    Assert.assertEquals("Perpetually running flag should be preserved", originalTask.isPerpetuallyRunning(), newTask.isPerpetuallyRunning());
+
+    final KafkaIndexTaskIOConfig actualNewIoConfig = newTask.getIOConfig();
+    Assert.assertEquals("IO config should be updated", newIoConfig, actualNewIoConfig);
+    Assert.assertNotEquals("IO config should be different from original", originalIoConfig, actualNewIoConfig);
+
+    Assert.assertEquals("Start sequence should be updated", 5L, (long) actualNewIoConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0)));
+    Assert.assertEquals("End sequence should be updated", 10L, (long) actualNewIoConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0)));
+  }
+
   public static class TestKafkaInputFormat implements InputFormat
   {
     final InputFormat baseInputFormat;
