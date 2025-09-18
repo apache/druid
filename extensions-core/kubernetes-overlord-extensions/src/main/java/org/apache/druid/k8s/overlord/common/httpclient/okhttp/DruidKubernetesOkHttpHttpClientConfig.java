@@ -21,16 +21,21 @@ package org.apache.druid.k8s.overlord.common.httpclient.okhttp;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import javax.annotation.Nullable;
+import javax.validation.constraints.Min;
+
 public class DruidKubernetesOkHttpHttpClientConfig
 {
   @JsonProperty
-  private boolean useCustomDispatcherExecutor = false;
+  private boolean useCustomDispatcherExecutor = true;
 
   @JsonProperty
-  private int maxWorkerThreads = 20;
+  @Nullable
+  private Integer maxWorkerThreads = null;
 
   @JsonProperty
-  private int coreWorkerThreads = 20;
+  @Min(1)
+  private int coreWorkerThreads = 50;
 
   @JsonProperty
   private long workerThreadKeepAliveTime = 60L;
@@ -42,7 +47,11 @@ public class DruidKubernetesOkHttpHttpClientConfig
 
   public int getMaxWorkerThreads()
   {
-    return maxWorkerThreads;
+    if (maxWorkerThreads == null || maxWorkerThreads < coreWorkerThreads) {
+      return coreWorkerThreads;
+    } else {
+      return maxWorkerThreads;
+    }
   }
 
   public int getCoreWorkerThreads()

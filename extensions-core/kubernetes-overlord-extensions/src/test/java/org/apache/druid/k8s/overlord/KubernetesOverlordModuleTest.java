@@ -290,32 +290,6 @@ public class KubernetesOverlordModuleTest
     Assert.assertNotNull("Underlying Kubernetes client should be created", client.getClient());
   }
 
-  @Test
-  public void test_druidKubernetesClient_createdWithOkHttpClient_honorsAdditionalConfig()
-  {
-    Properties props = new Properties();
-    props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
-    props.setProperty("druid.indexer.runner.k8sAndWorker.http.httpClientType", "okhttp");
-    injector = makeInjectorWithProperties(props, false, true);
-    DruidKubernetesClient client = injector.getInstance(DruidKubernetesClient.class);
-    Assert.assertNotNull("DruidKubernetesClient should be created successfully", client);
-    Assert.assertNotNull("Underlying Kubernetes client should be created", client.getClient());
-  }
-
-  @Test
-  public void test_druidKubernetesClient_createdWithJdkClient_honorsAdditionalConfig()
-  {
-    Properties props = new Properties();
-    props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
-    props.setProperty("druid.indexer.runner.k8sAndWorker.http.httpClientType", "javaStandardHttp");
-
-    injector = makeInjectorWithProperties(props, false, true);
-    DruidKubernetesClient client = injector.getInstance(DruidKubernetesClient.class);
-
-    Assert.assertNotNull("DruidKubernetesClient should be created successfully", client);
-    Assert.assertNotNull("Underlying Kubernetes client should be created", client.getClient());
-  }
-
   private Injector makeInjectorWithProperties(
       final Properties props,
       boolean isWorkerTypeRemote,
