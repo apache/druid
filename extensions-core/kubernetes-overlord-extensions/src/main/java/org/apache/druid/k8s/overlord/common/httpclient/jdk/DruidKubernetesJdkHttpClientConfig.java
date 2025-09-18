@@ -22,21 +22,28 @@ package org.apache.druid.k8s.overlord.common.httpclient.jdk;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import javax.annotation.Nullable;
+
 public class DruidKubernetesJdkHttpClientConfig
 {
 
   @JsonProperty
-  private int maxWorkerThreads = 20;
+  @Nullable
+  private Integer maxWorkerThreads = null;
 
   @JsonProperty
-  private int coreWorkerThreads = 20;
+  private int coreWorkerThreads = 50;
 
   @JsonProperty
   private long workerThreadKeepAliveTime = 60L;
 
   public int getMaxWorkerThreads()
   {
-    return maxWorkerThreads;
+    if (maxWorkerThreads == null || maxWorkerThreads < coreWorkerThreads) {
+      return coreWorkerThreads;
+    } else {
+      return maxWorkerThreads;
+    }
   }
 
   public int getCoreWorkerThreads()
