@@ -94,8 +94,17 @@ public class ColumnCache implements ColumnIndexSelector
   {
     final VirtualColumn virtualColumn = virtualColumns.getVirtualColumn(columnName);
     if (virtualColumn != null) {
-      final SelectableColumn selectableColumn = virtualColumn.toSelectableColumn(this);
-      return new VirtualColumnHolder(virtualColumn, selectableColumn);
+      final ColumnCapabilities capabilities = virtualColumn.capabilities(
+          virtualColumns.wrapInspector(index),
+          virtualColumn.getOutputName()
+      );
+      if (capabilities != null) {
+        final SelectableColumn selectableColumn = virtualColumn.toSelectableColumn(this);
+        return new VirtualColumnHolder(virtualColumn, capabilities, selectableColumn);
+      } else {
+        // Column wants to be treated like it doesn't exist.
+        return null;
+      }
     }
 
     final BaseColumnHolder holder = index.getColumnHolder(columnName);
@@ -162,18 +171,24 @@ public class ColumnCache implements ColumnIndexSelector
   private class VirtualColumnHolder implements ColumnHolder
   {
     private final VirtualColumn virtualColumn;
+    private final ColumnCapabilities capabilities;
     private final SelectableColumn selectableColumn;
 
-    VirtualColumnHolder(final VirtualColumn virtualColumn, final SelectableColumn selectableColumn)
+    VirtualColumnHolder(
+        final VirtualColumn virtualColumn,
+        final ColumnCapabilities capabilities,
+        final SelectableColumn selectableColumn
+    )
     {
       this.virtualColumn = virtualColumn;
+      this.capabilities = capabilities;
       this.selectableColumn = selectableColumn;
     }
 
     @Override
     public ColumnCapabilities getCapabilities()
     {
-      return virtualColumn.capabilities(virtualColumns.wrapInspector(index), virtualColumn.getOutputName());
+      return capabilities;
     }
 
     @Override

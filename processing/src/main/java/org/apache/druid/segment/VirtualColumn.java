@@ -200,26 +200,24 @@ public interface VirtualColumn extends Cacheable
    * @param dimensionSpec  spec the column was referenced with. Also provides the name that the
    *                       virtual column was referenced with, which is useful if this column uses dot notation.
    * @param factory        object for fetching underlying selectors.
-   * @param columnSelector object for fetching underlying columns, if available. Generally only available for
-   *                       regular segments.
-   * @param offset         offset to use with underlying columns. Available only if columnSelector is available.
+   * @param columnSelector object for fetching underlying columns.
+   * @param offset         offset to use with underlying columns.
    */
   default SingleValueDimensionVectorSelector makeSingleValueVectorDimensionSelector(
       DimensionSpec dimensionSpec,
       VectorColumnSelectorFactory factory,
-      @Nullable ColumnSelector columnSelector,
-      @Nullable ReadableVectorOffset offset
+      ColumnSelector columnSelector,
+      ReadableVectorOffset offset
   )
   {
     // Implementation for backwards compatibility with existing extensions.
-    if (columnSelector != null) {
-      final SingleValueDimensionVectorSelector selector =
-          makeSingleValueVectorDimensionSelector(dimensionSpec, columnSelector, offset);
-      if (selector != null) {
-        return selector;
-      }
+    final SingleValueDimensionVectorSelector selector =
+        makeSingleValueVectorDimensionSelector(dimensionSpec, columnSelector, offset);
+    if (selector != null) {
+      return selector;
+    } else {
+      return makeSingleValueVectorDimensionSelector(dimensionSpec, factory);
     }
-    return makeSingleValueVectorDimensionSelector(dimensionSpec, factory);
   }
 
   /**
@@ -269,14 +267,13 @@ public interface VirtualColumn extends Cacheable
   )
   {
     // Implementation for backwards compatibility with existing extensions.
-    if (columnSelector != null) {
-      final MultiValueDimensionVectorSelector selector =
-          makeMultiValueVectorDimensionSelector(dimensionSpec, columnSelector, offset);
-      if (selector != null) {
-        return selector;
-      }
+    final MultiValueDimensionVectorSelector selector =
+        makeMultiValueVectorDimensionSelector(dimensionSpec, columnSelector, offset);
+    if (selector != null) {
+      return selector;
+    } else {
+      return makeMultiValueVectorDimensionSelector(dimensionSpec, factory);
     }
-    return makeMultiValueVectorDimensionSelector(dimensionSpec, factory);
   }
 
   /**
@@ -313,26 +310,23 @@ public interface VirtualColumn extends Cacheable
    *
    * @param columnName     name the column was referenced with, which is useful if this column uses dot notation.
    * @param factory        object for fetching underlying selectors.
-   * @param columnSelector object for fetching underlying columns, if available. Generally only available for
-   *                       regular segments.
-   * @param offset         offset to use with underlying columns. Available only if columnSelector is available.
+   * @param columnSelector object for fetching underlying columns.
+   * @param offset         offset to use with underlying columns.
    */
   default VectorValueSelector makeVectorValueSelector(
       String columnName,
       VectorColumnSelectorFactory factory,
-      @Nullable ColumnSelector columnSelector,
-      @Nullable ReadableVectorOffset offset
+      ColumnSelector columnSelector,
+      ReadableVectorOffset offset
   )
   {
     // Implementation for backwards compatibility with existing extensions.
-    if (columnSelector != null) {
-      final VectorValueSelector selector =
-          makeVectorValueSelector(columnName, columnSelector, offset);
-      if (selector != null) {
-        return selector;
-      }
+    final VectorValueSelector selector = makeVectorValueSelector(columnName, columnSelector, offset);
+    if (selector != null) {
+      return selector;
+    } else {
+      return makeVectorValueSelector(columnName, factory);
     }
-    return makeVectorValueSelector(columnName, factory);
   }
 
   /**
@@ -378,14 +372,12 @@ public interface VirtualColumn extends Cacheable
   )
   {
     // Implementation for backwards compatibility with existing extensions.
-    if (columnSelector != null) {
-      final VectorObjectSelector selector =
-          makeVectorObjectSelector(columnName, columnSelector, offset);
-      if (selector != null) {
-        return selector;
-      }
+    final VectorObjectSelector selector = makeVectorObjectSelector(columnName, columnSelector, offset);
+    if (selector != null) {
+      return selector;
+    } else {
+      return makeVectorObjectSelector(columnName, factory);
     }
-    return makeVectorObjectSelector(columnName, factory);
   }
 
   /**
@@ -459,7 +451,7 @@ public interface VirtualColumn extends Cacheable
    * @param inspector  column inspector to provide additional information of other available columns
    * @param columnName the name this virtual column was referenced with
    *
-   * @return capabilities, must not be null
+   * @return capabilities, or null if the column should be treated as if it doesn't exist.
    */
   @Nullable
   default ColumnCapabilities capabilities(ColumnInspector inspector, String columnName)

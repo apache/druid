@@ -88,7 +88,7 @@ public class NestedObjectVirtualColumn extends SpecializedExpressionVirtualColum
             StringUtils.format(
                 "%s(%s)",
                 NestedDataExpressions.JsonObjectExprMacro.NAME,
-                keyExprMap.entrySet().stream().map(entry -> {
+                keyExprMap.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(entry -> {
                   final String key = entry.getKey();
                   final TypedExpression valueExpr = entry.getValue();
                   return Parser.constant(key).stringify() + ',' + valueExpr.expression;
