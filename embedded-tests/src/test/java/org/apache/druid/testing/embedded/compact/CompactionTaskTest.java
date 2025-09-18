@@ -38,7 +38,6 @@ import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchMo
 import org.apache.druid.query.aggregation.datasketches.theta.SketchModule;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
@@ -109,8 +108,6 @@ public class CompactionTaskTest extends CompactionTestBase
       );
 
   private String fullDatasourceName;
-  private final EmbeddedBroker broker = new EmbeddedBroker()
-      .addProperty("druid.sql.planner.metadataRefreshPeriod", "PT0.1s");
 
   @BeforeEach
   public void setFullDatasourceName()

@@ -86,6 +86,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+
 @SqlTestFrameworkConfig.ComponentSupplier(NestedComponentSupplier.class)
 public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 {
@@ -5452,13 +5454,15 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   public void testJoinOnNestedColumnThrows()
   {
     DruidException e = Assertions.assertThrows(DruidException.class, () -> {
-      testQuery(
-          "SELECT * FROM druid.nested a INNER JOIN druid.nested b ON a.nester = b.nester",
-          ImmutableList.of(),
-          ImmutableList.of()
-      );
+      testBuilder()
+          .sql("SELECT * FROM druid.nested a INNER JOIN druid.nested b ON a.nester = b.nester")
+          .run();
     });
-    Assertions.assertEquals("Cannot join when the join condition has column of type [COMPLEX<json>]", e.getMessage());
+
+    assertThat(
+        e.getMessage(),
+        CoreMatchers.containsString("Cannot join when the join condition has column of type [COMPLEX<json>]")
+    );
   }
 
   @Test

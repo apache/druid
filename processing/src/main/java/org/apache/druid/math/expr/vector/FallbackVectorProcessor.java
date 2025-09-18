@@ -25,6 +25,7 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Function;
 import org.apache.druid.math.expr.LambdaExpr;
@@ -111,6 +112,21 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
         adaptedExpr.getOutputType(inspector),
         inspector
     );
+  }
+
+  /**
+   * Returns whether {@link #create(Function, List, Expr.VectorInputBindingInspector)} can be used to make
+   * a fallback vectorized processor.
+   */
+  public static boolean canFallbackVectorize(
+      @Nullable final ExpressionType outputType,
+      final Expr.InputBindingInspector inspector,
+      final List<Expr> args
+  )
+  {
+    return ExpressionProcessing.allowVectorizeFallback() &&
+           outputType != null &&
+           inspector.canVectorize(args);
   }
 
   /**
