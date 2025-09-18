@@ -20,10 +20,14 @@
 package org.apache.druid.server.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
@@ -195,6 +199,7 @@ public class ServerConfig
 
   @JsonProperty
   @JsonDeserialize(using = UriComplianceDeserializer.class)
+  @JsonSerialize(using = UriComplianceSerializer.class)
   private UriCompliance uriCompliance = UriCompliance.LEGACY;
 
   /**
@@ -430,6 +435,15 @@ public class ServerConfig
     {
       String value = p.getValueAsString();
       return UriCompliance.valueOf(value);
+    }
+  }
+
+  public static class UriComplianceSerializer extends JsonSerializer<UriCompliance>
+  {
+    @Override
+    public void serialize(UriCompliance value, JsonGenerator gen, SerializerProvider serializers) throws IOException
+    {
+      gen.writeString(value.getName());
     }
   }
 }
