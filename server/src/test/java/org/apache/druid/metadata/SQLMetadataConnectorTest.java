@@ -340,13 +340,12 @@ public class SQLMetadataConnectorTest
       for (int i = 0; i < legacyIndexNames.size(); i++) {
         try {
           handle.execute(StringUtils.toUpperCase(StringUtils.format(
-                                                     "DROP INDEX %s",
-                                                     connector.generateSHABasedIndexIdentifier(
-                                                         segmentsTable,
-                                                         indexColumns.get(i)
-                                                     )
-                                                 )
-          ));
+              "DROP INDEX %s",
+              connector.generateSHABasedIndexIdentifier(
+                  segmentsTable,
+                  indexColumns.get(i)
+              )
+          )));
         }
         catch (Exception ignore) {
         }
@@ -391,10 +390,10 @@ public class SQLMetadataConnectorTest
     connector.alterSegmentTable();
 
     final List<String> indexNames = indexColumns.stream()
-                                                .map(cols -> StringUtils.toUpperCase(connector.generateSHABasedIndexIdentifier(
+                                                .map(cols -> connector.generateSHABasedIndexIdentifier(
                                                     segmentsTable,
                                                     cols
-                                                )))
+                                                ))
                                                 .collect(Collectors.toList());
     assertIndicesPresentOnTable(segmentsTable, indexNames);
     dropTable(segmentsTable);

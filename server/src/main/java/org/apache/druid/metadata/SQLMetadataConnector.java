@@ -392,7 +392,12 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     createIndex(
         tableName,
         "idx_%1$s_datasource_used_end_start",
-        ImmutableList.of("dataSource", "used", StringUtils.format("%send%S", getQuoteString(), getQuoteString()), "start"),
+        ImmutableList.of(
+            "dataSource",
+            "used",
+            StringUtils.format("%send%S", getQuoteString(), getQuoteString()),
+            "start"
+        ),
         createdIndexSet
     );
   }
@@ -1163,7 +1168,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   /**
-   * create index on the table with retry if not already exist, to be called after createTable
+   * Create index on the table with retry if not already exist, to be called after createTable
+   * Format of index name is either specified via legacy {@param indexTemplate} or {@code generateSHABasedIndexIdentifier}.
    *
    * @param tableName       Name of the table to create index on
    * @param indexTemplate   Template to create index ID (nullable for forwards compatibility with SHA-based indices)
@@ -1177,27 +1183,31 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       final Set<String> createdIndexSet
   )
   {
-    final String shaIndexName = generateSHABasedIndexIdentifier(tableName, indexCols);
-    final String legacyIndexName = indexTemplate != null ? StringUtils.format(indexTemplate, tableName) : null;
+    final String shaIndexName = StringUtils.toUpperCase(generateSHABasedIndexIdentifier(tableName, indexCols));
+    final String legacyIndexName = indexTemplate != null ? StringUtils.toUpperCase(StringUtils.format(
+        indexTemplate,
+        tableName
+    )) : null;
+
     // Avoid creating duplicate indices if an index with either naming convention already exists
-    if ((legacyIndexName != null && createdIndexSet.contains(legacyIndexName)) || createdIndexSet.contains(shaIndexName)) {
+    if (legacyIndexName != null && createdIndexSet.contains(legacyIndexName)) {
+      log.info("Legacy index[%s] on Table[%s] already exists", legacyIndexName, tableName);
+      return;
+    } else if (createdIndexSet.contains(shaIndexName)) {
+      log.info("Index[%s] on Table[%s] already exists", shaIndexName, tableName);
       return;
     }
     try {
       retryWithHandle(
           (HandleCallback<Void>) handle -> {
-            if (!createdIndexSet.contains(StringUtils.toUpperCase(shaIndexName))) {
-              String indexSQL = StringUtils.format(
-                  "CREATE INDEX %1$s ON %2$s(%3$s)",
-                  shaIndexName,
-                  tableName,
-                  Joiner.on(",").join(indexCols)
-              );
-              log.info("Creating Index on Table [%s], sql: [%s] ", tableName, indexSQL);
-              handle.execute(indexSQL);
-            } else {
-              log.info("Index [%s] on Table [%s] already exists", shaIndexName, tableName);
-            }
+            String indexSQL = StringUtils.format(
+                "CREATE INDEX %1$s ON %2$s(%3$s)",
+                shaIndexName,
+                tableName,
+                Joiner.on(",").join(indexCols)
+            );
+            log.info("Creating Index on Table [%s], sql: [%s] ", tableName, indexSQL);
+            handle.execute(indexSQL);
             return null;
           }
       );
@@ -1268,15 +1278,23 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   /**
    * Used to ensure full index coverage in the presence of large index names.
    * Returned indentifiers are of the format: `idx_{tableName}_{SHA of column list}`.
+   *
    * @param tableName the table name
-   * @param columns the set of columns to create the index on (case-insensitive)
+   * @param columns   the set of columns to create the index on (case-insensitive)
    * @return unique index identifier
    */
   @VisibleForTesting
   protected String generateSHABasedIndexIdentifier(String tableName, List<String> columns)
   {
     final String prefix = "idx_" + tableName + "_";
-    final String columnDigest = DigestUtils.sha1Hex(columns.stream().map(StringUtils::toLowerCase).collect(Collectors.joining("_")));
-    return prefix + columnDigest.substring(0, Math.min(columnDigest.length(), getMaxLengthOfIndexName() - prefix.length()));
+    final String columnDigest = DigestUtils.sha1Hex(
+        columns.stream()
+               .map(StringUtils::toLowerCase)
+               .collect(Collectors.joining("_"))
+    );
+    return prefix + columnDigest.substring(
+        0,
+        Math.min(columnDigest.length(), getMaxLengthOfIndexName() - prefix.length())
+    );
   }
 }
