@@ -54,6 +54,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -62,6 +63,8 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.query.filter.EqualityFilter;
+import org.apache.druid.query.filter.NullFilter;
+import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -846,6 +849,107 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         queryMetrics,
         Collections.singletonList(
             new Object[]{"a", 7L, Pair.of(UTC_01H31M.getMillis(), 2L)}
+        )
+    );
+  }
+
+  @Test
+  public void testProjectionSingleDimFilteredAgg()
+  {
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(new Interval(UTC_MIDNIGHT, UTC_MIDNIGHT.plusDays(1)))
+                    .addDimension("a")
+                    .addAggregator(
+                        new FilteredAggregatorFactory(
+                            new LongSumAggregatorFactory("c_sum", "c"),
+                            new EqualityFilter("a", ColumnType.STRING, "a", null)
+                        )
+                    )
+                    .build();
+    final ExpectedProjectionGroupBy queryMetrics =
+        new ExpectedProjectionGroupBy("a_hourly_c_sum_with_count_latest");
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, 3);
+
+    testGroupBy(
+        query,
+        queryMetrics,
+        List.of(
+            new Object[]{"a", 7L},
+            new Object[]{"b", null}
+        )
+    );
+  }
+
+  @Test
+  public void testProjectionSingleDimFilteredAggLessMatchy()
+  {
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(new Interval(UTC_MIDNIGHT, UTC_MIDNIGHT.plusDays(1)))
+                    .addDimension("a")
+                    .addAggregator(
+                        new FilteredAggregatorFactory(
+                            new LongSumAggregatorFactory("c_sum", "c"),
+                            new EqualityFilter("b", ColumnType.STRING, "bb", null)
+                        )
+                    )
+                    .build();
+    final ExpectedProjectionGroupBy queryMetrics =
+        new ExpectedProjectionGroupBy("ab_hourly_cd_sum");
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, 7);
+
+    testGroupBy(
+        query,
+        queryMetrics,
+        List.of(
+            new Object[]{"a", 1L},
+            new Object[]{"b", 5L}
+        )
+    );
+  }
+
+  @Test
+  public void testProjectionSingleDimFilteredAggNoMatchy()
+  {
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(new Interval(UTC_MIDNIGHT, UTC_MIDNIGHT.plusDays(1)))
+                    .addDimension("a")
+                    .addAggregator(
+                        new FilteredAggregatorFactory(
+                            new LongSumAggregatorFactory("c_sum", "c"),
+                            new OrDimFilter(
+                                List.of(
+                                    new EqualityFilter("b", ColumnType.STRING, "bb", null),
+                                    new NullFilter("e", null)
+                                )
+                            )
+                        )
+                    )
+                    .build();
+    final ExpectedProjectionGroupBy queryMetrics =
+        new ExpectedProjectionGroupBy(null);
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, 8);
+
+    testGroupBy(
+        query,
+        queryMetrics,
+        List.of(
+            new Object[]{"a", 2L},
+            new Object[]{"b", 5L}
         )
     );
   }
