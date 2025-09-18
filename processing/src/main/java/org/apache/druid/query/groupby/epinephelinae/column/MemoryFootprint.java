@@ -27,8 +27,7 @@ public class MemoryFootprint<T>
   private final T value;
   private final int footprintIncrease;
 
-  // Reduced visibility
-  MemoryFootprint(T value, int footprintIncrease)
+  public MemoryFootprint(T value, int footprintIncrease)
   {
     this.value = value;
     this.footprintIncrease = footprintIncrease;
