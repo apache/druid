@@ -414,12 +414,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             )
         )
     );
-    final Set<String> createdIndexSet = getIndexOnTable(tableName);
     createIndex(
         tableName,
         "idx_%1$s_task",
         ImmutableList.of("task_id"),
-        createdIndexSet
+        getIndexOnTable(tableName)
     );
   }
 
@@ -440,12 +439,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             )
         )
     );
-    final Set<String> createdIndexSet = getIndexOnTable(tableName);
     createIndex(
         tableName,
         "idx_%1$s_datasource",
         ImmutableList.of("dataSource"),
-        createdIndexSet
+        getIndexOnTable(tableName)
     );
   }
 
@@ -554,12 +552,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       alterTable(tableName, statements);
     }
 
-    final Set<String> createdIndexSet = getIndexOnTable(tableName);
     createIndex(
         tableName,
         "idx_%1$s_datasource_task_allocator_id",
         ImmutableList.of("dataSource", "task_allocator_id"),
-        createdIndexSet
+        getIndexOnTable(tableName)
     );
   }
 
@@ -579,12 +576,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             )
         )
     );
-    final Set<String> createdIndexSet = getIndexOnTable(tableName);
     createIndex(
         tableName,
         "idx_%1$s_task_id",
         ImmutableList.of("task_id"),
-        createdIndexSet
+        getIndexOnTable(tableName)
     );
   }
 
@@ -605,12 +601,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             )
         )
     );
-    final Set<String> createdIndexSet = getIndexOnTable(tableName);
     createIndex(
         tableName,
         "idx_%1$s_spec_id ",
         ImmutableList.of("spec_id"),
-        createdIndexSet
+        getIndexOnTable(tableName)
     );
   }
 
@@ -660,12 +655,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
     alterTable(tableName, alterCommands);
 
-    final Set<String> createdIndexSet = getIndexOnTable(tableName);
     createIndex(
         tableName,
         "idx_%1$s_datasource_upgraded_from_segment_id",
         ImmutableList.of("dataSource", "upgraded_from_segment_id"),
-        createdIndexSet
+        getIndexOnTable(tableName)
     );
   }
 
@@ -1282,7 +1276,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   protected String generateSHABasedIndexIdentifier(String tableName, List<String> columns)
   {
     final String prefix = "idx_" + tableName + "_";
-    final String columnDigest = DigestUtils.sha1Hex(columns.stream().map(String::toLowerCase).collect(Collectors.joining("_")));
-    return prefix + columnDigest.substring(0, Math.min(columnDigest.length(), indexIdentifierLengthLimit() - prefix.length()));
+    final String columnDigest = DigestUtils.sha1Hex(columns.stream().map(StringUtils::toLowerCase).collect(Collectors.joining("_")));
+    return prefix + columnDigest.substring(0, Math.min(columnDigest.length(), getMaxLengthOfIndexName() - prefix.length()));
   }
 }

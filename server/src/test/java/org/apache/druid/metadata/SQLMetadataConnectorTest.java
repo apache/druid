@@ -316,10 +316,10 @@ public class SQLMetadataConnectorTest
         "idx_%1$s_datasource_upgraded_from_segment_id"
     );
     final List<String> legacyIndexNames = legacyIndexTemplates.stream()
-                                                              .map(template -> StringUtils.format(
+                                                              .map(template -> StringUtils.toUpperCase(StringUtils.format(
                                                                   template,
                                                                   segmentsTable
-                                                              ).toUpperCase())
+                                                              )))
                                                               .collect(Collectors.toList());
     final List<List<String>> indexColumns = ImmutableList.of(
         ImmutableList.of("used"),
@@ -339,12 +339,13 @@ public class SQLMetadataConnectorTest
     connector.getDBI().withHandle(handle -> {
       for (int i = 0; i < legacyIndexNames.size(); i++) {
         try {
-          handle.execute(StringUtils.format(
-              "DROP INDEX %s",
-              connector.generateSHABasedIndexIdentifier(
-                  segmentsTable,
-                  indexColumns.get(i)
-              ).toUpperCase()
+          handle.execute(StringUtils.toUpperCase(StringUtils.format(
+                                                     "DROP INDEX %s",
+                                                     connector.generateSHABasedIndexIdentifier(
+                                                         segmentsTable,
+                                                         indexColumns.get(i)
+                                                     )
+                                                 )
           ));
         }
         catch (Exception ignore) {
@@ -390,10 +391,10 @@ public class SQLMetadataConnectorTest
     connector.alterSegmentTable();
 
     final List<String> indexNames = indexColumns.stream()
-                                                .map(cols -> connector.generateSHABasedIndexIdentifier(
+                                                .map(cols -> StringUtils.toUpperCase(connector.generateSHABasedIndexIdentifier(
                                                     segmentsTable,
                                                     cols
-                                                ).toUpperCase())
+                                                )))
                                                 .collect(Collectors.toList());
     assertIndicesPresentOnTable(segmentsTable, indexNames);
     dropTable(segmentsTable);
@@ -417,7 +418,7 @@ public class SQLMetadataConnectorTest
         indexTemplates.size()
     );
     for (String template : indexTemplates) {
-      String expectedIndex = StringUtils.format(template, tableName).toUpperCase();
+      String expectedIndex = StringUtils.toUpperCase(StringUtils.format(template, tableName));
       Assert.assertTrue(
           StringUtils.format("Expected index[%s] not found in table[%s]", expectedIndex, tableName),
           actualIndices.contains(expectedIndex)

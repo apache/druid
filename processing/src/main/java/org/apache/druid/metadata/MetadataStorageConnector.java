@@ -99,7 +99,7 @@ public interface MetadataStorageConnector
   /**
    * Returns the maximum identifier length for table indices in this MetadataStorageConnector implementation.
    */
-  default int indexIdentifierLengthLimit()
+  default int getMaxLengthOfIndexName()
   {
     return Integer.MAX_VALUE;
   }
