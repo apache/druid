@@ -1769,8 +1769,15 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       createNewSequenceFromIoConfig(newIoConfig);
 
       assignment = assignPartitions(recordSupplier);
-      possiblyResetDataSourceMetadata(toolbox, recordSupplier, assignment);
-      seekToStartingSequence(recordSupplier, assignment);
+      boolean shouldResume = true;
+      if (!assignment.isEmpty()) {
+        possiblyResetDataSourceMetadata(toolbox, recordSupplier, assignment);
+        seekToStartingSequence(recordSupplier, assignment);
+      } else {
+        // if there is no assignment, It means that there was no partition assigned to this task after scaling down.
+        pause();
+        shouldResume = false;
+      }
 
       log.info("Config updated to [%s]", this.ioConfig);
       toolbox.getEmitter().emit(ServiceMetricEvent.builder()
@@ -1779,7 +1786,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                                     .setDimension(DruidMetrics.DATASOURCE, task.getDataSource())
                                     .setMetric("task/config/update/success", 1)
                                     .build(ImmutableMap.of()));
-      resume();
+      if (shouldResume) {
+        resume();
+      }
       waitForConfigUpdate.set(false);
       return Response.ok().build();
     }

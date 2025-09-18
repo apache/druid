@@ -778,7 +778,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       int taskGroupId = entry.getKey();
       TaskGroup existingTaskGroup = entry.getValue();
 
-      Set<PartitionIdType> partitionsForThisTask = new HashSet<>(newPartitionGroups.get(taskGroupId));
+      Set<PartitionIdType> partitionsForThisTask = new HashSet<>(newPartitionGroups.getOrDefault(taskGroupId, Set.of()));
       SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig = createUpdatedTaskIoConfig(
           partitionsForThisTask,
           existingTaskGroup,
@@ -876,16 +876,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     for (Integer obsoleteTaskGroupId : obsoleteTaskGroupIds) {
       TaskGroup obsoleteTaskGroup = activelyReadingTaskGroups.get(obsoleteTaskGroupId);
       if (obsoleteTaskGroup != null) {
-        log.info("Pausing tasks in obsolete task group [%d]: %s", obsoleteTaskGroupId, obsoleteTaskGroup.taskIds());
+        log.info("Gracefully shutting down tasks in obsolete task group [%d]: %s", obsoleteTaskGroupId, obsoleteTaskGroup.taskIds());
 
-        // Pause all tasks in the obsolete task group
+        // Gracefully shut down all tasks in the obsolete task group
         for (String taskId : obsoleteTaskGroup.taskIds()) {
           try {
-            taskClient.pauseAsync(taskId);
-            log.info("Requested pause for task [%s] in obsolete task group [%d]", taskId, obsoleteTaskGroupId);
+            killTaskWithSuccess(taskId, "Gracefully shutting down task in obsolete task group [%d] during scale down", obsoleteTaskGroupId);
+            log.info("Requested graceful shutdown for task [%s] in obsolete task group [%d]", taskId, obsoleteTaskGroupId);
           }
           catch (Exception e) {
-            log.error(e, "Failed to pause task [%s] in obsolete task group [%d]", taskId, obsoleteTaskGroupId);
+            log.error(e, "Failed to gracefully shut down task [%s] in obsolete task group [%d]", taskId, obsoleteTaskGroupId);
           }
         }
 

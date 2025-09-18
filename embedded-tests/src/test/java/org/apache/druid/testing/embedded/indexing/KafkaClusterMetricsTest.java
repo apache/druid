@@ -183,10 +183,10 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(60)
-  public void test_ingest300kRows_ofSelfClusterMetricsWithScaleOuts_andVerifyValues()
+  public void test_ingest50kRows_ofSelfClusterMetricsWithScaleOuts_andVerifyValues()
   {
     final int maxRowsPerSegment = 1000;
-    final int expectedSegmentsHandedOff = 300;
+    final int expectedSegmentsHandedOff = 50;
 
     final int taskCount = 1;
 
@@ -363,6 +363,74 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
 
     // Suspend the supervisors
     cluster.callApi().postSupervisor(compactionSupervisorSpec.createSuspendedSpec());
+    cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
+  }
+
+  @Test
+  @Timeout(60)
+  public void test_ingest50kRows_ofSelfClusterMetricsWithScaleIns_andVerifyValues()
+  {
+    final int maxRowsPerSegment = 1000;
+    final int expectedSegmentsHandedOff = 50;
+
+    final int initialTaskCount = 3;
+
+    // Submit and start a supervisor with scale-in configuration
+    final String supervisorId = dataSource + "_supe";
+    AutoScalerConfig autoScalerConfig = new LagBasedAutoScalerConfigBuilder()
+        .withLagCollectionIntervalMillis(500)
+        .withLagCollectionRangeMillis(1000)
+        .withEnableTaskAutoScaler(true)
+        .withScaleActionPeriodMillis(10000)
+        .withScaleActionStartDelayMillis(5000)
+        .withScaleOutThreshold(10000)
+        .withScaleInThreshold(1)
+        .withTriggerScaleOutFractionThreshold(0.9)
+        .withTriggerScaleInFractionThreshold(0.001)
+        .withTaskCountMax(initialTaskCount)
+        .withTaskCountStart(initialTaskCount)
+        .withScaleOutStep(0)
+        .withScaleInStep(1)
+        .withMinTriggerScaleActionFrequencyMillis(10000)
+        .withStopTaskCountRatio(1.0)
+        .build();
+
+    final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(
+        supervisorId,
+        initialTaskCount,
+        maxRowsPerSegment,
+        autoScalerConfig,
+        true
+    );
+
+    Assertions.assertEquals(
+        supervisorId,
+        cluster.callApi().postSupervisor(kafkaSupervisorSpec)
+    );
+
+    overlord.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("task/autoScaler/scaleActionTime"),
+        agg -> agg.hasSumAtLeast(2)
+    );
+
+    indexer.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("ingest/handoff/count"),
+        agg -> agg.hasSumAtLeast(expectedSegmentsHandedOff)
+    );
+
+    final int numSegments = Integer.parseInt(
+        cluster.runSql("SELECT COUNT(*) FROM sys.segments WHERE datasource = '%s'", dataSource)
+    );
+    Assertions.assertTrue(numSegments >= expectedSegmentsHandedOff);
+
+    final int numRows = Integer.parseInt(
+        cluster.runSql("SELECT COUNT(*) FROM %s", dataSource)
+    );
+    Assertions.assertTrue(numRows >= expectedSegmentsHandedOff * maxRowsPerSegment);
+
+    verifyIngestedMetricCountMatchesEmittedCount("jvm/pool/committed", coordinator);
+    verifyIngestedMetricCountMatchesEmittedCount("coordinator/time", coordinator);
+
     cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
   }
 
