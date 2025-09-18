@@ -183,7 +183,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(60)
-  public void test_ingest30kRows_ofSelfClusterMetricsWithScaleOuts_andVerifyValues()
+  public void test_ingest300kRows_ofSelfClusterMetricsWithScaleOuts_andVerifyValues()
   {
     final int maxRowsPerSegment = 1000;
     final int expectedSegmentsHandedOff = 300;

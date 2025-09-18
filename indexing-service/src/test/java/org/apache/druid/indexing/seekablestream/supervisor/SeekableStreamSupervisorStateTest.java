@@ -207,6 +207,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testRunning()
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
     EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
@@ -249,6 +250,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(recordSupplier.getAssignment()).andReturn(ImmutableSet.of(SHARD0_PARTITION)).anyTimes();
     EasyMock.expect(recordSupplier.getLatestSequenceNumber(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
     EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
@@ -298,6 +300,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testAddDiscoveredTaskToPendingCompletionTaskGroups() throws Exception
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
@@ -402,6 +405,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testAddDiscoveredTaskToPendingCompletionMultipleTaskGroups() throws Exception
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
@@ -473,6 +477,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testConnectingToStreamFail()
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM))
             .andThrow(new StreamException(new IllegalStateException(EXCEPTION_MSG)))
             .anyTimes();
@@ -528,6 +533,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testConnectingToStreamFailRecoveryFailRecovery()
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM))
             .andThrow(new StreamException(new IllegalStateException()))
             .times(3);
@@ -602,6 +608,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testDiscoveringInitialTasksFailRecoveryFail()
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
     EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andThrow(new IllegalStateException(EXCEPTION_MSG)).times(3);
     EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).times(6);
@@ -711,6 +718,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       }
     }).anyTimes();
     EasyMock.expect(spec.getType()).andReturn("test").anyTimes();
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
     EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
@@ -784,6 +792,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.reset(spec);
     EasyMock.expect(spec.getId()).andReturn(SUPERVISOR_ID).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
     EasyMock.expect(spec.getContextValue("tags")).andReturn("").anyTimes();
     EasyMock.expect(spec.getIoConfig()).andReturn(new SeekableStreamSupervisorIOConfig(
@@ -859,6 +868,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testCreatingTasksFailRecoveryFail()
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
     EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andThrow(new IllegalStateException(EXCEPTION_MSG)).times(3);
@@ -937,6 +947,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testSuspended()
   {
     EasyMock.expect(spec.isSuspended()).andReturn(true).anyTimes();
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
     EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
@@ -976,6 +987,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testStopping()
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
     EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
@@ -1020,6 +1032,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
     EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
 
     taskRunner.unregisterListener("testSupervisorId");
     indexTaskClient.close();
@@ -1039,6 +1052,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testStoppingGracefully()
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
     EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
@@ -1136,7 +1150,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             ioConfig
     );
 
-    SeekableStreamIndexTaskTuningConfig taskTuningConfig = getTuningConfig().convertToTaskTuningConfig();
+    SeekableStreamIndexTaskTuningConfig taskTuningConfig = getTuningConfig().convertToTaskTuningConfig(false);
 
     TreeMap<Integer, Map<String, Long>> sequenceOffsets = new TreeMap<>();
     sequenceOffsets.put(0, ImmutableMap.of("0", 10L, "1", 20L));
@@ -1341,7 +1355,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
 
-    SeekableStreamIndexTaskTuningConfig taskTuningConfig = getTuningConfig().convertToTaskTuningConfig();
+    SeekableStreamIndexTaskTuningConfig taskTuningConfig = getTuningConfig().convertToTaskTuningConfig(false);
 
     TreeMap<Integer, Map<String, Long>> sequenceOffsets = new TreeMap<>();
     sequenceOffsets.put(0, ImmutableMap.of("0", 10L, "1", 20L));
@@ -1556,6 +1570,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(spec.getIoConfig()).andReturn(ioConfig).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andStubReturn(false);
     EasyMock.expect(spec.getMonitorSchedulerConfig()).andReturn(new DruidMonitorSchedulerConfig()
     {
       @Override
@@ -1572,7 +1587,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(streamingTaskRunner.getStatus()).andReturn(null);
     EasyMock.expect(streamingTaskRunner.getStatus()).andReturn(SeekableStreamIndexTaskRunner.Status.NOT_STARTED);
 
-    SeekableStreamIndexTaskTuningConfig taskTuningConfig = getTuningConfig().convertToTaskTuningConfig();
+    SeekableStreamIndexTaskTuningConfig taskTuningConfig = getTuningConfig().convertToTaskTuningConfig(false);
 
     TreeMap<Integer, Map<String, Long>> sequenceOffsets = new TreeMap<>();
     sequenceOffsets.put(0, ImmutableMap.of("0", 10L, "1", 20L));
@@ -1730,7 +1745,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testEmitTimeLag() throws Exception
   {
     expectEmitterSupervisor(false);
-
     CountDownLatch latch = new CountDownLatch(1);
     TestEmittingTestSeekableStreamSupervisor supervisor = new TestEmittingTestSeekableStreamSupervisor(
         latch,
@@ -1763,7 +1777,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testEmitNoticesQueueSize() throws Exception
   {
     expectEmitterSupervisor(false);
-
     CountDownLatch latch = new CountDownLatch(1);
     TestEmittingTestSeekableStreamSupervisor supervisor = new TestEmittingTestSeekableStreamSupervisor(
         latch,
@@ -1827,7 +1840,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testEmitNoLagWhenSuspended() throws Exception
   {
     expectEmitterSupervisor(true);
-
     CountDownLatch latch = new CountDownLatch(1);
     TestEmittingTestSeekableStreamSupervisor supervisor = new TestEmittingTestSeekableStreamSupervisor(
         latch,
@@ -1862,6 +1874,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testGetStats()
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false);
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     EasyMock.expect(indexTaskClient.getMovingAveragesAsync("task1"))
             .andReturn(Futures.immediateFuture(ImmutableMap.of("prop1", "val1")))
             .times(1);
@@ -1909,6 +1922,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testSupervisorResetAllWithCheckpoints() throws InterruptedException
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false);
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     EasyMock.expect(indexerMetadataStorageCoordinator.deleteDataSourceMetadata(SUPERVISOR_ID)).andReturn(
         true
     );
@@ -1962,6 +1976,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             )
         )
     );
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     EasyMock.expect(indexerMetadataStorageCoordinator.resetDataSourceMetadata(SUPERVISOR_ID, new TestSeekableStreamDataSourceMetadata(
         new SeekableStreamEndSequenceNumbers<>(
             STREAM,
@@ -2008,7 +2023,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testRegisterNewVersionOfPendingSegment()
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false);
-
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     Capture<PendingSegmentRecord> captured0 = Capture.newInstance(CaptureType.FIRST);
     Capture<PendingSegmentRecord> captured1 = Capture.newInstance(CaptureType.FIRST);
     EasyMock.expect(
@@ -2090,7 +2105,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     final ImmutableMap<String, String> checkpointOffsets = ImmutableMap.of("0", "5", "1", "6", "2", "100");
     final ImmutableMap<String, String> resetOffsets = ImmutableMap.of("0", "10", "1", "8");
     final ImmutableMap<String, String> expectedOffsets = ImmutableMap.of("0", "10", "1", "8", "2", "100");
-
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false);
     EasyMock.reset(indexerMetadataStorageCoordinator);
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(SUPERVISOR_ID)).andReturn(
@@ -2170,6 +2185,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     final ImmutableMap<String, String> expectedOffsets = ImmutableMap.copyOf(resetOffsets);
 
     EasyMock.expect(spec.isSuspended()).andReturn(false);
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     EasyMock.reset(indexerMetadataStorageCoordinator);
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(SUPERVISOR_ID)).andReturn(null);
     EasyMock.expect(indexerMetadataStorageCoordinator.insertDataSourceMetadata(SUPERVISOR_ID, new TestSeekableStreamDataSourceMetadata(
@@ -2243,6 +2259,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     final ImmutableMap<String, String> expectedOffsets = ImmutableMap.of("0", "5", "1", "6");
 
     EasyMock.expect(spec.isSuspended()).andReturn(false);
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     EasyMock.reset(indexerMetadataStorageCoordinator);
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(SUPERVISOR_ID)).andReturn(
         new TestSeekableStreamDataSourceMetadata(
@@ -2308,6 +2325,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     final ImmutableMap<String, String> expectedOffsets = ImmutableMap.of("0", "5", "1", "6", "2", "20");
 
     EasyMock.expect(spec.isSuspended()).andReturn(false);
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     EasyMock.reset(indexerMetadataStorageCoordinator);
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(SUPERVISOR_ID)).andReturn(
         new TestSeekableStreamDataSourceMetadata(
@@ -2371,6 +2389,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testSupervisorNoResetDataSourceMetadata()
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false);
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     replayAll();
 
     final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
@@ -2410,6 +2429,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testSupervisorResetWithInvalidStartSequenceMetadata()
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false);
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     replayAll();
 
     final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
@@ -2460,6 +2480,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testSupervisorResetInvalidStream()
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false);
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     replayAll();
 
     final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
@@ -2506,7 +2527,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testStaleOffsetsNegativeLagNotEmitted() throws Exception
   {
     expectEmitterSupervisor(false);
-
     CountDownLatch latch = new CountDownLatch(1);
 
     final TestEmittingTestSeekableStreamSupervisor supervisor = new TestEmittingTestSeekableStreamSupervisor(
@@ -2549,6 +2569,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   public void testScheduleReporting()
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     DruidMonitorSchedulerConfig config = new DruidMonitorSchedulerConfig();
     EasyMock.expect(spec.getMonitorSchedulerConfig()).andReturn(config).times(2);
     ScheduledExecutorService executorService = EasyMock.createMock(ScheduledExecutorService.class);
@@ -2651,6 +2672,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     spec = createMock(SeekableStreamSupervisorSpec.class);
     EasyMock.expect(spec.getId()).andReturn(SUPERVISOR_ID).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
     EasyMock.expect(spec.getIoConfig()).andReturn(new SeekableStreamSupervisorIOConfig(
         "stream",
@@ -2865,7 +2887,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       }
 
       @Override
-      public SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig()
+      public SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig(Boolean usePerpetuallyRunningTasks)
       {
         return new SeekableStreamIndexTaskTuningConfig(
             null,

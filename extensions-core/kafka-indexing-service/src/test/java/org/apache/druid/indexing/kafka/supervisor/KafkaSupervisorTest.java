@@ -397,7 +397,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     KafkaIndexTask task = captured.getValue();
     Assert.assertEquals(KafkaSupervisorTest.dataSchema, task.getDataSchema());
-    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), task.getTuningConfig());
+    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(null), task.getTuningConfig());
 
     KafkaIndexTaskIOConfig taskConfig = task.getIOConfig();
     Assert.assertEquals(kafkaHost, taskConfig.getConsumerProperties().get("bootstrap.servers"));
@@ -536,7 +536,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     KafkaIndexTask task = captured.getValue();
     Assert.assertEquals(dataSchema, task.getDataSchema());
-    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), task.getTuningConfig());
+    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(null), task.getTuningConfig());
 
     KafkaIndexTaskIOConfig taskConfig = task.getIOConfig();
     Assert.assertEquals(kafkaHost, taskConfig.getConsumerProperties().get("bootstrap.servers"));
@@ -1904,7 +1904,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     for (Task task : captured.getValues()) {
       KafkaIndexTask kafkaIndexTask = (KafkaIndexTask) task;
       Assert.assertEquals(dataSchema, kafkaIndexTask.getDataSchema());
-      Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), kafkaIndexTask.getTuningConfig());
+      Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(null), kafkaIndexTask.getTuningConfig());
 
       KafkaIndexTaskIOConfig taskConfig = kafkaIndexTask.getIOConfig();
       Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
@@ -2014,7 +2014,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     KafkaIndexTask capturedTask = captured.getValue();
     Assert.assertEquals(dataSchema, capturedTask.getDataSchema());
-    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), capturedTask.getTuningConfig());
+    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(null), capturedTask.getTuningConfig());
 
     KafkaIndexTaskIOConfig capturedTaskConfig = capturedTask.getIOConfig();
     Assert.assertEquals(kafkaHost, capturedTaskConfig.getConsumerProperties().get("bootstrap.servers"));
@@ -2148,7 +2148,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     KafkaIndexTask capturedTask = captured.getValue();
     Assert.assertEquals(dataSchema, capturedTask.getDataSchema());
-    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), capturedTask.getTuningConfig());
+    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(null), capturedTask.getTuningConfig());
 
     KafkaIndexTaskIOConfig capturedTaskConfig = capturedTask.getIOConfig();
     Assert.assertEquals(kafkaHost, capturedTaskConfig.getConsumerProperties().get("bootstrap.servers"));
@@ -4296,7 +4296,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     KafkaIndexTask task = captured.getValue();
     Assert.assertEquals(dataSchema, task.getDataSchema());
-    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), task.getTuningConfig());
+    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(null), task.getTuningConfig());
 
     KafkaIndexTaskIOConfig taskConfig = task.getIOConfig();
     Assert.assertEquals(kafkaHost, taskConfig.getConsumerProperties().get("bootstrap.servers"));
@@ -5614,7 +5614,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         minimumMessageTime,
         maximumMessageTime,
         schema,
-        tuningConfig.convertToTaskTuningConfig()
+        tuningConfig.convertToTaskTuningConfig(null)
     );
   }
 

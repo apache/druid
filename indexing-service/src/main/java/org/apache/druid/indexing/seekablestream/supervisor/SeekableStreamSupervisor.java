@@ -1299,7 +1299,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.ioConfig = spec.getIoConfig();
     this.autoScalerConfig = ioConfig.getAutoScalerConfig();
     this.tuningConfig = spec.getTuningConfig();
-    this.taskTuningConfig = this.tuningConfig.convertToTaskTuningConfig();
+    this.taskTuningConfig = this.tuningConfig.convertToTaskTuningConfig(spec.usePerpetuallyRunningTasks());
     this.supervisorId = spec.getId();
     this.exec = Execs.singleThreaded(StringUtils.encodeForFormat(supervisorTag));
     this.scheduledExec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorTag) + "-Scheduler-%d");
@@ -1838,7 +1838,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   public List<ParseExceptionReport> getParseErrors()
   {
     try {
-      if (spec.getSpec().getTuningConfig().convertToTaskTuningConfig().getMaxParseExceptions() <= 0) {
+      if (spec.getSpec().getTuningConfig().convertToTaskTuningConfig(spec.usePerpetuallyRunningTasks()).getMaxParseExceptions() <= 0) {
         return ImmutableList.of();
       }
       lastKnownParseErrors = getCurrentParseErrors();
@@ -2003,11 +2003,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
 
-    SeekableStreamIndexTaskTuningConfig ss = spec.getSpec().getTuningConfig().convertToTaskTuningConfig();
+    SeekableStreamIndexTaskTuningConfig ss = spec.getSpec().getTuningConfig().convertToTaskTuningConfig(spec.usePerpetuallyRunningTasks());
     SeekableStreamSupervisorIOConfig oo = spec.getSpec().getIOConfig();
 
     // store a limited number of parse exceptions, keeping the most recent ones
-    int parseErrorLimit = spec.getSpec().getTuningConfig().convertToTaskTuningConfig().getMaxSavedParseExceptions() *
+    int parseErrorLimit = spec.getSpec().getTuningConfig().convertToTaskTuningConfig(spec.usePerpetuallyRunningTasks()).getMaxSavedParseExceptions() *
                           spec.getSpec().getIOConfig().getTaskCount();
     parseErrorLimit = Math.min(parseErrorLimit, parseErrorsTreeSet.size());
 

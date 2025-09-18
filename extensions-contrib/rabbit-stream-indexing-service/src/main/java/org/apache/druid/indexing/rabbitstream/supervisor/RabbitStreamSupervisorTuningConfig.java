@@ -21,6 +21,7 @@ package org.apache.druid.indexing.rabbitstream.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.rabbitstream.RabbitStreamIndexTaskTuningConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
@@ -219,7 +220,7 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
   }
 
   @Override
-  public RabbitStreamIndexTaskTuningConfig convertToTaskTuningConfig()
+  public RabbitStreamIndexTaskTuningConfig convertToTaskTuningConfig(Boolean usePerpetuallyRunningTasks)
   {
     return new RabbitStreamIndexTaskTuningConfig(
         getAppendableIndexSpec(),
