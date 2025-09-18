@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.SegmentUtils;
@@ -86,15 +87,25 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   @Override
   public DataSegment pushToPath(File indexFilesDir, DataSegment inSegment, String storageDirSuffix) throws IOException
   {
-    final String s3Path = S3Utils.constructSegmentPath(config.getBaseKey(), storageDirSuffix);
-    log.debug("Copying segment[%s] to S3 at location[%s]", inSegment.getId(), s3Path);
+    if (config.isZip()) {
+      final String s3Path = S3Utils.constructSegmentPath(config.getBaseKey(), storageDirSuffix);
+      log.debug("Copying segment[%s] to S3 at location[%s]", inSegment.getId(), s3Path);
+      return pushZip(indexFilesDir, inSegment, s3Path);
+    } else {
+      final String s3Path = S3Utils.constructSegmentBasePath(config.getBaseKey(), storageDirSuffix);
+      log.debug("Copying segment[%s] files to S3 at location[%s]", inSegment.getId(), s3Path);
+      return pushNoZip(indexFilesDir, inSegment, s3Path);
+    }
+  }
 
+  private DataSegment pushZip(File indexFilesDir, DataSegment baseSegment, String s3Path) throws IOException
+  {
     final File zipOutFile = File.createTempFile("druid", "index.zip");
     final long indexSize = CompressionUtils.zip(indexFilesDir, zipOutFile);
 
-    final DataSegment outSegment = inSegment.withSize(indexSize)
-                                            .withLoadSpec(makeLoadSpec(config.getBucket(), s3Path))
-                                            .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
+    final DataSegment outSegment = baseSegment.withSize(indexSize)
+                                              .withLoadSpec(makeLoadSpec(config.getBucket(), s3Path))
+                                              .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
 
     try {
       return S3Utils.retryS3Operation(
@@ -128,6 +139,56 @@ public class S3DataSegmentPusher implements DataSegmentPusher
       log.debug("Deleting temporary cached index.zip");
       zipOutFile.delete();
     }
+  }
+
+  private DataSegment pushNoZip(File indexFilesDir, DataSegment baseSegment, String s3Path) throws IOException
+  {
+    final File[] files = indexFilesDir.listFiles();
+    if (files == null) {
+      throw new IOE("Cannot list directory [%s]", indexFilesDir);
+    }
+
+    long size = 0;
+    for (final File file : files) {
+      if (file.isFile()) {
+        size += file.length();
+
+        try {
+          S3Utils.retryS3Operation(
+              () -> {
+                S3Utils.uploadFileIfPossible(s3Client, config.getDisableAcl(), config.getBucket(), s3Path + file.getName(), file);
+                return null;
+              }
+          );
+        }
+        catch (AmazonServiceException e) {
+          if (S3Utils.ERROR_ENTITY_TOO_LARGE.equals(S3Utils.getS3ErrorCode(e))) {
+            throw DruidException
+                .forPersona(DruidException.Persona.USER)
+                .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                .build(
+                    e,
+                    "Got error[%s] from S3 when uploading segment of size[%,d] bytes. This typically happens when segment "
+                    + "size is above 5GB. Try reducing your segment size by lowering the target number of rows per "
+                    + "segment.",
+                    S3Utils.ERROR_ENTITY_TOO_LARGE,
+                    file.length()
+                );
+          }
+          throw new IOException(e);
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      } else {
+        // Segment directories are expected to be flat.
+        throw new IOE("Unexpected subdirectory [%s]", file.getName());
+      }
+    }
+
+    return baseSegment.withSize(size)
+                      .withLoadSpec(makeLoadSpec(config.getBucket(), s3Path))
+                      .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
   }
 
   @Override
