@@ -124,7 +124,7 @@
         <hibernate-validator.version>6.2.5.Final</hibernate-validator.version>
         <httpclient.version>4.5.13</httpclient.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
-        <zookeeper.version>3.8.4</zookeeper.version>
+        <zookeeper.version>3.8.5</zookeeper.version>
         <checkerframework.version>3.48.1</checkerframework.version>
         <com.google.apis.client.version>2.2.0</com.google.apis.client.version>
         <com.google.http.client.apis.version>1.42.3</com.google.http.client.apis.version>
