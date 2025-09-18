@@ -397,7 +397,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
-  protected void createUpgradeSegmentsTable(final String tableName)
+  private void createUpgradeSegmentsTable(final String tableName)
   {
     createTable(
         tableName,
@@ -988,7 +988,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
-  protected void createAuditTable(final String tableName)
+  private void createAuditTable(final String tableName)
   {
     createTable(
         tableName,
