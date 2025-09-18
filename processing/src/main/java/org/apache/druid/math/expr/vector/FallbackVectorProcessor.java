@@ -45,7 +45,7 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
   final Supplier<ExprEval<?>> fn;
   final List<AdaptedExpr> adaptedArgs;
 
-  private final ExpressionType outputType;
+  protected final ExpressionType outputType;
 
   private FallbackVectorProcessor(
       final Supplier<ExprEval<?>> fn,
@@ -216,10 +216,10 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
           adaptedArg.setRowNumber(i);
         }
 
-        outValues[i] = fn.get().value();
+        outValues[i] = fn.get().castTo(outputType).value();
       }
 
-      return new ExprEvalObjectVector(outValues, getOutputType());
+      return new ExprEvalObjectVector(outValues, outputType);
     }
 
     @Override
@@ -384,7 +384,7 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
         final boolean isNull = results.getNullVector() != null && results.getNullVector()[rowNum];
         return ExprEval.ofDouble(isNull ? null : results.getDoubleVector()[rowNum]);
       } else {
-        return ExprEval.ofType(type, results.getObjectVector()[rowNum]);
+        return ExprEval.bestEffortOf(results.getObjectVector()[rowNum]);
       }
     }
 
