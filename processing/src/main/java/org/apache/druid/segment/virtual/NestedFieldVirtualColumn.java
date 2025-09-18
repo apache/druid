@@ -969,7 +969,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     {
       // Best-effort cast to long.
       final Object[] objects = getObjectVector();
-      final long[] retVal =  new long[baseSelector.getMaxVectorSize()];
+      final long[] retVal = new long[baseSelector.getMaxVectorSize()];
       for (int i = 0; i < baseSelector.getCurrentVectorSize(); i++) {
         retVal[i] = Numbers.tryParseLong(objects[i], 0L);
       }
@@ -981,7 +981,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     {
       // Best-effort cast to float.
       final Object[] objects = getObjectVector();
-      final float[] retVal =  new float[baseSelector.getMaxVectorSize()];
+      final float[] retVal = new float[baseSelector.getMaxVectorSize()];
       for (int i = 0; i < baseSelector.getCurrentVectorSize(); i++) {
         retVal[i] = Numbers.tryParseFloat(objects[i], 0L);
       }
@@ -993,7 +993,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     {
       // Best-effort cast to double.
       final Object[] objects = getObjectVector();
-      final double[] retVal =  new double[baseSelector.getMaxVectorSize()];
+      final double[] retVal = new double[baseSelector.getMaxVectorSize()];
       for (int i = 0; i < baseSelector.getCurrentVectorSize(); i++) {
         retVal[i] = Numbers.tryParseDouble(objects[i], 0L);
       }
@@ -1005,7 +1005,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     {
       // Best-effort cast to double, see if the double value is null.
       final Object[] objects = getObjectVector();
-      final boolean[] retVal =  new boolean[baseSelector.getMaxVectorSize()];
+      final boolean[] retVal = new boolean[baseSelector.getMaxVectorSize()];
       for (int i = 0; i < baseSelector.getCurrentVectorSize(); i++) {
         retVal[i] = objects[i] == null || (objects[i] instanceof String
                                            && Doubles.tryParse((String) objects[i]) == null);
