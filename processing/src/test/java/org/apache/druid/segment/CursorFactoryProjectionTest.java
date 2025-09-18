@@ -270,7 +270,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                              .aggregators(new DoubleSumAggregatorFactory("dsum", "d"))
                              .build(),
       AggregateProjectionSpec.builder("json")
-                             .groupingColumns(new AutoTypeColumnSchema("f", null))
+                             .groupingColumns(AutoTypeColumnSchema.of("f"))
                              .aggregators(new LongSumAggregatorFactory("_c_sum", "c"))
                              .build(),
       AggregateProjectionSpec.builder("a_filter_b_aaonly_hourly_cd_sum")
@@ -388,7 +388,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                                 .groupingColumns(
                                                     projection.getGroupingColumns()
                                                               .stream()
-                                                              .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                              .map(x -> AutoTypeColumnSchema.of(x.getName()))
                                                               .collect(Collectors.toList())
                                                 )
                                                 .build()
@@ -399,13 +399,14 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       ROLLUP_PROJECTIONS.stream()
                         .map(
                             projection ->
-                                AggregateProjectionSpec
-                                    .builder(projection)
-                                    .groupingColumns(projection.getGroupingColumns()
-                                                               .stream()
-                                                               .map(x -> new AutoTypeColumnSchema(x.getName(), null))
-                                                               .collect(Collectors.toList()))
-                                    .build()
+                                AggregateProjectionSpec.builder(projection)
+                                                       .groupingColumns(
+                                                           projection.getGroupingColumns()
+                                                                     .stream()
+                                                                     .map(x -> AutoTypeColumnSchema.of(x.getName()))
+                                                                     .collect(Collectors.toList())
+                                                       )
+                                                       .build()
                         )
                         .collect(Collectors.toList());
 
@@ -422,7 +423,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                               new LongDimensionSchema("c"),
                               new DoubleDimensionSchema("d"),
                               new FloatDimensionSchema("e"),
-                              new AutoTypeColumnSchema("f", null),
+                              AutoTypeColumnSchema.of("f"),
                               new StringDimensionSchema("missing")
                           )
                       );
@@ -451,12 +452,12 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     List<DimensionSchema> autoDims = dimsOrdered.getDimensions()
                                                 .stream()
-                                                .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                .map(x -> AutoTypeColumnSchema.of(x.getName()))
                                                 .collect(Collectors.toList());
 
     List<DimensionSchema> rollupAutoDims = rollupDimsOrdered.getDimensions()
                                                             .stream()
-                                                            .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                            .map(x -> AutoTypeColumnSchema.of(x.getName()))
                                                             .collect(Collectors.toList());
 
     for (boolean incremental : new boolean[]{true, false}) {

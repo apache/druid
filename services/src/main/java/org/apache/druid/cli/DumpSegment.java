@@ -459,8 +459,8 @@ public class DumpSegment extends GuiceRunnable
                 final ColumnHolder columnHolder = index.getColumnHolder(columnName);
                 final BaseColumn baseColumn = columnHolder.getColumn();
                 Preconditions.checkArgument(baseColumn instanceof CompressedNestedDataComplexColumn);
-                final CompressedNestedDataComplexColumn<?> nestedDataColumn =
-                    (CompressedNestedDataComplexColumn<?>) baseColumn;
+                final CompressedNestedDataComplexColumn<?, ?> nestedDataColumn =
+                    (CompressedNestedDataComplexColumn<?, ?>) baseColumn;
 
                 jg.writeFieldName("fields");
                 jg.writeStartArray();
