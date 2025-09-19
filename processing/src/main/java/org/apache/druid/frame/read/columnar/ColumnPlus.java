@@ -20,8 +20,8 @@
 package org.apache.druid.frame.read.columnar;
 
 import org.apache.druid.segment.column.BaseColumn;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ValueTypes;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
@@ -32,7 +32,7 @@ import javax.annotation.Nullable;
 /**
  * Returned by {@link FrameColumnReader#readColumn}.
  */
-public class ColumnPlus implements ColumnHolder
+public class ColumnPlus implements BaseColumnHolder
 {
   private final BaseColumn column;
   private final ColumnCapabilities capabilities;

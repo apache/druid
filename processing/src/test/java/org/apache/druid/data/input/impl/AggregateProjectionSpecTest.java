@@ -31,6 +31,7 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -112,9 +113,15 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
         ColumnType.LONG,
         TestExprMacroTable.INSTANCE
     );
-    ExpressionVirtualColumn ptEvery10Min = new ExpressionVirtualColumn(
-        "ptEvery10Min",
+    ExpressionVirtualColumn every10MinLA = new ExpressionVirtualColumn(
+        "every10MinLA",
         "timestamp_floor(__time, 'PT10M', null, 'America/Los_Angeles')",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+    ExpressionVirtualColumn every10Min = new ExpressionVirtualColumn(
+        "every10Min",
+        "timestamp_floor(__time, 'PT10M', null, null)",
         ColumnType.LONG,
         TestExprMacroTable.INSTANCE
     );
@@ -128,11 +135,11 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
     Assertions.assertEquals("hourly", new AggregateProjectionSpec(
         "some_projection",
         null,
-        VirtualColumns.create(daily, hourly, ptEvery10Min),
+        VirtualColumns.create(daily, hourly, every10MinLA),
         List.of(
             new LongDimensionSchema("daily"),
             new LongDimensionSchema("hourly"),
-            new LongDimensionSchema("ptEvery10Min")
+            new LongDimensionSchema("every10MinLA")
         ),
         new AggregatorFactory[]{}
     ).toMetadataSchema().getTimeColumnName());
@@ -140,16 +147,39 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
     Assertions.assertNull(new AggregateProjectionSpec(
         "some_projection",
         null,
-        VirtualColumns.create(ptEvery10Min),
-        List.of(new LongDimensionSchema("ptEvery10Min")),
+        VirtualColumns.create(every10MinLA),
+        List.of(new LongDimensionSchema("every10MinLA")),
         new AggregatorFactory[]{}
     ).toMetadataSchema().getTimeColumnName());
 
     Assertions.assertEquals("every90Min", new AggregateProjectionSpec(
         "some_projection",
         null,
-        VirtualColumns.create(every90Min, ptEvery10Min),
-        List.of(new LongDimensionSchema("every90Min"), new LongDimensionSchema("ptEvery10Min")),
+        VirtualColumns.create(every90Min, every10MinLA),
+        List.of(new LongDimensionSchema("every90Min"), new LongDimensionSchema("every10MinLA")),
+        new AggregatorFactory[]{}
+    ).toMetadataSchema().getTimeColumnName());
+
+    Assertions.assertEquals("every10Min", new AggregateProjectionSpec(
+        "some_projection",
+        null,
+        VirtualColumns.create(daily, hourly, every10Min),
+        List.of(
+            new LongDimensionSchema("daily"),
+            new LongDimensionSchema("hourly"),
+            new LongDimensionSchema("every10Min")
+        ),
+        new AggregatorFactory[]{}
+    ).toMetadataSchema().getTimeColumnName());
+    Assertions.assertEquals("hourly", new AggregateProjectionSpec(
+        "some_projection",
+        null,
+        VirtualColumns.create(daily, hourly, every10Min),
+        List.of(
+            new LongDimensionSchema("daily"),
+            new LongDimensionSchema("hourly"),
+            new StringDimensionSchema("every10Min")
+        ),
         new AggregatorFactory[]{}
     ).toMetadataSchema().getTimeColumnName());
   }
@@ -213,6 +243,25 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
     );
     Assertions.assertEquals(
         "projection[other_projection] groupingColumns and aggregators must not both be null or empty",
+        t.getMessage()
+    );
+  }
+
+  @Test
+  void testInvalidTimeColumnType()
+  {
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> new AggregateProjectionSpec(
+            "projection",
+            null,
+            VirtualColumns.EMPTY,
+            List.of(new StringDimensionSchema(ColumnHolder.TIME_COLUMN_NAME)),
+            null
+        )
+    );
+    Assertions.assertEquals(
+        "Encountered grouping column[__time] with incorrect type[STRING]. Type must be 'long'.",
         t.getMessage()
     );
   }
