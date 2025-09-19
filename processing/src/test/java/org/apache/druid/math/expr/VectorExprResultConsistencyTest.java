@@ -41,7 +41,6 @@ import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.TestMapLookupExtractorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 
