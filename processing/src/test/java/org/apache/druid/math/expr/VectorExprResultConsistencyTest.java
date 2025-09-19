@@ -141,20 +141,21 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     MACRO_TABLE = injector.getInstance(ExprMacroTable.class);
   }
 
-  final Map<String, ExpressionType> types = ImmutableMap.<String, ExpressionType>builder()
-                                                        .put("l1", ExpressionType.LONG)
-                                                        .put("l2", ExpressionType.LONG)
-                                                        .put("l3", ExpressionType.LONG)
-                                                        .put("d1", ExpressionType.DOUBLE)
-                                                        .put("d2", ExpressionType.DOUBLE)
-                                                        .put("d3", ExpressionType.DOUBLE)
-                                                        .put("s1", ExpressionType.STRING)
-                                                        .put("s2", ExpressionType.STRING)
-                                                        .put("s3", ExpressionType.STRING)
-                                                        .put("boolString1", ExpressionType.STRING)
-                                                        .put("boolString2", ExpressionType.STRING)
-                                                        .put("boolString3", ExpressionType.STRING)
-                                                        .build();
+  final Map<String, ExpressionType> types =
+      ImmutableMap.<String, ExpressionType>builder()
+                  .put("l1", ExpressionType.LONG)
+                  .put("l2", ExpressionType.LONG)
+                  .put("l3", ExpressionType.LONG)
+                  .put("d1", ExpressionType.DOUBLE)
+                  .put("d2", ExpressionType.DOUBLE)
+                  .put("d3", ExpressionType.DOUBLE)
+                  .put("s1", ExpressionType.STRING)
+                  .put("s2", ExpressionType.STRING)
+                  .put("s3", ExpressionType.STRING)
+                  .put("boolString1", ExpressionType.STRING)
+                  .put("boolString2", ExpressionType.STRING)
+                  .put("boolString3", ExpressionType.STRING)
+                  .build();
 
 
   @Test
@@ -275,14 +276,16 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     final Set<List<String>> templateInputs = Sets.cartesianProduct(columns, columns2, columns2);
     final List<String> templates = new ArrayList<>();
     for (List<String> template : templateInputs) {
-      templates.add(StringUtils.format(
-          "(%s %s %s) %s %s",
-          template.get(0),
-          "%s",
-          template.get(1),
-          "%s",
-          template.get(2)
-      ));
+      templates.add(
+          StringUtils.format(
+              "(%s %s %s) %s %s",
+              template.get(0),
+              "%s",
+              template.get(1),
+              "%s",
+              template.get(2)
+          )
+      );
     }
     final Set<String> ops = Set.of("+", "-", "*", "/");
     final Set<List<String>> args = Sets.cartesianProduct(ops, ops);
@@ -539,43 +542,13 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testArrayFns()
+  public void testArrayFunctions()
   {
     testExpression("array(s1, s2)", types);
     testExpression("array(l1, l2)", types);
     testExpression("array(d1, d2)", types);
     testExpression("array(l1, d2)", types);
     testExpression("array(s1, l2)", types);
-
-    testExpression("map((x) -> x + 1, array(l1, l2))", types);
-    testExpression("map((x) -> x * 2.0, array(d1, d2))", types);
-    testExpression("map((x) -> concat(x, '_mapped'), array(s1, s2))", types);
-
-    testExpression("cartesian_map((x, y) -> x + y, array(l1, l2), array(d1, d2))", types);
-    testExpression("cartesian_map((x, y) -> concat(x, cast(y, 'STRING')), array(s1, s2), array(l1, l2))", types);
-
-    testExpression("fold((x, acc) -> x + acc, array(l1, l2), 0)", types);
-    testExpression("fold((x, acc) -> x + acc, array(d1, d2), 0.0)", types);
-    testExpression("fold((x, acc) -> concat(acc, x), array(s1, s2), '')", types);
-
-    testExpression("cartesian_fold((x, y, acc) -> acc + x + y, array(l1, l2), array(d1, d2), 0)", types);
-
-    testExpression("filter((x) -> x > 0, array(l1, l2))", types);
-    testExpression("filter((x) -> x > 0.0, array(d1, d2))", types);
-    testExpression("filter((x) -> strlen(x) > 0, array(s1, s2))", types);
-
-    testExpression("any((x) -> x > 0, array(l1, l2))", types);
-    testExpression("any((x) -> x > 0.0, array(d1, d2))", types);
-    testExpression("any((x) -> strlen(x) > 0, array(s1, s2))", types);
-
-    testExpression("all((x) -> x != null, array(l1, l2))", types);
-    testExpression("all((x) -> x != null, array(d1, d2))", types);
-    testExpression("all((x) -> x != null, array(s1, s2))", types);
-  }
-
-  @Test
-  public void testArrayFunctions()
-  {
     testExpression("array_length(array(s1, s2))", types);
     testExpression("array_length(array(l1, l2, l3))", types);
     testExpression("array_offset(array(s1, s2), 0)", types);
@@ -612,6 +585,35 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testArrayHigherOrderFunctions()
+  {
+    testExpression("map((x) -> x + 1, array(l1, l2))", types);
+    testExpression("map((x) -> x * 2.0, array(d1, d2))", types);
+    testExpression("map((x) -> concat(x, '_mapped'), array(s1, s2))", types);
+
+    testExpression("cartesian_map((x, y) -> x + y, array(l1, l2), array(d1, d2))", types);
+    testExpression("cartesian_map((x, y) -> concat(x, cast(y, 'STRING')), array(s1, s2), array(l1, l2))", types);
+
+    testExpression("fold((x, acc) -> x + acc, array(l1, l2), 0)", types);
+    testExpression("fold((x, acc) -> x + acc, array(d1, d2), 0.0)", types);
+    testExpression("fold((x, acc) -> concat(acc, x), array(s1, s2), '')", types);
+
+    testExpression("cartesian_fold((x, y, acc) -> acc + x + y, array(l1, l2), array(d1, d2), 0)", types);
+
+    testExpression("filter((x) -> x > 0, array(l1, l2))", types);
+    testExpression("filter((x) -> x > 0.0, array(d1, d2))", types);
+    testExpression("filter((x) -> strlen(x) > 0, array(s1, s2))", types);
+
+    testExpression("any((x) -> x > 0, array(l1, l2))", types);
+    testExpression("any((x) -> x > 0.0, array(d1, d2))", types);
+    testExpression("any((x) -> strlen(x) > 0, array(s1, s2))", types);
+
+    testExpression("all((x) -> x != null, array(l1, l2))", types);
+    testExpression("all((x) -> x != null, array(d1, d2))", types);
+    testExpression("all((x) -> x != null, array(s1, s2))", types);
+  }
+
+  @Test
   public void testReduceFns()
   {
     testExpression("greatest(s1, s2)", types);
@@ -632,7 +634,6 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   @Test
   public void testJsonFns()
   {
-    Assume.assumeTrue(ExpressionProcessing.allowVectorizeFallback());
     testExpression("json_object('k1', s1, 'k2', l1)", types);
     testExpression("json_value(json_object('k1', s1, 'k2', l1), '$.k2', 'STRING')", types);
     testExpression("json_query(json_object('k1', s1, 'k2', l1), '$.k1')", types);
