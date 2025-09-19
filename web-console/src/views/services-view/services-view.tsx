@@ -41,6 +41,7 @@ import type { QueryWithContext } from '../../druid-models';
 import { getConsoleViewIcon } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
+  DEFAULT_TABLE_CLASS_NAME,
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
   suggestibleFilterInput,
@@ -84,6 +85,7 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Max size',
     'Usage',
     'Start time',
+    'Labels',
     'Detail',
   ],
   'no-sql': [
@@ -143,6 +145,7 @@ interface ServiceResultRow {
   readonly plaintext_port: number;
   readonly tls_port: number;
   readonly start_time: string;
+  readonly labels: string;
 }
 
 interface ServicesWithAuxiliaryInfo {
@@ -238,7 +241,8 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
   "curr_size",
   "max_size",
   "is_leader",
-  "start_time"
+  "start_time",
+  "labels"
 FROM sys.servers
 ORDER BY
   (
@@ -415,6 +419,7 @@ ORDER BY
           }
           filterable
           filtered={filters}
+          className={`centered-table ${DEFAULT_TABLE_CLASS_NAME}`}
           onFilteredChange={onFiltersChange}
           pivotBy={groupServicesBy ? [groupServicesBy] : []}
           defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
@@ -615,6 +620,28 @@ ORDER BY
           width: 200,
           Cell: this.renderFilterableCell('start_time'),
           Aggregated: () => '',
+        },
+        {
+          Header: 'Labels',
+          show: visibleColumns.shown('Labels'),
+          accessor: 'labels',
+          className: 'padded',
+          filterable: false,
+          width: 200,
+          Cell: ({ value }) => {
+            if (!value) return '';
+            return (
+              <ul className="labels-list">
+                {Object.entries(JSON.parse(value)).map(([key, val]) => {
+                  return (
+                    <li key={String(key)}>
+                      {key}: {String(val)}
+                    </li>
+                  );
+                })}
+              </ul>
+            );
+          },
         },
         {
           Header: 'Detail',
