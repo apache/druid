@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
-import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedFilteringConfig;
+import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedInclusionConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
@@ -40,7 +40,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
   private final Map<String, Object> consumerProperties;
   private final long pollTimeout;
   private final KafkaConfigOverrides configOverrides;
-  private final KafkaHeaderBasedFilteringConfig headerBasedFilteringConfig;
+  private final KafkaHeaderBasedInclusionConfig headerBasedFilteringConfig;
 
   private final boolean multiTopic;
 
@@ -67,7 +67,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
       @JsonProperty("configOverrides") @Nullable KafkaConfigOverrides configOverrides,
       @JsonProperty("multiTopic") @Nullable Boolean multiTopic,
       @JsonProperty("refreshRejectionPeriodsInMinutes") Long refreshRejectionPeriodsInMinutes,
-      @JsonProperty("headerBasedFilteringConfig") @Nullable KafkaHeaderBasedFilteringConfig headerBasedFilteringConfig
+      @JsonProperty("headerBasedFilteringConfig") @Nullable KafkaHeaderBasedInclusionConfig headerBasedFilteringConfig
   )
   {
     super(
@@ -115,7 +115,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
       InputFormat inputFormat,
       KafkaConfigOverrides configOverrides,
       Long refreshRejectionPeriodsInMinutes,
-      KafkaHeaderBasedFilteringConfig headerBasedFilteringConfig
+      KafkaHeaderBasedInclusionConfig headerBasedFilteringConfig
   )
   {
     this(
@@ -193,7 +193,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
 
   @JsonProperty
   @Nullable
-  public KafkaHeaderBasedFilteringConfig getHeaderBasedFilteringConfig()
+  public KafkaHeaderBasedInclusionConfig getHeaderBasedFilteringConfig()
   {
     return headerBasedFilteringConfig;
   }

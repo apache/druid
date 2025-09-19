@@ -125,7 +125,7 @@ For configuration properties shared across all streaming ingestion methods, refe
 |`consumerProperties`|String, Object|A map of properties to pass to the Kafka consumer. See [Consumer properties](#consumer-properties) for details.|Yes. At the minimum, you must set the `bootstrap.servers` property to establish the initial connection to the Kafka cluster.||
 |`pollTimeout`|Long|The length of time to wait for the Kafka consumer to poll records, in milliseconds.|No|100|
 |`useEarliestOffset`|Boolean|If a supervisor is managing a datasource for the first time, it obtains a set of starting offsets from Kafka. This flag determines whether the supervisor retrieves the earliest or latest offsets in Kafka. Under normal circumstances, subsequent tasks start from where the previous segments ended so this flag is only used on the first run.|No|`false`|
-|`headerBasedFilteringConfig`|Object|Configuration for filtering Kafka records based on their headers before ingestion. See [Header-based filtering](#header-based-filtering) for more details.|No|null|
+|`headerBasedInclusionConfig`|Object|Configuration for including Kafka records based on their headers before ingestion. See [Header-based inclusion filtering](#header-based-inclusion-filtering) for more details.|No|null|
 |`idleConfig`|Object|Defines how and when the Kafka supervisor can become idle. See [Idle configuration](#idle-configuration) for more details.|No|null|
 
 #### Ingest from multiple topics
@@ -265,11 +265,11 @@ The following example shows a supervisor spec with idle configuration enabled:
 ```
 </details>
 
-#### Header-based filtering
+#### Header-based inclusion filtering
 
-Header-based filtering allows you to filter Kafka records based on their headers before ingestion, reducing the amount of data processed and improving ingestion performance. This is particularly useful when you want to ingest only a subset of records from a Kafka topic based on header values.
+Header-based inclusion filtering allows you to include only specific Kafka records based on their headers before ingestion, reducing the amount of data processed and improving ingestion performance. This is particularly useful when you want to ingest only a subset of records from a Kafka topic based on header values.
 
-The following table outlines the configuration options for `headerBasedFilteringConfig`:
+The following table outlines the configuration options for `headerBasedInclusionConfig`:
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
@@ -277,9 +277,9 @@ The following table outlines the configuration options for `headerBasedFiltering
 |`encoding`|String|The character encoding used to decode header values. Supported encodings include `UTF-8`, `UTF-16`, `ISO-8859-1`, `US-ASCII`, `UTF-16BE`, and `UTF-16LE`.|No|`UTF-8`|
 |`stringDecodingCacheSize`|Integer|The maximum number of decoded header strings to cache in memory. Set to a higher value for better performance when processing many unique header values.|No|10000|
 
-##### Header-based filtering example
+##### Header-based inclusion filtering example
 
-The following example shows how to configure header-based filtering to ingest only records where the `environment` header has the value `production` or `staging`:
+The following example shows how to configure header-based inclusion filtering to ingest only records where the `environment` header has the value `production` or `staging`:
 
 <details>
   <summary>Click to view the example</summary>
@@ -326,7 +326,7 @@ The following example shows how to configure header-based filtering to ingest on
       "consumerProperties": {
         "bootstrap.servers": "localhost:9092"
       },
-      "headerBasedFilteringConfig": {
+      "headerBasedInclusionConfig": {
         "filter": {
           "type": "in",
           "dimension": "environment",
@@ -355,14 +355,14 @@ In this example:
 
 ##### Performance considerations
 
-Header-based filtering provides several performance benefits:
+Header-based inclusion filtering provides several performance benefits:
 
 - **Reduced ingestion load**: Records are filtered before being processed by the ingestion pipeline
 - **Lower memory usage**: Filtered records don't consume memory in the ingestion process
 - **Improved throughput**: Less data to process means higher effective throughput
 - **String decoding cache**: Frequently accessed header values are cached to avoid repeated decoding
 
-Filtered events are tracked using the standard Druid ingestion metrics. The `ingest/events/filtered` metric reports the number of events rejected by header-based filtering. For more information about ingestion metrics, see [Ingestion metrics](../operations/metrics.md#other-ingestion-metrics).
+Filtered events are tracked using the standard Druid ingestion metrics. The `ingest/events/filtered` metric reports the number of events rejected by header-based inclusion filtering. For more information about ingestion metrics, see [Ingestion metrics](../operations/metrics.md#other-ingestion-metrics).
 
 #### Data format
 

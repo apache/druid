@@ -54,7 +54,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   private final String topic;
   private final String topicPattern;
   private final boolean emitTimeLagMetrics;
-  private final KafkaHeaderBasedFilteringConfig headerBasedFilteringConfig;
+  private final KafkaHeaderBasedInclusionConfig headerBasedFilteringConfig;
 
   @JsonCreator
   public KafkaSupervisorIOConfig(
@@ -76,7 +76,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("earlyMessageRejectionPeriod") Period earlyMessageRejectionPeriod,
       @JsonProperty("lateMessageRejectionStartDateTime") DateTime lateMessageRejectionStartDateTime,
       @JsonProperty("configOverrides") KafkaConfigOverrides configOverrides,
-      @JsonProperty("headerBasedFilteringConfig") KafkaHeaderBasedFilteringConfig headerBasedFilteringConfig,
+      @JsonProperty("headerBasedFilteringConfig") KafkaHeaderBasedInclusionConfig headerBasedFilteringConfig,
       @JsonProperty("idleConfig") IdleConfig idleConfig,
       @JsonProperty("stopTaskCount") Integer stopTaskCount,
       @Nullable @JsonProperty("emitTimeLagMetrics") Boolean emitTimeLagMetrics
@@ -172,7 +172,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
 
   @JsonProperty
   @Nullable
-  public KafkaHeaderBasedFilteringConfig getHeaderBasedFilteringConfig()
+  public KafkaHeaderBasedInclusionConfig getHeaderBasedFilteringConfig()
   {
     return headerBasedFilteringConfig;
   }
