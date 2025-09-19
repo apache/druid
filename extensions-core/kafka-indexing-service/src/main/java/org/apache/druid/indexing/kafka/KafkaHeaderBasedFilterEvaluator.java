@@ -45,23 +45,23 @@ public class KafkaHeaderBasedFilterEvaluator
   private final Charset encoding;
   private final Cache<ByteBuffer, String> stringDecodingCache;
 
-  public KafkaHeaderBasedFilterEvaluator(KafkaHeaderBasedInclusionConfig headerBasedFilteringConfig)
+  public KafkaHeaderBasedFilterEvaluator(KafkaHeaderBasedInclusionConfig headerBasedInclusionConfig)
   {
-    this.encoding = Charset.forName(headerBasedFilteringConfig.getEncoding());
+    this.encoding = Charset.forName(headerBasedInclusionConfig.getEncoding());
     this.stringDecodingCache = Caffeine.newBuilder()
-        .maximumSize(headerBasedFilteringConfig.getStringDecodingCacheSize())
+        .maximumSize(headerBasedInclusionConfig.getStringDecodingCacheSize())
         .build();
 
-    this.filter = headerBasedFilteringConfig.getFilter().toFilter();
+    this.filter = headerBasedInclusionConfig.getFilter().toFilter();
     if (!(filter instanceof InDimFilter)) {
       // Only InDimFilter supported
       throw new IllegalStateException("Unsupported filter type: " + filter.getClass().getSimpleName());
     }
 
     log.info("Initialized Kafka header filter with encoding [%s] - direct evaluation for [%s] with Caffeine string cache (max %d entries)",
-             headerBasedFilteringConfig.getEncoding(),
+             headerBasedInclusionConfig.getEncoding(),
              this.filter.getClass().getSimpleName(),
-             headerBasedFilteringConfig.getStringDecodingCacheSize());
+             headerBasedInclusionConfig.getStringDecodingCacheSize());
   }
 
 

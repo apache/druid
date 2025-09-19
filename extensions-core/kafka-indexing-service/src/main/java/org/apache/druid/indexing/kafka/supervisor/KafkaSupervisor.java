@@ -132,7 +132,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
         sortingMapper,
         spec.getIoConfig().getConfigOverrides(),
         spec.getIoConfig().isMultiTopic(),
-        spec.getIoConfig().getHeaderBasedFilteringConfig()
+        spec.getIoConfig().getheaderBasedInclusionConfig()
     );
   }
 
@@ -222,7 +222,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
         kafkaIoConfig.getConfigOverrides(),
         kafkaIoConfig.isMultiTopic(),
         ioConfig.getTaskDuration().getStandardMinutes(),
-        kafkaIoConfig.getHeaderBasedFilteringConfig()
+        kafkaIoConfig.getheaderBasedInclusionConfig()
     );
   }
 

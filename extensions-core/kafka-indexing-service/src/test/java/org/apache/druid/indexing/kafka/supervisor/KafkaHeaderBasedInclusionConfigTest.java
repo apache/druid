@@ -180,7 +180,7 @@ public class KafkaHeaderBasedInclusionConfigTest
     KafkaHeaderBasedInclusionConfig filter = new KafkaHeaderBasedInclusionConfig(dimFilter, "UTF-8", null);
 
     String toString = filter.toString();
-    Assert.assertTrue(toString.contains("KafkaHeaderBasedFilteringConfig"));
+    Assert.assertTrue(toString.contains("KafkaheaderBasedInclusionConfig"));
     Assert.assertTrue(toString.contains("filter="));
     Assert.assertTrue(toString.contains("encoding='UTF-8'"));
     Assert.assertTrue(toString.contains("stringDecodingCacheSize=10000"));

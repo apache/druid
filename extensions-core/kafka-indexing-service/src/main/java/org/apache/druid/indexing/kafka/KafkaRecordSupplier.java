@@ -107,10 +107,10 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       ObjectMapper sortingMapper,
       KafkaConfigOverrides configOverrides,
       boolean multiTopic,
-      @Nullable KafkaHeaderBasedInclusionConfig headerBasedFilteringConfig
+      @Nullable KafkaHeaderBasedInclusionConfig headerBasedInclusionConfig
   )
   {
-    this(getKafkaConsumer(sortingMapper, consumerProperties, configOverrides), multiTopic, headerBasedFilteringConfig);
+    this(getKafkaConsumer(sortingMapper, consumerProperties, configOverrides), multiTopic, headerBasedInclusionConfig);
   }
 
   @VisibleForTesting
@@ -123,14 +123,14 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   public KafkaRecordSupplier(
       KafkaConsumer<byte[], byte[]> consumer,
       boolean multiTopic,
-      @Nullable KafkaHeaderBasedInclusionConfig headerBasedFilteringConfig
+      @Nullable KafkaHeaderBasedInclusionConfig headerBasedInclusionConfig
   )
   {
     this.consumer = consumer;
     this.multiTopic = multiTopic;
     this.monitor = new KafkaConsumerMonitor(consumer);
-    this.headerFilterEvaluator = headerBasedFilteringConfig != null ?
-        new KafkaHeaderBasedFilterEvaluator(headerBasedFilteringConfig) : null;
+    this.headerFilterEvaluator = headerBasedInclusionConfig != null ?
+        new KafkaHeaderBasedFilterEvaluator(headerBasedInclusionConfig) : null;
   }
 
   @Override

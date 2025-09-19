@@ -128,7 +128,7 @@ public class KafkaHeaderBasedInclusionConfig
   @Override
   public String toString()
   {
-    return "KafkaHeaderBasedFilteringConfig{" +
+    return "KafkaheaderBasedInclusionConfig{" +
            "filter=" + filter +
            ", encoding='" + encoding + '\'' +
            ", stringDecodingCacheSize=" + stringDecodingCacheSize +
