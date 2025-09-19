@@ -755,7 +755,8 @@ public class SystemSchemaTest extends CalciteTestBase
                                                          serverInventoryView,
                                                          authMapper,
                                                          overlordClient,
-                                                         coordinatorClient
+                                                         coordinatorClient,
+                                                         MAPPER
                                                      )
                                                      .createMock();
     EasyMock.replay(serversTable);
