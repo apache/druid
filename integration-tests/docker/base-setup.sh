@@ -20,7 +20,7 @@ set -u
 export DEBIAN_FRONTEND=noninteractive
 
 # Using archive.apache.org instead of downloads.apache.org to avoid build failures, see https://github.com/apache/druid/pull/18548
-APACHE_ARCHIVE_MIRROR_HOST=${APACHE_ARCHIVE_MIRROR_HOST:-https://archive.apache.org}
+APACHE_ARCHIVE_MIRROR_HOST=${APACHE_ARCHIVE_MIRROR_HOST:-https://archive.apache.org/dist}
 
 apt-get update
 

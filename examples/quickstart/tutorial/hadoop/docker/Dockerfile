@@ -62,7 +62,7 @@ ENV PATH=$PATH:$JAVA_HOME/bin
 
 # hadoop
 # Using archive.apache.org instead of downloads.apache.org to avoid build failures, see https://github.com/apache/druid/pull/18548
-ARG APACHE_ARCHIVE_MIRROR_HOST=https://archive.apache.org
+ARG APACHE_ARCHIVE_MIRROR_HOST=https://archive.apache.org/dist
 RUN curl -s ${APACHE_ARCHIVE_MIRROR_HOST}/hadoop/core/hadoop-3.3.6/hadoop-3.3.6.tar.gz | tar -xz -C /usr/local/
 RUN cd /usr/local && ln -s ./hadoop-3.3.6 hadoop
 
