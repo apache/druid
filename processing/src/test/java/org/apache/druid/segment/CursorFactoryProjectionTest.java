@@ -1482,7 +1482,6 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                         .intervals(ImmutableList.of(Intervals.ETERNITY))
                                         .granularity(Granularities.HOUR)
                                         .aggregators(new LongSumAggregatorFactory("c_sum", "c"))
-                                        .descending(true)
                                         .build();
 
     final ExpectedProjectionTimeseries queryMetrics =
@@ -1495,8 +1494,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         query,
         queryMetrics,
         List.of(
-            new Object[]{UTC_01H, 3L},
-            new Object[]{UTC_MIDNIGHT, 16L}
+            new Object[]{UTC_MIDNIGHT, 16L},
+            new Object[]{UTC_01H, 3L}
         )
     );
   }
@@ -1850,8 +1849,10 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                         .granularity(Granularities.ALL)
                                         .filters(new EqualityFilter("a", ColumnType.STRING, "nomatch", null))
                                         .aggregators(new LongSumAggregatorFactory("c_sum", "c"))
-                                        .context(
-                                            Map.of(QueryContexts.USE_PROJECTION, "a_hourly_c_sum_filter_a_to_empty"))
+                                        .context(Map.of(
+                                            QueryContexts.USE_PROJECTION,
+                                            "a_hourly_c_sum_filter_a_to_empty"
+                                        ))
                                         .build();
 
     final ExpectedProjectionTimeseries queryMetrics =
@@ -2148,7 +2149,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       Assert.assertEquals(expectedRowCount, rowCount);
     }
   }
-  
+
   private static AutoTypeColumnSchema toAutoColumn(DimensionSchema x)
   {
     if (PROJECTION_TIME_COLUMNS.contains(x.getName())) {
