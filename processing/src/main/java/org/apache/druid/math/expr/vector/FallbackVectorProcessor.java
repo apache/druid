@@ -407,7 +407,7 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
         final boolean isNull = results.getNullVector() != null && results.getNullVector()[rowNum];
         return ExprEval.ofDouble(isNull ? null : results.getDoubleVector()[rowNum]);
       } else {
-        return ExprEval.bestEffortOf(results.getObjectVector()[rowNum]);
+        return ExprEval.bestEffortOf(results.getObjectVector()[rowNum]).castTo(type);
       }
     }
 
