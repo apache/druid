@@ -20,7 +20,6 @@
 package org.apache.druid.guice;
 
 import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
@@ -38,6 +37,8 @@ import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.nested.StructuredDataJsonSerializer;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
+import org.apache.druid.segment.virtual.NestedMergeVirtualColumn;
+import org.apache.druid.segment.virtual.NestedObjectVirtualColumn;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -116,7 +117,11 @@ public class BuiltInTypesModule implements DruidModule
   {
     return Collections.singletonList(
         new SimpleModule("NestedDataModule")
-            .registerSubtypes(new NamedType(NestedFieldVirtualColumn.class, "nested-field"))
+            .registerSubtypes(
+                NestedFieldVirtualColumn.class,
+                NestedMergeVirtualColumn.class,
+                NestedObjectVirtualColumn.class
+            )
             .addSerializer(StructuredData.class, new StructuredDataJsonSerializer())
     );
   }

@@ -23,19 +23,31 @@
     <Console name="Console" target="SYSTEM_OUT">
       <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
     </Console>
+
+    <Routing name="RoutingAppender">
+      <Routes pattern="$${ctx:task.log.id}">
+        <!-- Task logs on CliIndexer should go to dedicated file -->
+        <Route>
+          <File name="task-${ctx:task.log.id}" fileName="${ctx:task.log.file}">
+            <PatternLayout pattern="%d{ISO8601} %p [%t] %c -%notEmpty{ [%markerSimpleName]} %m%n"/>
+          </File>
+        </Route>
+
+        <!-- Default route to send non-task logs to the Console -->
+        <Route key="$${ctx:task.log.id}" ref="Console"/>
+      </Routes>
+    </Routing>
+
   </Appenders>
   <Loggers>
     <Root level="info">
-      <AppenderRef ref="Console"/>
+      <AppenderRef ref="RoutingAppender"/>
     </Root>
-    <Logger level="info" name="org.apache.druid.frame" additivity="false">
-      <AppenderRef ref="Console"/>
+    <Logger level="info" name="org.apache.druid" additivity="false">
+      <AppenderRef ref="RoutingAppender"/>
     </Logger>
-    <Logger level="info" name="org.apache.druid.msq" additivity="false">
-      <AppenderRef ref="Console"/>
-    </Logger>
-    <Logger level="info" name="org.apache.calcite" additivity="false">
-      <AppenderRef ref="Console"/>
+    <Logger level="debug" name="org.apache.calcite.plan.AbstractRelOptPlanner.rule_execution_summary" additivity="false">
+      <AppenderRef ref="RoutingAppender"/>
     </Logger>
   </Loggers>
 </Configuration>
