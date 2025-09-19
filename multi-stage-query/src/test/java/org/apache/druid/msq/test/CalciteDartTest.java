@@ -260,6 +260,24 @@ public class CalciteDartTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testJoin()
+  {
+    testBuilder()
+        .sql("SELECT f1.dim2 from foo f1 join foo f2 on f1.dim1 = f2.dim1 order by f1.dim2")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{null},
+                new Object[]{null},
+                new Object[]{""},
+                new Object[]{"a"},
+                new Object[]{"a"},
+                new Object[]{"abc"}
+            )
+        )
+        .run();
+  }
+
+  @Test
   public void testSubQuery()
   {
     String sql = "SELECT dim1, COUNT(*) FROM druid.foo "

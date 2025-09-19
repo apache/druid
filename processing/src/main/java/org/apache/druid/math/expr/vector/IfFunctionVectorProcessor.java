@@ -21,23 +21,28 @@ package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.math.expr.ExpressionType;
 
-public abstract class NvlFunctionVectorProcessor<T> implements ExprVectorProcessor<T>
+public abstract class IfFunctionVectorProcessor<T> implements ExprVectorProcessor<T>
 {
   final ExpressionType outputType;
-  final ExprVectorProcessor<T> inputProcessor;
+  final ExprVectorProcessor<?> conditionProcessor;
+  final ExprVectorProcessor<T> thenProcessor;
   final ExprVectorProcessor<T> elseProcessor;
-  final FilteredVectorInputBinding inputBindingFilterer;
+  final FilteredVectorInputBinding thenBindingFilterer;
+  final FilteredVectorInputBinding elseBindingFilterer;
 
-  public NvlFunctionVectorProcessor(
+  public IfFunctionVectorProcessor(
       ExpressionType outputType,
-      ExprVectorProcessor<T> inputProcessor,
+      ExprVectorProcessor<?> conditionProcessor,
+      ExprVectorProcessor<T> thenProcessor,
       ExprVectorProcessor<T> elseProcessor
   )
   {
     this.outputType = outputType;
-    this.inputProcessor = inputProcessor;
+    this.conditionProcessor = conditionProcessor;
+    this.thenProcessor = thenProcessor;
     this.elseProcessor = elseProcessor;
-    this.inputBindingFilterer = new FilteredVectorInputBinding(inputProcessor.maxVectorSize());
+    this.thenBindingFilterer = new FilteredVectorInputBinding(conditionProcessor.maxVectorSize());
+    this.elseBindingFilterer = new FilteredVectorInputBinding(conditionProcessor.maxVectorSize());
   }
 
   @Override
@@ -49,6 +54,6 @@ public abstract class NvlFunctionVectorProcessor<T> implements ExprVectorProcess
   @Override
   public int maxVectorSize()
   {
-    return inputProcessor.maxVectorSize();
+    return conditionProcessor.maxVectorSize();
   }
 }

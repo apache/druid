@@ -287,6 +287,7 @@ backfills
 backfilled
 backpressure
 base64
+baseTime
 big-endian
 bigint
 blkio
@@ -411,7 +412,10 @@ localhost
 log4j
 log4j2
 log4j2.xml
+lookahead
+lookaheadDuration
 lookback
+lookbackDuration
 lookups
 mapreduce
 masse
@@ -1352,6 +1356,7 @@ listDelimiter
 lowerOpen
 timestamp
 timestampColumnName
+TimestampType
 timestampSpec
 upperOpen
 urls

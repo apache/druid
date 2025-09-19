@@ -281,7 +281,7 @@ export class SupervisorsView extends React.PureComponent<
     this.supervisorQueryManager = new QueryManager({
       processQuery: async (
         { capabilities, visibleColumns, filtered, sorted, page, pageSize },
-        cancelToken,
+        signal,
         setIntermediateQuery,
       ) => {
         let supervisors: SupervisorQueryResultRow[];
@@ -318,7 +318,7 @@ export class SupervisorsView extends React.PureComponent<
               {
                 query: sqlQuery,
               },
-              cancelToken,
+              signal,
             )
           ).map(supervisor => {
             const spec: any = supervisor.spec;
@@ -326,7 +326,7 @@ export class SupervisorsView extends React.PureComponent<
             return { ...supervisor, spec: JSONBig.parse(spec) };
           });
 
-          auxiliaryQueries.push(async (supervisorsWithAuxiliaryInfo, cancelToken) => {
+          auxiliaryQueries.push(async (supervisorsWithAuxiliaryInfo, signal) => {
             const sqlQuery = assemble(
               'SELECT COUNT(*) AS "cnt"',
               'FROM "sys"."supervisors"',
@@ -337,7 +337,7 @@ export class SupervisorsView extends React.PureComponent<
                 {
                   query: sqlQuery,
                 },
-                cancelToken,
+                signal,
               )
             )[0].cnt;
             return {
@@ -346,7 +346,7 @@ export class SupervisorsView extends React.PureComponent<
             };
           });
         } else if (capabilities.hasOverlordAccess()) {
-          supervisors = (await getApiArray('/druid/indexer/v1/supervisor?full', cancelToken)).map(
+          supervisors = (await getApiArray('/druid/indexer/v1/supervisor?full', signal)).map(
             (sup: any) => {
               return {
                 supervisor_id: deepGet(sup, 'id'),
@@ -384,13 +384,13 @@ export class SupervisorsView extends React.PureComponent<
             auxiliaryQueries.push(
               ...supervisors.map(
                 (supervisor): AuxiliaryQueryFn<SupervisorsWithAuxiliaryInfo> =>
-                  async (supervisorsWithAuxiliaryInfo, cancelToken) => {
+                  async (supervisorsWithAuxiliaryInfo, signal) => {
                     const status = (
                       await Api.instance.get(
                         `/druid/indexer/v1/supervisor/${Api.encodePath(
                           supervisor.supervisor_id,
                         )}/status`,
-                        { cancelToken, timeout: STATUS_API_TIMEOUT },
+                        { signal, timeout: STATUS_API_TIMEOUT },
                       )
                     ).data;
                     return {
@@ -411,13 +411,13 @@ export class SupervisorsView extends React.PureComponent<
                 supervisors,
                 (supervisor): AuxiliaryQueryFn<SupervisorsWithAuxiliaryInfo> | undefined => {
                   if (oneOf(supervisor.type, 'autocompact', 'scheduled_batch')) return; // These supervisors do not report stats
-                  return async (supervisorsWithAuxiliaryInfo, cancelToken) => {
+                  return async (supervisorsWithAuxiliaryInfo, signal) => {
                     const stats = (
                       await Api.instance.get(
                         `/druid/indexer/v1/supervisor/${Api.encodePath(
                           supervisor.supervisor_id,
                         )}/stats`,
-                        { cancelToken, timeout: STATS_API_TIMEOUT },
+                        { signal, timeout: STATS_API_TIMEOUT },
                       )
                     ).data;
                     return {

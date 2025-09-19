@@ -16,9 +16,7 @@
  * limitations under the License.
  */
 
-import type { CancelToken } from 'axios';
-
-export type AuxiliaryQueryFn<R> = (result: R, cancelToken: CancelToken) => Promise<R>;
+export type AuxiliaryQueryFn<R> = (result: R, signal: AbortSignal) => Promise<R>;
 export class ResultWithAuxiliaryWork<R> {
   public readonly result: R;
   public readonly auxiliaryQueries: AuxiliaryQueryFn<R>[];
