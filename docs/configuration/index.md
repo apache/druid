@@ -627,6 +627,12 @@ On the other hand, if `druid.server.http.errorResponseTransform.allowedRegex` is
 {"error":"Plan validation failed","errorMessage":"org.apache.calcite.runtime.CalciteContextException: From line 1, column 15 to line 1, column 38: Object 'nonexistent-datasource' not found","errorClass":null,"host":null}
 ```
 
+##### Persona based error response transform strategy
+
+In this mode, Druid transforms any exceptions which are targeted at non-users personas. Instead of returning such exception directly, the strategy logs the exception against a random id and returns the id along with a generic error message to the user.
+
+To enable this strategy, set `druid.server.http.errorResponseTransform.strategy` to `persona`.
+
 ### Overlord discovery
 
 This config is used to find the [Overlord](../design/overlord.md) using Curator service discovery. Only required if you are actually running an Overlord.
@@ -702,7 +708,7 @@ All Druid components can communicate with each other over HTTP.
 |`druid.global.http.compressionCodec`|Compression codec to communicate with others. May be "gzip" or "identity".|`gzip`|
 |`druid.global.http.readTimeout`|The timeout for data reads.|`PT15M`|
 |`druid.global.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.global.http.readTimeout`. Set this timeout = ~90% of `druid.global.http.readTimeout`|`PT4M`|
-|`druid.global.http.numMaxThreads`|Maximum number of I/O worker threads|`max(10, ((number of cores * 17) / 16 + 2) + 30)`|
+|`druid.global.http.numMaxThreads`|Maximum number of I/O worker threads|`(number of cores) * 3 / 2 + 1`|
 |`druid.global.http.clientConnectTimeout`|The timeout (in milliseconds) for establishing client connections.|500|
 
 ### Common endpoints configuration
@@ -1788,7 +1794,7 @@ client has the following configuration options.
 |`druid.broker.http.readTimeout`|The timeout for data reads from Historical servers and real-time tasks.|`PT15M`|
 |`druid.broker.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.broker.http.readTimeout`. Set this timeout = ~90% of `druid.broker.http.readTimeout`|`PT4M`|
 |`druid.broker.http.maxQueuedBytes`|Maximum number of bytes queued per query before exerting [backpressure](../operations/basic-cluster-tuning.md#broker-backpressure) on channels to the data servers.<br /><br />Similar to `druid.server.http.maxScatterGatherBytes`, except that `maxQueuedBytes` triggers [backpressure](../operations/basic-cluster-tuning.md#broker-backpressure) instead of query failure. Set to zero to disable. You can override this setting by using the [`maxQueuedBytes` query context parameter](../querying/query-context-reference.md). Druid supports [human-readable](human-readable-byte.md) format. |25 MB or 2% of maximum Broker heap size, whichever is greater.|
-|`druid.broker.http.numMaxThreads`|`Maximum number of I/O worker threads|max(10, ((number of cores * 17) / 16 + 2) + 30)`|
+|`druid.broker.http.numMaxThreads`|`Maximum number of I/O worker threads|(number of cores) * 3 / 2 + 1`|
 |`druid.broker.http.clientConnectTimeout`|The timeout (in milliseconds) for establishing client connections.|500|
 
 
@@ -2295,7 +2301,7 @@ Supported query contexts:
 |`druid.router.http.numConnections`|Size of connection pool for the Router to connect to Broker processes. If there are more queries than this number that all need to speak to the same process, then they will queue up.|`20`|
 |`druid.router.http.eagerInitialization`|Indicates that http connections from Router to Broker should be eagerly initialized. If set to true, `numConnections` connections are created upon initialization|`true`|
 |`druid.router.http.readTimeout`|The timeout for data reads from Broker processes.|`PT15M`|
-|`druid.router.http.numMaxThreads`|Maximum number of worker threads to handle HTTP requests and responses|`max(10, ((number of cores * 17) / 16 + 2) + 30)`|
+|`druid.router.http.numMaxThreads`|Maximum number of worker threads to handle HTTP requests and responses|`(number of cores) * 3 / 2 + 1`|
 |`druid.router.http.numRequestsQueued`|Maximum number of requests that may be queued to a destination|`1024`|
 |`druid.router.http.requestBuffersize`|Size of the content buffer for receiving requests. These buffers are only used for active connections that have requests with bodies that will not fit within the header buffer|`8 * 1024`|
 |`druid.router.http.clientConnectTimeout`|The timeout (in milliseconds) for establishing client connections.|500|

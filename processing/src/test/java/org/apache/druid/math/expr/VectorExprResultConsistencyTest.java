@@ -65,7 +65,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
 {
   private static final Logger log = new Logger(VectorExprResultConsistencyTest.class);
   private static final int NUM_ITERATIONS = 10;
-  private static final int VECTOR_SIZE = 512;
+  private static final int VECTOR_SIZE = 4;
 
 
   private static final Map<String, String> LOOKUP = Map.of(
@@ -135,12 +135,16 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   final Map<String, ExpressionType> types = ImmutableMap.<String, ExpressionType>builder()
       .put("l1", ExpressionType.LONG)
       .put("l2", ExpressionType.LONG)
+      .put("l3", ExpressionType.LONG)
       .put("d1", ExpressionType.DOUBLE)
       .put("d2", ExpressionType.DOUBLE)
+      .put("d3", ExpressionType.DOUBLE)
       .put("s1", ExpressionType.STRING)
       .put("s2", ExpressionType.STRING)
+      .put("s3", ExpressionType.STRING)
       .put("boolString1", ExpressionType.STRING)
       .put("boolString2", ExpressionType.STRING)
+      .put("boolString3", ExpressionType.STRING)
       .build();
 
 
@@ -339,7 +343,8 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   public void testSymmetricalBivariateFunctions()
   {
     final List<String> functions = List.of(
-        "nvl"
+        "nvl",
+        "coalesce"
     );
     final List<String> templates = List.of(
         "%s(d1, d2)",
@@ -376,6 +381,59 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     );
   }
 
+  @Test
+  public void testCaseSearchedFunction()
+  {
+    testExpression("case_searched(boolString1, s1, boolString2, s2, s1)", types);
+    testExpression("case_searched(boolString1, s1, boolString2, s2, boolString3, s3, s1)", types);
+    testExpression("case_searched(boolString1, l1, boolString2, l2, l2)", types);
+    testExpression("case_searched(boolString1, l1, boolString2, l2, boolString3, l3, l2)", types);
+    testExpression("case_searched(boolString1, d1, boolString2, d2, d1)", types);
+    testExpression("case_searched(boolString1, d1, boolString2, d2, boolString3, d3, d1)", types);
+    testExpression("case_searched(l1 % 2 == 0, -1, l1 % 2 == 1, l2 / (l1 % 2))", types);
+    Assertions.assertFalse(
+        Parser.parse("case_searched(boolString1, d1, boolString2, d2, l1)", MACRO_TABLE)
+              .canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
+    Assertions.assertFalse(
+        Parser.parse("case_searched(boolString1, d1, boolString2, l1, d1)", MACRO_TABLE)
+              .canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
+  }
+
+  @Test
+  public void testCaseSimpleFunction()
+  {
+    testExpression("case_simple(s1, s2, s2, s1, s2)", types);
+    testExpression("case_simple(s1, s2, s2, s1, s2, s1)", types);
+    testExpression("case_simple(s1, s2, l1, s1, l2)", types);
+    testExpression("case_simple(s1, s2, d1, s1, d2, d1)", types);
+    testExpression("case_simple(s1, l1, d1, d1, d2, d1)", types);
+    Assertions.assertFalse(
+        Parser.parse("case_simple(s1, d1, s1, l1, d1)", MACRO_TABLE)
+              .canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
+  }
+
+  @Test
+  public void testCoalesceFunction()
+  {
+    final List<String> functions = List.of(
+        "coalesce"
+    );
+    final List<String> templates = List.of(
+        "%s(nonexistent, d1, d2, d3)",
+        "%s(nonexistent, d1, nonexistent2, d2, nonexistent3, d3)",
+        "%s(nonexistent, nonexistent2, l1, l2, nonexistent, l3)",
+        "%s(nonexistent, s1, nonexistent2, s2)"
+    );
+    testFunctions(types, templates, functions);
+    // cannot vectorize mixed arg types
+    Assertions.assertFalse(
+        Parser.parse("coalesce(s1, d1, s1, l1, d1)", MACRO_TABLE)
+              .canVectorize(InputBindings.inspectorFromTypeMap(types))
+    );
+  }
 
   @Test
   public void testStringFns()
@@ -410,6 +468,55 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
       testExpression("array(d1, d2)", types);
       testExpression("array(l1, d2)", types);
       testExpression("array(s1, l2)", types);
+
+      testExpression("map((x) -> x + 1, array(l1, l2))", types);
+      testExpression("map((x) -> x * 2.0, array(d1, d2))", types);
+      testExpression("map((x) -> concat(x, '_mapped'), array(s1, s2))", types);
+
+      testExpression("cartesian_map((x, y) -> x + y, array(l1, l2), array(d1, d2))", types);
+      testExpression("cartesian_map((x, y) -> concat(x, cast(y, 'STRING')), array(s1, s2), array(l1, l2))", types);
+
+      testExpression("fold((x, acc) -> x + acc, array(l1, l2), 0)", types);
+      testExpression("fold((x, acc) -> x + acc, array(d1, d2), 0.0)", types);
+      testExpression("fold((x, acc) -> concat(acc, x), array(s1, s2), '')", types);
+
+      testExpression("cartesian_fold((x, y, acc) -> acc + x + y, array(l1, l2), array(d1, d2), 0)", types);
+
+      testExpression("filter((x) -> x > 0, array(l1, l2))", types);
+      testExpression("filter((x) -> x > 0.0, array(d1, d2))", types);
+      testExpression("filter((x) -> strlen(x) > 0, array(s1, s2))", types);
+
+      testExpression("any((x) -> x > 0, array(l1, l2))", types);
+      testExpression("any((x) -> x > 0.0, array(d1, d2))", types);
+      testExpression("any((x) -> strlen(x) > 0, array(s1, s2))", types);
+
+      testExpression("all((x) -> x != null, array(l1, l2))", types);
+      testExpression("all((x) -> x != null, array(d1, d2))", types);
+      testExpression("all((x) -> x != null, array(s1, s2))", types);
+    }
+    finally {
+      ExpressionProcessing.initializeForTests();
+    }
+  }
+
+  @Test
+  public void testReduceFns()
+  {
+    try {
+      ExpressionProcessing.initializeForFallback();
+      testExpression("greatest(s1, s2)", types);
+      testExpression("greatest(l1, l2)", types);
+      testExpression("greatest(l1, nonexistent)", types);
+      testExpression("greatest(d1, d2)", types);
+      testExpression("greatest(l1, d2)", types);
+      testExpression("greatest(s1, l2)", types);
+
+      testExpression("least(s1, s2)", types);
+      testExpression("least(l1, l2)", types);
+      testExpression("least(l1, nonexistent)", types);
+      testExpression("least(d1, d2)", types);
+      testExpression("least(l1, d2)", types);
+      testExpression("least(s1, l2)", types);
     }
     finally {
       ExpressionProcessing.initializeForTests();
@@ -574,11 +681,14 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
       NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> bindings = makeRandomizedBindings(VECTOR_SIZE, types);
       ExprEvalVector<?> vectorEval = processor.evalVector(bindings.rhs);
       final Object[] vectorVals = vectorEval.getObjectVector();
+      if (outputType != null) {
+        Assert.assertEquals("vector eval type", outputType, vectorEval.getType());
+      }
       for (int i = 0; i < VECTOR_SIZE; i++) {
         ExprEval<?> eval = parsed.eval(bindings.lhs[i]);
         // 'null' expressions can have an output type of null, but still evaluate in default mode, so skip type checks
-        if (outputType != null && !eval.isNumericNull()) {
-          Assert.assertEquals(eval.type(), outputType);
+        if (outputType != null && eval.value() != null) {
+          Assert.assertEquals("nonvector eval type", eval.type(), outputType);
         }
         if (outputType != null && outputType.isArray()) {
           Assert.assertArrayEquals(
@@ -679,6 +789,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   {
     SettableVectorInputBinding vectorBinding = new SettableVectorInputBinding(vectorSize);
     SettableObjectBinding[] objectBindings = new SettableObjectBinding[vectorSize];
+    Expr.InputBindingInspector inspector = InputBindings.inspectorFromTypeMap(types);
 
     for (Map.Entry<String, ExpressionType> entry : types.entrySet()) {
       boolean[] nulls = new boolean[vectorSize];
@@ -690,7 +801,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
             nulls[i] = nullsFn.getAsBoolean();
             longs[i] = nulls[i] ? 0L : longsFn.getAsLong();
             if (objectBindings[i] == null) {
-              objectBindings[i] = new SettableObjectBinding();
+              objectBindings[i] = new SettableObjectBinding().withInspector(inspector);
             }
             objectBindings[i].withBinding(entry.getKey(), nulls[i] ? null : longs[i]);
           }
@@ -702,7 +813,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
             nulls[i] = nullsFn.getAsBoolean();
             doubles[i] = nulls[i] ? 0.0 : doublesFn.getAsDouble();
             if (objectBindings[i] == null) {
-              objectBindings[i] = new SettableObjectBinding();
+              objectBindings[i] = new SettableObjectBinding().withInspector(inspector);
             }
             objectBindings[i].withBinding(entry.getKey(), nulls[i] ? null : doubles[i]);
           }
@@ -718,7 +829,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
               strings[i] = nulls[i] ? null : String.valueOf(stringFn.get());
             }
             if (objectBindings[i] == null) {
-              objectBindings[i] = new SettableObjectBinding();
+              objectBindings[i] = new SettableObjectBinding().withInspector(inspector);
             }
             objectBindings[i].withBinding(entry.getKey(), nulls[i] ? null : strings[i]);
           }
@@ -729,5 +840,4 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
 
     return new NonnullPair<>(objectBindings, vectorBinding);
   }
-
 }

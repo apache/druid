@@ -27,8 +27,6 @@ import org.apache.druid.msq.logical.LogicalInputSpec;
 import org.apache.druid.msq.logical.StageMaker;
 import org.apache.druid.msq.querykit.groupby.GroupByPostShuffleStageProcessor;
 import org.apache.druid.msq.querykit.groupby.GroupByPreShuffleStageProcessor;
-import org.apache.druid.query.DataSource;
-import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.RowSignature;
@@ -43,14 +41,6 @@ import java.util.List;
 
 public class GroupByStages
 {
-  /**
-   * An input datasource is needed to construct a valid {@link GroupByQuery}.
-   *
-   * During staged execution the data is coming in thru channels - so this is
-   * just a placeholder.
-   */
-  private static final DataSource DUMMY_INPUT_DATASOURCE = new TableDataSource("__input__");
-
   public static class PreShuffleStage extends ProjectStage
   {
     private GroupByQuery groupByQuery;
@@ -116,7 +106,7 @@ public class GroupByStages
     builder.setDimFilter(projectStage.getDimFilter());
     builder.setVirtualColumns(projectStage.getVirtualColumns());
     builder.setPostAggregatorSpecs(grouping.getPostAggregators());
-    builder.setDataSource(DUMMY_INPUT_DATASOURCE);
+    builder.setDataSource(LogicalInputSpec.of(projectStage).getSourceDesc().dataSource);
     return builder.build();
   }
 

@@ -477,7 +477,7 @@ public class NestedDataExpressions
         if (valAtPath.type().isPrimitive() || valAtPath.type().isPrimitiveArray()) {
           return valAtPath;
         }
-        return ExprEval.of(null);
+        return ExprEval.ofMissing();
       }
 
       @Nullable
@@ -557,7 +557,7 @@ public class NestedDataExpressions
         if (valAtPath.type().isPrimitive() || valAtPath.type().isPrimitiveArray()) {
           return castTo == null ? valAtPath : valAtPath.castTo(castTo);
         }
-        return castTo == null ? ExprEval.of(null) : ExprEval.ofType(castTo, null);
+        return castTo == null ? ExprEval.ofMissing() : ExprEval.ofType(castTo, null);
       }
 
       @Nullable

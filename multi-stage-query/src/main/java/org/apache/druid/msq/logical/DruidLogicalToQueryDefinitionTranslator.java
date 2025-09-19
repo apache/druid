@@ -23,27 +23,22 @@ import com.google.common.collect.Lists;
 import org.apache.calcite.rel.RelNode;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.key.KeyColumn;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.msq.input.inline.InlineInputSpec;
-import org.apache.druid.msq.input.table.TableInputSpec;
+import org.apache.druid.msq.logical.stages.JoinStage;
 import org.apache.druid.msq.logical.stages.LogicalStage;
 import org.apache.druid.msq.logical.stages.OffsetLimitStage;
 import org.apache.druid.msq.logical.stages.ReadStage;
 import org.apache.druid.msq.logical.stages.SortStage;
-import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.query.TableDataSource;
+import org.apache.druid.msq.logical.stages.UnnestStage;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.DruidNodeStack;
-import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer.SourceDesc;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
+import org.apache.druid.sql.calcite.rel.logical.DruidJoin;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
 import org.apache.druid.sql.calcite.rel.logical.DruidSort;
-import org.apache.druid.sql.calcite.rel.logical.DruidTableScan;
-import org.apache.druid.sql.calcite.rel.logical.DruidValues;
+import org.apache.druid.sql.calcite.rule.logical.DruidUnnest;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -89,7 +84,7 @@ public class DruidLogicalToQueryDefinitionTranslator
     List<LogicalStage> inputStages = buildInputStages(stack);
     DruidLogicalNode node = stack.getNode();
     if (inputStages.size() == 0) {
-      Optional<ReadStage> stage = buildReadStage(node);
+      Optional<ReadStage> stage = ReadStage.buildReadStage(stack);
       if (stage.isPresent()) {
         return stage.get();
       }
@@ -104,19 +99,21 @@ public class DruidLogicalToQueryDefinitionTranslator
       if (newStage != null) {
         return newStage;
       }
+    } else {
+      LogicalStage newStage = buildMultiInputStage(inputStages, stack);
+      if (newStage != null) {
+        return newStage;
+      }
     }
     throw DruidException.defensive().build("Unable to process relNode[%s]", node);
   }
 
-  private Optional<ReadStage> buildReadStage(DruidLogicalNode node)
+  private LogicalStage buildMultiInputStage(List<LogicalStage> inputStages, DruidNodeStack stack)
   {
-    if (node instanceof DruidValues) {
-      return translateValues((DruidValues) node);
+    if (stack.getNode() instanceof DruidJoin) {
+      return JoinStage.buildJoinStage(inputStages, stack);
     }
-    if (node instanceof DruidTableScan) {
-      return translateTableScan((DruidTableScan) node);
-    }
-    return Optional.empty();
+    return null;
   }
 
   private LogicalStage makeSequenceStage(LogicalStage inputStage, DruidNodeStack stack)
@@ -133,6 +130,9 @@ public class DruidLogicalToQueryDefinitionTranslator
         return sortStage;
       }
     }
+    if (stack.getNode() instanceof DruidUnnest) {
+      return UnnestStage.buildUnnestStage(inputStage, stack);
+    }
     return new ReadStage(inputStage.getLogicalRowSignature(), LogicalInputSpec.of(inputStage)).extendWith(stack);
   }
 
@@ -147,23 +147,5 @@ public class DruidLogicalToQueryDefinitionTranslator
       stack.pop();
     }
     return inputStages;
-  }
-
-  private Optional<ReadStage> translateTableScan(DruidTableScan node)
-  {
-    SourceDesc sd = node.getSourceDesc(plannerContext, Collections.emptyList());
-    TableDataSource ids = (TableDataSource) sd.dataSource;
-    TableInputSpec inputSpec = new TableInputSpec(ids.getName(), Intervals.ONLY_ETERNITY, null, null);
-    ReadStage stage = new ReadStage(sd.rowSignature, LogicalInputSpec.of(inputSpec));
-    return Optional.of(stage);
-  }
-
-  private Optional<ReadStage> translateValues(DruidValues node)
-  {
-    SourceDesc sd = node.getSourceDesc(plannerContext, Collections.emptyList());
-    InlineDataSource ids = (InlineDataSource) sd.dataSource;
-    InlineInputSpec inputSpec = new InlineInputSpec(ids);
-    ReadStage stage = new ReadStage(sd.rowSignature, LogicalInputSpec.of(inputSpec));
-    return Optional.of(stage);
   }
 }

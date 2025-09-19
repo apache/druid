@@ -54,6 +54,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -62,6 +63,9 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.query.filter.EqualityFilter;
+import org.apache.druid.query.filter.NullFilter;
+import org.apache.druid.query.filter.OrDimFilter;
+import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryMetrics;
@@ -128,6 +132,12 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                                         .add("e", ColumnType.FLOAT)
                                                         .add("f", ColumnType.NESTED_DATA)
                                                         .build();
+
+  private static final Set<String> PROJECTION_TIME_COLUMNS = Set.of(
+      ColumnHolder.TIME_COLUMN_NAME,
+      Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
+      "__gran"
+  );
 
   public static List<InputRow> makeRows(List<String> dimensions)
   {
@@ -333,6 +343,20 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                  new LongDimensionSchema(ColumnHolder.TIME_COLUMN_NAME),
                                  new StringDimensionSchema("a")
                              )
+                             .build(),
+      AggregateProjectionSpec.builder("filtered_c_plus_d")
+                             .virtualColumns(
+                                 Granularities.toVirtualColumn(Granularities.HOUR, "__gran"),
+                                 new ExpressionVirtualColumn(
+                                     "__c_plus_d",
+                                     "c + d",
+                                     ColumnType.DOUBLE,
+                                     TestExprMacroTable.INSTANCE
+                                 )
+                             )
+                             .filter(new TypedInFilter("__c_plus_d", ColumnType.DOUBLE, List.of(2.1, 4.2), null, null))
+                             .groupingColumns(new LongDimensionSchema("__gran"))
+                             .aggregators(new LongSumAggregatorFactory("sum_c", "c"))
                              .build()
   );
 
@@ -373,7 +397,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                                 .groupingColumns(
                                                     projection.getGroupingColumns()
                                                               .stream()
-                                                              .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                              .map(CursorFactoryProjectionTest::toAutoColumn)
                                                               .collect(Collectors.toList())
                                                 )
                                                 .build()
@@ -388,13 +412,13 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                     .builder(projection)
                                     .groupingColumns(projection.getGroupingColumns()
                                                                .stream()
-                                                               .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                               .map(CursorFactoryProjectionTest::toAutoColumn)
                                                                .collect(Collectors.toList()))
                                     .build()
                         )
                         .collect(Collectors.toList());
 
-  @Parameterized.Parameters(name = "name: {0}, segmentTimeOrdered: {5}, autoSchema: {6}")
+  @Parameterized.Parameters(name = "name: {0}, segmentTimeOrdered: {5}, autoSchema: {6}, writeNullColumns: {7}")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -436,12 +460,12 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     List<DimensionSchema> autoDims = dimsOrdered.getDimensions()
                                                 .stream()
-                                                .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                .map(CursorFactoryProjectionTest::toAutoColumn)
                                                 .collect(Collectors.toList());
 
     List<DimensionSchema> rollupAutoDims = rollupDimsOrdered.getDimensions()
                                                             .stream()
-                                                            .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                            .map(CursorFactoryProjectionTest::toAutoColumn)
                                                             .collect(Collectors.toList());
 
     for (boolean incremental : new boolean[]{true, false}) {
@@ -484,7 +508,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                   new IncrementalIndexCursorFactory(rollupIndex),
                   new IncrementalIndexTimeBoundaryInspector(rollupIndex),
                   !sortByDim,
-                  autoSchema
+                  autoSchema,
+                  writeNullColumns
               });
             } else {
               QueryableIndex index = CLOSER.register(makeBuilder(
@@ -502,7 +527,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                   new QueryableIndexCursorFactory(rollupIndex),
                   QueryableIndexTimeBoundaryInspector.create(rollupIndex),
                   !sortByDim,
-                  autoSchema
+                  autoSchema,
+                  writeNullColumns
               });
             }
           }
@@ -541,7 +567,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       CursorFactory rollupProjectionsCursorFactory,
       TimeBoundaryInspector rollupProjectionsTimeBoundaryInspector,
       boolean segmentSortedByTime,
-      boolean autoSchema
+      boolean autoSchema,
+      boolean writeNullColumns
   )
   {
     this.projectionsCursorFactory = projectionsCursorFactory;
@@ -822,6 +849,107 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         queryMetrics,
         Collections.singletonList(
             new Object[]{"a", 7L, Pair.of(UTC_01H31M.getMillis(), 2L)}
+        )
+    );
+  }
+
+  @Test
+  public void testProjectionSingleDimFilteredAgg()
+  {
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(new Interval(UTC_MIDNIGHT, UTC_MIDNIGHT.plusDays(1)))
+                    .addDimension("a")
+                    .addAggregator(
+                        new FilteredAggregatorFactory(
+                            new LongSumAggregatorFactory("c_sum", "c"),
+                            new EqualityFilter("a", ColumnType.STRING, "a", null)
+                        )
+                    )
+                    .build();
+    final ExpectedProjectionGroupBy queryMetrics =
+        new ExpectedProjectionGroupBy("a_hourly_c_sum_with_count_latest");
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, 3);
+
+    testGroupBy(
+        query,
+        queryMetrics,
+        List.of(
+            new Object[]{"a", 7L},
+            new Object[]{"b", null}
+        )
+    );
+  }
+
+  @Test
+  public void testProjectionSingleDimFilteredAggLessMatchy()
+  {
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(new Interval(UTC_MIDNIGHT, UTC_MIDNIGHT.plusDays(1)))
+                    .addDimension("a")
+                    .addAggregator(
+                        new FilteredAggregatorFactory(
+                            new LongSumAggregatorFactory("c_sum", "c"),
+                            new EqualityFilter("b", ColumnType.STRING, "bb", null)
+                        )
+                    )
+                    .build();
+    final ExpectedProjectionGroupBy queryMetrics =
+        new ExpectedProjectionGroupBy("ab_hourly_cd_sum");
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, 7);
+
+    testGroupBy(
+        query,
+        queryMetrics,
+        List.of(
+            new Object[]{"a", 1L},
+            new Object[]{"b", 5L}
+        )
+    );
+  }
+
+  @Test
+  public void testProjectionSingleDimFilteredAggNoMatchy()
+  {
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(new Interval(UTC_MIDNIGHT, UTC_MIDNIGHT.plusDays(1)))
+                    .addDimension("a")
+                    .addAggregator(
+                        new FilteredAggregatorFactory(
+                            new LongSumAggregatorFactory("c_sum", "c"),
+                            new OrDimFilter(
+                                List.of(
+                                    new EqualityFilter("b", ColumnType.STRING, "bb", null),
+                                    new NullFilter("e", null)
+                                )
+                            )
+                        )
+                    )
+                    .build();
+    final ExpectedProjectionGroupBy queryMetrics =
+        new ExpectedProjectionGroupBy(null);
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, 8);
+
+    testGroupBy(
+        query,
+        queryMetrics,
+        List.of(
+            new Object[]{"a", 2L},
+            new Object[]{"b", 5L}
         )
     );
   }
@@ -1831,6 +1959,42 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     );
   }
 
+  @Test
+  public void testProjectionGroupFilteredOnVirtualColumn()
+  {
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.ETERNITY)
+                    .setVirtualColumns(
+                        new ExpressionVirtualColumn(
+                            "v0",
+                            "c + d",
+                            ColumnType.DOUBLE,
+                            TestExprMacroTable.INSTANCE
+                        )
+                    )
+                    .setDimFilter(
+                        new TypedInFilter("v0", ColumnType.DOUBLE, List.of(2.1, 4.2), null, null)
+                    )
+                    .setAggregatorSpecs(new LongSumAggregatorFactory("c", "c"))
+                    .build();
+
+    final ExpectedProjectionGroupBy queryMetrics =
+        new ExpectedProjectionGroupBy("filtered_c_plus_d");
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, queryMetrics);
+
+    assertCursorProjection(buildSpec, queryMetrics, 2);
+
+    testGroupBy(
+        query,
+        queryMetrics,
+        makeArrayResultSet(new Object[]{6L})
+    );
+  }
+
+
   private void testGroupBy(GroupByQuery query, ExpectedProjectionGroupBy queryMetrics, List<Object[]> expectedResults)
   {
     testGroupBy(projectionsCursorFactory, projectionsTimeBoundaryInspector, query, queryMetrics, expectedResults);
@@ -2014,6 +2178,14 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       }
       Assert.assertEquals(expectedRowCount, rowCount);
     }
+  }
+  
+  private static AutoTypeColumnSchema toAutoColumn(DimensionSchema x)
+  {
+    if (PROJECTION_TIME_COLUMNS.contains(x.getName())) {
+      return new AutoTypeColumnSchema(x.getName(), ColumnType.LONG);
+    }
+    return new AutoTypeColumnSchema(x.getName(), null);
   }
 
   private static IndexBuilder makeBuilder(DimensionsSpec dimensionsSpec, boolean autoSchema, boolean writeNullColumns)

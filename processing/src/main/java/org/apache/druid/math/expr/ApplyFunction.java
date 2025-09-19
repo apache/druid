@@ -23,8 +23,8 @@ import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.FallbackVectorProcessor;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -50,9 +50,9 @@ public interface ApplyFunction extends NamedFunction
    * @see Expr#canVectorize(Expr.InputBindingInspector)
    * @see Function#canVectorize(Expr.InputBindingInspector, List)
    */
-  default boolean canVectorize(Expr.InputBindingInspector inspector, Expr lambda, List<Expr> args)
+  default boolean canVectorize(Expr.InputBindingInspector inspector, LambdaExpr lambda, List<Expr> args)
   {
-    return false;
+    return FallbackVectorProcessor.canFallbackVectorize(getOutputType(inspector, lambda, args), inspector, args);
   }
 
   /**
@@ -64,11 +64,15 @@ public interface ApplyFunction extends NamedFunction
    */
   default <T> ExprVectorProcessor<T> asVectorProcessor(
       Expr.VectorInputBindingInspector inspector,
-      Expr lambda,
+      LambdaExpr lambda,
       List<Expr> args
   )
   {
-    throw new UOE("%s is not vectorized", name());
+    if (ExpressionProcessing.allowVectorizeFallback()) {
+      return FallbackVectorProcessor.create(this, lambda, args, inspector);
+    } else {
+      throw Exprs.cannotVectorize(name());
+    }
   }
 
   /**
@@ -183,7 +187,7 @@ public interface ApplyFunction extends NamedFunction
 
       Object[] array = arrayEval.asArray();
       if (array == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofMissing();
       }
       if (array.length == 0) {
         return arrayEval;
@@ -246,7 +250,7 @@ public interface ApplyFunction extends NamedFunction
         arrayInputs.add(Arrays.asList(array));
       }
       if (hadNull) {
-        return ExprEval.of(null);
+        return ExprEval.ofMissing();
       }
       if (hadEmpty) {
         return ExprEval.ofStringArray(new String[0]);
@@ -334,7 +338,7 @@ public interface ApplyFunction extends NamedFunction
 
       Object[] array = arrayEval.asArray();
       if (array == null) {
-        return ExprEval.of(null);
+        return ExprEval.ofMissing();
       }
       Object accumulator = accEval.value();
 
@@ -401,7 +405,7 @@ public interface ApplyFunction extends NamedFunction
         arrayInputs.add(Arrays.asList(array));
       }
       if (hadNull) {
-        return ExprEval.of(null);
+        return ExprEval.ofMissing();
       }
       if (hadEmpty) {
         return ExprEval.ofStringArray(new Object[0]);
