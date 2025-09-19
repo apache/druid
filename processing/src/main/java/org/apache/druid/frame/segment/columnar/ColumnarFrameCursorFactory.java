@@ -132,7 +132,7 @@ public class ColumnarFrameCursorFactory implements CursorFactory
       final VirtualColumns virtualColumns = spec.getVirtualColumns();
       final Filter filter = spec.getFilter();
       final QueryContext queryContext = spec.getQueryContext();
-      final ColumnInspector inspector = virtualColumns.wrapInspector(signature);
+      final ColumnInspector inspector = virtualColumns.wrapInspector(ColumnarFrameCursorFactory.this);
 
       // Check that virtual columns are vectorizable.
       if (!virtualColumns.isEmpty()) {
