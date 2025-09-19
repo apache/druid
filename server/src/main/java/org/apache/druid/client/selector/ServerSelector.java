@@ -54,10 +54,20 @@ public class ServerSelector implements Overshadowable<ServerSelector>
 
   private final HistoricalFilter filter;
 
+  // This property is true for a used segment which has been once loaded on a historical server.
+  // This is set when metadata for the segment is polled from the Coordinator.
+  private boolean isQueryable;
+
+  public ServerSelector(DataSegment segment, TierSelectorStrategy strategy, HistoricalFilter filter)
+  {
+    this(segment, strategy, filter, false);
+  }
+
   public ServerSelector(
       DataSegment segment,
       TierSelectorStrategy strategy,
-      HistoricalFilter filter
+      HistoricalFilter filter,
+      boolean isQueryable
   )
   {
     this.segment = new AtomicReference<>(DataSegmentInterner.intern(segment));
@@ -65,6 +75,7 @@ public class ServerSelector implements Overshadowable<ServerSelector>
     this.historicalServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
     this.realtimeServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
     this.filter = filter;
+    this.isQueryable = isQueryable;
   }
 
   public DataSegment getSegment()
@@ -228,6 +239,16 @@ public class ServerSelector implements Overshadowable<ServerSelector>
   public boolean hasData()
   {
     return segment.get().hasData();
+  }
+
+  public synchronized boolean isQueryable()
+  {
+    return isQueryable;
+  }
+
+  public synchronized void setQueryable(boolean queryable)
+  {
+    isQueryable = queryable;
   }
 
   /**

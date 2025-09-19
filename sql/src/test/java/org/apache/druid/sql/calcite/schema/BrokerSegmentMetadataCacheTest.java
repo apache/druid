@@ -61,6 +61,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
+import org.apache.druid.segment.metadata.BrokerSegmentMetadataCacheConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.segment.metadata.Metric;

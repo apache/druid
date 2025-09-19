@@ -459,6 +459,11 @@ public interface QueryMetrics<QueryType extends Query<?>>
   QueryMetrics<QueryType> reportParallelMergeSlowestPartitionTime(long timeNs);
 
   /**
+   * Report the number of segments that weren't available while executing the query.
+   */
+  QueryMetrics<QueryType> reportUnavailableSegmentCount(long count);
+
+  /**
    * Emits all metrics, registered since the last {@code emit()} call on this QueryMetrics object.
    */
   void emit(ServiceEmitter emitter);

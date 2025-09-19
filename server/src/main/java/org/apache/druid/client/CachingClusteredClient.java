@@ -62,6 +62,7 @@ import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -126,6 +127,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final BrokerParallelMergeConfig parallelMergeConfig;
   private final ForkJoinPool pool;
   private final QueryScheduler scheduler;
+  private final BrokerSegmentWatcherConfig brokerSegmentWatcherConfig;
   private final ServiceEmitter emitter;
 
   @Inject
@@ -140,7 +142,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
       BrokerParallelMergeConfig parallelMergeConfig,
       @Merging ForkJoinPool pool,
       QueryScheduler scheduler,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      BrokerSegmentWatcherConfig brokerSegmentWatcherConfig
   )
   {
     this.conglomerate = conglomerate;
@@ -154,6 +157,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     this.pool = pool;
     this.scheduler = scheduler;
     this.emitter = emitter;
+    this.brokerSegmentWatcherConfig = brokerSegmentWatcherConfig;
 
     if (cacheConfig.isQueryCacheable(Query.GROUP_BY) && (cacheConfig.isUseCache() || cacheConfig.isPopulateCache())) {
       log.warn(
@@ -200,7 +204,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final boolean specificSegments
   )
   {
-    final ClusterQueryResult<T> result = new SpecificQueryRunnable<>(queryPlus, responseContext)
+    final ClusterQueryResult<T> result = new SpecificQueryRunnable<>(queryPlus, responseContext, brokerSegmentWatcherConfig)
         .run(timelineConverter, specificSegments);
     initializeNumRemainingResponsesInResponseContext(queryPlus.getQuery(), responseContext, result.numQueryServers);
     return result.sequence;
@@ -263,15 +267,19 @@ public class CachingClusteredClient implements QuerySegmentWalker
     private final boolean populateCache;
     private final boolean isBySegment;
     private final int uncoveredIntervalsLimit;
+    private final UnavailableSegmentsAction unavailableSegmentsAction;
+
     private final Map<String, Cache.NamedKey> cachePopulatorKeyMap = new HashMap<>();
     private final ExecutionVertex ev;
     private final List<Interval> intervals;
     private final CacheKeyManager<T> cacheKeyManager;
+    private final BrokerSegmentWatcherConfig brokerSegmentWatcherConfig;
 
-    SpecificQueryRunnable(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
+    SpecificQueryRunnable(final QueryPlus<T> queryPlus, final ResponseContext responseContext, final BrokerSegmentWatcherConfig brokerSegmentWatcherConfig)
     {
       this.queryPlus = queryPlus;
       this.responseContext = responseContext;
+      this.brokerSegmentWatcherConfig = brokerSegmentWatcherConfig;
       this.query = queryPlus.getQuery();
       this.toolChest = conglomerate.getToolChest(query);
       this.strategy = toolChest.getCacheStrategy(query, objectMapper);
@@ -284,6 +292,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       // Note that enabling this leads to putting uncovered intervals information in the response headers
       // and might blow up in some cases https://github.com/apache/druid/issues/2108
       this.uncoveredIntervalsLimit = queryContext.getUncoveredIntervalsLimit();
+      this.unavailableSegmentsAction = queryContext.getEnum(QueryContexts.UNAVAILABLE_SEGMENTS_ACTION_KEY, UnavailableSegmentsAction.class, UnavailableSegmentsAction.ALLOW);
       // For nested queries, we need to look at the intervals of the inner most query.
       this.intervals = ev
           .getEffectiveQuerySegmentSpec()
@@ -444,6 +453,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final Set<SegmentServerSelector> segments = new LinkedHashSet<>();
       final Map<String, Optional<RangeSet<String>>> dimensionRangeCache;
       final Set<String> filterFieldsForPruning;
+      final List<SegmentId> unavailableSegmentsIds = new ArrayList<>();
 
       final boolean trySecondaryPartititionPruning =
           query.getFilter() != null && query.context().isSecondaryPartitionPruningEnabled();
@@ -476,15 +486,44 @@ public class CachingClusteredClient implements QuerySegmentWalker
           ServerSelector server = chunk.getObject();
           if (isRealtimeSegmentOnly && !server.isRealtimeSegment()) {
             continue; // Skip historical segments when only realtime segments are requested
+          } else if (brokerSegmentWatcherConfig.detectUnavailableSegments() && !server.isQueryable()) {
+            log.debug("ServerSelector for segment id [%s] is not queryable", server.getSegment().getId());
+            continue;
           }
+
           final SegmentDescriptor segment = new SegmentDescriptor(
               holder.getInterval(),
               holder.getVersion(),
               chunk.getChunkNumber()
           );
           segments.add(new SegmentServerSelector(server, segment));
+          if (server.isEmpty()) {
+            unavailableSegmentsIds.add(server.getSegment().getId());
+          }
         }
       }
+
+      if (brokerSegmentWatcherConfig.detectUnavailableSegments() && !unavailableSegmentsIds.isEmpty()) {
+        queryPlus.getQueryMetrics().reportUnavailableSegmentCount(unavailableSegmentsIds.size()).emit(emitter);
+        log.warn(
+            "Detected [%d] unavailable segments, trimmed segment ids: [%s]",
+            unavailableSegmentsIds.size(),
+            unavailableSegmentsIds.subList(0, 10)
+        );
+        if (unavailableSegmentsAction == UnavailableSegmentsAction.FAIL) {
+          throw new QueryException(
+              QueryException.UNAVAILABLE_SEGMENTS_ERROR_CODE,
+              StringUtils.format(
+                  "Detected [%d] unavailable segments, trimmed segment ids: [%s]",
+                  unavailableSegmentsIds.size(),
+                  unavailableSegmentsIds.subList(0, 100)
+              ),
+              null,
+              null
+          );
+        }
+      }
+
       return segments;
     }
 
@@ -919,5 +958,11 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
       return new PartitionChunkEntry<>(spec.getInterval(), spec.getVersion(), chunk);
     }
+  }
+
+  public enum UnavailableSegmentsAction
+  {
+    FAIL,
+    ALLOW;
   }
 }

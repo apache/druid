@@ -404,6 +404,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
     return this;
   }
 
+  @Override
+  public QueryMetrics<QueryType> reportUnavailableSegmentCount(long count)
+  {
+    return reportMetric("query/unavailableSegments", count);
+  }
+
   private QueryMetrics<QueryType> reportMillisTimeMetric(String metricName, long timeNs)
   {
     return reportMetric(metricName, TimeUnit.NANOSECONDS.toMillis(timeNs));

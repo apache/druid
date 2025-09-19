@@ -43,10 +43,13 @@ import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
+import org.apache.druid.server.coordination.ChangeRequestHistory;
+import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.coordination.LoadableDataSegment;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegmentChange;
 import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
@@ -326,6 +329,42 @@ public class CoordinatorClientImpl implements CoordinatorClient
               jsonMapper
           );
         }
+    );
+  }
+
+  @Override
+  public ListenableFuture<ChangeRequestsSnapshot<DataSegmentChange>> fetchChangedSegments(
+      @Nullable Set<String> watchedDataSources,
+      ChangeRequestHistory.Counter counter
+  )
+  {
+    final StringBuilder queryBuilder = new StringBuilder();
+    queryBuilder.append("/druid/coordinator/v1/metadata/changedSegments?");
+
+    if (watchedDataSources != null && !watchedDataSources.isEmpty()) {
+      for (String ds : watchedDataSources) {
+        queryBuilder.append("datasources=").append(ds).append("&");
+      }
+    }
+
+    if (counter == null) {
+      queryBuilder.append("counter=-1");
+    } else {
+      queryBuilder.append(StringUtils.format("counter=%s&hash=%s", counter.getCounter(), counter.getHash()));
+    }
+
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, queryBuilder.toString()),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(
+            jsonMapper,
+            holder.getContent(),
+            new TypeReference<>()
+            {
+            }
+        )
     );
   }
 

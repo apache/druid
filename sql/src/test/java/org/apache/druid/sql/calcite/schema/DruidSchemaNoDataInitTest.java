@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
+import org.apache.druid.segment.metadata.BrokerSegmentMetadataCacheConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;

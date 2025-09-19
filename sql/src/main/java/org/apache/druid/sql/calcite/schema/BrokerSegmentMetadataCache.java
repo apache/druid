@@ -36,6 +36,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
+import org.apache.druid.segment.metadata.BrokerSegmentMetadataCacheConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.segment.metadata.Metric;

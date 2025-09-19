@@ -17,17 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.schema;
+package org.apache.druid.segment.metadata;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 import org.joda.time.Period;
 
 /**
  * Broker-side configuration class for managing segment polling from the Coordinator and
  * customizing properties related to the SegmentMetadata cache which is used to infer datasources for SQL.
  *
- * <p>See {@link BrokerSegmentMetadataCache}, {@link MetadataSegmentView}.</p>
+ * <p>See BrokerSegmentMetadataCache, MetadataSegmentView</p>
  *
  * <p>This class shares the same config root as {@link org.apache.druid.sql.calcite.planner.PlannerConfig}
  * to maintain backward compatibility for when the properties here resided in {@code PlannerConfig}.</p>

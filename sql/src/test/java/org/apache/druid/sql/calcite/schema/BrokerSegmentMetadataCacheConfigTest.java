@@ -25,6 +25,7 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
+import org.apache.druid.segment.metadata.BrokerSegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.planner.CalcitePlannerModule;
 import org.joda.time.Period;
 import org.junit.Assert;

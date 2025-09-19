@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Futures;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.client.DataSourcesSnapshot;
@@ -41,8 +42,11 @@ import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SegmentMetadata;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
+import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegmentChange;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -53,17 +57,27 @@ import org.skife.jdbi.v2.TransactionStatus;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of {@link SegmentsMetadataManager}, that periodically polls
@@ -151,6 +165,10 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
    */
   private volatile @MonotonicNonNull DataSourcesSnapshot dataSourcesSnapshot = null;
 
+  private final AtomicReference<Set<SegmentId>> loadedSegments = new AtomicReference<>(Sets.newConcurrentHashSet());
+
+  private final ChangeRequestHistory<List<DataSegmentChange>> dataSegmentChanges;
+
   /**
    * The latest {@link DatabasePoll} represent {@link #poll()} calls which update {@link #dataSourcesSnapshot}, either
    * periodically (see {@link PeriodicDatabasePoll}, {@link #startPollingDatabasePeriodically}, {@link
@@ -236,6 +254,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     this.segmentSchemaCache = segmentSchemaCache;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
     this.serviceEmitter = serviceEmitter;
+    this.dataSegmentChanges = new ChangeRequestHistory<>(10, false);
   }
 
   @Override
@@ -650,17 +669,22 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     final DateTime startTime = DateTimes.nowUtc();
     final Stopwatch stopwatch = Stopwatch.createStarted();
 
+    final Map<String, Set<SegmentId>> datasourceToLoadedSegments = new HashMap<>();
+
+    String sql = StringUtils.format("SELECT payload, has_loaded FROM %s WHERE used=true", getSegmentsTable());
+
     // Some databases such as PostgreSQL require auto-commit turned off
     // to stream results back, enabling transactions disables auto-commit
     // setting connection to read-only will allow some database such as MySQL
     // to automatically use read-only transaction mode, further optimizing the query
     final List<DataSegment> segments = connector.inReadOnlyTransaction(
         (handle, status) -> handle
-            .createQuery(StringUtils.format("SELECT payload FROM %s WHERE used=true", getSegmentsTable()))
+            .createQuery(sql)
             .setFetchSize(connector.getStreamingFetchSize())
             .map((index, r, ctx) -> {
               try {
                 DataSegment segment = segmentReader.readValue(r.getBytes("payload"));
+                extractSegmentLoadedInformation(r, segment, datasourceToLoadedSegments);
                 return replaceWithExistingSegmentIfPresent(segment);
               }
               catch (IOException e) {
@@ -684,7 +708,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         segments.size(), stopwatch.millisElapsed()
     );
 
-    createDatasourcesSnapshot(startTime, segments);
+    createDatasourcesSnapshot(startTime, segments, datasourceToLoadedSegments);
   }
 
   private void pollSegmentAndSchema()
@@ -696,6 +720,13 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
     // Collect and emit stats for the schema cache before every DB poll
     segmentSchemaCache.getStats().forEach(this::emitMetric);
+
+    final Map<String, Set<SegmentId>> datasourceToLoadedSegments = new HashMap<>();
+
+    String sql = StringUtils.format(
+        "SELECT payload, schema_fingerprint, num_rows FROM %s WHERE used=true",
+        getSegmentsTable()
+    );
 
     // some databases such as PostgreSQL require auto-commit turned off
     // to stream results back, enabling transactions disables auto-commit
@@ -709,7 +740,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           public List<DataSegment> inTransaction(Handle handle, TransactionStatus status)
           {
             return handle
-                .createQuery(StringUtils.format("SELECT payload, schema_fingerprint, num_rows FROM %s WHERE used=true", getSegmentsTable()))
+                .createQuery(sql)
                 .setFetchSize(connector.getStreamingFetchSize())
                 .map(
                     (index, r, ctx) -> {
@@ -718,6 +749,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
                         Long numRows = (Long) r.getObject("num_rows");
                         String schemaFingerprint = r.getString("schema_fingerprint");
+
+                        extractSegmentLoadedInformation(r, segment, datasourceToLoadedSegments);
 
                         if (schemaFingerprint != null && numRows != null) {
                           segmentMetadataBuilder.put(
@@ -784,7 +817,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         segments.size(), schemaMap.size(), stopwatch.millisElapsed()
     );
 
-    createDatasourcesSnapshot(startTime, segments);
+    createDatasourcesSnapshot(startTime, segments, datasourceToLoadedSegments);
   }
 
   private void emitMetric(String metricName, long value)
@@ -792,7 +825,26 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     serviceEmitter.emit(new ServiceMetricEvent.Builder().setMetric(metricName, value));
   }
 
-  private void createDatasourcesSnapshot(DateTime snapshotTime, List<DataSegment> segments)
+  private void extractSegmentLoadedInformation(
+      ResultSet r,
+      DataSegment segment,
+      Map<String, Set<SegmentId>> datasourceToLoadedSegments
+  ) throws SQLException
+  {
+    boolean hasLoaded = r.getBoolean("has_loaded");
+    if (hasLoaded) {
+      datasourceToLoadedSegments.computeIfAbsent(
+          segment.getDataSource(),
+          value -> new HashSet<>()
+      ).add(segment.getId());
+    }
+  }
+
+  private void createDatasourcesSnapshot(
+      DateTime snapshotTime,
+      final List<DataSegment> segments,
+      final Map<String, Set<SegmentId>> datasourceToLoadedSegments
+  )
   {
     final Stopwatch stopwatch = Stopwatch.createStarted();
     // dataSourcesSnapshot is updated only here and the DataSourcesSnapshot object is immutable. If data sources or
@@ -804,13 +856,57 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     // Updates outside of database polls were primarily for the user experience, so users would immediately see the
     // effect of a segment mark call reflected in MetadataResource API calls.
 
-    dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
-        Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
-        snapshotTime
-    );
-    emitMetric("segment/buildSnapshot/time", stopwatch.millisElapsed());
-    log.debug(
-        "Created snapshot from polled segments in [%d]ms. Found [%d] overshadowed segments.",
+    if (segments.isEmpty()) {
+      log.debug("No segments found in the database!");
+    } else {
+      log.info("Polled and found %,d segments in the database", segments.size());
+    }
+
+    Set<SegmentId> loadStatus = Sets.newConcurrentHashSet();
+    for (Set<SegmentId> segmentIdSet : datasourceToLoadedSegments.values()) {
+      loadStatus.addAll(segmentIdSet);
+    }
+
+    loadedSegments.getAndSet(loadStatus);
+
+    if (dataSourcesSnapshot != null) {
+      Set<SegmentStatusInCluster> oldSegments = DataSourcesSnapshot.getSegmentsWithOvershadowedAndLoadStatus(
+          dataSourcesSnapshot.getDataSourcesWithAllUsedSegments(),
+          dataSourcesSnapshot.getOvershadowedSegments(),
+          dataSourcesSnapshot.getLoadedSegmentsPerDataSource()
+      );
+
+      dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
+          Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
+          snapshotTime,
+          datasourceToLoadedSegments
+      );
+
+      Set<SegmentStatusInCluster> newSegments = DataSourcesSnapshot.getSegmentsWithOvershadowedAndLoadStatus(
+          dataSourcesSnapshot.getDataSourcesWithAllUsedSegments(),
+          dataSourcesSnapshot.getOvershadowedSegments(),
+          dataSourcesSnapshot.getLoadedSegmentsPerDataSource()
+      );
+
+      List<DataSegmentChange> segmentLifecycleChangeList = computeSegmentLifecycleChanges(oldSegments, newSegments);
+
+      if (!segmentLifecycleChangeList.isEmpty()) {
+        dataSegmentChanges.addChangeRequest(segmentLifecycleChangeList);
+      }
+
+      log.info(
+          "Finished computing segment lifecycle changes. Changes count [%d], current counter [%d]",
+          segmentLifecycleChangeList.size(), dataSegmentChanges.getLastCounter().getCounter()
+      );
+    } else {
+      dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
+          Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
+          snapshotTime,
+          datasourceToLoadedSegments
+      );
+    }
+    log.info(
+        "Successfully created snapshot from polled segments in [%d] ms. Found [%d] overshadowed segments.",
         stopwatch.millisElapsed(), dataSourcesSnapshot.getOvershadowedSegments().size()
     );
   }
@@ -846,5 +942,116 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   private String getSegmentSchemaTable()
   {
     return dbTables.get().getSegmentSchemasTable();
+  }
+
+  protected List<DataSegmentChange> computeSegmentLifecycleChanges(
+      Set<SegmentStatusInCluster> oldSegments,
+      Set<SegmentStatusInCluster> currentSegments
+  )
+  {
+    if (oldSegments.isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    // a segment is added to the change set, if following changes:
+    // segmentId
+    // overshadowed state
+    // loaded state
+    Map<SegmentId, SegmentStatusInCluster> oldSegmentsMap =
+        oldSegments
+            .stream()
+            .collect(Collectors.toMap(
+                segment -> segment.getDataSegment().getId(),
+                Function.identity()
+            ));
+
+    Map<SegmentId, SegmentStatusInCluster> currentSegmentsMap =
+        currentSegments
+            .stream()
+            .collect(Collectors.toMap(
+                segment -> segment.getDataSegment().getId(),
+                Function.identity()
+            ));
+
+    Set<SegmentId> segmentsToBeRemoved =
+        Sets.difference(oldSegmentsMap.keySet(), currentSegmentsMap.keySet());
+    Set<SegmentId> segmentsToBeAdded =
+        Sets.difference(currentSegmentsMap.keySet(), oldSegmentsMap.keySet());
+    Set<SegmentId> commonSegmentIds =
+        Sets.intersection(oldSegmentsMap.keySet(), currentSegmentsMap.keySet());
+
+    List<DataSegmentChange> changeList = new ArrayList<>();
+
+    // segment present in the old set but missing in the current set
+    segmentsToBeRemoved.forEach(
+        segmentId ->
+            changeList.add(
+                new DataSegmentChange(
+                    oldSegmentsMap.get(segmentId),
+                    DataSegmentChange.SegmentLifecycleChangeType.SEGMENT_REMOVED
+                )
+            )
+    );
+
+    // segment present in the new set but missing in the old set
+    segmentsToBeAdded.forEach(
+        segmentId ->
+            changeList.add(
+                new DataSegmentChange(
+                    currentSegmentsMap.get(segmentId),
+                    DataSegmentChange.SegmentLifecycleChangeType.SEGMENT_ADDED
+                )
+            )
+    );
+
+    // segment present in both old and new set
+    // check if overshadowed state or loaded state has changed
+    commonSegmentIds.forEach(
+        segmentId -> {
+          SegmentStatusInCluster oldSegment = oldSegmentsMap.get(segmentId);
+          SegmentStatusInCluster newSegment = currentSegmentsMap.get(segmentId);
+          if (oldSegment != null && newSegment != null) {
+            final DataSegmentChange.SegmentLifecycleChangeType segmentLifecycleChangeType =
+                getSegmentLifecycleChangeType(
+                    oldSegment,
+                    newSegment
+                );
+            if (segmentLifecycleChangeType != null) {
+              changeList.add(
+                  new DataSegmentChange(
+                      newSegment,
+                      segmentLifecycleChangeType
+                  )
+              );
+            }
+          }
+        }
+    );
+
+    return changeList;
+  }
+
+  private static DataSegmentChange.SegmentLifecycleChangeType getSegmentLifecycleChangeType(
+      SegmentStatusInCluster oldSegment,
+      SegmentStatusInCluster newSegment
+  )
+  {
+    final boolean loadedStatusChanged = oldSegment.isLoaded() != newSegment.isLoaded();
+    final boolean overShadowedStatusChanged = oldSegment.isOvershadowed() != newSegment.isOvershadowed();
+    DataSegmentChange.SegmentLifecycleChangeType segmentLifecycleChangeType = null;
+    if (loadedStatusChanged && overShadowedStatusChanged) {
+      segmentLifecycleChangeType = DataSegmentChange.SegmentLifecycleChangeType.SEGMENT_OVERSHADOWED_AND_HAS_LOADED;
+    } else if (loadedStatusChanged) {
+      segmentLifecycleChangeType = DataSegmentChange.SegmentLifecycleChangeType.SEGMENT_HAS_LOADED;
+    } else if (overShadowedStatusChanged) {
+      segmentLifecycleChangeType = DataSegmentChange.SegmentLifecycleChangeType.SEGMENT_OVERSHADOWED;
+    }
+    return segmentLifecycleChangeType;
+  }
+
+  @Override
+  public ChangeRequestHistory<List<DataSegmentChange>> getChangeRequestHistory()
+  {
+    return dataSegmentChanges;
   }
 }
