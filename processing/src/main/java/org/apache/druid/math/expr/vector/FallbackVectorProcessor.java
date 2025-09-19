@@ -29,6 +29,7 @@ import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Function;
 import org.apache.druid.math.expr.LambdaExpr;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -406,6 +407,9 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
       } else if (type.is(ExprType.DOUBLE)) {
         final boolean isNull = results.getNullVector() != null && results.getNullVector()[rowNum];
         return ExprEval.ofDouble(isNull ? null : results.getDoubleVector()[rowNum]);
+      } else if (type.is(ExprType.COMPLEX)
+                 && !ColumnType.NESTED_DATA.getComplexTypeName().equals(type.getComplexTypeName())) {
+        return ExprEval.ofType(type, results.getObjectVector()[rowNum]);
       } else {
         return ExprEval.bestEffortOf(results.getObjectVector()[rowNum]).castTo(type);
       }
