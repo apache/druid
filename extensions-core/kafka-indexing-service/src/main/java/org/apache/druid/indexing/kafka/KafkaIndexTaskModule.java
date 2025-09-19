@@ -26,7 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.data.input.kafkainput.KafkaInputFormat;
-import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedFilteringConfig;
+import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedInclusionConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
 import org.apache.druid.initialization.DruidModule;
@@ -53,7 +53,7 @@ public class KafkaIndexTaskModule implements DruidModule
                 new NamedType(KafkaSupervisorSpec.class, SCHEME),
                 new NamedType(KafkaSamplerSpec.class, SCHEME),
                 new NamedType(KafkaInputFormat.class, SCHEME),
-                new NamedType(KafkaHeaderBasedFilteringConfig.class, SCHEME)
+                new NamedType(KafkaHeaderBasedInclusionConfig.class, SCHEME)
             )
             .addKeySerializer(KafkaTopicPartition.class, new KafkaTopicPartition.KafkaTopicPartitionKeySerializer())
     );
