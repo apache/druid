@@ -45,10 +45,20 @@ export const ShowJsonOrStages = React.memo(function ShowJsonOrStages(props: Show
       const resp = await Api.instance.get(endpoint, { signal });
       let data = resp.data;
       if (transform) data = transform(data);
+
+      let execution: Execution | undefined;
+      if (data.multiStageQuery) {
+        try {
+          execution = Execution.fromTaskReport(data);
+        } catch (e) {
+          console.error(`Could not parse task report as MSQ execution: ${e.message}`);
+        }
+      }
+
       return [
         typeof data === 'string' ? data : JSONBig.stringify(data, undefined, 2),
-        data.multiStageQuery ? Execution.fromTaskReport(data) : undefined,
-      ];
+        execution,
+      ] as [string, Execution | undefined];
     },
     initQuery: null,
   });
