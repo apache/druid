@@ -53,7 +53,7 @@ public class KafkaIOConfigBuilder extends SupervisorIOConfigBuilder<KafkaIOConfi
     return this;
   }
 
-  public KafkaIOConfigBuilder withheaderBasedInclusionConfig(KafkaHeaderBasedInclusionConfig headerBasedInclusionConfig)
+  public KafkaIOConfigBuilder withHeaderBasedInclusionConfig(KafkaHeaderBasedInclusionConfig headerBasedInclusionConfig)
   {
     this.headerBasedInclusionConfig = headerBasedInclusionConfig;
     return this;

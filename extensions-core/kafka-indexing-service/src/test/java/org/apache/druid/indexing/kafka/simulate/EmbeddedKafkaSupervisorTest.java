@@ -153,7 +153,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     kafkaServer.createTopicWithPartitions(topic, 2);
 
     final int totalRecords = 10;
-    final int expectedRecords = 3; // Only production records (indices 0, 3, 6)
+    final int expectedRecords = 4; // Only production records (indices 0, 3, 6, 9)
     kafkaServer.produceRecordsToTopic(
         generateRecordsWithEnvironmentHeaders(topic, totalRecords, DateTimes.of("2025-06-01"))
     );
@@ -225,7 +225,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
                 .withInputFormat(new CsvInputFormat(List.of("timestamp", "item"), null, null, false, 0, false))
                 .withConsumerProperties(kafkaServer.consumerProperties())
                 .withUseEarliestSequenceNumber(true)
-                .withheaderBasedInclusionConfig(headerFilterConfig)
+                .withHeaderBasedInclusionConfig(headerFilterConfig)
         )
         .withId(supervisorId)
         .build(dataSource, topic);
