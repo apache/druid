@@ -24,7 +24,7 @@ import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
-import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 
 /**
@@ -40,7 +40,7 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public List<DataSegment> getCachedSegments()
+  public Collection<DataSegment> getCachedSegments()
   {
     throw new UnsupportedOperationException();
   }
