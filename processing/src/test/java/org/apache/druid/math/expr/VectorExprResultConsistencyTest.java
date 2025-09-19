@@ -560,7 +560,11 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     testExpression("array_overlap(array(s1, s2), array(s2, s3))", types);
     testExpression("array_overlap(array(l1, l2), array(l2, l3))", types);
     testExpression("scalar_in_array(s1, array(s1, s2))", types);
+    testExpression("scalar_in_array(s1, array('1', '2'))", types);
+    testExpression("scalar_in_array(s1, array(1, 2))", types);
     testExpression("scalar_in_array(l1, array(l1, l2))", types);
+    testExpression("scalar_in_array(l1, array('1', '2'))", types);
+    testExpression("scalar_in_array(l1, array(1, 2))", types);
     testExpression("array_offset_of(array(s1, s2), s1)", types);
     testExpression("array_offset_of(array(l1, l2), l1)", types);
     testExpression("array_ordinal_of(array(s1, s2), s1)", types);
