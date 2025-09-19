@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
@@ -50,7 +49,6 @@ import org.apache.druid.segment.virtual.NestedObjectVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -124,17 +122,9 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
     return constructors;
   }
 
-  @Before
-  public void setup()
-  {
-    // Enable fallback vectorization so all tests can vectorize.
-    ExpressionProcessing.initializeForFallback();
-  }
-
   @After
   public void teardown() throws IOException
   {
-    ExpressionProcessing.initializeForTests();
     closer.close();
   }
 
