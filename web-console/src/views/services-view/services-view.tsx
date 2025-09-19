@@ -145,7 +145,7 @@ interface ServiceResultRow {
   readonly plaintext_port: number;
   readonly tls_port: number;
   readonly start_time: string;
-  readonly labels: string;
+  readonly labels: string | null;
 }
 
 interface ServicesWithAuxiliaryInfo {
@@ -291,6 +291,7 @@ ORDER BY
                 max_size: s.maxSize,
                 start_time: '1970:01:01T00:00:00Z',
                 is_leader: 0,
+                labels: null,
               };
             },
           );
