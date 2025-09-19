@@ -124,17 +124,9 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
     return constructors;
   }
 
-  @Before
-  public void setup()
-  {
-    // Enable fallback vectorization so all tests can vectorize.
-    ExpressionProcessing.initializeForFallback();
-  }
-
   @After
   public void teardown() throws IOException
   {
-    ExpressionProcessing.initializeForTests();
     closer.close();
   }
 
