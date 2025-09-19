@@ -147,7 +147,7 @@ public interface Function extends NamedFunction
    */
   default boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
   {
-    return FallbackVectorProcessor.canFallbackVectorize(getOutputType(inspector, args), inspector, args);
+    return FallbackVectorProcessor.canFallbackVectorize(args, getOutputType(inspector, args), inspector);
   }
 
   /**

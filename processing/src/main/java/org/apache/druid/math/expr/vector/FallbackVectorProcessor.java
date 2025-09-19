@@ -120,17 +120,33 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
 
   /**
    * Returns whether {@link #create(Function, List, Expr.VectorInputBindingInspector)} can be used to make
-   * a fallback vectorized processor.
+   * a fallback vectorized processor for a function with the given output type and arguments.
    */
   public static boolean canFallbackVectorize(
+      final List<Expr> args,
       @Nullable final ExpressionType outputType,
-      final Expr.InputBindingInspector inspector,
-      final List<Expr> args
+      final Expr.InputBindingInspector inspector
   )
   {
     return ExpressionProcessing.allowVectorizeFallback() &&
            outputType != null &&
            inspector.canVectorize(args);
+  }
+
+  /**
+   * Returns whether {@link #create(ApplyFunction, LambdaExpr, List, Expr.VectorInputBindingInspector)} can be used to
+   * make a fallback vectorized processor for a function with the given output type and arguments.
+   */
+  public static boolean canFallbackVectorize(
+      final LambdaExpr lambdaExpr,
+      final List<Expr> args,
+      @Nullable final ExpressionType outputType,
+      final Expr.InputBindingInspector inspector
+  )
+  {
+    // Currently, can only fallback vectorize if the lambda has no free variables.
+    return canFallbackVectorize(args, outputType, inspector)
+           && lambdaExpr.getIdentifiers().containsAll(lambdaExpr.getExpr().analyzeInputs().getRequiredBindings());
   }
 
   /**
@@ -436,6 +452,13 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
     public Object getLiteralValue()
     {
       return originalExpr.getLiteralValue();
+    }
+
+    @Override
+    @Nullable
+    public ExpressionType getOutputType(InputBindingInspector inspector)
+    {
+      return originalExpr.getOutputType(inspector);
     }
 
     @Override

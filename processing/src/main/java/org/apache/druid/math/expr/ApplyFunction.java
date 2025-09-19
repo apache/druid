@@ -52,7 +52,12 @@ public interface ApplyFunction extends NamedFunction
    */
   default boolean canVectorize(Expr.InputBindingInspector inspector, LambdaExpr lambda, List<Expr> args)
   {
-    return FallbackVectorProcessor.canFallbackVectorize(getOutputType(inspector, lambda, args), inspector, args);
+    return FallbackVectorProcessor.canFallbackVectorize(
+        lambda,
+        args,
+        getOutputType(inspector, lambda, args),
+        inspector
+    );
   }
 
   /**
