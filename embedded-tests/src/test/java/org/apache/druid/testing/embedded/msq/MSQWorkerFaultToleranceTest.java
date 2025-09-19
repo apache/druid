@@ -67,7 +67,7 @@ public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
         .addServer(overlord)
         .addServer(coordinator)
         .addServer(indexer)
-        .addServer(new EmbeddedBroker())
+        .addServer(broker)
         .addServer(new EmbeddedHistorical())
         .addServer(new EmbeddedRouter());
   }
