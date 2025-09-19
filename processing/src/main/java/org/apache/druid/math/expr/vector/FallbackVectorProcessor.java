@@ -68,9 +68,10 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
   )
   {
     final List<Expr> adaptedArgs = makeAdaptedArgs(args, inspector);
+    final Function singleThreadedFunction = function.asSingleThreaded(adaptedArgs, inspector);
     return makeFallbackProcessor(
         function.name(),
-        () -> function.apply(adaptedArgs, UnusedBinding.INSTANCE),
+        () -> singleThreadedFunction.apply(adaptedArgs, UnusedBinding.INSTANCE),
         adaptedArgs,
         function.getOutputType(inspector, args),
         inspector
@@ -107,7 +108,7 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
   )
   {
     final List<Expr> adaptedArgs = makeAdaptedArgs(args, inspector);
-    final Expr adaptedExpr = macro.apply(adaptedArgs);
+    final Expr adaptedExpr = macro.apply(adaptedArgs).asSingleThreaded(inspector);
     return makeFallbackProcessor(
         macro.name(),
         () -> adaptedExpr.eval(UnusedBinding.INSTANCE),
