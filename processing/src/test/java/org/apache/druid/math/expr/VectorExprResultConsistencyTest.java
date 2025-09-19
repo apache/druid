@@ -986,7 +986,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     }
 
     final Object[] vectorVals = vectorEval.getObjectVector();
-    // 'null' expressions can have an output type of null, but still evaluate in default mode, so skip type checks
+    // if outputType is known, verify the expr returns the correct type
     if (outputType != null) {
       Assert.assertEquals("vector eval type", outputType, vectorEval.getType());
     }
@@ -1014,7 +1014,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
       catch (Exception e) {
         return Either.error(e.toString());
       }
-      // 'null' expressions can have an output type of null, but still evaluate in default mode, so skip type checks
+      // if outputType is known, verify the expr returns the correct type
       if (outputType != null && eval.value() != null) {
         Assert.assertEquals("nonvector eval type", eval.type(), outputType);
       }
