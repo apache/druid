@@ -127,8 +127,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
            .addServer(overlord)
            .addServer(indexer)
            .addServer(broker)
-           .addServer(historical)
-           .addServer(new EmbeddedRouter());
+           .addServer(historical);
 
     return cluster;
   }
