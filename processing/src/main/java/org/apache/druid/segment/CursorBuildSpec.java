@@ -220,9 +220,12 @@ public class CursorBuildSpec
   }
 
   /**
-   * Returns true if the supplied ordering matches {@link #getPreferredOrdering()}, meaning that the supplied ordering
-   * has everything which is in the preferred ordering in the same direction and order. The supplied ordering may have
-   * additional columns beyond the preferred ordering and still satisify this method.
+   * Returns true if the given ordering is compatible with {@link #getPreferredOrdering()}. This means that, for every
+   * column in the preferred ordering, the supplied ordering must either:
+   * <li> use the same direction, or
+   * <li> use the exact opposite direction.
+   * <p>
+   * The supplied ordering may also include extra columns beyond those in the preferred ordering and still satisfy this condition.
    */
   public boolean isCompatibleOrdering(List<OrderBy> ordering)
   {
@@ -234,8 +237,18 @@ public class CursorBuildSpec
     if (ordering.size() < preferredOrdering.size()) {
       return false;
     }
-    for (int i = 0; i < preferredOrdering.size(); i++) {
-      if (!ordering.get(i).getColumnName().equals(preferredOrdering.get(i).getColumnName())) {
+
+    boolean exactMatch = ordering.get(0).equals(preferredOrdering.get(0));
+    if (!exactMatch && !ordering.get(0).equals(preferredOrdering.get(0).reverse())) {
+      // not exact match or reverse match on first column, fail fast
+      return false;
+    }
+    for (int i = 1; i < preferredOrdering.size(); i++) {
+      if (exactMatch && ordering.get(i).equals(preferredOrdering.get(i))) {
+        // exact match, continue
+      } else if (!exactMatch && ordering.get(i).equals(preferredOrdering.get(i).reverse())) {
+        // match in opposite direction, continue
+      } else {
         return false;
       }
     }
@@ -496,7 +509,6 @@ public class CursorBuildSpec
       this.queryMetrics = queryMetrics;
       return this;
     }
-
 
 
     /**
