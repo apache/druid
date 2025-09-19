@@ -187,7 +187,8 @@ public class ExpressionPlanner
     // this check should also change
     boolean supportsVector = ExpressionPlan.none(
         traits,
-        ExpressionPlan.Trait.INCOMPLETE_INPUTS
+        ExpressionPlan.Trait.INCOMPLETE_INPUTS,
+        ExpressionPlan.Trait.NEEDS_APPLIED
     );
 
     if (supportsVector && expression.canVectorize(inspector)) {

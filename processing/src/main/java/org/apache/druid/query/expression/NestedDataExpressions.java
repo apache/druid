@@ -699,8 +699,8 @@ public class NestedDataExpressions
       @Override
       public ExpressionType getOutputType(InputBindingInspector inspector)
       {
-        // call all the output JSON typed
-        return ExpressionType.NESTED_DATA;
+        // call all the output ARRAY<COMPLEX<json>> typed
+        return JSON_ARRAY;
       }
     }
 

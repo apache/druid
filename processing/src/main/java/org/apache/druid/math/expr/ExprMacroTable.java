@@ -178,7 +178,7 @@ public class ExprMacroTable
     @Override
     public boolean canVectorize(InputBindingInspector inspector)
     {
-      return FallbackVectorProcessor.canFallbackVectorize(getOutputType(inspector), inspector, args);
+      return FallbackVectorProcessor.canFallbackVectorize(args, getOutputType(inspector), inspector);
     }
 
     @Override

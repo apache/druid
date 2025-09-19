@@ -54,12 +54,6 @@ public class ExpressionProcessing
     INSTANCE = new ExpressionProcessingConfig(null, true, null);
   }
 
-  @VisibleForTesting
-  public static void initializeForFallback()
-  {
-    INSTANCE = new ExpressionProcessingConfig(null, null, true);
-  }
-
   /**
    * All {@link ExprType#ARRAY} values will be converted to {@link ExpressionType#STRING} by their column selectors
    * (not within expression processing) to be treated as multi-value strings instead of native arrays.
