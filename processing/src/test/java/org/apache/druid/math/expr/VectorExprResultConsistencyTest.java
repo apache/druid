@@ -95,46 +95,46 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
         new DruidGuiceExtensions(),
         new ExpressionModule(),
         binder -> {
+          final LookupExtractorFactoryContainerProvider lookupProvider = new LookupExtractorFactoryContainerProvider()
+          {
+            @Override
+            public Set<String> getAllLookupNames()
+            {
+              return Set.of("test-lookup", "test-lookup-injective");
+            }
+
+            @Override
+            public Optional<LookupExtractorFactoryContainer> get(String lookupName)
+            {
+              if ("test-lookup".equals(lookupName)) {
+                return Optional.of(
+                    new LookupExtractorFactoryContainer(
+                        "v0",
+                        new TestMapLookupExtractorFactory(LOOKUP, false)
+                    )
+                );
+              } else if ("test-lookup-injective".equals(lookupName)) {
+                return Optional.of(
+                    new LookupExtractorFactoryContainer(
+                        "v0",
+                        new TestMapLookupExtractorFactory(INJECTIVE_LOOKUP, true)
+                    )
+                );
+              }
+              return Optional.empty();
+            }
+
+            @Override
+            public String getCanonicalLookupName(String lookupName)
+            {
+              return "";
+            }
+          };
+
           ExpressionModule.addExprMacro(binder, LookupExprMacro.class);
           binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(new DefaultObjectMapper());
           binder.bind(LookupExtractorFactoryContainerProvider.class)
-                .toInstance(
-                    new LookupExtractorFactoryContainerProvider()
-                    {
-                      @Override
-                      public Set<String> getAllLookupNames()
-                      {
-                        return Set.of("test-lookup", "test-lookup-injective");
-                      }
-
-                      @Override
-                      public Optional<LookupExtractorFactoryContainer> get(String lookupName)
-                      {
-                        if ("test-lookup".equals(lookupName)) {
-                          return Optional.of(
-                              new LookupExtractorFactoryContainer(
-                                  "v0",
-                                  new TestMapLookupExtractorFactory(LOOKUP, false)
-                              )
-                          );
-                        } else if ("test-lookup-injective".equals(lookupName)) {
-                          return Optional.of(
-                              new LookupExtractorFactoryContainer(
-                                  "v0",
-                                  new TestMapLookupExtractorFactory(INJECTIVE_LOOKUP, true)
-                              )
-                          );
-                        }
-                        return Optional.empty();
-                      }
-
-                      @Override
-                      public String getCanonicalLookupName(String lookupName)
-                      {
-                        return "";
-                      }
-                    }
-                );
+                .toInstance(lookupProvider);
         }
     );
 
@@ -142,19 +142,19 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   }
 
   final Map<String, ExpressionType> types = ImmutableMap.<String, ExpressionType>builder()
-      .put("l1", ExpressionType.LONG)
-      .put("l2", ExpressionType.LONG)
-      .put("l3", ExpressionType.LONG)
-      .put("d1", ExpressionType.DOUBLE)
-      .put("d2", ExpressionType.DOUBLE)
-      .put("d3", ExpressionType.DOUBLE)
-      .put("s1", ExpressionType.STRING)
-      .put("s2", ExpressionType.STRING)
-      .put("s3", ExpressionType.STRING)
-      .put("boolString1", ExpressionType.STRING)
-      .put("boolString2", ExpressionType.STRING)
-      .put("boolString3", ExpressionType.STRING)
-      .build();
+                                                        .put("l1", ExpressionType.LONG)
+                                                        .put("l2", ExpressionType.LONG)
+                                                        .put("l3", ExpressionType.LONG)
+                                                        .put("d1", ExpressionType.DOUBLE)
+                                                        .put("d2", ExpressionType.DOUBLE)
+                                                        .put("d3", ExpressionType.DOUBLE)
+                                                        .put("s1", ExpressionType.STRING)
+                                                        .put("s2", ExpressionType.STRING)
+                                                        .put("s3", ExpressionType.STRING)
+                                                        .put("boolString1", ExpressionType.STRING)
+                                                        .put("boolString2", ExpressionType.STRING)
+                                                        .put("boolString3", ExpressionType.STRING)
+                                                        .build();
 
 
   @Test
@@ -184,7 +184,14 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   public void testCast()
   {
     final Set<String> columns = Set.of("d1", "l1", "s1");
-    final Set<String> castTo = Set.of("'STRING'", "'LONG'", "'DOUBLE'", "'ARRAY<STRING>'", "'ARRAY<LONG>'", "'ARRAY<DOUBLE>'");
+    final Set<String> castTo = Set.of(
+        "'STRING'",
+        "'LONG'",
+        "'DOUBLE'",
+        "'ARRAY<STRING>'",
+        "'ARRAY<LONG>'",
+        "'ARRAY<DOUBLE>'"
+    );
     final Set<List<String>> args = Sets.cartesianProduct(columns, castTo);
     final List<String> templates = List.of("cast(%s, %s)");
     testFunctions(types, templates, args);
@@ -251,7 +258,12 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   public void testBinaryLogicOperators()
   {
     final List<String> functions = List.of("&&", "||");
-    final List<String> templates = List.of("d1 %s d2", "l1 %s l2", "boolString1 %s boolString2", "(d1 == d2) %s (l1 == l2)");
+    final List<String> templates = List.of(
+        "d1 %s d2",
+        "l1 %s l2",
+        "boolString1 %s boolString2",
+        "(d1 == d2) %s (l1 == l2)"
+    );
     testFunctions(types, templates, functions);
   }
 
@@ -263,7 +275,14 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     final Set<List<String>> templateInputs = Sets.cartesianProduct(columns, columns2, columns2);
     final List<String> templates = new ArrayList<>();
     for (List<String> template : templateInputs) {
-      templates.add(StringUtils.format("(%s %s %s) %s %s", template.get(0), "%s", template.get(1), "%s", template.get(2)));
+      templates.add(StringUtils.format(
+          "(%s %s %s) %s %s",
+          template.get(0),
+          "%s",
+          template.get(1),
+          "%s",
+          template.get(2)
+      ));
     }
     final Set<String> ops = Set.of("+", "-", "*", "/");
     final Set<List<String>> args = Sets.cartesianProduct(ops, ops);
