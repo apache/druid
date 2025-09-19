@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.projections;
 
+import com.google.common.collect.RangeSet;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -26,7 +27,9 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.CursorBuildSpec;
@@ -153,7 +156,7 @@ public class Projections
       return null;
     }
 
-    matchBuilder = matchAggregators(projection, queryCursorBuildSpec, matchBuilder);
+    matchBuilder = matchAggregators(projection, queryCursorBuildSpec, physicalColumnChecker, matchBuilder);
     if (matchBuilder == null) {
       return null;
     }
@@ -199,15 +202,7 @@ public class Projections
         final Set<String> originalRequired = queryFilter.getRequiredColumns();
         // try to rewrite the query filter into a projection filter, if the rewrite is valid, we can proceed
         final Filter projectionFilter = projection.getFilter().toOptimizedFilter(false);
-        final Map<String, String> filterRewrites = new HashMap<>();
-        // start with identity
-        for (String required : queryFilter.getRequiredColumns()) {
-          filterRewrites.put(required, required);
-        }
-        // overlay projection rewrites
-        filterRewrites.putAll(matchBuilder.getRemapColumns());
-
-        final Filter remappedQueryFilter = queryFilter.rewriteRequiredColumns(filterRewrites);
+        final Filter remappedQueryFilter = remapFilterToProjection(matchBuilder, queryFilter);
 
         final Filter rewritten = ProjectionFilterMatch.rewriteFilter(projectionFilter, remappedQueryFilter);
         // if the filter does not contain the projection filter, we cannot match this projection
@@ -288,6 +283,7 @@ public class Projections
   public static ProjectionMatchBuilder matchAggregators(
       AggregateProjectionMetadata.Schema projection,
       CursorBuildSpec queryCursorBuildSpec,
+      PhysicalColumnChecker physicalColumnChecker,
       ProjectionMatchBuilder matchBuilder
   )
   {
@@ -296,6 +292,10 @@ public class Projections
     }
     boolean allMatch = true;
     for (AggregatorFactory queryAgg : queryCursorBuildSpec.getAggregators()) {
+      AggregatorFactory filterAgg = null;
+      if (queryAgg instanceof FilteredAggregatorFactory) {
+        filterAgg = ((FilteredAggregatorFactory) queryAgg).getAggregator();
+      }
       boolean foundMatch = false;
       for (AggregatorFactory projectionAgg : projection.getAggregators()) {
         final AggregatorFactory combining = queryAgg.substituteCombiningFactory(projectionAgg);
@@ -305,6 +305,37 @@ public class Projections
                       .addPreAggregatedAggregator(combining);
           foundMatch = true;
           break;
+        }
+
+        if (filterAgg != null) {
+          final AggregatorFactory filteredCombining = filterAgg.substituteCombiningFactory(projectionAgg);
+          if (filteredCombining != null) {
+            FilteredAggregatorFactory filteredQueryAgg = (FilteredAggregatorFactory) queryAgg;
+            final Filter aggFilter = filteredQueryAgg.getFilter().toFilter();
+            final Filter remappedAggFilter = remapFilterToProjection(matchBuilder, aggFilter);
+            for (String column : aggFilter.getRequiredColumns()) {
+              matchBuilder = matchRequiredColumn(
+                  column,
+                  projection,
+                  queryCursorBuildSpec,
+                  physicalColumnChecker,
+                  matchBuilder
+              );
+              if (matchBuilder == null) {
+                return null;
+              }
+            }
+
+            final FilteredAggregatorFactory remappedFilteredAgg = new FilteredAggregatorFactory(
+                filteredCombining,
+                new RewrittenAggDimFilter(filteredQueryAgg.getFilter(), remappedAggFilter)
+            );
+            matchBuilder.remapColumn(queryAgg.getName(), projectionAgg.getName())
+                        .addReferencedPhysicalColumn(projectionAgg.getName())
+                        .addPreAggregatedAggregator(remappedFilteredAgg);
+            foundMatch = true;
+            break;
+          }
         }
       }
       allMatch = allMatch && foundMatch;
@@ -493,6 +524,20 @@ public class Projections
     return false;
   }
 
+  private static Filter remapFilterToProjection(ProjectionMatchBuilder matchBuilder, Filter aggFilter)
+  {
+    final Map<String, String> filterRewrites = new HashMap<>();
+    // start with identity
+    for (String required : aggFilter.getRequiredColumns()) {
+      filterRewrites.put(required, required);
+    }
+    // overlay projection rewrites
+    filterRewrites.putAll(matchBuilder.getRemapColumns());
+
+    final Filter remappedAggFilter = aggFilter.rewriteRequiredColumns(filterRewrites);
+    return remappedAggFilter;
+  }
+
   /**
    * Returns true if column is defined in {@link AggregateProjectionSpec#getGroupingColumns()} OR if the column does not
    * exist in the base table. Part of determining if a projection can be used for a given {@link CursorBuildSpec},
@@ -503,6 +548,56 @@ public class Projections
   public interface PhysicalColumnChecker
   {
     boolean check(String projectionName, String columnName);
+  }
+
+  private static final class RewrittenAggDimFilter implements DimFilter
+  {
+    private final DimFilter originalFilter;
+    private final Filter rewrittenFilter;
+
+    private RewrittenAggDimFilter(DimFilter originalFilter, Filter rewrittenFilter)
+    {
+      this.originalFilter = originalFilter;
+      this.rewrittenFilter = rewrittenFilter;
+    }
+
+    @Override
+    public DimFilter optimize(boolean mayIncludeUnknown)
+    {
+      return this;
+    }
+
+    @Override
+    public Filter toOptimizedFilter(boolean mayIncludeUnknown)
+    {
+      return rewrittenFilter;
+    }
+
+    @Override
+    public Filter toFilter()
+    {
+      return rewrittenFilter;
+    }
+
+    @Nullable
+    @Override
+    public RangeSet<String> getDimensionRangeSet(String dimension)
+    {
+      return null;
+    }
+
+    @Override
+    public Set<String> getRequiredColumns()
+    {
+      return rewrittenFilter.getRequiredColumns();
+    }
+
+    @Nullable
+    @Override
+    public byte[] getCacheKey()
+    {
+      return originalFilter.getCacheKey();
+    }
   }
 
   private Projections()

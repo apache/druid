@@ -43,6 +43,7 @@ import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryException;
@@ -4541,11 +4542,15 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testTopNFilterJoinWithProjection(Map<String, Object> queryContext)
   {
-    // Cannot vectorize JOIN operator.
-    cannotVectorize();
+    if (QueryContext.of(queryContext).getEnableRewriteJoinToFilter()) {
+      // Join is eliminated. Cannot vectorize substring function unless fallback vectorization is on.
+      cannotVectorizeUnlessFallback();
+    } else {
+      // Cannot vectorize the join or the substring function.
+      cannotVectorize();
+    }
 
     // Filters on top N values of some dimension by using an inner join. Also projects the outer dimension.
-
     testQuery(
         "SELECT SUBSTRING(t1.dim1, 1, 10), SUM(t1.cnt)\n"
         + "FROM druid.foo t1\n"

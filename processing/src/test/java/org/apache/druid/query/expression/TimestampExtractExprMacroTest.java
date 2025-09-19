@@ -49,8 +49,8 @@ public class TimestampExtractExprMacroTest
   {
     Expr expression = target.apply(
         ImmutableList.of(
-            ExprEval.of("2001-02-16").toExpr(),
-            ExprEval.of(TimestampExtractExprMacro.Unit.DECADE.toString()).toExpr()
+            ExprEval.ofString("2001-02-16").toExpr(),
+            ExprEval.ofString(TimestampExtractExprMacro.Unit.DECADE.toString()).toExpr()
         ));
     Assert.assertEquals(200, expression.eval(InputBindings.nilBindings()).asInt());
   }
@@ -60,8 +60,8 @@ public class TimestampExtractExprMacroTest
   {
     Expr expression = target.apply(
         ImmutableList.of(
-            ExprEval.of("2000-12-16").toExpr(),
-            ExprEval.of(TimestampExtractExprMacro.Unit.CENTURY.toString()).toExpr()
+            ExprEval.ofString("2000-12-16").toExpr(),
+            ExprEval.ofString(TimestampExtractExprMacro.Unit.CENTURY.toString()).toExpr()
         ));
     Assert.assertEquals(20, expression.eval(InputBindings.nilBindings()).asInt());
   }
@@ -71,8 +71,8 @@ public class TimestampExtractExprMacroTest
   {
     Expr expression = target.apply(
         ImmutableList.of(
-            ExprEval.of("2001-02-16").toExpr(),
-            ExprEval.of(TimestampExtractExprMacro.Unit.CENTURY.toString()).toExpr()
+            ExprEval.ofString("2001-02-16").toExpr(),
+            ExprEval.ofString(TimestampExtractExprMacro.Unit.CENTURY.toString()).toExpr()
         ));
     Assert.assertEquals(21, expression.eval(InputBindings.nilBindings()).asInt());
   }
@@ -82,8 +82,8 @@ public class TimestampExtractExprMacroTest
   {
     Expr expression = target.apply(
         ImmutableList.of(
-            ExprEval.of("2000-12-16").toExpr(),
-            ExprEval.of(TimestampExtractExprMacro.Unit.MILLENNIUM.toString()).toExpr()
+            ExprEval.ofString("2000-12-16").toExpr(),
+            ExprEval.ofString(TimestampExtractExprMacro.Unit.MILLENNIUM.toString()).toExpr()
         ));
     Assert.assertEquals(2, expression.eval(InputBindings.nilBindings()).asInt());
   }
@@ -93,8 +93,8 @@ public class TimestampExtractExprMacroTest
   {
     Expr expression = target.apply(
         ImmutableList.of(
-            ExprEval.of("2001-02-16").toExpr(),
-            ExprEval.of(TimestampExtractExprMacro.Unit.MILLENNIUM.toString()).toExpr()
+            ExprEval.ofString("2001-02-16").toExpr(),
+            ExprEval.ofString(TimestampExtractExprMacro.Unit.MILLENNIUM.toString()).toExpr()
         ));
     Assert.assertEquals(3, expression.eval(InputBindings.nilBindings()).asInt());
   }
@@ -104,9 +104,9 @@ public class TimestampExtractExprMacroTest
   {
     Expr expression = target.apply(
         ImmutableList.of(
-            ExprEval.of("2023-12-15").toExpr(),
-            ExprEval.of(TimestampExtractExprMacro.Unit.DOW.toString()).toExpr(),
-            ExprEval.of("UTC").toExpr()
+            ExprEval.ofString("2023-12-15").toExpr(),
+            ExprEval.ofString(TimestampExtractExprMacro.Unit.DOW.toString()).toExpr(),
+            ExprEval.ofString("UTC").toExpr()
         ));
     Assert.assertEquals(5, expression.eval(InputBindings.nilBindings()).asInt());
   }
