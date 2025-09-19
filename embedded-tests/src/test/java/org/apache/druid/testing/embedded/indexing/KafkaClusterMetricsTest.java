@@ -45,6 +45,7 @@ import org.apache.druid.testing.embedded.EmbeddedDruidServer;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
+import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.emitter.LatchableEmitterModule;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.joda.time.Period;
@@ -126,7 +127,8 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
            .addServer(overlord)
            .addServer(indexer)
            .addServer(broker)
-           .addServer(historical);
+           .addServer(historical)
+           .addServer(new EmbeddedRouter());
 
     return cluster;
   }
@@ -226,7 +228,8 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     );
 
     indexer.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("ingest/handoff/count"),
+        event -> event.hasMetricName("ingest/handoff/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, List.of(dataSource)),
         agg -> agg.hasSumAtLeast(expectedSegmentsHandedOff)
     );
 
@@ -412,7 +415,8 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     );
 
     indexer.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("ingest/handoff/count"),
+        event -> event.hasMetricName("ingest/handoff/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, List.of(dataSource)),
         agg -> agg.hasSumAtLeast(expectedSegmentsHandedOff)
     );
 
