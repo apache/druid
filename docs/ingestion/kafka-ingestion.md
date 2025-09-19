@@ -125,7 +125,7 @@ For configuration properties shared across all streaming ingestion methods, refe
 |`consumerProperties`|String, Object|A map of properties to pass to the Kafka consumer. See [Consumer properties](#consumer-properties) for details.|Yes. At the minimum, you must set the `bootstrap.servers` property to establish the initial connection to the Kafka cluster.||
 |`pollTimeout`|Long|The length of time to wait for the Kafka consumer to poll records, in milliseconds.|No|100|
 |`useEarliestOffset`|Boolean|If a supervisor is managing a datasource for the first time, it obtains a set of starting offsets from Kafka. This flag determines whether the supervisor retrieves the earliest or latest offsets in Kafka. Under normal circumstances, subsequent tasks start from where the previous segments ended so this flag is only used on the first run.|No|`false`|
-|`headerBasedFilteringConfig`|Object|Configuration for filtering Kafka records based on their headers before ingestion. See [Header-based filtering](#header-based-filtering) for more details.|No|null|
+|`headerBasedInclusionConfig`|Object|Configuration for including Kafka records based on their headers before ingestion. See [Header-based inclusion filtering](#header-based-inclusion-filtering) for more details.|No|null|
 |`idleConfig`|Object|Defines how and when the Kafka supervisor can become idle. See [Idle configuration](#idle-configuration) for more details.|No|null|
 
 #### Ingest from multiple topics
@@ -183,8 +183,8 @@ When you define the consumer properties in the supervisor spec, use the dynamic 
 ```json
 "consumerProperties": {
   "bootstrap.servers": "localhost:9092",
-  "security.protocol": "SASL_SSL", 
-  "sasl.mechanism": "PLAIN", 
+  "security.protocol": "SASL_SSL",
+  "sasl.mechanism": "PLAIN",
   "ssl.keystore.location": "/opt/kafka/config/kafka01.keystore.jks",
   "ssl.truststore.location": "/opt/kafka/config/kafka.truststore.jks",
   "druid.dynamic.config.provider": {
@@ -265,11 +265,11 @@ The following example shows a supervisor spec with idle configuration enabled:
 ```
 </details>
 
-#### Header-based filtering
+#### Header-based inclusion filtering
 
-Header-based filtering allows you to filter Kafka records based on their headers before ingestion, reducing the amount of data processed and improving ingestion performance. This is particularly useful when you want to ingest only a subset of records from a Kafka topic based on header values.
+Header-based inclusion filtering allows you to include only specific Kafka records based on their headers before ingestion, reducing the amount of data processed and improving ingestion performance. This is particularly useful when you want to ingest only a subset of records from a Kafka topic based on header values.
 
-The following table outlines the configuration options for `headerBasedFilteringConfig`:
+The following table outlines the configuration options for `headerBasedInclusionConfig`:
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
@@ -277,9 +277,9 @@ The following table outlines the configuration options for `headerBasedFiltering
 |`encoding`|String|The character encoding used to decode header values. Supported encodings include `UTF-8`, `UTF-16`, `ISO-8859-1`, `US-ASCII`, `UTF-16BE`, and `UTF-16LE`.|No|`UTF-8`|
 |`stringDecodingCacheSize`|Integer|The maximum number of decoded header strings to cache in memory. Set to a higher value for better performance when processing many unique header values.|No|10000|
 
-##### Header-based filtering example
+##### Header-based inclusion filtering example
 
-The following example shows how to configure header-based filtering to ingest only records where the `environment` header has the value `production` or `staging`:
+The following example shows how to configure header-based inclusion filtering to ingest only records where the `environment` header has the value `production` or `staging`:
 
 <details>
   <summary>Click to view the example</summary>
@@ -326,7 +326,7 @@ The following example shows how to configure header-based filtering to ingest on
       "consumerProperties": {
         "bootstrap.servers": "localhost:9092"
       },
-      "headerBasedFilteringConfig": {
+      "headerBasedInclusionConfig": {
         "filter": {
           "type": "in",
           "dimension": "environment",
@@ -355,14 +355,14 @@ In this example:
 
 ##### Performance considerations
 
-Header-based filtering provides several performance benefits:
+Header-based inclusion filtering provides several performance benefits:
 
 - **Reduced ingestion load**: Records are filtered before being processed by the ingestion pipeline
 - **Lower memory usage**: Filtered records don't consume memory in the ingestion process
 - **Improved throughput**: Less data to process means higher effective throughput
 - **String decoding cache**: Frequently accessed header values are cached to avoid repeated decoding
 
-Filtered events are tracked using the standard Druid ingestion metrics. The `ingest/events/filtered` metric reports the number of events rejected by header-based filtering. For more information about ingestion metrics, see [Ingestion metrics](../operations/metrics.md#other-ingestion-metrics).
+Filtered events are tracked using the standard Druid ingestion metrics. The `ingest/events/filtered` metric reports the number of events rejected by header-based inclusion filtering. For more information about ingestion metrics, see [Ingestion metrics](../operations/metrics.md#other-ingestion-metrics).
 
 #### Data format
 
@@ -403,7 +403,7 @@ You configure it as follows:
 - `valueFormat`: Define how to parse the payload value. Set this to the payload parsing input format (`{ "type": "json" }`).
 - `timestampColumnName`: Supply a custom name for the Kafka timestamp in the Druid schema to avoid conflicts with columns from the payload. The default is `kafka.timestamp`.
 - `topicColumnName`: Supply a custom name for the Kafka topic in the Druid schema to avoid conflicts with columns from the payload. The default is `kafka.topic`. This field is useful when ingesting data from multiple topics into the same datasource.
-- `headerFormat`: The default value `string` decodes strings in UTF-8 encoding from the Kafka header.  
+- `headerFormat`: The default value `string` decodes strings in UTF-8 encoding from the Kafka header.
    Other supported encoding formats include the following:
    - `ISO-8859-1`: ISO Latin Alphabet No. 1, that is, ISO-LATIN-1.
    - `US-ASCII`: Seven-bit ASCII. Also known as ISO646-US. The Basic Latin block of the Unicode character set.
@@ -419,7 +419,7 @@ You configure it as follows:
     "type": "tsv",
     "findColumnsFromHeader": false,
     "columns": ["x"]
-  } 
+  }
   ```
   Note that for `tsv`,`csv`, and `regex` formats, you need to provide a `columns` array to make a valid input format. Only the first one is used, and its name will be ignored in favor of `keyColumnName`.
 - `keyColumnName`: Supply the name for the Kafka key column to avoid conflicts with columns from the payload. The default is `kafka.key`.
@@ -461,7 +461,7 @@ It parses the example message as follows:
 ```
 
 Finally, add these Kafka metadata columns to the `dimensionsSpec` or set your `dimensionsSpec` to auto-detect columns.
-     
+
 The following supervisor spec demonstrates how to ingest the Kafka header, key, timestamp, and topic into Druid dimensions:
 
 <details>

@@ -27,7 +27,7 @@ import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
-import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedFilteringConfig;
+import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedInclusionConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
@@ -99,7 +99,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       boolean multiTopic
   )
   {
-    this(getKafkaConsumer(sortingMapper, consumerProperties, configOverrides), multiTopic, (KafkaHeaderBasedFilteringConfig) null);
+    this(getKafkaConsumer(sortingMapper, consumerProperties, configOverrides), multiTopic, (KafkaHeaderBasedInclusionConfig) null);
   }
 
   public KafkaRecordSupplier(
@@ -107,30 +107,30 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       ObjectMapper sortingMapper,
       KafkaConfigOverrides configOverrides,
       boolean multiTopic,
-      @Nullable KafkaHeaderBasedFilteringConfig headerBasedFilteringConfig
+      @Nullable KafkaHeaderBasedInclusionConfig headerBasedInclusionConfig
   )
   {
-    this(getKafkaConsumer(sortingMapper, consumerProperties, configOverrides), multiTopic, headerBasedFilteringConfig);
+    this(getKafkaConsumer(sortingMapper, consumerProperties, configOverrides), multiTopic, headerBasedInclusionConfig);
   }
 
   @VisibleForTesting
   public KafkaRecordSupplier(KafkaConsumer<byte[], byte[]> consumer, boolean multiTopic)
   {
-    this(consumer, multiTopic, (KafkaHeaderBasedFilteringConfig) null);
+    this(consumer, multiTopic, (KafkaHeaderBasedInclusionConfig) null);
   }
 
   @VisibleForTesting
   public KafkaRecordSupplier(
       KafkaConsumer<byte[], byte[]> consumer,
       boolean multiTopic,
-      @Nullable KafkaHeaderBasedFilteringConfig headerBasedFilteringConfig
+      @Nullable KafkaHeaderBasedInclusionConfig headerBasedInclusionConfig
   )
   {
     this.consumer = consumer;
     this.multiTopic = multiTopic;
     this.monitor = new KafkaConsumerMonitor(consumer);
-    this.headerFilterEvaluator = headerBasedFilteringConfig != null ?
-        new KafkaHeaderBasedFilterEvaluator(headerBasedFilteringConfig) : null;
+    this.headerFilterEvaluator = headerBasedInclusionConfig != null ?
+        new KafkaHeaderBasedFilterEvaluator(headerBasedInclusionConfig) : null;
   }
 
   @Override

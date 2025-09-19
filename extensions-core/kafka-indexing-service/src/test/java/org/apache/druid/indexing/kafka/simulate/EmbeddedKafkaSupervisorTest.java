@@ -28,7 +28,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
-import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedFilteringConfig;
+import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedInclusionConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpecBuilder;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
@@ -207,7 +207,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
   private KafkaSupervisorSpec createKafkaSupervisorWithHeaderFilter(String supervisorId, String topic)
   {
     InDimFilter filter = new InDimFilter("environment", ImmutableSet.of("production"));
-    KafkaHeaderBasedFilteringConfig headerFilterConfig = new KafkaHeaderBasedFilteringConfig(filter, "UTF-8", 1000);
+    KafkaHeaderBasedInclusionConfig headerFilterConfig = new KafkaHeaderBasedInclusionConfig(filter, "UTF-8", 1000);
 
     return new KafkaSupervisorSpecBuilder()
         .withDataSchema(
@@ -225,7 +225,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
                 .withInputFormat(new CsvInputFormat(List.of("timestamp", "item"), null, null, false, 0, false))
                 .withConsumerProperties(kafkaServer.consumerProperties())
                 .withUseEarliestSequenceNumber(true)
-                .withHeaderBasedFilteringConfig(headerFilterConfig)
+                .withheaderBasedInclusionConfig(headerFilterConfig)
         )
         .withId(supervisorId)
         .build(dataSource, topic);

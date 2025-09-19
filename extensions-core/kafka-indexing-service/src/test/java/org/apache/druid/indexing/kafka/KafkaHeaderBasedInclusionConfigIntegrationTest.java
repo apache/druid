@@ -20,7 +20,7 @@
 package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedFilteringConfig;
+import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedInclusionConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.filter.InDimFilter;
@@ -37,7 +37,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 
-public class KafkaHeaderBasedFilteringConfigIntegrationTest
+public class KafkaHeaderBasedInclusionConfigIntegrationTest
 {
   private KafkaHeaderBasedFilterEvaluator evaluator;
   private final ObjectMapper objectMapper = new DefaultObjectMapper();
@@ -91,7 +91,7 @@ public class KafkaHeaderBasedFilteringConfigIntegrationTest
   {
     // Test Case: Only include records from production environment
     InDimFilter filter = new InDimFilter("environment", Collections.singletonList("production"), null);
-    KafkaHeaderBasedFilteringConfig headerFilter = new KafkaHeaderBasedFilteringConfig(filter, null, null);
+    KafkaHeaderBasedInclusionConfig headerFilter = new KafkaHeaderBasedInclusionConfig(filter, null, null);
     evaluator = new KafkaHeaderBasedFilterEvaluator(headerFilter);
 
     // Production record - should be included
@@ -127,7 +127,7 @@ public class KafkaHeaderBasedFilteringConfigIntegrationTest
   {
     // Test Case: Include records from multiple services
     InDimFilter filter = new InDimFilter("service", Arrays.asList("user-service", "payment-service"), null);
-    KafkaHeaderBasedFilteringConfig headerFilter = new KafkaHeaderBasedFilteringConfig(filter, null, null);
+    KafkaHeaderBasedInclusionConfig headerFilter = new KafkaHeaderBasedInclusionConfig(filter, null, null);
     evaluator = new KafkaHeaderBasedFilterEvaluator(headerFilter);
 
     // User service record - should be included
@@ -171,7 +171,7 @@ public class KafkaHeaderBasedFilteringConfigIntegrationTest
         ),
         null
     );
-    KafkaHeaderBasedFilteringConfig headerFilter = new KafkaHeaderBasedFilteringConfig(filter, null, null);
+    KafkaHeaderBasedInclusionConfig headerFilter = new KafkaHeaderBasedInclusionConfig(filter, null, null);
     evaluator = new KafkaHeaderBasedFilterEvaluator(headerFilter);
 
     // Matching metric - should be included
@@ -198,7 +198,7 @@ public class KafkaHeaderBasedFilteringConfigIntegrationTest
   {
     // Test Case: Verify basic filtering behavior
     InDimFilter filter = new InDimFilter("environment", Collections.singletonList("production"), null);
-    KafkaHeaderBasedFilteringConfig headerFilter = new KafkaHeaderBasedFilteringConfig(filter, null, null);
+    KafkaHeaderBasedInclusionConfig headerFilter = new KafkaHeaderBasedInclusionConfig(filter, null, null);
     evaluator = new KafkaHeaderBasedFilterEvaluator(headerFilter);
 
     // Process multiple records to verify filtering logic
@@ -217,13 +217,13 @@ public class KafkaHeaderBasedFilteringConfigIntegrationTest
   {
     // Test that header filter configurations can be serialized/deserialized correctly
     InDimFilter filter = new InDimFilter("environment", Arrays.asList("production", "staging"), null);
-    KafkaHeaderBasedFilteringConfig originalFilter = new KafkaHeaderBasedFilteringConfig(filter, "UTF-16", null);
+    KafkaHeaderBasedInclusionConfig originalFilter = new KafkaHeaderBasedInclusionConfig(filter, "UTF-16", null);
 
     // Serialize to JSON
     String json = objectMapper.writeValueAsString(originalFilter);
 
     // Deserialize back
-    KafkaHeaderBasedFilteringConfig deserializedFilter = objectMapper.readValue(json, KafkaHeaderBasedFilteringConfig.class);
+    KafkaHeaderBasedInclusionConfig deserializedFilter = objectMapper.readValue(json, KafkaHeaderBasedInclusionConfig.class);
 
     // Verify they're equivalent
     Assert.assertEquals(originalFilter.getFilter(), deserializedFilter.getFilter());
@@ -243,7 +243,7 @@ public class KafkaHeaderBasedFilteringConfigIntegrationTest
     String testValue = "café"; // Contains non-ASCII characters
 
     InDimFilter filter = new InDimFilter("text", Collections.singletonList(testValue), null);
-    KafkaHeaderBasedFilteringConfig headerFilter = new KafkaHeaderBasedFilteringConfig(filter, "ISO-8859-1", null);
+    KafkaHeaderBasedInclusionConfig headerFilter = new KafkaHeaderBasedInclusionConfig(filter, "ISO-8859-1", null);
     evaluator = new KafkaHeaderBasedFilterEvaluator(headerFilter);
 
     // Create record with ISO-8859-1 encoded header
@@ -260,7 +260,7 @@ public class KafkaHeaderBasedFilteringConfigIntegrationTest
   {
     // Test with custom cache size
     InDimFilter filter = new InDimFilter("environment", Collections.singletonList("production"), null);
-    KafkaHeaderBasedFilteringConfig headerFilter = new KafkaHeaderBasedFilteringConfig(filter, null, 100_000);
+    KafkaHeaderBasedInclusionConfig headerFilter = new KafkaHeaderBasedInclusionConfig(filter, null, 100_000);
     evaluator = new KafkaHeaderBasedFilterEvaluator(headerFilter);
 
     ConsumerRecord<byte[], byte[]> record = createRecord("events", 0, 100L, headers("environment", "production"));

@@ -21,7 +21,7 @@ package org.apache.druid.indexing.kafka;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedFilteringConfig;
+import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedInclusionConfig;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
@@ -45,23 +45,23 @@ public class KafkaHeaderBasedFilterEvaluator
   private final Charset encoding;
   private final Cache<ByteBuffer, String> stringDecodingCache;
 
-  public KafkaHeaderBasedFilterEvaluator(KafkaHeaderBasedFilteringConfig headerBasedFilteringConfig)
+  public KafkaHeaderBasedFilterEvaluator(KafkaHeaderBasedInclusionConfig headerBasedInclusionConfig)
   {
-    this.encoding = Charset.forName(headerBasedFilteringConfig.getEncoding());
+    this.encoding = Charset.forName(headerBasedInclusionConfig.getEncoding());
     this.stringDecodingCache = Caffeine.newBuilder()
-        .maximumSize(headerBasedFilteringConfig.getStringDecodingCacheSize())
+        .maximumSize(headerBasedInclusionConfig.getStringDecodingCacheSize())
         .build();
 
-    this.filter = headerBasedFilteringConfig.getFilter().toFilter();
+    this.filter = headerBasedInclusionConfig.getFilter().toFilter();
     if (!(filter instanceof InDimFilter)) {
       // Only InDimFilter supported
       throw new IllegalStateException("Unsupported filter type: " + filter.getClass().getSimpleName());
     }
 
     log.info("Initialized Kafka header filter with encoding [%s] - direct evaluation for [%s] with Caffeine string cache (max %d entries)",
-             headerBasedFilteringConfig.getEncoding(),
+             headerBasedInclusionConfig.getEncoding(),
              this.filter.getClass().getSimpleName(),
-             headerBasedFilteringConfig.getStringDecodingCacheSize());
+             headerBasedInclusionConfig.getStringDecodingCacheSize());
   }
 
 
