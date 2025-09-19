@@ -47,6 +47,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  *
@@ -81,7 +82,10 @@ public class StatusResource
   {
     Map<String, String> allProperties = Maps.fromProperties(properties);
     Set<String> hiddenProperties = druidServerConfig.getHiddenProperties();
-    return filterHiddenProperties(hiddenProperties, allProperties);
+    Map<String, String> filtered = filterHiddenProperties(hiddenProperties, allProperties);
+
+    //    Return the properties in sorted order
+    return new TreeMap<>(filtered);
   }
 
   /**

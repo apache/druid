@@ -213,10 +213,15 @@ public class S3Utils
 
   static String constructSegmentPath(String baseKey, String storageDir)
   {
+    return constructSegmentBasePath(baseKey, storageDir) + "index.zip";
+  }
+
+  static String constructSegmentBasePath(String baseKey, String storageDir)
+  {
     return JOINER.join(
         baseKey.isEmpty() ? null : baseKey,
         storageDir
-    ) + "/index.zip";
+    ) + "/";
   }
 
   static AccessControlList grantFullControlToBucketOwner(ServerSideEncryptingAmazonS3 s3Client, String bucket)

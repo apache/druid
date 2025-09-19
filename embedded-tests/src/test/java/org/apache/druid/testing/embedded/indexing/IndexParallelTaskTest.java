@@ -155,7 +155,7 @@ public class IndexParallelTaskTest extends EmbeddedClusterTestBase
                    );
 
     runTask(indexTask, dataSource);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
     runQueries(dataSource);
 
     // Re-index into a different datasource, indexing 1 segment per sub-task
@@ -181,7 +181,7 @@ public class IndexParallelTaskTest extends EmbeddedClusterTestBase
                    );
 
     runTask(reindexTaskSplitBySegment, dataSource2);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource2, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource2, coordinator, broker);
     runQueries(dataSource2);
 
     // Re-index into a different datasource, indexing 1 file per sub-task
@@ -207,7 +207,7 @@ public class IndexParallelTaskTest extends EmbeddedClusterTestBase
                    );
 
     runTask(reindexTaskSplitByFile, dataSource3);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource3, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource3, coordinator, broker);
     runQueries(dataSource3);
   }
 

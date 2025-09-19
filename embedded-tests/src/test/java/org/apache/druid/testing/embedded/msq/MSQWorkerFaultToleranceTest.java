@@ -47,6 +47,7 @@ import java.util.Map;
  */
 public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
 {
+  private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator()
       .addProperty("druid.manager.segments.useIncrementalCache", "ifSynced");
@@ -126,7 +127,7 @@ public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
 
     // Verify that the controller task eventually succeeds
     cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord.latchableEmitter());
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     cluster.callApi().verifySqlQuery(
         "SELECT __time, isRobot, added, delta, deleted, namespace FROM %s",
