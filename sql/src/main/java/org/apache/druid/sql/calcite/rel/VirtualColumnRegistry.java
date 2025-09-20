@@ -41,7 +41,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -172,12 +171,6 @@ public class VirtualColumnRegistry
            : expression.toVirtualColumn(virtualColumnName, columnType, expressionParser);
   }
 
-  @Nullable
-  public String getVirtualColumnByExpression(DruidExpression expression, RelDataType typeHint)
-  {
-    return virtualColumnsByExpression.get(wrap(expression, Calcites.getColumnTypeForRelDataType(typeHint)));
-  }
-
   /**
    * Get a signature representing the base signature plus all registered virtual columns.
    */
@@ -245,18 +238,6 @@ public class VirtualColumnRegistry
   }
 
   /**
-   * @deprecated use {@link #findVirtualColumnExpressions(List)} instead
-   */
-  @Deprecated
-  public List<VirtualColumn> findVirtualColumns(List<String> allColumns)
-  {
-    return allColumns.stream()
-                     .filter(this::isVirtualColumnDefined)
-                     .map(this::getVirtualColumn)
-                     .collect(Collectors.toList());
-  }
-
-  /**
    * @deprecated use {@link #getOrCreateVirtualColumnForExpression(DruidExpression, ColumnType)} instead
    */
   @Deprecated
@@ -268,37 +249,6 @@ public class VirtualColumnRegistry
   {
     final String name = getOrCreateVirtualColumnForExpression(expression, valueType);
     return getVirtualColumn(name);
-  }
-
-  /**
-   * @deprecated use {@link #getOrCreateVirtualColumnForExpression(DruidExpression, RelDataType)} instead
-   */
-  @Deprecated
-  public VirtualColumn getOrCreateVirtualColumnForExpression(
-      PlannerContext plannerContext,
-      DruidExpression expression,
-      RelDataType dataType
-  )
-  {
-    return getOrCreateVirtualColumnForExpression(
-        plannerContext,
-        expression,
-        Calcites.getColumnTypeForRelDataType(dataType)
-    );
-  }
-
-  /**
-   * @deprecated use {@link #getVirtualColumnByExpression(DruidExpression, RelDataType)} instead
-   */
-  @Deprecated
-  @Nullable
-  public VirtualColumn getVirtualColumnByExpression(String expression, RelDataType type)
-  {
-    final ColumnType columnType = Calcites.getColumnTypeForRelDataType(type);
-    ExpressionAndTypeHint wrapped = wrap(DruidExpression.fromExpression(expression), columnType);
-    return Optional.ofNullable(virtualColumnsByExpression.get(wrapped))
-                   .map(this::getVirtualColumn)
-                   .orElse(null);
   }
 
   private static ExpressionAndTypeHint wrap(DruidExpression expression, ColumnType typeHint)

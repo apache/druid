@@ -684,7 +684,6 @@ FROM test_json_cols;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -780,7 +779,6 @@ FROM test_json_cols;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -876,7 +874,6 @@ FROM test_json_cols;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"ARRAY<STRING>\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
