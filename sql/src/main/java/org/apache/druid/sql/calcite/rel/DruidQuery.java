@@ -735,15 +735,8 @@ public class DruidQuery
   }
 
   /**
-   * Returns the virtual columns required for a query.
-   *
-   * Does not necessarily return all virtual columns from {@link #sourceRowSignature}, only the ones actually
-   * referenced. May add specialized virtual columns that do not appear in {@link #sourceRowSignature}, when
-   * specialized expressions ({@link DruidExpression.NodeType#SPECIALIZED}) are in play.
-   *
-   * As part of creating specialized virtual columns, this method may rewrite virtual columns in
-   * {@link #virtualColumnRegistry}. Therefore, this method must be called prior to using any virtual columns in
-   * building a query.
+   * Returns the virtual columns required for a query. Does not necessarily return all virtual columns from
+   * {@link #sourceRowSignature}, only the ones actually referenced  (and any that they depend on).
    *
    * @param includeDimensions whether to include virtual columns refered by {@link Grouping#getDimensions()}
    */
