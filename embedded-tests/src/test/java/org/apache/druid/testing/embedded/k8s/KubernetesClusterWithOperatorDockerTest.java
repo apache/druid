@@ -62,12 +62,12 @@ public class KubernetesClusterWithOperatorDockerTest extends IngestionSmokeTest 
     
     return cluster
         .useContainerFriendlyHostname()
+        .useDefaultTimeoutForLatchableEmitter(60)
         .addResource(k3sCluster)
         .addServer(overlord)
         .addServer(broker)
         .addServer(eventCollector)
         .addCommonProperty("druid.indexer.task.encapsulatedTask", "true")
-        .addCommonProperty("druid.emitter.latching.defaultWaitTimeoutMillis", "60000")
         .addCommonProperty(
             "druid.extensions.loadList",
             "[\"druid-s3-extensions\", \"druid-kafka-indexing-service\","

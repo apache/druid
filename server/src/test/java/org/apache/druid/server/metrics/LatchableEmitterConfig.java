@@ -38,6 +38,10 @@ public class LatchableEmitterConfig
     this.defaultWaitTimeoutMillis = Configs.valueOrDefault(defaultWaitTimeoutMillis, 5_000);
   }
 
+  /**
+   * Default time to wait for an event to be emitted. Slow tests can set this
+   * config to a high value to avoid failures.
+   */
   public long getDefaultWaitTimeoutMillis()
   {
     return defaultWaitTimeoutMillis;

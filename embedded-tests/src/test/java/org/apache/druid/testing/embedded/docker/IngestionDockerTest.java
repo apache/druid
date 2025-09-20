@@ -52,6 +52,7 @@ public class IngestionDockerTest extends IngestionSmokeTest implements LatestIma
     overlord.addProperty("druid.plaintextPort", "7090");
 
     return cluster
+        .useDefaultTimeoutForLatchableEmitter(60)
         .useContainerFriendlyHostname()
         .addResource(containerOverlord)
         .addResource(containerCoordinator)
@@ -61,7 +62,6 @@ public class IngestionDockerTest extends IngestionSmokeTest implements LatestIma
         .addServer(overlord)
         .addServer(broker)
         .addServer(eventCollector)
-        .addCommonProperty("druid.emitter.latching.defaultWaitTimeoutMillis", "60000")
         .addCommonProperty(
             "druid.extensions.loadList",
             "[\"druid-s3-extensions\", \"druid-kafka-indexing-service\","
