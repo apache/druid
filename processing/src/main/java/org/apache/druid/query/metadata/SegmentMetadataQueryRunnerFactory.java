@@ -225,21 +225,36 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                   )
                   {
                     final Query<SegmentAnalysis> query = queryPlus.getQuery();
-                    final int priority = query.context().getPriority();
+                    final QueryContext context = query.context();
+                    final int priority = context.getPriority();
+                    final boolean usePerSegmentTimeout = context.usePerSegmentTimeout();
+                    final long perSegmentTimeout = context.getPerSegmentTimeout();
                     final QueryPlus<SegmentAnalysis> threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
-                    ListenableFuture<Sequence<SegmentAnalysis>> future = queryProcessingPool.submitRunnerTask(
-                        new AbstractPrioritizedQueryRunnerCallable<>(priority, input)
-                        {
-                          @Override
-                          public Sequence<SegmentAnalysis> call()
-                          {
-                            return Sequences.simple(input.run(threadSafeQueryPlus, responseContext).toList());
-                          }
-                        }
-                    );
+                    final AbstractPrioritizedQueryRunnerCallable callable = new AbstractPrioritizedQueryRunnerCallable<>(
+                        priority,
+                        input
+                    )
+                    {
+                      @Override
+                      public Sequence<SegmentAnalysis> call()
+                      {
+                        return Sequences.simple(input.run(threadSafeQueryPlus, responseContext).toList());
+                      }
+                    };
+
+                    final ListenableFuture<Sequence<SegmentAnalysis>> future;
+                    if (usePerSegmentTimeout) {
+                      future = queryProcessingPool.submitRunnerTask(
+                          callable,
+                          perSegmentTimeout,
+                          TimeUnit.MILLISECONDS
+                      );
+                    } else {
+                      future = queryProcessingPool.submitRunnerTask(callable);
+                    }
+
                     try {
                       queryWatcher.registerQueryFuture(query, future);
-                      final QueryContext context = query.context();
                       if (context.hasTimeout()) {
                         return future.get(context.getTimeout(), TimeUnit.MILLISECONDS);
                       } else {
@@ -263,6 +278,15 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                       ));
                     }
                     catch (ExecutionException e) {
+                      future.cancel(true);
+                      Throwable cause = e.getCause();
+                      if (cause instanceof TimeoutException || cause instanceof QueryTimeoutException) {
+                        log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
+                        throw new QueryTimeoutException(StringUtils.nonStrictFormat(
+                            "Query [%s] timed out",
+                            query.getId()
+                        ));
+                      }
                       throw new RuntimeException(e);
                     }
                   }
