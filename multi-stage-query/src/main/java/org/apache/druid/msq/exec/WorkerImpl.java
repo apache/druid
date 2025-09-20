@@ -427,7 +427,7 @@ public class WorkerImpl implements Worker
     );
 
     // Set up processorCloser (called when processing is done).
-    kernelHolder.processorCloser.register(() -> runWorkOrder.stopUnchecked(null));
+    kernelHolder.processorCloser.register(() -> runWorkOrder.stop(null));
 
     // Start working on this stage immediately.
     kernel.startReading();
