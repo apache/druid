@@ -340,6 +340,7 @@ public class KafkaSupervisorIOConfigTest
         null,
         null,
         null,
+        null,
         false
     );
     String ioConfig = mapper.writeValueAsString(kafkaSupervisorIOConfig);
@@ -369,6 +370,7 @@ public class KafkaSupervisorIOConfigTest
         new Period("PT30S"),
         true,
         new Period("PT30M"),
+        null,
         null,
         null,
         null,
@@ -421,6 +423,7 @@ public class KafkaSupervisorIOConfigTest
         new Period("PT30S"),
         true,
         new Period("PT30M"),
+        null,
         null,
         null,
         null,

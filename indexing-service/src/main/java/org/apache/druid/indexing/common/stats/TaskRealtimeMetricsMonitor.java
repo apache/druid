@@ -61,7 +61,7 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
     this.dimensions = ImmutableMap.copyOf(dimensions);
     this.metricTags = metricTags;
     previousSegmentGenerationMetrics = new SegmentGenerationMetrics();
-    previousRowIngestionMetersTotals = new RowIngestionMetersTotals(0, 0, 0, 0, 0);
+    previousRowIngestionMetersTotals = new RowIngestionMetersTotals(0, 0, 0, 0, 0, 0);
   }
 
   @Override
@@ -97,6 +97,9 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
     emitter.emit(builder.setMetric("ingest/events/processedWithError", processedWithError));
 
     emitter.emit(builder.setMetric("ingest/events/processed", rowIngestionMetersTotals.getProcessed() - previousRowIngestionMetersTotals.getProcessed()));
+
+    final long filtered = rowIngestionMetersTotals.getFiltered() - previousRowIngestionMetersTotals.getFiltered();
+    emitter.emit(builder.setMetric("ingest/events/filtered", filtered));
 
     final long dedup = metrics.dedup() - previousSegmentGenerationMetrics.dedup();
     if (dedup > 0) {
