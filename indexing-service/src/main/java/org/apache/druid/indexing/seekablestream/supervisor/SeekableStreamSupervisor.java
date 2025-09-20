@@ -73,6 +73,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.TaskConfigUpdateRequest;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
@@ -128,6 +129,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
@@ -195,14 +197,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // this task group has completed successfully, at which point this will be destroyed and a new task group will be
     // created with new starting sequences. This allows us to create replacement tasks for failed tasks that process the
     // same sequences, even if the values in [partitionGroups] has been changed.
-    final ImmutableMap<PartitionIdType, SequenceOffsetType> startingSequences;
+    // In perpetually-running tasks mode, the actively running task groups will be replaced with new task groups with updated starting sequences.
+    ImmutableMap<PartitionIdType, SequenceOffsetType> startingSequences;
 
     // We don't include closed partitions in the starting offsets. However, we keep the full unfiltered map of
     // partitions, only used for generating the sequence name, to avoid ambiguity in sequence names if mulitple
     // task groups have nothing but closed partitions in their assignments.
+
     final ImmutableMap<PartitionIdType, SequenceOffsetType> unfilteredStartingSequencesForSequenceName;
 
     final ConcurrentHashMap<String, TaskData> tasks = new ConcurrentHashMap<>();
+
     final DateTime minimumMessageTime;
     final DateTime maximumMessageTime;
     final Set<PartitionIdType> exclusiveStartSequenceNumberPartitions;
@@ -211,6 +216,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     DateTime completionTimeout; // is set after signalTasksToFinish(); if not done by timeout, take corrective action
 
     boolean handoffEarly = false; // set by SupervisorManager.stopTaskGroupEarly
+
+    public int getId()
+    {
+      return groupId;
+    }
+
+    public DateTime getMinimumMessageTime()
+    {
+      return minimumMessageTime;
+    }
+
+    public DateTime getMaximumMessageTime()
+    {
+      return maximumMessageTime;
+    }
 
     TaskGroup(
         int groupId,
@@ -297,6 +317,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
              "groupId=" + groupId +
              ", tasks=" + tasks +
              '}';
+    }
+
+    public TaskGroup withStartingSequences(Map<PartitionIdType, SequenceOffsetType> newStartingSequences)
+    {
+      this.startingSequences = ImmutableMap.copyOf(newStartingSequences);
+      return this;
     }
   }
 
@@ -520,8 +546,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             emitter.emit(event.setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
           }
 
-          boolean allocationSuccess = changeTaskCount(desiredTaskCount);
-          if (allocationSuccess) {
+          boolean allocationSuccess = changeTaskCount(desiredTaskCount, onSuccessfulScale);
+          if (allocationSuccess && !spec.usePerpetuallyRunningTasks()) {
             onSuccessfulScale.run();
             dynamicTriggerLastRunTime = nowTime;
           }
@@ -548,12 +574,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * After the taskCount is changed in SeekableStreamSupervisorIOConfig, next RunNotice will create scaled number of ingest tasks without resubmitting the supervisor.
    *
    * @param desiredActiveTaskCount desired taskCount computed from AutoScaler
+   * @param successfulScaleAutoScalerCallback callback to be triggered on successful scale action for AutoScaler to reset its queue.
    * @return Boolean flag indicating if scale action was executed or not. If true, it will wait at least 'minTriggerScaleActionFrequencyMillis' before next 'changeTaskCount'.
    * If false, it will do 'changeTaskCount' again after 'scaleActionPeriodMillis' millis.
    * @throws InterruptedException
    * @throws ExecutionException
    */
-  private boolean changeTaskCount(int desiredActiveTaskCount)
+  private boolean changeTaskCount(int desiredActiveTaskCount, Runnable successfulScaleAutoScalerCallback)
       throws InterruptedException, ExecutionException
   {
     int currentActiveTaskCount;
@@ -571,25 +598,333 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           dataSource
       );
       final Stopwatch scaleActionStopwatch = Stopwatch.createStarted();
-      gracefulShutdownInternal();
-      changeTaskCountInIOConfig(desiredActiveTaskCount);
-      clearAllocationInfo();
-      emitter.emit(ServiceMetricEvent.builder()
-                                     .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
-                                     .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                                     .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
-                                     .setDimensionIfNotNull(
-                                         DruidMetrics.TAGS,
-                                         spec.getContextValue(DruidMetrics.TAGS)
-                                     )
-                                     .setMetric(
-                                         AUTOSCALER_SCALING_TIME_METRIC,
-                                         scaleActionStopwatch.millisElapsed()
-                                     ));
+      
+      if (spec.usePerpetuallyRunningTasks()) {
+        return changeTaskCountForPerpetualTasks(desiredActiveTaskCount, successfulScaleAutoScalerCallback);
+      } else {
+        gracefulShutdownInternal();
+        changeTaskCountInIOConfig(desiredActiveTaskCount);
+        clearAllocationInfo();
+      }
+      emitAutoScalerRunMetric(scaleActionStopwatch);
       log.info("Changed taskCount to [%s] for supervisor[%s] for dataSource[%s].", desiredActiveTaskCount, supervisorId, dataSource);
       return true;
     }
   }
+
+  private void emitAutoScalerRunMetric(Stopwatch scaleActionStopwatch)
+  {
+    emitter.emit(ServiceMetricEvent.builder()
+                                   .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
+                                   .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                                   .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
+                                   .setDimensionIfNotNull(
+                                       DruidMetrics.TAGS,
+                                       spec.getContextValue(DruidMetrics.TAGS)
+                                   )
+                                   .setMetric(
+                                       AUTOSCALER_SCALING_TIME_METRIC,
+                                       scaleActionStopwatch.millisElapsed()
+                                   ));
+  }
+
+  /**
+   * Handles task count changes for perpetual tasks using updateConfig instead of graceful shutdown.
+   * This approach pauses tasks, recalculates partition assignments, and sends config updates.
+   */
+  private boolean changeTaskCountForPerpetualTasks(int desiredActiveTaskCount,
+                                                   Runnable successfulScaleAutoScalerCallback
+  )
+      throws InterruptedException, ExecutionException
+  {
+    if (!isDynamicAllocationOngoing.compareAndSet(false, true)) {
+      log.info("A dynamic allocation is already ongoing, skipping this request.");
+      return false;
+    }
+    final Stopwatch scaleActionStopwatch = Stopwatch.createStarted();
+    log.info("Handling task count change for perpetual tasks from [%d] to [%d]",
+             activelyReadingTaskGroups.size(), desiredActiveTaskCount);
+
+    Map<PartitionIdType, SequenceOffsetType> offsetsFromTasks = pauseAndCheckpointAllTasks();
+
+    if (offsetsFromTasks.isEmpty()) {
+      isDynamicAllocationOngoing.set(false);
+      return false;
+    }
+    pendingConfigUpdateHook = () -> updateTaskConfigsAndCompleteAutoScaleEvent(
+        offsetsFromTasks,
+        scaleActionStopwatch,
+        desiredActiveTaskCount,
+        successfulScaleAutoScalerCallback
+    );
+    return true;
+  }
+
+  /**
+   * This function sends the config updates to all the tasks with new partition assignments and offsets. In an auto-scaling
+   * lifecycle, this marks the end of the scale action.
+   */
+  private boolean updateTaskConfigsAndCompleteAutoScaleEvent(
+      Map<PartitionIdType, SequenceOffsetType> offsetsFromTasks,
+      Stopwatch scaleActionStopwatch,
+      int desiredActiveTaskCount,
+      Runnable successfulScaleAutoScalerCallback
+  ) throws InterruptedException, ExecutionException
+  {
+    changeTaskCountInIOConfig(desiredActiveTaskCount);
+    Map<Integer, Set<PartitionIdType>> newPartitionGroups = calculateNewPartitionGroups();
+
+    boolean success = sendConfigUpdatesToTasks(newPartitionGroups, offsetsFromTasks);
+
+    if (success) {
+      updatePartitionGroupsForPerpetualTasks(newPartitionGroups);
+
+      log.info("Successfully updated task configurations for perpetual tasks scaling");
+    } else {
+      log.error("Failed to update task configurations for perpetual tasks");
+    }
+
+    isDynamicAllocationOngoing.set(false);
+    emitAutoScalerRunMetric(scaleActionStopwatch);
+
+    // You need to set the auto scaler specific stuff here.
+    successfulScaleAutoScalerCallback.run();
+    dynamicTriggerLastRunTime = System.currentTimeMillis();
+    return success;
+  }
+
+
+  private Map<PartitionIdType, SequenceOffsetType> pauseAndCheckpointAllTasks() throws InterruptedException, ExecutionException
+  {
+    log.info("Pausing all tasks for perpetual task scaling");
+    List<ListenableFuture<Map<PartitionIdType, SequenceOffsetType>>> pauseFutures = new ArrayList<>();
+    
+    for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
+      for (String taskId : taskGroup.taskIds()) {
+        log.debug("Pausing & Checkpointing tasks [%s]", taskId);
+        pauseFutures.add(taskClient.pauseAndCheckpointAsync(taskId));
+      }
+    }
+
+    if (pauseFutures.isEmpty()) {
+      log.warn("No tasks found to pause for perpetual task scaling");
+      return Collections.emptyMap();
+    }
+
+    Map<PartitionIdType, SequenceOffsetType> consolidatedLatestOffsets = new HashMap<>();
+
+    int tasksToWaitFor = pauseFutures.size();
+    checkpointsToWaitFor = tasksToWaitFor;
+    log.info("Broadcasting pauseAndCheckpoint to [%d] tasks", tasksToWaitFor);
+
+    List<Either<Throwable, Map<PartitionIdType, SequenceOffsetType>>> latestOffsets = coalesceAndAwait(pauseFutures);
+    for (Either<Throwable, Map<PartitionIdType, SequenceOffsetType>> result : latestOffsets) {
+      if (result.isError()) {
+        log.warn("Failed to pause and checkpoint task[%s]", result.error().getMessage());
+      } else {
+        Map<PartitionIdType, SequenceOffsetType> offsets = result.valueOrThrow();
+        offsets.forEach((partition, offset) ->
+                            consolidatedLatestOffsets.merge(
+                                partition,
+                                offset,
+                                (key, existingOffset) -> {
+                                  OrderedSequenceNumber<SequenceOffsetType> existing = makeSequenceNumber(existingOffset);
+                                  OrderedSequenceNumber<SequenceOffsetType> incoming = makeSequenceNumber(offset);
+                                  return existing.compareTo(incoming) >= 0 ? existingOffset : offset;
+                                }
+                            ));
+      }
+    }
+
+    log.info("Successfully paused & checkpoints requested from [%d] tasks", pauseFutures.size());
+    return consolidatedLatestOffsets;
+  }
+
+  /**
+   * Calculates new partition groups.
+   */
+  private Map<Integer, Set<PartitionIdType>> calculateNewPartitionGroups()
+  {
+    log.info("Calculating new partition groups using getTaskGroupIdForPartition() logic");
+    Map<Integer, Set<PartitionIdType>> newPartitionGroups = new HashMap<>();
+
+    List<PartitionIdType> allPartitions = new ArrayList<>(partitionIds);
+
+    if (allPartitions.isEmpty()) {
+      log.warn("No partitions available for assignment");
+      return newPartitionGroups;
+    }
+
+    for (PartitionIdType partition : allPartitions) {
+      int taskGroupId = getTaskGroupIdForPartition(partition);
+      newPartitionGroups.computeIfAbsent(taskGroupId, k -> new HashSet<>()).add(partition);
+    }
+
+    log.info("Created [%d] new partition groups: %s", newPartitionGroups.size(), newPartitionGroups);
+    return newPartitionGroups;
+  }
+
+  /**
+   * Sends configuration updates to tasks with new partition assignments.
+   * Also handles cleanup of obsolete task groups when scaling down.
+   */
+  private boolean sendConfigUpdatesToTasks(Map<Integer, Set<PartitionIdType>> newPartitionGroups, Map<PartitionIdType, SequenceOffsetType> latestTaskOffsetsOnPause)
+      throws InterruptedException, ExecutionException
+  {
+    log.info("Sending configuration updates to the following partition groups %s", newPartitionGroups);
+    List<ListenableFuture<Boolean>> updateFutures = new ArrayList<>();
+    Map<PartitionIdType, SequenceOffsetType> latestCommittedOffsets = getOffsetsFromMetadataStorage();
+    for (Map.Entry<Integer, TaskGroup> entry : activelyReadingTaskGroups.entrySet()) {
+      int taskGroupId = entry.getKey();
+      TaskGroup existingTaskGroup = entry.getValue();
+
+      Set<PartitionIdType> partitionsForThisTask = new HashSet<>(newPartitionGroups.getOrDefault(taskGroupId, Set.of()));
+      SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig = createUpdatedTaskIoConfig(
+          partitionsForThisTask,
+          existingTaskGroup,
+          latestCommittedOffsets,
+          latestTaskOffsetsOnPause
+      );
+      Map<PartitionIdType, SequenceOffsetType> newStartingSequences = newIoConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap();
+      TaskGroup newTaskGroup = existingTaskGroup.withStartingSequences(newStartingSequences);
+      for (String taskId : existingTaskGroup.taskIds()) {
+        log.info("Updating config for task [%s] with partitions [%s]", taskId, partitionsForThisTask);
+        updateFutures.add(persistThenUpdateTaskConfig(taskId, newIoConfig));
+      }
+      activelyReadingTaskGroups.put(taskGroupId, newTaskGroup);
+    }
+
+    if (updateFutures.isEmpty()) {
+      log.info("No configuration updates needed");
+      return true;
+    }
+
+    List<Either<Throwable, Boolean>> results = coalesceAndAwait(updateFutures);
+    boolean allSucceeded = results.stream().allMatch(result -> {
+      if (result.isValue()) {
+        Boolean value = result.valueOrThrow();
+        return value != null && value;
+      }
+      return false;
+    });
+
+    if (allSucceeded) {
+      log.info("Successfully sent configuration updates to [%d] tasks", updateFutures.size());
+    } else {
+      log.error("Some configuration updates failed");
+    }
+    handleObsoleteTaskGroups(newPartitionGroups.keySet());
+
+    return allSucceeded;
+  }
+
+  private ListenableFuture<Boolean> persistThenUpdateTaskConfig(
+      String taskId,
+      SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig
+  )
+  {
+    return Futures.transformAsync(
+        workerExec.submit(() -> {
+          Optional<Task> existingTaskOpt = taskStorage.getTask(taskId);
+          if (!existingTaskOpt.isPresent()) {
+            throw new ISE("Task [%s] not found in storage", taskId);
+          }
+          SeekableStreamIndexTask existingTask =
+              (SeekableStreamIndexTask) existingTaskOpt.get();
+          SeekableStreamIndexTask updatedTask = existingTask.withNewIoConfig(newIoConfig);
+          log.info("Persisting updated config for task [%s] to storage", taskId);
+          updateTaskIoConfigInQueueOrStorage(updatedTask);
+          return updatedTask;
+        }),
+        (persistedTask) -> {
+          log.info("Sending config update to running task [%s]", taskId);
+          TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(newIoConfig);
+          return taskClient.updateConfigAsync(taskId, updateRequest);
+        },
+        workerExec
+    );
+  }
+
+  private void updateTaskIoConfigInQueueOrStorage(SeekableStreamIndexTask updatedTask)
+  {
+    Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
+    if (taskQueue.isPresent()) {
+      taskQueue.get().update(updatedTask);
+    } else {
+      taskStorage.updateTask(updatedTask);
+    }
+  }
+
+
+  /**
+   * Handles obsolete task groups when scaling down.
+   * Pauses tasks in task groups that are no longer needed and removes them from activelyReadingTaskGroups.
+   */
+  private void handleObsoleteTaskGroups(Set<Integer> newTaskGroupIds)
+  {
+    Set<Integer> currentTaskGroupIds = new HashSet<>(activelyReadingTaskGroups.keySet());
+    Set<Integer> obsoleteTaskGroupIds = new HashSet<>(currentTaskGroupIds);
+    obsoleteTaskGroupIds.removeAll(newTaskGroupIds);
+
+    if (obsoleteTaskGroupIds.isEmpty()) {
+      log.debug("No obsolete task groups to clean up");
+      return;
+    }
+
+    log.info("Handling obsolete task groups during scaling down: %s", obsoleteTaskGroupIds);
+
+    for (Integer obsoleteTaskGroupId : obsoleteTaskGroupIds) {
+      TaskGroup obsoleteTaskGroup = activelyReadingTaskGroups.get(obsoleteTaskGroupId);
+      if (obsoleteTaskGroup != null) {
+        log.info("Gracefully shutting down tasks in obsolete task group [%d]: %s", obsoleteTaskGroupId, obsoleteTaskGroup.taskIds());
+
+        // Gracefully shut down all tasks in the obsolete task group
+        for (String taskId : obsoleteTaskGroup.taskIds()) {
+          try {
+            killTaskWithSuccess(taskId, "Gracefully shutting down task in obsolete task group [%d] during scale down", obsoleteTaskGroupId);
+            log.info("Requested graceful shutdown for task [%s] in obsolete task group [%d]", taskId, obsoleteTaskGroupId);
+          }
+          catch (Exception e) {
+            log.error(e, "Failed to gracefully shut down task [%s] in obsolete task group [%d]", taskId, obsoleteTaskGroupId);
+          }
+        }
+
+        // Remove the task group from activelyReadingTaskGroups
+        // The supervisor's normal run cycle will handle shutdown of these paused tasks
+        activelyReadingTaskGroups.remove(obsoleteTaskGroupId);
+        log.info("Removed obsolete task group [%d] from activelyReadingTaskGroups", obsoleteTaskGroupId);
+      }
+    }
+  }
+
+  /**
+   * Updates the partition groups mapping for perpetual tasks without clearing other allocation info.
+   */
+  private void updatePartitionGroupsForPerpetualTasks(Map<Integer, Set<PartitionIdType>> newPartitionGroups)
+  {
+    log.info("Updating partition groups mapping for perpetual tasks");
+    
+    // Update the partition groups mapping
+    partitionGroups.clear();
+    partitionGroups.putAll(newPartitionGroups);
+    
+    // Update partition offsets for new partitions if needed
+    for (PartitionIdType partition : partitionIds) {
+      partitionOffsets.putIfAbsent(partition, getNotSetMarker());
+    }
+    
+    log.info("Updated partition groups: %s", partitionGroups);
+  }
+
+  /**
+   * Creates an updated IOConfig for a task with new partition assignments.
+   */
+  protected abstract SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> createUpdatedTaskIoConfig(
+      Set<PartitionIdType> partitions,
+      TaskGroup existingTaskGroup,
+      Map<PartitionIdType, SequenceOffsetType> latestCommittedOffsets,
+      Map<PartitionIdType, SequenceOffsetType> latestTaskOffsetsOnPause
+  );
 
   private void changeTaskCountInIOConfig(int desiredActiveTaskCount)
   {
@@ -766,13 +1101,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
         // check validity of previousCheckpoint
         int index = checkpoints.size();
+        // latest checkpoints are being compared first.
         for (int sequenceId : checkpoints.descendingKeySet()) {
           Map<PartitionIdType, SequenceOffsetType> checkpoint = checkpoints.get(sequenceId);
           // We have already verified the stream of the current checkpoint is same with that in ioConfig.
           // See checkpoint().
-          if (checkpoint.equals(checkpointMetadata.getSeekableStreamSequenceNumbers()
-                                                  .getPartitionSequenceNumberMap()
-          )) {
+          if (isCheckpointSignatureValid(checkpoint, checkpointMetadata)) {
             break;
           }
           index--;
@@ -790,7 +1124,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           taskGroup.addNewCheckpoint(newCheckpoint);
           log.info("Handled checkpoint notice, new checkpoint is [%s] for taskGroup [%s]", newCheckpoint, taskGroupId);
         } else {
+          // It might be possible that the task has not been discovered to the taskgroup yet and have received a checkpoint before hand,
+          // For now, I will attempt to repush the checkpoint request in the handler.
           log.warn("New checkpoint is null for taskGroup [%s]", taskGroupId);
+          addNotice(this);
         }
       }
     }
@@ -826,6 +1163,25 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
+  /**
+   * This function verifies whether the checkpoint received from a task is valid or not.
+   * In non-perpetual tasks, the checkpoint is valid if it matches one of the partition <> sequence numbers in the task checkpoints.
+   * In perpetual tasks, this does not hold valid anymore because partition assignments can change during dynamic scaling. We'll compare
+   * it with supervisor level partition group's partition assignments now.
+   */
+  private boolean isCheckpointSignatureValid(
+      Map<PartitionIdType, SequenceOffsetType> checkpoint,
+      SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> checkpointMetadata
+  )
+  {
+    // Earlier checkpoints may no longer have the same partitions.
+    if (spec.usePerpetuallyRunningTasks()) {
+      return true;
+    }
+
+    return checkpoint.equals(checkpointMetadata.getSeekableStreamSequenceNumbers().getPartitionSequenceNumberMap());
+  }
+
   // Map<{group id}, {actively reading task group}>; see documentation for TaskGroup class
   private final ConcurrentHashMap<Integer, TaskGroup> activelyReadingTaskGroups = new ConcurrentHashMap<>();
 
@@ -855,6 +1211,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   protected final String dataSource;
+  private final AtomicBoolean isDynamicAllocationOngoing = new AtomicBoolean(false);
+  private int checkpointsToWaitFor = 0;
+  private Callable<Boolean> pendingConfigUpdateHook;
 
   private final Set<PartitionIdType> subsequentlyDiscoveredPartitions = new HashSet<>();
   private final TaskStorage taskStorage;
@@ -940,7 +1299,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.ioConfig = spec.getIoConfig();
     this.autoScalerConfig = ioConfig.getAutoScalerConfig();
     this.tuningConfig = spec.getTuningConfig();
-    this.taskTuningConfig = this.tuningConfig.convertToTaskTuningConfig();
+    this.taskTuningConfig = this.tuningConfig.convertToTaskTuningConfig(spec.usePerpetuallyRunningTasks());
     this.supervisorId = spec.getId();
     this.exec = Execs.singleThreaded(StringUtils.encodeForFormat(supervisorTag));
     this.scheduledExec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorTag) + "-Scheduler-%d");
@@ -1479,7 +1838,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   public List<ParseExceptionReport> getParseErrors()
   {
     try {
-      if (spec.getSpec().getTuningConfig().convertToTaskTuningConfig().getMaxParseExceptions() <= 0) {
+      if (spec.getSpec().getTuningConfig().convertToTaskTuningConfig(spec.usePerpetuallyRunningTasks()).getMaxParseExceptions() <= 0) {
         return ImmutableList.of();
       }
       lastKnownParseErrors = getCurrentParseErrors();
@@ -1644,11 +2003,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
 
-    SeekableStreamIndexTaskTuningConfig ss = spec.getSpec().getTuningConfig().convertToTaskTuningConfig();
+    SeekableStreamIndexTaskTuningConfig ss = spec.getSpec().getTuningConfig().convertToTaskTuningConfig(spec.usePerpetuallyRunningTasks());
     SeekableStreamSupervisorIOConfig oo = spec.getSpec().getIOConfig();
 
     // store a limited number of parse exceptions, keeping the most recent ones
-    int parseErrorLimit = spec.getSpec().getTuningConfig().convertToTaskTuningConfig().getMaxSavedParseExceptions() *
+    int parseErrorLimit = spec.getSpec().getTuningConfig().convertToTaskTuningConfig(spec.usePerpetuallyRunningTasks()).getMaxSavedParseExceptions() *
                           spec.getSpec().getIOConfig().getTaskCount();
     parseErrorLimit = Math.min(parseErrorLimit, parseErrorsTreeSet.size());
 
@@ -1716,6 +2075,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   @VisibleForTesting
   public void runInternal()
   {
+    if (isDynamicAllocationOngoing.get()) {
+      log.info("Skipping run because dynamic allocation is ongoing.");
+      return;
+    }
     try {
       possiblyRegisterListener();
 
@@ -3301,6 +3664,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     } else {
       stopTasksEarly = false;
     }
+    // If using perpetually running tasks, we should not stop tasks based on duration
+    if (spec.usePerpetuallyRunningTasks()) {
+      return;
+    }
 
     final AtomicInteger numStoppedTasks = new AtomicInteger();
     // Sort task groups by start time to prioritize early termination of earlier groups, then iterate for processing
@@ -3529,11 +3896,22 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   try {
                     for (int i = 0; i < results.size(); i++) {
                       if (results.get(i).isValue() && Boolean.valueOf(true).equals(results.get(i).valueOrThrow())) {
-                        log.info("Successfully set endOffsets for task[%s] and resumed it", setEndOffsetTaskIds.get(i));
+                        log.info("Successfully set endOffsets for task[%s]", setEndOffsetTaskIds.get(i));
                       } else {
                         String taskId = setEndOffsetTaskIds.get(i);
                         killTask(taskId, "Failed to set end offsets, killing task");
                         taskGroup.tasks.remove(taskId);
+                      }
+                    }
+                    if (isDynamicAllocationOngoing.get()) {
+                      checkpointsToWaitFor -= setEndOffsetFutures.size();
+                      if (checkpointsToWaitFor <= 0) {
+                        log.info("All tasks in current task groups have been checkpointed, resuming dynamic allocation");
+                        pendingConfigUpdateHook.call();
+                        checkpointsToWaitFor = 0;
+                        pendingConfigUpdateHook = null;
+                      } else {
+                        log.info("Waiting for [%d] more checkpoints before resuming dynamic allocation", checkpointsToWaitFor);
                       }
                     }
                   }

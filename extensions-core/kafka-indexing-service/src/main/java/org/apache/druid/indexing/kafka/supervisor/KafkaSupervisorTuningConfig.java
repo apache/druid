@@ -213,7 +213,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
   }
 
   @Override
-  public KafkaIndexTaskTuningConfig convertToTaskTuningConfig()
+  public KafkaIndexTaskTuningConfig convertToTaskTuningConfig(Boolean usePerpetuallyRunningTasks)
   {
     return new KafkaIndexTaskTuningConfig(
         getAppendableIndexSpec(),
@@ -237,7 +237,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
         getMaxSavedParseExceptions(),
         getNumPersistThreads(),
         getMaxColumnsToMerge(),
-        isReleaseLocksOnHandoff()
+        usePerpetuallyRunningTasks
     );
   }
 }

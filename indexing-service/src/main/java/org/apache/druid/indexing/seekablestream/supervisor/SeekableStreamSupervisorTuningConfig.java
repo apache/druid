@@ -55,5 +55,5 @@ public interface SeekableStreamSupervisorTuningConfig
   @JsonProperty
   Duration getOffsetFetchPeriod();
 
-  SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig();
+  SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig(Boolean usePerpetuallyRunningTasks);
 }

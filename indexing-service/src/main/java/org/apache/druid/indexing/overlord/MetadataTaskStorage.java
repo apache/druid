@@ -296,4 +296,27 @@ public class MetadataTaskStorage implements TaskStorage
   {
     return handler.getLocks(taskid);
   }
+
+  @Override
+  public void updateTask(Task task)
+  {
+    Preconditions.checkNotNull(task, "task");
+    log.info("Updating task [%s].", task.getId());
+    final String taskId = task.getId();
+
+    Optional<Task> existingTask = getTask(taskId);
+    if (!existingTask.isPresent()) {
+      throw new ISE("No task found for id [%s]", taskId);
+    }
+
+    try {
+      handler.update(taskId, task);
+    }
+    catch (DruidException e) {
+      throw e;
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
 }

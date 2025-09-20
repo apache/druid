@@ -555,6 +555,46 @@ public class TaskQueue
     }
   }
 
+  public void update(final Task task)
+  {
+    IdUtils.validateId("Task ID", task.getId());
+
+    if (!taskStorage.getTask(task.getId()).isPresent()) {
+      throw new ISE("Task[%s] does not exist in storage", task.getId());
+    }
+
+    validateTaskPayload(task);
+    startStopLock.readLock().lock();
+
+    try {
+      Preconditions.checkState(active, "Queue is not active!");
+      Preconditions.checkNotNull(task, "task");
+
+      final String taskId = task.getId();
+      if (!activeTasks.containsKey(taskId)) {
+        throw new ISE("Task[%s] is not in the queue", taskId);
+      }
+
+      updateTaskEntry(taskId, entry -> {
+        // Create new TaskInfo with updated task while preserving created time and status
+        final TaskInfo existingTaskInfo = entry.taskInfo;
+        entry.taskInfo = new TaskInfo(
+            existingTaskInfo.getCreatedTime(),
+            existingTaskInfo.getStatus(),
+            task
+        );
+        log.info("Updated task [%s] in queue hashmap", taskId);
+      });
+
+      taskStorage.updateTask(task);
+      log.info("Updated task [%s] in storage", taskId);
+      requestManagement();
+    }
+    finally {
+      startStopLock.readLock().unlock();
+    }
+  }
+
   @GuardedBy("startStopLock")
   private void addTaskInternal(final TaskInfo taskInfo, final DateTime updateTime)
   {

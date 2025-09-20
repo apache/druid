@@ -74,6 +74,7 @@ import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -690,6 +691,35 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertEquals(failedStatus, getTaskStorage().getStatus(task.getId()).get());
   }
 
+  @Test
+  public void test_update_successfullyUpdates()
+  {
+    final TestTask originalTask = new TestTask("update-test-task", Intervals.of("2021-01-01/P1D"));
+    taskQueue.add(originalTask);
+
+    final TestTask updatedTask = new TestTask("update-test-task", "updatedDatasource", Intervals.of("2021-01-01/P1D"),
+        ImmutableMap.of("testKey", "testValue"));
+
+    taskQueue.update(updatedTask);
+
+    final Optional<TaskInfo> updatedInfoOpt = taskQueue.getActiveTaskInfo(updatedTask.getId());
+    Assert.assertTrue(updatedInfoOpt.isPresent());
+    Assert.assertEquals("updatedDatasource", updatedInfoOpt.get().getTask().getDataSource());
+    Assert.assertEquals("testValue", updatedInfoOpt.get().getTask().getContextValue("testKey"));
+
+    final Optional<Task> taskInStorage = getTaskStorage().getTask(updatedTask.getId());
+    Assert.assertTrue(taskInStorage.isPresent());
+    Assert.assertEquals("updatedDatasource", taskInStorage.get().getDataSource());
+  }
+
+  @Test(expected = ISE.class)
+  public void test_update_nonExistingTask()
+  {
+    taskQueue.update(new TestTask("non-existing-task", Intervals.of("2021-01-01/P1D")));
+  }
+
+
+
   private HttpRemoteTaskRunner createHttpRemoteTaskRunner()
   {
     final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider
@@ -741,6 +771,12 @@ public class TaskQueueTest extends IngestionTestBase
     private TestTask(String id, Interval interval, Map<String, Object> context)
     {
       super(id, "datasource", context, IngestionMode.NONE);
+      this.interval = interval;
+    }
+
+    private TestTask(String id, String dataSource, Interval interval, Map<String, Object> context)
+    {
+      super(id, dataSource, context, IngestionMode.NONE);
       this.interval = interval;
     }
 
