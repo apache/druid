@@ -23,12 +23,14 @@ import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
+import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.LatchableEmitter;
+import org.apache.druid.server.metrics.LatchableEmitterConfig;
 
 /**
  * Guice module to use {@link LatchableEmitter}. This module is added to the file
@@ -40,6 +42,7 @@ public class LatchableEmitterModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
+    JsonConfigProvider.bind(binder, "druid.emitter.latching", LatchableEmitterConfig.class);
     binder.bind(Key.get(Emitter.class, Names.named(LatchableEmitter.TYPE)))
           .to(LatchableEmitter.class);
   }
@@ -47,9 +50,10 @@ public class LatchableEmitterModule implements DruidModule
   @Provides
   @ManageLifecycle
   public LatchableEmitter makeEmitter(
-      @Self DruidNode selfNode
+      @Self DruidNode selfNode,
+      LatchableEmitterConfig config
   )
   {
-    return new LatchableEmitter(selfNode.getServiceName(), selfNode.getHost());
+    return new LatchableEmitter(selfNode.getServiceName(), selfNode.getHost(), config);
   }
 }

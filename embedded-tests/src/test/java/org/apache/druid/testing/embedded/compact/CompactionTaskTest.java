@@ -120,6 +120,7 @@ public class CompactionTaskTest extends CompactionTestBase
   {
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
+                               .useDefaultTimeoutForLatchableEmitter(10)
                                .addExtension(SketchModule.class)
                                .addExtension(HllSketchModule.class)
                                .addExtension(DoublesSketchModule.class)

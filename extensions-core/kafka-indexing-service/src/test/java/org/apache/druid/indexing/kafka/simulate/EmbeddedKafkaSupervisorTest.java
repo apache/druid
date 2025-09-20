@@ -72,6 +72,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     cluster.addExtension(KafkaIndexTaskModule.class)
            .addResource(kafkaServer)
            .useLatchableEmitter()
+           .useDefaultTimeoutForLatchableEmitter(10)
            .addServer(new EmbeddedCoordinator())
            .addServer(overlord)
            .addServer(indexer)
