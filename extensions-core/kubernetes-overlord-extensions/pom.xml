@@ -35,7 +35,7 @@
   </parent>
 
   <properties>
-    <fabric8.version>7.2.0</fabric8.version>
+    <fabric8.version>7.3.1</fabric8.version>
   </properties>
 
   <dependencies>
