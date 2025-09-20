@@ -1,0 +1,82 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#-------------------------------------------------------------------------
+apiVersion: v1
+data:
+  common.runtime.properties: |
+    #
+    # Extensions
+    #
+    druid.extensions.loadList=["druid-datasketches", "druid-s3-extensions", "postgresql-metadata-storage"]
+
+    #
+    # Logging
+    #
+    # Log all runtime properties on startup. Disable to avoid logging properties on startup:
+    druid.startup.logging.logProperties=true
+
+    #
+    # Indexing service logs
+    #
+    # Store indexing logs in an S3 bucket named 'druid-deep-storage' with the
+    # prefix 'druid/indexing-logs'
+    druid.indexer.logs.type=s3
+    druid.indexer.logs.s3Bucket=mybucket
+    druid.indexer.logs.s3Prefix=druid/indexing-logs
+
+    #
+    # Service discovery
+    #
+    druid.selectors.indexing.serviceName=druid/overlord
+    druid.selectors.coordinator.serviceName=druid/coordinator
+
+    #
+    # Monitoring
+    #
+    druid.monitoring.monitors=["com.metamx.metrics.JvmMonitor"]
+    druid.emitter=logging
+    druid.emitter.logging.logLevel=info
+
+    # Storage type of double columns
+    # ommiting this will lead to index double as float at the storage layer
+    druid.indexing.doubleStorage=double
+    druid.zk.service.host=zookeeper-0.zookeeper,zookeeper-1.zookeeper,zookeeper-2.zookeeper
+    druid.zk.paths.base=/druid
+    druid.zk.service.compress=false
+
+    druid.metadata.storage.type=postgresql
+    druid.metadata.storage.connector.connectURI=jdbc:postgresql://rdsaddr.us-west-2.rds.amazonaws.com:5432/druiddb
+    druid.metadata.storage.connector.user=iamuser
+    druid.metadata.storage.connector.password=changeme
+    druid.metadata.storage.connector.createTables=true
+
+    druid.storage.type=s3
+    druid.storage.bucket=mybucket
+    druid.storage.baseKey=druid/segments
+    druid.s3.accessKey=accesskey
+    druid.s3.secretKey=secretkey
+  metricDimensions.json: |-
+    {
+      "query/time" : { "dimensions" : ["dataSource", "type"], "type" : "timer"}
+    }
+kind: ConfigMap
+metadata:
+  labels:
+    app: druid
+    druid_cr: druid-test
+  name: druid-test-druid-common-config
+  namespace: test-namespace
+  annotations:
+    druidOpResourceHash: 1/BkoZEvfj+rB80LzeQeu6T7mhs=
