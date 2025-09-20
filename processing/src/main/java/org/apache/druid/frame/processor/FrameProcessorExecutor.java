@@ -591,7 +591,8 @@ public class FrameProcessorExecutor
         // even when interrupted, to ensure processor cleanup happens.
         try {
           lock.wait();
-        } catch (InterruptedException e) {
+        }
+        catch (InterruptedException e) {
           interrupted = true;
         }
       }
