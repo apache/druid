@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -611,17 +612,18 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
           // tasks that we think are running on this worker. Provide that information to WorkerHolder that
           // manages the task syncing with that worker.
           for (Map.Entry<String, HttpRemoteTaskRunnerWorkItem> e : tasks.entrySet()) {
-            if (e.getValue().getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {
-              Worker w = e.getValue().getWorker();
-              if (w != null && w.getHost().equals(worker.getHost()) && e.getValue().getTask() != null) {
-                expectedAnnouncements.add(
-                    TaskAnnouncement.create(
-                        e.getValue().getTask(),
-                        TaskStatus.running(e.getKey()),
-                        e.getValue().getLocation()
-                    )
-                );
-              }
+            HttpRemoteTaskRunnerWorkItem workItem = e.getValue();
+            if (workItem.isRunningOnWorker(worker)) {
+              expectedAnnouncements.add(
+                  TaskAnnouncement.create(
+                      workItem.getTaskId(),
+                      workItem.getTaskType(),
+                      null,
+                      TaskStatus.running(workItem.getTaskId()),
+                      workItem.getLocation(),
+                      null
+                  )
+              );
             }
           }
         }
@@ -1891,6 +1893,13 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
       // It is possible to have it null when the TaskRunner is just started and discovered this taskId from a worker,
       // notifications don't contain whole Task instance but just metadata about the task.
       this.task = task;
+    }
+
+    public boolean isRunningOnWorker(Worker candidateWorker)
+    {
+      return getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING &&
+          getWorker() != null &&
+          Objects.equal(getWorker().getHost(), candidateWorker.getHost());
     }
 
     public Task getTask()
