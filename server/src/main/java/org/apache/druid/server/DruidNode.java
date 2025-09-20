@@ -32,11 +32,12 @@ import org.apache.druid.java.util.common.ISE;
 
 import javax.validation.constraints.Max;
 import javax.validation.constraints.NotNull;
-
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -89,6 +90,9 @@ public class DruidNode
       "unknown"
   );
 
+  @JsonProperty
+  private Map<String, String> labels = new HashMap<>();
+
   public DruidNode(
       String serviceName,
       String host,
@@ -99,7 +103,7 @@ public class DruidNode
       boolean enableTlsPort
   )
   {
-    this(serviceName, host, bindOnHost, plaintextPort, null, tlsPort, enablePlaintextPort, enableTlsPort);
+    this(serviceName, host, bindOnHost, plaintextPort, null, tlsPort, enablePlaintextPort, enableTlsPort, null);
   }
 
   /**
@@ -127,7 +131,8 @@ public class DruidNode
       @JacksonInject @Named("servicePort") @JsonProperty("port") Integer port,
       @JacksonInject @Named("tlsServicePort") @JsonProperty("tlsPort") Integer tlsPort,
       @JsonProperty("enablePlaintextPort") Boolean enablePlaintextPort,
-      @JsonProperty("enableTlsPort") boolean enableTlsPort
+      @JsonProperty("enableTlsPort") boolean enableTlsPort,
+      @JsonProperty("labels") Map<String, String> labels
   )
   {
     init(
@@ -137,7 +142,8 @@ public class DruidNode
         plaintextPort != null ? plaintextPort : port,
         tlsPort,
         enablePlaintextPort == null ? true : enablePlaintextPort.booleanValue(),
-        enableTlsPort
+        enableTlsPort,
+        labels
     );
   }
 
@@ -148,7 +154,8 @@ public class DruidNode
       Integer plainTextPort,
       Integer tlsPort,
       boolean enablePlaintextPort,
-      boolean enableTlsPort
+      boolean enableTlsPort,
+      Map<String, String> labels
   )
   {
     Preconditions.checkNotNull(serviceName);
@@ -208,6 +215,12 @@ public class DruidNode
     this.serviceName = serviceName;
     this.host = host;
     this.bindOnHost = bindOnHost;
+    this.labels = labels;
+  }
+
+  public Map<String, String> getLabels()
+  {
+    return labels;
   }
 
   public String getServiceName()
