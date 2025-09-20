@@ -29,7 +29,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.HashMap;
 import java.util.Map;
 
 public class NestedObjectVirtualColumnTest
@@ -56,9 +55,10 @@ public class NestedObjectVirtualColumnTest
   @Test
   public void testGetKeyExprMap()
   {
-    Map<String, NestedObjectVirtualColumn.TypedExpression> keyExprMap = new HashMap<>();
-    keyExprMap.put("key1", new NestedObjectVirtualColumn.TypedExpression("expr1", ColumnType.STRING));
-    keyExprMap.put("key2", new NestedObjectVirtualColumn.TypedExpression("expr2", ColumnType.DOUBLE));
+    Map<String, NestedObjectVirtualColumn.TypedExpression> keyExprMap = ImmutableMap.of(
+        "key1", new NestedObjectVirtualColumn.TypedExpression("expr1", ColumnType.STRING),
+        "key2", new NestedObjectVirtualColumn.TypedExpression("expr2", ColumnType.DOUBLE)
+    );
 
     NestedObjectVirtualColumn column = new NestedObjectVirtualColumn(
         "test_obj",
