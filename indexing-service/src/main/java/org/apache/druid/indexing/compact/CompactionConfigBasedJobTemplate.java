@@ -1,0 +1,161 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.indexing.compact;
+
+import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexing.input.DruidDatasourceDestination;
+import org.apache.druid.indexing.input.DruidInputSource;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.server.compaction.CompactionCandidate;
+import org.apache.druid.server.compaction.CompactionSlotManager;
+import org.apache.druid.server.compaction.DataSourceCompactibleSegmentIterator;
+import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.duty.CompactSegments;
+import org.apache.druid.timeline.SegmentTimeline;
+import org.joda.time.Interval;
+import org.joda.time.Period;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+/**
+ * This template never needs to be deserialized as a {@code BatchIndexingJobTemplate}.
+ * It is just a delegating template that uses a {@link DataSourceCompactionConfig}
+ * to create compaction jobs.
+ */
+public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
+{
+  private final DataSourceCompactionConfig config;
+
+  public CompactionConfigBasedJobTemplate(DataSourceCompactionConfig config)
+  {
+    this.config = config;
+  }
+
+  public static CompactionConfigBasedJobTemplate create(String dataSource, CompactionStateMatcher stateMatcher)
+  {
+    return new CompactionConfigBasedJobTemplate(
+        InlineSchemaDataSourceCompactionConfig
+            .builder()
+            .forDataSource(dataSource)
+            .withSkipOffsetFromLatest(Period.ZERO)
+            .withTransformSpec(stateMatcher.getTransformSpec())
+            .withProjections(stateMatcher.getProjections())
+            .withMetricsSpec(stateMatcher.getMetricsSpec())
+            .withGranularitySpec(stateMatcher.getGranularitySpec())
+            .build()
+    );
+  }
+
+  @Nullable
+  @Override
+  public Granularity getSegmentGranularity()
+  {
+    return config.getSegmentGranularity();
+  }
+
+  @Override
+  public List<CompactionJob> createCompactionJobs(
+      DruidInputSource source,
+      CompactionJobParams params
+  )
+  {
+    final DataSourceCompactibleSegmentIterator segmentIterator = getCompactibleCandidates(source, params);
+
+    final List<CompactionJob> jobs = new ArrayList<>();
+
+    // Create a job for each CompactionCandidate
+    while (segmentIterator.hasNext()) {
+      final CompactionCandidate candidate = segmentIterator.next();
+
+      ClientCompactionTaskQuery taskPayload
+          = CompactSegments.createCompactionTask(candidate, config, params.getClusterCompactionConfig().getEngine());
+      jobs.add(
+          new CompactionJob(
+              taskPayload,
+              candidate,
+              CompactionSlotManager.getMaxTaskSlotsForNativeCompactionTask(taskPayload.getTuningConfig())
+          )
+      );
+    }
+
+    return jobs;
+  }
+
+  @Override
+  public String getType()
+  {
+    throw new UnsupportedOperationException("This template type cannot be serialized");
+  }
+
+  /**
+   * Creates an iterator over the compactible candidate segments for the given
+   * params. Adds stats for segments that are already compacted to the
+   * {@link CompactionJobParams#getSnapshotBuilder()}.
+   */
+  DataSourceCompactibleSegmentIterator getCompactibleCandidates(
+      DruidInputSource source,
+      CompactionJobParams params
+  )
+  {
+    validateInput(source);
+
+    final Interval searchInterval = Objects.requireNonNull(source.getInterval());
+
+    final SegmentTimeline timeline = params.getTimeline(config.getDataSource());
+    final DataSourceCompactibleSegmentIterator iterator = new DataSourceCompactibleSegmentIterator(
+        config,
+        timeline,
+        Intervals.complementOf(searchInterval),
+        new NewestSegmentFirstPolicy(null)
+    );
+
+    // Collect stats for segments that are already compacted
+    iterator.getCompactedSegments().forEach(entry -> params.getSnapshotBuilder().addToComplete(entry));
+
+    return iterator;
+  }
+
+  private void validateInput(DruidInputSource druidInputSource)
+  {
+    if (!druidInputSource.getDataSource().equals(config.getDataSource())) {
+      throw InvalidInput.exception(
+          "Datasource[%s] in compaction config does not match datasource[%s] in input source",
+          config.getDataSource(), druidInputSource.getDataSource()
+      );
+    }
+  }
+
+  private void validateOutput(DruidDatasourceDestination druidDestination)
+  {
+    if (!druidDestination.getDataSource().equals(config.getDataSource())) {
+      throw InvalidInput.exception(
+          "Datasource[%s] in compaction config does not match datasource[%s] in output destination",
+          config.getDataSource(), druidDestination.getDataSource()
+      );
+    }
+  }
+}

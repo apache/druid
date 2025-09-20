@@ -19,14 +19,12 @@
 
 package org.apache.druid.server.compaction;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -51,10 +49,8 @@ import java.util.Set;
 
 public class CompactionRunSimulatorTest
 {
-  private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
-
   private final CompactionRunSimulator simulator = new CompactionRunSimulator(
-      new CompactionStatusTracker(OBJECT_MAPPER),
+      new CompactionStatusTracker(),
       new TestOverlordClient()
   );
 
@@ -115,7 +111,7 @@ public class CompactionRunSimulatorTest
     );
     Assert.assertEquals(
         Collections.singletonList(
-            Arrays.asList("wiki", Intervals.of("2013-01-10/P1D"), 10, 1_000_000_000L, "skip offset from latest[P1D]")
+            Arrays.asList("wiki", Intervals.of("2013-01-10/P1D"), 10, 1_000_000_000L, 1, "skip offset from latest[P1D]")
         ),
         skippedTable.getRows()
     );

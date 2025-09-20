@@ -109,7 +109,6 @@ public class ClientSqlQuery
     return parameters;
   }
 
-
   @Override
   public boolean equals(final Object o)
   {

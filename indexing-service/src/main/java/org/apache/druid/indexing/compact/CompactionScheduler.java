@@ -65,7 +65,7 @@ public interface CompactionScheduler
   /**
    * Starts compaction for a datasource if not already running.
    */
-  void startCompaction(String dataSourceName, DataSourceCompactionConfig compactionConfig);
+  void startCompaction(String dataSourceName, CompactionSupervisor supervisor);
 
   /**
    * Stops compaction for a datasource if currently running.
