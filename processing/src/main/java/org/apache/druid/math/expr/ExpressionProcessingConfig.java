@@ -59,9 +59,10 @@ public class ExpressionProcessingConfig
         homogenizeNullMultiValueStringArrays,
         HOMOGENIZE_NULL_MULTIVALUE_STRING_ARRAYS
     );
-    this.allowVectorizeFallback = getWithPropertyFallbackFalse(
+    this.allowVectorizeFallback = getWithPropertyFallback(
         allowVectorizeFallback,
-        ALLOW_VECTORIZE_FALLBACK
+        ALLOW_VECTORIZE_FALLBACK,
+        "true"
     );
   }
 

@@ -64,11 +64,13 @@ import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.server.handler.ErrorHandler;
+import org.eclipse.jetty.util.Callback;
 import org.eclipse.jetty.util.component.LifeCycle;
 import org.eclipse.jetty.util.ssl.KeyStoreScanner;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
@@ -81,11 +83,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.KeyStore;
@@ -225,6 +223,7 @@ public class JettyServerModule extends JerseyServletModule
     if (node.isEnablePlaintextPort()) {
       log.info("Creating http connector with port [%d]", node.getPlaintextPort());
       HttpConfiguration httpConfiguration = new HttpConfiguration();
+      httpConfiguration.setUriCompliance(config.getUriCompliance());
       if (config.isEnableForwardedRequestCustomizer()) {
         httpConfiguration.addCustomizer(new ForwardedRequestCustomizer());
       }
@@ -309,6 +308,7 @@ public class JettyServerModule extends JerseyServletModule
       }
 
       final HttpConfiguration httpsConfiguration = new HttpConfiguration();
+      httpsConfiguration.setUriCompliance(config.getUriCompliance());
       if (config.isEnableForwardedRequestCustomizer()) {
         httpsConfiguration.addCustomizer(new ForwardedRequestCustomizer());
       }
@@ -364,7 +364,7 @@ public class JettyServerModule extends JerseyServletModule
     if (gracefulStop > 0) {
       server.setStopTimeout(gracefulStop);
     }
-    server.addLifeCycleListener(new LifeCycle.Listener()
+    server.addEventListener(new LifeCycle.Listener()
     {
       @Override
       public void lifeCycleStarting(LifeCycle event)
@@ -467,24 +467,19 @@ public class JettyServerModule extends JerseyServletModule
       server.setErrorHandler(new ErrorHandler()
       {
         @Override
-        public boolean isShowServlet()
-        {
-          return false;
-        }
-
-        @Override
-        public void handle(
-            String target,
+        public boolean handle(
             Request baseRequest,
-            HttpServletRequest request,
-            HttpServletResponse response
-        ) throws IOException, ServletException
+            Response response,
+            Callback callback
+        ) throws Exception
         {
-          request.setAttribute(RequestDispatcher.ERROR_EXCEPTION, null);
-          super.handle(target, baseRequest, request, response);
+          baseRequest.setAttribute(RequestDispatcher.ERROR_EXCEPTION, null);
+          return super.handle(baseRequest, response, callback);
         }
       });
     }
+
+    server.setRequestLog(new JettyRequestLog());
 
     return server;
   }
