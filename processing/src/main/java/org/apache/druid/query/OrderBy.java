@@ -68,6 +68,18 @@ public class OrderBy
     return order;
   }
 
+  public OrderBy reverse()
+  {
+    switch (order) {
+      case ASCENDING:
+        return new OrderBy(columnName, Order.DESCENDING);
+      case DESCENDING:
+        return new OrderBy(columnName, Order.ASCENDING);
+      default:
+        throw new IAE("Cannot reverse order [%s]", order);
+    }
+  }
+
   @Override
   public boolean equals(Object o)
   {
