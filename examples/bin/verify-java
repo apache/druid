@@ -28,14 +28,14 @@ sub fail_check {
     : "No Java runtime was detected on your system.";
 
   print STDERR <<"EOT";
-Druid requires Java 11 or 17. $current_version_text
+Druid requires Java 11 or 17(recommended). $current_version_text
 
 If you believe this check is in error, or you want to proceed with a potentially
 unsupported Java runtime, you can skip this check using an environment variable:
 
   export DRUID_SKIP_JAVA_CHECK=1
 
-Otherwise, install Java 11 or 17 in one of the following locations.
+Otherwise, install Java 11 or 17(recommended) in one of the following locations.
 
   * DRUID_JAVA_HOME
   * JAVA_HOME
