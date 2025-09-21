@@ -30,7 +30,6 @@ import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
-import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.indexing.Resources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
@@ -49,8 +48,7 @@ public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
-  private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator()
-      .addProperty("druid.manager.segments.useIncrementalCache", "ifSynced");
+  private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer()
       .addProperty("druid.worker.capacity", "1");
 
@@ -68,8 +66,7 @@ public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
         .addServer(coordinator)
         .addServer(indexer)
         .addServer(broker)
-        .addServer(new EmbeddedHistorical())
-        .addServer(new EmbeddedRouter());
+        .addServer(new EmbeddedHistorical());
   }
 
   @BeforeAll
