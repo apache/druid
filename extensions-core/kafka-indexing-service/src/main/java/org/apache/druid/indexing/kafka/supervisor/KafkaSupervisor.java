@@ -130,17 +130,17 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   protected RecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity> setupRecordSupplier()
   {
     return new KafkaRecordSupplier(
-        spec.getIoConfig().getConsumerProperties(),
+        spec.getSpec().getIOConfig().getConsumerProperties(),
         sortingMapper,
-        spec.getIoConfig().getConfigOverrides(),
-        spec.getIoConfig().isMultiTopic()
+        spec.getSpec().getIOConfig().getConfigOverrides(),
+        spec.getSpec().getIOConfig().isMultiTopic()
     );
   }
 
   @Override
   protected int getTaskGroupIdForPartition(KafkaTopicPartition partitionId)
   {
-    Integer taskCount = spec.getIoConfig().getTaskCount();
+    Integer taskCount = spec.getSpec().getIOConfig().getTaskCount();
     
     if (spec.usePerpetuallyRunningTasks()) {
       int taskGroupId = getRangeBasedTaskGroupId(partitionId, taskCount);
@@ -202,7 +202,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
       boolean includeOffsets
   )
   {
-    KafkaSupervisorIOConfig ioConfig = spec.getIoConfig();
+    KafkaSupervisorIOConfig ioConfig = spec.getSpec().getIOConfig();
     Map<KafkaTopicPartition, Long> partitionLag = getRecordLagPerPartitionInLatestSequences(getHighestCurrentOffsets());
     return new KafkaSupervisorReportPayload(
         spec.getId(),
@@ -279,7 +279,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
 
     SeekableStreamStartSequenceNumbers<KafkaTopicPartition, Long> startSequenceNumbers =
         new SeekableStreamStartSequenceNumbers<>(
-            spec.getIoConfig().getStream(),
+            spec.getSpec().getIOConfig().getStream(),
             startingSequences,
             exclusiveStartSequenceNumberPartitions
         );
@@ -292,7 +292,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
 
     SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long> endSequenceNumbers =
         new SeekableStreamEndSequenceNumbers<>(
-            spec.getIoConfig().getStream(),
+            spec.getSpec().getIOConfig().getStream(),
             endingSequences
         );
 
@@ -309,15 +309,15 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
         null,
         startSequenceNumbers,
         endSequenceNumbers,
-        spec.getIoConfig().getConsumerProperties(),
-        spec.getIoConfig().getPollTimeout(),
+        spec.getSpec().getIOConfig().getConsumerProperties(),
+        spec.getSpec().getIOConfig().getPollTimeout(),
         true,
         existingTaskGroup.getMinimumMessageTime(),
         existingTaskGroup.getMaximumMessageTime(),
-        spec.getIoConfig().getInputFormat(),
-        spec.getIoConfig().getConfigOverrides(),
-        spec.getIoConfig().isMultiTopic(),
-        spec.getIoConfig().getTaskDuration().getStandardMinutes()
+        spec.getSpec().getIOConfig().getInputFormat(),
+        spec.getSpec().getIOConfig().getConfigOverrides(),
+        spec.getSpec().getIOConfig().isMultiTopic(),
+        spec.getSpec().getIOConfig().getTaskDuration().getStandardMinutes()
     );
   }
 
@@ -647,7 +647,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   @VisibleForTesting
   public KafkaSupervisorIOConfig getIoConfig()
   {
-    return spec.getIoConfig();
+    return spec.getSpec().getIOConfig();
   }
 
   @VisibleForTesting

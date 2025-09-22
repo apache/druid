@@ -121,9 +121,9 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
     RabbitStreamIndexTaskTuningConfig taskTuningConfig = spec.getTuningConfig();
 
     return new RabbitStreamRecordSupplier(
-      spec.getIoConfig().getConsumerProperties(),
+      spec.getSpec().getIOConfig().getConsumerProperties(),
       sortingMapper,
-      spec.getIoConfig().getUri(),
+      spec.getSpec().getIOConfig().getUri(),
       taskTuningConfig.getRecordBufferSizeOrDefault(Runtime.getRuntime().maxMemory()),
       taskTuningConfig.getRecordBufferOfferTimeout(),
       taskTuningConfig.getMaxRecordsPerPollOrDefault()      
@@ -133,7 +133,7 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
   @Override
   protected int getTaskGroupIdForPartition(String partitionId)
   {
-    return partitionId.hashCode() % spec.getIoConfig().getTaskCount();
+    return partitionId.hashCode() % spec.getSpec().getIOConfig().getTaskCount();
   }
 
   @Override
@@ -158,7 +158,7 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
       int numPartitions,
       boolean includeOffsets)
   {
-    RabbitStreamSupervisorIOConfig ioConfig = spec.getIoConfig();
+    RabbitStreamSupervisorIOConfig ioConfig = spec.getSpec().getIOConfig();
     Map<String, Long> partitionLag = getRecordLagPerPartitionInLatestSequences(getHighestCurrentOffsets());
     return new RabbitStreamSupervisorReportPayload(
         spec.getId(),
@@ -423,7 +423,7 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
   @VisibleForTesting
   public RabbitStreamSupervisorIOConfig getIoConfig()
   {
-    return spec.getIoConfig();
+    return spec.getSpec().getIOConfig();
   }
 
   @VisibleForTesting

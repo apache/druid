@@ -2003,9 +2003,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
 
-    SeekableStreamIndexTaskTuningConfig ss = spec.getSpec().getTuningConfig().convertToTaskTuningConfig(spec.usePerpetuallyRunningTasks());
-    SeekableStreamSupervisorIOConfig oo = spec.getSpec().getIOConfig();
-
     // store a limited number of parse exceptions, keeping the most recent ones
     int parseErrorLimit = spec.getSpec().getTuningConfig().convertToTaskTuningConfig(spec.usePerpetuallyRunningTasks()).getMaxSavedParseExceptions() *
                           spec.getSpec().getIOConfig().getTaskCount();
