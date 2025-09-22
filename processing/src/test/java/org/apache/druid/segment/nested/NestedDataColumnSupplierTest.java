@@ -298,7 +298,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
         false,
         ByteOrder.nativeOrder(),
         RoaringBitmapSerdeFactory.getInstance(),
-        columnFormatSpec
+        NestedCommonFormatColumnPartSerde.FormatSpec.forSerde(columnFormatSpec)
     );
     bob.setFileMapper(fileMapper);
     ColumnPartSerde.Deserializer deserializer = partSerde.getDeserializer();
@@ -323,7 +323,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
         false,
         ByteOrder.nativeOrder(),
         RoaringBitmapSerdeFactory.getInstance(),
-        columnFormatSpec
+        NestedCommonFormatColumnPartSerde.FormatSpec.forSerde(columnFormatSpec)
     );
     bob.setFileMapper(arrayFileMapper);
     ColumnPartSerde.Deserializer deserializer = partSerde.getDeserializer();

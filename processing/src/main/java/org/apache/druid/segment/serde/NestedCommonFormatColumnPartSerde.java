@@ -28,8 +28,11 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
+import org.apache.druid.segment.data.CompressionFactory;
+import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.nested.NestedCommonFormatColumn;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
@@ -83,7 +86,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       @JsonProperty("enforceLogicalType") boolean enforceLogicalType,
       @JsonProperty("byteOrder") ByteOrder byteOrder,
       @JsonProperty("bitmapSerdeFactory") BitmapSerdeFactory bitmapSerdeFactory,
-      @JsonProperty("columnFormatSpec") @Nullable NestedCommonFormatColumnFormatSpec columnFormatSpec
+      @JsonProperty("columnFormatSpec") @Nullable FormatSpec columnFormatSpec
   )
   {
     return new NestedCommonFormatColumnPartSerde(
@@ -105,7 +108,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
   private final ByteOrder byteOrder;
   private final BitmapSerdeFactory bitmapSerdeFactory;
   @Nullable
-  private final NestedCommonFormatColumnFormatSpec columnFormatSpec;
+  private final FormatSpec columnFormatSpec;
 
   @Nullable
   private final Serializer serializer;
@@ -118,7 +121,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       boolean enforceLogicalType,
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
-      @Nullable NestedCommonFormatColumnFormatSpec columnFormatSpec,
+      @Nullable FormatSpec columnFormatSpec,
       @Nullable Serializer serializer
   )
   {
@@ -196,7 +199,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
 
   @Nullable
   @JsonProperty
-  public NestedCommonFormatColumnFormatSpec getColumnFormatSpec()
+  public FormatSpec getColumnFormatSpec()
   {
     return columnFormatSpec;
   }
@@ -432,9 +435,72 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           enforceLogicalType,
           byteOrder,
           bitmapSerdeFactory,
-          columnFormatSpec,
+          FormatSpec.forSerde(columnFormatSpec),
           serializer
       );
+    }
+  }
+
+  /**
+   * Overrides {@link NestedCommonFormatColumnFormatSpec} so that {@link #getBitmapEncoding()} participates in serde
+   * so that it can store the complete object in the column metadata
+   */
+  public static class FormatSpec extends NestedCommonFormatColumnFormatSpec
+  {
+    @Nullable
+    public static FormatSpec forSerde(
+        @Nullable NestedCommonFormatColumnFormatSpec spec
+    )
+    {
+      if (spec == null) {
+        return null;
+      }
+      return new FormatSpec(
+          spec.getObjectFieldsDictionaryEncoding(),
+          spec.getObjectStorageEncoding(),
+          spec.getObjectStorageCompression(),
+          spec.getStringDictionaryEncoding(),
+          spec.getDictionaryEncodedColumnCompression(),
+          spec.getLongColumnEncoding(),
+          spec.getLongColumnCompression(),
+          spec.getDoubleColumnCompression(),
+          spec.getBitmapEncoding()
+      );
+    }
+
+    @JsonCreator
+    public FormatSpec(
+        @JsonProperty("objectFieldsDictionaryEncoding")@Nullable StringEncodingStrategy objectFieldsDictionaryEncoding,
+        @JsonProperty("objectStorageEncoding")@Nullable ObjectStorageEncoding objectStorageEncoding,
+        @JsonProperty("objectStorageCompression")@Nullable CompressionStrategy objectStorageCompression,
+        @JsonProperty("stringDictionaryEncoding")@Nullable StringEncodingStrategy stringDictionaryEncoding,
+        @JsonProperty("dictionaryEncodedColumnCompression")@Nullable CompressionStrategy dictionaryEncodedColumnCompression,
+        @JsonProperty("longColumnEncoding")@Nullable CompressionFactory.LongEncodingStrategy longColumnEncoding,
+        @JsonProperty("longColumnCompression")@Nullable CompressionStrategy longColumnCompression,
+        @JsonProperty("doubleColumnCompression")@Nullable CompressionStrategy doubleColumnCompression,
+        @JsonProperty("bitmapEncoding") @Nullable BitmapSerdeFactory bitmapEncoding
+    )
+    {
+      super(
+          objectFieldsDictionaryEncoding,
+          objectStorageEncoding,
+          objectStorageCompression,
+          stringDictionaryEncoding,
+          dictionaryEncodedColumnCompression,
+          longColumnEncoding,
+          longColumnCompression,
+          doubleColumnCompression,
+          bitmapEncoding
+      );
+    }
+
+    @JsonProperty("bitmapEncoding")
+    @JsonIgnore(false)
+    @Nullable
+    @Override
+    public BitmapSerdeFactory getBitmapEncoding()
+    {
+      return super.getBitmapEncoding();
     }
   }
 }

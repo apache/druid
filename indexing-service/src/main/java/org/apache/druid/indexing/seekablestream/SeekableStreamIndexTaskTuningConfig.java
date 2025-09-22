@@ -40,7 +40,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   private static final boolean DEFAULT_RESET_OFFSET_AUTOMATICALLY = false;
   private static final boolean DEFAULT_SKIP_SEQUENCE_NUMBER_AVAILABILITY_CHECK = false;
   private static final Period DEFAULT_INTERMEDIATE_PERSIST_PERIOD = new Period("PT10M");
-  private static final IndexSpec DEFAULT_INDEX_SPEC = IndexSpec.DEFAULT;
   private static final Boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = Boolean.FALSE;
   private static final boolean DEFAULT_RELEASE_LOCKS_ON_HANDOFF = false;
   private static final long DEFAULT_HANDOFF_CONDITION_TIMEOUT = Duration.ofMinutes(15).toMillis();
@@ -110,7 +109,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
         intermediatePersistPeriod == null ? DEFAULT_INTERMEDIATE_PERSIST_PERIOD : intermediatePersistPeriod;
     this.basePersistDirectory = basePersistDirectory;
     this.maxPendingPersists = maxPendingPersists == null ? 0 : maxPendingPersists;
-    this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
+    this.indexSpec = indexSpec == null ? IndexSpec.DEFAULT : indexSpec;
     this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
                                             this.indexSpec : indexSpecForIntermediatePersists;
     this.reportParseExceptions = reportParseExceptions == null

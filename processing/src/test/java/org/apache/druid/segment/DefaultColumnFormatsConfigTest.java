@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.segment.data.CompressionStrategy;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -56,6 +57,13 @@ public class DefaultColumnFormatsConfigTest
   @Test
   public void testEqualsAndHashcode()
   {
-    EqualsVerifier.forClass(DefaultColumnFormatConfig.class).usingGetClass().verify();
+    EqualsVerifier.forClass(DefaultColumnFormatConfig.class)
+                  .usingGetClass()
+                  .withPrefabValues(
+                      IndexSpec.class,
+                      IndexSpec.builder().build(),
+                      IndexSpec.builder().withComplexMetricCompression(CompressionStrategy.ZSTD).build()
+                  )
+                  .verify();
   }
 }

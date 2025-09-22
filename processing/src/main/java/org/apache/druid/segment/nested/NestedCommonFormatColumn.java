@@ -87,10 +87,10 @@ public interface NestedCommonFormatColumn extends BaseColumn
 
   class Format implements ColumnFormat
   {
-    private final ColumnType logicalType;
-    private final boolean hasNulls;
-    private final boolean enforceLogicalType;
-    private final NestedCommonFormatColumnFormatSpec columnFormatSpec;
+    protected final ColumnType logicalType;
+    protected final boolean hasNulls;
+    protected final boolean enforceLogicalType;
+    protected final NestedCommonFormatColumnFormatSpec columnFormatSpec;
 
     public Format(
         ColumnType logicalType,
@@ -132,11 +132,22 @@ public interface NestedCommonFormatColumn extends BaseColumn
 
       if (otherFormat instanceof Format) {
         final Format other = (Format) otherFormat;
-        // todo (clint): actually merge columnFormatSpec, maybe
-        if (!getLogicalType().equals(other.getLogicalType())) {
-          return new Format(ColumnType.NESTED_DATA, hasNulls || other.hasNulls, false, columnFormatSpec);
+        // when merging formats in the same ingestion job, all segments should have the exact same columnFormatSpec, so
+        // no need to merge that
+        if (!logicalType.equals(other.logicalType)) {
+          return new Format(
+              ColumnType.leastRestrictiveType(logicalType, other.logicalType),
+              hasNulls || other.hasNulls,
+              false,
+              columnFormatSpec
+          );
         }
-        return new Format(logicalType, hasNulls || other.hasNulls, enforceLogicalType || other.enforceLogicalType, columnFormatSpec);
+        return new Format(
+            logicalType,
+            hasNulls || other.hasNulls,
+            enforceLogicalType || other.enforceLogicalType,
+            columnFormatSpec
+        );
       }
       throw new ISE(
           "Cannot merge columns of type[%s] and format[%s] and with [%s] and [%s]",

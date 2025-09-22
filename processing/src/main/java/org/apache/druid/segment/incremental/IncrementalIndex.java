@@ -38,7 +38,6 @@ import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.SpatialDimensionSchema;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -61,6 +60,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.EncodedKeyComponent;
 import org.apache.druid.segment.FloatColumnSelector;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.NestedCommonFormatColumnHandler;
@@ -521,7 +521,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
           wasNewDim = true;
           final DimensionHandler<?, ?, ?> handler;
           if (useSchemaDiscovery) {
-            handler = new NestedCommonFormatColumnHandler(dimension, null, BuiltInTypesModule.getDefaultNestedCommonFormatSpec());
+            handler = new NestedCommonFormatColumnHandler(dimension, null, IndexSpec.DEFAULT.getAutoColumnFormatSpec());
           } else {
             // legacy behavior: for schemaless type discovery, everything is a String
             handler = DimensionHandlerUtils.getHandlerFromCapabilities(

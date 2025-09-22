@@ -25,14 +25,18 @@ import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.DimensionHandlerProvider;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.NestedCommonFormatColumnHandler;
 import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 
 import javax.annotation.Nullable;
 import java.util.Properties;
@@ -42,7 +46,7 @@ public class BuiltInTypesModuleTest
   @Nullable
   private static DimensionHandlerProvider DEFAULT_HANDLER_PROVIDER;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup()
   {
     DEFAULT_HANDLER_PROVIDER = DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.get(
@@ -50,6 +54,13 @@ public class BuiltInTypesModuleTest
     );
     DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.remove(NestedDataComplexTypeSerde.TYPE_NAME);
   }
+  
+  @AfterEach
+  public void beforeEach()
+  {
+    IndexSpec.DEFAULT = IndexSpec.builder().build();
+  }
+
   @AfterClass
   public static void teardown()
   {
@@ -61,6 +72,7 @@ public class BuiltInTypesModuleTest
           DEFAULT_HANDLER_PROVIDER
       );
     }
+    IndexSpec.DEFAULT = IndexSpec.builder().build();
   }
 
   @Test
@@ -76,9 +88,9 @@ public class BuiltInTypesModuleTest
     DimensionHandlerProvider provider = DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.get(
         NestedDataComplexTypeSerde.TYPE_NAME
     );
-    Assert.assertTrue(provider.get("test") instanceof NestedCommonFormatColumnHandler);
+    Assertions.assertInstanceOf(NestedCommonFormatColumnHandler.class, provider.get("test"));
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         DimensionSchema.MultiValueHandling.SORTED_ARRAY,
         BuiltInTypesModule.getStringMultiValueHandlingMode()
     );
@@ -90,9 +102,14 @@ public class BuiltInTypesModuleTest
     DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.remove(NestedDataComplexTypeSerde.TYPE_NAME);
     Properties props = new Properties();
     props.setProperty("druid.indexing.formats.stringMultiValueHandlingMode", "sorted_array");
-    props.setProperty("druid.indexing.formats.nestedColumnFormatSpec.stringDictionaryEncoding.type", StringEncodingStrategy.FRONT_CODED);
-    props.setProperty("druid.indexing.formats.nestedColumnFormatSpec.stringDictionaryEncoding.bucketSize", "16");
-    props.setProperty("druid.indexing.formats.nestedColumnFormatSpec.stringDictionaryEncoding.formatVersion", "1");
+    props.setProperty("druid.indexing.formats.indexSpec.complexMetricCompression", CompressionStrategy.LZ4.toString());
+    props.setProperty("druid.indexing.formats.indexSpec.autoColumnFormatSpec.stringDictionaryEncoding.type", StringEncodingStrategy.FRONT_CODED);
+    props.setProperty("druid.indexing.formats.indexSpec.autoColumnFormatSpec.stringDictionaryEncoding.bucketSize", "16");
+    props.setProperty("druid.indexing.formats.indexSpec.autoColumnFormatSpec.stringDictionaryEncoding.formatVersion", "1");
+    // ensure that this cannot be set
+    props.setProperty("druid.indexing.formats.indexSpec.autoColumnFormatSpec.bitmapEncoding", "roaring");
+    props.setProperty("druid.indexing.formats.indexSpec.metricCompression", CompressionStrategy.ZSTD.toString());
+    props.setProperty("druid.indexing.formats.indexSpec.bitmap", "{\"type\":\"concise\"}");
     Injector gadget = makeInjector(props);
 
     // side effects
@@ -102,14 +119,19 @@ public class BuiltInTypesModuleTest
         NestedDataComplexTypeSerde.TYPE_NAME
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         DimensionSchema.MultiValueHandling.SORTED_ARRAY,
         BuiltInTypesModule.getStringMultiValueHandlingMode()
     );
-    Assert.assertEquals(
-        new NestedCommonFormatColumnFormatSpec(null, null, null, new StringEncodingStrategy.FrontCoded(16, (byte) 1), null, null, null, null, null),
-        BuiltInTypesModule.getDefaultNestedCommonFormatSpec()
+    Assertions.assertEquals(CompressionStrategy.LZ4, IndexSpec.DEFAULT.getComplexMetricCompression());
+    Assertions.assertEquals(
+        NestedCommonFormatColumnFormatSpec.builder().setStringDictionaryEncoding(new StringEncodingStrategy.FrontCoded(16, (byte) 1)).build(),
+        IndexSpec.DEFAULT.getAutoColumnFormatSpec()
     );
+
+    Assertions.assertNull(IndexSpec.DEFAULT.getAutoColumnFormatSpec().getBitmapEncoding());
+    Assertions.assertEquals(CompressionStrategy.ZSTD, IndexSpec.DEFAULT.getMetricCompression());
+    Assertions.assertEquals(new ConciseBitmapSerdeFactory(), IndexSpec.DEFAULT.getBitmapSerdeFactory());
   }
 
   @Test
@@ -121,7 +143,7 @@ public class BuiltInTypesModuleTest
 
     gadget.getInstance(BuiltInTypesModule.SideEffectRegisterer.class);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         DimensionSchema.MultiValueHandling.ARRAY,
         BuiltInTypesModule.getStringMultiValueHandlingMode()
     );
@@ -134,11 +156,11 @@ public class BuiltInTypesModuleTest
     props.setProperty("druid.indexing.formats.stringMultiValueHandlingMode", "boo");
     final Injector gadget = makeInjector(props);
 
-    final Exception exception = Assert.assertThrows(
+    final Exception exception = Assertions.assertThrows(
         Exception.class,
         () -> gadget.getInstance(BuiltInTypesModule.SideEffectRegisterer.class)
     );
-    Assert.assertTrue(exception.getMessage().contains(
+    Assertions.assertTrue(exception.getMessage().contains(
         "Invalid value[boo] specified for 'druid.indexing.formats.stringMultiValueHandlingMode'."
         + " Supported values are [[SORTED_ARRAY, SORTED_SET, ARRAY]]."
     ));

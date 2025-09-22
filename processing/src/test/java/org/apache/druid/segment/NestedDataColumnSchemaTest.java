@@ -40,10 +40,11 @@ public class NestedDataColumnSchemaTest
                                         )
                                         .setObjectStorageCompression(CompressionStrategy.ZSTD)
                                         .build();
+
   private static final DefaultColumnFormatConfig DEFAULT_NESTED_SPEC_CONFIG = new DefaultColumnFormatConfig(
       null,
       null,
-      DEFAULT_NESTED_SPEC
+      IndexSpec.builder().withAutoColumnFormatSpec(DEFAULT_NESTED_SPEC).build()
   );
 
   private static final ObjectMapper MAPPER;

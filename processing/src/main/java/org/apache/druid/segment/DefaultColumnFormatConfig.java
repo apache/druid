@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -69,23 +68,23 @@ public class DefaultColumnFormatConfig
     return stringMultiValueHandlingMode;
   }
 
+  @JsonProperty("stringMultiValueHandlingMode")
   @Nullable
-  @JsonProperty("nestedColumnFormatVersion")
   private final Integer nestedColumnFormatVersion;
 
+  @JsonProperty("nestedColumnFormatVersion")
   @Nullable
-  @JsonProperty("stringMultiValueHandlingMode")
   private final String stringMultiValueHandlingMode;
 
+  @JsonProperty("indexSpec")
   @Nullable
-  @JsonProperty
-  private final NestedCommonFormatColumnFormatSpec nestedColumnFormatSpec;
+  private final IndexSpec indexSpec;
 
   @JsonCreator
   public DefaultColumnFormatConfig(
       @JsonProperty("stringMultiValueHandlingMode") @Nullable String stringMultiValueHandlingMode,
       @JsonProperty("nestedColumnFormatVersion") @Nullable Integer nestedColumnFormatVersion,
-      @JsonProperty("nestedColumnFormatSpec") @Nullable NestedCommonFormatColumnFormatSpec nestedColumnFormatSpec
+      @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec
   )
   {
     validateMultiValueHandlingMode(stringMultiValueHandlingMode);
@@ -93,7 +92,7 @@ public class DefaultColumnFormatConfig
 
     this.stringMultiValueHandlingMode = validateMultiValueHandlingMode(stringMultiValueHandlingMode);
     this.nestedColumnFormatVersion = nestedColumnFormatVersion;
-    this.nestedColumnFormatSpec = nestedColumnFormatSpec;
+    this.indexSpec = indexSpec;
   }
 
   @Nullable
@@ -111,10 +110,10 @@ public class DefaultColumnFormatConfig
   }
 
   @Nullable
-  @JsonProperty("nestedColumnFormatSpec")
-  public NestedCommonFormatColumnFormatSpec getNestedColumnFormatSpec()
+  @JsonProperty("indexSpec")
+  public IndexSpec getIndexSpec()
   {
-    return nestedColumnFormatSpec;
+    return indexSpec;
   }
 
   @Override
@@ -129,13 +128,13 @@ public class DefaultColumnFormatConfig
     DefaultColumnFormatConfig that = (DefaultColumnFormatConfig) o;
     return Objects.equals(nestedColumnFormatVersion, that.nestedColumnFormatVersion)
            && Objects.equals(stringMultiValueHandlingMode, that.stringMultiValueHandlingMode)
-           && Objects.equals(nestedColumnFormatSpec, that.nestedColumnFormatSpec);
+           && Objects.equals(indexSpec, that.indexSpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(nestedColumnFormatVersion, stringMultiValueHandlingMode, nestedColumnFormatSpec);
+    return Objects.hash(nestedColumnFormatVersion, stringMultiValueHandlingMode, indexSpec);
   }
 
   @Override
@@ -144,7 +143,7 @@ public class DefaultColumnFormatConfig
     return "DefaultColumnFormatConfig{" +
            "stringMultiValueHandlingMode=" + stringMultiValueHandlingMode +
            ", nestedColumnFormatVersion=" + nestedColumnFormatVersion +
-           ", nestedColumnFormatSpec=" + nestedColumnFormatSpec +
+           ", indexSpec=" + indexSpec +
            '}';
   }
 }

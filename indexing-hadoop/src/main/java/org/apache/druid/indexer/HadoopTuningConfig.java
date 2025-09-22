@@ -46,7 +46,6 @@ public class HadoopTuningConfig implements TuningConfig
 
   private static final DimensionBasedPartitionsSpec DEFAULT_PARTITIONS_SPEC = HashedPartitionsSpec.defaultSpec();
   private static final Map<Long, List<HadoopyShardSpec>> DEFAULT_SHARD_SPECS = ImmutableMap.of();
-  private static final IndexSpec DEFAULT_INDEX_SPEC = IndexSpec.DEFAULT;
   private static final boolean DEFAULT_USE_COMBINER = false;
   private static final int DEFAULT_NUM_BACKGROUND_PERSIST_THREADS = 0;
 
@@ -57,8 +56,8 @@ public class HadoopTuningConfig implements TuningConfig
         DateTimes.nowUtc().toString(),
         DEFAULT_PARTITIONS_SPEC,
         DEFAULT_SHARD_SPECS,
-        DEFAULT_INDEX_SPEC,
-        DEFAULT_INDEX_SPEC,
+        IndexSpec.DEFAULT,
+        IndexSpec.DEFAULT,
         DEFAULT_APPENDABLE_INDEX,
         DEFAULT_MAX_ROWS_IN_MEMORY_BATCH,
         0L,
@@ -151,7 +150,7 @@ public class HadoopTuningConfig implements TuningConfig
     this.version = Configs.valueOrDefault(version, DateTimes.nowUtc().toString());
     this.partitionsSpec = Configs.valueOrDefault(partitionsSpec, DEFAULT_PARTITIONS_SPEC);
     this.shardSpecs = Configs.valueOrDefault(shardSpecs, DEFAULT_SHARD_SPECS);
-    this.indexSpec = Configs.valueOrDefault(indexSpec, DEFAULT_INDEX_SPEC);
+    this.indexSpec = Configs.valueOrDefault(indexSpec, IndexSpec.DEFAULT);
     this.indexSpecForIntermediatePersists = Configs.valueOrDefault(
         indexSpecForIntermediatePersists,
         this.indexSpec
