@@ -24,7 +24,6 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.ChainedExecutionQueryRunner;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryProcessingPool;
@@ -55,9 +54,6 @@ import java.util.stream.Collectors;
 
 public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<SegmentAnalysis, SegmentMetadataQuery>
 {
-  private static final Logger log = new Logger(SegmentMetadataQueryRunnerFactory.class);
-
-
   private final SegmentMetadataQueryQueryToolChest toolChest;
   private final QueryWatcher queryWatcher;
 
@@ -196,97 +192,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
       Iterable<QueryRunner<SegmentAnalysis>> queryRunners
   )
   {
-<<<<<<< HEAD
     return new ChainedExecutionQueryRunner<>(queryProcessingPool, queryWatcher, queryRunners);
-=======
-    return new ConcatQueryRunner<>(
-        Sequences.map(
-            Sequences.simple(queryRunners),
-            new Function<>()
-            {
-              @Override
-              public QueryRunner<SegmentAnalysis> apply(final QueryRunner<SegmentAnalysis> input)
-              {
-                return new QueryRunner<>()
-                {
-                  @Override
-                  public Sequence<SegmentAnalysis> run(
-                      final QueryPlus<SegmentAnalysis> queryPlus,
-                      final ResponseContext responseContext
-                  )
-                  {
-                    final Query<SegmentAnalysis> query = queryPlus.getQuery();
-                    final QueryContext context = query.context();
-                    final int priority = context.getPriority();
-                    final boolean usePerSegmentTimeout = context.usePerSegmentTimeout();
-                    final long perSegmentTimeout = context.getPerSegmentTimeout();
-                    final QueryPlus<SegmentAnalysis> threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
-                    final AbstractPrioritizedQueryRunnerCallable callable = new AbstractPrioritizedQueryRunnerCallable<>(
-                        priority,
-                        input
-                    )
-                    {
-                      @Override
-                      public Sequence<SegmentAnalysis> call()
-                      {
-                        return Sequences.simple(input.run(threadSafeQueryPlus, responseContext).toList());
-                      }
-                    };
-
-                    final ListenableFuture<Sequence<SegmentAnalysis>> future;
-                    if (usePerSegmentTimeout) {
-                      future = queryProcessingPool.submitRunnerTask(
-                          callable,
-                          perSegmentTimeout,
-                          TimeUnit.MILLISECONDS
-                      );
-                    } else {
-                      future = queryProcessingPool.submitRunnerTask(callable);
-                    }
-
-                    try {
-                      queryWatcher.registerQueryFuture(query, future);
-                      if (context.hasTimeout()) {
-                        return future.get(context.getTimeout(), TimeUnit.MILLISECONDS);
-                      } else {
-                        return future.get();
-                      }
-                    }
-                    catch (InterruptedException e) {
-                      log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
-                      future.cancel(true);
-                      throw new QueryInterruptedException(e);
-                    }
-                    catch (CancellationException e) {
-                      throw new QueryInterruptedException(e);
-                    }
-                    catch (TimeoutException e) {
-                      log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
-                      future.cancel(true);
-                      throw new QueryTimeoutException(StringUtils.nonStrictFormat(
-                          "Query [%s] timed out",
-                          query.getId()
-                      ));
-                    }
-                    catch (ExecutionException e) {
-                      future.cancel(true);
-                      Throwable cause = e.getCause();
-                      if (cause instanceof TimeoutException || cause instanceof QueryTimeoutException) {
-                        log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
-                        throw new QueryTimeoutException(StringUtils.nonStrictFormat(
-                            "Query [%s] timed out",
-                            query.getId()
-                        ));
-                      }
-                      throw new RuntimeException(e);
-                    }
-                  }
-                };
-              }
-            }
-        )
-    );
->>>>>>> d53245d6ff (Add more tests)
   }
 
   @Override

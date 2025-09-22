@@ -182,7 +182,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
               GuavaUtils.cancelAll(true, future, futures);
               Throwable cause = e.getCause();
               Throwables.propagateIfPossible(cause);
-              if (cause instanceof TimeoutException || cause instanceof QueryTimeoutException) {
+              if (cause instanceof TimeoutException) {
                 log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
                 throw new QueryTimeoutException(StringUtils.nonStrictFormat(
                     "Query [%s] timed out",
