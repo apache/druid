@@ -74,7 +74,6 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.mocks.ExceptionalInputStream;
-import org.apache.druid.server.mocks.MockAsyncContext;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.apache.druid.server.mocks.MockHttpServletResponse;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
@@ -91,11 +90,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.http.HttpStatus;
-import org.easymock.EasyMock;
-import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpHeader;
-import org.eclipse.jetty.server.HttpChannel;
-import org.eclipse.jetty.server.HttpOutput;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
@@ -121,6 +116,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -275,7 +271,15 @@ public class QueryResourceTest
   {
     expectPermissiveHappyPathAuth();
 
-    Assert.assertEquals(200, expectAsyncRequestFlow(SIMPLE_TIMESERIES_QUERY).getStatus());
+    HttpServletResponse servletResponse = expectAsyncRequestFlow(SIMPLE_TIMESERIES_QUERY);
+    Assert.assertEquals(200, servletResponse.getStatus());
+    Assert.assertTrue(servletResponse.containsHeader(HttpHeader.TRAILER.toString()));
+
+    final Map<String, String> fields = servletResponse.getTrailerFields().get();
+    Assert.assertFalse(fields.containsKey(QueryResource.ERROR_MESSAGE_TRAILER_HEADER));
+
+    Assert.assertTrue(fields.containsKey(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
+    Assert.assertEquals(fields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER), "true");
   }
 
   @Test
@@ -487,16 +491,12 @@ public class QueryResourceTest
 
     expectPermissiveHappyPathAuth();
 
-    org.eclipse.jetty.server.Response response = this.jettyResponseforRequest(testServletRequest);
-    Assert.assertNull(queryResource.doPost(new ByteArrayInputStream(
-                                               SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
-                                           null /*pretty*/,
-                                           testServletRequest
-    ));
+    HttpServletResponse response = expectAsyncRequestFlow(testServletRequest, SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8), queryResource);
+
     Assert.assertTrue(response.containsHeader(HttpHeader.TRAILER.toString()));
     Assert.assertEquals(response.getHeader(HttpHeader.TRAILER.toString()), QueryResultPusher.RESULT_TRAILER_HEADERS);
 
-    final HttpFields fields = response.getTrailers().get();
+    final Map<String, String> fields = response.getTrailerFields().get();
     Assert.assertTrue(fields.containsKey(QueryResource.ERROR_MESSAGE_TRAILER_HEADER));
     Assert.assertEquals(
         fields.get(QueryResource.ERROR_MESSAGE_TRAILER_HEADER),
@@ -505,49 +505,6 @@ public class QueryResourceTest
 
     Assert.assertTrue(fields.containsKey(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
     Assert.assertEquals(fields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER), "false");
-  }
-
-  @Test
-  public void testSuccessResponseWithTrailerHeader() throws IOException
-  {
-    queryResource = new QueryResource(
-        new QueryLifecycleFactory(
-            CONGLOMERATE,
-            TEST_SEGMENT_WALKER,
-            new DefaultGenericQueryMetricsFactory(),
-            new NoopServiceEmitter(),
-            testRequestLogger,
-            new AuthConfig(),
-            NoopPolicyEnforcer.instance(),
-            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
-        ),
-        jsonMapper,
-        queryScheduler,
-        null,
-        new QueryResourceQueryResultPusherFactory(
-            jsonMapper,
-            ResponseContextConfig.newConfig(true),
-            DRUID_NODE
-        ),
-        new ResourceIOReaderWriterFactory(jsonMapper, smileMapper)
-    );
-
-    expectPermissiveHappyPathAuth();
-
-    org.eclipse.jetty.server.Response response = this.jettyResponseforRequest(testServletRequest);
-    Assert.assertNull(queryResource.doPost(new ByteArrayInputStream(
-                                               SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
-                                           null /*pretty*/,
-                                           testServletRequest
-    ));
-    Assert.assertTrue(response.containsHeader(HttpHeader.TRAILER.toString()));
-
-    final HttpFields fields = response.getTrailers().get();
-    Assert.assertFalse(fields.containsKey(QueryResource.ERROR_MESSAGE_TRAILER_HEADER));
-
-    Assert.assertTrue(fields.containsKey(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
-    Assert.assertEquals(fields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER), "true");
   }
 
   @Test
@@ -635,29 +592,20 @@ public class QueryResourceTest
 
     expectPermissiveHappyPathAuth();
 
-    org.eclipse.jetty.server.Response response = this.jettyResponseforRequest(testServletRequest);
-
-    // Execute the query
-    Assert.assertNull(queryResource.doPost(
-        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
-        null,
-        testServletRequest
-    ));
-
+    HttpServletResponse response = expectAsyncRequestFlow(testServletRequest, SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8), queryResource);
 
     Assert.assertTrue(response.containsHeader(HttpHeader.TRAILER.toString()));
     Assert.assertEquals(QueryResultPusher.RESULT_TRAILER_HEADERS, response.getHeader(HttpHeader.TRAILER.toString()));
 
-    final HttpFields observedFields = response.getTrailers().get();
-
+    final Map<String, String> fields = response.getTrailerFields().get();
     Assert.assertTrue(response.containsHeader(QueryResource.HEADER_RESPONSE_CONTEXT));
     Assert.assertEquals(
         jsonMapper.writeValueAsString(ImmutableMap.of("missingSegments", ImmutableList.of(missingSegDesc))),
         response.getHeader(QueryResource.HEADER_RESPONSE_CONTEXT)
     );
 
-    Assert.assertTrue(observedFields.containsKey(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
-    Assert.assertEquals("true", observedFields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
+    Assert.assertTrue(fields.containsKey(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
+    Assert.assertEquals("true", fields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
   }
 
 
@@ -1781,30 +1729,5 @@ public class QueryResourceTest
   ) throws IOException
   {
     return queryResource.doPost(new ByteArrayInputStream(bytes), null, req);
-  }
-
-  private org.eclipse.jetty.server.Response jettyResponseforRequest(MockHttpServletRequest req) throws IOException
-  {
-    HttpChannel channelMock = EasyMock.mock(HttpChannel.class);
-    HttpOutput outputMock = EasyMock.mock(HttpOutput.class);
-    org.eclipse.jetty.server.Response response = new org.eclipse.jetty.server.Response(channelMock, outputMock);
-
-    EasyMock.expect(channelMock.isSendError()).andReturn(false);
-    EasyMock.expect(channelMock.isCommitted()).andReturn(true);
-
-    outputMock.close();
-    EasyMock.expectLastCall().andVoid();
-
-    outputMock.write(EasyMock.anyObject(byte[].class), EasyMock.anyInt(), EasyMock.anyInt());
-    EasyMock.expectLastCall().andVoid();
-
-    EasyMock.replay(outputMock, channelMock);
-
-    req.newAsyncContext(() -> {
-      final MockAsyncContext retVal = new MockAsyncContext();
-      retVal.response = response;
-      return retVal;
-    });
-    return response;
   }
 }

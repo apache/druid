@@ -34,6 +34,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * A fake HttpServletResponse used in tests.  A lot of methods are implemented as
@@ -58,6 +60,8 @@ public class MockHttpServletResponse implements HttpServletResponse
   public Multimap<String, String> headers = Multimaps.newListMultimap(
       new LinkedHashMap<>(), ArrayList::new
   );
+
+  private Supplier<Map<String, String>> trailerSupplier;
 
   public final ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
@@ -148,6 +152,8 @@ public class MockHttpServletResponse implements HttpServletResponse
   @Override
   public void setHeader(String name, String value)
   {
+    // HttpServletResponse 4.0.1 spec dictates that setHeader  overwrites existing values.
+    headers.removeAll(name);
     headers.put(name, value);
   }
 
@@ -336,5 +342,17 @@ public class MockHttpServletResponse implements HttpServletResponse
   public Locale getLocale()
   {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void setTrailerFields(Supplier<Map<String, String>> supplier)
+  {
+    this.trailerSupplier = supplier;
+  }
+
+  @Override
+  public Supplier<Map<String, String>> getTrailerFields()
+  {
+    return trailerSupplier;
   }
 }

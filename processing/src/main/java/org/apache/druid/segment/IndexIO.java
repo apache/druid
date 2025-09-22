@@ -49,6 +49,7 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -451,7 +452,7 @@ public class IndexIO
     {
       MMappedIndex index = legacyHandler.mapDir(inDir);
 
-      Map<String, Supplier<ColumnHolder>> columns = new LinkedHashMap<>();
+      Map<String, Supplier<BaseColumnHolder>> columns = new LinkedHashMap<>();
 
       for (String dimension : index.getAvailableDimensions()) {
         ColumnBuilder builder = new ColumnBuilder()
@@ -528,12 +529,12 @@ public class IndexIO
       };
     }
 
-    private Supplier<ColumnHolder> getColumnHolderSupplier(ColumnBuilder builder, boolean lazy)
+    private Supplier<BaseColumnHolder> getColumnHolderSupplier(ColumnBuilder builder, boolean lazy)
     {
       if (lazy) {
         return Suppliers.memoize(builder::build);
       } else {
-        ColumnHolder columnHolder = builder.build();
+        BaseColumnHolder columnHolder = builder.build();
         return () -> columnHolder;
       }
     }
@@ -617,7 +618,7 @@ public class IndexIO
         allDims = null;
       }
 
-      Map<String, Supplier<ColumnHolder>> columns = new LinkedHashMap<>();
+      Map<String, Supplier<BaseColumnHolder>> columns = new LinkedHashMap<>();
 
       // Register the time column
       ByteBuffer timeBuffer = smooshedFiles.mapFile("__time");
@@ -651,11 +652,11 @@ public class IndexIO
           smooshedFiles,
           loadFailed
       );
-      final Map<String, Map<String, Supplier<ColumnHolder>>> projectionsColumns = new LinkedHashMap<>();
+      final Map<String, Map<String, Supplier<BaseColumnHolder>>> projectionsColumns = new LinkedHashMap<>();
       final Metadata metadata = getMetdata(smooshedFiles, mapper, inDir);
       if (metadata != null && metadata.getProjections() != null) {
         for (AggregateProjectionMetadata projectionSpec : metadata.getProjections()) {
-          final Map<String, Supplier<ColumnHolder>> projectionColumns = readProjectionColumns(
+          final Map<String, Supplier<BaseColumnHolder>> projectionColumns = readProjectionColumns(
               mapper,
               loadFailed,
               projectionSpec,
@@ -690,24 +691,24 @@ public class IndexIO
       return index;
     }
 
-    private Map<String, Supplier<ColumnHolder>> readProjectionColumns(
+    private Map<String, Supplier<BaseColumnHolder>> readProjectionColumns(
         ObjectMapper mapper,
         SegmentLazyLoadFailCallback loadFailed,
         AggregateProjectionMetadata projectionSpec,
         SmooshedFileMapper smooshedFiles,
-        Map<String, Supplier<ColumnHolder>> columns,
+        Map<String, Supplier<BaseColumnHolder>> columns,
         Interval dataInterval
     ) throws IOException
     {
       final String timeColumnName = projectionSpec.getSchema().getTimeColumnName();
       final boolean renameTime = !ColumnHolder.TIME_COLUMN_NAME.equals(timeColumnName);
-      final Map<String, Supplier<ColumnHolder>> projectionColumns = new LinkedHashMap<>();
+      final Map<String, Supplier<BaseColumnHolder>> projectionColumns = new LinkedHashMap<>();
 
       for (String groupingColumn : projectionSpec.getSchema().getGroupingColumns()) {
         final String smooshName = Projections.getProjectionSmooshV9FileName(projectionSpec, groupingColumn);
         final ByteBuffer colBuffer = smooshedFiles.mapFile(smooshName);
 
-        final ColumnHolder parentColumn;
+        final BaseColumnHolder parentColumn;
         if (columns.containsKey(groupingColumn)) {
           parentColumn = columns.get(groupingColumn).get();
         } else {
@@ -813,7 +814,7 @@ public class IndexIO
         File inDir,
         Indexed<String> cols,
         boolean lazy,
-        Map<String, Supplier<ColumnHolder>> columns,
+        Map<String, Supplier<BaseColumnHolder>> columns,
         ObjectMapper mapper,
         SmooshedFileMapper smooshedFiles,
         SegmentLazyLoadFailCallback loadFailed
@@ -841,12 +842,12 @@ public class IndexIO
 
     private void registerColumnHolder(
         boolean lazy,
-        Map<String, Supplier<ColumnHolder>> columns,
+        Map<String, Supplier<BaseColumnHolder>> columns,
         String columnName,
         ObjectMapper mapper,
         ByteBuffer colBuffer,
         SmooshedFileMapper smooshedFiles,
-        @Nullable ColumnHolder parentColumn,
+        @Nullable BaseColumnHolder parentColumn,
         SegmentLazyLoadFailCallback loadFailed
     ) throws IOException
     {
@@ -874,7 +875,7 @@ public class IndexIO
             }
         ));
       } else {
-        final ColumnHolder columnHolder = deserializeColumn(
+        final BaseColumnHolder columnHolder = deserializeColumn(
             internedColumnName,
             mapper,
             colBuffer,
@@ -890,7 +891,7 @@ public class IndexIO
      * Visible for failure testing. See {@link V9IndexLoaderTest#testLoadSegmentDamagedFileWithLazy()}.
      */
     @VisibleForTesting
-    ColumnHolder deserializeColumn(
+    BaseColumnHolder deserializeColumn(
         String columnName, // columnName is not used in this method, but used in tests.
         ObjectMapper mapper,
         ByteBuffer byteBuffer,

@@ -117,6 +117,7 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
             MSQExternalDataSourceModule.class
         )
         .addResource(storageResource)
+        .addCommonProperty("druid.storage.zip", "false")
         .addServer(coordinator)
         .addServer(overlord)
         .addServer(indexer)
