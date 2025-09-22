@@ -52,7 +52,7 @@ public class NestedCommonFormatColumnHandler implements DimensionHandler<Structu
   public NestedCommonFormatColumnHandler(
       String name,
       @Nullable ColumnType castTo,
-      NestedCommonFormatColumnFormatSpec columnFormatSpec
+      @Nullable NestedCommonFormatColumnFormatSpec columnFormatSpec
   )
   {
     this.name = name;

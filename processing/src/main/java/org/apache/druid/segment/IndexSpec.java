@@ -63,6 +63,7 @@ public class IndexSpec
   private final CompressionStrategy jsonCompression;
   @Nullable
   private final SegmentizerFactory segmentLoader;
+  @Nullable
   private final NestedCommonFormatColumnFormatSpec autoColumnFormatSpec;
 
   /**
@@ -113,11 +114,7 @@ public class IndexSpec
                         : longEncoding;
     this.jsonCompression = jsonCompression;
     this.segmentLoader = segmentLoader;
-    this.autoColumnFormatSpec = autoColumnFormatSpec == null
-                                ? NestedCommonFormatColumnFormatSpec.builder()
-                                                                    .setObjectStorageCompression(jsonCompression)
-                                                                    .build()
-                                : autoColumnFormatSpec;
+    this.autoColumnFormatSpec = autoColumnFormatSpec;
   }
 
   @JsonProperty("bitmap")
@@ -176,7 +173,8 @@ public class IndexSpec
   }
 
   @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
   public NestedCommonFormatColumnFormatSpec getAutoColumnFormatSpec()
   {
     return autoColumnFormatSpec;
