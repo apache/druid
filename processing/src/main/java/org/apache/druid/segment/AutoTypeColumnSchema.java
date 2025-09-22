@@ -95,7 +95,7 @@ public class AutoTypeColumnSchema extends DimensionSchema
       this.castToType = castToType;
     }
     this.columnFormatSpec = columnFormatSpec == null
-                            ? IndexSpec.DEFAULT.getAutoColumnFormatSpec()
+                            ? IndexSpec.getDefault().getAutoColumnFormatSpec()
                             : columnFormatSpec;
   }
 

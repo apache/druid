@@ -58,7 +58,7 @@ public class BuiltInTypesModuleTest
   @AfterEach
   public void beforeEach()
   {
-    IndexSpec.DEFAULT = IndexSpec.builder().build();
+    BuiltInTypesModule.setIndexSpecDefaults(IndexSpec.builder().build());
   }
 
   @AfterClass
@@ -72,7 +72,7 @@ public class BuiltInTypesModuleTest
           DEFAULT_HANDLER_PROVIDER
       );
     }
-    IndexSpec.DEFAULT = IndexSpec.builder().build();
+    BuiltInTypesModule.setIndexSpecDefaults(IndexSpec.builder().build());
   }
 
   @Test
@@ -123,15 +123,15 @@ public class BuiltInTypesModuleTest
         DimensionSchema.MultiValueHandling.SORTED_ARRAY,
         BuiltInTypesModule.getStringMultiValueHandlingMode()
     );
-    Assertions.assertEquals(CompressionStrategy.LZ4, IndexSpec.DEFAULT.getComplexMetricCompression());
+    Assertions.assertEquals(CompressionStrategy.LZ4, IndexSpec.getDefault().getComplexMetricCompression());
     Assertions.assertEquals(
         NestedCommonFormatColumnFormatSpec.builder().setStringDictionaryEncoding(new StringEncodingStrategy.FrontCoded(16, (byte) 1)).build(),
-        IndexSpec.DEFAULT.getAutoColumnFormatSpec()
+        IndexSpec.getDefault().getAutoColumnFormatSpec()
     );
 
-    Assertions.assertNull(IndexSpec.DEFAULT.getAutoColumnFormatSpec().getBitmapEncoding());
-    Assertions.assertEquals(CompressionStrategy.ZSTD, IndexSpec.DEFAULT.getMetricCompression());
-    Assertions.assertEquals(new ConciseBitmapSerdeFactory(), IndexSpec.DEFAULT.getBitmapSerdeFactory());
+    Assertions.assertNull(IndexSpec.getDefault().getAutoColumnFormatSpec().getBitmapEncoding());
+    Assertions.assertEquals(CompressionStrategy.ZSTD, IndexSpec.getDefault().getMetricCompression());
+    Assertions.assertEquals(new ConciseBitmapSerdeFactory(), IndexSpec.getDefault().getBitmapSerdeFactory());
   }
 
   @Test

@@ -592,7 +592,7 @@ public class TestDataBuilder
     try {
       final File directory = new File(tmpDir, StringUtils.format("wikipedia-index-%s", UUID.randomUUID()));
       final IncrementalIndex index = TestIndex.makeWikipediaIncrementalIndex();
-      TestIndex.INDEX_MERGER.persist(index, directory, IndexSpec.DEFAULT, null);
+      TestIndex.INDEX_MERGER.persist(index, directory, IndexSpec.getDefault(), null);
       return TestIndex.INDEX_IO.loadIndex(directory);
     }
     catch (IOException e) {

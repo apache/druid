@@ -20,7 +20,6 @@
 package org.apache.druid.segment;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.segment.data.CompressionStrategy;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -44,11 +43,6 @@ public class CompleteSegmentTest
   {
     EqualsVerifier.forClass(CompleteSegment.class)
                   .withNonnullFields("segment", "dataSegment")
-                  .withPrefabValues(
-                      IndexSpec.class,
-                      IndexSpec.builder().build(),
-                      IndexSpec.builder().withComplexMetricCompression(CompressionStrategy.ZSTD).build()
-                  )
                   .usingGetClass()
                   .verify();
   }

@@ -447,14 +447,14 @@ public class CompactionStatusTest
         DimensionsSpec.builder()
                       .setDimensions(
                           List.of(
-                              AutoTypeColumnSchema.of("x").getEffectiveSchema(IndexSpec.DEFAULT),
-                              AutoTypeColumnSchema.of("y").getEffectiveSchema(IndexSpec.DEFAULT)
+                              AutoTypeColumnSchema.of("x").getEffectiveSchema(IndexSpec.getDefault()),
+                              AutoTypeColumnSchema.of("y").getEffectiveSchema(IndexSpec.getDefault())
                           )
                       )
                       .build(),
         null,
         null,
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
         currentGranularitySpec,
         Collections.emptyList()
     );
@@ -475,7 +475,7 @@ public class CompactionStatusTest
                 )
             )
         )
-        .withTuningConfig(createTuningConfig(currentPartitionsSpec, IndexSpec.DEFAULT))
+        .withTuningConfig(createTuningConfig(currentPartitionsSpec, IndexSpec.getDefault()))
         .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))
         .withProjections(Collections.emptyList())
         .build();
@@ -501,14 +501,14 @@ public class CompactionStatusTest
         DimensionsSpec.builder()
                       .setDimensions(
                           List.of(
-                              AutoTypeColumnSchema.of("x").getEffectiveSchema(IndexSpec.DEFAULT),
-                              AutoTypeColumnSchema.of("y").getEffectiveSchema(IndexSpec.DEFAULT)
+                              AutoTypeColumnSchema.of("x").getEffectiveSchema(IndexSpec.getDefault()),
+                              AutoTypeColumnSchema.of("y").getEffectiveSchema(IndexSpec.getDefault())
                           )
                       )
                       .build(),
         null,
         null,
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
         currentGranularitySpec,
         Collections.emptyList()
     );
@@ -529,7 +529,7 @@ public class CompactionStatusTest
                 )
             )
         )
-        .withTuningConfig(createTuningConfig(currentPartitionsSpec, IndexSpec.DEFAULT))
+        .withTuningConfig(createTuningConfig(currentPartitionsSpec, IndexSpec.getDefault()))
         .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))
         .withProjections(Collections.emptyList())
         .build();

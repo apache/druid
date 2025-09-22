@@ -1363,7 +1363,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
                                ? IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE
                                : maxColumnsToMerge;
       this.partitionsSpec = partitionsSpec;
-      this.indexSpec = indexSpec == null ? IndexSpec.DEFAULT : indexSpec;
+      this.indexSpec = indexSpec == null ? IndexSpec.getDefault() : indexSpec;
       this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
                                               this.indexSpec : indexSpecForIntermediatePersists;
       this.maxPendingPersists = maxPendingPersists == null ? DEFAULT_MAX_PENDING_PERSISTS : maxPendingPersists;

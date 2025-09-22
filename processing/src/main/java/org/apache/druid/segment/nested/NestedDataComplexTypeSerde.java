@@ -235,7 +235,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     @Override
     public DimensionHandler getColumnHandler(String columnName)
     {
-      return new NestedCommonFormatColumnHandler(columnName, null, IndexSpec.DEFAULT.getAutoColumnFormatSpec());
+      return new NestedCommonFormatColumnHandler(columnName, null, IndexSpec.getDefault().getAutoColumnFormatSpec());
     }
 
     @Override

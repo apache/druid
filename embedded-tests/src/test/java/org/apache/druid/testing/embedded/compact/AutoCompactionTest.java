@@ -504,7 +504,7 @@ public class AutoCompactionTest extends CompactionTestBase
 
       List<DimensionSchema> dimensionSchemas = ImmutableList.of(
           new StringDimensionSchema("language", DimensionSchema.MultiValueHandling.SORTED_ARRAY, false),
-          new AutoTypeColumnSchema("deleted", ColumnType.DOUBLE, null).getEffectiveSchema(IndexSpec.DEFAULT)
+          new AutoTypeColumnSchema("deleted", ColumnType.DOUBLE, null).getEffectiveSchema(IndexSpec.getDefault())
       );
 
       submitCompactionConfig(

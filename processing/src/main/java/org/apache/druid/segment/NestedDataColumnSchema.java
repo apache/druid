@@ -63,7 +63,7 @@ public class NestedDataColumnSchema extends DimensionSchema
       if (defaultFormatConfig.getIndexSpec() != null) {
         this.columnFormatSpec = defaultFormatConfig.getIndexSpec().getAutoColumnFormatSpec();
       } else {
-        this.columnFormatSpec = IndexSpec.DEFAULT.getAutoColumnFormatSpec();
+        this.columnFormatSpec = IndexSpec.getDefault().getAutoColumnFormatSpec();
       }
     } else {
       this.columnFormatSpec = columnFormatSpec;
@@ -78,7 +78,7 @@ public class NestedDataColumnSchema extends DimensionSchema
     super(name, null, true);
     this.formatVersion = version;
     DefaultColumnFormatConfig.validateNestedFormatVersion(this.formatVersion);
-    this.columnFormatSpec = IndexSpec.DEFAULT.getAutoColumnFormatSpec();
+    this.columnFormatSpec = IndexSpec.getDefault().getAutoColumnFormatSpec();
   }
 
   @JsonProperty("formatVersion")

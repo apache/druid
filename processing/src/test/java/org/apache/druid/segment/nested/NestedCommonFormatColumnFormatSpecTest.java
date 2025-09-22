@@ -61,7 +61,7 @@ public class NestedCommonFormatColumnFormatSpecTest
   {
     NestedCommonFormatColumnFormatSpec defaults = NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(
         null,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
     Assert.assertEquals(
@@ -77,19 +77,19 @@ public class NestedCommonFormatColumnFormatSpecTest
         defaults.getObjectStorageCompression()
     );
     Assert.assertEquals(
-        IndexSpec.DEFAULT.getDimensionCompression(),
+        IndexSpec.getDefault().getDimensionCompression(),
         defaults.getDictionaryEncodedColumnCompression()
     );
     Assert.assertEquals(
-        IndexSpec.DEFAULT.getStringDictionaryEncoding(),
+        IndexSpec.getDefault().getStringDictionaryEncoding(),
         defaults.getStringDictionaryEncoding()
     );
     Assert.assertEquals(
-        IndexSpec.DEFAULT.getMetricCompression(),
+        IndexSpec.getDefault().getMetricCompression(),
         defaults.getLongColumnCompression()
     );
     Assert.assertEquals(
-        IndexSpec.DEFAULT.getMetricCompression(),
+        IndexSpec.getDefault().getMetricCompression(),
         defaults.getDoubleColumnCompression()
     );
   }
@@ -108,7 +108,7 @@ public class NestedCommonFormatColumnFormatSpecTest
                                           )
                                           .setDoubleColumnCompression(CompressionStrategy.ZSTD)
                                           .build(),
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
     Assert.assertEquals(
@@ -124,7 +124,7 @@ public class NestedCommonFormatColumnFormatSpecTest
         merged.getObjectStorageEncoding()
     );
     Assert.assertEquals(
-        IndexSpec.DEFAULT.getDimensionCompression(),
+        IndexSpec.getDefault().getDimensionCompression(),
         merged.getDictionaryEncodedColumnCompression()
     );
     Assert.assertEquals(
@@ -132,7 +132,7 @@ public class NestedCommonFormatColumnFormatSpecTest
         merged.getObjectStorageCompression()
     );
     Assert.assertEquals(
-        IndexSpec.DEFAULT.getMetricCompression(),
+        IndexSpec.getDefault().getMetricCompression(),
         merged.getLongColumnCompression()
     );
     Assert.assertEquals(

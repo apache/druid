@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -41,7 +42,10 @@ import java.util.Objects;
  */
 public class IndexSpec
 {
-  public static IndexSpec DEFAULT = IndexSpec.builder().build();
+  public static IndexSpec getDefault()
+  {
+    return BuiltInTypesModule.getDefaultIndexSpec();
+  }
 
   public static Builder builder()
   {

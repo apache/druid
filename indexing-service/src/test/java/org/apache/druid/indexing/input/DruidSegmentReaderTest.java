@@ -743,7 +743,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
       ).persist(
           incrementalIndex,
           segmentDirectory,
-          IndexSpec.DEFAULT,
+          IndexSpec.getDefault(),
           null
       );
       segmentSize = FileUtils.getFileSize(segmentDirectory);
@@ -855,7 +855,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
       ).persist(
           incrementalIndex,
           segmentDirectory,
-          IndexSpec.DEFAULT,
+          IndexSpec.getDefault(),
           null
       );
       segmentSize = FileUtils.getFileSize(segmentDirectory);
@@ -1030,7 +1030,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
       ).persist(
           incrementalIndex,
           segmentDirectory,
-          IndexSpec.DEFAULT,
+          IndexSpec.getDefault(),
           null
       );
       segmentSize = FileUtils.getFileSize(segmentDirectory);

@@ -126,7 +126,7 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
     try (final FileSmoosher smoosher = new FileSmoosher(tmpFile)) {
       ScalarStringColumnSerializer serializer = new ScalarStringColumnSerializer(
           fileNameBase,
-          NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(null, IndexSpec.DEFAULT),
+          NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(null, IndexSpec.getDefault()),
           writeOutMediumFactory.makeSegmentWriteOutMedium(tempFolder.newFolder()),
           closer
       );

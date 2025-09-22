@@ -344,7 +344,7 @@ public class CompactionStatus
     {
       return CompactionStatus.completeIfEqual(
           "indexSpec",
-          Configs.valueOrDefault(tuningConfig.getIndexSpec(), IndexSpec.DEFAULT),
+          Configs.valueOrDefault(tuningConfig.getIndexSpec(), IndexSpec.getDefault()),
           objectMapper.convertValue(lastCompactionState.getIndexSpec(), IndexSpec.class),
           String::valueOf
       );
@@ -446,7 +446,7 @@ public class CompactionStatus
             compactionConfig.getDimensionsSpec().getDimensions(),
             compactionConfig.getTuningConfig() == null ? null : compactionConfig.getTuningConfig().getPartitionsSpec(),
             compactionConfig.getTuningConfig() == null
-            ? IndexSpec.DEFAULT
+            ? IndexSpec.getDefault()
             : compactionConfig.getTuningConfig().getIndexSpec()
         );
         return CompactionStatus.completeIfEqual(

@@ -292,7 +292,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
         },
         Granularities.HOUR,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
   }
 }

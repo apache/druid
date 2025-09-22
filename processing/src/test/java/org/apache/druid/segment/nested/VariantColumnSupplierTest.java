@@ -272,7 +272,7 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
           fileNameBase,
           expectedTypes.getSingleType() == null ? null : expectedLogicalType,
           expectedTypes.getSingleType() == null ? expectedTypes.getByteValue() : null,
-          NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(columnFormatSpec, IndexSpec.DEFAULT),
+          NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(columnFormatSpec, IndexSpec.getDefault()),
           writeOutMediumFactory.makeSegmentWriteOutMedium(tempFolder.newFolder()),
           closer
       );

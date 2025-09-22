@@ -63,7 +63,7 @@ public class IndexSpecTest
   @Test
   public void testDefaults()
   {
-    final IndexSpec spec = IndexSpec.DEFAULT;
+    final IndexSpec spec = IndexSpec.getDefault();
     Assert.assertEquals(CompressionStrategy.LZ4, spec.getDimensionCompression());
     Assert.assertEquals(CompressionStrategy.LZ4, spec.getMetricCompression());
     Assert.assertEquals(LongEncodingStrategy.LONGS, spec.getLongEncoding());
@@ -75,7 +75,7 @@ public class IndexSpecTest
     EqualsVerifier.forClass(IndexSpec.class)
                   .withPrefabValues(
                       IndexSpec.class,
-                      IndexSpec.DEFAULT,
+                      IndexSpec.getDefault(),
                       IndexSpec.builder()
                                .withJsonCompression(CompressionStrategy.ZSTD)
                                .build()

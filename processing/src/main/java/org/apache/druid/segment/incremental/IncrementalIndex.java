@@ -521,7 +521,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
           wasNewDim = true;
           final DimensionHandler<?, ?, ?> handler;
           if (useSchemaDiscovery) {
-            handler = new NestedCommonFormatColumnHandler(dimension, null, IndexSpec.DEFAULT.getAutoColumnFormatSpec());
+            handler = new NestedCommonFormatColumnHandler(dimension, null, IndexSpec.getDefault().getAutoColumnFormatSpec());
           } else {
             // legacy behavior: for schemaless type discovery, everything is a String
             handler = DimensionHandlerUtils.getHandlerFromCapabilities(

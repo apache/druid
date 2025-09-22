@@ -169,7 +169,7 @@ public class InPlanningBenchmark
         schemaInfo,
         DimensionsSpec.builder().setDimensions(columnSchemas).build(),
         TransformSpec.NONE,
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
         Granularities.NONE,
         rowsPerSegment
     );

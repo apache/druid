@@ -80,7 +80,7 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
     try {
       final File directory = new File(tmpDir, StringUtils.format("kttm-index-%s", UUID.randomUUID()));
       final IncrementalIndex index = makeKttmNestedIndex();
-      TestIndex.INDEX_MERGER.persist(index, directory, IndexSpec.DEFAULT, null);
+      TestIndex.INDEX_MERGER.persist(index, directory, IndexSpec.getDefault(), null);
       return TestIndex.INDEX_IO.loadIndex(directory);
     }
     catch (IOException e) {

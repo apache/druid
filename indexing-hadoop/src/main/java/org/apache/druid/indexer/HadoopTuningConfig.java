@@ -56,8 +56,8 @@ public class HadoopTuningConfig implements TuningConfig
         DateTimes.nowUtc().toString(),
         DEFAULT_PARTITIONS_SPEC,
         DEFAULT_SHARD_SPECS,
-        IndexSpec.DEFAULT,
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
+        IndexSpec.getDefault(),
         DEFAULT_APPENDABLE_INDEX,
         DEFAULT_MAX_ROWS_IN_MEMORY_BATCH,
         0L,
@@ -150,7 +150,7 @@ public class HadoopTuningConfig implements TuningConfig
     this.version = Configs.valueOrDefault(version, DateTimes.nowUtc().toString());
     this.partitionsSpec = Configs.valueOrDefault(partitionsSpec, DEFAULT_PARTITIONS_SPEC);
     this.shardSpecs = Configs.valueOrDefault(shardSpecs, DEFAULT_SHARD_SPECS);
-    this.indexSpec = Configs.valueOrDefault(indexSpec, IndexSpec.DEFAULT);
+    this.indexSpec = Configs.valueOrDefault(indexSpec, IndexSpec.getDefault());
     this.indexSpecForIntermediatePersists = Configs.valueOrDefault(
         indexSpecForIntermediatePersists,
         this.indexSpec
