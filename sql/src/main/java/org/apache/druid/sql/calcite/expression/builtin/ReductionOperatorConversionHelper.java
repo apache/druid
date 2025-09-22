@@ -31,7 +31,6 @@ import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.ExpressionTypeConversion;
 import org.apache.druid.math.expr.Function;
 import org.apache.druid.segment.column.ColumnType;
@@ -49,7 +48,7 @@ class ReductionOperatorConversionHelper
    * Implements type precedence rules similar to:
    * https://dev.mysql.com/doc/refman/8.0/en/comparison-operators.html#function_least
    *
-   * @see org.apache.druid.math.expr.Function.ReduceFunction#apply
+   * @see Function.ReduceFunction#apply
    * @see ExpressionTypeConversion#function
    */
   static final SqlReturnTypeInference TYPE_INFERENCE =
@@ -71,27 +70,29 @@ class ReductionOperatorConversionHelper
           if (SqlTypeName.INTERVAL_TYPES.contains(type.getSqlTypeName())) {
             // handle intervals as a LONG type even though it is a string
             valueType = ColumnType.LONG;
+          } else if (SqlTypeName.NULL == type.getSqlTypeName()) {
+            valueType = null;
           } else {
             valueType = Calcites.getColumnTypeForRelDataType(type);
           }
 
           // Return types are listed in order of preference:
-          if (valueType != null) {
-            if (valueType.is(ValueType.STRING)) {
-              returnSqlTypeName = sqlTypeName;
-              break;
-            } else if (valueType.anyOf(ValueType.DOUBLE, ValueType.FLOAT)) {
-              returnSqlTypeName = SqlTypeName.DOUBLE;
-              hasDouble = true;
-            } else if (valueType.is(ValueType.LONG) && !hasDouble) {
+          if (valueType == null) {
+            continue;
+          } else if (valueType.is(ValueType.STRING)) {
+            returnSqlTypeName = sqlTypeName;
+            break;
+          } else if (valueType.anyOf(ValueType.DOUBLE, ValueType.FLOAT)) {
+            returnSqlTypeName = SqlTypeName.DOUBLE;
+            hasDouble = true;
+          } else if (valueType.is(ValueType.LONG)) {
+            if (!hasDouble) {
               returnSqlTypeName = SqlTypeName.BIGINT;
-            } else {
-              // The operand checker of the function should prevent other types from reaching us.
-              // Throw a defensive exception if we encounter one.
-              throw DruidException.defensive("Got type[%s], which should have been a validation error.", type);
             }
-          } else if (sqlTypeName != SqlTypeName.NULL) {
-            throw new IAE("Argument %d has invalid type: %s", i, sqlTypeName);
+          } else {
+            // The operand checker of the function should prevent other types from reaching us.
+            // Throw a defensive exception if we encounter one.
+            throw DruidException.defensive("Got type[%s], which should have been a validation error.", type);
           }
         }
 
@@ -115,9 +116,7 @@ class ReductionOperatorConversionHelper
         final boolean validType =
             SqlTypeFamily.STRING.contains(type)
             || SqlTypeFamily.NUMERIC.contains(type)
-            || SqlTypeFamily.DATETIME.contains(type)
-            || SqlTypeFamily.DATETIME_INTERVAL.contains(type)
-            || SqlTypeFamily.BOOLEAN.contains(type)
+            || SqlTypeFamily.TIMESTAMP.contains(type)
             || SqlTypeFamily.NULL.contains(type);
 
         if (!validType) {
