@@ -280,7 +280,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                     catch (ExecutionException e) {
                       future.cancel(true);
                       Throwable cause = e.getCause();
-                      if (cause instanceof TimeoutException || cause instanceof QueryTimeoutException) {
+                      if (cause instanceof TimeoutException) {
                         log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
                         throw new QueryTimeoutException(StringUtils.nonStrictFormat(
                             "Query [%s] timed out",

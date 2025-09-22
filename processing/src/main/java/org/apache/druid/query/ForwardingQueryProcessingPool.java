@@ -27,6 +27,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 
+import javax.annotation.Nullable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -38,9 +39,9 @@ import java.util.concurrent.TimeUnit;
 public class ForwardingQueryProcessingPool extends ForwardingListeningExecutorService implements QueryProcessingPool
 {
   private final ListeningExecutorService delegate;
-  private final ScheduledExecutorService timeoutService;
+  @Nullable private final ScheduledExecutorService timeoutService;
 
-  public ForwardingQueryProcessingPool(ExecutorService executorService, ScheduledExecutorService timeoutService)
+  public ForwardingQueryProcessingPool(ExecutorService executorService, @Nullable ScheduledExecutorService timeoutService)
   {
     this.delegate = MoreExecutors.listeningDecorator(executorService);
     this.timeoutService = timeoutService;
@@ -66,12 +67,15 @@ public class ForwardingQueryProcessingPool extends ForwardingListeningExecutorSe
       TimeUnit unit
   )
   {
-    return Futures.withTimeout(
-        delegate().submit(task),
-        timeout,
-        unit,
-        timeoutService
-    );
+    if (timeoutService != null) {
+      return Futures.withTimeout(
+          delegate().submit(task),
+          timeout,
+          unit,
+          timeoutService
+      );
+    }
+    return delegate().submit(task);
   }
 
   @Override

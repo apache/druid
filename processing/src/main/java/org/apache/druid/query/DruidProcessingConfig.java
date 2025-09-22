@@ -79,7 +79,7 @@ public class DruidProcessingConfig implements ColumnConfig
     );
     this.numTimeoutThreads = Configs.valueOrDefault(
         numTimeoutThreads,
-        1
+        0
     );
     this.numMergeBuffers = Configs.valueOrDefault(numMergeBuffers, Math.max(2, this.numThreads / 4));
     this.fifo = fifo == null || fifo;

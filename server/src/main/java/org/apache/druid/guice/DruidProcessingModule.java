@@ -158,7 +158,7 @@ public class DruidProcessingModule implements Module
             lifecycle,
             config
         ),
-        ScheduledExecutors.fixed(config.getNumTimeoutThreads(), "PrioritizedExecutorService-Timeout-%%d"),
+        config.getNumTimeoutThreads() > 0 ? ScheduledExecutors.fixed(config.getNumTimeoutThreads(), "PrioritizedExecutorService-Timeout-%%d") : null,
         executorServiceMonitor
     );
   }
