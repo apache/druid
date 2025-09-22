@@ -34,6 +34,12 @@ import java.util.Objects;
 
 public class NestedCommonFormatColumnFormatSpec
 {
+  private static final NestedCommonFormatColumnFormatSpec DEFAULT =
+      NestedCommonFormatColumnFormatSpec.builder()
+                                        .setObjectFieldsDictionaryEncoding(StringEncodingStrategy.UTF8_STRATEGY)
+                                        .setObjectStorageEncoding(ObjectStorageEncoding.SMILE)
+                                        .build();
+
   public static Builder builder()
   {
     return new Builder();
@@ -44,13 +50,7 @@ public class NestedCommonFormatColumnFormatSpec
       IndexSpec indexSpec
   )
   {
-    return Objects.requireNonNullElseGet(
-        columnFormatSpec,
-        () -> NestedCommonFormatColumnFormatSpec.builder()
-                                                .setObjectFieldsDictionaryEncoding(StringEncodingStrategy.UTF8_STRATEGY)
-                                                .setObjectStorageEncoding(ObjectStorageEncoding.SMILE)
-                                                .build()
-    ).getEffectiveSpec(indexSpec);
+    return Objects.requireNonNullElse(columnFormatSpec, DEFAULT).getEffectiveSpec(indexSpec);
   }
 
   @Nullable
@@ -143,8 +143,15 @@ public class NestedCommonFormatColumnFormatSpec
     Builder builder = new Builder(this);
     builder.setBitmapEncoding(indexSpec.getBitmapSerdeFactory());
 
+    final NestedCommonFormatColumnFormatSpec defaultSpec;
+    if (indexSpec.getAutoColumnFormatSpec() != null) {
+      defaultSpec = indexSpec.getAutoColumnFormatSpec();
+    } else {
+      defaultSpec = DEFAULT;
+    }
+
     if (objectFieldsDictionaryEncoding == null) {
-      if (indexSpec.getAutoColumnFormatSpec().getObjectFieldsDictionaryEncoding() != null) {
+      if (defaultSpec.getObjectFieldsDictionaryEncoding() != null) {
         builder.setObjectFieldsDictionaryEncoding(
             indexSpec.getAutoColumnFormatSpec().getObjectFieldsDictionaryEncoding()
         );
@@ -154,7 +161,7 @@ public class NestedCommonFormatColumnFormatSpec
     }
 
     if (objectStorageEncoding == null) {
-      if (indexSpec.getAutoColumnFormatSpec().getObjectStorageEncoding() != null) {
+      if (defaultSpec.getObjectStorageEncoding() != null) {
         builder.setObjectStorageEncoding(indexSpec.getAutoColumnFormatSpec().getObjectStorageEncoding());
       } else {
         builder.setObjectStorageEncoding(ObjectStorageEncoding.SMILE);
@@ -162,7 +169,7 @@ public class NestedCommonFormatColumnFormatSpec
     }
 
     if (objectStorageCompression == null) {
-      if (indexSpec.getAutoColumnFormatSpec().getObjectStorageCompression() != null) {
+      if (defaultSpec.getObjectStorageCompression() != null) {
         builder.setObjectStorageCompression(indexSpec.getAutoColumnFormatSpec().getObjectStorageCompression());
       } else if (indexSpec.getJsonCompression() != null) {
         builder.setObjectStorageCompression(indexSpec.getJsonCompression());
@@ -172,7 +179,7 @@ public class NestedCommonFormatColumnFormatSpec
     }
 
     if (stringDictionaryEncoding == null) {
-      if (indexSpec.getAutoColumnFormatSpec().getStringDictionaryEncoding() != null) {
+      if (defaultSpec.getStringDictionaryEncoding() != null) {
         builder.setStringDictionaryEncoding(indexSpec.getAutoColumnFormatSpec().getStringDictionaryEncoding());
       } else {
         builder.setStringDictionaryEncoding(indexSpec.getStringDictionaryEncoding());
@@ -180,7 +187,7 @@ public class NestedCommonFormatColumnFormatSpec
     }
 
     if (dictionaryEncodedColumnCompression == null) {
-      if (indexSpec.getAutoColumnFormatSpec().getDictionaryEncodedColumnCompression() != null) {
+      if (defaultSpec.getDictionaryEncodedColumnCompression() != null) {
         builder.setDictionaryEncodedColumnCompression(
             indexSpec.getAutoColumnFormatSpec().getDictionaryEncodedColumnCompression()
         );
@@ -190,7 +197,7 @@ public class NestedCommonFormatColumnFormatSpec
     }
 
     if (longColumnEncoding == null) {
-      if (indexSpec.getAutoColumnFormatSpec().getLongColumnEncoding() != null) {
+      if (defaultSpec.getLongColumnEncoding() != null) {
         builder.setLongColumnEncoding(indexSpec.getAutoColumnFormatSpec().getLongColumnEncoding());
       } else {
         builder.setLongColumnEncoding(indexSpec.getLongEncoding());
@@ -198,7 +205,7 @@ public class NestedCommonFormatColumnFormatSpec
     }
 
     if (longColumnCompression == null) {
-      if (indexSpec.getAutoColumnFormatSpec().getLongColumnCompression() != null) {
+      if (defaultSpec.getLongColumnCompression() != null) {
         builder.setLongColumnCompression(indexSpec.getAutoColumnFormatSpec().getLongColumnCompression());
       } else {
         builder.setLongColumnCompression(indexSpec.getMetricCompression());
@@ -206,7 +213,7 @@ public class NestedCommonFormatColumnFormatSpec
     }
 
     if (doubleColumnCompression == null) {
-      if (indexSpec.getAutoColumnFormatSpec().getDoubleColumnCompression() != null) {
+      if (defaultSpec.getDoubleColumnCompression() != null) {
         builder.setDoubleColumnCompression(indexSpec.getAutoColumnFormatSpec().getDoubleColumnCompression());
       } else {
         builder.setDoubleColumnCompression(indexSpec.getMetricCompression());
