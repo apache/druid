@@ -128,7 +128,7 @@ public class KubernetesOverlordModule implements DruidModule
         binder,
         HTTPCLIENT_TYPE_PROPERTY,
         Key.get(DruidKubernetesHttpClientFactory.class),
-        DruidKubernetesOkHttpHttpClientFactory.TYPE_NAME
+        DruidKubernetesVertxHttpClientFactory.TYPE_NAME
     );
 
     final MapBinder<String, DruidKubernetesHttpClientFactory> factoryBinder =
