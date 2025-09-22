@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.FallbackVectorProcessor;
+import org.apache.druid.math.expr.vector.FunctionErrorReportingExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorConditionalProcessors;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
 import org.apache.druid.math.expr.vector.VectorProcessors;
@@ -146,7 +147,7 @@ public interface Function extends NamedFunction
    */
   default boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
   {
-    return FallbackVectorProcessor.canFallbackVectorize(getOutputType(inspector, args), inspector, args);
+    return FallbackVectorProcessor.canFallbackVectorize(args, getOutputType(inspector, args), inspector);
   }
 
   /**
@@ -1225,12 +1226,6 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
-    {
-      return false;
-    }
-
-    @Override
     protected ExprEval eval(final long x, final long y)
     {
       if (y == 0) {
@@ -1285,7 +1280,13 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.longDivide().asProcessor(inspector, args.get(0), args.get(1));
+      // Div is currently the only math function that wraps its processor in FunctionErrorReportingExprVectorProcessor.
+      // In principle all functions could do this, but it's most useful for Div, because Div throws division by zero
+      // errors in normal operation. The others aren't expected to throw errors.
+      return new FunctionErrorReportingExprVectorProcessor<>(
+          name(),
+          VectorMathProcessors.longDivide().asProcessor(inspector, args.get(0), args.get(1))
+      );
     }
   }
 

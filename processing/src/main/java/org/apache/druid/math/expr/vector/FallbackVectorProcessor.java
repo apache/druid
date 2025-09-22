@@ -29,6 +29,7 @@ import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Function;
 import org.apache.druid.math.expr.LambdaExpr;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -61,15 +62,17 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
   /**
    * Create a processor for a non-vectorizable {@link Function}.
    */
-  public static <T> FallbackVectorProcessor<T> create(
+  public static <T> ExprVectorProcessor<T> create(
       final Function function,
       final List<Expr> args,
       final Expr.VectorInputBindingInspector inspector
   )
   {
     final List<Expr> adaptedArgs = makeAdaptedArgs(args, inspector);
+    final Function singleThreadedFunction = function.asSingleThreaded(adaptedArgs, inspector);
     return makeFallbackProcessor(
-        () -> function.apply(adaptedArgs, UnusedBinding.INSTANCE),
+        function.name(),
+        () -> singleThreadedFunction.apply(adaptedArgs, UnusedBinding.INSTANCE),
         adaptedArgs,
         function.getOutputType(inspector, args),
         inspector
@@ -79,7 +82,7 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
   /**
    * Create a processor for a non-vectorizable {@link ApplyFunction}.
    */
-  public static <T> FallbackVectorProcessor<T> create(
+  public static <T> ExprVectorProcessor<T> create(
       final ApplyFunction function,
       final LambdaExpr lambdaExpr,
       final List<Expr> args,
@@ -88,6 +91,7 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
   {
     final List<Expr> adaptedArgs = makeAdaptedArgs(args, inspector);
     return makeFallbackProcessor(
+        function.name(),
         () -> function.apply(lambdaExpr, adaptedArgs, UnusedBinding.INSTANCE),
         adaptedArgs,
         function.getOutputType(inspector, lambdaExpr, args),
@@ -98,15 +102,16 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
   /**
    * Create a processor for a non-vectorizable {@link ExprMacroTable.ExprMacro}.
    */
-  public static <T> FallbackVectorProcessor<T> create(
+  public static <T> ExprVectorProcessor<T> create(
       final ExprMacroTable.ExprMacro macro,
       final List<Expr> args,
       final Expr.VectorInputBindingInspector inspector
   )
   {
     final List<Expr> adaptedArgs = makeAdaptedArgs(args, inspector);
-    final Expr adaptedExpr = macro.apply(adaptedArgs);
+    final Expr adaptedExpr = macro.apply(adaptedArgs).asSingleThreaded(inspector);
     return makeFallbackProcessor(
+        macro.name(),
         () -> adaptedExpr.eval(UnusedBinding.INSTANCE),
         adaptedArgs,
         adaptedExpr.getOutputType(inspector),
@@ -116,17 +121,33 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
 
   /**
    * Returns whether {@link #create(Function, List, Expr.VectorInputBindingInspector)} can be used to make
-   * a fallback vectorized processor.
+   * a fallback vectorized processor for a function with the given output type and arguments.
    */
   public static boolean canFallbackVectorize(
+      final List<Expr> args,
       @Nullable final ExpressionType outputType,
-      final Expr.InputBindingInspector inspector,
-      final List<Expr> args
+      final Expr.InputBindingInspector inspector
   )
   {
     return ExpressionProcessing.allowVectorizeFallback() &&
            outputType != null &&
            inspector.canVectorize(args);
+  }
+
+  /**
+   * Returns whether {@link #create(ApplyFunction, LambdaExpr, List, Expr.VectorInputBindingInspector)} can be used to
+   * make a fallback vectorized processor for a function with the given output type and arguments.
+   */
+  public static boolean canFallbackVectorize(
+      final LambdaExpr lambdaExpr,
+      final List<Expr> args,
+      @Nullable final ExpressionType outputType,
+      final Expr.InputBindingInspector inspector
+  )
+  {
+    // Currently, can only fallback vectorize if the lambda has no free variables.
+    return canFallbackVectorize(args, outputType, inspector)
+           && lambdaExpr.getIdentifiers().containsAll(lambdaExpr.getExpr().analyzeInputs().getRequiredBindings());
   }
 
   /**
@@ -161,22 +182,25 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
    * @param inspector   binding inspector
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
-  private static <T> FallbackVectorProcessor<T> makeFallbackProcessor(
+  private static <T> ExprVectorProcessor<T> makeFallbackProcessor(
+      final String functionName,
       final Supplier<ExprEval<?>> fn,
       final List<Expr> adaptedArgs,
       final ExpressionType outputType,
       final Expr.VectorInputBindingInspector inspector
   )
   {
+    final ExprVectorProcessor<T> processor;
     if (outputType == null) {
       throw DruidException.defensive("Plan has null outputType");
     } else if (outputType.equals(ExpressionType.LONG)) {
-      return (FallbackVectorProcessor<T>) new OfLong(fn, (List) adaptedArgs, outputType, inspector);
+      processor = (FallbackVectorProcessor<T>) new OfLong(fn, (List) adaptedArgs, outputType, inspector);
     } else if (outputType.equals(ExpressionType.DOUBLE)) {
-      return (FallbackVectorProcessor<T>) new OfDouble(fn, (List) adaptedArgs, outputType, inspector);
+      processor = (FallbackVectorProcessor<T>) new OfDouble(fn, (List) adaptedArgs, outputType, inspector);
     } else {
-      return (FallbackVectorProcessor<T>) new OfObject(fn, (List) adaptedArgs, outputType, inspector);
+      processor = (FallbackVectorProcessor<T>) new OfObject(fn, (List) adaptedArgs, outputType, inspector);
     }
+    return new FunctionErrorReportingExprVectorProcessor<>(functionName, processor);
   }
 
   @Override
@@ -383,8 +407,11 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
       } else if (type.is(ExprType.DOUBLE)) {
         final boolean isNull = results.getNullVector() != null && results.getNullVector()[rowNum];
         return ExprEval.ofDouble(isNull ? null : results.getDoubleVector()[rowNum]);
+      } else if (type.is(ExprType.COMPLEX)
+                 && !ColumnType.NESTED_DATA.getComplexTypeName().equals(type.getComplexTypeName())) {
+        return ExprEval.ofType(type, results.getObjectVector()[rowNum]);
       } else {
-        return ExprEval.bestEffortOf(results.getObjectVector()[rowNum]);
+        return ExprEval.bestEffortOf(results.getObjectVector()[rowNum]).castTo(type);
       }
     }
 
@@ -429,6 +456,13 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
     public Object getLiteralValue()
     {
       return originalExpr.getLiteralValue();
+    }
+
+    @Override
+    @Nullable
+    public ExpressionType getOutputType(InputBindingInspector inspector)
+    {
+      return originalExpr.getOutputType(inspector);
     }
 
     @Override

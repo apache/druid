@@ -81,8 +81,8 @@ class FunctionExpr implements Expr
     try {
       return function.apply(args, bindings);
     }
-    catch (ExpressionValidationException e) {
-      // ExpressionValidationException already contain function name
+    catch (ExpressionValidationException | ExpressionProcessingException e) {
+      // Already contain function name
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(e, e.getMessage());

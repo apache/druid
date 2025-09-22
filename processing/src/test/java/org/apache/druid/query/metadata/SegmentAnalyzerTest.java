@@ -51,6 +51,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -432,7 +433,7 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
             .andReturn(Cursors.ascendingTimeOrder())
             .atLeastOnce();
 
-    ColumnHolder holder = EasyMock.createMock(ColumnHolder.class);
+    BaseColumnHolder holder = EasyMock.createMock(BaseColumnHolder.class);
     EasyMock.expect(mockIndex.getColumnHolder("x")).andReturn(holder).atLeastOnce();
 
     StringUtf8DictionaryEncodedColumn dictionaryEncodedColumn = EasyMock.createMock(StringUtf8DictionaryEncodedColumn.class);
