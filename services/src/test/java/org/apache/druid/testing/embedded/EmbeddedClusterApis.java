@@ -280,20 +280,31 @@ public class EmbeddedClusterApis implements EmbeddedResource
     );
   }
 
+  public void waitForAllSegmentsToBeAvailable(String dataSource, EmbeddedCoordinator coordinator, EmbeddedBroker broker)
+  {
+    waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker, false);
+  }
+
   /**
    * Waits for all used segments (including overshadowed) of the given datasource
    * to be queryable by Brokers.
    */
-  public void waitForAllSegmentsToBeAvailable(String dataSource, EmbeddedCoordinator coordinator, EmbeddedBroker broker)
+  public void waitForAllSegmentsToBeAvailable(
+      String dataSource,
+      EmbeddedCoordinator coordinator,
+      EmbeddedBroker broker,
+      boolean usingCentralizedSchema
+  )
   {
     final int numSegments = coordinator
         .bindings()
         .segmentsMetadataStorage()
         .retrieveAllUsedSegments(dataSource, Segments.INCLUDING_OVERSHADOWED)
         .size();
-
+    final String metricName = usingCentralizedSchema ? "segment/schemaCache/refreshSkipped/count" :
+                                                "segment/schemaCache/refresh/count";
     broker.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("segment/schemaCache/refresh/count")
+        event -> event.hasMetricName(metricName)
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(numSegments)
     );
