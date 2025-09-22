@@ -1412,6 +1412,18 @@ public class DruidQuery
       postAggregators.addAll(sorting.getProjection().getPostAggregators());
     }
 
+    // Determine subtotals spec for the outer query
+    List<List<String>> subtotalsSpec = grouping.getSubtotals().toSubtotalsSpec(grouping.getDimensionSpecs());
+
+    // Fix for issue #13125: When using exact COUNT(DISTINCT) with GROUPING SETS,
+    // Calcite's AGGREGATE_EXPAND_DISTINCT_AGGREGATES_TO_JOIN rule may rewrite the query
+    // into a nested structure where the outer aggregate loses the original subtotals.
+    // If we have a QueryDataSource and no subtotals, check if the inner query has subtotals
+    // that should be preserved in the outer query.
+    if (subtotalsSpec == null && newDataSource instanceof QueryDataSource) {
+      subtotalsSpec = tryRecoverSubtotalsFromInnerQuery((QueryDataSource) newDataSource, grouping.getDimensionSpecs());
+    }
+
     GroupByQuery query = new GroupByQuery(
         newDataSource,
         filtration.getQuerySegmentSpec(),
@@ -1423,7 +1435,7 @@ public class DruidQuery
         postAggregators,
         havingSpec,
         Optional.ofNullable(sorting).orElse(Sorting.none()).limitSpec(),
-        grouping.getSubtotals().toSubtotalsSpec(grouping.getDimensionSpecs()),
+        subtotalsSpec,
         ImmutableSortedMap.copyOf(plannerContext.queryContextMap())
     );
     // We don't apply timestamp computation optimization yet when limit is pushed down. Maybe someday.
@@ -1499,6 +1511,61 @@ public class DruidQuery
       return query;
     }
     return query.withOverriddenContext(theContext);
+  }
+
+  /**
+   * Attempts to recover subtotals specification from an inner query when the outer query
+   * has lost the original GROUPING SETS information due to Calcite's query rewriting.
+   *
+   * This is specifically needed for issue #13125 where exact COUNT(DISTINCT) with GROUPING SETS
+   * gets rewritten by AGGREGATE_EXPAND_DISTINCT_AGGREGATES_TO_JOIN, causing the outer query
+   * to lose the original subtotals.
+   *
+   * @param queryDataSource the inner query data source
+   * @param outerDimensions the dimensions of the outer query
+   * @return subtotals spec if recoverable, null otherwise
+   */
+  @Nullable
+  private static List<List<String>> tryRecoverSubtotalsFromInnerQuery(
+      final QueryDataSource queryDataSource,
+      final List<DimensionSpec> outerDimensions
+  )
+  {
+    final Query<?> innerQuery = queryDataSource.getQuery();
+
+    // Only try to recover from GroupBy queries
+    if (!(innerQuery instanceof GroupByQuery)) {
+      return null;
+    }
+
+    final GroupByQuery innerGroupBy = (GroupByQuery) innerQuery;
+    final List<List<String>> innerSubtotals = innerGroupBy.getSubtotalsSpec();
+
+    // If inner query has no subtotals, nothing to recover
+    if (innerSubtotals == null || innerSubtotals.isEmpty()) {
+      return null;
+    }
+
+    // Map inner subtotals to outer dimensions
+    // This is a simplified mapping that works for the common case where
+    // the outer query has the same or fewer dimensions than the inner query
+    final List<String> outerDimensionNames = outerDimensions.stream()
+        .map(DimensionSpec::getOutputName)
+        .collect(Collectors.toList());
+
+    final List<List<String>> mappedSubtotals = new ArrayList<>();
+    for (List<String> innerSubtotal : innerSubtotals) {
+      final List<String> mappedSubtotal = new ArrayList<>();
+      for (String innerDimName : innerSubtotal) {
+        // Only include dimensions that exist in the outer query
+        if (outerDimensionNames.contains(innerDimName)) {
+          mappedSubtotal.add(innerDimName);
+        }
+      }
+      mappedSubtotals.add(mappedSubtotal);
+    }
+
+    return mappedSubtotals.isEmpty() ? null : mappedSubtotals;
   }
 
   /**
