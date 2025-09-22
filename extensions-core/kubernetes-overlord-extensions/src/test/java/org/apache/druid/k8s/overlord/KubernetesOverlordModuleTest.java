@@ -206,18 +206,18 @@ public class KubernetesOverlordModuleTest
   }
 
   @Test
-  public void test_httpClientFactory_defaultsToVertx()
+  public void test_httpClientFactory_defaultsToOkhttp()
   {
     Properties props = new Properties();
     props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
-    // Don't set httpClientType - should default to vertx
+    // Don't set httpClientType - should default to okhttp
 
     injector = makeInjectorWithProperties(props, false, true);
     DruidKubernetesHttpClientFactory factory = injector.getInstance(DruidKubernetesHttpClientFactory.class);
 
     Assert.assertNotNull(factory);
-    Assert.assertTrue("Should default to Vertx HTTP client",
-                     factory instanceof DruidKubernetesVertxHttpClientFactory);
+    Assert.assertTrue("Should default to Okhttp HTTP client",
+                     factory instanceof DruidKubernetesOkHttpHttpClientFactory);
   }
 
   @Test
