@@ -22,6 +22,8 @@ package org.apache.druid.testing.embedded.server;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.TestDataSource;
@@ -32,6 +34,10 @@ import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.junit.jupiter.api.Test;
+
+import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -51,14 +57,42 @@ public class HttpTaskRunnerWorkerFailTest extends EmbeddedClusterTestBase
         .addServer(indexer);
   }
 
+  static class MyTask extends NoopTask {
+
+    CountDownLatch latch = new CountDownLatch(1);
+
+    public MyTask(String taskId, long runTimeMillis  )
+    {
+      super(taskId, null, null, runTimeMillis, 0L, null);
+    }
+
+    @Override
+    public TaskStatus runTask(TaskToolbox toolbox) throws Exception
+    {
+      latch.countDown();
+      return super.runTask(toolbox);
+    }
+
+    public void awaitRunning(Duration waitDuration) throws Exception
+    {
+      if (latch.await(waitDuration.toMillis(), TimeUnit.MILLISECONDS)) {
+        return;
+      }
+    }
+  }
+
   @Test
   public void test_overlord_marksTaskAsFailed_ifIndexerCrashes() throws Exception
   {
     final String taskId = IdUtils.newTaskId("sim_test_noop", TestDataSource.WIKI, null);
+    MyTask task = new MyTask(taskId, 4000L);
     cluster.callApi().onLeaderOverlord(
-        o -> o.runTask(taskId, new NoopTask(taskId, null, null, 8000L, 0L, null))
+        o -> {
+          return o.runTask(taskId, task);
+        }
     );
     // give some time for the overlord to dispatch the task to the worker
+    task.awaitRunning(Duration.ofMillis(100));
     Thread.sleep(100);
     overlord.stop();
     overlord.start();
@@ -70,7 +104,7 @@ public class HttpTaskRunnerWorkerFailTest extends EmbeddedClusterTestBase
     overlord.latchableEmitter().waitForMetricEvent(
         event -> event.hasMetricName("task/run/time")
             .hasDimension(DruidMetrics.TASK_ID, taskId)
-            .hasDimension(DruidMetrics.TASK_STATUS, "FAILEDX"),
+            .hasDimension(DruidMetrics.TASK_STATUS, "FAILED"),
         100
     );
     TaskStatusResponse jobStatus = cluster.callApi().onLeaderOverlord(oc -> oc.taskStatus(taskId));
@@ -80,5 +114,6 @@ public class HttpTaskRunnerWorkerFailTest extends EmbeddedClusterTestBase
         "This task disappeared on the worker where it was assigned. See overlord logs for more details.",
         jobStatus.getStatus().getErrorMsg()
     );
+//    cluster.callApi().onLeaderOverlord(c -> c.cancelTask(taskId));
   }
 }
