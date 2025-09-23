@@ -91,7 +91,7 @@ public class DruidNode
   );
 
   @JsonProperty
-  private Map<String, String> labels = new HashMap<>();
+  private Map<String, String> labels;
 
   public DruidNode(
       String serviceName,
