@@ -51,7 +51,7 @@ public class OverlordIntegrationTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void test_runTask_ofTypeNoop() throws Exception
+  public void test_overlord_marksTaskAsFailed_ifIndexerCrashes() throws Exception
   {
     final String taskId = IdUtils.newTaskId("sim_test_noop", TestDataSource.WIKI, null);
     cluster.callApi().onLeaderOverlord(
