@@ -66,7 +66,7 @@ public class DruidNode
   @Deprecated
   @JsonProperty
   @Max(0xffff)
-  private final int port = -1;
+  private int port = -1;
 
   @JsonProperty
   @Max(0xffff)
