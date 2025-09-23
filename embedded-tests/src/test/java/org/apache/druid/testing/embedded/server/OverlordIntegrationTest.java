@@ -65,8 +65,12 @@ public class OverlordIntegrationTest extends EmbeddedClusterTestBase
     Thread.sleep(100);
     indexer.stop();
     indexer.start();
-    // give time for the overlord to realize that the task is not there anymore
-    Thread.sleep(100);
+    // Wait for the Overlord to mark the task as FAILED
+    overlord.latchableEmitter().waitForEvent(
+       event -> event.hasMetricName("task/run/time")
+                               .hasDimension(DruidMetrics.TASK_ID, taskId)
+                               .hasDimension(DruidMetrics.TASK_STATUS, "FAILED")
+    );
 
     TaskStatusResponse jobStatus = cluster.callApi().onLeaderOverlord(oc -> oc.taskStatus(taskId));
     // the task should have failed
