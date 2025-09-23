@@ -68,15 +68,22 @@ public class OrderBy
     return order;
   }
 
-  public OrderBy reverse()
+  /**
+   * Returns true if the given {@link OrderBy} is the exact reverse, meaning they have the same column name
+   * in revrersed order.
+   */
+  public boolean isExactReverse(OrderBy that)
   {
+    if (!columnName.equals(that.columnName)) {
+      return false;
+    }
     switch (order) {
       case ASCENDING:
-        return new OrderBy(columnName, Order.DESCENDING);
+        return Order.DESCENDING.equals(that.order);
       case DESCENDING:
-        return new OrderBy(columnName, Order.ASCENDING);
+        return Order.ASCENDING.equals(that.order);
       default:
-        throw new IAE("Cannot reverse order [%s]", order);
+        throw new IAE("No order[%s] for column[%s]", order, columnName);
     }
   }
 

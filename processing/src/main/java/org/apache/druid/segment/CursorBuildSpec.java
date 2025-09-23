@@ -239,14 +239,14 @@ public class CursorBuildSpec
     }
 
     boolean exactMatch = ordering.get(0).equals(preferredOrdering.get(0));
-    if (!exactMatch && !ordering.get(0).equals(preferredOrdering.get(0).reverse())) {
+    if (!exactMatch && !ordering.get(0).isExactReverse(preferredOrdering.get(0))) {
       // not exact match or reverse match on first column, fail fast
       return false;
     }
     for (int i = 1; i < preferredOrdering.size(); i++) {
       if (exactMatch && ordering.get(i).equals(preferredOrdering.get(i))) {
         // exact match, continue
-      } else if (!exactMatch && ordering.get(i).equals(preferredOrdering.get(i).reverse())) {
+      } else if (!exactMatch && ordering.get(i).isExactReverse(preferredOrdering.get(i))) {
         // match in opposite direction, continue
       } else {
         return false;
