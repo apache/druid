@@ -383,9 +383,8 @@ public class SystemSchemaTest extends CalciteTestBase
   private final DateTime startTime = DateTimes.nowUtc();
 
   private final String version = GuavaUtils.firstNonNull(
-    SystemSchemaTest.class.getPackage().getImplementationVersion(),
-    DruidNode.UNKNOWN_VERSION
-);
+          SystemSchemaTest.class.getPackage().getImplementationVersion(),
+          DruidNode.UNKNOWN_VERSION);
 
   private final DiscoveryDruidNode coordinator = new DiscoveryDruidNode(
       new DruidNode("s1", "localhost", false, 8081, null, true, false),
@@ -558,7 +557,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final SystemSchema.ServersTable serversTable = (SystemSchema.ServersTable) schema.getTableMap().get("servers");
     final RelDataType serverRowType = serversTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> serverFields = serverRowType.getFieldList();
-    Assert.assertEquals(10, serverFields.size());
+    Assert.assertEquals(11, serverFields.size());
     Assert.assertEquals("server", serverFields.get(0).getName());
     Assert.assertEquals(SqlTypeName.VARCHAR, serverFields.get(0).getType().getSqlTypeName());
   }
