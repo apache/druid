@@ -2070,6 +2070,7 @@ druid.enableTlsPort
 druid.indexer.autoscale.workerVersion
 druid.service
 druid.storage.disableAcl
+druid.labels
 druid_audit
 druid_config
 druid_dataSource
