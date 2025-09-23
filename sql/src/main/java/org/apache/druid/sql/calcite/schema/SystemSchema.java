@@ -630,8 +630,8 @@ public class SystemSchema extends AbstractSchema
     private static Object[] buildRowForNonDataServer(DiscoveryDruidNode discoveryDruidNode)
     {
       final DruidNode node = discoveryDruidNode.getDruidNode();
-      return new Object[] {
-              node.getHostAndPortToUse(),
+      return new Object[]{
+          node.getHostAndPortToUse(),
           node.getHost(),
           (long) node.getPlaintextPort(),
           (long) node.getTlsPort(),
@@ -654,8 +654,8 @@ public class SystemSchema extends AbstractSchema
     )
     {
       final DruidNode node = discoveryDruidNode.getDruidNode();
-      return new Object[] {
-              node.getHostAndPortToUse(),
+      return new Object[]{
+          node.getHostAndPortToUse(),
           node.getHost(),
           (long) node.getPlaintextPort(),
           (long) node.getTlsPort(),
@@ -690,8 +690,8 @@ public class SystemSchema extends AbstractSchema
       } else {
         currentSize = serverFromInventoryView.getCurrSize();
       }
-      return new Object[] {
-              node.getHostAndPortToUse(),
+      return new Object[]{
+          node.getHostAndPortToUse(),
           node.getHost(),
           (long) node.getPlaintextPort(),
           (long) node.getTlsPort(),

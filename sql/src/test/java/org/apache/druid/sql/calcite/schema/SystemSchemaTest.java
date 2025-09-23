@@ -396,7 +396,7 @@ public class SystemSchemaTest extends CalciteTestBase
   );
 
   private final DiscoveryDruidNode overlord = new DiscoveryDruidNode(
-      new DruidNode("s2", "localhost", false, 8090, null, true, false),
+      new DruidNode("s2", "localhost", false, 8090, null, null, true, false, ImmutableMap.of("overlordKey", "overlordValue")),
       NodeRole.OVERLORD,
       ImmutableMap.of(),
       startTime
@@ -410,7 +410,7 @@ public class SystemSchemaTest extends CalciteTestBase
   );
 
   private final DiscoveryDruidNode broker1 = new DiscoveryDruidNode(
-      new DruidNode("s3", "localhost", false, 8082, null, true, false),
+      new DruidNode("s3", "localhost", false, 8082, null, null, true, false, ImmutableMap.of("brokerKey", "brokerValue", "brokerKey2", "brokerValue2")),
       NodeRole.BROKER,
       ImmutableMap.of(),
       startTime
@@ -552,7 +552,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final SystemSchema.ServersTable serversTable = (SystemSchema.ServersTable) schema.getTableMap().get("servers");
     final RelDataType serverRowType = serversTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> serverFields = serverRowType.getFieldList();
-    Assert.assertEquals(10, serverFields.size());
+    Assert.assertEquals(11, serverFields.size());
     Assert.assertEquals("server", serverFields.get(0).getName());
     Assert.assertEquals(SqlTypeName.VARCHAR, serverFields.get(0).getType().getSqlTypeName());
   }
@@ -755,8 +755,7 @@ public class SystemSchemaTest extends CalciteTestBase
                                                          serverInventoryView,
                                                          authMapper,
                                                          overlordClient,
-                                                         coordinatorClient,
-                                                         MAPPER
+                                                         coordinatorClient
                                                      )
                                                      .createMock();
     EasyMock.replay(serversTable);
@@ -852,7 +851,8 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             0L,
             nonLeader,
-            startTimeStr
+            startTimeStr,
+            null
         )
     );
     expectedRows.add(
@@ -866,7 +866,8 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             1000L,
             nonLeader,
-            startTimeStr
+            startTimeStr,
+            null
         )
     );
     expectedRows.add(
@@ -880,7 +881,8 @@ public class SystemSchemaTest extends CalciteTestBase
             400L,
             1000L,
             nonLeader,
-            startTimeStr
+            startTimeStr,
+            null
         )
     );
     expectedRows.add(
@@ -894,7 +896,8 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             1000L,
             nonLeader,
-            startTimeStr
+            startTimeStr,
+            null
         )
     );
     expectedRows.add(
@@ -908,7 +911,8 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             1000L,
             nonLeader,
-            startTimeStr
+            startTimeStr,
+            null
         )
     );
     expectedRows.add(createExpectedRow(
@@ -921,7 +925,8 @@ public class SystemSchemaTest extends CalciteTestBase
         0L,
         1000L,
         nonLeader,
-        startTimeStr
+        startTimeStr,
+        null
     ));
     expectedRows.add(
         createExpectedRow(
@@ -934,7 +939,8 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             0L,
             1L,
-            startTimeStr
+            startTimeStr,
+            null
         )
     );
     expectedRows.add(
@@ -948,7 +954,8 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             0L,
             nonLeader,
-            startTimeStr
+            startTimeStr,
+            ImmutableMap.of("brokerKey", "brokerValue", "brokerKey2", "brokerValue2")
         )
     );
     expectedRows.add(
@@ -962,7 +969,8 @@ public class SystemSchemaTest extends CalciteTestBase
             200L,
             1000L,
             nonLeader,
-            startTimeStr
+            startTimeStr,
+            null
         )
     );
     expectedRows.add(
@@ -976,7 +984,8 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             0L,
             1L,
-            startTimeStr
+            startTimeStr,
+            ImmutableMap.of("overlordKey", "overlordValue")
         )
     );
     expectedRows.add(
@@ -990,7 +999,8 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             0L,
             0L,
-            startTimeStr
+            startTimeStr,
+            null
         )
     );
     expectedRows.add(
@@ -1004,7 +1014,8 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             0L,
             0L,
-            startTimeStr
+            startTimeStr,
+            null
         )
     );
     expectedRows.add(
@@ -1018,7 +1029,8 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             0L,
             nonLeader,
-            startTimeStr
+            startTimeStr,
+            null
         )
     );
     expectedRows.add(
@@ -1032,7 +1044,8 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             0L,
             nonLeader,
-            startTimeStr
+            startTimeStr,
+            null
         )
     );
     expectedRows.add(createExpectedRow(
@@ -1045,7 +1058,8 @@ public class SystemSchemaTest extends CalciteTestBase
         0L,
         1000L,
         nonLeader,
-        startTimeStr
+        startTimeStr,
+        null
     ));
     Assert.assertEquals(expectedRows.size(), rows.size());
     for (int i = 0; i < rows.size(); i++) {
@@ -1078,10 +1092,11 @@ public class SystemSchemaTest extends CalciteTestBase
       @Nullable Long currSize,
       @Nullable Long maxSize,
       @Nullable Long isLeader,
-      String startTime
+      String startTime,
+      Map<String, String> labels
   )
   {
-    return new Object[]{
+    return new Object[] {
         server,
         host,
         (long) plaintextPort,
@@ -1091,7 +1106,8 @@ public class SystemSchemaTest extends CalciteTestBase
         currSize,
         maxSize,
         isLeader,
-        startTime
+        startTime,
+        labels
     };
   }
 
@@ -1515,6 +1531,9 @@ public class SystemSchemaTest extends CalciteTestBase
             break;
           case STRING:
             expectedClass = String.class;
+            break;
+          case COMPLEX:
+            expectedClass = Map.class;
             break;
           default:
             throw new IAE("Don't know what class to expect for valueType[%s]", columnType);
