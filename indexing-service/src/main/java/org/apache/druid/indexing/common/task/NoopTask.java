@@ -109,8 +109,8 @@ public class NoopTask extends AbstractTask implements PendingSegmentAllocatingTa
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
     toolbox.getEmitter().emit(ServiceMetricEvent.builder().setMetric(NOOP_TASK_EVENT_STARTED, 1));
-    long endTime= System.currentTimeMillis() + runTime;
-    while(endTime > System.currentTimeMillis() && !aborted.get()) {
+    long endTime = System.currentTimeMillis() + runTime;
+    while (endTime > System.currentTimeMillis() && !aborted.get()) {
       Thread.sleep(100);
     }
     if (aborted.get()) {

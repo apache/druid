@@ -58,7 +58,7 @@ public class HttpRemoteTaskRunnerWorkerFailTest extends EmbeddedClusterTestBase
     final String taskId = IdUtils.newTaskId("sim_test_noop", TestDataSource.WIKI, null);
     cluster.callApi().onLeaderOverlord(
         o -> {
-          return o.runTask(taskId, new NoopTask(taskId, null, null, 8000L, 0L, null));//task);
+          return o.runTask(taskId, new NoopTask(taskId, null, null, 8000L, 0L, null));
         }
     );
     // wait for the overlord to dispatch the task and worker start it
