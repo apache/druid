@@ -213,7 +213,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   @Override
   public ListenableFuture<Boolean> updateConfigAsync(String taskId, TaskConfigUpdateRequest updateRequest)
   {
-    final RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.POST, "/updateConfig")
+    final RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.POST, "/config")
         .jsonContent(jsonMapper, updateRequest);
     return makeRequest(taskId, requestBuilder)
         .handler(IgnoreHttpResponseHandler.INSTANCE)

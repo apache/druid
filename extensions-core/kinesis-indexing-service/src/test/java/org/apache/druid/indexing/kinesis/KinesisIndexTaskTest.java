@@ -612,7 +612,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final Map<String, String> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
     Assert.assertEquals(checkpoint1.getPartitionSequenceNumberMap(), currentOffsets);
-    task.getRunner().setEndOffsets(currentOffsets, false);
+    task.getRunner().setEndOffsets(currentOffsets, false, true);
 
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
@@ -696,7 +696,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final Map<String, String> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
 
     Assert.assertEquals(checkpointOffsets1, currentOffsets);
-    task.getRunner().setEndOffsets(currentOffsets, false);
+    task.getRunner().setEndOffsets(currentOffsets, false, true);
 
     waitUntil(task, this::isTaskPaused);
 
@@ -704,7 +704,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     Assert.assertEquals(checkpointOffsets2, nextOffsets);
 
-    task.getRunner().setEndOffsets(nextOffsets, false);
+    task.getRunner().setEndOffsets(nextOffsets, false, true);
 
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
@@ -1753,7 +1753,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final Map<String, String> currentOffsets = ImmutableMap.copyOf(task1.getRunner().getCurrentOffsets());
     Assert.assertEquals(checkpointOffsets1, currentOffsets);
-    task1.getRunner().setEndOffsets(currentOffsets, false);
+    task1.getRunner().setEndOffsets(currentOffsets, false, true);
 
     // Stop without publishing segment
     task1.stopGracefully(toolboxFactory.build(task1).getConfig());
@@ -1874,7 +1874,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     replayAll();
 
-    task.getRunner().setEndOffsets(currentOffsets, true);
+    task.getRunner().setEndOffsets(currentOffsets, true, true);
 
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
@@ -2033,8 +2033,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Map<String, String> currentOffsets = ImmutableMap.copyOf(normalReplica.getRunner().getCurrentOffsets());
     Assert.assertEquals(checkpointOffsets1, currentOffsets);
 
-    normalReplica.getRunner().setEndOffsets(currentOffsets, false);
-    staleReplica.getRunner().setEndOffsets(currentOffsets, false);
+    normalReplica.getRunner().setEndOffsets(currentOffsets, false, true);
+    staleReplica.getRunner().setEndOffsets(currentOffsets, false, true);
 
     waitUntil(normalReplica, this::isTaskPaused);
     waitUntil(staleReplica, this::isTaskPaused);
@@ -2044,8 +2044,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     currentOffsets = ImmutableMap.copyOf(staleReplica.getRunner().getCurrentOffsets());
     Assert.assertEquals(checkpointOffsets2, currentOffsets);
 
-    normalReplica.getRunner().setEndOffsets(currentOffsets, true);
-    staleReplica.getRunner().setEndOffsets(currentOffsets, true);
+    normalReplica.getRunner().setEndOffsets(currentOffsets, true, true);
+    staleReplica.getRunner().setEndOffsets(currentOffsets, true, true);
 
     Assert.assertEquals(TaskState.SUCCESS, normalReplicaFuture.get().getStatusCode());
     Assert.assertEquals(TaskState.SUCCESS, staleReplicaFuture.get().getStatusCode());

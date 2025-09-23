@@ -646,7 +646,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
     final TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(null);
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.POST, "/updateConfig")
+        new RequestBuilder(HttpMethod.POST, "/config")
             .content(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(updateRequest))
             .timeout(httpTimeout),
         HttpResponseStatus.OK,
@@ -663,7 +663,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
     final TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(null);
 
     serviceClient.expectAndThrow(
-        new RequestBuilder(HttpMethod.POST, "/updateConfig")
+        new RequestBuilder(HttpMethod.POST, "/config")
             .content(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(updateRequest))
             .timeout(httpTimeout),
         new HttpResponseException(
@@ -683,7 +683,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
     final TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(null);
 
     serviceClient.expectAndThrow(
-        new RequestBuilder(HttpMethod.POST, "/updateConfig")
+        new RequestBuilder(HttpMethod.POST, "/config")
             .content(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(updateRequest))
             .timeout(httpTimeout),
         new ServiceNotAvailableException(TASK_ID)
@@ -698,7 +698,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
     final TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(null);
 
     serviceClient.expectAndThrow(
-        new RequestBuilder(HttpMethod.POST, "/updateConfig")
+        new RequestBuilder(HttpMethod.POST, "/config")
             .content(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(updateRequest))
             .timeout(httpTimeout),
         new ServiceClosedException(TASK_ID)

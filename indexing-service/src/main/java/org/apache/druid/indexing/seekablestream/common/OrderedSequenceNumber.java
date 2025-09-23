@@ -100,16 +100,10 @@ public abstract class OrderedSequenceNumber<SequenceOffsetType>
   {
     // This happens in the situations where earlier sequences had a different partition mapping and has now been updated.
     // Since the end is not defined, we can't really say if there is more to read or not.
-    try {
-      if (end.sequenceNumber == null) {
-        return false;
-      }
-      final int compareToEnd = this.compareTo(end);
-      return isEndOffsetExclusive ? compareToEnd < 0 : compareToEnd <= 0;
-    }
-    catch (Exception e) {
-      // In case of any exception, we return false to avoid reading unwanted data.
+    if (end.sequenceNumber == null) {
       return false;
     }
+    final int compareToEnd = this.compareTo(end);
+    return isEndOffsetExclusive ? compareToEnd < 0 : compareToEnd <= 0;
   }
 }
