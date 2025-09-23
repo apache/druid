@@ -91,7 +91,7 @@ public class StructuredData implements Comparable<StructuredData>
   private final LongSupplier hash = () -> {
     if (!hashInitialized) {
       final byte[] bytes = serialized(this);
-      // compute the size estimate, note it's not an accurate reflective of the heap size
+      // compute the size estimate, note it's not an accurate representation of the heap size
       sizeEstimate = bytes.length + Integer.BYTES; // add 4 bytes for the length prefix
       // compute the hash, we might use it for comparison later
       hashValue = HASH_FUNCTION.hash(bytes, 0, bytes.length, SEED);
@@ -138,7 +138,7 @@ public class StructuredData implements Comparable<StructuredData>
   public int getSizeEstimate()
   {
     if (sizeEstimate < 0) {
-      hash.getAsLong(); // trigger hash computation which also sets sizeEstimate
+      var unused = hash.getAsLong(); // trigger hash computation which also sets sizeEstimate
     }
     Preconditions.checkState(sizeEstimate >= 0, "sizeEstimate not initialized");
     return sizeEstimate;

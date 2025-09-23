@@ -1739,7 +1739,6 @@ public class RowBasedGrouperHelper
 
     private class ArrayNumericRowBasedKeySerdeHelper extends DictionaryBuildingSingleValuedRowBasedKeySerdeHelper
     {
-      private final int elementSize;
       private final BufferComparator bufferComparator;
       private final List<Object[]> dictionary;
       private final Object2IntMap<Object[]> reverseDictionary;
@@ -1752,19 +1751,6 @@ public class RowBasedGrouperHelper
       {
         super(keyBufferPosition, arrayType.getNullableStrategy());
         final TypeSignature<ValueType> elementType = arrayType.getElementType();
-        switch (elementType.getType()) {
-          case LONG:
-            elementSize = Long.BYTES;
-            break;
-          case FLOAT:
-            elementSize = Float.BYTES;
-            break;
-          case DOUBLE:
-            elementSize = Double.BYTES;
-            break;
-          default:
-            throw DruidException.defensive("Expecting primitive numeric types");
-        }
         this.dictionary = getDictionaryForType(elementType);
         this.reverseDictionary = getReverseDictionaryForType(elementType);
         this.bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
