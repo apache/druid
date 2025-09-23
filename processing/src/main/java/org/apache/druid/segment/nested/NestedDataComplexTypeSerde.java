@@ -20,7 +20,6 @@
 package org.apache.druid.segment.nested;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import it.unimi.dsi.fastutil.Hash;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -33,7 +32,7 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ObjectStrategyComplexTypeStrategy;
+import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
@@ -96,33 +95,32 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
   }
 
   @Override
-  public ObjectStrategy getObjectStrategy()
+  public ObjectStrategy<StructuredData> getObjectStrategy()
   {
     return new ObjectStrategy<>()
     {
       @Override
-      public int compare(Object o1, Object o2)
+      public int compare(StructuredData o1, StructuredData o2)
       {
-        return Comparators.<StructuredData>naturalNullsFirst()
-                          .compare(StructuredData.wrap(o1), StructuredData.wrap(o2));
+        return Comparators.<StructuredData>naturalNullsFirst().compare(o1, o2);
       }
 
       @Override
-      public Class<? extends Object> getClazz()
+      public Class<? extends StructuredData> getClazz()
       {
         return StructuredData.class;
       }
 
       @Nullable
       @Override
-      public Object fromByteBuffer(ByteBuffer buffer, int numBytes)
+      public StructuredData fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
         return deserializeBuffer(buffer, numBytes);
       }
 
       @Nullable
       @Override
-      public byte[] toBytes(@Nullable Object val)
+      public byte[] toBytes(@Nullable StructuredData val)
       {
         return serializeToBytes(val);
       }
@@ -201,26 +199,9 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
   }
 
   @Override
-  public <T extends Comparable<T>> TypeStrategy<T> getTypeStrategy()
+  public TypeStrategy<StructuredData> getTypeStrategy()
   {
-    return new ObjectStrategyComplexTypeStrategy<>(
-        getObjectStrategy(),
-        ColumnType.ofComplex(TYPE_NAME),
-        new Hash.Strategy<>()
-        {
-          @Override
-          public int hashCode(Object o)
-          {
-            return StructuredData.wrap(o).equalityHash();
-          }
-
-          @Override
-          public boolean equals(Object a, Object b)
-          {
-            return StructuredData.wrap(a).compareTo(StructuredData.wrap(b)) == 0;
-          }
-        }
-    );
+    return new TypeStrategies.JsonTypeStrategy(getObjectStrategy());
   }
 
   public static class NestedColumnFormatV4 implements ColumnFormat

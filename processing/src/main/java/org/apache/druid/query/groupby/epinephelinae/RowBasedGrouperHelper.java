@@ -78,6 +78,7 @@ import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.TypeStrategies;
@@ -85,7 +86,6 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.ValueMatchers;
-import org.apache.druid.segment.nested.StructuredData;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -1527,6 +1527,7 @@ public class RowBasedGrouperHelper
             case STRING:
               return new ArrayStringRowBasedKeySerdeHelper(
                   keyBufferPosition,
+                  valueType.getNullableStrategy(),
                   stringComparator
               );
             case LONG:
@@ -1609,10 +1610,15 @@ public class RowBasedGrouperHelper
     private abstract class DictionaryBuildingSingleValuedRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
     {
       private final int keyBufferPosition;
+      private final NullableTypeStrategy nullableTypeStrategy;
 
-      public DictionaryBuildingSingleValuedRowBasedKeySerdeHelper(final int keyBufferPosition)
+      public DictionaryBuildingSingleValuedRowBasedKeySerdeHelper(
+          final int keyBufferPosition,
+          final NullableTypeStrategy nullableTypeStrategy
+      )
       {
         this.keyBufferPosition = keyBufferPosition;
+        this.nullableTypeStrategy = nullableTypeStrategy;
       }
 
       @Override
@@ -1627,7 +1633,7 @@ public class RowBasedGrouperHelper
         final Object obj = key.getKey()[idx];
         int id = getReverseDictionary().getInt(obj);
         if (id == DimensionDictionary.ABSENT_VALUE_ID) {
-          int size = estimatedKeySize(key.getKey());
+          int size = nullableTypeStrategy.estimateSizeBytes(obj);
           if (currentEstimatedSize + size > maxDictionarySize) {
             return false;
           }
@@ -1639,8 +1645,6 @@ public class RowBasedGrouperHelper
         keyBuffer.putInt(id);
         return true;
       }
-
-      abstract int estimatedKeySize(Object[] key);
 
       @Override
       public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
@@ -1675,7 +1679,7 @@ public class RowBasedGrouperHelper
           ColumnType columnType
       )
       {
-        super(keyBufferPosition);
+        super(keyBufferPosition, columnType.getNullableStrategy());
         validateColumnType(columnType);
         this.columnTypeName = columnType.asTypeString();
         this.dictionary = genericDictionaries.computeIfAbsent(
@@ -1705,24 +1709,6 @@ public class RowBasedGrouperHelper
             throw DruidException.defensive("complex type name expected");
           }
         }
-      }
-
-      @Override
-      int estimatedKeySize(Object[] key)
-      {
-        int size = 0;
-        for (Object obj : key) {
-          if (obj instanceof StructuredData) {
-            Object o = ((StructuredData) obj).getValue();
-            if (o instanceof String) {
-              size += (int) estimateStringKeySize((String) o);
-            } else {
-              // fall back to string representation for other types, this might be under-estimating for map
-              size += (int) estimateStringKeySize(String.valueOf(o));
-            }
-          }
-        }
-        return size;
       }
 
       @Override
@@ -1764,7 +1750,7 @@ public class RowBasedGrouperHelper
           ColumnType arrayType
       )
       {
-        super(keyBufferPosition);
+        super(keyBufferPosition, arrayType.getNullableStrategy());
         final TypeSignature<ValueType> elementType = arrayType.getElementType();
         switch (elementType.getType()) {
           case LONG:
@@ -1827,18 +1813,6 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      int estimatedKeySize(Object[] key)
-      {
-        int size = 0;
-        for (Object obj : key) {
-          if (obj instanceof Object[]) {
-            size += ((Object[]) obj).length * elementSize;
-          }
-        }
-        return size;
-      }
-
-      @Override
       public BufferComparator getBufferComparator()
       {
         return bufferComparator;
@@ -1871,10 +1845,11 @@ public class RowBasedGrouperHelper
 
       ArrayStringRowBasedKeySerdeHelper(
           int keyBufferPosition,
+          NullableTypeStrategy nullableTypeStrategy,
           @Nullable StringComparator stringComparator
       )
       {
-        super(keyBufferPosition);
+        super(keyBufferPosition, nullableTypeStrategy);
         final Comparator<Object[]> comparator;
         if (useNaturalStringArrayComparator(stringComparator)) {
           comparator = ColumnType.STRING_ARRAY.getNullableStrategy();
@@ -1886,24 +1861,6 @@ public class RowBasedGrouperHelper
                 stringArrayDictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
                 stringArrayDictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
             );
-      }
-
-      @Override
-      int estimatedKeySize(Object[] key)
-      {
-        int size = 0;
-        for (Object obj : key) {
-          if (obj instanceof Object[]) {
-            for (Object o : (Object[]) obj) {
-              if (o instanceof String) {
-                size += (int) estimateStringKeySize((String) o);
-              } else {
-                size += (int) estimateStringKeySize(String.valueOf(o));
-              }
-            }
-          }
-        }
-        return size;
       }
 
       @Override

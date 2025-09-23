@@ -26,18 +26,21 @@ import com.google.common.primitives.Longs;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.data.ObjectStrategy;
+import org.apache.druid.segment.nested.StructuredData;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class TypeStrategies
 {
   public static final byte IS_NULL_BYTE = (byte) 1;
   public static final byte IS_NOT_NULL_BYTE = (byte) 0;
-  
+
   public static final int VALUE_OFFSET = Byte.BYTES;
   public static final int NULLABLE_LONG_SIZE = Byte.BYTES + Long.BYTES;
   public static final int NULLABLE_DOUBLE_SIZE = Byte.BYTES + Double.BYTES;
@@ -63,9 +66,9 @@ public class TypeStrategies
 
   /**
    * hmm... this might look familiar... (see ComplexMetrics)
-   *
+   * <p>
    * Register a complex type name -> {@link TypeStrategy} mapping.
-   *
+   * <p>
    * If the specified type name is already used and the supplied {@link TypeStrategy} is not of the
    * same type as the existing value in the map for said key, an {@link ISE} is thrown.
    *
@@ -96,10 +99,10 @@ public class TypeStrategies
    * Clear and set the 'null' byte of a nullable value to {@link TypeStrategies#IS_NULL_BYTE} to a {@link ByteBuffer} at
    * the supplied position. This method does not change the buffer position, limit, or mark, because it does not expect
    * to own the buffer given to it (i.e. buffer aggs)
-   *
+   * <p>
    * Nullable types are stored with a leading byte to indicate if the value is null, followed by the value bytes
    * (if not null)
-   *
+   * <p>
    * layout: | null (byte) | value |
    *
    * @return number of bytes written (always 1)
@@ -114,10 +117,10 @@ public class TypeStrategies
    * Checks if a 'nullable' value's null byte is set to {@link TypeStrategies#IS_NULL_BYTE}. This method will mask the
    * value of the null byte to only check if the null bit is set, meaning that the higher bits can be utilized for
    * flags as necessary (e.g. using high bits to indicate if the value has been set or not for aggregators).
-   *
+   * <p>
    * Note that writing nullable values with the methods of {@link Types} will always clear and set the null byte to
    * either {@link TypeStrategies#IS_NULL_BYTE} or {@link TypeStrategies#IS_NOT_NULL_BYTE}, losing any flag bits.
-   *
+   * <p>
    * layout: | null (byte) | value |
    */
   public static boolean isNullableNull(ByteBuffer buffer, int offset)
@@ -129,9 +132,9 @@ public class TypeStrategies
   /**
    * Write a non-null long value to a {@link ByteBuffer} at the supplied offset. The first byte is always cleared and
    * set to {@link TypeStrategies#IS_NOT_NULL_BYTE}, the long value is written in the next 8 bytes.
-   *
+   * <p>
    * layout: | null (byte) | long |
-   *
+   * <p>
    * This method does not change the buffer position, limit, or mark, because it does not expect to own the buffer
    * given to it (i.e. buffer aggs)
    *
@@ -147,9 +150,9 @@ public class TypeStrategies
   /**
    * Reads a non-null long value from a {@link ByteBuffer} at the supplied offset. This method should only be called
    * if and only if {@link #isNullableNull} for the same offset returns false.
-   *
+   * <p>
    * layout: | null (byte) | long |
-   *
+   * <p>
    * This method does not change the buffer position, limit, or mark, because it does not expect  to own the buffer
    * given to it (i.e. buffer aggs)
    */
@@ -161,9 +164,9 @@ public class TypeStrategies
   /**
    * Write a non-null double value to a {@link ByteBuffer} at the supplied offset. The first byte is always cleared and
    * set to {@link TypeStrategies#IS_NOT_NULL_BYTE}, the double value is written in the next 8 bytes.
-   *
+   * <p>
    * layout: | null (byte) | double |
-   *
+   * <p>
    * This method does not change the buffer position, limit, or mark, because it does not expect to own the buffer
    * given to it (i.e. buffer aggs)
    *
@@ -179,9 +182,9 @@ public class TypeStrategies
   /**
    * Reads a non-null double value from a {@link ByteBuffer} at the supplied offset. This method should only be called
    * if and only if {@link #isNullableNull} for the same offset returns false.
-   *
+   * <p>
    * layout: | null (byte) | double |
-   *
+   * <p>
    * This method does not change the buffer position, limit, or mark, because it does not expect to own the buffer
    * given to it (i.e. buffer aggs)
    */
@@ -193,9 +196,9 @@ public class TypeStrategies
   /**
    * Write a non-null float value to a {@link ByteBuffer} at the supplied offset. The first byte is always cleared and
    * set to {@link TypeStrategies#IS_NOT_NULL_BYTE}, the float value is written in the next 4 bytes.
-   *
+   * <p>
    * layout: | null (byte) | float |
-   *
+   * <p>
    * This method does not change the buffer position, limit, or mark, because it does not expect to own the buffer
    * given to it (i.e. buffer aggs)
    *
@@ -211,9 +214,9 @@ public class TypeStrategies
   /**
    * Reads a non-null float value from a {@link ByteBuffer} at the supplied offset. This method should only be called
    * if and only if {@link #isNullableNull} for the same offset returns false.
-   *
+   * <p>
    * layout: | null (byte) | float |
-   *
+   * <p>
    * This method does not change the buffer position, limit, or mark, because it does not expect to own the buffer
    * given to it (i.e. buffer aggs)
    */
@@ -463,7 +466,7 @@ public class TypeStrategies
   /**
    * Read and write non-null UTF8 encoded String values. Encodes the length in bytes as an integer prefix followed by
    * the actual encoded value bytes.
-   *
+   * <p>
    * format: | length (int) | bytes |
    */
   public static final class StringTypeStrategy implements TypeStrategy<String>
@@ -551,7 +554,7 @@ public class TypeStrategies
    * Read and write a non-null ARRAY which is permitted to have null elements (all elements are always read and written
    * with a {@link NullableTypeStrategy} wrapper on the {@link TypeStrategy} of the
    * {@link TypeSignature#getElementType()}.
-   *
+   * <p>
    * Encodes the number of elements in the array as an integer prefix followed by the actual encoded value bytes of
    * each element serially.
    */
@@ -665,6 +668,7 @@ public class TypeStrategies
         return result;
       }
     }
+
     /**
      * Implements {@link Arrays#equals} but the element equality uses the element's type strategy
      */
@@ -695,6 +699,85 @@ public class TypeStrategies
     public Class<?> getClazz()
     {
       return Object[].class;
+    }
+  }
+
+  public static final class JsonTypeStrategy implements TypeStrategy<StructuredData>
+  {
+    private final ObjectStrategy<StructuredData> objectStrategy;
+
+    public JsonTypeStrategy(ObjectStrategy<StructuredData> objectStrategy)
+    {
+      this.objectStrategy = objectStrategy;
+    }
+
+    @Override
+    public int estimateSizeBytes(StructuredData value)
+    {
+      return value.getSizeEstimate();
+    }
+
+    @Override
+    public StructuredData read(ByteBuffer buffer)
+    {
+      final int len = buffer.getInt();
+      return objectStrategy.fromByteBuffer(buffer, len);
+    }
+
+    @Override
+    public boolean readRetainsBufferReference()
+    {
+      return objectStrategy.readRetainsBufferReference();
+    }
+
+    @Override
+    public int write(ByteBuffer buffer, StructuredData value, int maxSizeBytes)
+    {
+      TypeStrategies.checkMaxSize(buffer.remaining(), maxSizeBytes, ColumnType.NESTED_DATA);
+      byte[] bytes = objectStrategy.toBytes(value);
+      final int sizeBytes = Integer.BYTES + bytes.length;
+      if (sizeBytes > maxSizeBytes) {
+        return maxSizeBytes - sizeBytes;
+      }
+      buffer.putInt(bytes.length);
+      buffer.put(bytes);
+      return sizeBytes;
+    }
+
+    @Override
+    public StructuredData fromBytes(byte[] value)
+    {
+      return objectStrategy.fromByteBuffer(ByteBuffer.wrap(value), value.length);
+    }
+
+    @Override
+    public int compare(Object o1, Object o2)
+    {
+      return objectStrategy.compare((StructuredData) o1, (StructuredData) o2);
+    }
+
+    @Override
+    public boolean groupable()
+    {
+      return true;
+    }
+
+    @Override
+    public int hashCode(StructuredData o)
+    {
+      return Objects.hashCode(o);
+    }
+
+    @Override
+    public boolean equals(StructuredData a, StructuredData b)
+    {
+      return Objects.equals(a, b);
+    }
+
+    @Override
+    public Class<?> getClazz()
+    {
+      return objectStrategy.getClazz();
     }
   }
 }
