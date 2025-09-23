@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.java.util.common.IAE;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -44,6 +45,24 @@ public class DimensionSchemaTest
     Assert.assertEquals(
         schema2,
         OBJECT_MAPPER.readValue(OBJECT_MAPPER.writeValueAsString(schema2), DimensionSchema.class)
+    );
+  }
+
+  @Test
+  public void testDeserializeStrictTypeId() throws Exception
+  {
+    final String invalidType = "{\"type\":\"invalid\",\"name\":\"foo\",\"multiValueHandling\":\"ARRAY\",\"createBitmapIndex\":false}";
+    IAE e = Assert.assertThrows(IAE.class, () -> OBJECT_MAPPER.readValue(invalidType, DimensionSchema.class));
+    Assert.assertEquals("Unknown type[invalid]", e.getMessage());
+  }
+
+  @Test
+  public void testDeserializeDefaultAsString() throws Exception
+  {
+    final String noType = "{\"name\":\"foo\",\"multiValueHandling\":\"ARRAY\",\"createBitmapIndex\":false}";
+    Assert.assertEquals(
+        new StringDimensionSchema("foo", DimensionSchema.MultiValueHandling.ARRAY, false),
+        OBJECT_MAPPER.readValue(noType, DimensionSchema.class)
     );
   }
 }
