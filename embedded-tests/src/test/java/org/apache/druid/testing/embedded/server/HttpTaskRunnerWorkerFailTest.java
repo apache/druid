@@ -23,6 +23,7 @@ import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.common.task.NoopTask;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -34,7 +35,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class OverlordIntegrationTest extends EmbeddedClusterTestBase
+public class HttpTaskRunnerWorkerFailTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer().addProperty("druid.worker.capacity", "3");
@@ -66,12 +67,12 @@ public class OverlordIntegrationTest extends EmbeddedClusterTestBase
     indexer.stop();
     indexer.start();
     // Wait for the Overlord to mark the task as FAILED
-    overlord.latchableEmitter().waitForEvent(
-       event -> event.hasMetricName("task/run/time")
-                               .hasDimension(DruidMetrics.TASK_ID, taskId)
-                               .hasDimension(DruidMetrics.TASK_STATUS, "FAILED")
+    overlord.latchableEmitter().waitForMetricEvent(
+        event -> event.hasMetricName("task/run/time")
+            .hasDimension(DruidMetrics.TASK_ID, taskId)
+            .hasDimension(DruidMetrics.TASK_STATUS, "FAILEDX"),
+        100
     );
-
     TaskStatusResponse jobStatus = cluster.callApi().onLeaderOverlord(oc -> oc.taskStatus(taskId));
     // the task should have failed
     assertEquals(TaskState.FAILED, jobStatus.getStatus().getStatusCode());

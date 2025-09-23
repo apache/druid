@@ -535,7 +535,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
         agg -> agg.hasSumAtLeast(1)
     );
     // Wait for the schema cache to refresh for the datasource under test
-    broker.latchableEmitter().waitForEvent(
+    broker.latchableEmitter().waitForMetricEvent(
         event -> event.hasMetricName("segment/schemaCache/refresh/count")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );

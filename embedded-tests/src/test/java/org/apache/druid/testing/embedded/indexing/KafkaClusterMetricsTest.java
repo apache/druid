@@ -215,7 +215,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
         agg -> agg.hasSumAtLeast(1)
     );
     // Wait for some segments to be published
-    overlord.latchableEmitter().waitForEvent(
+    overlord.latchableEmitter().waitForMetricEvent(
         event -> event.hasMetricName("segment/txn/success")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
@@ -330,7 +330,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     cluster.callApi().postSupervisor(kafkaSupervisorSpec);
 
     // Wait for some segments to be published
-    overlord.latchableEmitter().waitForEvent(
+    overlord.latchableEmitter().waitForMetricEvent(
         event -> event.hasMetricName("segment/txn/success")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
