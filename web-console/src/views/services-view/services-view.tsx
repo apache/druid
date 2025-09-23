@@ -65,7 +65,6 @@ import {
   lookupBy,
   oneOf,
   pluralIfNeeded,
-  prettyFormatIsoDateWithMsIfNeeded,
   queryDruidSql,
   QueryManager,
   QueryState,
@@ -200,6 +199,11 @@ function aggregateLoadQueueInfos(loadQueueInfos: LoadQueueInfo[]): LoadQueueInfo
     segmentsToDropSize: sum(loadQueueInfos, s => Number(s.segmentsToDropSize) || 0),
     expectedLoadTimeMillis: max(loadQueueInfos, s => Number(s.expectedLoadTimeMillis) || 0) || 0,
   };
+}
+
+function defaultDisplayFn(value: any): string {
+  if (value === undefined || value === null) return '';
+  return String(value);
 }
 
 interface WorkerInfo {
@@ -384,7 +388,10 @@ ORDER BY
     this.serviceQueryManager.runQuery({ capabilities, visibleColumns });
   };
 
-  private renderFilterableCell(field: string, displayFn: (value: string) => string = String) {
+  private renderFilterableCell(
+    field: string,
+    displayFn: (value: string) => string = defaultDisplayFn,
+  ) {
     const { filters, onFiltersChange } = this.props;
 
     return function FilterableCell(row: { value: any }) {
@@ -659,17 +666,11 @@ ORDER BY
                 const details: string[] = [];
                 if (workerInfo.lastCompletedTaskTime) {
                   details.push(
-                    `Last completed task: ${prettyFormatIsoDateWithMsIfNeeded(
-                      workerInfo.lastCompletedTaskTime,
-                    )}`,
+                    `Last completed task: ${formatDate(workerInfo.lastCompletedTaskTime)}`,
                   );
                 }
                 if (workerInfo.blacklistedUntil) {
-                  details.push(
-                    `Blacklisted until: ${prettyFormatIsoDateWithMsIfNeeded(
-                      workerInfo.blacklistedUntil,
-                    )}`,
-                  );
+                  details.push(`Blacklisted until: ${formatDate(workerInfo.blacklistedUntil)}`);
                 }
                 return details.join(' ') || null;
               }
