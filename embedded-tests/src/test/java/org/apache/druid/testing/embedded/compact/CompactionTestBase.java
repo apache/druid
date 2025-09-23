@@ -72,8 +72,12 @@ public abstract class CompactionTestBase extends EmbeddedClusterTestBase
   {
     final String taskId = IdUtils.getRandomId();
     cluster.callApi().runTask(taskBuilder.dataSource(dataSource).withId(taskId), overlord);
-    boolean useCentralizedSchema = Boolean.parseBoolean((String) cluster.getCommonProperties().getOrDefault("druid.centralizedDatasourceSchema.enabled", "false"));
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker, useCentralizedSchema);
+    boolean useCentralizedSchema = Boolean.parseBoolean(cluster.getCommonProperties().getProperty("druid.centralizedDatasourceSchema.enabled", "false"));
+    if (useCentralizedSchema) {
+      cluster.callApi().waitForAllSegmentsToBeAvailableWithCentralizedSchema(dataSource, coordinator, broker);
+    } else {
+      cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+    }
 
     return taskId;
   }
