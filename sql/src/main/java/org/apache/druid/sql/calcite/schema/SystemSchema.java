@@ -700,7 +700,7 @@ public class SystemSchema extends AbstractSchema
           currentSize,
           druidServerToUse.getMaxSize(),
           null,
-          toStringOrNull(discoveryDruidNode.getStartTime())
+          toStringOrNull(discoveryDruidNode.getStartTime()),
           node.getVersion()
       };
     }
