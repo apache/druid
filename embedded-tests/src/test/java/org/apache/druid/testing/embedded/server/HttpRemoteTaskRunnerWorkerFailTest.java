@@ -22,9 +22,8 @@ package org.apache.druid.testing.embedded.server;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskState;
-import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.NoopTask;
+import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunner;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
@@ -35,13 +34,9 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class HttpTaskRunnerWorkerFailTest extends EmbeddedClusterTestBase
+public class HttpRemoteTaskRunnerWorkerFailTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer().addProperty("druid.worker.capacity", "3");
@@ -57,47 +52,27 @@ public class HttpTaskRunnerWorkerFailTest extends EmbeddedClusterTestBase
         .addServer(indexer);
   }
 
-  static class MyTask extends NoopTask {
-
-    CountDownLatch latch = new CountDownLatch(1);
-
-    public MyTask(String taskId, long runTimeMillis  )
-    {
-      super(taskId, null, null, runTimeMillis, 0L, null);
-    }
-
-    @Override
-    public TaskStatus runTask(TaskToolbox toolbox) throws Exception
-    {
-      latch.countDown();
-      return super.runTask(toolbox);
-    }
-
-    public void awaitRunning(Duration waitDuration) throws Exception
-    {
-      if (latch.await(waitDuration.toMillis(), TimeUnit.MILLISECONDS)) {
-        return;
-      }
-    }
-  }
-
   @Test
   public void test_overlord_marksTaskAsFailed_ifIndexerCrashes() throws Exception
   {
     final String taskId = IdUtils.newTaskId("sim_test_noop", TestDataSource.WIKI, null);
-    MyTask task = new MyTask(taskId, 4000L);
     cluster.callApi().onLeaderOverlord(
         o -> {
-          return o.runTask(taskId, task);
+          return o.runTask(taskId, new NoopTask(taskId, null, null, 8000L, 0L, null));//task);
         }
     );
-    // give some time for the overlord to dispatch the task to the worker
-    task.awaitRunning(Duration.ofMillis(100));
-    Thread.sleep(100);
+    // wait for the overlord to dispatch the task and worker start it
+    indexer.latchableEmitter().waitForMetricEvent(
+        event -> event.hasMetricName(NoopTask.NOOP_TASK_EVENT_STARTED),
+        1000
+    );
     overlord.stop();
     overlord.start();
     // give some time for the overlord to load the task from the worker
-    Thread.sleep(100);
+    overlord.latchableEmitter().waitForMetricEvent(
+        event -> event.hasMetricName(HttpRemoteTaskRunner.TASK_UNKNOWN_COUNT),
+        1000
+    );
     indexer.stop();
     indexer.start();
     // Wait for the Overlord to mark the task as FAILED
@@ -114,6 +89,5 @@ public class HttpTaskRunnerWorkerFailTest extends EmbeddedClusterTestBase
         "This task disappeared on the worker where it was assigned. See overlord logs for more details.",
         jobStatus.getStatus().getErrorMsg()
     );
-//    cluster.callApi().onLeaderOverlord(c -> c.cancelTask(taskId));
   }
 }

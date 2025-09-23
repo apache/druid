@@ -29,6 +29,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.server.security.ResourceAction;
 
 import javax.annotation.Nonnull;
@@ -36,16 +37,21 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  */
 public class NoopTask extends AbstractTask implements PendingSegmentAllocatingTask
 {
   public static final String TYPE = "noop";
+  public static final String NOOP_TASK_EVENT_STARTED = "noopTask-started";
   private static final int DEFAULT_RUN_TIME = 2500;
 
   @JsonIgnore
   private final long runTime;
+
+  @JsonIgnore
+  private final AtomicBoolean aborted = new AtomicBoolean();
 
   @JsonCreator
   public NoopTask(
@@ -54,8 +60,7 @@ public class NoopTask extends AbstractTask implements PendingSegmentAllocatingTa
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("runTime") long runTimeMillis,
       @JsonProperty("isReadyTime") long isReadyTime,
-      @JsonProperty("context") Map<String, Object> context
-  )
+      @JsonProperty("context") Map<String, Object> context)
   {
     super(
         id == null ? StringUtils.format("noop_%s_%s", DateTimes.nowUtc(), UUID.randomUUID().toString()) : id,
@@ -97,13 +102,22 @@ public class NoopTask extends AbstractTask implements PendingSegmentAllocatingTa
   @Override
   public void stopGracefully(TaskConfig taskConfig)
   {
+    aborted.set(true);
   }
 
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
-    Thread.sleep(runTime);
-    return TaskStatus.success(getId());
+    toolbox.getEmitter().emit(ServiceMetricEvent.builder().setMetric(NOOP_TASK_EVENT_STARTED, 1));
+    long endTime= System.currentTimeMillis() + runTime;
+    while(endTime > System.currentTimeMillis() && !aborted.get()) {
+      Thread.sleep(100);
+    }
+    if (aborted.get()) {
+      return TaskStatus.failure(getId(), "aborted thru stopGracefully");
+    } else {
+      return TaskStatus.success(getId());
+    }
   }
 
   @Override

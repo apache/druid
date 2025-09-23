@@ -85,6 +85,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.initialization.IndexerZkConfig;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.zookeeper.KeeperException;
@@ -132,6 +133,8 @@ import java.util.stream.Collectors;
  */
 public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 {
+  public static final String TASK_UNKNOWN_COUNT = "task/unknown/count";
+
   private static final EmittingLogger log = new EmittingLogger(HttpRemoteTaskRunner.class);
 
   private final LifecycleLock lifecycleLock = new LifecycleLock();
@@ -1547,6 +1550,14 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                   HttpRemoteTaskRunnerWorkItem.State.RUNNING
               );
               tasks.put(taskId, taskItem);
+              final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+              metricBuilder.setDimension(DruidMetrics.TASK_ID, taskId);
+              emitter.emit(
+                  metricBuilder.setMetric(
+                      TASK_UNKNOWN_COUNT,
+                      (long) 1
+                  )
+              );
               break;
             case SUCCESS:
             case FAILED:
