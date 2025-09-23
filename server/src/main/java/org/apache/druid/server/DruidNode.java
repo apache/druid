@@ -36,7 +36,6 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -67,7 +66,7 @@ public class DruidNode
   @Deprecated
   @JsonProperty
   @Max(0xffff)
-  private int port = -1;
+  private final int port = -1;
 
   @JsonProperty
   @Max(0xffff)
@@ -141,7 +140,7 @@ public class DruidNode
         bindOnHost,
         plaintextPort != null ? plaintextPort : port,
         tlsPort,
-        enablePlaintextPort == null ? true : enablePlaintextPort.booleanValue(),
+        enablePlaintextPort == null || enablePlaintextPort.booleanValue(),
         enableTlsPort,
         labels
     );
