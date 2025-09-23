@@ -384,7 +384,8 @@ public class SystemSchemaTest extends CalciteTestBase
 
   private final String version = GuavaUtils.firstNonNull(
           SystemSchemaTest.class.getPackage().getImplementationVersion(),
-          DruidNode.UNKNOWN_VERSION);
+          DruidNode.UNKNOWN_VERSION
+      );
 
   private final DiscoveryDruidNode coordinator = new DiscoveryDruidNode(
       new DruidNode("s1", "localhost", false, 8081, null, true, false),
