@@ -614,6 +614,8 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           for (Map.Entry<String, HttpRemoteTaskRunnerWorkItem> e : tasks.entrySet()) {
             HttpRemoteTaskRunnerWorkItem workItem = e.getValue();
             if (workItem.isRunningOnWorker(worker)) {
+              // This announcement is only used to notify when a task has disappeared on the worker
+              // So it is okay to set the dataSource and taskResource to null as they will not be used
               expectedAnnouncements.add(
                   TaskAnnouncement.create(
                       workItem.getTaskId(),
