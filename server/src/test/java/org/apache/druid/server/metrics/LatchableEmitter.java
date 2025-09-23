@@ -140,18 +140,16 @@ public class LatchableEmitter extends StubServiceEmitter
    */
   public ServiceMetricEvent waitForMetricEvent(UnaryOperator<EventMatcher> condition)
   {
-    return waitForMetricEvent(condition, -1);
+    return waitForMetricEvent(condition, defaultWaitTimeoutMillis);
   }
 
-  public ServiceMetricEvent waitForMetricEvent(UnaryOperator<EventMatcher> condition, int timeoutMillis)
+  public ServiceMetricEvent waitForMetricEvent(UnaryOperator<EventMatcher> condition, long timeoutMillis)
   {
     final EventMatcher matcher = condition.apply(new EventMatcher());
     waitForEvent(
         event -> event instanceof ServiceMetricEvent
                  && matcher.test((ServiceMetricEvent) event),
-        -1
         timeoutMillis
-        defaultWaitTimeoutMillis
     );
     return matcher.matchingEvent.get();
   }
