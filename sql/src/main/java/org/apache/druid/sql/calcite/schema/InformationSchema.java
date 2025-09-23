@@ -46,6 +46,7 @@ import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -56,13 +57,16 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
+import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -137,6 +141,7 @@ public class InformationSchema extends AbstractSchema
       .add("CHARACTER_SET_NAME", SqlTypeName.VARCHAR, true)
       .add("COLLATION_NAME", SqlTypeName.VARCHAR, true)
       .add("JDBC_TYPE", SqlTypeName.BIGINT)
+      .add("COLUMN_TYPE", SqlTypeName.BIGINT)
       .build();
   private static final RelDataType ROUTINES_SIGNATURE = new RowTypeBuilder()
       .add("ROUTINE_CATALOG", SqlTypeName.VARCHAR)
@@ -154,15 +159,18 @@ public class InformationSchema extends AbstractSchema
   private final DruidSchemaCatalog rootSchema;
   private final Map<String, Table> tableMap;
   private final AuthorizerMapper authorizerMapper;
+  private final DruidSchema druidSchema;
 
   @Inject
   public InformationSchema(
       @Named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA) final DruidSchemaCatalog rootSchema,
       final AuthorizerMapper authorizerMapper,
-      final DruidOperatorTable operatorTable
+      final DruidOperatorTable operatorTable,
+      final DruidSchema druidSchema
   )
   {
     this.rootSchema = Preconditions.checkNotNull(rootSchema, "rootSchema");
+    this.druidSchema = Preconditions.checkNotNull(druidSchema, "druidSchema");
     this.tableMap = ImmutableMap.of(
         SCHEMATA_TABLE, new SchemataTable(),
         TABLES_TABLE, new TablesTable(),
@@ -377,8 +385,9 @@ public class InformationSchema extends AbstractSchema
                                       return generateColumnMetadata(
                                           schemaName,
                                           tableName,
-                                           table.getRowType(typeFactory),
-                                          typeFactory
+                                          table.getRowType(typeFactory),
+                                          typeFactory,
+                                          table
                                       );
                                     }
                                   }
@@ -396,7 +405,8 @@ public class InformationSchema extends AbstractSchema
                                               schemaName,
                                               functionName,
                                               viewMacro.apply(Collections.emptyList()).getRowType(typeFactory),
-                                              typeFactory
+                                              typeFactory,
+                                              null
                                           );
                                         }
                                         catch (Exception e) {
@@ -443,7 +453,8 @@ public class InformationSchema extends AbstractSchema
         final String schemaName,
         final String tableName,
         final RelDataType tableSchema,
-        final RelDataTypeFactory typeFactory
+        final RelDataTypeFactory typeFactory,
+        @Nullable final Table table
     )
     {
       return FluentIterable
@@ -461,6 +472,10 @@ public class InformationSchema extends AbstractSchema
                   boolean isDateTime = SqlTypeName.DATETIME_TYPES.contains(sqlTypeName);
 
                   final String typeName = type instanceof RowSignatures.ComplexSqlType ? ((RowSignatures.ComplexSqlType) type).asTypeString() : sqlTypeName.toString();
+                  
+                  // Determine column type (METRIC vs DIMENSION)
+                  ColumnType columnType = determineColumnType(schemaName, tableName, field.getName(), table);
+                  
                   return new Object[]{
                       CATALOG_NAME, // TABLE_CATALOG
                       schemaName, // TABLE_SCHEMA
@@ -478,12 +493,68 @@ public class InformationSchema extends AbstractSchema
                       isDateTime ? (long) type.getPrecision() : null, // DATETIME_PRECISION
                       isCharacter ? type.getCharset().name() : null, // CHARACTER_SET_NAME
                       isCharacter ? type.getCollation().getCollationName() : null, // COLLATION_NAME
-                      (long) type.getSqlTypeName().getJdbcOrdinal() // JDBC_TYPE (Druid extension)
+                      (long) type.getSqlTypeName().getJdbcOrdinal(), // JDBC_TYPE (Druid extension)
+                      (long) columnType.ordinal() // COLUMN_TYPE (Druid extension)
                   };
                 }
               }
           );
     }
+
+    /**
+     * Determines the column type (METRIC vs DIMENSION) for a given column.
+     * Returns UNKNOWN if unable to determine type or view.
+     * 
+     * @param schemaName the schema name
+     * @param tableName the table name  
+     * @param columnName the column name
+     * @param table the table object (maybe null for views)
+     * @return "METRIC", "DIMENSION", or "UNKNOWN"
+     */
+    private ColumnType determineColumnType(String schemaName, String tableName, String columnName, @Nullable Table table)
+    {
+      if (table == null) {
+        return ColumnType.UNKNOWN;
+      }
+      
+      try {
+        BrokerSegmentMetadataCache cache = druidSchema.cache();
+        if (cache == null) {
+          return ColumnType.UNKNOWN;
+        }
+
+        DatasourceTable.PhysicalDatasourceMetadata dsMetadata = cache.getDatasource(tableName);
+        if (dsMetadata == null) {
+          return ColumnType.UNKNOWN;
+        }
+
+        for (Iterator<AvailableSegmentMetadata> it = cache.iterateSegmentMetadata(); it.hasNext(); ) {
+          AvailableSegmentMetadata segmentMetadata = it.next();
+          DataSegment segment = segmentMetadata.getSegment();
+          if (segment.getDataSource().equals(tableName)) {
+            if (segment.getMetrics().contains(columnName)) {
+              return ColumnType.METRIC;
+            } else if (segment.getDimensions().contains(columnName) || "__time".equals(columnName)) {
+              return ColumnType.DIMENSION;
+            }
+            break;
+          }
+        }
+        
+        return ColumnType.UNKNOWN;
+      }
+      catch (Exception e) {
+        log.warn(e, "Failed to determine column type for [%s].[%s].[%s]", schemaName, tableName, columnName);
+        return ColumnType.UNKNOWN;
+      }
+    }
+  }
+
+  enum ColumnType
+  {
+    METRIC,
+    DIMENSION,
+    UNKNOWN
   }
 
   static class RoutinesTable extends AbstractTable implements ScannableTable

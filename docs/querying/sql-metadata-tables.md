@@ -101,6 +101,7 @@ WHERE "TABLE_SCHEMA" = 'druid' AND "TABLE_NAME" = 'foo'
 |CHARACTER_SET_NAME|VARCHAR||
 |COLLATION_NAME|VARCHAR||
 |JDBC_TYPE|BIGINT|Type code from java.sql.Types (Druid extension)|
+|COLUMN_TYPE|BIGINT|Column type code: 0=METRIC, 1=DIMENSION, 2=UNKNOWN (Druid extension)|
 
 For example, this query returns [data type](sql-data-types.md) information for columns in the `foo` table:
 

@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
@@ -33,7 +34,15 @@ import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.druid.client.InternalQueryConfig;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.join.MapJoinableFactory;
+import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
@@ -45,6 +54,8 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.apache.druid.sql.calcite.util.TestTimelineServerView;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,13 +68,15 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCacheConcurrencyTest.SEGMENT_CACHE_CONFIG_DEFAULT;
+
 public class InformationSchemaTest extends BaseCalciteQueryTest
 {
   private InformationSchema informationSchema;
   private SqlTestFramework qf;
 
   @BeforeEach
-  public void setUp()
+  public void setUp() throws InterruptedException
   {
     qf = queryFramework();
     DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
@@ -77,10 +90,28 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
         CatalogResolver.NULL_RESOLVER
     );
 
+    BrokerSegmentMetadataCache cache = new BrokerSegmentMetadataCache(
+        CalciteTests.createMockQueryLifecycleFactory(qf.walker(), qf.conglomerate()),
+        new TestTimelineServerView(qf.walker().getSegments(), List.of()),
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        new NoopServiceEmitter(),
+        new PhysicalDatasourceMetadataFactory(
+            new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
+            new SegmentManager(EasyMock.createMock(SegmentCacheManager.class))
+        ),
+        new NoopCoordinatorClient(),
+        CentralizedDatasourceSchemaConfig.create()
+    );
+    cache.start();
+    cache.awaitInitialization();
+
     informationSchema = new InformationSchema(
         rootSchema,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        qf.operatorTable()
+        qf.operatorTable(),
+        new DruidSchema(cache, null, CatalogResolver.NULL_RESOLVER)
     );
   }
 
@@ -161,6 +192,15 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
 
     Assert.assertNotNull(rows);
     Assert.assertEquals(0, rows.size());
+  }
+
+  @Test
+  public void testColumnsTableSchema()
+  {
+    InformationSchema.ColumnsTable columnsTable = informationSchema.new ColumnsTable();
+    RelDataType rowType = columnsTable.getRowType(new JavaTypeFactoryImpl());
+    Assert.assertEquals(18, rowType.getFieldCount());
+    Assert.assertEquals("COLUMN_TYPE", rowType.getFieldList().get(17).getName());
   }
 
   private static Set<SqlOperatorConversion> customOperatorsToOperatorConversions()
