@@ -19,22 +19,23 @@
 
 package org.apache.druid.segment.virtual;
 
-import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
-import org.apache.druid.segment.ColumnSelectorColumnIndexSelector;
+import org.apache.druid.query.filter.ColumnIndexSelector;
+import org.apache.druid.segment.ColumnCache;
 import org.apache.druid.segment.ConstantDimensionSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
-import org.apache.druid.segment.TestColumnSelector;
+import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestColumnSelectorFactory;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
@@ -46,14 +47,22 @@ import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.MockitoJUnitRunner;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-@SuppressWarnings("ALL")
+@RunWith(MockitoJUnitRunner.class)
 public class FallbackVirtualColumnTest
 {
+  @Mock
+  public QueryableIndex testIndex;
+
   @Test
   public void testGetOutputName()
   {
@@ -301,37 +310,41 @@ public class FallbackVirtualColumnTest
   }
 
   @Test
-  public void testGetIndexSupplier()
+  public void testGetIndexSupplier() throws IOException
   {
     final FallbackVirtualColumn col = makeCol("slimshady", "colA", "colB", "colC");
 
-    final SameColumnIndexSupplier colA = new SameColumnIndexSupplier();
-    final SameColumnIndexSupplier colB = new SameColumnIndexSupplier();
-    final SameColumnIndexSupplier colC = new SameColumnIndexSupplier();
-    final TestColumnSelector selectorFactory = new TestColumnSelector()
-        .addHolder("colA", new HolderForIndexSupplier(colA))
-        .addHolder("colB", new HolderForIndexSupplier(colB))
-        .addHolder("colC", new HolderForIndexSupplier(colC))
-        .addCapabilities("colA", ColumnCapabilitiesImpl.createDefault())
-        .addCapabilities("colB", ColumnCapabilitiesImpl.createDefault())
-        .addCapabilities("colC", ColumnCapabilitiesImpl.createDefault());
-    final ColumnSelectorColumnIndexSelector columnIndexSelector = new ColumnSelectorColumnIndexSelector(
-        RoaringBitmapFactory.INSTANCE,
-        VirtualColumns.EMPTY,
-        selectorFactory
-    );
+    final SameColumnIndexSupplier colA = new SameColumnIndexSupplier("A");
+    final SameColumnIndexSupplier colB = new SameColumnIndexSupplier("B");
+    final SameColumnIndexSupplier colC = new SameColumnIndexSupplier("C");
 
-    Assert.assertSame(colA, col.getIndexSupplier("abcd", columnIndexSelector));
+    final ColumnCapabilitiesImpl capabilities = ColumnCapabilitiesImpl.createDefault();
+    Mockito.when(testIndex.getColumnHolder("colA")).thenReturn(new HolderForIndexSupplier(colA, capabilities));
+    Mockito.when(testIndex.getColumnHolder("colB")).thenReturn(new HolderForIndexSupplier(colB, capabilities));
+    Mockito.when(testIndex.getColumnHolder("colC")).thenReturn(new HolderForIndexSupplier(colC, capabilities));
 
-    selectorFactory.addCapabilities("colA", null);
-    Assert.assertSame(colB, col.getIndexSupplier("abcd", columnIndexSelector));
+    try (final Closer closer = Closer.create()) {
+      final ColumnIndexSelector columnIndexSelector = new ColumnCache(testIndex, VirtualColumns.EMPTY, closer);
+      Assert.assertSame(colA, col.getIndexSupplier("abcd", columnIndexSelector));
+    }
 
-    selectorFactory.addCapabilities("colB", null);
-    Assert.assertSame(colC, col.getIndexSupplier("abcd", columnIndexSelector));
+    Mockito.when(testIndex.getColumnHolder("colA")).thenReturn(new HolderForIndexSupplier(colA, null));
+    try (final Closer closer = Closer.create()) {
+      final ColumnIndexSelector columnIndexSelector = new ColumnCache(testIndex, VirtualColumns.EMPTY, closer);
+      Assert.assertSame(colB, col.getIndexSupplier("abcd", columnIndexSelector));
+    }
 
-    selectorFactory.addCapabilities("colC", null);
-    Assert.assertSame(colA, col.getIndexSupplier("abcd", columnIndexSelector));
+    Mockito.when(testIndex.getColumnHolder("colB")).thenReturn(new HolderForIndexSupplier(colB, null));
+    try (final Closer closer = Closer.create()) {
+      final ColumnIndexSelector columnIndexSelector = new ColumnCache(testIndex, VirtualColumns.EMPTY, closer);
+      Assert.assertSame(colC, col.getIndexSupplier("abcd", columnIndexSelector));
+    }
 
+    Mockito.when(testIndex.getColumnHolder("colC")).thenReturn(new HolderForIndexSupplier(colC, null));
+    try (final Closer closer = Closer.create()) {
+      final ColumnIndexSelector columnIndexSelector = new ColumnCache(testIndex, VirtualColumns.EMPTY, closer);
+      Assert.assertSame(colA, col.getIndexSupplier("abcd", columnIndexSelector));
+    }
   }
 
   private static FallbackVirtualColumn makeCol(String name, String... cols)
@@ -484,11 +497,24 @@ public class FallbackVirtualColumnTest
 
   private static class SameColumnIndexSupplier implements ColumnIndexSupplier
   {
+    private final String name;
+
+    public SameColumnIndexSupplier(String name)
+    {
+      this.name = name;
+    }
+
     @Nullable
     @Override
     public <T> T as(Class<T> clazz)
     {
       throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String toString()
+    {
+      return name;
     }
   }
 
@@ -539,21 +565,24 @@ public class FallbackVirtualColumnTest
     }
   }
 
-  private static class HolderForIndexSupplier implements ColumnHolder
+  private static class HolderForIndexSupplier implements BaseColumnHolder
   {
     private final ColumnIndexSupplier indexSupplier;
+    private final ColumnCapabilities capabilities;
 
     public HolderForIndexSupplier(
-        ColumnIndexSupplier indexSupplier
+        ColumnIndexSupplier indexSupplier,
+        ColumnCapabilities capabilities
     )
     {
       this.indexSupplier = indexSupplier;
+      this.capabilities = capabilities;
     }
 
     @Override
     public ColumnCapabilities getCapabilities()
     {
-      throw new UnsupportedOperationException();
+      return capabilities;
     }
 
     @Override

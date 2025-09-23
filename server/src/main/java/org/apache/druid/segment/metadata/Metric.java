@@ -44,6 +44,7 @@ public class Metric
   // Broker-side metrics
   public static final String BROKER_POLL_DURATION_MILLIS = PREFIX + "poll/time";
   public static final String BROKER_POLL_FAILED = PREFIX + "poll/failed";
+  public static final String BROKER_SEGMENTS_SKIPPED_REFRESH = PREFIX + "refreshSkipped/count";
 
   // Schema refresh metrics
   public static final String STARTUP_DURATION_MILLIS = "metadatacache/init/time";

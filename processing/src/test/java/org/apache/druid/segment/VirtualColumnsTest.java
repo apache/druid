@@ -216,7 +216,7 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
 
     Throwable t = Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> virtualColumns.makeColumnValueSelector("bar", baseColumnSelectorFactory)
+        () -> virtualColumns.makeColumnValueSelector("bar", baseColumnSelectorFactory, null, null)
     );
     Assert.assertEquals("No such virtual column[bar]", t.getMessage());
   }
@@ -229,23 +229,33 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     final VirtualColumns virtualColumns = makeVirtualColumns();
     final BaseObjectColumnValueSelector objectSelector = virtualColumns.makeColumnValueSelector(
         "expr",
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
     final DimensionSelector dimensionSelector = virtualColumns.makeDimensionSelector(
         new DefaultDimensionSpec("expr", "x"),
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
     final DimensionSelector extractionDimensionSelector = virtualColumns.makeDimensionSelector(
         new ExtractionDimensionSpec("expr", "x", new BucketExtractionFn(1.0, 0.5)),
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
     final BaseFloatColumnValueSelector floatSelector = virtualColumns.makeColumnValueSelector(
         "expr",
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
     final BaseLongColumnValueSelector longSelector = virtualColumns.makeColumnValueSelector(
         "expr",
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
 
     Assert.assertEquals(1L, objectSelector.getObject());
@@ -261,19 +271,27 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     final VirtualColumns virtualColumns = makeVirtualColumns();
     final BaseObjectColumnValueSelector objectSelector = virtualColumns.makeColumnValueSelector(
         "foo.5",
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
     final DimensionSelector dimensionSelector = virtualColumns.makeDimensionSelector(
         new DefaultDimensionSpec("foo.5", "x"),
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
     final BaseFloatColumnValueSelector floatSelector = virtualColumns.makeColumnValueSelector(
         "foo.5",
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
     final BaseLongColumnValueSelector longSelector = virtualColumns.makeColumnValueSelector(
         "foo.5",
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
 
     Assert.assertEquals(5L, objectSelector.getObject());
@@ -288,19 +306,27 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     final VirtualColumns virtualColumns = makeVirtualColumns();
     final BaseObjectColumnValueSelector objectSelector = virtualColumns.makeColumnValueSelector(
         "foo",
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
     final DimensionSelector dimensionSelector = virtualColumns.makeDimensionSelector(
         new DefaultDimensionSpec("foo", "x"),
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
     final BaseFloatColumnValueSelector floatSelector = virtualColumns.makeColumnValueSelector(
         "foo",
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
     final BaseLongColumnValueSelector longSelector = virtualColumns.makeColumnValueSelector(
         "foo",
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
 
     Assert.assertEquals(-1L, objectSelector.getObject());

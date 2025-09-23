@@ -44,10 +44,11 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
+import org.apache.druid.segment.virtual.NestedMergeVirtualColumn;
+import org.apache.druid.segment.virtual.NestedObjectVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -119,11 +120,6 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
       }
     }
     return constructors;
-  }
-
-  @Before
-  public void setup()
-  {
   }
 
   @After
@@ -639,6 +635,160 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
     );
   }
 
+  @Test
+  public void testGroupByWithNestedObjectVirtualColumn()
+  {
+    Map<String, NestedObjectVirtualColumn.TypedExpression> keyExprMap = ImmutableMap.of(
+        "nested_x",
+        new NestedObjectVirtualColumn.TypedExpression("json_value(nest, '$.x', 'STRING')", ColumnType.STRING)
+    );
+
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(DefaultDimensionSpec.of("v1"))
+                                          .setVirtualColumns(
+                                              new NestedObjectVirtualColumn(
+                                                  "v0",
+                                                  keyExprMap,
+                                                  TestExprMacroTable.INSTANCE
+                                              ),
+                                              new NestedFieldVirtualColumn("v0", "$.nested_x", "v1")
+                                          )
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setContext(getContext())
+                                          .build();
+
+    runResults(
+        groupQuery,
+        ImmutableList.of(
+            new Object[]{null, 8L},
+            new Object[]{"100", 2L},
+            new Object[]{"200", 2L},
+            new Object[]{"300", 4L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByWithNestedObjectVirtualColumnFilter()
+  {
+    final Map<String, NestedObjectVirtualColumn.TypedExpression> keyExprMap = ImmutableMap.of(
+        "dimension",
+        new NestedObjectVirtualColumn.TypedExpression("dim", ColumnType.STRING)
+    );
+
+    final List<String> vals = List.of("100", "hello");
+
+    GroupByQuery groupQuery =
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.ETERNITY)
+                    .setDimensions(DefaultDimensionSpec.of("v1"))
+                    .setVirtualColumns(
+                        new NestedObjectVirtualColumn("v0", keyExprMap, TestExprMacroTable.INSTANCE),
+                        new NestedFieldVirtualColumn("v0", "$.dimension", "v1")
+                    )
+                    .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                    .setDimFilter(new InDimFilter("v1", vals, null))
+                    .setContext(getContext())
+                    .build();
+
+    runResults(
+        groupQuery,
+        ImmutableList.of(
+            new Object[]{"100", 2L},
+            new Object[]{"hello", 12L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByWithNestedMergeVirtualColumn()
+  {
+    final Map<String, NestedObjectVirtualColumn.TypedExpression> obj1Map = ImmutableMap.of(
+        "x",
+        new NestedObjectVirtualColumn.TypedExpression("json_value(nest, '$.x', 'STRING')", ColumnType.STRING),
+        "dim_value", // will be overshadowed
+        new NestedObjectVirtualColumn.TypedExpression("'no'", ColumnType.STRING)
+    );
+    final Map<String, NestedObjectVirtualColumn.TypedExpression> obj2Map = ImmutableMap.of(
+        "dim_value",
+        new NestedObjectVirtualColumn.TypedExpression("'yes'", ColumnType.STRING)
+    );
+
+    GroupByQuery groupQuery =
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.ETERNITY)
+                    .setDimensions(DefaultDimensionSpec.of("v3"), DefaultDimensionSpec.of("v4"))
+                    .setVirtualColumns(
+                        new NestedObjectVirtualColumn("v0", obj1Map, TestExprMacroTable.INSTANCE),
+                        new NestedObjectVirtualColumn("v1", obj2Map, TestExprMacroTable.INSTANCE),
+                        new NestedMergeVirtualColumn("v2", ImmutableList.of("v0", "v1"), TestExprMacroTable.INSTANCE),
+                        new NestedFieldVirtualColumn("v2", "$.x", "v3"),
+                        new NestedFieldVirtualColumn("v2", "$.dim_value", "v4")
+                    )
+                    .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                    .setContext(getContext())
+                    .build();
+
+    runResults(
+        groupQuery,
+        ImmutableList.of(
+            new Object[]{null, "yes", 8L},
+            new Object[]{"100", "yes", 2L},
+            new Object[]{"200", "yes", 2L},
+            new Object[]{"300", "yes", 4L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByWithNestedMergeVirtualColumnFilter()
+  {
+    final Map<String, NestedObjectVirtualColumn.TypedExpression> obj1Map = ImmutableMap.of(
+        "x",
+        new NestedObjectVirtualColumn.TypedExpression("json_value(nest, '$.x', 'STRING')", ColumnType.STRING),
+        "dim_value", // will be overshadowed
+        new NestedObjectVirtualColumn.TypedExpression("'no'", ColumnType.STRING)
+    );
+    final Map<String, NestedObjectVirtualColumn.TypedExpression> obj2Map = ImmutableMap.of(
+        "dim_value",
+        new NestedObjectVirtualColumn.TypedExpression("'yes'", ColumnType.STRING)
+    );
+
+    final List<String> vals = List.of("100", "200");
+
+    GroupByQuery groupQuery =
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.ETERNITY)
+                    .setDimensions(DefaultDimensionSpec.of("v3"), DefaultDimensionSpec.of("v4"))
+                    .setVirtualColumns(
+                        new NestedObjectVirtualColumn("v0", obj1Map, TestExprMacroTable.INSTANCE),
+                        new NestedObjectVirtualColumn("v1", obj2Map, TestExprMacroTable.INSTANCE),
+                        new NestedMergeVirtualColumn("v2", ImmutableList.of("v0", "v1"), TestExprMacroTable.INSTANCE),
+                        new NestedFieldVirtualColumn("v2", "$.x", "v3"),
+                        new NestedFieldVirtualColumn("v2", "$.dim_value", "v4")
+                    )
+                    .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                    .setDimFilter(new InDimFilter("v3", vals, null))
+                    .setContext(getContext())
+                    .build();
+
+    runResults(
+        groupQuery,
+        ImmutableList.of(
+            new Object[]{"100", "yes", 2L},
+            new Object[]{"200", "yes", 2L}
+        )
+    );
+  }
 
   private void runResults(
       GroupByQuery groupQuery,
