@@ -177,16 +177,16 @@ ORDER BY
     };
 
     this.taskQueryManager = new QueryManager({
-      processQuery: async (capabilities, cancelToken) => {
+      processQuery: async (capabilities, signal) => {
         if (capabilities.hasSql()) {
           return await queryDruidSql(
             {
               query: TasksView.TASK_SQL,
             },
-            cancelToken,
+            signal,
           );
         } else if (capabilities.hasOverlordAccess()) {
-          return (await getApiArray(`/druid/indexer/v1/tasks`, cancelToken)).map(d => {
+          return (await getApiArray(`/druid/indexer/v1/tasks`, signal)).map(d => {
             return {
               task_id: d.id,
               group_id: d.groupId,

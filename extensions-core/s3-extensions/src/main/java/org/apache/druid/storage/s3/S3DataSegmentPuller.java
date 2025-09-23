@@ -22,8 +22,11 @@ package org.apache.druid.storage.s3;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.services.s3.model.ListObjectsV2Request;
+import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.io.ByteSource;
@@ -43,6 +46,7 @@ import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.URIDataPuller;
 import org.apache.druid.utils.CompressionUtils;
 
+import javax.annotation.Nonnull;
 import javax.tools.FileObject;
 import java.io.File;
 import java.io.FilterInputStream;
@@ -52,6 +56,7 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.net.URI;
+import java.nio.file.Paths;
 
 /**
  * A data segment puller that also hanldes URI data pulls.
@@ -77,33 +82,15 @@ public class S3DataSegmentPuller implements URIDataPuller
 
     log.info("Pulling index at path[%s] to outDir[%s]", s3Coords, outDir);
 
-    if (!isObjectInBucket(s3Coords)) {
-      throw new SegmentLoadingException("IndexFile[%s] does not exist.", s3Coords);
-    }
-
     try {
       FileUtils.mkdirp(outDir);
 
-      final URI uri = s3Coords.toUri(S3StorageDruidModule.SCHEME);
-      final ByteSource byteSource = new ByteSource()
-      {
-        @Override
-        public InputStream openStream() throws IOException
-        {
-          try {
-            return buildFileObject(uri).openInputStream();
-          }
-          catch (AmazonServiceException e) {
-            if (e.getCause() != null) {
-              if (S3Utils.S3RETRY.apply(e)) {
-                throw new IOException("Recoverable exception", e);
-              }
-            }
-            throw new RuntimeException(e);
-          }
-        }
-      };
       if (CompressionUtils.isZip(s3Coords.getPath())) {
+        if (!isObjectInBucket(s3Coords)) {
+          throw new SegmentLoadingException("IndexFile[%s] does not exist.", s3Coords);
+        }
+        final URI uri = s3Coords.toUri(S3StorageDruidModule.SCHEME);
+        final ByteSource byteSource = getByteSource(uri);
         final FileUtils.FileCopyResult result = CompressionUtils.unzip(
             byteSource,
             outDir,
@@ -112,16 +99,37 @@ public class S3DataSegmentPuller implements URIDataPuller
         );
         log.info("Loaded %d bytes from [%s] to [%s]", result.size(), s3Coords.toString(), outDir.getAbsolutePath());
         return result;
-      }
-      if (CompressionUtils.isGz(s3Coords.getPath())) {
+      } else if (CompressionUtils.isGz(s3Coords.getPath())) {
+        if (!isObjectInBucket(s3Coords)) {
+          throw new SegmentLoadingException("IndexFile[%s] does not exist.", s3Coords);
+        }
+        final URI uri = s3Coords.toUri(S3StorageDruidModule.SCHEME);
+        final ByteSource byteSource = getByteSource(uri);
         final String fname = Files.getNameWithoutExtension(uri.getPath());
         final File outFile = new File(outDir, fname);
-
         final FileUtils.FileCopyResult result = CompressionUtils.gunzip(byteSource, outFile, S3Utils.S3RETRY);
         log.info("Loaded %d bytes from [%s] to [%s]", result.size(), s3Coords.toString(), outFile.getAbsolutePath());
         return result;
+      } else if (s3Coords.getPath().endsWith("/")) {
+        // segment is not compressed, list objects and pull them all
+        final ListObjectsV2Result list = s3Client.listObjectsV2(
+            new ListObjectsV2Request().withBucketName(s3Coords.getBucket())
+                                      .withPrefix(s3Coords.getPath())
+        );
+        FileUtils.FileCopyResult copyResult = new FileUtils.FileCopyResult();
+        for (S3ObjectSummary objectSummary : list.getObjectSummaries()) {
+          final CloudObjectLocation objectLocation = S3Utils.summaryToCloudObjectLocation(objectSummary);
+          final URI uri = objectLocation.toUri(S3StorageDruidModule.SCHEME);
+          final ByteSource byteSource = getByteSource(uri);
+          final File outFile = new File(outDir, Paths.get(objectLocation.getPath()).getFileName().toString());
+          outFile.createNewFile();
+          final FileUtils.FileCopyResult result = FileUtils.retryCopy(byteSource, outFile, S3Utils.S3RETRY, 3);
+          copyResult.addFiles(result.getFiles());
+        }
+        log.info("Loaded %d bytes from [%s] to [%s]", copyResult.size(), s3Coords.toString(), outDir.getAbsolutePath());
+        return copyResult;
       }
-      throw new IAE("Do not know how to load file type at [%s]", uri.toString());
+      throw new IAE("Do not know how to load file type at [%s]", s3Coords.toUri(S3StorageDruidModule.SCHEME));
     }
     catch (Exception e) {
       try {
@@ -137,6 +145,30 @@ public class S3DataSegmentPuller implements URIDataPuller
       }
       throw new SegmentLoadingException(e, e.getMessage());
     }
+  }
+
+  @Nonnull
+  private ByteSource getByteSource(URI uri)
+  {
+    final ByteSource byteSource = new ByteSource()
+    {
+      @Override
+      public InputStream openStream() throws IOException
+      {
+        try {
+          return buildFileObject(uri).openInputStream();
+        }
+        catch (AmazonServiceException e) {
+          if (e.getCause() != null) {
+            if (S3Utils.S3RETRY.apply(e)) {
+              throw new IOException("Recoverable exception", e);
+            }
+          }
+          throw new RuntimeException(e);
+        }
+      }
+    };
+    return byteSource;
   }
 
   @Override

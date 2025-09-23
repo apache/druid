@@ -431,7 +431,7 @@ The regular expression filter is similar to the selector filter, but using regul
 | -------- | ----------- | -------- |
 | `type` | Must be `regex`.| Yes |
 | `dimension` | Input column or virtual column name to filter on. | Yes |
-| `pattern` | String pattern to match - any standard [Java regular expression](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/regex/Pattern.html). | Yes |
+| `pattern` | String pattern to match - any standard [Java regular expression](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/regex/Pattern.html). | Yes |
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
 
 Note that it is often more optimal to use a like filter instead of a regex for simple matching of prefixes.

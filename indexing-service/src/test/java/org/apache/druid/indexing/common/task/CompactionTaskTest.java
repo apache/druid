@@ -102,10 +102,13 @@ import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.SimpleQueryableIndex;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.BaseColumn;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -355,7 +358,7 @@ public class CompactionTaskTest
   @Before
   public void setup()
   {
-    final IndexIO testIndexIO = new TestIndexIO(OBJECT_MAPPER, SEGMENT_MAP);
+    final TestIndexIO testIndexIO = new TestIndexIO(OBJECT_MAPPER, SEGMENT_MAP);
     emitter = new StubServiceEmitter();
     toolbox = makeTaskToolbox(
         new TestTaskActionClient(new ArrayList<>(SEGMENT_MAP.keySet())),
@@ -1925,20 +1928,28 @@ public class CompactionTaskTest
 
   private TaskToolbox makeTaskToolbox(
       TaskActionClient taskActionClient,
-      IndexIO indexIO,
+      TestIndexIO indexIO,
       Map<DataSegment, File> segments
   )
   {
     final SegmentCacheManager segmentCacheManager = new NoopSegmentCacheManager()
     {
       @Override
-      public File getSegmentFiles(DataSegment segment)
+      public void load(DataSegment segment)
       {
-        return Preconditions.checkNotNull(segments.get(segment));
+        // do nothing
       }
 
       @Override
-      public void cleanup(DataSegment segment)
+      public Optional<Segment> acquireCachedSegment(DataSegment dataSegment)
+      {
+        return Optional.of(
+            new QueryableIndexSegment(indexIO.loadIndex(segments.get(dataSegment)), dataSegment.getId())
+        );
+      }
+
+      @Override
+      public void drop(DataSegment segment)
       {
         // Do nothing.
       }
@@ -2009,22 +2020,22 @@ public class CompactionTaskTest
         columnNames.add(ColumnHolder.TIME_COLUMN_NAME);
         columnNames.addAll(segment.getDimensions());
         columnNames.addAll(segment.getMetrics());
-        final Map<String, Supplier<ColumnHolder>> columnMap = Maps.newHashMapWithExpectedSize(columnNames.size());
+        final Map<String, Supplier<BaseColumnHolder>> columnMap = Maps.newHashMapWithExpectedSize(columnNames.size());
         final List<AggregatorFactory> aggregatorFactories = new ArrayList<>(segment.getMetrics().size());
 
         for (String columnName : columnNames) {
           if (MIXED_TYPE_COLUMN.equals(columnName)) {
-            ColumnHolder columnHolder = createColumn(MIXED_TYPE_COLUMN_MAP.get(segment.getInterval()));
+            BaseColumnHolder columnHolder = createColumn(MIXED_TYPE_COLUMN_MAP.get(segment.getInterval()));
             columnMap.put(columnName, () -> columnHolder);
           } else if (DIMENSIONS.containsKey(columnName)) {
-            ColumnHolder columnHolder = createColumn(DIMENSIONS.get(columnName));
+            BaseColumnHolder columnHolder = createColumn(DIMENSIONS.get(columnName));
             columnMap.put(columnName, () -> columnHolder);
           } else {
             final Optional<AggregatorFactory> maybeMetric = AGGREGATORS.stream()
                                                                        .filter(agg -> agg.getName().equals(columnName))
                                                                        .findAny();
             if (maybeMetric.isPresent()) {
-              ColumnHolder columnHolder = createColumn(maybeMetric.get());
+              BaseColumnHolder columnHolder = createColumn(maybeMetric.get());
               columnMap.put(columnName, () -> columnHolder);
               aggregatorFactories.add(maybeMetric.get());
             }
@@ -2094,17 +2105,17 @@ public class CompactionTaskTest
     }
   }
 
-  private static ColumnHolder createColumn(DimensionSchema dimensionSchema)
+  private static BaseColumnHolder createColumn(DimensionSchema dimensionSchema)
   {
     return new TestColumn(dimensionSchema.getColumnType());
   }
 
-  private static ColumnHolder createColumn(AggregatorFactory aggregatorFactory)
+  private static BaseColumnHolder createColumn(AggregatorFactory aggregatorFactory)
   {
     return new TestColumn(aggregatorFactory.getIntermediateType());
   }
 
-  private static class TestColumn implements ColumnHolder
+  private static class TestColumn implements BaseColumnHolder
   {
     private final ColumnCapabilities columnCapabilities;
 

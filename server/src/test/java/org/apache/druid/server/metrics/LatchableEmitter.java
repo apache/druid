@@ -63,11 +63,17 @@ public class LatchableEmitter extends StubServiceEmitter
   private final List<Event> processedEvents = new ArrayList<>();
 
   /**
+   * Default timeout to use while waiting for events.
+   */
+  private final long defaultWaitTimeoutMillis;
+
+  /**
    * Creates a {@link StubServiceEmitter} that may be used in embedded tests.
    */
-  public LatchableEmitter(String service, String host)
+  public LatchableEmitter(String service, String host, LatchableEmitterConfig config)
   {
     super(service, host);
+    this.defaultWaitTimeoutMillis = config.getDefaultWaitTimeoutMillis();
   }
 
   @Override
@@ -129,7 +135,8 @@ public class LatchableEmitter extends StubServiceEmitter
   }
 
   /**
-   * Wait indefinitely until a metric event that matches the given condition is emitted.
+   * Wait until a metric event that matches the given condition is emitted.
+   * Uses the {@link LatchableEmitterConfig#defaultWaitTimeoutMillis}.
    */
   public ServiceMetricEvent waitForMetricEvent(UnaryOperator<EventMatcher> condition)
   {
@@ -142,7 +149,9 @@ public class LatchableEmitter extends StubServiceEmitter
     waitForEvent(
         event -> event instanceof ServiceMetricEvent
                  && matcher.test((ServiceMetricEvent) event),
+        -1
         timeoutMillis
+        defaultWaitTimeoutMillis
     );
     return matcher.matchingEvent.get();
   }
@@ -163,7 +172,7 @@ public class LatchableEmitter extends StubServiceEmitter
         event -> event instanceof ServiceMetricEvent
                  && eventMatcher.test((ServiceMetricEvent) event)
                  && aggregateMatcher.test((ServiceMetricEvent) event),
-        300_000
+        defaultWaitTimeoutMillis
     );
   }
 

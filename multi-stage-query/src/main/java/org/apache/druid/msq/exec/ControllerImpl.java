@@ -33,6 +33,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntObjectPair;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.common.guava.FutureUtils;
@@ -213,7 +214,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -301,7 +301,6 @@ public class ControllerImpl implements Controller
   @Nullable
   private MSQSegmentReport segmentReport;
 
-  private final AtomicLong mainThreadId = new AtomicLong();
 
   public ControllerImpl(
       final LegacyMSQSpec querySpec,
@@ -394,7 +393,6 @@ public class ControllerImpl implements Controller
     final TaskState taskStateForReport;
     final MSQErrorReport errorForReport;
 
-    mainThreadId.set(Thread.currentThread().getId());
 
     try {
       // Planning-related: convert the native query from MSQSpec into a multi-stage QueryDefinition.
@@ -749,7 +747,8 @@ public class ControllerImpl implements Controller
     workerManager = context.newWorkerManager(
         context.queryId(),
         querySpec,
-        queryKernelConfig
+        queryKernelConfig,
+        getWorkerFailureListener()
     );
 
     if (queryKernelConfig.isFaultTolerant() && !(workerManager instanceof RetryCapableWorkerManager)) {
@@ -782,19 +781,14 @@ public class ControllerImpl implements Controller
     return queryDef;
   }
 
-  private WorkerFailureListener getWorkerFailureListener(ControllerQueryKernel controllerQueryKernel)
+  private WorkerFailureListener getWorkerFailureListener()
   {
     return (failedTask, fault) -> {
       throwIfNonRetriableFault(fault);
-      if (Thread.currentThread().getId() == mainThreadId.get()) {
-        // this is called from the main controller thread, so we can directly access the kernel.
-        addToRetryQueue(controllerQueryKernel, failedTask.getWorkerNumber(), fault);
-      } else {
-        // since this is called from the task launcher thread, we need to add it to the kernel manipulation queue so that only the controller thread can manipulate the kernel.
-        addToKernelManipulationQueue(kernel -> {
-          addToRetryQueue(kernel, failedTask.getWorkerNumber(), fault);
-        });
-      }
+      // since this is called from the task launcher thread, we need to add it to the kernel manipulation queue so that only the controller thread can manipulate the kernel.
+      addToKernelManipulationQueue(kernel -> {
+        addToRetryQueue(kernel, failedTask.getWorkerNumber(), fault);
+      });
     };
   }
 
@@ -1397,7 +1391,10 @@ public class ControllerImpl implements Controller
     final List<ListenableFuture<Void>> workerFutures = new ArrayList<>(workersCopy.size());
 
     try {
-      workerManager.waitForWorkers(workers);
+      Set<IntObjectPair<MSQFault>> workerFaultSet;
+      while (!(workerFaultSet = workerManager.waitForWorkers(workers)).isEmpty()) {
+        retryWorkersOrFailJob(queryKernel, workerFaultSet);
+      }
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -1432,6 +1429,14 @@ public class ControllerImpl implements Controller
         // Nonretryable failure.
         throw new RuntimeException(workerResult.error());
       }
+    }
+  }
+
+  private void retryWorkersOrFailJob(ControllerQueryKernel queryKernel, Set<IntObjectPair<MSQFault>> workerFaultSet)
+  {
+    for (IntObjectPair<MSQFault> workerFault : workerFaultSet) {
+      throwIfNonRetriableFault(workerFault.right());
+      addToRetryQueue(queryKernel, workerFault.firstInt(), workerFault.right());
     }
   }
 
@@ -2234,7 +2239,7 @@ public class ControllerImpl implements Controller
     private final ControllerQueryKernel queryKernel;
 
     /**
-     * Return value of {@link WorkerManager#start(WorkerFailureListener)} )}. Set by {@link #startTaskLauncher()}.
+     * Return value of {@link WorkerManager#start()} )}. Set by {@link #startTaskLauncher()}.
      */
     private ListenableFuture<?> workerTaskLauncherFuture;
 
@@ -2380,7 +2385,10 @@ public class ControllerImpl implements Controller
       }
 
       // wait till the workers identified above are fully ready
-      workerManager.waitForWorkers(workersNeedToBeFullyStarted);
+      Set<IntObjectPair<MSQFault>> workerFaultSet;
+      while (!(workerFaultSet = workerManager.waitForWorkers(workersNeedToBeFullyStarted)).isEmpty()) {
+        retryWorkersOrFailJob(queryKernel, workerFaultSet);
+      }
 
       for (Map.Entry<StageId, Map<Integer, WorkOrder>> stageWorkOrders : stageWorkerOrders.entrySet()) {
         contactWorkersForStage(
@@ -2445,7 +2453,7 @@ public class ControllerImpl implements Controller
       // Start tasks.
       log.debug("Query [%s] starting task launcher.", queryDef.getQueryId());
 
-      workerTaskLauncherFuture = workerManager.start(getWorkerFailureListener(queryKernel));
+      workerTaskLauncherFuture = workerManager.start();
       closer.register(() -> workerManager.stop(true));
 
       workerTaskLauncherFuture.addListener(
@@ -2559,7 +2567,11 @@ public class ControllerImpl implements Controller
               stageDef.doesShuffle() ? stageDef.getShuffleSpec().kind() : "none"
           );
 
-          workerManager.launchWorkersIfNeeded(workerCount);
+
+          Set<IntObjectPair<MSQFault>> workerFaultSet;
+          while (!(workerFaultSet = workerManager.launchWorkersIfNeeded(workerCount)).isEmpty()) {
+            retryWorkersOrFailJob(queryKernel, workerFaultSet);
+          }
           stageRuntimesForLiveReports.put(stageId.getStageNumber(), new Interval(DateTimes.nowUtc(), DateTimes.MAX));
           startWorkForStage(queryDef, queryKernel, stageId.getStageNumber(), segmentsToGenerate);
         }

@@ -62,6 +62,7 @@ public class KubernetesClusterWithOperatorDockerTest extends IngestionSmokeTest 
     
     return cluster
         .useContainerFriendlyHostname()
+        .useDefaultTimeoutForLatchableEmitter(60)
         .addResource(k3sCluster)
         .addServer(overlord)
         .addServer(broker)

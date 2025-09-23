@@ -37,6 +37,7 @@ import org.apache.druid.msq.counters.NilQueryCounterSnapshot;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.exec.SegmentSource;
+import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
@@ -218,6 +219,16 @@ public class MultiStageQueryContext
    * partitions. This helps us utilize more parallelism when workers are multi-threaded.
    */
   public static final String CTX_TARGET_PARTITIONS_PER_WORKER = "targetPartitionsPerWorker";
+
+  /**
+   * Maximum size of frames to create. Defaults to {@link WorkerMemoryParameters#DEFAULT_FRAME_SIZE}.
+   */
+  public static final String CTX_MAX_FRAME_SIZE = "maxFrameSize";
+
+  /**
+   * Maximum number of threads to use for processing. Acts as a cap on the value of {@link WorkerContext#threadCount()}.
+   */
+  public static final String CTX_MAX_THREADS = "maxThreads";
 
   private static final Pattern LOOKS_LIKE_JSON_ARRAY = Pattern.compile("^\\s*\\[.*", Pattern.DOTALL);
 
@@ -495,6 +506,16 @@ public class MultiStageQueryContext
   public static Set<String> getColumnsExcludedFromTypeVerification(final QueryContext queryContext)
   {
     return new HashSet<>(decodeList(CTX_SKIP_TYPE_VERIFICATION, queryContext.getString(CTX_SKIP_TYPE_VERIFICATION)));
+  }
+
+  public static int getFrameSize(final QueryContext queryContext)
+  {
+    return queryContext.getInt(CTX_MAX_FRAME_SIZE, WorkerMemoryParameters.DEFAULT_FRAME_SIZE);
+  }
+
+  public static Integer getMaxThreads(final QueryContext queryContext)
+  {
+    return queryContext.getInt(CTX_MAX_THREADS);
   }
 
   /**

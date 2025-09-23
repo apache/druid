@@ -18,7 +18,6 @@
 
 import { Button, ButtonGroup } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { CancelToken } from 'axios';
 import classNames from 'classnames';
 import type { LiteralValue, QueryResult, SqlQuery, ValuesFilterPattern } from 'druid-query-toolkit';
 import {
@@ -56,7 +55,7 @@ export interface HelperTableProps {
   where: SqlExpression;
   setWhere(where: SqlExpression): void;
   expression: ExpressionMeta;
-  runSqlQuery(query: string | SqlQuery, cancelToken?: CancelToken): Promise<QueryResult>;
+  runSqlQuery(query: string | SqlQuery, signal?: AbortSignal): Promise<QueryResult>;
   onDelete(): void;
 }
 
@@ -94,8 +93,8 @@ export const HelperTable = React.memo(function HelperTable(props: HelperTablePro
     query: valuesQuery,
     debounceIdle: 100,
     debounceLoading: 500,
-    processQuery: async (query, cancelToken) => {
-      const vs = await runSqlQuery(query, cancelToken);
+    processQuery: async (query, signal) => {
+      const vs = await runSqlQuery(query, signal);
       return (vs.toObjectArray() as any) || [];
     },
   });

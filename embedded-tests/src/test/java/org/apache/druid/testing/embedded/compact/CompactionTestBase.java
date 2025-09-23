@@ -41,6 +41,7 @@ public abstract class CompactionTestBase extends EmbeddedClusterTestBase
 {
   protected final EmbeddedOverlord overlord = new EmbeddedOverlord();
   protected final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
+  protected final EmbeddedBroker broker = new EmbeddedBroker();
 
   @Override
   protected EmbeddedDruidCluster createCluster()
@@ -50,7 +51,7 @@ public abstract class CompactionTestBase extends EmbeddedClusterTestBase
                                .addServer(overlord)
                                .addServer(coordinator)
                                .addServer(new EmbeddedIndexer())
-                               .addServer(new EmbeddedBroker())
+                               .addServer(broker)
                                .addServer(new EmbeddedHistorical())
                                .addServer(new EmbeddedRouter());
   }
@@ -67,11 +68,16 @@ public abstract class CompactionTestBase extends EmbeddedClusterTestBase
   /**
    * Creates and runs a task for the current {@link #dataSource}.
    */
-  protected String runTask(TaskBuilder<?, ?, ?> taskBuilder)
+  protected String runTask(TaskBuilder<?, ?, ?, ?> taskBuilder)
   {
     final String taskId = IdUtils.getRandomId();
     cluster.callApi().runTask(taskBuilder.dataSource(dataSource).withId(taskId), overlord);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
+    boolean useCentralizedSchema = Boolean.parseBoolean(cluster.getCommonProperties().getProperty("druid.centralizedDatasourceSchema.enabled", "false"));
+    if (useCentralizedSchema) {
+      cluster.callApi().waitForAllSegmentsToBeAvailableWithCentralizedSchema(dataSource, coordinator, broker);
+    } else {
+      cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+    }
 
     return taskId;
   }

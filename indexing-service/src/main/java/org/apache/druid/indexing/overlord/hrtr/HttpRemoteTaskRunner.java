@@ -131,7 +131,7 @@ import java.util.stream.Collectors;
  * workers to support deprecated RemoteTaskRunner. So a method "scheduleCompletedTaskStatusCleanupFromZk()" is added'
  * which should be removed in the release that removes RemoteTaskRunner legacy ZK updation WorkerTaskMonitor class.
  */
-public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
+public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, WorkerHolder.Listener
 {
   public static final String TASK_UNKNOWN_COUNT = "task/unknown/count";
 
@@ -637,7 +637,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             httpClient,
             config,
             workersSyncExec,
-            this::taskAddedOrUpdated,
+            this,
             worker,
             expectedAnnouncements
         );
@@ -1514,7 +1514,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     return Optional.fromNullable(provisioningService.getStats());
   }
 
-  @VisibleForTesting
+  @Override
   public void taskAddedOrUpdated(final TaskAnnouncement announcement, final WorkerHolder workerHolder)
   {
     final String taskId = announcement.getTaskId();
@@ -1716,6 +1716,14 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       workerHolder.shutdownTask(taskId);
     }
 
+    synchronized (statusLock) {
+      statusLock.notifyAll();
+    }
+  }
+
+  @Override
+  public void stateChanged(boolean enabled, WorkerHolder workerHolder)
+  {
     synchronized (statusLock) {
       statusLock.notifyAll();
     }

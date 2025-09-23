@@ -80,11 +80,11 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
 
         if (s == null) {
           // True nulls do not match anything.
-          return ExprEval.of(null);
+          return ExprEval.ofString(null);
         } else {
           final Matcher matcher = pattern.matcher(s);
           final String retVal = matcher.find() ? matcher.group(index) : null;
-          return ExprEval.of(retVal);
+          return ExprEval.ofString(retVal);
         }
       }
 

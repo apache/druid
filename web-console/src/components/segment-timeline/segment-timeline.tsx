@@ -97,25 +97,25 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
 
   const [datasourcesState] = useQueryManager<Capabilities, string[]>({
     initQuery: capabilities,
-    processQuery: async (capabilities, cancelToken) => {
+    processQuery: async (capabilities, signal) => {
       if (capabilities.hasSql()) {
         const tables = await queryDruidSql<{ TABLE_NAME: string }>(
           {
             query: `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'TABLE'`,
           },
-          cancelToken,
+          signal,
         );
 
         return tables.map(d => d.TABLE_NAME);
       } else {
-        return await getApiArray(`/druid/coordinator/v1/datasources`, cancelToken);
+        return await getApiArray(`/druid/coordinator/v1/datasources`, signal);
       }
     },
   });
 
   const [initDatasourceDateRangeState] = useQueryManager<string | null, NonNullDateRange>({
     query: dateRange ? undefined : shownDatasource ?? null,
-    processQuery: async (datasource, cancelToken) => {
+    processQuery: async (datasource, signal) => {
       let queriedStart: Date;
       let queriedEnd: Date;
       if (capabilities.hasSql()) {
@@ -134,7 +134,7 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
           .addSelect(C('end'), { addToOrderBy: 'end', direction: 'DESC' })
           .toString();
 
-        const endRes = await queryDruidSql<{ end: string }>({ query: endQuery }, cancelToken).catch(
+        const endRes = await queryDruidSql<{ end: string }>({ query: endQuery }, signal).catch(
           () => [],
         );
         if (endRes.length !== 1) {
@@ -149,7 +149,7 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
 
         const startRes = await queryDruidSql<{ start: string }>(
           { query: startQuery },
-          cancelToken,
+          signal,
         ).catch(() => []);
         if (startRes.length !== 1) {
           return [DEFAULT_SHOWN_DURATION.shift(queriedEnd, Timezone.UTC, -1), queriedEnd]; // Should not really get here

@@ -90,6 +90,34 @@ public class S3DataSegmentPusherTest
     );
   }
 
+  @Test
+  public void testPushNoZip() throws Exception
+  {
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
+
+    final AccessControlList acl = new AccessControlList();
+    acl.setOwner(new Owner("ownerId", "owner"));
+    acl.grantAllPermissions(new Grant(new CanonicalGrantee(acl.getOwner().getId()), Permission.FullControl));
+    EasyMock.expect(s3Client.getBucketAcl(EasyMock.eq("bucket"))).andReturn(acl).once();
+
+    s3Client.upload(EasyMock.anyObject(PutObjectRequest.class));
+    EasyMock.expectLastCall().once();
+
+    EasyMock.replay(s3Client);
+
+    S3DataSegmentPusherConfig config = new S3DataSegmentPusherConfig()
+    {
+      @Override
+      public boolean isZip()
+      {
+        return false;
+      }
+    };
+    config.setBucket("bucket");
+    config.setBaseKey("key");
+    validate(false, "key/foo/2015-01-01T00:00:00\\.000Z_2016-01-01T00:00:00\\.000Z/0/0/", s3Client, config);
+  }
+
   private void testPushInternal(boolean useUniquePath, String matcher) throws Exception
   {
     ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
@@ -132,7 +160,11 @@ public class S3DataSegmentPusherTest
     S3DataSegmentPusherConfig config = new S3DataSegmentPusherConfig();
     config.setBucket("bucket");
     config.setBaseKey("key");
+    validate(useUniquePath, matcher, s3Client, config);
+  }
 
+  private void validate(boolean useUniquePath, String matcher, ServerSideEncryptingAmazonS3 s3Client, S3DataSegmentPusherConfig config) throws IOException
+  {
     S3DataSegmentPusher pusher = new S3DataSegmentPusher(s3Client, config);
 
     // Create a mock segment on disk
