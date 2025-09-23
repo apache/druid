@@ -180,7 +180,7 @@ public class SystemSchema extends AbstractSchema
       .add("max_size", ColumnType.LONG)
       .add("is_leader", ColumnType.LONG)
       .add("start_time", ColumnType.STRING)
-      .add("labels", ColumnType.STRING)
+      .add("labels", ColumnType.NESTED_DATA)
       .build();
 
   static final RowSignature SERVER_SEGMENTS_SIGNATURE = RowSignature
@@ -245,8 +245,7 @@ public class SystemSchema extends AbstractSchema
             serverInventoryView,
             authorizerMapper,
             overlordClient,
-            coordinatorClient,
-            jsonMapper
+            coordinatorClient
         ),
         SERVER_SEGMENTS_TABLE,
         new ServerSegmentsTable(serverView, authorizerMapper),
@@ -527,15 +526,13 @@ public class SystemSchema extends AbstractSchema
     private final FilteredServerInventoryView serverInventoryView;
     private final OverlordClient overlordClient;
     private final CoordinatorClient coordinatorClient;
-    private final ObjectMapper jsonMapper;
 
     public ServersTable(
         DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
         FilteredServerInventoryView serverInventoryView,
         AuthorizerMapper authorizerMapper,
         OverlordClient overlordClient,
-        CoordinatorClient coordinatorClient,
-        ObjectMapper jsonMapper
+        CoordinatorClient coordinatorClient
     )
     {
       this.authorizerMapper = authorizerMapper;
@@ -543,7 +540,6 @@ public class SystemSchema extends AbstractSchema
       this.serverInventoryView = serverInventoryView;
       this.overlordClient = overlordClient;
       this.coordinatorClient = coordinatorClient;
-      this.jsonMapper = jsonMapper;
     }
 
     @Override
@@ -631,56 +627,46 @@ public class SystemSchema extends AbstractSchema
     /**
      * Returns a row for all node types which don't serve data. The returned row contains only static information.
      */
-    private Object[] buildRowForNonDataServer(DiscoveryDruidNode discoveryDruidNode)
+    private static Object[] buildRowForNonDataServer(DiscoveryDruidNode discoveryDruidNode)
     {
       final DruidNode node = discoveryDruidNode.getDruidNode();
-      try {
-        return new Object[]{
-            node.getHostAndPortToUse(),
-            node.getHost(),
-            (long) node.getPlaintextPort(),
-            (long) node.getTlsPort(),
-            StringUtils.toLowerCase(discoveryDruidNode.getNodeRole().toString()),
-            null,
-            UNKNOWN_SIZE,
-            UNKNOWN_SIZE,
-            null,
-            toStringOrNull(discoveryDruidNode.getStartTime()),
-            node.getLabels() == null ? null : jsonMapper.writeValueAsString(node.getLabels())
-        };
-      }
-      catch (JsonProcessingException e) {
-        throw new RuntimeException(e);
-      }
+      return new Object[] {
+              node.getHostAndPortToUse(),
+          node.getHost(),
+          (long) node.getPlaintextPort(),
+          (long) node.getTlsPort(),
+          StringUtils.toLowerCase(discoveryDruidNode.getNodeRole().toString()),
+          null,
+          UNKNOWN_SIZE,
+          UNKNOWN_SIZE,
+          null,
+          toStringOrNull(discoveryDruidNode.getStartTime()),
+          node.getLabels()
+      };
     }
 
     /**
      * Returns a row for all node types which don't serve data. The returned row contains only static information.
      */
-    private Object[] buildRowForNonDataServerWithLeadership(
+    private static Object[] buildRowForNonDataServerWithLeadership(
         DiscoveryDruidNode discoveryDruidNode,
         boolean isLeader
     )
     {
       final DruidNode node = discoveryDruidNode.getDruidNode();
-      try {
-        return new Object[]{
-            node.getHostAndPortToUse(),
-            node.getHost(),
-            (long) node.getPlaintextPort(),
-            (long) node.getTlsPort(),
-            StringUtils.toLowerCase(discoveryDruidNode.getNodeRole().toString()),
-            null,
-            UNKNOWN_SIZE,
-            UNKNOWN_SIZE,
-            isLeader ? 1L : 0L,
-            toStringOrNull(discoveryDruidNode.getStartTime()),
-            node.getLabels() == null ? null : jsonMapper.writeValueAsString(node.getLabels())
-        };
-      }
-      catch (JsonProcessingException e) {
-        throw new RuntimeException(e);
-      }
+      return new Object[] {
+              node.getHostAndPortToUse(),
+          node.getHost(),
+          (long) node.getPlaintextPort(),
+          (long) node.getTlsPort(),
+          StringUtils.toLowerCase(discoveryDruidNode.getNodeRole().toString()),
+          null,
+          UNKNOWN_SIZE,
+          UNKNOWN_SIZE,
+          isLeader ? 1L : 0L,
+          toStringOrNull(discoveryDruidNode.getStartTime()),
+          node.getLabels()
+      };
     }
 
     /**
@@ -688,7 +674,7 @@ public class SystemSchema extends AbstractSchema
      * {@code serverFromInventoryView} if available which is the current state of the server. Otherwise, it
      * will get the information from {@code discoveryDruidNode} which has only static configurations.
      */
-    private Object[] buildRowForDiscoverableDataServer(
+    private static Object[] buildRowForDiscoverableDataServer(
         DiscoveryDruidNode discoveryDruidNode,
         @Nullable DruidServer serverFromInventoryView
     )
@@ -704,24 +690,19 @@ public class SystemSchema extends AbstractSchema
       } else {
         currentSize = serverFromInventoryView.getCurrSize();
       }
-      try {
-        return new Object[]{
-            node.getHostAndPortToUse(),
-            node.getHost(),
-            (long) node.getPlaintextPort(),
-            (long) node.getTlsPort(),
-            StringUtils.toLowerCase(discoveryDruidNode.getNodeRole().toString()),
-            druidServerToUse.getTier(),
-            currentSize,
-            druidServerToUse.getMaxSize(),
-            null,
-            toStringOrNull(discoveryDruidNode.getStartTime()),
-            node.getLabels() == null ? null : jsonMapper.writeValueAsString(node.getLabels())
-        };
-      }
-      catch (JsonProcessingException e) {
-        throw new RuntimeException(e);
-      }
+      return new Object[] {
+              node.getHostAndPortToUse(),
+          node.getHost(),
+          (long) node.getPlaintextPort(),
+          (long) node.getTlsPort(),
+          StringUtils.toLowerCase(discoveryDruidNode.getNodeRole().toString()),
+          druidServerToUse.getTier(),
+          currentSize,
+          druidServerToUse.getMaxSize(),
+          null,
+          toStringOrNull(discoveryDruidNode.getStartTime()),
+          node.getLabels()
+      };
     }
 
     private static boolean isDiscoverableDataServer(DataNodeService dataNodeService)
