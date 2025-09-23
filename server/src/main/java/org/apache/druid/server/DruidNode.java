@@ -44,6 +44,8 @@ import java.util.Objects;
  */
 public class DruidNode
 {
+  public static final String UNKNOWN_VERSION = "unknown";
+
   @JsonProperty("service")
   @NotNull
   private String serviceName;
@@ -86,7 +88,7 @@ public class DruidNode
   @NotNull
   private final String version = GuavaUtils.firstNonNull(
       DruidNode.class.getPackage().getImplementationVersion(),
-      "unknown"
+      UNKNOWN_VERSION
   );
 
   public DruidNode(
