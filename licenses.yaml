@@ -2147,23 +2147,23 @@ notices:
 name: Jetty
 license_category: binary
 module: java-core
-license_name: Apache License version 2.0
-version: 9.4.57.v20241219
+license_name: Eclipse Public License 2.0
+version: 12.0.25
 libraries:
+  - org.eclipse.jetty: jetty-alpn-client
   - org.eclipse.jetty: jetty-client
-  - org.eclipse.jetty: jetty-continuation
   - org.eclipse.jetty: jetty-http
   - org.eclipse.jetty: jetty-io
-  - org.eclipse.jetty: jetty-proxy
   - org.eclipse.jetty: jetty-rewrite
   - org.eclipse.jetty: jetty-security
   - org.eclipse.jetty: jetty-server
-  - org.eclipse.jetty: jetty-servlet
-  - org.eclipse.jetty: jetty-servlets
+  - org.eclipse.jetty: jetty-session
   - org.eclipse.jetty: jetty-util
-  - org.eclipse.jetty: jetty-util-ajax
-  - org.eclipse.jetty: jetty-xml
-  - org.eclipse.jetty: jetty-webapp
+  - org.eclipse.jetty.ee8: jetty-ee8-nested
+  - org.eclipse.jetty.ee8: jetty-ee8-proxy
+  - org.eclipse.jetty.ee8: jetty-ee8-security
+  - org.eclipse.jetty.ee8: jetty-ee8-servlet
+  - org.eclipse.jetty.ee8: jetty-ee8-servlets
 notice: |
   ==============================================================
    Jetty Web Container
@@ -3684,7 +3684,7 @@ name: Java Servlet API
 license_category: binary
 module: java-core
 license_name: CDDL 1.1
-version: 3.1.0
+version: 4.0.1
 copyright: Oracle and/or its affiliates.
 license_file_path: licenses/bin/javax.CDDL11
 libraries:

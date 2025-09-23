@@ -300,6 +300,29 @@ public class EmbeddedClusterApis implements EmbeddedResource
   }
 
   /**
+   * Waits for all used segments (including overshadowed) of the given datasource
+   * to be queryable by Brokers when centralized schema is enabled.
+   */
+  public void waitForAllSegmentsToBeAvailableWithCentralizedSchema(
+      String dataSource,
+      EmbeddedCoordinator coordinator,
+      EmbeddedBroker broker
+  )
+  {
+    final int numSegments = coordinator
+        .bindings()
+        .segmentsMetadataStorage()
+        .retrieveAllUsedSegments(dataSource, Segments.INCLUDING_OVERSHADOWED)
+        .size();
+
+    broker.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("segment/schemaCache/refreshSkipped/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(numSegments)
+    );
+  }
+
+  /**
    * Returns a {@link Closeable} that deletes all the data for the given datasource
    * on {@link Closeable#close()}.
    */

@@ -32,7 +32,7 @@ public class RunWorkOrderTest
   private static final String CANCELLATION_ID = "my-cancellation-id";
 
   @Test
-  public void test_stopUnchecked() throws InterruptedException
+  public void test_stop()
   {
     final FrameProcessorExecutor exec = Mockito.mock(FrameProcessorExecutor.class);
     final WorkerContext workerContext = Mockito.mock(WorkerContext.class);
@@ -45,10 +45,10 @@ public class RunWorkOrderTest
     final RunWorkOrder runWorkOrder =
         new RunWorkOrder(null, null, null, exec, CANCELLATION_ID, workerContext, frameContext, listener);
 
-    runWorkOrder.stopUnchecked(null);
+    runWorkOrder.stop(null);
 
     // Calling a second time doesn't do anything special.
-    runWorkOrder.stopUnchecked(null);
+    runWorkOrder.stop(null);
 
     Mockito.verify(exec).cancel(CANCELLATION_ID);
     Mockito.verify(frameContext).close();
@@ -56,7 +56,7 @@ public class RunWorkOrderTest
   }
 
   @Test
-  public void test_stopUnchecked_error() throws InterruptedException
+  public void test_stop_error()
   {
     final FrameProcessorExecutor exec = Mockito.mock(FrameProcessorExecutor.class);
     final WorkerContext workerContext = Mockito.mock(WorkerContext.class);
@@ -73,11 +73,11 @@ public class RunWorkOrderTest
 
     Assert.assertThrows(
         IllegalStateException.class,
-        () -> runWorkOrder.stopUnchecked(exception)
+        () -> runWorkOrder.stop(exception)
     );
 
     // Calling a second time doesn't do anything special. We already tried our best.
-    runWorkOrder.stopUnchecked(null);
+    runWorkOrder.stop(null);
 
     Mockito.verify(exec).cancel(CANCELLATION_ID);
     Mockito.verify(frameContext).close();
@@ -85,7 +85,7 @@ public class RunWorkOrderTest
   }
 
   @Test
-  public void test_stopUnchecked_errorDuringExecCancel() throws InterruptedException
+  public void test_stop_errorDuringExecCancel()
   {
     final FrameProcessorExecutor exec = Mockito.mock(FrameProcessorExecutor.class);
     final WorkerContext workerContext = Mockito.mock(WorkerContext.class);
@@ -102,7 +102,7 @@ public class RunWorkOrderTest
 
     Assert.assertThrows(
         IllegalStateException.class,
-        () -> runWorkOrder.stopUnchecked(null)
+        () -> runWorkOrder.stop(null)
     );
 
     Mockito.verify(exec).cancel(CANCELLATION_ID);
@@ -111,7 +111,7 @@ public class RunWorkOrderTest
   }
 
   @Test
-  public void test_stopUnchecked_errorDuringFrameContextClose() throws InterruptedException
+  public void test_stop_errorDuringFrameContextClose()
   {
     final FrameProcessorExecutor exec = Mockito.mock(FrameProcessorExecutor.class);
     final WorkerContext workerContext = Mockito.mock(WorkerContext.class);
@@ -128,7 +128,7 @@ public class RunWorkOrderTest
 
     Assert.assertThrows(
         IllegalStateException.class,
-        () -> runWorkOrder.stopUnchecked(null)
+        () -> runWorkOrder.stop(null)
     );
 
     Mockito.verify(exec).cancel(CANCELLATION_ID);

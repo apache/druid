@@ -61,6 +61,7 @@ public class IngestionBackwardCompatibilityDockerTest extends IngestionSmokeTest
 
     return cluster
         .useContainerFriendlyHostname()
+        .useDefaultTimeoutForLatchableEmitter(60)
         .addResource(containerOverlord)
         .addResource(containerCoordinator)
         .addServer(overlord)
