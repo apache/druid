@@ -37,7 +37,6 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.storage.postgresql.PostgreSQLMetadataStorageModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.SqlTaskStatus;
@@ -178,7 +177,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     );
 
     // Wait for the Broker to remove this datasource from its schema cache
-    eventCollector.latchableEmitter().waitForEvent(
+    eventCollector.latchableEmitter().waitForMetricEvent(
         event -> event.hasMetricName("segment/schemaCache/dataSource/removed")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
                       .hasService("druid/broker")
@@ -303,9 +302,8 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(topic, supervisorStatus.getSource());
 
     // Get the task statuses
-    List<TaskStatusPlus> taskStatuses = ImmutableList.copyOf(
-        (CloseableIterator<TaskStatusPlus>)
-            cluster.callApi().onLeaderOverlord(o -> o.taskStatuses(null, dataSource, 1))
+    List<TaskStatusPlus> taskStatuses = ImmutableList.<TaskStatusPlus>copyOf(
+        cluster.callApi().onLeaderOverlord(o -> o.taskStatuses(null, dataSource, 1))
     );
     Assertions.assertFalse(taskStatuses.isEmpty());
     Assertions.assertEquals(TaskState.RUNNING, taskStatuses.get(0).getStatusCode());

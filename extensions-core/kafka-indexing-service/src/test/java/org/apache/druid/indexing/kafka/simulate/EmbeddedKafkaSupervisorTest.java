@@ -32,7 +32,6 @@ import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpecBuilder;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
@@ -99,7 +98,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(supervisorId, cluster.callApi().postSupervisor(kafkaSupervisorSpec));
 
     // Wait for the broker to discover the realtime segments
-    broker.latchableEmitter().waitForEvent(
+    broker.latchableEmitter().waitForMetricEvent(
         event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
 
@@ -111,9 +110,8 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(topic, supervisorStatus.getSource());
 
     // Get the task statuses
-    List<TaskStatusPlus> taskStatuses = ImmutableList.copyOf(
-        (CloseableIterator<TaskStatusPlus>)
-            cluster.callApi().onLeaderOverlord(o -> o.taskStatuses(null, dataSource, 1))
+    List<TaskStatusPlus> taskStatuses = ImmutableList.<TaskStatusPlus>copyOf(
+        cluster.callApi().onLeaderOverlord(o -> o.taskStatuses(null, dataSource, 1))
     );
     Assertions.assertEquals(1, taskStatuses.size());
     Assertions.assertEquals(TaskState.RUNNING, taskStatuses.get(0).getStatusCode());

@@ -100,7 +100,7 @@ public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
     faultyIndexer.start();
 
     // Let the worker run for a bit so that controller task moves to READING_INPUT phase
-    final ServiceMetricEvent matchingEvent = faultyIndexer.latchableEmitter().waitForEvent(
+    final ServiceMetricEvent matchingEvent = faultyIndexer.latchableEmitter().waitForMetricEvent(
         event -> event.hasMetricName("ingest/count")
     );
     final String workerTaskId = (String) matchingEvent.getUserDims().get(DruidMetrics.TASK_ID);
@@ -115,7 +115,7 @@ public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
 
     // Cancel the worker task and verify that it has failed
     cluster.callApi().onLeaderOverlord(o -> o.cancelTask(workerTaskId));
-    overlord.latchableEmitter().waitForEvent(
+    overlord.latchableEmitter().waitForMetricEvent(
         event -> event.hasMetricName("task/run/time")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
                       .hasDimension(DruidMetrics.TASK_STATUS, "FAILED")

@@ -63,15 +63,13 @@ public class HttpRemoteTaskRunnerWorkerFailTest extends EmbeddedClusterTestBase
     );
     // wait for the overlord to dispatch the task and worker start it
     indexer.latchableEmitter().waitForMetricEvent(
-        event -> event.hasMetricName(NoopTask.NOOP_TASK_EVENT_STARTED),
-        1000
+        event -> event.hasMetricName(NoopTask.NOOP_TASK_EVENT_STARTED)
     );
     overlord.stop();
     overlord.start();
     // give some time for the overlord to load the task from the worker
     overlord.latchableEmitter().waitForMetricEvent(
-        event -> event.hasMetricName(HttpRemoteTaskRunner.TASK_UNKNOWN_COUNT),
-        1000
+        event -> event.hasMetricName(HttpRemoteTaskRunner.TASK_UNKNOWN_COUNT)
     );
     indexer.stop();
     indexer.start();
@@ -79,8 +77,7 @@ public class HttpRemoteTaskRunnerWorkerFailTest extends EmbeddedClusterTestBase
     overlord.latchableEmitter().waitForMetricEvent(
         event -> event.hasMetricName("task/run/time")
             .hasDimension(DruidMetrics.TASK_ID, taskId)
-            .hasDimension(DruidMetrics.TASK_STATUS, "FAILED"),
-        100
+            .hasDimension(DruidMetrics.TASK_STATUS, "FAILED")
     );
     TaskStatusResponse jobStatus = cluster.callApi().onLeaderOverlord(oc -> oc.taskStatus(taskId));
     // the task should have failed
