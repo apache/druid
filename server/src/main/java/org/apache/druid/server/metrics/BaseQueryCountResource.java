@@ -17,13 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.server;
+package org.apache.druid.server.metrics;
 
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.server.metrics.QueryCountStatsProvider;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+/*
+  A thread-safe query count statistics tracker. Meant to be a shared between the various query resource handlers present
+  on an instance.
+*/
 @LazySingleton
 public class BaseQueryCountResource implements QueryCountStatsProvider
 {

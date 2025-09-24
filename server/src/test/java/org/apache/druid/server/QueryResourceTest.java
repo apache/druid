@@ -74,6 +74,7 @@ import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
+import org.apache.druid.server.metrics.BaseQueryCountResource;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.mocks.ExceptionalInputStream;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
