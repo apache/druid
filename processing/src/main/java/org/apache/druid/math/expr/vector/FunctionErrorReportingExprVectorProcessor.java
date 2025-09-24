@@ -58,7 +58,12 @@ public class FunctionErrorReportingExprVectorProcessor<T> implements ExprVectorP
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(e, "Function[%s] encountered exception: %s", functionName, e.getMessage());
     }
-    catch (DruidException | IAE e) {
+    catch (IAE e) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(e, e.getMessage());
+    }
+    catch (DruidException e) {
       throw e;
     }
     catch (Exception e) {
