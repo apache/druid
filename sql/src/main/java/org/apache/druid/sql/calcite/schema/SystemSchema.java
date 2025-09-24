@@ -57,6 +57,7 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnType;
@@ -663,24 +664,19 @@ public class SystemSchema extends AbstractSchema
     )
     {
       final DruidNode node = discoveryDruidNode.getDruidNode();
-      try {
-        return new Object[]{
-            node.getHostAndPortToUse(),
-            node.getHost(),
-            (long) node.getPlaintextPort(),
-            (long) node.getTlsPort(),
-            StringUtils.toLowerCase(discoveryDruidNode.getNodeRole().toString()),
-            null,
-            UNKNOWN_SIZE,
-            UNKNOWN_SIZE,
-            isLeader ? 1L : 0L,
-            toStringOrNull(discoveryDruidNode.getStartTime()),
-            node.getLabels() == null ? null : jsonMapper.writeValueAsString(node.getLabels())
-        };
-      }
-      catch (JsonProcessingException e) {
-        throw new RuntimeException(e);
-      }
+      return new Object[]{
+          node.getHostAndPortToUse(),
+          node.getHost(),
+          (long) node.getPlaintextPort(),
+          (long) node.getTlsPort(),
+          StringUtils.toLowerCase(discoveryDruidNode.getNodeRole().toString()),
+          null,
+          UNKNOWN_SIZE,
+          UNKNOWN_SIZE,
+          isLeader ? 1L : 0L,
+          toStringOrNull(discoveryDruidNode.getStartTime()),
+          node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels())
+      };
     }
 
     /**
@@ -704,24 +700,19 @@ public class SystemSchema extends AbstractSchema
       } else {
         currentSize = serverFromInventoryView.getCurrSize();
       }
-      try {
-        return new Object[]{
-            node.getHostAndPortToUse(),
-            node.getHost(),
-            (long) node.getPlaintextPort(),
-            (long) node.getTlsPort(),
-            StringUtils.toLowerCase(discoveryDruidNode.getNodeRole().toString()),
-            druidServerToUse.getTier(),
-            currentSize,
-            druidServerToUse.getMaxSize(),
-            null,
-            toStringOrNull(discoveryDruidNode.getStartTime()),
-            node.getLabels() == null ? null : jsonMapper.writeValueAsString(node.getLabels())
-        };
-      }
-      catch (JsonProcessingException e) {
-        throw new RuntimeException(e);
-      }
+      return new Object[]{
+          node.getHostAndPortToUse(),
+          node.getHost(),
+          (long) node.getPlaintextPort(),
+          (long) node.getTlsPort(),
+          StringUtils.toLowerCase(discoveryDruidNode.getNodeRole().toString()),
+          druidServerToUse.getTier(),
+          currentSize,
+          druidServerToUse.getMaxSize(),
+          null,
+          toStringOrNull(discoveryDruidNode.getStartTime()),
+          node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels())
+      };
     }
 
     private static boolean isDiscoverableDataServer(DataNodeService dataNodeService)
