@@ -39,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class HttpRemoteTaskRunnerWorkerFailTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
-  private final EmbeddedIndexer indexer = new EmbeddedIndexer().addProperty("druid.worker.capacity", "3");
+  private final EmbeddedIndexer indexer = new EmbeddedIndexer();
 
   @Override
   public EmbeddedDruidCluster createCluster()
@@ -57,9 +57,7 @@ public class HttpRemoteTaskRunnerWorkerFailTest extends EmbeddedClusterTestBase
   {
     final String taskId = IdUtils.newTaskId("sim_test_noop", TestDataSource.WIKI, null);
     cluster.callApi().onLeaderOverlord(
-        o -> {
-          return o.runTask(taskId, new NoopTask(taskId, null, null, 8000L, 0L, null));
-        }
+        o -> o.runTask(taskId, new NoopTask(taskId, null, null, 8000L, 0L, null))
     );
     // wait for the overlord to dispatch the task and worker start it
     indexer.latchableEmitter().waitForMetricEvent(

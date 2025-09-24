@@ -44,7 +44,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class NoopTask extends AbstractTask implements PendingSegmentAllocatingTask
 {
   public static final String TYPE = "noop";
-  public static final String NOOP_TASK_EVENT_STARTED = "noopTask-started";
+  public static final String EVENT_STARTED = "task/noop/started";
   private static final int DEFAULT_RUN_TIME = 2500;
 
   @JsonIgnore
@@ -108,7 +108,7 @@ public class NoopTask extends AbstractTask implements PendingSegmentAllocatingTa
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
-    toolbox.getEmitter().emit(ServiceMetricEvent.builder().setMetric(NOOP_TASK_EVENT_STARTED, 1));
+    emitMetric(toolbox.getEmitter(), NOOP_TASK_EVENT_STARTED, 1);
     long endTime = System.currentTimeMillis() + runTime;
     while (endTime > System.currentTimeMillis() && !aborted.get()) {
       Thread.sleep(100);
