@@ -702,23 +702,23 @@ public class TypeStrategies
     }
   }
 
-  public static final class JsonTypeStrategy implements TypeStrategy<StructuredData>
+  public static final class JsonTypeStrategy implements TypeStrategy
   {
-    private final ObjectStrategy<StructuredData> objectStrategy;
+    private final ObjectStrategy objectStrategy;
 
-    public JsonTypeStrategy(ObjectStrategy<StructuredData> objectStrategy)
+    public JsonTypeStrategy(ObjectStrategy objectStrategy)
     {
       this.objectStrategy = objectStrategy;
     }
 
     @Override
-    public int estimateSizeBytes(StructuredData value)
+    public int estimateSizeBytes(Object value)
     {
-      return value.getSizeEstimate();
+      return StructuredData.wrap(value).getSizeEstimate();
     }
 
     @Override
-    public StructuredData read(ByteBuffer buffer)
+    public Object read(ByteBuffer buffer)
     {
       final int len = buffer.getInt();
       return objectStrategy.fromByteBuffer(buffer, len);
@@ -731,10 +731,10 @@ public class TypeStrategies
     }
 
     @Override
-    public int write(ByteBuffer buffer, StructuredData value, int maxSizeBytes)
+    public int write(ByteBuffer buffer, Object value, int maxSizeBytes)
     {
       TypeStrategies.checkMaxSize(buffer.remaining(), maxSizeBytes, ColumnType.NESTED_DATA);
-      byte[] bytes = objectStrategy.toBytes(value);
+      byte[] bytes = objectStrategy.toBytes(StructuredData.wrap(value));
       final int sizeBytes = Integer.BYTES + bytes.length;
       if (sizeBytes > maxSizeBytes) {
         return maxSizeBytes - sizeBytes;
@@ -745,15 +745,9 @@ public class TypeStrategies
     }
 
     @Override
-    public StructuredData fromBytes(byte[] value)
-    {
-      return objectStrategy.fromByteBuffer(ByteBuffer.wrap(value), value.length);
-    }
-
-    @Override
     public int compare(Object o1, Object o2)
     {
-      return objectStrategy.compare((StructuredData) o1, (StructuredData) o2);
+      return objectStrategy.compare(o1, o2);
     }
 
     @Override
@@ -763,13 +757,13 @@ public class TypeStrategies
     }
 
     @Override
-    public int hashCode(StructuredData o)
+    public int hashCode(Object o)
     {
-      return Objects.hashCode(o);
+      return Objects.hashCode(StructuredData.wrap(o));
     }
 
     @Override
-    public boolean equals(StructuredData a, StructuredData b)
+    public boolean equals(Object a, Object b)
     {
       return Objects.equals(a, b);
     }

@@ -113,7 +113,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   private static final Map<Class<?>, Function<CompressedNestedDataComplexColumn, ?>> AS_MAP =
       SemanticUtils.makeAsMap(CompressedNestedDataComplexColumn.class);
 
-  private static final ObjectStrategy<StructuredData> STRATEGY = NestedDataComplexTypeSerde.INSTANCE.getObjectStrategy();
+  private static final ObjectStrategy<Object> STRATEGY = NestedDataComplexTypeSerde.INSTANCE.getObjectStrategy();
   public static final IntTypeStrategy INT_TYPE_STRATEGY = new IntTypeStrategy();
   private final ColumnConfig columnConfig;
   private final Closer closer;
