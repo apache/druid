@@ -755,7 +755,8 @@ public class SystemSchemaTest extends CalciteTestBase
                                                          serverInventoryView,
                                                          authMapper,
                                                          overlordClient,
-                                                         coordinatorClient
+                                                         coordinatorClient,
+                                                         MAPPER
                                                      )
                                                      .createMock();
     EasyMock.replay(serversTable);
@@ -955,7 +956,7 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             nonLeader,
             startTimeStr,
-            ImmutableMap.of("brokerKey", "brokerValue", "brokerKey2", "brokerValue2")
+            "{\"brokerKey\":\"brokerValue\",\"brokerKey2\":\"brokerValue2\"}"
         )
     );
     expectedRows.add(
@@ -985,7 +986,7 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             1L,
             startTimeStr,
-            ImmutableMap.of("overlordKey", "overlordValue")
+            "{\"overlordKey\":\"overlordValue\"}"
         )
     );
     expectedRows.add(
@@ -1093,10 +1094,10 @@ public class SystemSchemaTest extends CalciteTestBase
       @Nullable Long maxSize,
       @Nullable Long isLeader,
       String startTime,
-      Map<String, String> labels
+      String labels
   )
   {
-    return new Object[] {
+    return new Object[]{
         server,
         host,
         (long) plaintextPort,

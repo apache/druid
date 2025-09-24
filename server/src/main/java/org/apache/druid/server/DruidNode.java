@@ -30,6 +30,7 @@ import org.apache.druid.common.utils.SocketUtil;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 
+import javax.annotation.Nullable;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.NotNull;
 import java.net.InetAddress;
@@ -131,7 +132,7 @@ public class DruidNode
       @JacksonInject @Named("tlsServicePort") @JsonProperty("tlsPort") Integer tlsPort,
       @JsonProperty("enablePlaintextPort") Boolean enablePlaintextPort,
       @JsonProperty("enableTlsPort") boolean enableTlsPort,
-      @JsonProperty("labels") Map<String, String> labels
+      @JsonProperty("labels") @Nullable Map<String, String> labels
   )
   {
     init(
@@ -217,6 +218,7 @@ public class DruidNode
     this.labels = labels;
   }
 
+  @Nullable
   public Map<String, String> getLabels()
   {
     return labels;
@@ -346,13 +348,14 @@ public class DruidNode
            tlsPort == druidNode.tlsPort &&
            enableTlsPort == druidNode.enableTlsPort &&
            Objects.equals(serviceName, druidNode.serviceName) &&
-           Objects.equals(host, druidNode.host);
+           Objects.equals(host, druidNode.host) &&
+           Objects.equals(labels, druidNode.labels);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(serviceName, host, port, plaintextPort, enablePlaintextPort, tlsPort, enableTlsPort);
+    return Objects.hash(serviceName, host, port, plaintextPort, enablePlaintextPort, tlsPort, enableTlsPort, labels);
   }
 
   @Override
@@ -367,6 +370,7 @@ public class DruidNode
            ", enablePlaintextPort=" + enablePlaintextPort +
            ", tlsPort=" + tlsPort +
            ", enableTlsPort=" + enableTlsPort +
+           ", labels=" + labels +
            '}';
   }
 }
