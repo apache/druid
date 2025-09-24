@@ -414,8 +414,14 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       return new ArrayElementColumnValueSelector(arraySelector, elementNumber);
     }
 
-    // we are not a nested column and are being asked for a path that will never exist, so we are nil selector
-    return NilColumnValueSelector.instance();
+    if (holder.getCapabilities().isArray() || ColumnType.NESTED_DATA.equals(holder.getCapabilities().toColumnType())) {
+      // Not a root access and no specialized path available. But the underlying column is array or nested typed,
+      // so we may still be able to walk it using exprs. Try that.
+      return makeColumnValueSelectorUsingColumnSelectorFactory(selectorFactory);
+    } else {
+      // we are not a nested or array column, and are being asked for a path that will never exist, so nil selector
+      return NilColumnValueSelector.instance();
+    }
   }
 
   @Override
@@ -486,11 +492,11 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     final NestedVectorColumnSelectorFactory nestedColumnSelectorFactory =
         column.as(NestedVectorColumnSelectorFactory.class);
 
-    if (isNestedColumn(holder)) {
+    if (isNestedColumn(holder) || holder.getCapabilities().isArray()) {
       if (fieldSpec.processFromRaw || nestedTypeInspector == null || nestedColumnSelectorFactory == null) {
         // 1) If processFromRaw is true, that means JSON_QUERY.
-        // 2) If no nestedTypeInspector, nestedColumnSelectorFactory then that means this is a nested type that is
-        //    not exposed as a nested column.
+        // 2) If no nestedTypeInspector, nestedColumnSelectorFactory then that means this is a nested or array
+        //    type that is not exposed as a nested column.
         // Either way, we read and process raw objects.
         return new RawFieldVectorObjectSelector(
             selectorFactory.makeObjectSelector(fieldSpec.columnName),
@@ -499,7 +505,9 @@ public class NestedFieldVirtualColumn implements VirtualColumn
         );
       }
       final ColumnType leastRestrictiveType = nestedTypeInspector.getFieldLogicalType(fieldSpec.parts);
-      if (leastRestrictiveType != null && leastRestrictiveType.isNumeric() && !Types.isNumeric(fieldSpec.expectedType)) {
+      if (leastRestrictiveType != null
+          && leastRestrictiveType.isNumeric()
+          && !Types.isNumeric(fieldSpec.expectedType)) {
         return ExpressionVectorSelectors.castValueSelectorToObject(
             offset,
             columnName,

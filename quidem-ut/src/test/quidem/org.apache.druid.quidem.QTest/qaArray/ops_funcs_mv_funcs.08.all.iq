@@ -119,16 +119,34 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_to_array(json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
 FROM test_array;
-should be an identifier expression. Use array() instead
-!error
++--------------+
+| col          |
++--------------+
+| [1, 0, null] |
+| [1, 0, null] |
+| [null, 0, 1] |
+| [null, 0, 1] |
++--------------+
+(4 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_mv_funcs TEST_ID: A1_B16_C3_D1
 #-------------------------------------------------------------------------
 SELECT mv_to_array(json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
 FROM test_array;
-should be an identifier expression. Use array() instead
-!error
++--------------+
+| col          |
++--------------+
+| [1, 0, null] |
+| [1, 0, null] |
+| [null, 0, 1] |
+| [null, 0, 1] |
++--------------+
+(4 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_mv_funcs TEST_ID: A1_B16_C4_D1
@@ -152,16 +170,34 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_to_array(json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
 FROM test_array;
-should be an identifier expression. Use array() instead
-!error
++--------------+
+| col          |
++--------------+
+| [1, 2, null] |
+| [1, 2, null] |
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(4 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_mv_funcs TEST_ID: A1_B16_C6_D1
 #-------------------------------------------------------------------------
 SELECT mv_to_array(json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
 FROM test_array;
-should be an identifier expression. Use array() instead
-!error
++--------------+
+| col          |
++--------------+
+| [1, 2, null] |
+| [1, 2, null] |
+| [null, 2, 1] |
+| [null, 2, 1] |
++--------------+
+(4 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_mv_funcs TEST_ID: A1_B16_C7_D1
@@ -185,16 +221,34 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_to_array(json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
 FROM test_array;
-should be an identifier expression. Use array() instead
-!error
++------------------+
+| col              |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_mv_funcs TEST_ID: A1_B16_C9_D1
 #-------------------------------------------------------------------------
 SELECT mv_to_array(json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
 FROM test_array;
-should be an identifier expression. Use array() instead
-!error
++------------------+
+| col              |
++------------------+
+| [0.1, 0.2, null] |
+| [0.1, 0.2, null] |
+| [null, 0.2, 0.1] |
+| [null, 0.2, 0.1] |
++------------------+
+(4 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_mv_funcs TEST_ID: A1_B16_C10_D1
@@ -218,16 +272,34 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_to_array(json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
 FROM test_array;
-should be an identifier expression. Use array() instead
-!error
++----------------+
+| col            |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_mv_funcs TEST_ID: A1_B16_C12_D1
 #-------------------------------------------------------------------------
 SELECT mv_to_array(json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
 FROM test_array;
-should be an identifier expression. Use array() instead
-!error
++----------------+
+| col            |
++----------------+
+| [S1, S2, null] |
+| [S1, S2, null] |
+| [null, S2, S1] |
+| [null, S2, S1] |
++----------------+
+(4 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_mv_funcs TEST_ID: A1_B16_C13_D1
@@ -251,16 +323,34 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_to_array(json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
 FROM test_array;
-should be an identifier expression. Use array() instead
-!error
++--------------------+
+| col                |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_mv_funcs TEST_ID: A1_B16_C15_D1
 #-------------------------------------------------------------------------
 SELECT mv_to_array(json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
 FROM test_array;
-should be an identifier expression. Use array() instead
-!error
++--------------------+
+| col                |
++--------------------+
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
+| [null, null, null] |
++--------------------+
+(4 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_mv_funcs TEST_ID: A1_B16_C16_D1
@@ -284,16 +374,34 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_to_array(json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
 FROM test_array;
-should be an identifier expression. Use array() instead
-!error
++-----+
+| col |
++-----+
+| []  |
+| []  |
+| []  |
+| []  |
++-----+
+(4 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_mv_funcs TEST_ID: A1_B16_C18_D1
 #-------------------------------------------------------------------------
 SELECT mv_to_array(json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
 FROM test_array;
-should be an identifier expression. Use array() instead
-!error
++-----+
+| col |
++-----+
+| []  |
+| []  |
+| []  |
+| []  |
++-----+
+(4 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_mv_funcs TEST_ID: A1_B16_C19_D1
@@ -317,16 +425,34 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_to_array(json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
 FROM test_array;
-should be an identifier expression. Use array() instead
-!error
++--------------------------+
+| col                      |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(4 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_mv_funcs TEST_ID: A1_B16_C21_D1
 #-------------------------------------------------------------------------
 SELECT mv_to_array(json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
 FROM test_array;
-should be an identifier expression. Use array() instead
-!error
++--------------------------+
+| col                      |
++--------------------------+
+| [null, S1, 0.1, 1, true] |
+| [null, S1, 0.1, 1, true] |
+| [true, 1, 0.1, S1, null] |
+| [true, 1, 0.1, S1, null] |
++--------------------------+
+(4 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_mv_funcs TEST_ID: A1_B16_C22_D1
@@ -341,14 +467,31 @@ Cannot apply 'MV_TO_ARRAY' to arguments of type 'MV_TO_ARRAY(
 #-------------------------------------------------------------------------
 SELECT mv_to_array(json_value(a_nested, '$[7]' RETURNING varchar array)) AS col
 FROM test_array;
-should be an identifier expression. Use array() instead
-!error
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_mv_funcs TEST_ID: A1_B16_C24_D1
 #-------------------------------------------------------------------------
 SELECT mv_to_array(json_value(a_nested, '$[7][7]' RETURNING varchar array)) AS col
 FROM test_array;
-should be an identifier expression. Use array() instead
-!error
++-----+
+| col |
++-----+
+|     |
+|     |
+|     |
+|     |
++-----+
+(4 rows)
 
+!ok
