@@ -138,7 +138,7 @@ public class StructuredData implements Comparable<StructuredData>
   public int getSizeEstimate()
   {
     if (sizeEstimate < 0) {
-      var unused = hash.getAsLong(); // trigger hash computation which also sets sizeEstimate
+      hash.getAsLong(); // trigger hash computation which also sets sizeEstimate
     }
     Preconditions.checkState(sizeEstimate >= 0, "sizeEstimate not initialized");
     return sizeEstimate;
