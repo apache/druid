@@ -145,7 +145,7 @@ interface ServiceResultRow {
   readonly plaintext_port: number;
   readonly tls_port: number;
   readonly start_time: string;
-  readonly labels: Record<string, string> | null;
+  readonly labels: string | null;
 }
 
 interface ServicesWithAuxiliaryInfo {
@@ -629,14 +629,14 @@ ORDER BY
           className: 'padded',
           filterable: false,
           width: 200,
-          Cell: ({ value }: { value: Record<string, string> | null }) => {
+          Cell: ({ value }: { value: string | null }) => {
             if (!value) return '';
             return (
               <ul className="labels-list">
-                {Object.entries(value).map(([key, val]) => {
+                {Object.entries(JSON.parse(value)).map(([key, val]) => {
                   return (
                     <li key={key}>
-                      {key}: {val}
+                      {key}: {String(val)}
                     </li>
                   );
                 })}
