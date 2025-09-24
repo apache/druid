@@ -1552,12 +1552,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
               tasks.put(taskId, taskItem);
               final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
               metricBuilder.setDimension(DruidMetrics.TASK_ID, taskId);
-              emitter.emit(
-                  metricBuilder.setMetric(
-                      TASK_UNKNOWN_COUNT,
-                      (long) 1
-                  )
-              );
+              emitter.emit(metricBuilder.setMetric(TASK_UNKNOWN_COUNT, (long) 1));
               break;
             case SUCCESS:
             case FAILED:

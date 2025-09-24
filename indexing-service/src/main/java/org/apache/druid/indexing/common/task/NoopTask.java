@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  */
@@ -107,7 +108,7 @@ public class NoopTask extends AbstractTask implements PendingSegmentAllocatingTa
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
     emitMetric(toolbox.getEmitter(), EVENT_STARTED, 1);
-    runTaskLatch.wait(runTime);
+    runTaskLatch.await(runTime, TimeUnit.MILLISECONDS);
     if(runTaskLatch.getCount() == 1) {
       return TaskStatus.success(getId());
     } else {
