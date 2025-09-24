@@ -204,6 +204,12 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     return new TypeStrategies.JsonTypeStrategy(getObjectStrategy());
   }
 
+  @Override
+  public byte[] toBytes(@Nullable Object val)
+  {
+    return getObjectStrategy().toBytes(StructuredData.wrap(val));
+  }
+
   public static class NestedColumnFormatV4 implements ColumnFormat
   {
     @Override
