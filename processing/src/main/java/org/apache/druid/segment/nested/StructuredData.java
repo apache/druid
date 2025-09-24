@@ -135,6 +135,7 @@ public class StructuredData implements Comparable<StructuredData>
     return (Number) value;
   }
 
+  @SuppressWarnings("ReturnValueIgnored")
   public int getSizeEstimate()
   {
     if (sizeEstimate < 0) {
