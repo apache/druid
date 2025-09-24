@@ -61,7 +61,7 @@ public class HttpRemoteTaskRunnerWorkerFailTest extends EmbeddedClusterTestBase
     );
     // wait for the overlord to dispatch the task and worker start it
     indexer.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName(NoopTask.NOOP_TASK_EVENT_STARTED)
+        event -> event.hasMetricName(NoopTask.EVENT_STARTED)
     );
     overlord.stop();
     overlord.start();
