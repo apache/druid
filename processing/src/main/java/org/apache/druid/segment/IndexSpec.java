@@ -95,6 +95,12 @@ public class IndexSpec
    * @param complexMetricCompression default {@link CompressionStrategy} to use for complex type columns which use
    *                                 generic serializers. Defaults to null which means no compression upon calling
    *                                 {@link #getEffectiveSpec()}.
+   * @param jsonCompression          deprecated mechanism to define default json column 'raw' storage compression. This
+   *                                 has been replaced by {@link #autoColumnFormatSpec} which has
+   *                                 {@link NestedCommonFormatColumnFormatSpec#getObjectStorageCompression()}. If this
+   *                                 is set and {@link #autoColumnFormatSpec} is null, this value will be used to set
+   *                                 the object storage compression of the computed {@link #autoColumnFormatSpec} upon
+   *                                 calling {@link #getEffectiveSpec()}
    * @param segmentLoader            specify a {@link SegmentizerFactory} which will be written to 'factory.json' and
    *                                 used to load the written segment
    * @param autoColumnFormatSpec     specify the default {@link NestedCommonFormatColumnFormatSpec} to use for json and
