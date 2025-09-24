@@ -26,6 +26,7 @@ import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.server.metrics.QueryCountStatsProvider;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.MediaType;
@@ -58,7 +59,7 @@ public class QueryResourceQueryResultPusherFactory
    * Creates a new instance of {@link QueryResourceQueryResultPusher}.
    */
   public QueryResourceQueryResultPusher factorize(
-      final QueryResource.QueryMetricCounter counter,
+      final QueryCountStatsProvider counter,
       final HttpServletRequest req,
       final QueryLifecycle queryLifecycle,
       final ResourceIOReaderWriterFactory.ResourceIOReaderWriter io
@@ -85,13 +86,13 @@ public class QueryResourceQueryResultPusherFactory
     private final HttpServletRequest req;
     private final QueryLifecycle queryLifecycle;
     private final ResourceIOReaderWriterFactory.ResourceIOReaderWriter io;
-    private final QueryResource.QueryMetricCounter counter;
+    private final QueryCountStatsProvider counter;
 
     public QueryResourceQueryResultPusher(
         final ObjectMapper jsonMapper,
         final ResponseContextConfig responseContextConfig,
         final DruidNode selfNode,
-        final QueryResource.QueryMetricCounter counter,
+        final QueryCountStatsProvider counter,
         final HttpServletRequest req,
         final QueryLifecycle queryLifecycle,
         final ResourceIOReaderWriterFactory.ResourceIOReaderWriter io

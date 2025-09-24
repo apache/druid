@@ -41,7 +41,7 @@ import org.apache.druid.guice.http.JettyHttpClientModule;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupSerdeModule;
-import org.apache.druid.server.AsyncQueryForwardingServlet;
+import org.apache.druid.server.BaseQueryCountResource;
 import org.apache.druid.server.NoopQuerySegmentWalker;
 import org.apache.druid.server.http.RouterResource;
 import org.apache.druid.server.http.SelfDiscoveryResource;
@@ -114,7 +114,7 @@ public class CliRouter extends ServerRunnable
                 .toProvider(TieredBrokerSelectorStrategiesProvider.class)
                 .in(LazySingleton.class);
 
-          binder.bind(QueryCountStatsProvider.class).to(AsyncQueryForwardingServlet.class).in(LazySingleton.class);
+          binder.bind(QueryCountStatsProvider.class).to(BaseQueryCountResource.class).in(LazySingleton.class);
           binder.bind(JettyServerInitializer.class).to(RouterJettyServerInitializer.class).in(LazySingleton.class);
 
           Jerseys.addResource(binder, RouterResource.class);

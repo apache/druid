@@ -87,7 +87,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * This class does async query processing and should be merged with QueryResource at some point
  */
-public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements QueryCountStatsProvider
+public class AsyncQueryForwardingServlet extends AsyncProxyServlet
 {
   private static final EmittingLogger LOG = new EmittingLogger(AsyncQueryForwardingServlet.class);
   @Deprecated // use SmileMediaTypes.APPLICATION_JACKSON_SMILE
@@ -141,6 +141,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private final AuthenticatorMapper authenticatorMapper;
   private final ProtobufTranslation protobufTranslation;
   private final ServerConfig serverConfig;
+  private final QueryCountStatsProvider counter;
 
   private final boolean routeSqlByStrategy;
 
@@ -159,7 +160,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       GenericQueryMetricsFactory queryMetricsFactory,
       AuthenticatorMapper authenticatorMapper,
       Properties properties,
-      final ServerConfig serverConfig
+      final ServerConfig serverConfig,
+      QueryCountStatsProvider counter
   )
   {
     this.warehouse = warehouse;
@@ -177,6 +179,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         properties.getProperty(PROPERTY_SQL_ENABLE, PROPERTY_SQL_ENABLE_DEFAULT)
     );
     this.serverConfig = serverConfig;
+    this.counter = counter;
   }
 
   @Override
@@ -353,7 +356,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       broadcastReq.send(completeListener);
     }
 
-    interruptedQueryCount.incrementAndGet();
+    counter.incrementInterrupted();
   }
 
   @VisibleForTesting
@@ -562,32 +565,6 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   }
 
   @Override
-  public long getSuccessfulQueryCount()
-  {
-    return successfulQueryCount.get();
-  }
-
-  @Override
-  public long getFailedQueryCount()
-  {
-    return failedQueryCount.get();
-  }
-
-  @Override
-  public long getInterruptedQueryCount()
-  {
-    return interruptedQueryCount.get();
-  }
-
-  @Override
-  public long getTimedOutQueryCount()
-  {
-    // Query timeout metric is not relevant here and this metric is already being tracked in the Broker and the
-    // data nodes using QueryResource
-    return 0L;
-  }
-
-  @Override
   protected void onServerResponseHeaders(
       HttpServletRequest clientRequest,
       HttpServletResponse proxyResponse,
@@ -762,9 +739,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
 
       boolean success = result.isSucceeded();
       if (success) {
-        successfulQueryCount.incrementAndGet();
+        counter.incrementSuccess();
       } else {
-        failedQueryCount.incrementAndGet();
+        counter.incrementFailed();
       }
       emitQueryTime(requestTimeNs, success, sqlQueryId, queryId);
 
@@ -852,7 +829,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         return;
       }
 
-      failedQueryCount.incrementAndGet();
+      counter.incrementFailed();
       emitQueryTime(requestTimeNs, false, sqlQueryId, queryId);
       AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 

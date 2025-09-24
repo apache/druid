@@ -67,7 +67,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 @LazySingleton
 @Path("/druid/v2/")
-public class QueryResource implements QueryCountStatsProvider
+public class QueryResource
 {
   protected static final EmittingLogger log = new EmittingLogger(QueryResource.class);
   public static final EmittingLogger NO_STACK_LOGGER = log.noStackTrace();
@@ -98,7 +98,7 @@ public class QueryResource implements QueryCountStatsProvider
   private final AtomicLong failedQueryCount = new AtomicLong();
   private final AtomicLong interruptedQueryCount = new AtomicLong();
   private final AtomicLong timedOutQueryCount = new AtomicLong();
-  private final QueryResourceQueryMetricCounter counter = new QueryResourceQueryMetricCounter();
+  final QueryCountStatsProvider counter;
 
   @Inject
   public QueryResource(
@@ -107,7 +107,8 @@ public class QueryResource implements QueryCountStatsProvider
       QueryScheduler queryScheduler,
       AuthorizerMapper authorizerMapper,
       QueryResourceQueryResultPusherFactory queryResultPusherFactory,
-      ResourceIOReaderWriterFactory resourceIOReaderWriterFactory
+      ResourceIOReaderWriterFactory resourceIOReaderWriterFactory,
+      final QueryCountStatsProvider counter
   )
   {
     this.queryLifecycleFactory = queryLifecycleFactory;
@@ -116,6 +117,7 @@ public class QueryResource implements QueryCountStatsProvider
     this.authorizerMapper = authorizerMapper;
     this.queryResultPusherFactory = queryResultPusherFactory;
     this.resourceIOReaderWriterFactory = resourceIOReaderWriterFactory;
+    this.counter = counter;
   }
 
   @DELETE
@@ -239,17 +241,6 @@ public class QueryResource implements QueryCountStatsProvider
     }
   }
 
-  public interface QueryMetricCounter
-  {
-    void incrementSuccess();
-
-    void incrementFailed();
-
-    void incrementInterrupted();
-
-    void incrementTimedOut();
-  }
-
   private Query<?> readQuery(
       final HttpServletRequest req,
       final InputStream in,
@@ -283,63 +274,12 @@ public class QueryResource implements QueryCountStatsProvider
     return req.getHeader(HEADER_IF_NONE_MATCH);
   }
 
-  @Override
-  public long getSuccessfulQueryCount()
-  {
-    return successfulQueryCount.get();
-  }
-
-  @Override
-  public long getFailedQueryCount()
-  {
-    return failedQueryCount.get();
-  }
-
-  @Override
-  public long getInterruptedQueryCount()
-  {
-    return interruptedQueryCount.get();
-  }
-
-  @Override
-  public long getTimedOutQueryCount()
-  {
-    return timedOutQueryCount.get();
-  }
-
   @VisibleForTesting
   public static void transferEntityTag(ResponseContext context, Response.ResponseBuilder builder)
   {
     Object entityTag = context.remove(Keys.ETAG);
     if (entityTag != null) {
       builder.header(HEADER_ETAG, entityTag);
-    }
-  }
-
-  private class QueryResourceQueryMetricCounter implements QueryMetricCounter
-  {
-    @Override
-    public void incrementSuccess()
-    {
-      successfulQueryCount.incrementAndGet();
-    }
-
-    @Override
-    public void incrementFailed()
-    {
-      failedQueryCount.incrementAndGet();
-    }
-
-    @Override
-    public void incrementInterrupted()
-    {
-      interruptedQueryCount.incrementAndGet();
-    }
-
-    @Override
-    public void incrementTimedOut()
-    {
-      timedOutQueryCount.incrementAndGet();
     }
   }
 

@@ -281,7 +281,8 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(
             jsonMapper,
             smileMapper
-        )
+        ),
+        new BaseQueryCountResource()
     );
   }
 
@@ -330,7 +331,8 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(
             jsonMapper,
             smileMapper
-        )
+        ),
+        new BaseQueryCountResource()
     );
 
     expectPermissiveHappyPathAuth();
@@ -410,7 +412,8 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(
             jsonMapper,
             smileMapper
-        )
+        ),
+        new BaseQueryCountResource()
     );
 
     expectPermissiveHappyPathAuth();
@@ -505,7 +508,8 @@ public class QueryResourceTest
             ResponseContextConfig.newConfig(true),
             DRUID_NODE
         ),
-        new ResourceIOReaderWriterFactory(jsonMapper, smileMapper)
+        new ResourceIOReaderWriterFactory(jsonMapper, smileMapper),
+        new BaseQueryCountResource()
     );
 
     expectPermissiveHappyPathAuth();
@@ -686,7 +690,8 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(
             jsonMapper,
             smileMapper
-        )
+        ),
+        new BaseQueryCountResource()
     );
 
     expectPermissiveHappyPathAuth();
@@ -777,7 +782,8 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(
             jsonMapper,
             smileMapper
-        )
+        ),
+        new BaseQueryCountResource()
     );
 
     expectPermissiveHappyPathAuth();
@@ -825,7 +831,8 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(
             jsonMapper,
             smileMapper
-        )
+        ),
+        new BaseQueryCountResource()
     );
 
     expectPermissiveHappyPathAuth();
@@ -868,7 +875,7 @@ public class QueryResourceTest
         SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8),
         queryResource
     );
-    Assert.assertEquals(1, queryResource.getInterruptedQueryCount());
+    Assert.assertEquals(1, queryResource.counter.getInterruptedQueryCount());
     Assert.assertEquals(HttpStatus.SC_INTERNAL_SERVER_ERROR, response.getStatus());
     final String expectedException = new QueryInterruptedException(
         new TruncatedResponseContextException("Serialized response context exceeds the max size[0]"),
@@ -1068,7 +1075,8 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(
             jsonMapper,
             smileMapper
-        )
+        ),
+        new BaseQueryCountResource()
     );
 
 
@@ -1149,7 +1157,8 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(
             jsonMapper,
             jsonMapper
-        )
+        ),
+        new BaseQueryCountResource()
     );
     expectPermissiveHappyPathAuth();
 
@@ -1178,7 +1187,7 @@ public class QueryResourceTest
     Assert.assertEquals("Query did not complete within configured timeout period. You can " +
                         "increase query timeout or tune the performance of query.", ex.getMessage());
     Assert.assertEquals(QueryException.QUERY_TIMEOUT_ERROR_CODE, ex.getErrorCode());
-    Assert.assertEquals(1, timeoutQueryResource.getTimedOutQueryCount());
+    Assert.assertEquals(1, timeoutQueryResource.counter.getTimedOutQueryCount());
 
   }
 
@@ -1251,7 +1260,8 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(
             jsonMapper,
             smileMapper
-        )
+        ),
+        new BaseQueryCountResource()
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -1364,7 +1374,8 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(
             jsonMapper,
             smileMapper
-        )
+        ),
+        new BaseQueryCountResource()
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -1478,8 +1489,8 @@ public class QueryResourceTest
     for (Future<Boolean> theFuture : back2) {
       Assert.assertTrue(theFuture.get());
     }
-    Assert.assertEquals(2, queryResource.getSuccessfulQueryCount());
-    Assert.assertEquals(1, queryResource.getFailedQueryCount());
+    Assert.assertEquals(2, queryResource.counter.getSuccessfulQueryCount());
+    Assert.assertEquals(1, queryResource.counter.getFailedQueryCount());
   }
 
   @Test(timeout = 10_000L)
@@ -1724,7 +1735,8 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(
             jsonMapper,
             smileMapper
-        )
+        ),
+        new BaseQueryCountResource()
     );
   }
 

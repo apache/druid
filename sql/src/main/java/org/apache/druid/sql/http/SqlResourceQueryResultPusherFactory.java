@@ -25,6 +25,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.sql.HttpStatement;
 
 import javax.servlet.http.HttpServletRequest;
@@ -52,7 +53,7 @@ public class SqlResourceQueryResultPusherFactory
     this.selfNode = selfNode;
   }
 
-  public SqlResourceQueryResultPusher factorize(HttpServletRequest req, HttpStatement stmt, SqlQuery sqlQuery)
+  public SqlResourceQueryResultPusher factorize(final QueryCountStatsProvider counter, HttpServletRequest req, HttpStatement stmt, SqlQuery sqlQuery)
   {
     Map<String, String> headers = new LinkedHashMap<>();
 
@@ -71,7 +72,8 @@ public class SqlResourceQueryResultPusherFactory
         req,
         stmt,
         sqlQuery,
-        headers
+        headers,
+        counter
     );
   }
 }

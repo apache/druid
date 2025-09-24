@@ -21,6 +21,7 @@ package org.apache.druid.guice;
 
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.server.BaseQueryCountResource;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 
@@ -29,7 +30,7 @@ public class QueryablePeonModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    binder.bind(QueryCountStatsProvider.class).to(QueryResource.class);
+    binder.bind(QueryCountStatsProvider.class).to(BaseQueryCountResource.class);
     Jerseys.addResource(binder, QueryResource.class);
     LifecycleModule.register(binder, QueryResource.class);
   }

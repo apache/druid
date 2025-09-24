@@ -37,6 +37,7 @@ import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.ForbiddenException;
 import org.eclipse.jetty.http.HttpHeader;
@@ -64,7 +65,7 @@ public abstract class QueryResultPusher
   private final ObjectMapper jsonMapper;
   private final ResponseContextConfig responseContextConfig;
   private final DruidNode selfNode;
-  private final QueryResource.QueryMetricCounter counter;
+  private final QueryCountStatsProvider counter;
   private final MediaType contentType;
   private final Map<String, String> extraHeaders;
   private final Map<String, Object> queryContext;
@@ -79,7 +80,7 @@ public abstract class QueryResultPusher
       ObjectMapper jsonMapper,
       ResponseContextConfig responseContextConfig,
       DruidNode selfNode,
-      QueryResource.QueryMetricCounter counter,
+      QueryCountStatsProvider counter,
       String queryId,
       MediaType contentType,
       Map<String, String> extraHeaders,

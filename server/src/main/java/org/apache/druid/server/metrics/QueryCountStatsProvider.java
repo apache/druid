@@ -40,4 +40,24 @@ public interface QueryCountStatsProvider
    * Returns the number of timed out queries during the emission period.
    */
   long getTimedOutQueryCount();
+
+  /**
+   * Increments successful query count.
+   */
+  void incrementSuccess();
+
+  /**
+   * Increments failed query count.
+   */
+  void incrementFailed();
+
+  /**
+   * Increments interrupted query count.
+   */
+  void incrementInterrupted();
+
+  /**
+   * Increments timed out query count.
+   */
+  void incrementTimedOut();
 }

@@ -28,6 +28,7 @@ import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.QueryResultPusher;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.HttpStatement;
 import org.apache.druid.sql.SqlRowTransformer;
@@ -59,7 +60,8 @@ class SqlResourceQueryResultPusher extends QueryResultPusher
       final HttpServletRequest req,
       final HttpStatement stmt,
       final SqlQuery sqlQuery,
-      final Map<String, String> headers
+      final Map<String, String> headers,
+      final QueryCountStatsProvider counter
   )
   {
     super(
@@ -67,7 +69,7 @@ class SqlResourceQueryResultPusher extends QueryResultPusher
         jsonMapper,
         responseContextConfig,
         selfNode,
-        SqlResource.QUERY_METRIC_COUNTER,
+        counter,
         stmt.sqlQueryId(),
         MediaType.APPLICATION_JSON_TYPE,
         headers,

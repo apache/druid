@@ -33,6 +33,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class QueryCountStatsMonitorTest
 {
@@ -55,37 +56,57 @@ public class QueryCountStatsMonitorTest
 
     queryCountStatsProvider = new QueryCountStatsProvider()
     {
-      private long successEmitCount = 0;
-      private long failedEmitCount = 0;
-      private long interruptedEmitCount = 0;
-      private long timedOutEmitCount = 0;
+      private final AtomicLong successEmitCount = new AtomicLong(0);
+      private final AtomicLong failedEmitCount = new AtomicLong(0);
+      private final AtomicLong interruptedEmitCount = new AtomicLong(0);
+      private final AtomicLong timedOutEmitCount = new AtomicLong(0);
 
       @Override
       public long getSuccessfulQueryCount()
       {
-        successEmitCount += 1;
-        return successEmitCount;
+        return successEmitCount.get();
       }
 
       @Override
       public long getFailedQueryCount()
       {
-        failedEmitCount += 2;
-        return failedEmitCount;
+        return failedEmitCount.get();
       }
 
       @Override
       public long getInterruptedQueryCount()
       {
-        interruptedEmitCount += 3;
-        return interruptedEmitCount;
+        return interruptedEmitCount.get();
       }
 
       @Override
       public long getTimedOutQueryCount()
       {
-        timedOutEmitCount += 4;
-        return timedOutEmitCount;
+        return timedOutEmitCount.get();
+      }
+
+      @Override
+      public void incrementSuccess()
+      {
+        successEmitCount.incrementAndGet();
+      }
+
+      @Override
+      public void incrementFailed()
+      {
+        failedEmitCount.incrementAndGet();
+      }
+
+      @Override
+      public void incrementInterrupted()
+      {
+        interruptedEmitCount.incrementAndGet();
+      }
+
+      @Override
+      public void incrementTimedOut()
+      {
+        timedOutEmitCount.incrementAndGet();
       }
     };
 
@@ -106,15 +127,23 @@ public class QueryCountStatsMonitorTest
         new QueryCountStatsMonitor(queryCountStatsProvider, monitorsConfig, mergeBufferPool);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
+
+    // Mock metrics emission
+    queryCountStatsProvider.incrementSuccess();
+    queryCountStatsProvider.incrementFailed();
+    queryCountStatsProvider.incrementFailed();
+    queryCountStatsProvider.incrementInterrupted();
+    queryCountStatsProvider.incrementTimedOut();
+
     emitter.flush();
     // Trigger metric emission
     monitor.doMonitor(emitter);
     Assert.assertEquals(5, emitter.getNumEmittedEvents());
     emitter.verifyValue("query/success/count", 1L);
     emitter.verifyValue("query/failed/count", 2L);
-    emitter.verifyValue("query/interrupted/count", 3L);
-    emitter.verifyValue("query/timeout/count", 4L);
-    emitter.verifyValue("query/count", 10L);
+    emitter.verifyValue("query/interrupted/count", 1L);
+    emitter.verifyValue("query/timeout/count", 1L);
+    emitter.verifyValue("query/count", 5L);
   }
 
   @Test
@@ -126,6 +155,14 @@ public class QueryCountStatsMonitorTest
         new QueryCountStatsMonitor(queryCountStatsProvider, monitorsConfig, mergeBufferPool);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
+
+    // Mock metrics emission
+    queryCountStatsProvider.incrementSuccess();
+    queryCountStatsProvider.incrementFailed();
+    queryCountStatsProvider.incrementFailed();
+    queryCountStatsProvider.incrementInterrupted();
+    queryCountStatsProvider.incrementTimedOut();
+
     emitter.flush();
     // Trigger metric emission
     monitor.doMonitor(emitter);
@@ -134,8 +171,8 @@ public class QueryCountStatsMonitorTest
     emitter.verifyValue("mergeBuffer/pendingRequests", 0L);
     emitter.verifyValue("query/success/count", 1L);
     emitter.verifyValue("query/failed/count", 2L);
-    emitter.verifyValue("query/interrupted/count", 3L);
-    emitter.verifyValue("query/timeout/count", 4L);
-    emitter.verifyValue("query/count", 10L);
+    emitter.verifyValue("query/interrupted/count", 1L);
+    emitter.verifyValue("query/timeout/count", 1L);
+    emitter.verifyValue("query/count", 5L);
   }
 }

@@ -692,7 +692,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         new DefaultGenericQueryMetricsFactory(),
         new AuthenticatorMapper(ImmutableMap.of()),
         properties,
-        new ServerConfig()
+        new ServerConfig(),
+        new BaseQueryCountResource()
     )
     {
       @Override
@@ -804,7 +805,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
               new DefaultGenericQueryMetricsFactory(),
               new AuthenticatorMapper(ImmutableMap.of()),
               new Properties(),
-              new ServerConfig()
+              new ServerConfig(),
+              new BaseQueryCountResource()
           )
           {
             @Override
@@ -1024,7 +1026,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
             new DefaultGenericQueryMetricsFactory(),
             new AuthenticatorMapper(ImmutableMap.of()),
             new Properties(),
-            serverConfig
+            serverConfig,
+            new BaseQueryCountResource()
     );
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     Mockito.when(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).thenReturn(new AuthenticationResult("userA", "basic", "basic", null));

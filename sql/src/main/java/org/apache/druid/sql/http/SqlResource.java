@@ -34,6 +34,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryResultPusher;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationResult;
@@ -80,7 +81,6 @@ public class SqlResource
   public static final String SQL_HEADER_VALUE = "yes";
 
   private static final Logger log = new Logger(SqlResource.class);
-  public static final SqlResourceQueryMetricCounter QUERY_METRIC_COUNTER = new SqlResourceQueryMetricCounter();
 
   private final AuthorizerMapper authorizerMapper;
   private final SqlResourceQueryResultPusherFactory resultPusherFactory;
@@ -88,6 +88,7 @@ public class SqlResource
   private final SqlEngineRegistry sqlEngineRegistry;
   private final DefaultQueryConfig defaultQueryConfig;
   private final ServerConfig serverConfig;
+  final QueryCountStatsProvider counter;
 
   @VisibleForTesting
   @Inject
@@ -97,7 +98,8 @@ public class SqlResource
       final SqlEngineRegistry sqlEngineRegistry,
       final SqlResourceQueryResultPusherFactory resultPusherFactory,
       final DefaultQueryConfig defaultQueryConfig,
-      final ServerConfig serverConfig
+      final ServerConfig serverConfig,
+      final QueryCountStatsProvider counter
   )
   {
     this.resultPusherFactory = resultPusherFactory;
@@ -106,6 +108,7 @@ public class SqlResource
     this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");
     this.defaultQueryConfig = Preconditions.checkNotNull(defaultQueryConfig, "defaultQueryConfig");
     this.serverConfig = serverConfig;
+    this.counter = Preconditions.checkNotNull(counter, "counter");
   }
 
   @GET
@@ -203,7 +206,7 @@ public class SqlResource
     try {
       Thread.currentThread().setName(StringUtils.format("sql[%s]", stmt.sqlQueryId()));
 
-      QueryResultPusher pusher = resultPusherFactory.factorize(req, stmt, sqlQuery);
+      QueryResultPusher pusher = resultPusherFactory.factorize(counter, req, stmt, sqlQuery);
       return pusher.push();
     }
     finally {
@@ -235,33 +238,6 @@ public class SqlResource
       return Response.status(Status.ACCEPTED).build();
     } else {
       return Response.status(Status.FORBIDDEN).build();
-    }
-  }
-
-  /**
-   * The SqlResource only generates metrics and doesn't keep track of aggregate counts of successful/failed/interrupted
-   * queries, so this implementation is effectively just a noop.
-   */
-  private static class SqlResourceQueryMetricCounter implements QueryResource.QueryMetricCounter
-  {
-    @Override
-    public void incrementSuccess()
-    {
-    }
-
-    @Override
-    public void incrementFailed()
-    {
-    }
-
-    @Override
-    public void incrementInterrupted()
-    {
-    }
-
-    @Override
-    public void incrementTimedOut()
-    {
     }
   }
 

@@ -31,6 +31,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
 
 import javax.annotation.Nullable;
@@ -62,7 +63,8 @@ public class BrokerQueryResource extends QueryResource
       AuthorizerMapper authorizerMapper,
       QueryResourceQueryResultPusherFactory queryResultPusherFactory,
       ResourceIOReaderWriterFactory resourceIOReaderWriterFactory,
-      TimelineServerView brokerServerView
+      TimelineServerView brokerServerView,
+      QueryCountStatsProvider counter
   )
   {
     super(
@@ -71,7 +73,8 @@ public class BrokerQueryResource extends QueryResource
         queryScheduler,
         authorizerMapper,
         queryResultPusherFactory,
-        resourceIOReaderWriterFactory
+        resourceIOReaderWriterFactory,
+        counter
     );
     this.brokerServerView = brokerServerView;
   }

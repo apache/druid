@@ -70,6 +70,7 @@ import org.apache.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.rpc.guice.ServiceClientModule;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumModule;
+import org.apache.druid.server.BaseQueryCountResource;
 import org.apache.druid.server.BrokerQueryResource;
 import org.apache.druid.server.ClientInfoResource;
 import org.apache.druid.server.DruidNode;
@@ -227,7 +228,7 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
 
           binder.bind(BrokerQueryResource.class).in(LazySingleton.class);
           Jerseys.addResource(binder, BrokerQueryResource.class);
-          binder.bind(QueryCountStatsProvider.class).to(BrokerQueryResource.class).in(LazySingleton.class);
+          binder.bind(QueryCountStatsProvider.class).to(BaseQueryCountResource.class).in(LazySingleton.class);
           binder.bind(SubqueryCountStatsProvider.class).toInstance(new SubqueryCountStatsProvider());
           Jerseys.addResource(binder, BrokerResource.class);
           Jerseys.addResource(binder, ClientInfoResource.class);
