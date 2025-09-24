@@ -177,7 +177,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     );
 
     // Wait for the Broker to remove this datasource from its schema cache
-    eventCollector.latchableEmitter().waitForMetricEvent(
+    eventCollector.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("segment/schemaCache/dataSource/removed")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
                       .hasService("druid/broker")

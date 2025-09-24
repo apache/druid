@@ -74,7 +74,7 @@ public class HttpEmitterEventCollectorTest extends EmbeddedClusterTestBase
     cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
 
     // Wait for the task finish metric to be emitted by the Overlord
-    eventCollector.latchableEmitter().waitForMetricEvent(
+    eventCollector.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("task/run/time")
                       .hasService("druid/overlord")
                       .hasHost(overlord.bindings().selfNode().getHostAndPort())

@@ -62,19 +62,19 @@ public class HttpRemoteTaskRunnerWorkerFailTest extends EmbeddedClusterTestBase
         }
     );
     // wait for the overlord to dispatch the task and worker start it
-    indexer.latchableEmitter().waitForMetricEvent(
+    indexer.latchableEmitter().waitForEvent(
         event -> event.hasMetricName(NoopTask.NOOP_TASK_EVENT_STARTED)
     );
     overlord.stop();
     overlord.start();
     // give some time for the overlord to load the task from the worker
-    overlord.latchableEmitter().waitForMetricEvent(
+    overlord.latchableEmitter().waitForEvent(
         event -> event.hasMetricName(HttpRemoteTaskRunner.TASK_UNKNOWN_COUNT)
     );
     indexer.stop();
     indexer.start();
     // Wait for the Overlord to mark the task as FAILED
-    overlord.latchableEmitter().waitForMetricEvent(
+    overlord.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("task/run/time")
             .hasDimension(DruidMetrics.TASK_ID, taskId)
             .hasDimension(DruidMetrics.TASK_STATUS, "FAILED")

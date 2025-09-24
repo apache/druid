@@ -223,7 +223,7 @@ public class EmbeddedClusterApis implements EmbeddedResource
    */
   public TaskStatus waitForTaskToFinish(String taskId, LatchableEmitter emitter)
   {
-    emitter.waitForMetricEvent(
+    emitter.waitForEvent(
         event -> event.hasMetricName(TaskMetrics.RUN_DURATION)
                       .hasDimension(DruidMetrics.TASK_ID, taskId)
     );

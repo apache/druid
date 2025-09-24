@@ -140,7 +140,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
 
     Map<String, Object> avroSchema = createWikipediaAvroSchemaMap();
-    
+
     InlineSchemaAvroBytesDecoder avroBytesDecoder = new InlineSchemaAvroBytesDecoder(
         overlord.bindings().jsonMapper(),
         avroSchema
@@ -175,23 +175,23 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     kafkaServer.createTopicWithPartitions(dataSource, 3);
     EventSerializer serializer = new AvroEventSerializer();
     int recordCount = generateStreamAndPublishToKafka(dataSource, serializer, false);
-    
+
     Map<String, Object> avroSchema = createWikipediaAvroSchemaMap();
-    
+
     InlineSchemaAvroBytesDecoder avroBytesDecoder = new InlineSchemaAvroBytesDecoder(
         overlord.bindings().jsonMapper(),
         avroSchema
     );
-    
+
     JSONPathSpec flattenSpec = new JSONPathSpec(true, null);
-    
+
     AvroStreamInputFormat inputFormat = new AvroStreamInputFormat(
         flattenSpec,
         avroBytesDecoder,
         false,
         null
     );
-    
+
     KafkaSupervisorSpec supervisorSpec = createKafkaSupervisor(dataSource, dataSource, inputFormat);
     final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
     Assertions.assertEquals(dataSource, supervisorId);
@@ -532,7 +532,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
         agg -> agg.hasSumAtLeast(1)
     );
     // Wait for the schema cache to refresh for the datasource under test
-    broker.latchableEmitter().waitForMetricEvent(
+    broker.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("segment/schemaCache/refresh/count")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
@@ -618,7 +618,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     schema.put("namespace", "org.apache.druid");
     schema.put("name", "wikipedia");
     schema.put("type", "record");
-    
+
     List<Map<String, Object>> fields = new ArrayList<>();
     fields.add(Map.of("name", "timestamp", "type", "string"));
     fields.add(Map.of("name", "page", "type", "string"));
@@ -636,7 +636,7 @@ public class KafkaDataFormatsTest extends EmbeddedClusterTestBase
     fields.add(Map.of("name", "added", "type", "long"));
     fields.add(Map.of("name", "deleted", "type", "long"));
     fields.add(Map.of("name", "delta", "type", "long"));
-    
+
     schema.put("fields", fields);
     return schema;
   }

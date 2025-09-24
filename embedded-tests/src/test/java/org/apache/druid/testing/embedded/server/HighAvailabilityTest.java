@@ -125,7 +125,7 @@ public class HighAvailabilityTest extends EmbeddedClusterTestBase
         .dimensions()
         .withId(taskId);
     cluster.callApi().runTask(task, overlord1);
-    coordinator1.latchableEmitter().waitForMetricEvent(
+    coordinator1.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("segment/metadataCache/used/count")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
                       .hasValueAtLeast(10)

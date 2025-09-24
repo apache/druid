@@ -100,7 +100,7 @@ public class IndexTaskTest extends EmbeddedClusterTestBase
     }
 
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-    broker.latchableEmitter().waitForMetricEvent(
+    broker.latchableEmitter().waitForEvent(
         event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
     Assertions.assertEquals(
