@@ -142,7 +142,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   {
     Integer taskCount = spec.getSpec().getIOConfig().getTaskCount();
     
-    if (spec.usePerpetuallyRunningTasks()) {
+    if (spec.usePersistentTasks()) {
       int taskGroupId = getRangeBasedTaskGroupId(partitionId, taskCount);
       log.debug("Range-based assignment for partition [%s]: taskGroupId [%d] when taskCount is [%d]", partitionId, taskGroupId, taskCount);
       return taskGroupId;
@@ -347,7 +347,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
           (KafkaIndexTaskTuningConfig) taskTuningConfig,
           (KafkaIndexTaskIOConfig) taskIoConfig,
           context,
-          spec.usePerpetuallyRunningTasks(),
+          spec.usePersistentTasks(),
+          spec.getVersion().get(),
           sortingMapper
       ));
     }

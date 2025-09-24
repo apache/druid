@@ -112,8 +112,7 @@ public class OrderedSequenceNumberTest
     TestSequenceNumber current = new TestSequenceNumber(null, false);
     TestSequenceNumber end = new TestSequenceNumber(10L, false);
 
-    Assert.assertFalse("Should return false when current sequence number is null",
-                      current.isMoreToReadBeforeReadingRecord(end, true));
+    Assert.assertThrows(NullPointerException.class, () -> current.isMoreToReadBeforeReadingRecord(end, true));
   }
 
   @Test
@@ -122,8 +121,7 @@ public class OrderedSequenceNumberTest
     TestSequenceNumber current = new TestSequenceNumber(null, false);
     TestSequenceNumber end = new TestSequenceNumber(10L, false);
 
-    Assert.assertFalse("Should return false when current sequence number is null",
-                      current.isMoreToReadBeforeReadingRecord(end, false));
+    Assert.assertThrows(NullPointerException.class, () -> current.isMoreToReadBeforeReadingRecord(end, false));
   }
 
   @Test
@@ -144,10 +142,8 @@ public class OrderedSequenceNumberTest
     TestExceptionSequenceNumber current = new TestExceptionSequenceNumber(5L, false);
     TestExceptionSequenceNumber end = new TestExceptionSequenceNumber(10L, false);
 
-    Assert.assertFalse("Should return false when comparison throws exception",
-                      current.isMoreToReadBeforeReadingRecord(end, true));
-    Assert.assertFalse("Should return false when comparison throws exception",
-                      current.isMoreToReadBeforeReadingRecord(end, false));
+    Assert.assertThrows(RuntimeException.class, () -> current.isMoreToReadBeforeReadingRecord(end, true));
+    Assert.assertThrows(RuntimeException.class, () -> current.isMoreToReadBeforeReadingRecord(end, false));
   }
 
   @Test

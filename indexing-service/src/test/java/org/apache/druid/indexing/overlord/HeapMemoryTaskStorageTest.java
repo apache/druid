@@ -94,23 +94,4 @@ public class HeapMemoryTaskStorageTest
     Assert.assertEquals(1, taskInfosComplete.size());
     Assert.assertEquals(task1.getId(), taskInfosComplete.get(0).getTask().getId());
   }
-
-  @Test
-  public void testUpdateTask()
-  {
-    final NoopTask originalTask = NoopTask.create();
-    final TaskStatus runningStatus = TaskStatus.running(originalTask.getId());
-    storage.insert(originalTask, runningStatus);
-
-    final NoopTask updatedTask = new NoopTask(originalTask.getId(), null, "testDS", 5000, 0, null);
-
-    storage.updateTask(updatedTask);
-
-    TaskInfo taskInfo = storage.getTaskInfo(originalTask.getId());
-    Assert.assertEquals(runningStatus, taskInfo.getStatus());
-    Assert.assertEquals(5000L, ((NoopTask) taskInfo.getTask()).getRunTime());
-    Assert.assertEquals("testDS", taskInfo.getTask().getDataSource());
-
-    Assert.assertThrows(IllegalStateException.class, () -> storage.updateTask(NoopTask.create()));
-  }
 }

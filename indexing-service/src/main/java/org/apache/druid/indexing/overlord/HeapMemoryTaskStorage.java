@@ -305,17 +305,6 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
-  public void updateTask(Task task)
-  {
-    final Optional<TaskStatus> status = getStatus(task.getId());
-    if (!status.isPresent()) {
-      throw new IllegalStateException("No task found for id [" + task.getId() + "]");
-    }
-    final TaskInfo updatedTaskInfo = new TaskInfo(DateTimes.nowUtc(), status.get(), task);
-    tasks.put(task.getId(), updatedTaskInfo);
-  }
-
-  @Override
   public void removeTasksOlderThan(final long timestamp)
   {
     // This is the only fn where both tasks & taskActions are modified for removal, they may

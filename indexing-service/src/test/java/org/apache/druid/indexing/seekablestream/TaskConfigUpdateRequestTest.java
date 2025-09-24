@@ -31,13 +31,13 @@ public class TaskConfigUpdateRequestTest
     SeekableStreamIndexTaskIOConfig mockIoConfig = EasyMock.createMock(SeekableStreamIndexTaskIOConfig.class);
     EasyMock.replay(mockIoConfig);
 
-    TaskConfigUpdateRequest request = new TaskConfigUpdateRequest(mockIoConfig);
+    TaskConfigUpdateRequest request = new TaskConfigUpdateRequest(mockIoConfig, null);
     Assert.assertEquals(mockIoConfig, request.getIoConfig());
 
-    TaskConfigUpdateRequest nullRequest = new TaskConfigUpdateRequest(null);
+    TaskConfigUpdateRequest nullRequest = new TaskConfigUpdateRequest(null, null);
     Assert.assertNull(nullRequest.getIoConfig());
 
-    TaskConfigUpdateRequest request2 = new TaskConfigUpdateRequest(mockIoConfig);
+    TaskConfigUpdateRequest request2 = new TaskConfigUpdateRequest(mockIoConfig, null);
     Assert.assertEquals(request, request2);
     Assert.assertEquals(request.hashCode(), request2.hashCode());
 
@@ -47,6 +47,7 @@ public class TaskConfigUpdateRequestTest
     String toString = request.toString();
     Assert.assertTrue(toString.contains("TaskConfigUpdateRequest"));
     Assert.assertTrue(toString.contains("ioConfig"));
+    Assert.assertTrue(toString.contains("supervisorSpecVersion"));
 
     EasyMock.verify(mockIoConfig);
   }

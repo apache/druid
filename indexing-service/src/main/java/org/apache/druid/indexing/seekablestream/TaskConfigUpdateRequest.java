@@ -28,41 +28,51 @@ import java.util.Objects;
 /**
  * Request object for updating the configuration of a running {@link SeekableStreamIndexTask}.
  */
-public class TaskConfigUpdateRequest
+public class TaskConfigUpdateRequest<PartitionIdType, SequenceOffsetType>
 {
-  private final SeekableStreamIndexTaskIOConfig ioConfig;
+  private final SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig;
+
+  private final String supervisorSpecVersion;
 
   @JsonCreator
   public TaskConfigUpdateRequest(
-      @JsonProperty("ioConfig") @Nullable SeekableStreamIndexTaskIOConfig ioConfig
+      @JsonProperty("ioConfig") @Nullable SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig,
+      @JsonProperty("supervisorSpecVersion") String supervisorSpecVersion
   )
   {
     this.ioConfig = ioConfig;
+    this.supervisorSpecVersion = supervisorSpecVersion;
   }
 
   @JsonProperty
-  public SeekableStreamIndexTaskIOConfig getIoConfig()
+  public String getSupervisorSpecVersion()
+  {
+    return supervisorSpecVersion;
+  }
+
+  @JsonProperty
+  public SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> getIoConfig()
   {
     return ioConfig;
   }
 
   @Override
-  public boolean equals(Object o)
+  public boolean equals(Object object)
   {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
+    if (object == null || getClass() != object.getClass()) {
       return false;
     }
-    TaskConfigUpdateRequest that = (TaskConfigUpdateRequest) o;
-    return Objects.equals(ioConfig, that.ioConfig);
+    TaskConfigUpdateRequest that = (TaskConfigUpdateRequest) object;
+    return Objects.equals(ioConfig, that.ioConfig) && Objects.equals(
+        supervisorSpecVersion,
+        that.supervisorSpecVersion
+    );
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(ioConfig);
+    return Objects.hash(ioConfig, supervisorSpecVersion);
   }
 
   @Override
@@ -70,6 +80,7 @@ public class TaskConfigUpdateRequest
   {
     return "TaskConfigUpdateRequest{" +
            "ioConfig=" + ioConfig +
+           ", supervisorSpecVersion='" + supervisorSpecVersion + '\'' +
            '}';
   }
 }

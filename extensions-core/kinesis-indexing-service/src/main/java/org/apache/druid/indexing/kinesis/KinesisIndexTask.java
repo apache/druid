@@ -85,6 +85,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, Ki
         ioConfig,
         context,
         getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE),
+        null,
         null
     );
     this.useListShards = useListShards;

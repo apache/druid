@@ -643,7 +643,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_updateConfigAsync_success() throws Exception
   {
-    final TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(null);
+    final TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(null, null);
 
     serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.POST, "/config")
@@ -660,7 +660,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_updateConfigAsync_httpError() throws Exception
   {
-    final TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(null);
+    final TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(null, null);
 
     serviceClient.expectAndThrow(
         new RequestBuilder(HttpMethod.POST, "/config")
@@ -680,7 +680,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_updateConfigAsync_notAvailable() throws Exception
   {
-    final TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(null);
+    final TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(null, null);
 
     serviceClient.expectAndThrow(
         new RequestBuilder(HttpMethod.POST, "/config")
@@ -695,7 +695,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_updateConfigAsync_closed() throws Exception
   {
-    final TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(null);
+    final TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(null, null);
 
     serviceClient.expectAndThrow(
         new RequestBuilder(HttpMethod.POST, "/config")

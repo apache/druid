@@ -5869,6 +5869,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         ),
         Collections.emptyMap(),
         null,
+        "v1",
         OBJECT_MAPPER
     );
   }

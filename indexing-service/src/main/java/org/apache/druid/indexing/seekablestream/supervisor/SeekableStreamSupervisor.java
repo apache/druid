@@ -73,6 +73,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.TaskConfigResponse;
 import org.apache.druid.indexing.seekablestream.TaskConfigUpdateRequest;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -547,7 +548,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           }
 
           boolean allocationSuccess = changeTaskCount(desiredTaskCount, onSuccessfulScale);
-          if (allocationSuccess && !spec.usePerpetuallyRunningTasks()) {
+          if (allocationSuccess && !spec.usePersistentTasks()) {
             onSuccessfulScale.run();
             dynamicTriggerLastRunTime = nowTime;
           }
@@ -599,7 +600,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       );
       final Stopwatch scaleActionStopwatch = Stopwatch.createStarted();
       
-      if (spec.usePerpetuallyRunningTasks()) {
+      if (spec.usePersistentTasks()) {
         return changeTaskCountForPerpetualTasks(desiredActiveTaskCount, successfulScaleAutoScalerCallback);
       } else {
         gracefulShutdownInternal();
@@ -768,13 +769,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * Sends configuration updates to tasks with new partition assignments.
    * Also handles cleanup of obsolete task groups when scaling down.
    */
-  private boolean sendConfigUpdatesToTasks(Map<Integer, Set<PartitionIdType>> newPartitionGroups, Map<PartitionIdType, SequenceOffsetType> latestTaskOffsetsOnPause)
+  private boolean sendConfigUpdatesToTasks(
+      Map<Integer, Set<PartitionIdType>> newPartitionGroups,
+      Map<PartitionIdType, SequenceOffsetType> latestTaskOffsetsOnPause
+  )
       throws InterruptedException, ExecutionException
   {
     log.info("Sending configuration updates to the following partition groups %s", newPartitionGroups);
     List<ListenableFuture<Boolean>> updateFutures = new ArrayList<>();
     Map<PartitionIdType, SequenceOffsetType> latestCommittedOffsets = getOffsetsFromMetadataStorage();
-    for (Map.Entry<Integer, TaskGroup> entry : activelyReadingTaskGroups.entrySet()) {
+    for (Entry<Integer, TaskGroup> entry : activelyReadingTaskGroups.entrySet()) {
       int taskGroupId = entry.getKey();
       TaskGroup existingTaskGroup = entry.getValue();
 
@@ -789,7 +793,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       TaskGroup newTaskGroup = existingTaskGroup.withStartingSequences(newStartingSequences);
       for (String taskId : existingTaskGroup.taskIds()) {
         log.info("Updating config for task [%s] with partitions [%s]", taskId, partitionsForThisTask);
-        updateFutures.add(persistThenUpdateTaskConfig(taskId, newIoConfig));
+        TaskConfigUpdateRequest<PartitionIdType, SequenceOffsetType> updateRequest = new TaskConfigUpdateRequest<>(newIoConfig, spec.getVersion().get());
+        updateFutures.add(taskClient.updateConfigAsync(taskId, updateRequest));
       }
       activelyReadingTaskGroups.put(taskGroupId, newTaskGroup);
     }
@@ -816,43 +821,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     handleObsoleteTaskGroups(newPartitionGroups.keySet());
 
     return allSucceeded;
-  }
-
-  private ListenableFuture<Boolean> persistThenUpdateTaskConfig(
-      String taskId,
-      SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig
-  )
-  {
-    return Futures.transformAsync(
-        workerExec.submit(() -> {
-          Optional<Task> existingTaskOpt = taskStorage.getTask(taskId);
-          if (!existingTaskOpt.isPresent()) {
-            throw new ISE("Task [%s] not found in storage", taskId);
-          }
-          SeekableStreamIndexTask existingTask =
-              (SeekableStreamIndexTask) existingTaskOpt.get();
-          SeekableStreamIndexTask updatedTask = existingTask.withNewIoConfig(newIoConfig);
-          log.info("Persisting updated config for task [%s] to storage", taskId);
-          updateTaskIoConfigInQueueOrStorage(updatedTask);
-          return updatedTask;
-        }),
-        (persistedTask) -> {
-          log.info("Sending config update to running task [%s]", taskId);
-          TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(newIoConfig);
-          return taskClient.updateConfigAsync(taskId, updateRequest);
-        },
-        workerExec
-    );
-  }
-
-  private void updateTaskIoConfigInQueueOrStorage(SeekableStreamIndexTask updatedTask)
-  {
-    Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
-    if (taskQueue.isPresent()) {
-      taskQueue.get().update(updatedTask);
-    } else {
-      taskStorage.updateTask(updatedTask);
-    }
   }
 
 
@@ -926,9 +894,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       Map<PartitionIdType, SequenceOffsetType> latestTaskOffsetsOnPause
   );
 
+
   private void changeTaskCountInIOConfig(int desiredActiveTaskCount)
   {
     ioConfig.setTaskCount(desiredActiveTaskCount);
+    spec.setVersion(DateTimes.nowUtc().toString());
     try {
       Optional<SupervisorManager> supervisorManager = taskMaster.getSupervisorManager();
       if (supervisorManager.isPresent()) {
@@ -1175,7 +1145,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   )
   {
     // Earlier checkpoints may no longer have the same partitions.
-    if (spec.usePerpetuallyRunningTasks()) {
+    if (spec.usePersistentTasks()) {
       return true;
     }
 
@@ -1299,7 +1269,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.ioConfig = spec.getIoConfig();
     this.autoScalerConfig = ioConfig.getAutoScalerConfig();
     this.tuningConfig = spec.getTuningConfig();
-    this.taskTuningConfig = this.tuningConfig.convertToTaskTuningConfig(spec.usePerpetuallyRunningTasks());
+    this.taskTuningConfig = this.tuningConfig.convertToTaskTuningConfig(spec.usePersistentTasks());
     this.supervisorId = spec.getId();
     this.exec = Execs.singleThreaded(StringUtils.encodeForFormat(supervisorTag));
     this.scheduledExec = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorTag) + "-Scheduler-%d");
@@ -1838,7 +1808,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   public List<ParseExceptionReport> getParseErrors()
   {
     try {
-      if (spec.getSpec().getTuningConfig().convertToTaskTuningConfig(spec.usePerpetuallyRunningTasks()).getMaxParseExceptions() <= 0) {
+      if (spec.getSpec().getTuningConfig().convertToTaskTuningConfig(spec.usePersistentTasks()).getMaxParseExceptions() <= 0) {
         return ImmutableList.of();
       }
       lastKnownParseErrors = getCurrentParseErrors();
@@ -2004,7 +1974,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     // store a limited number of parse exceptions, keeping the most recent ones
-    int parseErrorLimit = spec.getSpec().getTuningConfig().convertToTaskTuningConfig(spec.usePerpetuallyRunningTasks()).getMaxSavedParseExceptions() *
+    int parseErrorLimit = spec.getSpec().getTuningConfig().convertToTaskTuningConfig(spec.usePersistentTasks()).getMaxSavedParseExceptions() *
                           spec.getSpec().getIOConfig().getTaskCount();
     parseErrorLimit = Math.min(parseErrorLimit, parseErrorsTreeSet.size());
 
@@ -2723,7 +2693,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     final String killMsg =
         "Killing forcefully as task could not be resumed in the first supervisor run after Overlord change.";
-    for (Map.Entry<String, ListenableFuture<Boolean>> entry : tasksToResume.entrySet()) {
+    for (Entry<String, ListenableFuture<Boolean>> entry : tasksToResume.entrySet()) {
       String taskId = entry.getKey();
       ListenableFuture<Boolean> future = entry.getValue();
       future.addListener(
@@ -3088,6 +3058,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task =
         (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType>) genericTask;
 
+    // If the persistent tasks are present, we should use the version.
+    if (spec.usePersistentTasks()) {
+      return isPersistentTaskCurrent(task);
+    }
+
     // We recompute the sequence name hash for the supervisor's own configuration and compare this to the hash created
     // by rehashing the task's sequence name using the most up-to-date class definitions of tuning config and
     // data schema. Recomputing both ensures that forwards-compatible tasks won't be killed (which would occur
@@ -3119,6 +3094,23 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           spec.getDataSchema(),
           taskTuningConfig
       ).equals(taskSequenceName);
+    }
+  }
+
+  /**
+   * Verifies whether the running config version of the persistent task matches one in current supervisor spec.
+   */
+  private boolean isPersistentTaskCurrent(SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task)
+  {
+    try {
+      final String currentVersion = spec.getVersion().get();
+      final TaskConfigResponse<PartitionIdType, SequenceOffsetType> runningConfig = FutureUtils.get(
+          taskClient.getTaskConfigAsync(task.getId()), true);
+      return currentVersion.equals(runningConfig.getSupervisorSpecVersion());
+    }
+    catch (Exception e) {
+      log.error(e, "Could not fetch running config for task[%s]", task.getId());
+      return false;
     }
   }
 
@@ -3662,7 +3654,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       stopTasksEarly = false;
     }
     // If using perpetually running tasks, we should not stop tasks based on duration
-    if (spec.usePerpetuallyRunningTasks()) {
+    if (spec.usePersistentTasks()) {
       return;
     }
 
@@ -5036,7 +5028,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
         final LagStats lagStats = aggregatePartitionLags(partitionLags);
         Map<String, Object> metricTags = spec.getContextValue(DruidMetrics.TAGS);
-        for (Map.Entry<PartitionIdType, Long> entry : partitionLags.entrySet()) {
+        for (Entry<PartitionIdType, Long> entry : partitionLags.entrySet()) {
           emitter.emit(
               ServiceMetricEvent.builder()
                                 .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)

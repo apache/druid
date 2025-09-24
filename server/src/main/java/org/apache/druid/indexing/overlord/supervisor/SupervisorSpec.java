@@ -28,6 +28,7 @@ import org.apache.druid.server.security.ResourceAction;
 
 import javax.annotation.Nonnull;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
@@ -112,5 +113,10 @@ public interface SupervisorSpec
   default void validateSpecUpdateTo(SupervisorSpec proposedSpec) throws DruidException
   {
     // The default implementation does not do any validation checks.
+  }
+
+  default Optional<String> getVersion()
+  {
+    return Optional.empty();
   }
 }

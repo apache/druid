@@ -211,7 +211,10 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   }
 
   @Override
-  public ListenableFuture<Boolean> updateConfigAsync(String taskId, TaskConfigUpdateRequest updateRequest)
+  public ListenableFuture<Boolean> updateConfigAsync(
+      String taskId,
+      TaskConfigUpdateRequest<PartitionIdType, SequenceOffsetType> updateRequest
+  )
   {
     final RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.POST, "/config")
         .jsonContent(jsonMapper, updateRequest);
@@ -233,6 +236,16 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
           log.warn("Task [%s] config update failed because task is no longer running.", taskId);
           return Either.value(false);
         })
+        .go();
+  }
+
+  @Override
+  public ListenableFuture<TaskConfigResponse<PartitionIdType, SequenceOffsetType>> getTaskConfigAsync(String taskId)
+  {
+    return makeRequest(taskId, new RequestBuilder(HttpMethod.GET, "/config"))
+        .handler(new BytesFullResponseHandler())
+        .onSuccess(r -> (TaskConfigResponse<PartitionIdType, SequenceOffsetType>) JacksonUtils.readValue(jsonMapper, r.getContent(), TaskConfigResponse.class))
+        .onNotAvailable(e -> Either.value(null))
         .go();
   }
 

@@ -175,7 +175,14 @@ public interface SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetTy
    *
    * Task-side is {@link SeekableStreamIndexTaskRunner#updateConfig}.
    */
-  ListenableFuture<Boolean> updateConfigAsync(String taskId, TaskConfigUpdateRequest updateRequest);
+  ListenableFuture<Boolean> updateConfigAsync(String taskId, TaskConfigUpdateRequest<PartitionIdType, SequenceOffsetType> updateRequest);
+
+  /**
+   * Gets the current configuration of a running task.
+   *
+   * Task-side is {@link SeekableStreamIndexTaskRunner#getConfigHTTP}.
+   */
+  ListenableFuture<TaskConfigResponse<PartitionIdType, SequenceOffsetType>> getTaskConfigAsync(String taskId);
 
   Class<PartitionIdType> getPartitionType();
 

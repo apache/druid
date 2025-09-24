@@ -211,6 +211,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private volatile Set<StreamPartition<PartitionIdType>> assignment;
   private volatile RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier;
   private SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig;
+  private volatile String supervisorSpecVersion;
   private final SeekableStreamIndexTaskTuningConfig tuningConfig;
   private final InputRowSchema inputRowSchema;
   @Nullable
@@ -276,6 +277,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     this.sequences = new CopyOnWriteArrayList<>();
     this.ingestionState = IngestionState.NOT_STARTED;
     this.lockGranularityToUse = lockGranularityToUse;
+    this.supervisorSpecVersion = task.getSupervisorSpecVersion();
 
     minMessageTime = Configs.valueOrDefault(ioConfig.getMinimumMessageTime(), DateTimes.MIN);
     maxMessageTime = Configs.valueOrDefault(ioConfig.getMaximumMessageTime(), DateTimes.MAX);
@@ -1614,10 +1616,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @GET
   @Path("/config")
   @Produces(MediaType.APPLICATION_JSON)
-  public TaskConfigResponse getConfigHTTP(@Context final HttpServletRequest req)
+  public TaskConfigResponse<PartitionIdType, SequenceOffsetType> getConfigHTTP(@Context final HttpServletRequest req)
   {
     authorizationCheck(req);
-    return new TaskConfigResponse(ioConfig);
+    return new TaskConfigResponse<>(ioConfig, supervisorSpecVersion);
   }
 
   @POST
@@ -1741,7 +1743,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Path("/config")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response updateConfig(TaskConfigUpdateRequest request, @Context final HttpServletRequest req)
+  public Response updateConfig(
+      TaskConfigUpdateRequest<PartitionIdType, SequenceOffsetType> request,
+      @Context final HttpServletRequest req
+  )
   {
     authorizationCheck(req);
     if (!waitForConfigUpdate.get()) {
@@ -1762,12 +1767,14 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    * the new starting offsets. If there is no partition assigned to this task due to a scale down, the task will be
    * paused.
    */
-  private Response updateTaskRunnerConfig(TaskConfigUpdateRequest request) throws IOException, InterruptedException
+  private Response updateTaskRunnerConfig(TaskConfigUpdateRequest<PartitionIdType, SequenceOffsetType> request)
+      throws IOException, InterruptedException
   {
     log.info("Attempting to update config to [%s]", request.getIoConfig());
     SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig = request.getIoConfig();
     setIOConfig(newIoConfig);
     createNewSequenceFromIoConfig(newIoConfig);
+    supervisorSpecVersion = request.getSupervisorSpecVersion();
 
     assignment = assignPartitions(recordSupplier);
     if (!assignment.isEmpty()) {
@@ -1888,7 +1895,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                      )
                      .build();
     } else {
-      try   {
+      try {
         // Don't acquire a lock if the task is already paused for checkpoint completion, avoiding deadlock
         pauseLock.lockInterruptibly();
         // Perform all sequence related checks before checking for isPaused()
@@ -2071,7 +2078,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     }
     try {
       checkpointSequences();
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       waitForConfigUpdate.set(false);
       resume();
     }

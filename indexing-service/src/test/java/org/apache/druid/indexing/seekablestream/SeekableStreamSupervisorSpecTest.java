@@ -755,12 +755,14 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
+    EasyMock.expect(spec.getVersion()).andReturn(java.util.Optional.of("v1")).anyTimes();
+    spec.setVersion(EasyMock.anyString());
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
     EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(1, true)).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
-    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.usePersistentTasks()).andReturn(false).anyTimes();
     EasyMock.replay(spec);
 
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
@@ -817,7 +819,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
-    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.usePersistentTasks()).andReturn(false).anyTimes();
     EasyMock.replay(spec);
 
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
@@ -877,7 +879,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
-    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.usePersistentTasks()).andReturn(false).anyTimes();
     EasyMock.replay(spec);
 
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
@@ -944,7 +946,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
-    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.usePersistentTasks()).andReturn(false).anyTimes();
     EasyMock.replay(spec);
 
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
@@ -990,12 +992,14 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
+    EasyMock.expect(spec.getVersion()).andReturn(java.util.Optional.of("v1")).anyTimes();
+    spec.setVersion(EasyMock.anyString());
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
     EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(1, true)).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
-    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.usePersistentTasks()).andReturn(false).anyTimes();
     EasyMock.replay(spec);
 
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
@@ -1042,7 +1046,9 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
-    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.usePersistentTasks()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.getVersion()).andReturn(java.util.Optional.of("v1")).anyTimes();
+    spec.setVersion(EasyMock.anyString());
     EasyMock.replay(spec);
 
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
@@ -1093,7 +1099,9 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
-    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.usePersistentTasks()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.getVersion()).andReturn(java.util.Optional.of("v1")).anyTimes();
+    spec.setVersion(EasyMock.anyString());
     EasyMock.replay(spec);
 
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
@@ -1150,7 +1158,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
-    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.usePersistentTasks()).andReturn(false).anyTimes();
     EasyMock.replay(spec);
 
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
@@ -1231,7 +1239,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
-    EasyMock.expect(spec.usePerpetuallyRunningTasks()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.usePersistentTasks()).andReturn(false).anyTimes();
     EasyMock.replay(spec);
 
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(this.seekableStreamSupervisorIOConfig).anyTimes();

@@ -37,6 +37,7 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAu
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.NoopTaskAutoScaler;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
@@ -45,6 +46,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
 {
@@ -78,7 +80,8 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   protected final DruidMonitorSchedulerConfig monitorSchedulerConfig;
   private final boolean suspended;
   protected final SupervisorStateManagerConfig supervisorStateManagerConfig;
-  protected final boolean usePerpetuallyRunningTasks;
+  protected final boolean usePersistentTasks;
+  protected String version;
 
   /**
    * Base constructor for SeekableStreamSupervisors.
@@ -99,7 +102,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
       DruidMonitorSchedulerConfig monitorSchedulerConfig,
       RowIngestionMetersFactory rowIngestionMetersFactory,
       SupervisorStateManagerConfig supervisorStateManagerConfig,
-      @Nullable Boolean usePerpetuallyRunningTasks
+      @Nullable Boolean usePersistentTasks
   )
   {
     this.ingestionSchema = checkIngestionSchema(ingestionSchema);
@@ -119,7 +122,8 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
     this.suspended = suspended != null ? suspended : false;
     this.supervisorStateManagerConfig = supervisorStateManagerConfig;
-    this.usePerpetuallyRunningTasks = Configs.valueOrDefault(usePerpetuallyRunningTasks, false);
+    this.usePersistentTasks = Configs.valueOrDefault(usePersistentTasks, false);
+    this.version = DateTimes.nowUtc().toString();
   }
 
   @JsonProperty
@@ -148,9 +152,9 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   }
 
   @JsonProperty
-  public boolean usePerpetuallyRunningTasks()
+  public boolean usePersistentTasks()
   {
-    return usePerpetuallyRunningTasks;
+    return usePersistentTasks;
   }
 
   @Nullable
@@ -235,6 +239,16 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     return suspended;
   }
 
+  public Optional<String> getVersion()
+  {
+    return Optional.of(this.version);
+  }
+
+  public void setVersion(String version)
+  {
+    this.version = version;
+  }
+
   /**
    * Default implementation that prevents unsupported evolution of the supervisor spec
    * <ul>
@@ -265,5 +279,4 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   }
 
   protected abstract SeekableStreamSupervisorSpec toggleSuspend(boolean suspend);
-
 }

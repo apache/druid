@@ -182,11 +182,4 @@ public interface TaskStorage
    * @return list of TaskLocks for the given task
    */
   List<TaskLock> getLocks(String taskid);
-
-  /**
-   * Updates an existing task with new configuration.
-   * This is used for updating task payload (e.g., IOConfig changes for perpetual tasks)
-   * while preserving the task status and other metadata.
-   */
-  void updateTask(Task task);
 }
