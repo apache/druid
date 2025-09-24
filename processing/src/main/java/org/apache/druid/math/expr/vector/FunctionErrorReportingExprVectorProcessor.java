@@ -20,6 +20,7 @@
 package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExpressionProcessingException;
 import org.apache.druid.math.expr.ExpressionType;
@@ -57,7 +58,7 @@ public class FunctionErrorReportingExprVectorProcessor<T> implements ExprVectorP
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(e, "Function[%s] encountered exception: %s", functionName, e.getMessage());
     }
-    catch (DruidException e) {
+    catch (DruidException | IAE e) {
       throw e;
     }
     catch (Exception e) {
