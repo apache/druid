@@ -70,7 +70,7 @@ public class IndexMergerNullHandlingTest
   {
     indexMerger = TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
     indexIO = TestHelper.getTestIndexIO();
-    indexSpec = IndexSpec.getDefault();
+    indexSpec = IndexSpec.getDefault().getEffectiveSpec();
   }
 
   @Test

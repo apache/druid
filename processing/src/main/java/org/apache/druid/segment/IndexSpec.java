@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.guice.BuiltInTypesModule;
@@ -52,10 +53,15 @@ public class IndexSpec
     return new Builder();
   }
 
+  @Nullable
   private final BitmapSerdeFactory bitmapSerdeFactory;
+  @Nullable
   private final CompressionStrategy dimensionCompression;
+  @Nullable
   private final StringEncodingStrategy stringDictionaryEncoding;
+  @Nullable
   private final CompressionStrategy metricCompression;
+  @Nullable
   private final CompressionFactory.LongEncodingStrategy longEncoding;
   @Nullable
   private final CompressionStrategy complexMetricCompression;
@@ -95,53 +101,47 @@ public class IndexSpec
       @JsonProperty("autoColumnFormatSpec") @Nullable NestedCommonFormatColumnFormatSpec autoColumnFormatSpec
   )
   {
-    this.bitmapSerdeFactory = bitmapSerdeFactory != null
-                              ? bitmapSerdeFactory
-                              : new BitmapSerde.DefaultBitmapSerdeFactory();
-    this.dimensionCompression = dimensionCompression == null
-                                ? CompressionStrategy.DEFAULT_COMPRESSION_STRATEGY
-                                : dimensionCompression;
-    this.stringDictionaryEncoding = stringDictionaryEncoding == null
-                                    ? StringEncodingStrategy.DEFAULT
-                                    : stringDictionaryEncoding;
-
-    this.metricCompression = metricCompression == null
-                             ? CompressionStrategy.DEFAULT_COMPRESSION_STRATEGY
-                             : metricCompression;
+    this.bitmapSerdeFactory = bitmapSerdeFactory;
+    this.dimensionCompression = dimensionCompression;
+    this.stringDictionaryEncoding = stringDictionaryEncoding;
+    this.metricCompression = metricCompression;
     this.complexMetricCompression = complexMetricCompression;
-    this.longEncoding = longEncoding == null
-                        ? CompressionFactory.DEFAULT_LONG_ENCODING_STRATEGY
-                        : longEncoding;
+    this.longEncoding = longEncoding;
     this.jsonCompression = jsonCompression;
     this.segmentLoader = segmentLoader;
     this.autoColumnFormatSpec = autoColumnFormatSpec;
   }
 
   @JsonProperty("bitmap")
+  @Nullable
   public BitmapSerdeFactory getBitmapSerdeFactory()
   {
     return bitmapSerdeFactory;
   }
 
   @JsonProperty
+  @Nullable
   public CompressionStrategy getDimensionCompression()
   {
     return dimensionCompression;
   }
 
   @JsonProperty
+  @Nullable
   public StringEncodingStrategy getStringDictionaryEncoding()
   {
     return stringDictionaryEncoding;
   }
 
   @JsonProperty
+  @Nullable
   public CompressionStrategy getMetricCompression()
   {
     return metricCompression;
   }
 
   @JsonProperty
+  @Nullable
   public CompressionFactory.LongEncodingStrategy getLongEncoding()
   {
     return longEncoding;
@@ -178,6 +178,80 @@ public class IndexSpec
   public NestedCommonFormatColumnFormatSpec getAutoColumnFormatSpec()
   {
     return autoColumnFormatSpec;
+  }
+
+  @JsonIgnore
+  public IndexSpec getEffectiveSpec()
+  {
+    Builder bob = IndexSpec.builder();
+    final IndexSpec defaultSpec = getDefault();
+
+    if (bitmapSerdeFactory != null) {
+      bob.withBitmapSerdeFactory(bitmapSerdeFactory);
+    } else if (defaultSpec.bitmapSerdeFactory != null) {
+      bob.withBitmapSerdeFactory(defaultSpec.bitmapSerdeFactory);
+    } else {
+      bob.withBitmapSerdeFactory(new BitmapSerde.DefaultBitmapSerdeFactory());
+    }
+
+    if (dimensionCompression != null) {
+      bob.withDimensionCompression(dimensionCompression);
+    } else if (defaultSpec.dimensionCompression != null) {
+      bob.withDimensionCompression(defaultSpec.dimensionCompression);
+    } else {
+      bob.withDimensionCompression(CompressionStrategy.DEFAULT_COMPRESSION_STRATEGY);
+    }
+
+    if (stringDictionaryEncoding != null) {
+      bob.withStringDictionaryEncoding(stringDictionaryEncoding);
+    } else if (defaultSpec.stringDictionaryEncoding != null) {
+      bob.withStringDictionaryEncoding(defaultSpec.stringDictionaryEncoding);
+    } else {
+      bob.withStringDictionaryEncoding(StringEncodingStrategy.DEFAULT);
+    }
+
+    if (metricCompression != null) {
+      bob.withMetricCompression(metricCompression);
+    } else if (defaultSpec.metricCompression != null) {
+      bob.withMetricCompression(defaultSpec.metricCompression);
+    } else {
+      bob.withMetricCompression(CompressionStrategy.DEFAULT_COMPRESSION_STRATEGY);
+    }
+
+    if (longEncoding != null) {
+      bob.withLongEncoding(longEncoding);
+    } else if (defaultSpec.longEncoding != null) {
+      bob.withLongEncoding(defaultSpec.longEncoding);
+    } else {
+      bob.withLongEncoding(CompressionFactory.DEFAULT_LONG_ENCODING_STRATEGY);
+    }
+
+    if (complexMetricCompression != null) {
+      bob.withComplexMetricCompression(complexMetricCompression);
+    } else if (defaultSpec.complexMetricCompression != null) {
+      bob.withComplexMetricCompression(defaultSpec.complexMetricCompression);
+    }
+
+    if (jsonCompression != null) {
+      bob.withJsonCompression(jsonCompression);
+    } else if (defaultSpec.jsonCompression != null) {
+      bob.withJsonCompression(defaultSpec.jsonCompression);
+    }
+
+    if (segmentLoader != null) {
+      bob.withSegmentLoader(segmentLoader);
+    } else if (defaultSpec.segmentLoader != null) {
+      bob.withSegmentLoader(defaultSpec.segmentLoader);
+    }
+
+    if (autoColumnFormatSpec != null) {
+      bob.withAutoColumnFormatSpec(autoColumnFormatSpec.getEffectiveSpec(this));
+    } else if (defaultSpec.autoColumnFormatSpec != null) {
+      bob.withAutoColumnFormatSpec(defaultSpec.autoColumnFormatSpec.getEffectiveSpec(this));
+    }
+
+
+    return bob.build();
   }
 
   @Override
@@ -253,55 +327,56 @@ public class IndexSpec
     @Nullable
     private NestedCommonFormatColumnFormatSpec autoColumnFormatSpec;
 
-    public Builder withBitmapSerdeFactory(BitmapSerdeFactory bitmapSerdeFactory)
+    public Builder withBitmapSerdeFactory(@Nullable BitmapSerdeFactory bitmapSerdeFactory)
     {
       this.bitmapSerdeFactory = bitmapSerdeFactory;
       return this;
     }
 
-    public Builder withDimensionCompression(CompressionStrategy dimensionCompression)
+    public Builder withDimensionCompression(@Nullable CompressionStrategy dimensionCompression)
     {
       this.dimensionCompression = dimensionCompression;
       return this;
     }
 
-    public Builder withStringDictionaryEncoding(StringEncodingStrategy stringDictionaryEncoding)
+    public Builder withStringDictionaryEncoding(@Nullable StringEncodingStrategy stringDictionaryEncoding)
     {
       this.stringDictionaryEncoding = stringDictionaryEncoding;
       return this;
     }
 
-    public Builder withMetricCompression(CompressionStrategy metricCompression)
+    public Builder withMetricCompression(@Nullable CompressionStrategy metricCompression)
     {
       this.metricCompression = metricCompression;
       return this;
     }
 
-    public Builder withComplexMetricCompression(CompressionStrategy complexMetricCompression)
+    public Builder withComplexMetricCompression(@Nullable CompressionStrategy complexMetricCompression)
     {
       this.complexMetricCompression = complexMetricCompression;
       return this;
     }
 
-    public Builder withLongEncoding(CompressionFactory.LongEncodingStrategy longEncoding)
+    public Builder withLongEncoding(@Nullable CompressionFactory.LongEncodingStrategy longEncoding)
     {
       this.longEncoding = longEncoding;
       return this;
     }
 
-    public Builder withJsonCompression(CompressionStrategy jsonCompression)
+    @Deprecated
+    public Builder withJsonCompression(@Nullable CompressionStrategy jsonCompression)
     {
       this.jsonCompression = jsonCompression;
       return this;
     }
 
-    public Builder withSegmentLoader(SegmentizerFactory segmentLoader)
+    public Builder withSegmentLoader(@Nullable SegmentizerFactory segmentLoader)
     {
       this.segmentLoader = segmentLoader;
       return this;
     }
 
-    public Builder withAutoColumnFormatSpec(NestedCommonFormatColumnFormatSpec autoColumnFormatSpec)
+    public Builder withAutoColumnFormatSpec(@Nullable NestedCommonFormatColumnFormatSpec autoColumnFormatSpec)
     {
       this.autoColumnFormatSpec = autoColumnFormatSpec;
       return this;

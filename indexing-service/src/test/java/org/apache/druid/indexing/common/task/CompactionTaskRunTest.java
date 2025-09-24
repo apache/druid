@@ -158,7 +158,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
   );
 
   private static final NestedCommonFormatColumnFormatSpec DEFAULT_NESTED_SPEC =
-      NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(null, IndexSpec.getDefault());
+      NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(null, IndexSpec.getDefault().getEffectiveSpec());
 
   private static final List<String> TEST_ROWS = ImmutableList.of(
       "2014-01-01T00:00:10Z,a,1\n",
@@ -258,7 +258,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         expectedDims,
         ImmutableList.of(expectedMetric),
         null,
-        IndexSpec.getDefault(),
+        IndexSpec.getDefault().getEffectiveSpec(),
         new UniformGranularitySpec(
             segmentGranularity,
             queryGranularity,
@@ -389,7 +389,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
             ),
             ImmutableList.of(expectedLongSumMetric),
             null,
-            compactionTask.getTuningConfig().getIndexSpec(),
+            compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
             new UniformGranularitySpec(
                 Granularities.HOUR,
                 Granularities.MINUTE,
@@ -774,7 +774,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         ),
         ImmutableList.of(expectedLongSumMetric),
         compactionTask.getTransformSpec(),
-        IndexSpec.getDefault(),
+        IndexSpec.getDefault().getEffectiveSpec(),
         new UniformGranularitySpec(
             Granularities.DAY,
             Granularities.MINUTE,
@@ -829,7 +829,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         ),
         ImmutableList.of(expectedCountMetric, expectedLongSumMetric),
         compactionTask.getTransformSpec(),
-        IndexSpec.getDefault(),
+        IndexSpec.getDefault().getEffectiveSpec(),
         new UniformGranularitySpec(
             Granularities.DAY,
             Granularities.MINUTE,

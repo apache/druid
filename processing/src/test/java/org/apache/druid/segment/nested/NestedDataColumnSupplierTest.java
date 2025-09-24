@@ -203,7 +203,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
   {
     this.columnFormatSpec = NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(
         columnFormatSpec,
-        IndexSpec.getDefault()
+        IndexSpec.getDefault().getEffectiveSpec()
     );
     this.bitmapSerdeFactory = this.columnFormatSpec.getBitmapEncoding();
     this.resultFactory = new DefaultBitmapResultFactory(bitmapSerdeFactory.getBitmapFactory());

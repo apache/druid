@@ -1052,6 +1052,8 @@ public class IndexMergerV9 implements IndexMerger
       throw new IAE("Trying to persist an empty index!");
     }
 
+    indexSpec = indexSpec.getEffectiveSpec();
+
     final DateTime firstTimestamp = index.getMinTime();
     final DateTime lastTimestamp = index.getMaxTime();
     if (!(dataInterval.contains(firstTimestamp) && dataInterval.contains(lastTimestamp))) {
@@ -1110,8 +1112,8 @@ public class IndexMergerV9 implements IndexMerger
         metricAggs,
         dimensionsSpec,
         outDir,
-        indexSpec,
-        indexSpecForIntermediatePersists,
+        indexSpec.getEffectiveSpec(),
+        indexSpecForIntermediatePersists.getEffectiveSpec(),
         progress,
         segmentWriteOutMediumFactory,
         maxColumnsToMerge
@@ -1138,8 +1140,8 @@ public class IndexMergerV9 implements IndexMerger
         metricAggs,
         dimensionsSpec,
         outDir,
-        indexSpec,
-        indexSpec,
+        indexSpec.getEffectiveSpec(),
+        indexSpec.getEffectiveSpec(),
         new BaseProgressIndicator(),
         null,
         maxColumnsToMerge
@@ -1163,6 +1165,9 @@ public class IndexMergerV9 implements IndexMerger
     FileUtils.mkdirp(outDir);
 
     List<File> tempDirs = new ArrayList<>();
+
+    indexSpec = indexSpec.getEffectiveSpec();
+    indexSpecForIntermediatePersists = indexSpecForIntermediatePersists.getEffectiveSpec();
 
     if (maxColumnsToMerge == IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE) {
       return merge(

@@ -514,7 +514,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                     .put(
                         "incrementalAutoTypes",
                         input -> {
-                          input.indexSpec(IndexSpec.builder().build());
                           input.mapSchema(
                               schema ->
                                   new IncrementalIndexSchema(
@@ -527,7 +526,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                 .getDimensions()
                                                 .stream()
                                                 .map(
-                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName(), null, null)
+                                                    dimensionSchema ->
+                                                        AutoTypeColumnSchema.of(dimensionSchema.getName())
                                                 )
                                                 .collect(Collectors.toList())
                                       ),
@@ -543,7 +543,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                     .put(
                         "mmappedAutoTypes",
                         input -> {
-                          input.indexSpec(IndexSpec.builder().build());
                           input.mapSchema(
                               schema ->
                                   new IncrementalIndexSchema(
@@ -556,7 +555,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                 .getDimensions()
                                                 .stream()
                                                 .map(
-                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName(), null, null)
+                                                    dimensionSchema ->
+                                                        AutoTypeColumnSchema.of(dimensionSchema.getName())
                                                 )
                                                 .collect(Collectors.toList())
                                       ),

@@ -344,8 +344,8 @@ public class CompactionStatus
     {
       return CompactionStatus.completeIfEqual(
           "indexSpec",
-          Configs.valueOrDefault(tuningConfig.getIndexSpec(), IndexSpec.getDefault()),
-          objectMapper.convertValue(lastCompactionState.getIndexSpec(), IndexSpec.class),
+          Configs.valueOrDefault(tuningConfig.getIndexSpec(), IndexSpec.getDefault()).getEffectiveSpec(),
+          objectMapper.convertValue(lastCompactionState.getIndexSpec(), IndexSpec.class).getEffectiveSpec(),
           String::valueOf
       );
     }

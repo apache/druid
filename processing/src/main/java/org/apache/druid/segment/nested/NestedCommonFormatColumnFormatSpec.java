@@ -45,6 +45,11 @@ public class NestedCommonFormatColumnFormatSpec
     return new Builder();
   }
 
+  public static Builder builder(NestedCommonFormatColumnFormatSpec spec)
+  {
+    return new Builder(spec);
+  }
+
   public static NestedCommonFormatColumnFormatSpec getEffectiveFormatSpec(
       @Nullable NestedCommonFormatColumnFormatSpec columnFormatSpec,
       IndexSpec indexSpec

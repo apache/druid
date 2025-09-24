@@ -61,7 +61,7 @@ public class NestedCommonFormatColumnFormatSpecTest
   {
     NestedCommonFormatColumnFormatSpec defaults = NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(
         null,
-        IndexSpec.getDefault()
+        IndexSpec.getDefault().getEffectiveSpec()
     );
 
     Assert.assertEquals(
@@ -77,19 +77,19 @@ public class NestedCommonFormatColumnFormatSpecTest
         defaults.getObjectStorageCompression()
     );
     Assert.assertEquals(
-        IndexSpec.getDefault().getDimensionCompression(),
+        IndexSpec.getDefault().getEffectiveSpec().getDimensionCompression(),
         defaults.getDictionaryEncodedColumnCompression()
     );
     Assert.assertEquals(
-        IndexSpec.getDefault().getStringDictionaryEncoding(),
+        IndexSpec.getDefault().getEffectiveSpec().getStringDictionaryEncoding(),
         defaults.getStringDictionaryEncoding()
     );
     Assert.assertEquals(
-        IndexSpec.getDefault().getMetricCompression(),
+        IndexSpec.getDefault().getEffectiveSpec().getMetricCompression(),
         defaults.getLongColumnCompression()
     );
     Assert.assertEquals(
-        IndexSpec.getDefault().getMetricCompression(),
+        IndexSpec.getDefault().getEffectiveSpec().getMetricCompression(),
         defaults.getDoubleColumnCompression()
     );
   }
@@ -108,7 +108,7 @@ public class NestedCommonFormatColumnFormatSpecTest
                                           )
                                           .setDoubleColumnCompression(CompressionStrategy.ZSTD)
                                           .build(),
-        IndexSpec.getDefault()
+        IndexSpec.getDefault().getEffectiveSpec()
     );
 
     Assert.assertEquals(
@@ -124,7 +124,7 @@ public class NestedCommonFormatColumnFormatSpecTest
         merged.getObjectStorageEncoding()
     );
     Assert.assertEquals(
-        IndexSpec.getDefault().getDimensionCompression(),
+        IndexSpec.getDefault().getEffectiveSpec().getDimensionCompression(),
         merged.getDictionaryEncodedColumnCompression()
     );
     Assert.assertEquals(
@@ -132,7 +132,7 @@ public class NestedCommonFormatColumnFormatSpecTest
         merged.getObjectStorageCompression()
     );
     Assert.assertEquals(
-        IndexSpec.getDefault().getMetricCompression(),
+        IndexSpec.getDefault().getEffectiveSpec().getMetricCompression(),
         merged.getLongColumnCompression()
     );
     Assert.assertEquals(
@@ -148,7 +148,7 @@ public class NestedCommonFormatColumnFormatSpecTest
         ISE.class,
         () -> NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(
             NestedCommonFormatColumnFormatSpec.builder().setBitmapEncoding(new ConciseBitmapSerdeFactory()).build(),
-            IndexSpec.builder().withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance()).build()
+            IndexSpec.builder().withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance()).build().getEffectiveSpec()
         )
     );
 

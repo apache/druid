@@ -64,6 +64,7 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.FixedIntervalOrderPolicy;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
@@ -504,7 +505,7 @@ public class AutoCompactionTest extends CompactionTestBase
 
       List<DimensionSchema> dimensionSchemas = ImmutableList.of(
           new StringDimensionSchema("language", DimensionSchema.MultiValueHandling.SORTED_ARRAY, false),
-          new AutoTypeColumnSchema("deleted", ColumnType.DOUBLE, null).getEffectiveSchema(IndexSpec.getDefault())
+          new AutoTypeColumnSchema("deleted", ColumnType.DOUBLE, null)
       );
 
       submitCompactionConfig(
@@ -520,7 +521,21 @@ public class AutoCompactionTest extends CompactionTestBase
       // Compacted into 1 segment for the entire year.
       forceTriggerAutoCompaction(1);
       verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
-      verifySegmentsCompactedDimensionSchema(dimensionSchemas);
+      List<DimensionSchema> expectedDimensionSchemas = List.of(
+          dimensionSchemas.get(0),
+          new AutoTypeColumnSchema(
+              "deleted",
+              ColumnType.DOUBLE,
+              // json serialization doesn't store bitmap in compaction state, so need to set to null
+              NestedCommonFormatColumnFormatSpec.builder(
+                  NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(
+                      null,
+                      IndexSpec.getDefault().getEffectiveSpec()
+                  )
+              ).setBitmapEncoding(null).build()
+          )
+      );
+      verifySegmentsCompactedDimensionSchema(expectedDimensionSchemas);
     }
   }
 
