@@ -39,7 +39,10 @@ import java.util.Objects;
  * IndexSpec defines segment storage format options to be used at indexing time,
  * such as bitmap type, and column compression formats.
  * <p>
- * IndexSpec is specified as part of the TuningConfig for the corresponding index task.
+ * IndexSpec is specified as part of the TuningConfig for the corresponding index task. Fields which are not explicitly
+ * defined by the operator default to null values, callers must call {@link #getEffectiveSpec()} to fill in these null
+ * values, which will replace nulls first with any system defaults defined in {@link #getDefault()} falling back to
+ * hard coded defaults.
  */
 public class IndexSpec
 {
@@ -76,17 +79,26 @@ public class IndexSpec
    * Creates an IndexSpec with the given storage format settings.
    *
    * @param bitmapSerdeFactory       type of bitmap to use (e.g. roaring or concise), null to use the default.
-   *                                 Defaults to the bitmap type specified by the (deprecated) "druid.processing.bitmap.type"
-   *                                 setting, or, if none was set, uses the default defined in {@link BitmapSerde}
+   *                                 Defaults to the bitmap type specified by the (deprecated)
+   *                                 "druid.processing.bitmap.type" setting, or, if none was set, uses the default
+   *                                 defined in {@link BitmapSerde} upon calling {@link #getEffectiveSpec()}
    * @param dimensionCompression     compression format for dimension columns, null to use the default.
-   *                                 Defaults to {@link CompressionStrategy#DEFAULT_COMPRESSION_STRATEGY}
+   *                                 Defaults to {@link CompressionStrategy#DEFAULT_COMPRESSION_STRATEGY} upon calling
+   *                                 {@link #getEffectiveSpec()}
    * @param stringDictionaryEncoding encoding strategy for string dictionaries of dictionary encoded string columns
    * @param metricCompression        compression format for primitive type metric columns, null to use the default.
-   *                                 Defaults to {@link CompressionStrategy#DEFAULT_COMPRESSION_STRATEGY}
-   * @param longEncoding             encoding strategy for metric and dimension columns with type long, null to use the default.
-   *                                 Defaults to {@link CompressionFactory#DEFAULT_LONG_ENCODING_STRATEGY}
-   * @param segmentLoader            specify a {@link SegmentizerFactory} which will be written to 'factory.json' and used to load
-   *                                 the written segment
+   *                                 Defaults to {@link CompressionStrategy#DEFAULT_COMPRESSION_STRATEGY} upon calling
+   *                                 {@link #getEffectiveSpec()}.
+   * @param longEncoding             encoding strategy for metric and dimension columns with type long, null to use the
+   *                                 default. Defaults to {@link CompressionFactory#DEFAULT_LONG_ENCODING_STRATEGY} upon
+   *                                 calling {@link #getEffectiveSpec()}
+   * @param complexMetricCompression default {@link CompressionStrategy} to use for complex type columns which use
+   *                                 generic serializers. Defaults to null which means no compression upon calling
+   *                                 {@link #getEffectiveSpec()}.
+   * @param segmentLoader            specify a {@link SegmentizerFactory} which will be written to 'factory.json' and
+   *                                 used to load the written segment
+   * @param autoColumnFormatSpec     specify the default {@link NestedCommonFormatColumnFormatSpec} to use for json and
+   *                                 auto columns. Defaults to null upon calling {@link #getEffectiveSpec()}.
    */
   @JsonCreator
   public IndexSpec(
@@ -180,6 +192,10 @@ public class IndexSpec
     return autoColumnFormatSpec;
   }
 
+  /**
+   * Populate all null fields of {@link IndexSpec}, first from {@link #getDefault()} and finally falling back to hard
+   * coded defaults if no overrides are defined.
+   */
   @JsonIgnore
   public IndexSpec getEffectiveSpec()
   {
