@@ -1062,14 +1062,13 @@ libraries:
   - io.prometheus: simpleclient_tracer_otel
   - io.prometheus: simpleclient_tracer_otel_agent
 
-
 ---
 
 name: org.snakeyaml snakeyaml-engine
 license_category: binary
-module: extensions-core/druid-kubernetes-overlord-extensions
+module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 2.10
+version: "2.10"
 libraries:
   - org.snakeyaml: snakeyaml-engine
 
@@ -1077,7 +1076,7 @@ libraries:
 
 name: org.yaml snakeyaml
 license_category: binary
-module: extensions-core/druid-kubernetes-overlord-extensions
+module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
 version: 2.4
 libraries:
