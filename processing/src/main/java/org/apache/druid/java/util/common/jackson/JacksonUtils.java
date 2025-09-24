@@ -31,7 +31,7 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.InvalidInput;
+import org.apache.druid.error.InternalServerError;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
@@ -127,7 +127,7 @@ public final class JacksonUtils
       return jsonMapper.writeValueAsString(value);
     }
     catch (JsonProcessingException e) {
-      throw InvalidInput.exception(e, "Failed to serialize object as JSON");
+      throw InternalServerError.exception(e, "Failed to serialize object as JSON");
     }
   }
 
