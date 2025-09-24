@@ -2815,7 +2815,7 @@ public class MSQReplaceTest extends MSQTestBase
       );
     }
 
-    IndexSpec indexSpec = IndexSpec.getDefault();
+    IndexSpec indexSpec = IndexSpec.getDefault().getEffectiveSpec();
     GranularitySpec granularitySpec = new UniformGranularitySpec(
         segmentGranularity.getDefaultGranularity(),
         GranularityType.NONE.getDefaultGranularity(),

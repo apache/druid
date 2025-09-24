@@ -155,11 +155,11 @@ public class RabbitStreamIndexTaskTuningConfigTest
                     "intermediatePersistPeriod=PT1H, " +
                     "maxPendingPersists=100, " +
                     "indexSpec=IndexSpec{" +
-                    "bitmapSerdeFactory=RoaringBitmapSerdeFactory{}, " +
-                    "dimensionCompression=lz4, " +
-                    "stringDictionaryEncoding=Utf8{}, " +
-                    "metricCompression=lz4, " +
-                    "longEncoding=longs, " +
+                    "bitmapSerdeFactory=null, " +
+                    "dimensionCompression=null, " +
+                    "stringDictionaryEncoding=null, " +
+                    "metricCompression=null, " +
+                    "longEncoding=null, " +
                     "complexMetricCompression=null, " +
                     "jsonCompression=null, " +
                     "segmentLoader=null" +
