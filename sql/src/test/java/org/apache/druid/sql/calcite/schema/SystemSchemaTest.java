@@ -1533,9 +1533,6 @@ public class SystemSchemaTest extends CalciteTestBase
           case STRING:
             expectedClass = String.class;
             break;
-          case COMPLEX:
-            expectedClass = Map.class;
-            break;
           default:
             throw new IAE("Don't know what class to expect for valueType[%s]", columnType);
         }
