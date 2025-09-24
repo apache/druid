@@ -17,24 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.expression.builtin;
+package org.apache.druid.server.metrics;
 
-import org.apache.calcite.sql.SqlFunction;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.math.expr.Function;
-import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
-import org.apache.druid.sql.calcite.expression.OperatorConversions;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.config.Configs;
 
-public class LeastOperatorConversion extends DirectOperatorConversion
+import javax.annotation.Nullable;
+
+public class LatchableEmitterConfig
 {
-  private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder(StringUtils.toUpperCase(Function.LeastFunc.NAME))
-      .operandTypeChecker(ReductionOperatorConversionHelper.OPERAND_TYPE_CHECKER)
-      .returnTypeInference(ReductionOperatorConversionHelper.TYPE_INFERENCE)
-      .build();
+  @JsonProperty
+  private final long defaultWaitTimeoutMillis;
 
-  public LeastOperatorConversion()
+  @JsonCreator
+  public LatchableEmitterConfig(
+      @JsonProperty("defaultWaitTimeoutMillis") @Nullable Long defaultWaitTimeoutMillis
+  )
   {
-    super(SQL_FUNCTION, Function.LeastFunc.NAME);
+    this.defaultWaitTimeoutMillis = Configs.valueOrDefault(defaultWaitTimeoutMillis, 10_000);
+  }
+
+  /**
+   * Default time to wait for an event to be emitted. Slow tests can set this
+   * config to a high value to avoid failures.
+   */
+  public long getDefaultWaitTimeoutMillis()
+  {
+    return defaultWaitTimeoutMillis;
   }
 }
