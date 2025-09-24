@@ -240,10 +240,11 @@ public class CompactionStatus
       @Nullable final IndexSpec indexSpec
   )
   {
+    final IndexSpec effectiveIndexSpec = (indexSpec == null ? IndexSpec.getDefault() : indexSpec).getEffectiveSpec();
     if (dimensionSchemas == null || !(partitionsSpec instanceof DimensionRangePartitionsSpec)) {
       if (dimensionSchemas != null) {
         return dimensionSchemas.stream()
-                               .map(dim -> dim.getEffectiveSchema(indexSpec))
+                               .map(dim -> dim.getEffectiveSchema(effectiveIndexSpec))
                                .collect(Collectors.toList());
       }
       return null;
@@ -252,7 +253,7 @@ public class CompactionStatus
     final List<String> partitionsDimensions = ((DimensionRangePartitionsSpec) partitionsSpec).getPartitionDimensions();
     return dimensionSchemas.stream()
                            .filter(dim -> !partitionsDimensions.contains(dim.getName()))
-                           .map(dim -> dim.getEffectiveSchema(indexSpec))
+                           .map(dim -> dim.getEffectiveSchema(effectiveIndexSpec))
                            .collect(Collectors.toList());
   }
 

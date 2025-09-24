@@ -447,14 +447,14 @@ public class CompactionStatusTest
         DimensionsSpec.builder()
                       .setDimensions(
                           List.of(
-                              AutoTypeColumnSchema.of("x").getEffectiveSchema(IndexSpec.getDefault()),
-                              AutoTypeColumnSchema.of("y").getEffectiveSchema(IndexSpec.getDefault())
+                              AutoTypeColumnSchema.of("x").getEffectiveSchema(IndexSpec.getDefault().getEffectiveSpec()),
+                              AutoTypeColumnSchema.of("y").getEffectiveSchema(IndexSpec.getDefault().getEffectiveSpec())
                           )
                       )
                       .build(),
         null,
         null,
-        IndexSpec.getDefault(),
+        IndexSpec.getDefault().getEffectiveSpec(),
         currentGranularitySpec,
         Collections.emptyList()
     );
