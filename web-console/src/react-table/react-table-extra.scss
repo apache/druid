@@ -20,12 +20,11 @@
 
 .ReactTable {
   &.centered-table {
-  
-      .rt-th,
-      .rt-td {
-        align-content: center;
-      }
+    .rt-th,
+    .rt-td {
+      align-content: center;
     }
+  }
   .rt-tr {
     min-height: 38px;
 

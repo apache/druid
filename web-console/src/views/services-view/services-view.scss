@@ -36,14 +36,14 @@
   ul {
     line-height: 20px;
   }
-.labels-list {
-  list-style-type: none;
-  padding-left: 0;
-  margin: 0;
-
-  li {
+  .labels-list {
+    list-style-type: none;
+    padding-left: 0;
     margin: 0;
-    padding: 0;
+
+    li {
+      margin: 0;
+      padding: 0;
+    }
   }
-}
 }
