@@ -26,7 +26,6 @@ import com.google.common.io.CountingOutputStream;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ErrorResponse;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.QueryExceptionCompat;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
