@@ -42,9 +42,9 @@ import java.util.UUID;
 public class NoopTask extends AbstractTask implements PendingSegmentAllocatingTask
 {
   public static final String TYPE = "noop";
+  public static final String EVENT_STARTED = "task/noop/started";
   private static final int DEFAULT_RUN_TIME = 2500;
 
-  @JsonIgnore
   private final long runTime;
 
   @JsonCreator
@@ -102,6 +102,7 @@ public class NoopTask extends AbstractTask implements PendingSegmentAllocatingTa
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
+    emitMetric(toolbox.getEmitter(), EVENT_STARTED, 1);
     Thread.sleep(runTime);
     return TaskStatus.success(getId());
   }
