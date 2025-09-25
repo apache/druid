@@ -655,7 +655,7 @@ ORDER BY
                 })}
               </ul>
             );
-          }
+          },
         },
         {
           Header: 'Detail',
