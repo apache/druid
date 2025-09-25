@@ -270,10 +270,9 @@ public class KubernetesPeonLifecycle
   {
     State currentState = state.get();
     if (State.PENDING.equals(currentState) || State.NOT_STARTED.equals(currentState)) {
-      /* This should not actually ever happen because KubernetesTaskRunner.start() should not return until all running tasks
-      have already gone into State.RUNNING, so getTaskLocation should not be called.
-       */
-      log.warn("Can't get task location for non-running job. [%s]", taskId.getOriginalTaskId());
+      // This can happen if something external is checking the task location before the task has started.
+      // For example, when MSQ controller has started but the workers have not been started yet, this can be called.
+      log.debug("Can't get task location for non-running job. [%s]", taskId.getOriginalTaskId());
       return TaskLocation.unknown();
     }
 
