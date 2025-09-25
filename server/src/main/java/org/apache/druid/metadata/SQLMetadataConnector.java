@@ -62,7 +62,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -306,19 +305,16 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             )
         )
     );
-    final Set<String> createdIndexSet = getIndexOnTable(tableName);
     createIndex(
         tableName,
         "IDX_%S_DATASOURCE_END",
-        List.of("dataSource", quoteColumn("end")),
-        createdIndexSet
-    ).ifPresent(createdIndexSet::add);
+        List.of("dataSource", quoteColumn("end"))
+    );
     createIndex(
         tableName,
         "IDX_%S_DATASOURCE_SEQUENCE",
-        List.of("dataSource", "sequence_name"),
-        createdIndexSet
-    ).ifPresent(createdIndexSet::add);
+        List.of("dataSource", "sequence_name")
+    );
     alterPendingSegmentsTable(tableName);
   }
 
@@ -384,13 +380,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         )
     );
 
-    final Set<String> createdIndexSet = getIndexOnTable(tableName);
     createIndex(
         tableName,
         "IDX_%S_USED",
-        List.of("used"),
-        createdIndexSet
-    ).ifPresent(createdIndexSet::add);
+        List.of("used")
+    );
     createIndex(
         tableName,
         "IDX_%S_DATASOURCE_USED_END_START",
@@ -399,9 +393,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             "used",
             quoteColumn("end"),
             "start"
-        ),
-        createdIndexSet
-    ).ifPresent(createdIndexSet::add);
+        )
+    );
   }
 
   private void createUpgradeSegmentsTable(final String tableName)
@@ -424,8 +417,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     createIndex(
         tableName,
         "IDX_%S_TASK",
-        List.of("task_id"),
-        getIndexOnTable(tableName)
+        List.of("task_id")
     );
   }
 
@@ -449,8 +441,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     createIndex(
         tableName,
         "IDX_%S_DATASOURCE",
-        List.of("dataSource"),
-        getIndexOnTable(tableName)
+        List.of("dataSource")
     );
   }
 
@@ -496,19 +487,16 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             )
         )
     );
-    final Set<String> createdIndexSet = getIndexOnTable(tableName);
     createIndex(
         tableName,
         "IDX_%S_ACTIVE_CREATED_DATE",
-        List.of("active", "created_date"),
-        createdIndexSet
-    ).ifPresent(createdIndexSet::add);
+        List.of("active", "created_date")
+    );
     createIndex(
         tableName,
         "IDX_%S_DATASOURCE_ACTIVE",
-        List.of("datasource", "active"),
-        createdIndexSet
-    ).ifPresent(createdIndexSet::add);
+        List.of("datasource", "active")
+    );
   }
 
   private void alterEntryTableAddTypeAndGroupId(final String tableName)
@@ -562,8 +550,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     createIndex(
         tableName,
         "IDX_%S_DATASOURCE_TASK_ALLOCATOR_ID",
-        List.of("dataSource", "task_allocator_id"),
-        getIndexOnTable(tableName)
+        List.of("dataSource", "task_allocator_id")
     );
   }
 
@@ -586,8 +573,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     createIndex(
         tableName,
         "IDX_%S_TASK_ID",
-        List.of("task_id"),
-        getIndexOnTable(tableName)
+        List.of("task_id")
     );
   }
 
@@ -611,8 +597,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     createIndex(
         tableName,
         "IDX_%S_SPEC_ID ",
-        List.of("spec_id"),
-        getIndexOnTable(tableName)
+        List.of("spec_id")
     );
   }
 
@@ -665,8 +650,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     createIndex(
         tableName,
         "IDX_%S_DATASOURCE_UPGRADED_FROM_SEGMENT_ID",
-        List.of("dataSource", "upgraded_from_segment_id"),
-        getIndexOnTable(tableName)
+        List.of("dataSource", "upgraded_from_segment_id")
     );
   }
 
@@ -1015,25 +999,21 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             )
         )
     );
-    final Set<String> createdIndexSet = getIndexOnTable(tableName);
     createIndex(
         tableName,
         "IDX_%s_KEY_TIME",
-        List.of("audit_key", "created_date"),
-        createdIndexSet
-    ).ifPresent(createdIndexSet::add);
+        List.of("audit_key", "created_date")
+    );
     createIndex(
         tableName,
         "IDX_%s_TYPE_TIME",
-        List.of("type", "created_date"),
-        createdIndexSet
-    ).ifPresent(createdIndexSet::add);
+        List.of("type", "created_date")
+    );
     createIndex(
         tableName,
         "IDX_%s_AUDIT_TIME",
-        List.of("created_date"),
-        createdIndexSet
-    ).ifPresent(createdIndexSet::add);
+        List.of("created_date")
+    );
   }
 
   @Override
@@ -1094,19 +1074,16 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             )
         )
     );
-    final Set<String> createdIndexSet = getIndexOnTable(tableName);
     createIndex(
         tableName,
         "IDX_%s_FINGERPRINT",
-        List.of("fingerprint"),
-        createdIndexSet
-    ).ifPresent(createdIndexSet::add);
+        List.of("fingerprint")
+    );
     createIndex(
         tableName,
         "IDX_%s_USED",
-        List.of("used", "used_status_last_updated"),
-        createdIndexSet
-    ).ifPresent(createdIndexSet::add);
+        List.of("used", "used_status_last_updated")
+    );
   }
 
   @Override
@@ -1176,16 +1153,15 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    * @param tableName             Name of the table to create index on
    * @param legacyIndexNameFormat Template to create index ID. If null, uses the format: IDX_{table name}_{columns}.
    * @param indexCols             List of un-escaped column names to be indexed on (case-sensitive).
-   * @param createdIndexSet       Set of pre-existing indices on the table (to avoid extra queries for multiple CREATEs).
    * @return Optional id of the index if successfully created.
    */
-  public Optional<String> createIndex(
+  public void createIndex(
       final String tableName,
       final String legacyIndexNameFormat,
-      final List<String> indexCols,
-      final Set<String> createdIndexSet
+      final List<String> indexCols
   )
   {
+    final Set<String> createdIndexSet = getIndexOnTable(tableName);
     final String shortIndexName = generateShortIndexName(tableName, indexCols);
     String legacyIndexName = legacyIndexNameFormat != null
                              ? StringUtils.toUpperCase(StringUtils.format(legacyIndexNameFormat, tableName))
@@ -1198,10 +1174,10 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     // Avoid creating duplicate indices if an index with either naming convention already exists
     if (createdIndexSet.contains(legacyIndexName)) {
       log.info("Legacy index[%s] on Table[%s] already exists", legacyIndexName, tableName);
-      return Optional.empty();
+      return;
     } else if (createdIndexSet.contains(shortIndexName)) {
       log.info("Short index[%s] on Table[%s] already exists", shortIndexName, tableName);
-      return Optional.empty();
+      return;
     }
 
     final String indexName = tablesConfigSupplier.get().isUseShortIndexNames() ? shortIndexName : legacyIndexName;
@@ -1219,13 +1195,10 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             return null;
           }
       );
-      createdIndexSet.add(indexName);
-      return Optional.of(indexName);
     }
     catch (Exception e) {
       log.error(e, StringUtils.format("Exception while creating index on table [%s]", tableName));
     }
-    return Optional.empty();
   }
 
   /**
@@ -1295,7 +1268,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   /**
-   * Creates a unique length 24 index name of the format {@code IDX_{20 char SHA of table name + column list}}
+   * Creates a unique index name of length 24 with the format {@code IDX_{20 char SHA of table name + column list}}.
    *
    * @param tableName the table name
    * @param columns   the set of columns to create the index on (case-insensitive)
