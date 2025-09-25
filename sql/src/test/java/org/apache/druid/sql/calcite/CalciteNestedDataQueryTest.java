@@ -573,28 +573,24 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByOnNestedColumn()
   {
-    cannotVectorize();
     testQuery(
-        "SELECT nester, SUM(strlen(string)) FROM druid.nested GROUP BY 1",
+        "SELECT nester, SUM(\"long\") FROM druid.nested GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(
-                            new ExpressionVirtualColumn("v0", "strlen(\"string\")", ColumnType.LONG, queryFramework().macroTable())
-                        )
                         .setDimensions(dimensions(new DefaultDimensionSpec("nester", "d0", ColumnType.NESTED_DATA)))
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "v0")))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "long")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{null, 9L},
-            new Object[]{"\"hello\"", 3L},
-            new Object[]{"2", 3L},
-            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}", 3L},
-            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}", 3L}
+            new Object[]{null, 6L},
+            new Object[]{"\"hello\"", 4L},
+            new Object[]{"2", 2L},
+            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}", 5L},
+            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}", 5L}
         )
     );
   }
@@ -602,28 +598,24 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByOnNestedColumnWithOrderBy()
   {
-    cannotVectorize();
     testQuery(
-        "SELECT nester, SUM(strlen(string)) FROM druid.nested GROUP BY 1",
+        "SELECT nester, SUM(\"long\") FROM druid.nested GROUP BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(
-                            new ExpressionVirtualColumn("v0", "strlen(\"string\")", ColumnType.LONG, queryFramework().macroTable())
-                        )
                         .setDimensions(dimensions(new DefaultDimensionSpec("nester", "d0", ColumnType.NESTED_DATA)))
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "v0")))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "long")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{null, 9L},
-            new Object[]{"\"hello\"", 3L},
-            new Object[]{"2", 3L},
-            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}", 3L},
-            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}", 3L}
+            new Object[]{null, 6L},
+            new Object[]{"\"hello\"", 4L},
+            new Object[]{"2", 2L},
+            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}", 5L},
+            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}", 5L}
         )
     );
   }
@@ -631,24 +623,15 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByOnNestedColumnWithOrderByAndLimit()
   {
-    cannotVectorize();
     testQuery(
-        "SELECT nester, SUM(strlen(string)) FROM druid.nested GROUP BY 1 ORDER BY 1 LIMIT 100",
+        "SELECT nester, SUM(\"long\") FROM druid.nested GROUP BY 1 ORDER BY 1 LIMIT 100",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(
-                            new ExpressionVirtualColumn(
-                                "v0",
-                                "strlen(\"string\")",
-                                ColumnType.LONG,
-                                queryFramework().macroTable()
-                            )
-                        )
                         .setDimensions(dimensions(new DefaultDimensionSpec("nester", "d0", ColumnType.NESTED_DATA)))
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "v0")))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "long")))
                         .setLimitSpec(new DefaultLimitSpec(
                             ImmutableList.of(new OrderByColumnSpec(
                                 "d0",
@@ -661,11 +644,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{null, 9L},
-            new Object[]{"\"hello\"", 3L},
-            new Object[]{"2", 3L},
-            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}", 3L},
-            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}", 3L}
+            new Object[]{null, 6L},
+            new Object[]{"\"hello\"", 4L},
+            new Object[]{"2", 2L},
+            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}", 5L},
+            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}", 5L}
         )
     );
   }
@@ -673,24 +656,15 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByOnNestedColumnWithOrderByAndLimit2()
   {
-    cannotVectorize();
     testQuery(
-        "SELECT nester, SUM(strlen(string)) FROM druid.nested GROUP BY 1 ORDER BY 1 LIMIT 2",
+        "SELECT nester, SUM(\"long\") FROM druid.nested GROUP BY 1 ORDER BY 1 LIMIT 2",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(
-                            new ExpressionVirtualColumn(
-                                "v0",
-                                "strlen(\"string\")",
-                                ColumnType.LONG,
-                                queryFramework().macroTable()
-                            )
-                        )
                         .setDimensions(dimensions(new DefaultDimensionSpec("nester", "d0", ColumnType.NESTED_DATA)))
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "v0")))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "long")))
                         .setLimitSpec(new DefaultLimitSpec(
                             ImmutableList.of(new OrderByColumnSpec(
                                 "d0",
@@ -703,8 +677,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{null, 9L},
-            new Object[]{"\"hello\"", 3L}
+            new Object[]{null, 6L},
+            new Object[]{"\"hello\"", 4L}
         )
     );
   }
@@ -712,34 +686,25 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByOnNestedColumnWithLimit()
   {
-    cannotVectorize();
     testQuery(
-        "SELECT nester, SUM(strlen(string)) FROM druid.nested GROUP BY 1 LIMIT 100",
+        "SELECT nester, SUM(\"long\") FROM druid.nested GROUP BY 1 LIMIT 100",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(
-                            new ExpressionVirtualColumn(
-                                "v0",
-                                "strlen(\"string\")",
-                                ColumnType.LONG,
-                                queryFramework().macroTable()
-                            )
-                        )
                         .setDimensions(dimensions(new DefaultDimensionSpec("nester", "d0", ColumnType.NESTED_DATA)))
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "v0")))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "long")))
                         .setLimitSpec(new DefaultLimitSpec(null, 100))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{null, 9L},
-            new Object[]{"\"hello\"", 3L},
-            new Object[]{"2", 3L},
-            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}", 3L},
-            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}", 3L}
+            new Object[]{null, 6L},
+            new Object[]{"\"hello\"", 4L},
+            new Object[]{"2", 2L},
+            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}", 5L},
+            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}", 5L}
         )
     );
   }
@@ -747,31 +712,22 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByOnNestedColumnWithLimit2()
   {
-    cannotVectorize();
     testQuery(
-        "SELECT nester, SUM(strlen(string)) FROM druid.nested GROUP BY 1 LIMIT 2",
+        "SELECT nester, SUM(\"long\") FROM druid.nested GROUP BY 1 LIMIT 2",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(
-                            new ExpressionVirtualColumn(
-                                "v0",
-                                "strlen(\"string\")",
-                                ColumnType.LONG,
-                                queryFramework().macroTable()
-                            )
-                        )
                         .setDimensions(dimensions(new DefaultDimensionSpec("nester", "d0", ColumnType.NESTED_DATA)))
-                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "v0")))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "long")))
                         .setLimitSpec(new DefaultLimitSpec(null, 2))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{null, 9L},
-            new Object[]{"\"hello\"", 3L}
+            new Object[]{null, 6L},
+            new Object[]{"\"hello\"", 4L}
         )
     );
   }
