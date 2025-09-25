@@ -108,8 +108,7 @@ public class NoopTask extends AbstractTask implements PendingSegmentAllocatingTa
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
     emitMetric(toolbox.getEmitter(), EVENT_STARTED, 1);
-    runTaskLatch.await(runTime, TimeUnit.MILLISECONDS);
-    if (runTaskLatch.getCount() == 1) {
+    if (runTaskLatch.await(runTime, TimeUnit.MILLISECONDS)) {
       return TaskStatus.success(getId());
     } else {
       return TaskStatus.failure(getId(), "aborted thru stopGracefully");
