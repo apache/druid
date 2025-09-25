@@ -64,8 +64,8 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.NoopRequestLogger;
-import org.apache.druid.server.metrics.BaseQueryCountResource;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.metrics.QueryCountStatsAccumulator;
 import org.apache.druid.server.mocks.MockAsyncContext;
 import org.apache.druid.server.mocks.MockHttpServletResponse;
 import org.apache.druid.server.security.AuthConfig;
@@ -277,7 +277,7 @@ public class DartSqlResourceTest extends MSQTestBase
         ),
         DefaultQueryConfig.NIL,
         new ServerConfig(),
-        new BaseQueryCountResource()
+        new QueryCountStatsAccumulator()
     );
 
     // Setup mocks

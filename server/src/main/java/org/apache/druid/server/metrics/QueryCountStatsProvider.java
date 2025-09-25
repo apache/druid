@@ -44,7 +44,7 @@ public interface QueryCountStatsProvider
   /**
    * Increments successful query count.
    */
-  void incrementSuccess();
+  void incrementSuccessful();
 
   /**
    * Increments failed query count.

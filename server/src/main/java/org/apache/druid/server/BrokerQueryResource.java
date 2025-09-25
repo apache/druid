@@ -64,7 +64,7 @@ public class BrokerQueryResource extends QueryResource
       QueryResourceQueryResultPusherFactory queryResultPusherFactory,
       ResourceIOReaderWriterFactory resourceIOReaderWriterFactory,
       TimelineServerView brokerServerView,
-      QueryCountStatsProvider counter
+      final QueryCountStatsProvider counter
   )
   {
     super(

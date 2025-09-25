@@ -24,7 +24,7 @@ import com.google.inject.Module;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.server.metrics.BaseQueryCountResource;
+import org.apache.druid.server.metrics.QueryCountStatsAccumulator;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 
@@ -37,7 +37,7 @@ public class SqlHttpModule implements Module
   public void configure(Binder binder)
   {
     binder.bind(SqlResource.class).in(LazySingleton.class);
-    binder.bind(QueryCountStatsProvider.class).to(BaseQueryCountResource.class).in(LazySingleton.class);
+    binder.bind(QueryCountStatsProvider.class).to(QueryCountStatsAccumulator.class).in(LazySingleton.class);
     Multibinder.newSetBinder(binder, SqlEngine.class);
     Jerseys.addResource(binder, SqlResource.class);
   }

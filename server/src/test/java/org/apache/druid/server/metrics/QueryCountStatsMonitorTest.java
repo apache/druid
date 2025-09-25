@@ -33,7 +33,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class QueryCountStatsMonitorTest
 {
@@ -54,61 +53,7 @@ public class QueryCountStatsMonitorTest
         )
     );
 
-    queryCountStatsProvider = new QueryCountStatsProvider()
-    {
-      private final AtomicLong successEmitCount = new AtomicLong(0);
-      private final AtomicLong failedEmitCount = new AtomicLong(0);
-      private final AtomicLong interruptedEmitCount = new AtomicLong(0);
-      private final AtomicLong timedOutEmitCount = new AtomicLong(0);
-
-      @Override
-      public long getSuccessfulQueryCount()
-      {
-        return successEmitCount.get();
-      }
-
-      @Override
-      public long getFailedQueryCount()
-      {
-        return failedEmitCount.get();
-      }
-
-      @Override
-      public long getInterruptedQueryCount()
-      {
-        return interruptedEmitCount.get();
-      }
-
-      @Override
-      public long getTimedOutQueryCount()
-      {
-        return timedOutEmitCount.get();
-      }
-
-      @Override
-      public void incrementSuccess()
-      {
-        successEmitCount.incrementAndGet();
-      }
-
-      @Override
-      public void incrementFailed()
-      {
-        failedEmitCount.incrementAndGet();
-      }
-
-      @Override
-      public void incrementInterrupted()
-      {
-        interruptedEmitCount.incrementAndGet();
-      }
-
-      @Override
-      public void incrementTimedOut()
-      {
-        timedOutEmitCount.incrementAndGet();
-      }
-    };
+    queryCountStatsProvider = new QueryCountStatsAccumulator();
 
     mergeBufferPool = new DefaultBlockingPool(() -> ByteBuffer.allocate(1024), 5);
     executorService = Executors.newSingleThreadExecutor();
@@ -128,8 +73,8 @@ public class QueryCountStatsMonitorTest
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
 
-    // Mock metrics emission
-    queryCountStatsProvider.incrementSuccess();
+    // Simulate metrics emission
+    queryCountStatsProvider.incrementSuccessful();
     queryCountStatsProvider.incrementFailed();
     queryCountStatsProvider.incrementFailed();
     queryCountStatsProvider.incrementInterrupted();
@@ -156,8 +101,8 @@ public class QueryCountStatsMonitorTest
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
 
-    // Mock metrics emission
-    queryCountStatsProvider.incrementSuccess();
+    // Simulate metrics emission
+    queryCountStatsProvider.incrementSuccessful();
     queryCountStatsProvider.incrementFailed();
     queryCountStatsProvider.incrementFailed();
     queryCountStatsProvider.incrementInterrupted();

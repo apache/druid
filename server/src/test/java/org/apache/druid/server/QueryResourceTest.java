@@ -74,8 +74,8 @@ import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
-import org.apache.druid.server.metrics.BaseQueryCountResource;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.metrics.QueryCountStatsAccumulator;
 import org.apache.druid.server.mocks.ExceptionalInputStream;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.apache.druid.server.mocks.MockHttpServletResponse;
@@ -283,7 +283,7 @@ public class QueryResourceTest
             jsonMapper,
             smileMapper
         ),
-        new BaseQueryCountResource()
+        new QueryCountStatsAccumulator()
     );
   }
 
@@ -333,7 +333,7 @@ public class QueryResourceTest
             jsonMapper,
             smileMapper
         ),
-        new BaseQueryCountResource()
+        new QueryCountStatsAccumulator()
     );
 
     expectPermissiveHappyPathAuth();
@@ -414,7 +414,7 @@ public class QueryResourceTest
             jsonMapper,
             smileMapper
         ),
-        new BaseQueryCountResource()
+        new QueryCountStatsAccumulator()
     );
 
     expectPermissiveHappyPathAuth();
@@ -510,7 +510,7 @@ public class QueryResourceTest
             DRUID_NODE
         ),
         new ResourceIOReaderWriterFactory(jsonMapper, smileMapper),
-        new BaseQueryCountResource()
+        new QueryCountStatsAccumulator()
     );
 
     expectPermissiveHappyPathAuth();
@@ -692,7 +692,7 @@ public class QueryResourceTest
             jsonMapper,
             smileMapper
         ),
-        new BaseQueryCountResource()
+        new QueryCountStatsAccumulator()
     );
 
     expectPermissiveHappyPathAuth();
@@ -784,7 +784,7 @@ public class QueryResourceTest
             jsonMapper,
             smileMapper
         ),
-        new BaseQueryCountResource()
+        new QueryCountStatsAccumulator()
     );
 
     expectPermissiveHappyPathAuth();
@@ -833,7 +833,7 @@ public class QueryResourceTest
             jsonMapper,
             smileMapper
         ),
-        new BaseQueryCountResource()
+        new QueryCountStatsAccumulator()
     );
 
     expectPermissiveHappyPathAuth();
@@ -1077,7 +1077,7 @@ public class QueryResourceTest
             jsonMapper,
             smileMapper
         ),
-        new BaseQueryCountResource()
+        new QueryCountStatsAccumulator()
     );
 
 
@@ -1159,7 +1159,7 @@ public class QueryResourceTest
             jsonMapper,
             jsonMapper
         ),
-        new BaseQueryCountResource()
+        new QueryCountStatsAccumulator()
     );
     expectPermissiveHappyPathAuth();
 
@@ -1262,7 +1262,7 @@ public class QueryResourceTest
             jsonMapper,
             smileMapper
         ),
-        new BaseQueryCountResource()
+        new QueryCountStatsAccumulator()
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -1376,7 +1376,7 @@ public class QueryResourceTest
             jsonMapper,
             smileMapper
         ),
-        new BaseQueryCountResource()
+        new QueryCountStatsAccumulator()
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -1737,7 +1737,7 @@ public class QueryResourceTest
             jsonMapper,
             smileMapper
         ),
-        new BaseQueryCountResource()
+        new QueryCountStatsAccumulator()
     );
   }
 

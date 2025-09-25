@@ -19,16 +19,13 @@
 
 package org.apache.druid.server.metrics;
 
-import org.apache.druid.guice.LazySingleton;
-
 import java.util.concurrent.atomic.AtomicLong;
 
 /*
-  A thread-safe query count statistics tracker. Meant to be a shared between the various query resource handlers present
+  A thread-safe query count statistics tracker. Meant to be shared between the various query resource handlers present
   on an instance.
 */
-@LazySingleton
-public class BaseQueryCountResource implements QueryCountStatsProvider
+public class QueryCountStatsAccumulator implements QueryCountStatsProvider
 {
   private final AtomicLong successfulQueryCount = new AtomicLong();
   private final AtomicLong failedQueryCount = new AtomicLong();
@@ -60,7 +57,7 @@ public class BaseQueryCountResource implements QueryCountStatsProvider
   }
 
   @Override
-  public void incrementSuccess()
+  public void incrementSuccessful()
   {
     successfulQueryCount.incrementAndGet();
   }

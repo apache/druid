@@ -45,7 +45,7 @@ import org.apache.druid.server.NoopQuerySegmentWalker;
 import org.apache.druid.server.http.RouterResource;
 import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
-import org.apache.druid.server.metrics.BaseQueryCountResource;
+import org.apache.druid.server.metrics.QueryCountStatsAccumulator;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.router.AvaticaConnectionBalancer;
 import org.apache.druid.server.router.CoordinatorRuleManager;
@@ -114,7 +114,7 @@ public class CliRouter extends ServerRunnable
                 .toProvider(TieredBrokerSelectorStrategiesProvider.class)
                 .in(LazySingleton.class);
 
-          binder.bind(QueryCountStatsProvider.class).to(BaseQueryCountResource.class).in(LazySingleton.class);
+          binder.bind(QueryCountStatsProvider.class).to(QueryCountStatsAccumulator.class).in(LazySingleton.class);
           binder.bind(JettyServerInitializer.class).to(RouterJettyServerInitializer.class).in(LazySingleton.class);
 
           Jerseys.addResource(binder, RouterResource.class);

@@ -161,7 +161,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
       AuthenticatorMapper authenticatorMapper,
       Properties properties,
       final ServerConfig serverConfig,
-      QueryCountStatsProvider counter
+      final QueryCountStatsProvider counter
   )
   {
     this.warehouse = warehouse;
@@ -739,7 +739,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
 
       boolean success = result.isSucceeded();
       if (success) {
-        counter.incrementSuccess();
+        counter.incrementSuccessful();
       } else {
         counter.incrementFailed();
       }

@@ -63,7 +63,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicLong;
 
 @LazySingleton
 @Path("/druid/v2/")
@@ -93,11 +92,6 @@ public class QueryResource
 
   private final QueryResourceQueryResultPusherFactory queryResultPusherFactory;
   protected final ResourceIOReaderWriterFactory resourceIOReaderWriterFactory;
-
-  private final AtomicLong successfulQueryCount = new AtomicLong();
-  private final AtomicLong failedQueryCount = new AtomicLong();
-  private final AtomicLong interruptedQueryCount = new AtomicLong();
-  private final AtomicLong timedOutQueryCount = new AtomicLong();
   final QueryCountStatsProvider counter;
 
   @Inject

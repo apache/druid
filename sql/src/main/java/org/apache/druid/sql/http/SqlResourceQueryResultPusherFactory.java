@@ -53,7 +53,12 @@ public class SqlResourceQueryResultPusherFactory
     this.selfNode = selfNode;
   }
 
-  public SqlResourceQueryResultPusher factorize(final QueryCountStatsProvider counter, HttpServletRequest req, HttpStatement stmt, SqlQuery sqlQuery)
+  public SqlResourceQueryResultPusher factorize(
+      final QueryCountStatsProvider counter,
+      HttpServletRequest req,
+      HttpStatement stmt,
+      SqlQuery sqlQuery
+  )
   {
     Map<String, String> headers = new LinkedHashMap<>();
 

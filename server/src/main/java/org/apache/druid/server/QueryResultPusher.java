@@ -80,7 +80,7 @@ public abstract class QueryResultPusher
       ObjectMapper jsonMapper,
       ResponseContextConfig responseContextConfig,
       DruidNode selfNode,
-      QueryCountStatsProvider counter,
+      final QueryCountStatsProvider counter,
       String queryId,
       MediaType contentType,
       Map<String, String> extraHeaders,
@@ -166,7 +166,7 @@ public abstract class QueryResultPusher
       results.accumulate(null, accumulator);
       accumulator.flush();
 
-      counter.incrementSuccess();
+      counter.incrementSuccessful();
       accumulator.close();
       resultsWriter.recordSuccess(accumulator.getNumBytesSent());
     }

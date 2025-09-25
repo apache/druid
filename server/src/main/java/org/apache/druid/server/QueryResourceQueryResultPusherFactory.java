@@ -131,7 +131,7 @@ public class QueryResourceQueryResultPusherFactory
 
           if (prevEtag != null && prevEtag.equals(responseContext.getEntityTag())) {
             queryLifecycle.emitLogsAndMetrics(null, req.getRemoteAddr(), -1);
-            counter.incrementSuccess();
+            counter.incrementSuccessful();
             return Response.status(Response.Status.NOT_MODIFIED);
           }
 

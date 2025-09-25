@@ -74,7 +74,7 @@ import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
-import org.apache.druid.server.metrics.BaseQueryCountResource;
+import org.apache.druid.server.metrics.QueryCountStatsAccumulator;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.apache.druid.server.mocks.MockHttpServletResponse;
@@ -251,7 +251,7 @@ public class SqlResourceTest extends CalciteTestBase
     req = request();
 
     testRequestLogger = new TestRequestLogger();
-    baseQueryResource = new BaseQueryCountResource();
+    baseQueryResource = new QueryCountStatsAccumulator();
 
     final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
@@ -609,7 +609,7 @@ public class SqlResourceTest extends CalciteTestBase
         ),
         queryConfigWithTimezone,
         new ServerConfig(),
-        new BaseQueryCountResource()
+        new QueryCountStatsAccumulator()
     );
 
     final List<Map<String, Object>> rows = doPost(

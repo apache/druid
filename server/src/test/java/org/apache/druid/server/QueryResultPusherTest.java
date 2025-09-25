@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.server.QueryResultPusher.ResultsWriter;
 import org.apache.druid.server.QueryResultPusher.Writer;
+import org.apache.druid.server.metrics.QueryCountStatsAccumulator;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.junit.Test;
@@ -58,7 +59,7 @@ public class QueryResultPusherTest
     ObjectMapper jsonMapper = new DefaultObjectMapper();
     ResponseContextConfig responseContextConfig = ResponseContextConfig.newConfig(true);
     DruidNode selfNode = DRUID_NODE;
-    QueryCountStatsProvider counter = new NoopQueryMetricCounter();
+    QueryCountStatsProvider counter = new QueryCountStatsAccumulator();
     String queryId = "someQuery";
     MediaType contentType = MediaType.APPLICATION_JSON_TYPE;
     Map<String, String> extraHeaders = new HashMap<>();
@@ -133,54 +134,5 @@ public class QueryResultPusherTest
     pusher.push();
 
     assertTrue("recordFailure(e) should have been invoked!", recordFailureInvoked.get());
-  }
-
-  static class NoopQueryMetricCounter implements QueryCountStatsProvider
-  {
-
-    @Override
-    public long getSuccessfulQueryCount()
-    {
-      return 0;
-    }
-
-    @Override
-    public long getFailedQueryCount()
-    {
-      return 0;
-    }
-
-    @Override
-    public long getInterruptedQueryCount()
-    {
-      return 0;
-    }
-
-    @Override
-    public long getTimedOutQueryCount()
-    {
-      return 0;
-    }
-
-    @Override
-    public void incrementSuccess()
-    {
-    }
-
-    @Override
-    public void incrementFailed()
-    {
-    }
-
-    @Override
-    public void incrementInterrupted()
-    {
-    }
-
-    @Override
-    public void incrementTimedOut()
-    {
-    }
-
   }
 }

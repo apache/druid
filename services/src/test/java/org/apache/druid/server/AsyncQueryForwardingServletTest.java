@@ -69,8 +69,8 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.log.NoopRequestLogger;
-import org.apache.druid.server.metrics.BaseQueryCountResource;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.metrics.QueryCountStatsAccumulator;
 import org.apache.druid.server.router.QueryHostFinder;
 import org.apache.druid.server.router.RendezvousHashAvaticaConnectionBalancer;
 import org.apache.druid.server.security.AllowAllAuthorizer;
@@ -694,7 +694,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         new AuthenticatorMapper(ImmutableMap.of()),
         properties,
         new ServerConfig(),
-        new BaseQueryCountResource()
+        new QueryCountStatsAccumulator()
     )
     {
       @Override
@@ -807,7 +807,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
               new AuthenticatorMapper(ImmutableMap.of()),
               new Properties(),
               new ServerConfig(),
-              new BaseQueryCountResource()
+              new QueryCountStatsAccumulator()
           )
           {
             @Override
@@ -1028,7 +1028,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
             new AuthenticatorMapper(ImmutableMap.of()),
             new Properties(),
             serverConfig,
-            new BaseQueryCountResource()
+            new QueryCountStatsAccumulator()
     );
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     Mockito.when(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).thenReturn(new AuthenticationResult("userA", "basic", "basic", null));
