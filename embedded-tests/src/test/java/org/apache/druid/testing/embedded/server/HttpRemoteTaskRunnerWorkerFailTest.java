@@ -67,7 +67,7 @@ public class HttpRemoteTaskRunnerWorkerFailTest extends EmbeddedClusterTestBase
     overlord.start();
     // give some time for the overlord to load the task from the worker
     overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName(HttpRemoteTaskRunner.TASK_UNKNOWN_COUNT)
+        event -> event.hasMetricName(HttpRemoteTaskRunner.TASK_DISCOVERED_COUNT)
     );
     indexer.stop();
     indexer.start();

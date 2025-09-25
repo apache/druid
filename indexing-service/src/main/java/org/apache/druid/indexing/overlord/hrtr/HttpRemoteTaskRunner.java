@@ -133,7 +133,7 @@ import java.util.stream.Collectors;
  */
 public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, WorkerHolder.Listener
 {
-  public static final String TASK_UNKNOWN_COUNT = "task/unknown/count";
+  public static final String TASK_DISCOVERED_COUNT = "task/discovered/count";
 
   private static final EmittingLogger log = new EmittingLogger(HttpRemoteTaskRunner.class);
 
@@ -1552,7 +1552,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
               tasks.put(taskId, taskItem);
               final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
               metricBuilder.setDimension(DruidMetrics.TASK_ID, taskId);
-              emitter.emit(metricBuilder.setMetric(TASK_UNKNOWN_COUNT, (long) 1));
+              emitter.emit(metricBuilder.setMetric(TASK_DISCOVERED_COUNT, 1L));
               break;
             case SUCCESS:
             case FAILED:
