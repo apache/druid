@@ -32,6 +32,12 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
+/**
+ * Defines storage format for 'auto' and json columns. This can be convered into the 'effective' format spec by calling
+ * {@link #getEffectiveSpec(IndexSpec)}, which will fill in any values which were not specified from
+ * {@link IndexSpec#getAutoColumnFormatSpec()}, falling back to hard-coded defaults, useful when generating segments or
+ * comparing compaction state.
+ */
 public class NestedCommonFormatColumnFormatSpec
 {
   private static final NestedCommonFormatColumnFormatSpec DEFAULT =
