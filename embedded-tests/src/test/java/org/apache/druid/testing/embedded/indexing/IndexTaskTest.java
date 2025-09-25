@@ -23,7 +23,6 @@ import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -100,9 +99,6 @@ public class IndexTaskTest extends EmbeddedClusterTestBase
     }
 
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-    broker.latchableEmitter().waitForEvent(
-        event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
-    );
     Assertions.assertEquals(
         Resources.InlineData.CSV_10_DAYS,
         cluster.runSql("SELECT * FROM %s", dataSource)
