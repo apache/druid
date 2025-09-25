@@ -477,7 +477,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
   @Override
   public ColumnFormat getFormat()
   {
-    return new Format(getLogicalType(), hasNulls, castToType != null, columnFormatSpec);
+    return new IndexerFormat(getLogicalType(), hasNulls, castToType != null, columnFormatSpec);
   }
 
   @Override
@@ -757,10 +757,9 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
     }
   }
 
-  static class Format extends NestedCommonFormatColumn.Format
+  static class IndexerFormat extends NestedCommonFormatColumn.Format
   {
-
-    public Format(
+    public IndexerFormat(
         ColumnType logicalType,
         boolean hasNulls,
         boolean enforceLogicalType,
