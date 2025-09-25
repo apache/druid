@@ -67,8 +67,8 @@ class EmbeddedServerLifecycle
     final CountDownLatch lifecycleCreated = new CountDownLatch(1);
     final ServerRunnable serverRunnable = server.createRunnable(
         lifecycle -> {
-          lifecycleCreated.countDown();
           EmbeddedServerLifecycle.this.lifecycle.set(lifecycle);
+          lifecycleCreated.countDown();
         }
     );
 
