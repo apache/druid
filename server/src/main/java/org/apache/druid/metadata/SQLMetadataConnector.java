@@ -596,7 +596,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
     createIndex(
         tableName,
-        "IDX_%S_SPEC_ID ",
+        "IDX_%S_SPEC_ID",
         List.of("spec_id")
     );
   }
@@ -895,7 +895,10 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     return config.get();
   }
 
-  protected static BasicDataSource makeDatasource(MetadataStorageConnectorConfig connectorConfig, String validationQuery)
+  protected static BasicDataSource makeDatasource(
+      MetadataStorageConnectorConfig connectorConfig,
+      String validationQuery
+  )
   {
     BasicDataSource dataSource;
 
@@ -1147,13 +1150,12 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   /**
-   * Create index on the table with retry if not already exist, to be called after createTable
-   * Format of index name is either specified via legacy {@param legacyIndexNameFormat} or {@code generateSHABasedIndexIdentifier}.
+   * Create index on the table {@code tableName} with retry if not already exist, to be called after {@link #createTable}.
+   * Format of index name is either specified via legacy {@code legacyIndexNameFormat} or {@link #generateShortIndexName}.
    *
    * @param tableName             Name of the table to create index on
-   * @param legacyIndexNameFormat Template to create index ID. If null, uses the format: IDX_{table name}_{columns}.
+   * @param legacyIndexNameFormat Template to create index ID. If null, uses the format: {@code IDX_{table name}_{columns}}.
    * @param indexCols             List of un-escaped column names to be indexed on (case-sensitive).
-   * @return Optional id of the index if successfully created.
    */
   public void createIndex(
       final String tableName,
@@ -1163,13 +1165,13 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     final Set<String> createdIndexSet = getIndexOnTable(tableName);
     final String shortIndexName = generateShortIndexName(tableName, indexCols);
-    String legacyIndexName = legacyIndexNameFormat != null
-                             ? StringUtils.toUpperCase(StringUtils.format(legacyIndexNameFormat, tableName))
-                             : StringUtils.toUpperCase(StringUtils.format(
-                                 "IDX_%s_%s",
-                                 tableName,
-                                 Joiner.on("_").join(indexCols)
-                             ));
+    String legacyIndexName = StringUtils.toUpperCase(legacyIndexNameFormat != null
+                                                     ? StringUtils.format(legacyIndexNameFormat, tableName)
+                                                     : StringUtils.format(
+                                                         "IDX_%S_%S",
+                                                         tableName,
+                                                         Joiner.on("_").join(indexCols)
+                                                     ));
 
     // Avoid creating duplicate indices if an index with either naming convention already exists
     if (createdIndexSet.contains(legacyIndexName)) {
@@ -1197,7 +1199,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       );
     }
     catch (Exception e) {
-      log.error(e, StringUtils.format("Exception while creating index on table [%s]", tableName));
+      log.error(e, StringUtils.format("Exception while creating index[%s] on table[%s]", indexName, tableName));
     }
   }
 
