@@ -69,6 +69,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.Status;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.TaskConfigResponse;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
@@ -245,6 +246,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskClient.pauseAndCheckpointAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(dummyOffsets))
             .anyTimes();
+    EasyMock.expect(taskClient.getTaskConfigAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(new TaskConfigResponse<>(null, "v1")))
+            .anyTimes();
     EasyMock.expect(taskClient.updateConfigAsync(
         EasyMock.anyString(),
         EasyMock.anyObject()
@@ -367,7 +371,14 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new DruidMonitorSchedulerConfig(),
         rowIngestionMetersFactory,
         new SupervisorStateManagerConfig()
-    );
+    )
+    {
+      @Override
+      public java.util.Optional<String> getVersion()
+      {
+        return java.util.Optional.of("v1");
+      }
+    };
 
     supervisor = new TestableKafkaSupervisor(
         taskStorage,
@@ -474,7 +485,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void test_noInitialState_withPerpetuallyRunningTasks() throws Exception
+  public void test_noInitialState_withPersistentTasks() throws Exception
   {
     final int taskCountMax = 2;
     final int replicas = 1;
@@ -566,7 +577,14 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new DruidMonitorSchedulerConfig(),
         rowIngestionMetersFactory,
         new SupervisorStateManagerConfig()
-    );
+    )
+    {
+      @Override
+      public java.util.Optional<String> getVersion()
+      {
+        return java.util.Optional.of("v1");
+      }
+    };
 
     supervisor = new TestableKafkaSupervisor(
         taskStorage,
@@ -580,8 +598,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     SupervisorTaskAutoScaler autoscaler = testableSupervisorSpec.createAutoscaler(supervisor);
 
-
-    final KafkaSupervisorTuningConfig tuningConfig = supervisor.getTuningConfig();
     addSomeEvents(1);
 
     Capture<KafkaIndexTask> captured = Capture.newInstance();
@@ -615,9 +631,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent()).anyTimes();
     EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE))
             .andReturn(createdTasks).anyTimes();
+    EasyMock.expect(taskClient.getTaskConfigAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(new TaskConfigResponse<>(null, "v1")))
+            .anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
-    taskQueue.update(EasyMock.anyObject());
-    EasyMock.expectLastCall().anyTimes();
     EasyMock.expect(taskStorage.getStatus(createdTask.getId()))
             .andReturn(Optional.of(TaskStatus.running(createdTask.getId()))).anyTimes();
     EasyMock.expect(taskStorage.getTask(createdTask.getId()))
@@ -5260,38 +5277,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.replay(differentTaskType);
   }
 
-  @Test
-  public void test_getTaskGroupIdForPartition() throws Exception
-  {
-    int taskCount = 3;
-    supervisor = getTestableSupervisor(
-        "test-supervisor",
-        1,
-        taskCount,
-        true,
-        false,
-        "PT1H",
-        null,
-        null,
-        false,
-        kafkaHost,
-        null,
-        true
-    );
-
-    int totalPartitions = 10;
-    Assert.assertEquals(0, supervisor.getRangeBasedTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 0), taskCount, totalPartitions));
-    Assert.assertEquals(0, supervisor.getRangeBasedTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 1), taskCount, totalPartitions));
-    Assert.assertEquals(0, supervisor.getRangeBasedTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 2), taskCount, totalPartitions));
-    Assert.assertEquals(1, supervisor.getRangeBasedTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 3), taskCount, totalPartitions));
-    Assert.assertEquals(1, supervisor.getRangeBasedTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 4), taskCount, totalPartitions));
-    Assert.assertEquals(1, supervisor.getRangeBasedTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 5), taskCount, totalPartitions));
-    Assert.assertEquals(2, supervisor.getRangeBasedTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 6), taskCount, totalPartitions));
-    Assert.assertEquals(2, supervisor.getRangeBasedTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 7), taskCount, totalPartitions));
-    Assert.assertEquals(2, supervisor.getRangeBasedTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 8), taskCount, totalPartitions));
-    Assert.assertEquals(2, supervisor.getRangeBasedTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 9), taskCount, totalPartitions));
-  }
-
   private void addSomeEvents(int numEventsPerPartition) throws Exception
   {
     // create topic manually
@@ -5478,13 +5463,13 @@ public class KafkaSupervisorTest extends EasyMockSupport
         replicas,
         taskCount,
         useEarliestOffset,
-        false,
+        resetOffsetAutomatically,
         duration,
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         suspended,
         kafkaHost,
-        null,
+        idleConfig,
         null
     );
   }
@@ -5501,7 +5486,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
       boolean suspended,
       String kafkaHost,
       IdleConfig idleConfig,
-      Boolean usePerpetuallyRunningTasks
+      Boolean usePersistentTasks
   )
   {
     final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
@@ -5569,7 +5554,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             kafkaSupervisorIOConfig,
             null,
             suspended,
-            usePerpetuallyRunningTasks,
+            usePersistentTasks,
             taskStorage,
             taskMaster,
             indexerMetadataStorageCoordinator,
@@ -5579,7 +5564,22 @@ public class KafkaSupervisorTest extends EasyMockSupport
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
             supervisorConfig
-        ),
+        )
+        {
+          private String version = "v1";
+
+          @Override
+          public java.util.Optional<String> getVersion()
+          {
+            return java.util.Optional.of(version);
+          }
+
+          @Override
+          public void setVersion(String newVersion)
+          {
+            this.version = newVersion;
+          }
+        },
         rowIngestionMetersFactory
     );
   }
@@ -5671,7 +5671,22 @@ public class KafkaSupervisorTest extends EasyMockSupport
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
             supervisorConfig
-        ),
+        )
+        {
+          private String version = "v1";
+
+          @Override
+          public java.util.Optional<String> getVersion()
+          {
+            return java.util.Optional.of(version);
+          }
+
+          @Override
+          public void setVersion(String newVersion)
+          {
+            this.version = newVersion;
+          }
+        },
         rowIngestionMetersFactory,
         isTaskCurrentReturn
     );
@@ -5764,7 +5779,22 @@ public class KafkaSupervisorTest extends EasyMockSupport
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
             supervisorConfig
-        ),
+        )
+        {
+          private String version = "v1";
+
+          @Override
+          public java.util.Optional<String> getVersion()
+          {
+            return java.util.Optional.of(version);
+          }
+
+          @Override
+          public void setVersion(String newVersion)
+          {
+            this.version = newVersion;
+          }
+        },
         rowIngestionMetersFactory
     );
   }
@@ -6029,7 +6059,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
       final int groupId = getTaskGroupIdForPartition(startPartitions.keySet().iterator().next());
       return StringUtils.format("sequenceName-%d", groupId);
     }
-
     private SeekableStreamSupervisorStateManager getStateManager()
     {
       return stateManager;
