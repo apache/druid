@@ -36,8 +36,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 /**
  */
@@ -48,8 +46,6 @@ public class NoopTask extends AbstractTask implements PendingSegmentAllocatingTa
   private static final int DEFAULT_RUN_TIME = 2500;
 
   private final long runTime;
-
-  private final CountDownLatch runTaskLatch = new CountDownLatch(1);
 
   @JsonCreator
   public NoopTask(
@@ -101,18 +97,14 @@ public class NoopTask extends AbstractTask implements PendingSegmentAllocatingTa
   @Override
   public void stopGracefully(TaskConfig taskConfig)
   {
-    runTaskLatch.countDown();
   }
 
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
     emitMetric(toolbox.getEmitter(), EVENT_STARTED, 1);
-    if (!runTaskLatch.await(runTime, TimeUnit.MILLISECONDS)) {
-      return TaskStatus.success(getId());
-    } else {
-      return TaskStatus.failure(getId(), "aborted thru stopGracefully");
-    }
+    Thread.sleep(runTime);
+    return TaskStatus.success(getId());
   }
 
   @Override
