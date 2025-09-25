@@ -1,5 +1,5 @@
 !set useApproximateCountDistinct false
-!use druidtest://?componentSupplier=StandardComponentSupplier&datasets=sql/src/test/quidem/qatests/qaJsonCols/funcs_and_sql
+!use druidtest://?componentSupplier=StandardMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaJsonCols/funcs_and_sql
 !set outputformat mysql
 #-------------------------------------------------------------------------
 # TESTCASE: test_func_json_value TEST_ID: A100
