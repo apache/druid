@@ -33,7 +33,6 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
@@ -194,11 +193,7 @@ public class FallbackVirtualColumn implements VirtualColumn
       ColumnIndexSelector indexSelector
   )
   {
-    final ColumnHolder columnHolder = indexSelector.getColumnHolder(columnToUse(indexSelector).getDimension());
-    if (columnHolder == null) {
-      return null;
-    }
-    return columnHolder.getIndexSupplier();
+    return indexSelector.getIndexSupplier(columnToUse(indexSelector).getDimension());
   }
 
   @SuppressWarnings("ConstantConditions")

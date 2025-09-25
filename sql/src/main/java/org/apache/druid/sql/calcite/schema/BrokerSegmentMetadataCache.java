@@ -222,6 +222,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     // update datasource metadata in the cache
     polledDataSourceMetadata.forEach(this::updateDSMetadata);
 
+    emitMetricForSkippedSegments(segmentsToRefresh, polledDataSourceMetadata);
     // Remove segments of the datasource from refresh list for which we received schema from the Coordinator.
     segmentsToRefresh.removeIf(segmentId -> polledDataSourceMetadata.containsKey(segmentId.getDataSource()));
 
@@ -275,6 +276,29 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
       final PhysicalDatasourceMetadata physicalDatasourceMetadata = dataSourceMetadataFactory.build(dataSource, rowSignature);
       updateDSMetadata(dataSource, physicalDatasourceMetadata);
     }
+  }
+
+  private void emitMetricForSkippedSegments(
+      Set<SegmentId> segmentsToRefresh,
+      Map<String, PhysicalDatasourceMetadata> polledDataSourceMetadata
+  )
+  {
+    final Map<String, Integer> datasourceToNumSegmentsSkipped = new HashMap<>();
+
+    for (SegmentId segmentId : segmentsToRefresh) {
+      if (polledDataSourceMetadata.containsKey(segmentId.getDataSource())) {
+        datasourceToNumSegmentsSkipped.merge(segmentId.getDataSource(), 1, Integer::sum);
+      }
+    }
+
+    datasourceToNumSegmentsSkipped.forEach(
+        (dataSource, count) ->
+            emitMetric(
+                Metric.BROKER_SEGMENTS_SKIPPED_REFRESH,
+                count,
+                new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource)
+            )
+    );
   }
 
   @Override

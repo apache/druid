@@ -56,7 +56,7 @@ public class DruidNodeTest
     // Hosts which report only ipv6 will have getDefaultHost() report something like fe80::6e40:8ff:fe93:9230
     // but getHostAndPort() reports [fe80::6e40:8ff:fe93:9230]
     Assert.assertEquals(HostAndPort.fromString(DruidNode.getDefaultHost()).toString(), node.getHostAndPort());
-    Assert.assertEquals("unknown", node.getVersion()); // unknown because not compiled with version
+    Assert.assertEquals(DruidNode.UNKNOWN_VERSION, node.getVersion()); // unknown because not compiled with version
 
     node = new DruidNode(service, "2001:db8:85a3::8a2e:370:7334", false, -1, null, true, false);
     Assert.assertEquals("2001:db8:85a3::8a2e:370:7334", node.getHost());

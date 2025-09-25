@@ -1192,11 +1192,14 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       final List<String> expectedRows
   )
   {
-    final boolean vectorize = ExpressionProcessing.allowVectorizeFallback();
-    assertFilterMatches(filter, expectedRows, vectorize);
-    // test double inverted
-    if (!StringUtils.toLowerCase(testName).contains("concise")) {
-      assertFilterMatches(NotDimFilter.of(NotDimFilter.of(filter)), expectedRows, vectorize);
+    if (ExpressionProcessing.allowVectorizeFallback()) {
+      assertFilterMatches(filter, expectedRows);
+    } else {
+      assertFilterMatches(filter, expectedRows, false);
+      // test double inverted
+      if (!StringUtils.toLowerCase(testName).contains("concise")) {
+        assertFilterMatches(NotDimFilter.of(NotDimFilter.of(filter)), expectedRows, false);
+      }
     }
   }
 

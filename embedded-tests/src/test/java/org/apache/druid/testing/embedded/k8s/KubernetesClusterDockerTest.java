@@ -54,6 +54,7 @@ public class KubernetesClusterDockerTest extends IngestionSmokeTest implements L
 
     return cluster
         .useContainerFriendlyHostname()
+        .useDefaultTimeoutForLatchableEmitter(60)
         .addResource(k3sCluster)
         .addServer(overlord)
         .addServer(broker)

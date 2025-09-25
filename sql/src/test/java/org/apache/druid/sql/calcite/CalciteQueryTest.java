@@ -7502,10 +7502,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testApproxCountDistinct()
   {
+    cannotVectorizeUnlessFallback();
     msqIncompatible();
-
-    // Cannot vectorize due to multi-valued dim2.
-    cannotVectorize();
 
     testQuery(
         "SELECT\n"
@@ -8167,8 +8165,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinctOfSubstring()
   {
-    // Cannot vectorize due to extraction dimension spec.
-    cannotVectorize();
+    // Cannot vectorize due to substring function.
+    cannotVectorizeUnlessFallback();
 
     testQuery(
         "SELECT COUNT(DISTINCT SUBSTRING(dim1, 1, 1)) FROM druid.foo WHERE dim1 <> ''",
@@ -8312,7 +8310,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testRegexpExtract()
   {
     // Cannot vectorize due to regexp_extract function.
-    cannotVectorize();
+    cannotVectorizeUnlessFallback();
 
     testQuery(
         "SELECT DISTINCT\n"
@@ -14738,6 +14736,110 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{0L, false},
             new Object[]{7L, false},
             new Object[]{325323L, false}
+        )
+    );
+  }
+
+  @Test
+  public void testGreatestLeastTypes()
+  {
+    cannotVectorizeUnlessFallback();
+    String query = "SELECT\n"
+                   + "__time,\n"
+                   + "l1,\n"
+                   + "m1,\n"
+                   + "l2,\n"
+                   + "GREATEST(l1, l2),\n"
+                   + "GREATEST(l1, dim1),\n"
+                   + "GREATEST(dim1, l1),\n"
+                   + "GREATEST(l1, m1),\n"
+                   + "GREATEST(m1, l1),\n"
+                   + "GREATEST(l1, CAST(l2 AS VARCHAR)),\n"
+                   + "GREATEST(__time, __time + INTERVAL '1' HOUR),\n"
+                   + "GREATEST(l1, NULL),\n"
+                   + "GREATEST(NULL, NULL)\n"
+                   + "FROM druid.numfoo";
+
+    ScanQuery expectedQuery =
+        Druids.newScanQueryBuilder()
+              .dataSource(CalciteTests.DATASOURCE3)
+              .intervals(querySegmentSpec(Filtration.eternity()))
+              .columns("__time", "l1", "m1", "l2", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8")
+              .columnTypes(
+                  ColumnType.LONG,
+                  ColumnType.LONG,
+                  ColumnType.FLOAT,
+                  ColumnType.LONG,
+                  ColumnType.LONG,
+                  ColumnType.STRING,
+                  ColumnType.STRING,
+                  ColumnType.DOUBLE,
+                  ColumnType.DOUBLE,
+                  ColumnType.STRING,
+                  ColumnType.LONG,
+                  ColumnType.LONG,
+                  ColumnType.STRING
+              )
+              .virtualColumns(
+                  expressionVirtualColumn(
+                      "v0",
+                      "greatest(\"l1\",\"l2\")",
+                      ColumnType.LONG
+                  ),
+                  expressionVirtualColumn(
+                      "v1",
+                      "greatest(\"l1\",\"dim1\")",
+                      ColumnType.STRING
+                  ),
+                  expressionVirtualColumn(
+                      "v2",
+                      "greatest(\"dim1\",\"l1\")",
+                      ColumnType.STRING
+                  ),
+                  expressionVirtualColumn(
+                      "v3",
+                      "greatest(\"l1\",\"m1\")",
+                      ColumnType.DOUBLE
+                  ),
+                  expressionVirtualColumn(
+                      "v4",
+                      "greatest(\"m1\",\"l1\")",
+                      ColumnType.DOUBLE
+                  ),
+                  expressionVirtualColumn(
+                      "v5",
+                      "greatest(\"l1\",CAST(\"l2\", 'STRING'))",
+                      ColumnType.STRING
+                  ),
+                  expressionVirtualColumn(
+                      "v6",
+                      "greatest(\"__time\",(\"__time\" + 3600000))",
+                      ColumnType.LONG
+                  ),
+                  expressionVirtualColumn(
+                      "v7",
+                      "greatest(\"l1\",null)",
+                      ColumnType.LONG
+                  ),
+                  expressionVirtualColumn(
+                      "v8",
+                      "null",
+                      ColumnType.STRING
+                  )
+              )
+              .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+              .build();
+
+    testQuery(
+        query,
+        List.of(expectedQuery),
+        List.of(
+            new Object[]{946684800000L, 7L, 1.0F, null, 7L, "7", "7", 7.0D, 7.0D, "7", 946688400000L, 7L, null},
+            new Object[]{946771200000L, 325323L, 2.0F, 325323L, 325323L, "325323", "325323", 325323.0D, 325323.0D, "325323", 946774800000L, 325323L, null},
+            new Object[]{946857600000L, 0L, 3.0F, 0L, 0L, "2", "2", 3.0D, 3.0D, "0", 946861200000L, 0L, null},
+            new Object[]{978307200000L, null, 4.0F, null, null, "1", "1", 4.0D, 4.0D, null, 978310800000L, null, null},
+            new Object[]{978393600000L, null, 5.0F, null, null, "def", "def", 5.0D, 5.0D, null, 978397200000L, null, null},
+            new Object[]{978480000000L, null, 6.0F, null, null, "abc", "abc", 6.0D, 6.0D, null, 978483600000L, null, null}
         )
     );
   }

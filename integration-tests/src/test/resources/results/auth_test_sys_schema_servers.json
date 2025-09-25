@@ -10,6 +10,7 @@
     "max_size": 5000000000,
     "is_leader": null,
     "start_time": "0",
+    "version": "0.0.0",
     "labels": null
   },
   {
@@ -23,6 +24,7 @@
     "max_size": 1000000000,
     "is_leader": null,
     "start_time": "0",
+    "version": "0.0.0",
     "labels": null
   }
 ]

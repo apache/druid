@@ -76,7 +76,7 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
       ExprEval eval = args.get(0).eval(bindings);
       if (eval.isNumericNull()) {
         // Return null if the argument if null.
-        return ExprEval.of(null);
+        return ExprEval.ofLong(null);
       }
       long argTime = eval.asLong();
       long bucketStartTime = granularity.bucketStart(argTime);

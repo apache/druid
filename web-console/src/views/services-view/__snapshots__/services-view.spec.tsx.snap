@@ -58,6 +58,7 @@ exports[`ServicesView renders data 1`] = `
           "Max size",
           "Usage",
           "Start time",
+          "Version",
           "Labels",
           "Detail",
         ]
@@ -215,6 +216,14 @@ exports[`ServicesView renders data 1`] = `
             "accessor": "labels",
             "className": "padded",
             "filterable": false,
+            "show": true,
+            "width": 200,
+          },
+          {
+            "Aggregated": [Function],
+            "Cell": [Function],
+            "Header": "Version",
+            "accessor": "version",
             "show": true,
             "width": 200,
           },

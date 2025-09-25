@@ -181,6 +181,7 @@ public class SystemSchema extends AbstractSchema
       .add("max_size", ColumnType.LONG)
       .add("is_leader", ColumnType.LONG)
       .add("start_time", ColumnType.STRING)
+      .add("version", ColumnType.STRING)
       .add("labels", ColumnType.STRING)
       .build();
 
@@ -635,24 +636,20 @@ public class SystemSchema extends AbstractSchema
     private Object[] buildRowForNonDataServer(DiscoveryDruidNode discoveryDruidNode)
     {
       final DruidNode node = discoveryDruidNode.getDruidNode();
-      try {
-        return new Object[]{
-            node.getHostAndPortToUse(),
-            node.getHost(),
-            (long) node.getPlaintextPort(),
-            (long) node.getTlsPort(),
-            StringUtils.toLowerCase(discoveryDruidNode.getNodeRole().toString()),
-            null,
-            UNKNOWN_SIZE,
-            UNKNOWN_SIZE,
-            null,
-            toStringOrNull(discoveryDruidNode.getStartTime()),
-            node.getLabels() == null ? null : jsonMapper.writeValueAsString(node.getLabels())
-        };
-      }
-      catch (JsonProcessingException e) {
-        throw new RuntimeException(e);
-      }
+      return new Object[]{
+          node.getHostAndPortToUse(),
+          node.getHost(),
+          (long) node.getPlaintextPort(),
+          (long) node.getTlsPort(),
+          StringUtils.toLowerCase(discoveryDruidNode.getNodeRole().toString()),
+          null,
+          UNKNOWN_SIZE,
+          UNKNOWN_SIZE,
+          null,
+          toStringOrNull(discoveryDruidNode.getStartTime()),
+          node.getVersion(),
+          node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels())
+      };
     }
 
     /**
@@ -675,6 +672,7 @@ public class SystemSchema extends AbstractSchema
           UNKNOWN_SIZE,
           isLeader ? 1L : 0L,
           toStringOrNull(discoveryDruidNode.getStartTime()),
+          node.getVersion(),
           node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels())
       };
     }
@@ -711,6 +709,7 @@ public class SystemSchema extends AbstractSchema
           druidServerToUse.getMaxSize(),
           null,
           toStringOrNull(discoveryDruidNode.getStartTime()),
+          node.getVersion(),
           node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels())
       };
     }
