@@ -75,6 +75,8 @@ import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.metrics.QueryCountStatsAccumulator;
+import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.mocks.ExceptionalInputStream;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.apache.druid.server.mocks.MockHttpServletResponse;
@@ -233,6 +235,7 @@ public class QueryResourceTest
   private QueryResource queryResource;
   private QueryScheduler queryScheduler;
   private TestRequestLogger testRequestLogger;
+  private QueryCountStatsProvider queryCountStatsProvider;
 
   @BeforeClass
   public static void staticSetup()
@@ -253,6 +256,7 @@ public class QueryResourceTest
 
     queryScheduler = QueryStackTests.DEFAULT_NOOP_SCHEDULER;
     testRequestLogger = new TestRequestLogger();
+    queryCountStatsProvider = new QueryCountStatsAccumulator();
     queryResource = createQueryResource(ResponseContextConfig.newConfig(true));
   }
 
@@ -281,7 +285,8 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(
             jsonMapper,
             smileMapper
-        )
+        ),
+        queryCountStatsProvider
     );
   }
 
@@ -330,7 +335,8 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(
             jsonMapper,
             smileMapper
-        )
+        ),
+        queryCountStatsProvider
     );
 
     expectPermissiveHappyPathAuth();
@@ -410,7 +416,8 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(
             jsonMapper,
             smileMapper
-        )
+        ),
+        queryCountStatsProvider
     );
 
     expectPermissiveHappyPathAuth();
@@ -505,7 +512,8 @@ public class QueryResourceTest
             ResponseContextConfig.newConfig(true),
             DRUID_NODE
         ),
-        new ResourceIOReaderWriterFactory(jsonMapper, smileMapper)
+        new ResourceIOReaderWriterFactory(jsonMapper, smileMapper),
+        queryCountStatsProvider
     );
 
     expectPermissiveHappyPathAuth();
@@ -587,7 +595,8 @@ public class QueryResourceTest
             ResponseContextConfig.newConfig(true),
             DRUID_NODE
         ),
-        new ResourceIOReaderWriterFactory(jsonMapper, smileMapper)
+        new ResourceIOReaderWriterFactory(jsonMapper, smileMapper),
+        queryCountStatsProvider
     );
 
     expectPermissiveHappyPathAuth();
@@ -686,7 +695,8 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(
             jsonMapper,
             smileMapper
-        )
+        ),
+        queryCountStatsProvider
     );
 
     expectPermissiveHappyPathAuth();
@@ -777,7 +787,8 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(
             jsonMapper,
             smileMapper
-        )
+        ),
+        queryCountStatsProvider
     );
 
     expectPermissiveHappyPathAuth();
@@ -825,7 +836,8 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(
             jsonMapper,
             smileMapper
-        )
+        ),
+        queryCountStatsProvider
     );
 
     expectPermissiveHappyPathAuth();
@@ -868,7 +880,7 @@ public class QueryResourceTest
         SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8),
         queryResource
     );
-    Assert.assertEquals(1, queryResource.getInterruptedQueryCount());
+    Assert.assertEquals(1, queryCountStatsProvider.getInterruptedQueryCount());
     Assert.assertEquals(HttpStatus.SC_INTERNAL_SERVER_ERROR, response.getStatus());
     final String expectedException = new QueryInterruptedException(
         new TruncatedResponseContextException("Serialized response context exceeds the max size[0]"),
@@ -1068,7 +1080,8 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(
             jsonMapper,
             smileMapper
-        )
+        ),
+        queryCountStatsProvider
     );
 
 
@@ -1149,7 +1162,8 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(
             jsonMapper,
             jsonMapper
-        )
+        ),
+        queryCountStatsProvider
     );
     expectPermissiveHappyPathAuth();
 
@@ -1178,7 +1192,7 @@ public class QueryResourceTest
     Assert.assertEquals("Query did not complete within configured timeout period. You can " +
                         "increase query timeout or tune the performance of query.", ex.getMessage());
     Assert.assertEquals(QueryException.QUERY_TIMEOUT_ERROR_CODE, ex.getErrorCode());
-    Assert.assertEquals(1, timeoutQueryResource.getTimedOutQueryCount());
+    Assert.assertEquals(1, queryCountStatsProvider.getTimedOutQueryCount());
 
   }
 
@@ -1251,7 +1265,8 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(
             jsonMapper,
             smileMapper
-        )
+        ),
+        queryCountStatsProvider
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -1364,7 +1379,8 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(
             jsonMapper,
             smileMapper
-        )
+        ),
+        new QueryCountStatsAccumulator()
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -1478,8 +1494,8 @@ public class QueryResourceTest
     for (Future<Boolean> theFuture : back2) {
       Assert.assertTrue(theFuture.get());
     }
-    Assert.assertEquals(2, queryResource.getSuccessfulQueryCount());
-    Assert.assertEquals(1, queryResource.getFailedQueryCount());
+    Assert.assertEquals(2, queryCountStatsProvider.getSuccessfulQueryCount());
+    Assert.assertEquals(1, queryCountStatsProvider.getFailedQueryCount());
   }
 
   @Test(timeout = 10_000L)
@@ -1724,7 +1740,8 @@ public class QueryResourceTest
         new ResourceIOReaderWriterFactory(
             jsonMapper,
             smileMapper
-        )
+        ),
+        queryCountStatsProvider
     );
   }
 
