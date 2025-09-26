@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.InputStream;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class KubernetesWorkItem extends TaskRunnerWorkItem
 {
@@ -38,6 +39,9 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
   
   private final Task task;
   private KubernetesPeonLifecycle kubernetesPeonLifecycle = null;
+  
+  // Upstream improvement: Track shutdown state to make shutdown() idempotent
+  private final AtomicBoolean isShutdown = new AtomicBoolean(false);
 
   public KubernetesWorkItem(Task task, ListenableFuture<TaskStatus> statusFuture)
   {
@@ -51,12 +55,20 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
     this.kubernetesPeonLifecycle = kubernetesPeonLifecycle;
   }
 
-  protected synchronized void shutdown()
+  /**
+   * Shuts down this work item. Subsequent calls to this method return immediately.
+   */
+  protected void shutdown()
   {
-
-    if (this.kubernetesPeonLifecycle != null) {
-      this.kubernetesPeonLifecycle.startWatchingLogs();
-      this.kubernetesPeonLifecycle.shutdown();
+    // Upstream improvement: Make shutdown idempotent using AtomicBoolean
+    if (isShutdown.compareAndSet(false, true)) {
+      synchronized (this) {
+        // Only shutdown if lifecycle is available
+        if (this.kubernetesPeonLifecycle != null) {
+          this.kubernetesPeonLifecycle.startWatchingLogs();
+          this.kubernetesPeonLifecycle.shutdown();
+        }
+      }
     }
   }
 
