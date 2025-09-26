@@ -240,4 +240,22 @@ public class ListFilteredDimensionSpecTest
     Assert.assertEquals(expected, actual);
     Assert.assertArrayEquals(expected.getCacheKey(), actual.getCacheKey());
   }
+
+  @Test
+  public void testListFilteredDimensionSpecValueOrderIsIgnored()
+  {
+    ListFilteredDimensionSpec spec1 = new ListFilteredDimensionSpec(
+        new DefaultDimensionSpec("foo", "bar"),
+        new HashSet<>(Arrays.asList(null, "A", "B")),
+        true
+    );
+
+    ListFilteredDimensionSpec spec2 = new ListFilteredDimensionSpec(
+        new DefaultDimensionSpec("foo", "bar"),
+        new HashSet<>(Arrays.asList("A", "B", null)),
+        true
+    );
+
+    Assert.assertArrayEquals(spec1.getCacheKey(), spec2.getCacheKey());
+  }
 }
