@@ -96,6 +96,8 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
   // Set this to true if the client needs to skip tombstones upon lookup (like the broker)
   private final boolean skipObjectsWithNoData;
 
+  private static boolean exactIntervalMatch = (System.getProperty("experimental.timeline.exactIntervalMatch") != null);
+
   public VersionedIntervalTimeline(Comparator<? super VersionType> versionComparator)
   {
     this(versionComparator, false);
@@ -289,11 +291,24 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
   {
     lock.readLock().lock();
     try {
-      for (Entry<Interval, TreeMap<VersionType, TimelineEntry>> entry : allTimelineEntries.entrySet()) {
-        if (entry.getKey().equals(interval) || entry.getKey().contains(interval)) {
-          TimelineEntry foundEntry = entry.getValue().get(version);
-          if (foundEntry != null) {
-            return foundEntry.getPartitionHolder().getChunk(partitionNum);
+
+      // Speed up search with an exact interval match lookup first
+      TreeMap<VersionType, TimelineEntry> versionEntries = allTimelineEntries.get(interval);
+      if (versionEntries != null) {
+        TimelineEntry foundEntry = versionEntries.get(version);
+        if (foundEntry != null) {
+          return foundEntry.getPartitionHolder().getChunk(partitionNum);
+        }
+      }
+
+      if (!exactIntervalMatch) {
+        // If an exact interval match is not found search for an encapsulating interval
+        for (Entry<Interval, TreeMap<VersionType, TimelineEntry>> entry : allTimelineEntries.entrySet()) {
+          if (entry.getKey().contains(interval)) {
+            TimelineEntry foundEntry = entry.getValue().get(version);
+            if (foundEntry != null) {
+              return foundEntry.getPartitionHolder().getChunk(partitionNum);
+            }
           }
         }
       }
