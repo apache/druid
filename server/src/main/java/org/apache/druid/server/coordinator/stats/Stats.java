@@ -112,6 +112,8 @@ public class Stats
   {
     public static final CoordinatorStat SUBMITTED_TASKS
         = CoordinatorStat.toDebugAndEmit("compactTasks", "compact/task/count");
+    public static final CoordinatorStat CANCELLED_TASKS
+        = CoordinatorStat.toDebugAndEmit("compactCancelled", "compactTask/cancelled/count");
     public static final CoordinatorStat MAX_SLOTS
         = CoordinatorStat.toDebugAndEmit("compactMaxSlots", "compactTask/maxSlot/count");
     public static final CoordinatorStat AVAILABLE_SLOTS
