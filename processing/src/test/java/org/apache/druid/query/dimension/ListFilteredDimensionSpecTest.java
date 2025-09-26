@@ -29,6 +29,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  */
@@ -111,7 +113,18 @@ public class ListFilteredDimensionSpecTest
         false
     );
 
+    ListFilteredDimensionSpec spec4 = new ListFilteredDimensionSpec(
+        new DefaultDimensionSpec("foo", "bar"),
+        ImmutableSet.of("xyz"),
+        true
+    );
+
+    Assert.assertFalse(Arrays.equals(spec1.getCacheKey(), spec2.getCacheKey()));
     Assert.assertFalse(Arrays.equals(spec1.getCacheKey(), spec3.getCacheKey()));
+    Assert.assertFalse(Arrays.equals(spec1.getCacheKey(), spec4.getCacheKey()));
+    Assert.assertFalse(Arrays.equals(spec2.getCacheKey(), spec3.getCacheKey()));
+    Assert.assertArrayEquals(spec2.getCacheKey(), spec4.getCacheKey());
+    Assert.assertFalse(Arrays.equals(spec3.getCacheKey(), spec4.getCacheKey()));
   }
 
   @Test
@@ -195,5 +208,36 @@ public class ListFilteredDimensionSpecTest
   public void testEquals()
   {
     EqualsVerifier.forClass(ListFilteredDimensionSpec.class).withNonnullFields("values").usingGetClass().verify();
+  }
+
+  @Test
+  public void testListFilteredDimensionSpecWithNullValue() throws Exception
+  {
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
+
+    String jsonStr = "{\n"
+                     + "  \"type\": \"listFiltered\",\n"
+                     + "  \"delegate\": {\n"
+                     + "    \"type\": \"default\",\n"
+                     + "    \"dimension\": \"foo\",\n"
+                     + "    \"outputName\": \"bar\"\n"
+                     + "  },\n"
+                     + "  \"values\": [null, \"A\", \"B\"]\n"
+                     + "}";
+
+    ListFilteredDimensionSpec actual = (ListFilteredDimensionSpec) mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue(jsonStr, DimensionSpec.class)),
+        DimensionSpec.class
+    );
+
+    Set<String> expectedValues = new HashSet<>(Arrays.asList(null, "A", "B"));
+    ListFilteredDimensionSpec expected = new ListFilteredDimensionSpec(
+        new DefaultDimensionSpec("foo", "bar"),
+        expectedValues,
+        true
+    );
+
+    Assert.assertEquals(expected, actual);
+    Assert.assertArrayEquals(expected.getCacheKey(), actual.getCacheKey());
   }
 }
