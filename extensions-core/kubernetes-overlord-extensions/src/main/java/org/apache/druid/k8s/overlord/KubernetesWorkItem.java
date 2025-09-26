@@ -36,7 +36,7 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
   private final Task task;
   private final KubernetesPeonLifecycle kubernetesPeonLifecycle;
 
-  private final AtomicBoolean isShuttingDown = new AtomicBoolean(false);
+  private final AtomicBoolean isShutdown = new AtomicBoolean(false);
 
   public KubernetesWorkItem(Task task, ListenableFuture<TaskStatus> statusFuture, KubernetesPeonLifecycle kubernetesPeonLifecycle)
   {
@@ -50,7 +50,7 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
    */
   protected void shutdown()
   {
-    if (isShuttingDown.compareAndSet(false, true)) {
+    if (isShutdown.compareAndSet(false, true)) {
       synchronized (this) {
         this.kubernetesPeonLifecycle.startWatchingLogs();
         this.kubernetesPeonLifecycle.shutdown();
