@@ -29,11 +29,14 @@ import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.java.util.common.ISE;
 
 import java.io.InputStream;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class KubernetesWorkItem extends TaskRunnerWorkItem
 {
   private final Task task;
   private final KubernetesPeonLifecycle kubernetesPeonLifecycle;
+
+  private final AtomicBoolean isShutdown = new AtomicBoolean(false);
 
   public KubernetesWorkItem(Task task, ListenableFuture<TaskStatus> statusFuture, KubernetesPeonLifecycle kubernetesPeonLifecycle)
   {
@@ -42,9 +45,16 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
     this.kubernetesPeonLifecycle = kubernetesPeonLifecycle;
   }
 
-  protected synchronized void shutdown()
+  /**
+   * Shuts down this work item. Subsequent calls to this method return immediately.
+   */
+  protected void shutdown()
   {
-    this.kubernetesPeonLifecycle.shutdown();
+    if (isShutdown.compareAndSet(false, true)) {
+      synchronized (this) {
+        this.kubernetesPeonLifecycle.shutdown();
+      }
+    }
   }
 
   protected boolean isPending()
