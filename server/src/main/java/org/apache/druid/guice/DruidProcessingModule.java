@@ -38,6 +38,7 @@ import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.offheap.OffheapBufferGenerator;
@@ -157,6 +158,7 @@ public class DruidProcessingModule implements Module
             lifecycle,
             config
         ),
+        config.getNumTimeoutThreads() > 0 ? ScheduledExecutors.fixed(config.getNumTimeoutThreads(), "PrioritizedExecutorService-Timeout-%%d") : null,
         executorServiceMonitor
     );
   }
