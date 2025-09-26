@@ -30,7 +30,7 @@ import java.util.function.Consumer;
 public class KafkaSupervisorSpecBuilder
 {
   private String id;
-  private Boolean usePerpetuallyRunningTasks;
+  private Boolean usePersistentTasks;
   private final DataSchema.Builder dataSchema = new DataSchema.Builder();
   private final KafkaIOConfigBuilder ioConfig = new KafkaIOConfigBuilder();
   private final KafkaTuningConfigBuilder tuningConfig = new KafkaTuningConfigBuilder();
@@ -59,9 +59,9 @@ public class KafkaSupervisorSpecBuilder
     return this;
   }
   
-  public KafkaSupervisorSpecBuilder withUsePerpetuallyRunningTasks(Boolean usePerpetuallyRunningTasks)
+  public KafkaSupervisorSpecBuilder withUsePersistentTasks(Boolean usePersistentTasks)
   {
-    this.usePerpetuallyRunningTasks = usePerpetuallyRunningTasks;
+    this.usePersistentTasks = usePersistentTasks;
     return this;
   }
 
@@ -96,7 +96,7 @@ public class KafkaSupervisorSpecBuilder
         ioConfig.build(),
         null,
         false,
-        usePerpetuallyRunningTasks,
+        usePersistentTasks,
         // Jackson injected params, not needed while posting a supervisor to the Overlord
         null, null, null, null, null, null, null, null, null
     );

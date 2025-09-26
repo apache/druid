@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -31,17 +32,19 @@ import java.util.Objects;
 public class TaskConfigUpdateRequest<PartitionIdType, SequenceOffsetType>
 {
   private final SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig;
-
   private final String supervisorSpecVersion;
+  private final Map<PartitionIdType, SequenceOffsetType> lastOffsets;
 
   @JsonCreator
   public TaskConfigUpdateRequest(
       @JsonProperty("ioConfig") @Nullable SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig,
-      @JsonProperty("supervisorSpecVersion") String supervisorSpecVersion
+      @JsonProperty("supervisorSpecVersion") String supervisorSpecVersion,
+      @JsonProperty("lastOffsets") Map<PartitionIdType, SequenceOffsetType> lastOffsets
   )
   {
     this.ioConfig = ioConfig;
     this.supervisorSpecVersion = supervisorSpecVersion;
+    this.lastOffsets = lastOffsets;
   }
 
   @JsonProperty
@@ -54,6 +57,12 @@ public class TaskConfigUpdateRequest<PartitionIdType, SequenceOffsetType>
   public SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> getIoConfig()
   {
     return ioConfig;
+  }
+
+  @JsonProperty
+  public Map<PartitionIdType, SequenceOffsetType> getLastOffsets()
+  {
+    return lastOffsets;
   }
 
   @Override

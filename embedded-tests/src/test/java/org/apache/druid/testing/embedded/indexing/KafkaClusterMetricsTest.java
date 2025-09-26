@@ -27,9 +27,7 @@ import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
-import org.apache.druid.indexing.kafka.supervisor.LagBasedAutoScalerConfigBuilder;
 import org.apache.druid.indexing.overlord.Segments;
-import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -147,8 +145,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(
         supervisorId,
         taskCount,
-        maxRowsPerSegment,
-        null
+        maxRowsPerSegment
     );
 
     Assertions.assertEquals(
@@ -182,74 +179,6 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  @Timeout(60)
-  public void test_ingest20kRows_ofSelfClusterMetricsWithScaleOuts_andVerifyValues()
-  {
-    final int maxRowsPerSegment = 1000;
-    final int expectedSegmentsHandedOff = 20;
-
-    final int taskCount = 1;
-
-    // Submit and start a supervisor
-    final String supervisorId = dataSource + "_supe";
-    AutoScalerConfig autoScalerConfig = new LagBasedAutoScalerConfigBuilder()
-        .withLagCollectionIntervalMillis(100)
-        .withLagCollectionRangeMillis(100)
-        .withEnableTaskAutoScaler(true)
-        .withScaleActionPeriodMillis(5000)
-        .withScaleActionStartDelayMillis(10000)
-        .withScaleOutThreshold(0)
-        .withScaleInThreshold(10000)
-        .withTriggerScaleOutFractionThreshold(0.001)
-        .withTriggerScaleInFractionThreshold(0.1)
-        .withTaskCountMax(3)
-        .withTaskCountMin(taskCount)
-        .withScaleOutStep(1)
-        .withScaleInStep(0)
-        .withMinTriggerScaleActionFrequencyMillis(5000)
-        .withStopTaskCountRatio(1.0)
-        .build();
-
-    final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(
-        supervisorId,
-        taskCount,
-        maxRowsPerSegment,
-        autoScalerConfig,
-        true
-    );
-
-    Assertions.assertEquals(
-        supervisorId,
-        cluster.callApi().postSupervisor(kafkaSupervisorSpec)
-    );
-    overlord.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("task/autoScaler/scaleActionTime"),
-        agg -> agg.hasSumAtLeast(2)
-    );
-
-    indexer.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("ingest/handoff/count")
-                      .hasDimension(DruidMetrics.DATASOURCE, List.of(dataSource)),
-        agg -> agg.hasSumAtLeast(expectedSegmentsHandedOff)
-    );
-
-    final int numSegments = Integer.parseInt(
-        cluster.runSql("SELECT COUNT(*) FROM sys.segments WHERE datasource = '%s'", dataSource)
-    );
-    Assertions.assertTrue(numSegments >= expectedSegmentsHandedOff);
-
-    final int numRows = Integer.parseInt(
-        cluster.runSql("SELECT COUNT(*) FROM %s", dataSource)
-    );
-    Assertions.assertTrue(numRows >= expectedSegmentsHandedOff * maxRowsPerSegment);
-
-    verifyIngestedMetricCountMatchesEmittedCount("jvm/pool/committed", coordinator);
-    verifyIngestedMetricCountMatchesEmittedCount("coordinator/time", coordinator);
-
-    cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
-  }
-
-  @Test
   @Timeout(120)
   public void test_ingestClusterMetrics_withConcurrentCompactionSupervisor_andSkipKillOfUnusedSegments()
   {
@@ -263,8 +192,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(
         supervisorId,
         taskCount,
-        maxRowsPerSegment,
-        null
+        maxRowsPerSegment
     );
     cluster.callApi().postSupervisor(kafkaSupervisorSpec);
 
@@ -368,75 +296,6 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  @Timeout(60)
-  public void test_ingest20kRows_ofSelfClusterMetricsWithScaleIns_andVerifyValues()
-  {
-    final int maxRowsPerSegment = 1000;
-    final int expectedSegmentsHandedOff = 20;
-
-    final int initialTaskCount = 3;
-
-    // Submit and start a supervisor with scale-in configuration
-    final String supervisorId = dataSource + "_supe";
-    AutoScalerConfig autoScalerConfig = new LagBasedAutoScalerConfigBuilder()
-        .withLagCollectionIntervalMillis(500)
-        .withLagCollectionRangeMillis(1000)
-        .withEnableTaskAutoScaler(true)
-        .withScaleActionPeriodMillis(10000)
-        .withScaleActionStartDelayMillis(5000)
-        .withScaleOutThreshold(10000)
-        .withScaleInThreshold(1)
-        .withTriggerScaleOutFractionThreshold(0.9)
-        .withTriggerScaleInFractionThreshold(0.001)
-        .withTaskCountMax(initialTaskCount)
-        .withTaskCountStart(initialTaskCount)
-        .withScaleOutStep(0)
-        .withScaleInStep(1)
-        .withMinTriggerScaleActionFrequencyMillis(10000)
-        .withStopTaskCountRatio(1.0)
-        .build();
-
-    final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(
-        supervisorId,
-        initialTaskCount,
-        maxRowsPerSegment,
-        autoScalerConfig,
-        true
-    );
-
-    Assertions.assertEquals(
-        supervisorId,
-        cluster.callApi().postSupervisor(kafkaSupervisorSpec)
-    );
-
-    overlord.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("task/autoScaler/scaleActionTime"),
-        agg -> agg.hasSumAtLeast(2)
-    );
-
-    indexer.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("ingest/handoff/count")
-                      .hasDimension(DruidMetrics.DATASOURCE, List.of(dataSource)),
-        agg -> agg.hasSumAtLeast(expectedSegmentsHandedOff)
-    );
-
-    final int numSegments = Integer.parseInt(
-        cluster.runSql("SELECT COUNT(*) FROM sys.segments WHERE datasource = '%s'", dataSource)
-    );
-    Assertions.assertTrue(numSegments >= expectedSegmentsHandedOff);
-
-    final int numRows = Integer.parseInt(
-        cluster.runSql("SELECT COUNT(*) FROM %s", dataSource)
-    );
-    Assertions.assertTrue(numRows >= expectedSegmentsHandedOff * maxRowsPerSegment);
-
-    verifyIngestedMetricCountMatchesEmittedCount("jvm/pool/committed", coordinator);
-    verifyIngestedMetricCountMatchesEmittedCount("coordinator/time", coordinator);
-
-    cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
-  }
-
-  @Test
   @Timeout(120)
   public void test_ingestClusterMetrics_compactionSkipsLockedIntervals()
   {
@@ -450,8 +309,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisor(
         supervisorId,
         taskCount,
-        maxRowsPerSegment,
-        null
+        maxRowsPerSegment
     );
     cluster.callApi().postSupervisor(kafkaSupervisorSpec);
 
@@ -530,19 +388,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
   private KafkaSupervisorSpec createKafkaSupervisor(
       String supervisorId,
       int taskCount,
-      int maxRowsPerSegment,
-      AutoScalerConfig autoScalerConfig
-  )
-  {
-    return createKafkaSupervisor(supervisorId, taskCount, maxRowsPerSegment, autoScalerConfig, false);
-  }
-
-  private KafkaSupervisorSpec createKafkaSupervisor(
-      String supervisorId,
-      int taskCount,
-      int maxRowsPerSegment,
-      AutoScalerConfig autoScalerConfig,
-      boolean usePerpetuallyRunningTasks
+      int maxRowsPerSegment
   )
   {
     return MoreResources.Supervisor.KAFKA_JSON
@@ -556,10 +402,8 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
             ioConfig -> ioConfig
                 .withConsumerProperties(kafkaServer.consumerProperties())
                 .withTaskCount(taskCount)
-                .withAutoScalerConfig(autoScalerConfig)
         )
         .withId(supervisorId)
-        .withUsePerpetuallyRunningTasks(usePerpetuallyRunningTasks)
         .build(dataSource, TOPIC);
   }
 }

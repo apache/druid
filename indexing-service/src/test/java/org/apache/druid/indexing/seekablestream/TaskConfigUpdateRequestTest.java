@@ -31,13 +31,13 @@ public class TaskConfigUpdateRequestTest
     SeekableStreamIndexTaskIOConfig mockIoConfig = EasyMock.createMock(SeekableStreamIndexTaskIOConfig.class);
     EasyMock.replay(mockIoConfig);
 
-    TaskConfigUpdateRequest request = new TaskConfigUpdateRequest(mockIoConfig, null);
+    TaskConfigUpdateRequest request = new TaskConfigUpdateRequest(mockIoConfig, null, null);
     Assert.assertEquals(mockIoConfig, request.getIoConfig());
 
-    TaskConfigUpdateRequest nullRequest = new TaskConfigUpdateRequest(null, null);
+    TaskConfigUpdateRequest nullRequest = new TaskConfigUpdateRequest(null, null, null);
     Assert.assertNull(nullRequest.getIoConfig());
 
-    TaskConfigUpdateRequest request2 = new TaskConfigUpdateRequest(mockIoConfig, null);
+    TaskConfigUpdateRequest request2 = new TaskConfigUpdateRequest(mockIoConfig, null, null);
     Assert.assertEquals(request, request2);
     Assert.assertEquals(request.hashCode(), request2.hashCode());
 

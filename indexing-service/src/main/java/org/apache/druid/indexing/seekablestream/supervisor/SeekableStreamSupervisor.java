@@ -793,7 +793,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       TaskGroup newTaskGroup = existingTaskGroup.withStartingSequences(newStartingSequences);
       for (String taskId : existingTaskGroup.taskIds()) {
         log.info("Updating config for task [%s] with partitions [%s]", taskId, partitionsForThisTask);
-        TaskConfigUpdateRequest<PartitionIdType, SequenceOffsetType> updateRequest = new TaskConfigUpdateRequest<>(newIoConfig, spec.getVersion().get());
+        TaskConfigUpdateRequest<PartitionIdType, SequenceOffsetType> updateRequest = new TaskConfigUpdateRequest<>(newIoConfig, spec.getVersion().get(), latestTaskOffsetsOnPause);
         updateFutures.add(taskClient.updateConfigAsync(taskId, updateRequest));
       }
       activelyReadingTaskGroups.put(taskGroupId, newTaskGroup);
@@ -1975,7 +1975,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     // store a limited number of parse exceptions, keeping the most recent ones
     int parseErrorLimit = spec.getSpec().getTuningConfig().convertToTaskTuningConfig(spec.usePersistentTasks()).getMaxSavedParseExceptions() *
-                          spec.getSpec().getIOConfig().getTaskCount();
+                          spec.getIoConfig().getTaskCount();
     parseErrorLimit = Math.min(parseErrorLimit, parseErrorsTreeSet.size());
 
     final List<ParseExceptionReport> limitedParseErrors = new ArrayList<>();

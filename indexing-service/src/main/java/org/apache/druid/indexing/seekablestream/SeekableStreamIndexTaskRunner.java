@@ -188,7 +188,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   //   - In possiblyPause(), when [shouldResume] is signalled, if [pauseRequested] has become false the pause loop ends,
   //     [status] is changed to STARTING and [shouldResume] is signalled.
   private final Lock pauseLock = new ReentrantLock();
-  private final Lock updateConfigLock = new ReentrantLock();
   private final Condition hasPaused = pauseLock.newCondition();
   private final Condition shouldResume = pauseLock.newCondition();
 
@@ -1773,7 +1772,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     log.info("Attempting to update config to [%s]", request.getIoConfig());
     SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> newIoConfig = request.getIoConfig();
     setIOConfig(newIoConfig);
-    createNewSequenceFromIoConfig(newIoConfig);
+    createNewSequenceFromIoConfig(newIoConfig, request.getLastOffsets());
     supervisorSpecVersion = request.getSupervisorSpecVersion();
 
     assignment = assignPartitions(recordSupplier);
@@ -1808,22 +1807,37 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    * Creates new sequences for the ingestion process. It currently accepts the ioConfig given by the request as the correct offsets
    * and ignores the offsets it may have stored in currOffsets and endOffsets.
    */
-  private void createNewSequenceFromIoConfig(SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig)
+  private void createNewSequenceFromIoConfig(SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig,
+                                             Map<PartitionIdType, SequenceOffsetType> latestCommittedOffsets
+  )
       throws IOException
   {
     Map<PartitionIdType, SequenceOffsetType> partitionStartOffsets = ioConfig.getStartSequenceNumbers()
                                                                              .getPartitionSequenceNumberMap();
     Map<PartitionIdType, SequenceOffsetType> partitionEndSequences = ioConfig.getEndSequenceNumbers()
                                                                              .getPartitionSequenceNumberMap();
+    SequenceMetadata<PartitionIdType, SequenceOffsetType> lastSequenceMetadata = getLastSequenceMetadata();
+    Map<PartitionIdType, SequenceOffsetType> offsetsForLastPartitionAssignment = latestCommittedOffsets.entrySet()
+                                                                                                                   .stream()
+                                                                                                                   .filter(e -> lastSequenceMetadata.startOffsets.containsKey(e.getKey()))
+                                                                                                                   .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+    if (lastSequenceMetadata.startOffsets.equals(offsetsForLastPartitionAssignment)) {
+      // This is the case where no data has been ingested since the last successfull checkpoint for these partitions.
+      // In this case, we'll mark the end offsets for this sequence same as start offsets and create a new sequence.
+      log.info("No new data ingested across any sibling tasks for this partition sequence since last checkpoint.");
+      lastSequenceMetadata.setEndOffsets(lastSequenceMetadata.startOffsets);
+    }
 
     final Set<PartitionIdType> exclusiveStartPartitions = computeExclusiveStartPartitionsForSequence(
         partitionStartOffsets);
+
     final SequenceMetadata<PartitionIdType, SequenceOffsetType> newSequence = new SequenceMetadata<>(
-        sequences.isEmpty() ? 0 : getLastSequenceMetadata().getSequenceId() + 1,
+        sequences.isEmpty() ? 0 : lastSequenceMetadata.getSequenceId() + 1,
         StringUtils.format(
             "%s_%d",
             ioConfig.getBaseSequenceName(),
-            sequences.isEmpty() ? 0 : getLastSequenceMetadata().getSequenceId() + 1
+            sequences.isEmpty() ? 0 : lastSequenceMetadata.getSequenceId() + 1
         ),
         partitionStartOffsets,
         partitionEndSequences,
