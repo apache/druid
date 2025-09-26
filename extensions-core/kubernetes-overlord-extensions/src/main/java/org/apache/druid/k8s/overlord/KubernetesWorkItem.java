@@ -52,8 +52,7 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
   {
     if (isShutdown.compareAndSet(false, true)) {
       synchronized (this) {
-        this.kubernetesPeonLifecycle.startWatchingLogs();
-        this.kubernetesPeonLifecycle.shutdown();
+        kubernetesPeonLifecycle.shutdown();
       }
     }
   }

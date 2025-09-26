@@ -29,6 +29,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.security.ResourceAction;
 
 import javax.annotation.Nonnull;
@@ -36,15 +37,20 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  */
 public class NoopTask extends AbstractTask implements PendingSegmentAllocatingTask
 {
+  private static final Logger log = new Logger(NoopTask.class);
+
   public static final String TYPE = "noop";
   public static final String EVENT_STARTED = "task/noop/started";
   private static final int DEFAULT_RUN_TIME = 2500;
 
+  private final CountDownLatch isShutdown = new CountDownLatch(1);
   private final long runTime;
 
   @JsonCreator
@@ -97,14 +103,20 @@ public class NoopTask extends AbstractTask implements PendingSegmentAllocatingTa
   @Override
   public void stopGracefully(TaskConfig taskConfig)
   {
+    isShutdown.countDown();
   }
 
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
+    log.info("Running task[%s] for [%d] millis", getId(), runTime);
     emitMetric(toolbox.getEmitter(), EVENT_STARTED, 1);
-    Thread.sleep(runTime);
-    return TaskStatus.success(getId());
+    if (isShutdown.await(runTime, TimeUnit.MILLISECONDS)) {
+      log.info("Task has been cancelled by user.");
+      return TaskStatus.failure(getId(), "Cancelled");
+    } else {
+      return TaskStatus.success(getId());
+    }
   }
 
   @Override

@@ -19,7 +19,9 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -27,6 +29,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.IndexTask;
+import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
@@ -41,6 +44,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.storage.postgresql.PostgreSQLMetadataStorageModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.SqlTaskStatus;
+import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -62,6 +66,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -316,6 +322,45 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     );
     supervisorStatus = cluster.callApi().getSupervisorStatus(supervisorId);
     Assertions.assertTrue(supervisorStatus.isSuspended());
+  }
+
+  @Test
+  public void test_streamLogs_ofCancelledTask() throws Exception
+  {
+    final String taskId = IdUtils.getRandomId();
+    final long runDurationMillis = 100_000L;
+    cluster.callApi().onLeaderOverlord(
+        o -> o.runTask(taskId, new NoopTask(taskId, null, null, runDurationMillis, 0L, null))
+    );
+
+    eventCollector.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName(NoopTask.EVENT_STARTED)
+                      .hasDimension(DruidMetrics.TASK_ID, taskId)
+    );
+
+    cluster.callApi().onLeaderOverlord(o -> o.cancelTask(taskId));
+
+    eventCollector.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("task/run/time")
+                      .hasDimension(DruidMetrics.TASK_ID, taskId)
+                      .hasDimension(DruidMetrics.TASK_STATUS, "FAILED")
+    );
+
+    final Optional<InputStream> streamOptional =
+        overlord.bindings()
+                .getInstance(TaskLogStreamer.class)
+                .streamTaskLog(taskId, 0);
+
+    Assertions.assertTrue(streamOptional.isPresent());
+
+    final String logs = IOUtils.toString(streamOptional.get(), StandardCharsets.UTF_8);
+
+    final String expectedLogLine = StringUtils.format(
+        "Running task[%s] for [%d] millis",
+        taskId, runDurationMillis
+    );
+    Assertions.assertTrue(logs.contains(expectedLogLine));
+    Assertions.assertTrue(logs.contains("Task has been cancelled by user"));
   }
 
   private KafkaSupervisorSpec createKafkaSupervisor(String topic)
