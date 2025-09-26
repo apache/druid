@@ -88,7 +88,7 @@ public class SqlResource
   private final SqlEngineRegistry sqlEngineRegistry;
   private final DefaultQueryConfig defaultQueryConfig;
   private final ServerConfig serverConfig;
-  final QueryCountStatsProvider counter;
+  private final QueryCountStatsProvider counter;
 
   @VisibleForTesting
   @Inject

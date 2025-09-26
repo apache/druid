@@ -92,7 +92,7 @@ public class QueryResource
 
   private final QueryResourceQueryResultPusherFactory queryResultPusherFactory;
   protected final ResourceIOReaderWriterFactory resourceIOReaderWriterFactory;
-  final QueryCountStatsProvider counter;
+  private final QueryCountStatsProvider counter;
 
   @Inject
   public QueryResource(
