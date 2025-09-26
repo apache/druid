@@ -350,6 +350,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     columns.add("used BOOLEAN NOT NULL");
     columns.add("payload %2$s NOT NULL");
     columns.add("used_status_last_updated VARCHAR(255) NOT NULL");
+    columns.add("has_loaded BOOLEAN NOT NULL DEFAULT FALSE");
 
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
       columns.add("schema_fingerprint VARCHAR(255)");
@@ -588,8 +589,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
     Map<String, String> columnNameTypes = new HashMap<>();
     columnNameTypes.put("used_status_last_updated", "VARCHAR(255)");
-
     columnNameTypes.put("upgraded_from_segment_id", "VARCHAR(255)");
+    columnNameTypes.put("has_loaded", "BOOLEAN NOT NULL DEFAULT FALSE");
 
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
       columnNameTypes.put("schema_fingerprint", "VARCHAR(255)");
