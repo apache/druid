@@ -48,11 +48,13 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
   /**
    * Shuts down this work item. Subsequent calls to this method return immediately.
    */
-  protected synchronized void shutdown()
+  protected void shutdown()
   {
     if (isShuttingDown.compareAndSet(false, true)) {
-      this.kubernetesPeonLifecycle.startWatchingLogs();
-      this.kubernetesPeonLifecycle.shutdown();
+      synchronized (this) {
+        this.kubernetesPeonLifecycle.startWatchingLogs();
+        this.kubernetesPeonLifecycle.shutdown();
+      }
     }
   }
 
