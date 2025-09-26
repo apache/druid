@@ -100,36 +100,31 @@ class EmbeddedServerLifecycle
   /**
    * Waits for the server lifecycle created in {@link #start()} to start.
    */
-  private void awaitLifecycleStart()
+  private void awaitLifecycleStart() throws Exception
   {
-    try {
-      final CountDownLatch started = new CountDownLatch(1);
+    final CountDownLatch started = new CountDownLatch(1);
 
-      lifecycle.get().addMaybeStartHandler(
-          new Lifecycle.Handler()
+    lifecycle.get().addMaybeStartHandler(
+        new Lifecycle.Handler()
+        {
+          @Override
+          public void start()
           {
-            @Override
-            public void start()
-            {
-              started.countDown();
-            }
-
-            @Override
-            public void stop()
-            {
-
-            }
+            started.countDown();
           }
-      );
 
-      if (started.await(10, TimeUnit.SECONDS)) {
-        log.info("Server[%s] is now running.", server.getName());
-      } else {
-        throw new ISE("Timed out waiting for lifecycle of server[%s] to be started", server.getName());
-      }
-    }
-    catch (Exception e) {
-      log.error(e, "Exception while waiting for server[%s] to start.", server.getName());
+          @Override
+          public void stop()
+          {
+
+          }
+        }
+    );
+
+    if (started.await(10, TimeUnit.SECONDS)) {
+      log.info("Server[%s] is now running.", server.getName());
+    } else {
+      throw new ISE("Timed out waiting for lifecycle of server[%s] to be started", server.getName());
     }
   }
 
