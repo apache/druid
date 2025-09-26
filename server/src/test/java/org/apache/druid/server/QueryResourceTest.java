@@ -595,7 +595,8 @@ public class QueryResourceTest
             ResponseContextConfig.newConfig(true),
             DRUID_NODE
         ),
-        new ResourceIOReaderWriterFactory(jsonMapper, smileMapper)
+        new ResourceIOReaderWriterFactory(jsonMapper, smileMapper),
+        queryCountStatsProvider
     );
 
     expectPermissiveHappyPathAuth();
