@@ -44,7 +44,6 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
 
   protected synchronized void shutdown()
   {
-    this.kubernetesPeonLifecycle.startWatchingLogs();
     this.kubernetesPeonLifecycle.shutdown();
   }
 
