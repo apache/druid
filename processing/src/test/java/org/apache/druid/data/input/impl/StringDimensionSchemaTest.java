@@ -52,7 +52,6 @@ public class StringDimensionSchemaTest
   public void testDeserializeFromJson() throws JsonProcessingException
   {
     final String json = "{\n"
-                        + "  \"type\" : \"StringDimensionSchema\",\n"
                         + "  \"name\" : \"dim\",\n"
                         + "  \"multiValueHandling\" : \"SORTED_SET\",\n"
                         + "  \"createBitmapIndex\" : false\n"
