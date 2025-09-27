@@ -744,6 +744,12 @@ public class TaskQueueTest extends IngestionTestBase
       this.interval = interval;
     }
 
+    private TestTask(String id, String dataSource, Interval interval, Map<String, Object> context)
+    {
+      super(id, dataSource, context, IngestionMode.NONE);
+      this.interval = interval;
+    }
+
     @Override
     public boolean isReady(TaskActionClient taskActionClient) throws Exception
     {

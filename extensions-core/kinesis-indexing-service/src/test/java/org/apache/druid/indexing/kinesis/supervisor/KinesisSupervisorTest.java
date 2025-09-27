@@ -263,7 +263,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     KinesisIndexTask task = captured.getValue();
     Assert.assertEquals(dataSchema, task.getDataSchema());
-    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), task.getTuningConfig());
+    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(null), task.getTuningConfig());
 
     KinesisIndexTaskIOConfig taskConfig = task.getIOConfig();
     Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
@@ -1593,7 +1593,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     for (Task task : secondTasks.getValues()) {
       KinesisIndexTask kinesisIndexTask = (KinesisIndexTask) task;
       Assert.assertEquals(dataSchema, kinesisIndexTask.getDataSchema());
-      Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), kinesisIndexTask.getTuningConfig());
+      Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(null), kinesisIndexTask.getTuningConfig());
 
       KinesisIndexTaskIOConfig taskConfig = kinesisIndexTask.getIOConfig();
       Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
@@ -1746,7 +1746,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     KinesisIndexTask capturedTask = captured.getValue();
     Assert.assertEquals(dataSchema, capturedTask.getDataSchema());
-    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), capturedTask.getTuningConfig());
+    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(null), capturedTask.getTuningConfig());
 
     KinesisIndexTaskIOConfig capturedTaskConfig = capturedTask.getIOConfig();
     Assert.assertEquals("awsEndpoint", capturedTaskConfig.getEndpoint());
@@ -1896,7 +1896,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     KinesisIndexTask capturedTask = captured.getValue();
     Assert.assertEquals(dataSchema, capturedTask.getDataSchema());
-    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), capturedTask.getTuningConfig());
+    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(null), capturedTask.getTuningConfig());
 
     KinesisIndexTaskIOConfig capturedTaskConfig = capturedTask.getIOConfig();
     Assert.assertEquals("awsEndpoint", capturedTaskConfig.getEndpoint());
@@ -5603,7 +5603,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         minimumMessageTime,
         maximumMessageTime,
         dataSchema,
-        (KinesisIndexTaskTuningConfig) tuningConfig.convertToTaskTuningConfig()
+        (KinesisIndexTaskTuningConfig) tuningConfig.convertToTaskTuningConfig(null)
     );
   }
 

@@ -684,7 +684,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertTrue(checkpoint1.getPartitionSequenceNumberMap().equals(currentOffsets)
                       || checkpoint2.getPartitionSequenceNumberMap()
                                     .equals(currentOffsets));
-    task.getRunner().setEndOffsets(currentOffsets, false);
+    task.getRunner().setEndOffsets(currentOffsets, false, true);
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     Assert.assertEquals(1, checkpointRequestsHash.size());
@@ -787,7 +787,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final Map<KafkaTopicPartition, Long> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
 
     Assert.assertEquals(checkpoint1.getPartitionSequenceNumberMap(), currentOffsets);
-    task.getRunner().setEndOffsets(currentOffsets, false);
+    task.getRunner().setEndOffsets(currentOffsets, false, true);
 
     while (task.getRunner().getStatus() != Status.PAUSED) {
       Thread.sleep(10);
@@ -806,7 +806,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
 
     Assert.assertEquals(checkpoint2.getPartitionSequenceNumberMap(), nextOffsets);
-    task.getRunner().setEndOffsets(nextOffsets, false);
+    task.getRunner().setEndOffsets(nextOffsets, false, true);
 
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
@@ -915,7 +915,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     }
     final Map<KafkaTopicPartition, Long> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
     Assert.assertEquals(checkpoint.getPartitionSequenceNumberMap(), currentOffsets);
-    task.getRunner().setEndOffsets(currentOffsets, false);
+    task.getRunner().setEndOffsets(currentOffsets, false, true);
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     Assert.assertEquals(1, checkpointRequestsHash.size());
@@ -994,7 +994,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     }
     long currentNextCheckpointTime = task.getRunner().getNextCheckpointTime();
     final Map<KafkaTopicPartition, Long> nextEndOffsets = task.getRunner().getLastSequenceMetadata().getStartOffsets();
-    task.getRunner().setEndOffsets(nextEndOffsets, false);
+    task.getRunner().setEndOffsets(nextEndOffsets, false, true);
     long newNextCheckpointTime = task.getRunner().getNextCheckpointTime();
     Assert.assertTrue(
         StringUtils.format(
@@ -1089,8 +1089,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Map<KafkaTopicPartition, Long> currentOffsets = ImmutableMap.copyOf(normalReplica.getRunner().getCurrentOffsets());
     Assert.assertEquals(checkpoint1.getPartitionSequenceNumberMap(), currentOffsets);
 
-    normalReplica.getRunner().setEndOffsets(currentOffsets, false);
-    staleReplica.getRunner().setEndOffsets(currentOffsets, false);
+    normalReplica.getRunner().setEndOffsets(currentOffsets, false, true);
+    staleReplica.getRunner().setEndOffsets(currentOffsets, false, true);
 
     while (normalReplica.getRunner().getStatus() != Status.PAUSED) {
       Thread.sleep(10);
@@ -1103,8 +1103,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     currentOffsets = ImmutableMap.copyOf(staleReplica.getRunner().getCurrentOffsets());
     Assert.assertEquals(checkpoint2.getPartitionSequenceNumberMap(), currentOffsets);
 
-    normalReplica.getRunner().setEndOffsets(currentOffsets, true);
-    staleReplica.getRunner().setEndOffsets(currentOffsets, true);
+    normalReplica.getRunner().setEndOffsets(currentOffsets, true, true);
+    staleReplica.getRunner().setEndOffsets(currentOffsets, true, true);
 
     Assert.assertEquals(TaskState.SUCCESS, normalReplicaFuture.get().getStatusCode());
     Assert.assertEquals(TaskState.SUCCESS, staleReplicaFuture.get().getStatusCode());
@@ -2191,7 +2191,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final Map<KafkaTopicPartition, Long> currentOffsets = ImmutableMap.copyOf(task1.getRunner().getCurrentOffsets());
     Assert.assertEquals(checkpoint.getPartitionSequenceNumberMap(), currentOffsets);
     // Set endOffsets to persist sequences
-    task1.getRunner().setEndOffsets(ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 5L), false);
+    task1.getRunner().setEndOffsets(ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 5L), false, true);
 
     // Stop without publishing segment
     task1.stopGracefully(toolboxFactory.build(task1).getConfig());
@@ -2485,12 +2485,12 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // first setEndOffsets request
     task.getRunner().pause();
-    task.getRunner().setEndOffsets(ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 500L), true);
+    task.getRunner().setEndOffsets(ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 500L), true, true);
     Assert.assertEquals(Status.READING, task.getRunner().getStatus());
 
     // duplicate setEndOffsets request
     task.getRunner().pause();
-    task.getRunner().setEndOffsets(ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 500L), true);
+    task.getRunner().setEndOffsets(ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 500L), true, true);
     Assert.assertEquals(Status.READING, task.getRunner().getStatus());
   }
 
@@ -2931,6 +2931,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         tuningConfig,
         ioConfig,
         context,
+        null,
+        "v1",
         OBJECT_MAPPER
     );
     task.setPollRetryMs(POLL_RETRY_MS);
@@ -3358,6 +3360,60 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     // Verify report metrics
     Assert.assertEquals(reportData.getRecordsProcessed().size(), 2);
     Assert.assertTrue(reportData.getRecordsProcessed().values().containsAll(ImmutableSet.of(6L, 2L)));
+  }
+
+  @Test
+  public void testWithNewIoConfig() throws Exception
+  {
+    final KafkaIndexTaskIOConfig originalIoConfig = new KafkaIndexTaskIOConfig(
+        0,
+        "sequence0",
+        new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 0L), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 5L)),
+        kafkaServer.consumerProperties(),
+        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+        true,
+        null,
+        null,
+        INPUT_FORMAT,
+        null,
+        Duration.standardHours(2).getStandardMinutes()
+    );
+
+    final KafkaIndexTask originalTask = createTask("testTask", originalIoConfig);
+
+    final KafkaIndexTaskIOConfig newIoConfig = new KafkaIndexTaskIOConfig(
+        1,
+        "sequence1",
+        new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 5L), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 10L)),
+        kafkaServer.consumerProperties(),
+        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+        false,
+        null,
+        null,
+        INPUT_FORMAT,
+        null,
+        Duration.standardHours(1).getStandardMinutes()
+    );
+
+    final KafkaIndexTask newTask = (KafkaIndexTask) originalTask.withNewIoConfig(newIoConfig);
+
+    Assert.assertNotSame("New task should be a different instance", originalTask, newTask);
+    Assert.assertEquals("Task ID should be preserved", originalTask.getId(), newTask.getId());
+    Assert.assertEquals("Supervisor ID should be preserved", originalTask.getSupervisorId(), newTask.getSupervisorId());
+    Assert.assertEquals("Task resource should be preserved", originalTask.getTaskResource(), newTask.getTaskResource());
+    Assert.assertEquals("Data schema should be preserved", originalTask.getDataSchema(), newTask.getDataSchema());
+    Assert.assertEquals("Tuning config should be preserved", originalTask.getTuningConfig(), newTask.getTuningConfig());
+    Assert.assertEquals("Context should be preserved", originalTask.getContext(), newTask.getContext());
+    Assert.assertEquals("Perpetually running flag should be preserved", originalTask.isPerpetuallyRunning(), newTask.isPerpetuallyRunning());
+
+    final KafkaIndexTaskIOConfig actualNewIoConfig = newTask.getIOConfig();
+    Assert.assertEquals("IO config should be updated", newIoConfig, actualNewIoConfig);
+    Assert.assertNotEquals("IO config should be different from original", originalIoConfig, actualNewIoConfig);
+
+    Assert.assertEquals("Start sequence should be updated", 5L, (long) actualNewIoConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0)));
+    Assert.assertEquals("End sequence should be updated", 10L, (long) actualNewIoConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0)));
   }
 
   public static class TestKafkaInputFormat implements InputFormat

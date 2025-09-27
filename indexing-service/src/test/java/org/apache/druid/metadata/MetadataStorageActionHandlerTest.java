@@ -148,6 +148,12 @@ public class MetadataStorageActionHandlerTest
       {
 
       }
+
+      @Override
+      public void update(String id, Task entry)
+      {
+
+      }
     };
   }
 }

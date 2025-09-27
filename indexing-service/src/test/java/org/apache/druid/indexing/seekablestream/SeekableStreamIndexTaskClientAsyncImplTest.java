@@ -566,6 +566,148 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   }
 
   @Test
+  public void test_pauseAndCheckpointAsync_immediateOk() throws Exception
+  {
+    final Map<Integer, Long> offsets = ImmutableMap.of(1, 3L);
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/pauseAndCheckpoint").timeout(httpTimeout),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        jsonMapper.writeValueAsBytes(offsets)
+    );
+
+    Assert.assertEquals(offsets, client.pauseAndCheckpointAsync(TASK_ID).get());
+  }
+
+  @Test
+  public void test_pauseAndCheckpointAsync_immediateBadStatus() throws Exception
+  {
+    final Map<Integer, Long> offsets = ImmutableMap.of(1, 3L);
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/pauseAndCheckpoint").timeout(httpTimeout),
+        HttpResponseStatus.CONTINUE,
+        Collections.emptyMap(),
+        jsonMapper.writeValueAsBytes(offsets)
+    );
+
+    final ExecutionException e = Assert.assertThrows(
+        ExecutionException.class,
+        () -> client.pauseAndCheckpointAsync(TASK_ID).get()
+    );
+
+    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(IllegalStateException.class));
+    MatcherAssert.assertThat(
+        e.getCause().getMessage(),
+        CoreMatchers.startsWith("Pause & Checkpoint request for task [the-task] failed with response [100 Continue]")
+    );
+  }
+
+  @Test
+  public void test_pauseAndCheckpointAsync_oneIteration() throws Exception
+  {
+    final Map<Integer, Long> offsets = ImmutableMap.of(1, 3L);
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/pauseAndCheckpoint").timeout(httpTimeout),
+        HttpResponseStatus.ACCEPTED,
+        Collections.emptyMap(),
+        ByteArrays.EMPTY_ARRAY
+    ).expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/status").timeout(httpTimeout),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        jsonMapper.writeValueAsBytes(SeekableStreamIndexTaskRunner.Status.PAUSED)
+    ).expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/offsets/current").timeout(httpTimeout),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        jsonMapper.writeValueAsBytes(offsets)
+    );
+
+    Assert.assertEquals(offsets, client.pauseAndCheckpointAsync(TASK_ID).get());
+  }
+
+  @Test
+  public void test_pauseAndCheckpointAsync_notAvailable() throws Exception
+  {
+    serviceClient.expectAndThrow(
+        new RequestBuilder(HttpMethod.POST, "/pauseAndCheckpoint").timeout(httpTimeout),
+        new ServiceNotAvailableException(TASK_ID)
+    );
+
+    Assert.assertEquals(Collections.emptyMap(), client.pauseAndCheckpointAsync(TASK_ID).get());
+  }
+
+  @Test
+  public void test_updateConfigAsync_success() throws Exception
+  {
+    final TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(null, null, null);
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/config")
+            .content(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(updateRequest))
+            .timeout(httpTimeout),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        ByteArrays.EMPTY_ARRAY
+    );
+
+    Assert.assertEquals(true, client.updateConfigAsync(TASK_ID, updateRequest).get());
+  }
+
+  @Test
+  public void test_updateConfigAsync_httpError() throws Exception
+  {
+    final TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(null, null, null);
+
+    serviceClient.expectAndThrow(
+        new RequestBuilder(HttpMethod.POST, "/config")
+            .content(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(updateRequest))
+            .timeout(httpTimeout),
+        new HttpResponseException(
+            new StringFullResponseHolder(
+                new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.SERVICE_UNAVAILABLE),
+                StandardCharsets.UTF_8
+            )
+        )
+    );
+
+    Assert.assertEquals(false, client.updateConfigAsync(TASK_ID, updateRequest).get());
+  }
+
+  @Test
+  public void test_updateConfigAsync_notAvailable() throws Exception
+  {
+    final TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(null, null, null);
+
+    serviceClient.expectAndThrow(
+        new RequestBuilder(HttpMethod.POST, "/config")
+            .content(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(updateRequest))
+            .timeout(httpTimeout),
+        new ServiceNotAvailableException(TASK_ID)
+    );
+
+    Assert.assertEquals(false, client.updateConfigAsync(TASK_ID, updateRequest).get());
+  }
+
+  @Test
+  public void test_updateConfigAsync_closed() throws Exception
+  {
+    final TaskConfigUpdateRequest updateRequest = new TaskConfigUpdateRequest(null, null, null);
+
+    serviceClient.expectAndThrow(
+        new RequestBuilder(HttpMethod.POST, "/config")
+            .content(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(updateRequest))
+            .timeout(httpTimeout),
+        new ServiceClosedException(TASK_ID)
+    );
+
+    Assert.assertEquals(false, client.updateConfigAsync(TASK_ID, updateRequest).get());
+  }
+
+  @Test
   public void test_serviceLocator_unknownTask() throws Exception
   {
     final TaskInfoProvider taskInfoProvider = EasyMock.createStrictMock(TaskInfoProvider.class);
