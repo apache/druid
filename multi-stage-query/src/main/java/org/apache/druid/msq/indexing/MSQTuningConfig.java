@@ -140,7 +140,7 @@ public class MSQTuningConfig
 
   public IndexSpec getIndexSpec()
   {
-    return indexSpec != null ? indexSpec : IndexSpec.DEFAULT;
+    return indexSpec != null ? indexSpec : IndexSpec.getDefault();
   }
 
   @Override

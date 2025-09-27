@@ -44,7 +44,6 @@ import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
-import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.index.semantic.ArrayElementIndexes;
@@ -173,29 +172,32 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
   @Parameterized.Parameters(name = "data = {0}")
   public static Collection<?> constructorFeeder()
   {
-    IndexSpec fancy = IndexSpec.builder()
-                               .withLongEncoding(CompressionFactory.LongEncodingStrategy.AUTO)
-                               .withStringDictionaryEncoding(
-                                   new StringEncodingStrategy.FrontCoded(16, FrontCodedIndexed.V1)
-                               )
-                               .build();
+
+    NestedCommonFormatColumnFormatSpec defaultSpec = NestedCommonFormatColumnFormatSpec.builder().build();
+
+    NestedCommonFormatColumnFormatSpec frontCodedDict =
+        NestedCommonFormatColumnFormatSpec.builder()
+                                          .setStringDictionaryEncoding(
+                                              new StringEncodingStrategy.FrontCoded(16, FrontCodedIndexed.V1)
+                                          )
+                                          .build();
     final List<Object[]> constructors = ImmutableList.of(
-        new Object[]{"ARRAY<LONG>", LONG_ARRAY, IndexSpec.DEFAULT},
-        new Object[]{"ARRAY<LONG>", LONG_ARRAY, fancy},
-        new Object[]{"ARRAY<DOUBLE>", DOUBLE_ARRAY, IndexSpec.DEFAULT},
-        new Object[]{"ARRAY<DOUBLE>", DOUBLE_ARRAY, fancy},
-        new Object[]{"ARRAY<STRING>", STRING_ARRAY, IndexSpec.DEFAULT},
-        new Object[]{"ARRAY<STRING>", STRING_ARRAY, fancy},
-        new Object[]{"DOUBLE,LONG", VARIANT_NUMERIC, IndexSpec.DEFAULT},
-        new Object[]{"DOUBLE,LONG", VARIANT_NUMERIC, fancy},
-        new Object[]{"DOUBLE,LONG,STRING", VARIANT_SCALAR, IndexSpec.DEFAULT},
-        new Object[]{"DOUBLE,LONG,STRING", VARIANT_SCALAR, fancy},
-        new Object[]{"ARRAY<LONG>,ARRAY<STRING>,DOUBLE,LONG,STRING", VARIANT_SCALAR_AND_ARRAY, IndexSpec.DEFAULT},
-        new Object[]{"ARRAY<LONG>,ARRAY<STRING>,DOUBLE,LONG,STRING", VARIANT_SCALAR_AND_ARRAY, fancy},
-        new Object[]{"ARRAY<DOUBLE>,ARRAY<LONG>,ARRAY<STRING>", VARIANT_ARRAY, IndexSpec.DEFAULT},
-        new Object[]{"ARRAY<DOUBLE>,ARRAY<LONG>,ARRAY<STRING>", VARIANT_ARRAY, fancy},
-        new Object[]{"ARRAY<LONG>", NO_TYPE_ARRAY, IndexSpec.DEFAULT},
-        new Object[]{"ARRAY<LONG>", NO_TYPE_ARRAY, fancy}
+        new Object[]{"ARRAY<LONG>", LONG_ARRAY, defaultSpec},
+        new Object[]{"ARRAY<LONG>", LONG_ARRAY, frontCodedDict},
+        new Object[]{"ARRAY<DOUBLE>", DOUBLE_ARRAY, defaultSpec},
+        new Object[]{"ARRAY<DOUBLE>", DOUBLE_ARRAY, frontCodedDict},
+        new Object[]{"ARRAY<STRING>", STRING_ARRAY, defaultSpec},
+        new Object[]{"ARRAY<STRING>", STRING_ARRAY, frontCodedDict},
+        new Object[]{"DOUBLE,LONG", VARIANT_NUMERIC, defaultSpec},
+        new Object[]{"DOUBLE,LONG", VARIANT_NUMERIC, frontCodedDict},
+        new Object[]{"DOUBLE,LONG,STRING", VARIANT_SCALAR, defaultSpec},
+        new Object[]{"DOUBLE,LONG,STRING", VARIANT_SCALAR, frontCodedDict},
+        new Object[]{"ARRAY<LONG>,ARRAY<STRING>,DOUBLE,LONG,STRING", VARIANT_SCALAR_AND_ARRAY, defaultSpec},
+        new Object[]{"ARRAY<LONG>,ARRAY<STRING>,DOUBLE,LONG,STRING", VARIANT_SCALAR_AND_ARRAY, frontCodedDict},
+        new Object[]{"ARRAY<DOUBLE>,ARRAY<LONG>,ARRAY<STRING>", VARIANT_ARRAY, defaultSpec},
+        new Object[]{"ARRAY<DOUBLE>,ARRAY<LONG>,ARRAY<STRING>", VARIANT_ARRAY, frontCodedDict},
+        new Object[]{"ARRAY<LONG>", NO_TYPE_ARRAY, defaultSpec},
+        new Object[]{"ARRAY<LONG>", NO_TYPE_ARRAY, frontCodedDict}
     );
 
     return constructors;
@@ -212,16 +214,16 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
   ColumnType expectedLogicalType = null;
 
   private final List<?> data;
-  private final IndexSpec indexSpec;
+  private final NestedCommonFormatColumnFormatSpec columnFormatSpec;
 
   public VariantColumnSupplierTest(
       @SuppressWarnings("unused") String name,
       List<?> data,
-      IndexSpec indexSpec
+      NestedCommonFormatColumnFormatSpec columnFormatSpec
   )
   {
     this.data = data;
-    this.indexSpec = indexSpec;
+    this.columnFormatSpec = columnFormatSpec;
   }
 
   @Before
@@ -241,7 +243,7 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
     SegmentWriteOutMediumFactory writeOutMediumFactory = TmpFileSegmentWriteOutMediumFactory.instance();
     try (final FileSmoosher smoosher = new FileSmoosher(tmpFile)) {
 
-      AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
+      AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null, columnFormatSpec);
       for (Object o : data) {
         indexer.processRowValsToUnsortedEncodedKeyComponent(o, false);
       }
@@ -270,7 +272,7 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
           fileNameBase,
           expectedTypes.getSingleType() == null ? null : expectedLogicalType,
           expectedTypes.getSingleType() == null ? expectedTypes.getByteValue() : null,
-          indexSpec,
+          NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(columnFormatSpec, IndexSpec.getDefault().getEffectiveSpec()),
           writeOutMediumFactory.makeSegmentWriteOutMedium(tempFolder.newFolder()),
           closer
       );

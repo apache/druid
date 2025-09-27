@@ -114,7 +114,7 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
   {
-    final IndexSpec indexSpec = IndexSpec.DEFAULT;
+    final IndexSpec indexSpec = IndexSpec.getDefault();
     final IndexSpec frontCodedIndexSpec =
         IndexSpec.builder()
                  .withStringDictionaryEncoding(new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V1))

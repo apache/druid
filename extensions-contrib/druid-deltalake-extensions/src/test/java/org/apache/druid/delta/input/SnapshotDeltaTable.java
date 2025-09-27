@@ -120,8 +120,8 @@ public class SnapshotDeltaTable
       new TimestampSpec("na", "posix", DateTimes.of("2024-01-01")),
       new DimensionsSpec(
           ImmutableList.of(
-              new AutoTypeColumnSchema("id", null),
-              new AutoTypeColumnSchema("map_info", null)
+              AutoTypeColumnSchema.of("id"),
+              AutoTypeColumnSchema.of("map_info")
           )
       ),
       ColumnsFilter.all()

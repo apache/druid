@@ -143,7 +143,7 @@ public class SerializablePairLongFloatComplexMetricSerdeTest
     SegmentWriteOutMedium writeOutMedium = new OnHeapMemorySegmentWriteOutMedium();
     ByteBuffer compressedBuffer = serializeAllValuesToByteBuffer(
         expected,
-        COMPRESSED_SERDE.getSerializer(writeOutMedium, "not-used", IndexSpec.DEFAULT),
+        COMPRESSED_SERDE.getSerializer(writeOutMedium, "not-used", IndexSpec.getDefault()),
         expectedCompressedSize
     ).asReadOnlyBuffer();
 

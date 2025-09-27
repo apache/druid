@@ -70,7 +70,7 @@ public class TestIndexTask extends IndexTask
             ),
             TuningConfigBuilder.forIndexTask()
                                .withMaxRowsInMemory(10)
-                               .withIndexSpec(IndexSpec.DEFAULT)
+                               .withIndexSpec(IndexSpec.getDefault())
                                .withPartitionsSpec(new DynamicPartitionsSpec(10000, null))
                                .withForceGuaranteedRollup(false)
                                .withMaxPendingPersists(3)

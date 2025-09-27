@@ -34,7 +34,7 @@ public class MSQSpecTest
                   .withNonnullFields("destination", "tuningConfig")
                   .withPrefabValues(
                       IndexSpec.class,
-                      IndexSpec.DEFAULT,
+                      IndexSpec.getDefault(),
                       IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build()
                   )
                   .usingGetClass()
@@ -48,7 +48,7 @@ public class MSQSpecTest
                   .withNonnullFields("destination", "tuningConfig")
                   .withPrefabValues(
                       IndexSpec.class,
-                      IndexSpec.DEFAULT,
+                      IndexSpec.getDefault(),
                       IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build()
                   )
                   .usingGetClass()
@@ -62,7 +62,7 @@ public class MSQSpecTest
                   .withNonnullFields("destination", "tuningConfig")
                   .withPrefabValues(
                       IndexSpec.class,
-                      IndexSpec.DEFAULT,
+                      IndexSpec.getDefault(),
                       IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build()
                   )
                   .usingGetClass()

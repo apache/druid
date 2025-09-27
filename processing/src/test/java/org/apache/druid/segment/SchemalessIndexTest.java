@@ -75,7 +75,7 @@ public class SchemalessIndexTest
       new CountAggregatorFactory("count")
   };
 
-  private static final IndexSpec INDEX_SPEC = IndexSpec.DEFAULT;
+  private static final IndexSpec INDEX_SPEC = IndexSpec.getDefault();
 
   private static final List<Map<String, Object>> EVENTS = new ArrayList<>();
 

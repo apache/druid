@@ -141,7 +141,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
             NestedDataTestUtils.COUNT,
             Granularities.YEAR,
             true,
-            IndexSpec.DEFAULT
+            IndexSpec.getDefault()
         )
     ).build();
 
@@ -345,7 +345,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.SIMPLE_DATA_FILE,
         Granularities.HOUR,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 
@@ -529,7 +529,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.COUNT,
         Granularities.DAY,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
 
@@ -551,9 +551,9 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     DimensionsSpec spec = DimensionsSpec.builder()
                                         .setDimensions(
                                             ImmutableList.of(
-                                                new AutoTypeColumnSchema("str", ColumnType.STRING),
-                                                new AutoTypeColumnSchema("long", ColumnType.LONG),
-                                                new AutoTypeColumnSchema("double", ColumnType.FLOAT)
+                                                new AutoTypeColumnSchema("str", ColumnType.STRING, null),
+                                                new AutoTypeColumnSchema("long", ColumnType.LONG, null),
+                                                new AutoTypeColumnSchema("double", ColumnType.FLOAT, null)
                                             )
                                         )
                                         .build();
@@ -592,7 +592,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.COUNT,
         Granularities.DAY,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
 
@@ -648,7 +648,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         aggs,
         Granularities.NONE,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
 
@@ -703,7 +703,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         aggs,
         Granularities.NONE,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
 
@@ -766,7 +766,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         aggs,
         Granularities.NONE,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
 
@@ -820,7 +820,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE,
         Granularities.HOUR,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
     List<Segment> realtimeSegs = ImmutableList.of(
@@ -878,7 +878,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE,
         Granularities.HOUR,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
     List<Segment> realtimeSegs = ImmutableList.of(
@@ -943,7 +943,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         aggs,
         Granularities.NONE,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
 

@@ -3061,7 +3061,7 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
             new AggregatorFactory[0],
             temporaryFolder.newFolder(),
             dimensionsBuilder.build(),
-            IndexSpec.DEFAULT,
+            IndexSpec.getDefault(),
             -1
         )
     );

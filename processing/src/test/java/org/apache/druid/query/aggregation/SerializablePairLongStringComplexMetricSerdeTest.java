@@ -148,12 +148,12 @@ public class SerializablePairLongStringComplexMetricSerdeTest
     SegmentWriteOutMedium writeOutMedium = new OnHeapMemorySegmentWriteOutMedium();
     ByteBuffer legacyBuffer = serializeAllValuesToByteBuffer(
         expected,
-        LEGACY_SERDE.getSerializer(writeOutMedium, "not-used", IndexSpec.DEFAULT),
+        LEGACY_SERDE.getSerializer(writeOutMedium, "not-used", IndexSpec.getDefault()),
         expectedLegacySize
     ).asReadOnlyBuffer();
     ByteBuffer compressedBuffer = serializeAllValuesToByteBuffer(
         expected,
-        COMPRESSED_SERDE.getSerializer(writeOutMedium, "not-used", IndexSpec.DEFAULT),
+        COMPRESSED_SERDE.getSerializer(writeOutMedium, "not-used", IndexSpec.getDefault()),
         expectedCompressedSize
     ).asReadOnlyBuffer();
 

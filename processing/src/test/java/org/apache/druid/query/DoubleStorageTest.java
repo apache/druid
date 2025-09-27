@@ -353,7 +353,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
     File someTmpFile = File.createTempFile("billy", "yay");
     someTmpFile.delete();
     FileUtils.mkdirp(someTmpFile);
-    INDEX_MERGER_V9.persist(index, someTmpFile, IndexSpec.DEFAULT, null);
+    INDEX_MERGER_V9.persist(index, someTmpFile, IndexSpec.getDefault(), null);
     someTmpFile.delete();
     return INDEX_IO.loadIndex(someTmpFile);
   }

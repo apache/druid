@@ -46,7 +46,7 @@ import java.util.Collections;
 public class K8sTestUtils
 {
 
-  private static final IndexSpec INDEX_SPEC = IndexSpec.DEFAULT;
+  private static final IndexSpec INDEX_SPEC = IndexSpec.getDefault();
 
   public static PodSpec getDummyPodSpec()
   {

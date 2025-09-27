@@ -204,7 +204,7 @@ public class TestIndex
                              )
                              .build()
   );
-  public static final IndexSpec INDEX_SPEC = IndexSpec.DEFAULT;
+  public static final IndexSpec INDEX_SPEC = IndexSpec.getDefault();
 
   public static final JsonInputFormat DEFAULT_JSON_INPUT_FORMAT = new JsonInputFormat(
       JSONPathSpec.DEFAULT,

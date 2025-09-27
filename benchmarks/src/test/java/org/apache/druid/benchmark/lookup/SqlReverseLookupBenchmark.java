@@ -105,7 +105,7 @@ public class SqlReverseLookupBenchmark
     final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
 
     final QueryableIndex index =
-        segmentGenerator.generate(dataSegment, schemaInfo, IndexSpec.DEFAULT, Granularities.NONE, 1);
+        segmentGenerator.generate(dataSegment, schemaInfo, IndexSpec.getDefault(), Granularities.NONE, 1);
 
     final Pair<PlannerFactory, SqlEngine> sqlSystem = SqlBaseBenchmark.createSqlSystem(
         ImmutableMap.of(dataSegment, index),

@@ -52,7 +52,7 @@ import java.io.File;
 public class TaskSerdeTest
 {
   private final ObjectMapper jsonMapper;
-  private final IndexSpec indexSpec = IndexSpec.DEFAULT;
+  private final IndexSpec indexSpec = IndexSpec.getDefault();
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
@@ -88,7 +88,7 @@ public class TaskSerdeTest
     );
 
     Assert.assertFalse(tuningConfig.isReportParseExceptions());
-    Assert.assertEquals(IndexSpec.DEFAULT, tuningConfig.getIndexSpec());
+    Assert.assertEquals(IndexSpec.getDefault(), tuningConfig.getIndexSpec());
     Assert.assertEquals(new Period(Integer.MAX_VALUE), tuningConfig.getIntermediatePersistPeriod());
     Assert.assertEquals(0, tuningConfig.getMaxPendingPersists());
     Assert.assertEquals(1000000, tuningConfig.getMaxRowsInMemory());

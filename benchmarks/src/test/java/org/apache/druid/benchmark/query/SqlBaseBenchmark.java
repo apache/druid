@@ -226,7 +226,8 @@ public class SqlBaseBenchmark
                     .withComplexMetricCompression(
                         CompressionStrategy.valueOf(StringUtils.toUpperCase(complexCompression))
                     )
-                    .build();
+                    .build()
+                    .getEffectiveSpec();
   }
 
   @Setup(Level.Trial)

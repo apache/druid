@@ -129,7 +129,7 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
                                                 .groupingColumns(
                                                     projection.getGroupingColumns()
                                                               .stream()
-                                                              .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                              .map(x -> AutoTypeColumnSchema.of(x.getName()))
                                                               .collect(Collectors.toList())
                                                 )
                                                 .build()
@@ -167,7 +167,7 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
 
     List<DimensionSchema> autoDims = dimsOrdered.getDimensions()
                                                 .stream()
-                                                .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                .map(x -> AutoTypeColumnSchema.of(x.getName()))
                                                 .collect(Collectors.toList());
     for (boolean incremental : new boolean[]{true, false}) {
       for (boolean sortByDim : new boolean[]{true, false}) {

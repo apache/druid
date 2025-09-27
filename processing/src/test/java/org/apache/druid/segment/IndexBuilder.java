@@ -75,7 +75,7 @@ public class IndexBuilder
   private SegmentWriteOutMediumFactory segmentWriteOutMediumFactory = OffHeapMemorySegmentWriteOutMediumFactory.instance();
   private IndexMerger indexMerger;
   private File tmpDir;
-  private IndexSpec indexSpec = IndexSpec.DEFAULT;
+  private IndexSpec indexSpec = IndexSpec.getDefault();
   private int maxRows = DEFAULT_MAX_ROWS;
   private int intermediatePersistSize = ROWS_PER_INDEX_FOR_MERGING;
   private IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()

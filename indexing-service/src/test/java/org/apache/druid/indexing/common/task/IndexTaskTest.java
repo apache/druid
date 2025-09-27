@@ -196,7 +196,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
   }
 
-  private static final IndexSpec INDEX_SPEC = IndexSpec.DEFAULT;
+  private static final IndexSpec INDEX_SPEC = IndexSpec.getDefault();
   private final ObjectMapper jsonMapper;
   private final IndexIO indexIO;
   private final LockGranularity lockGranularity;
@@ -2725,7 +2725,7 @@ public class IndexTaskTest extends IngestionTestBase
     EqualsVerifier.forClass(IndexTuningConfig.class)
                   .withPrefabValues(
                       IndexSpec.class,
-                      IndexSpec.DEFAULT,
+                      IndexSpec.getDefault(),
                       IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build()
                   )
                   .usingGetClass()

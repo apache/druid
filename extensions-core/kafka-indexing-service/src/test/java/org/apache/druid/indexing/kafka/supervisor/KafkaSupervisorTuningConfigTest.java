@@ -62,8 +62,8 @@ public class KafkaSupervisorTuningConfigTest
     Assert.assertEquals(5_000_000, config.getMaxRowsPerSegment().intValue());
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(0, config.getMaxPendingPersists());
-    Assert.assertEquals(IndexSpec.DEFAULT, config.getIndexSpec());
-    Assert.assertEquals(IndexSpec.DEFAULT, config.getIndexSpecForIntermediatePersists());
+    Assert.assertEquals(IndexSpec.getDefault(), config.getIndexSpec());
+    Assert.assertEquals(IndexSpec.getDefault(), config.getIndexSpecForIntermediatePersists());
     Assert.assertFalse(config.isReportParseExceptions());
     Assert.assertEquals(java.time.Duration.ofMinutes(15).toMillis(), config.getHandoffConditionTimeout());
     Assert.assertNull(config.getWorkerThreads());

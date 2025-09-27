@@ -203,7 +203,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ),
           ImmutableList.of(expectedLongSumMetric),
           null,
-          compactionTask.getTuningConfig().getIndexSpec(),
+          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
           new UniformGranularitySpec(
               Granularities.HOUR,
               Granularities.MINUTE,
@@ -251,7 +251,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ),
           ImmutableList.of(expectedLongSumMetric),
           null,
-          compactionTask.getTuningConfig().getIndexSpec(),
+          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
           new UniformGranularitySpec(
               Granularities.HOUR,
               Granularities.MINUTE,
@@ -314,7 +314,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ),
           ImmutableList.of(expectedLongSumMetric),
           null,
-          compactionTask.getTuningConfig().getIndexSpec(),
+          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
           new UniformGranularitySpec(
               Granularities.HOUR,
               Granularities.MINUTE,
@@ -367,7 +367,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
           ImmutableList.of(expectedLongSumMetric),
           null,
-          compactionTask.getTuningConfig().getIndexSpec(),
+          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
           new UniformGranularitySpec(
               Granularities.HOUR,
               Granularities.MINUTE,
@@ -420,7 +420,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ),
           ImmutableList.of(expectedLongSumMetric),
           null,
-          compactionTask.getTuningConfig().getIndexSpec(),
+          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
           new UniformGranularitySpec(
               Granularities.HOUR,
               Granularities.MINUTE,
@@ -468,7 +468,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ),
           ImmutableList.of(expectedLongSumMetric),
           null,
-          compactionTask.getTuningConfig().getIndexSpec(),
+          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
           new UniformGranularitySpec(
               Granularities.HOUR,
               Granularities.MINUTE,
@@ -519,7 +519,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ),
           ImmutableList.of(expectedLongSumMetric),
           null,
-          compactionTask.getTuningConfig().getIndexSpec(),
+          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
           new UniformGranularitySpec(
               Granularities.HOUR,
               Granularities.MINUTE,
@@ -600,7 +600,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ),
           ImmutableList.of(expectedLongSumMetric),
           compactionTask.getTransformSpec(),
-          compactionTask.getTuningConfig().getIndexSpec(),
+          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
           new UniformGranularitySpec(
               Granularities.HOUR,
               Granularities.MINUTE,
@@ -655,7 +655,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ),
           ImmutableList.of(expectedCountMetric, expectedLongSumMetric),
           compactionTask.getTransformSpec(),
-          compactionTask.getTuningConfig().getIndexSpec(),
+          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
           new UniformGranularitySpec(
               Granularities.HOUR,
               Granularities.MINUTE,
@@ -931,7 +931,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ),
           Collections.emptyList(),
           null,
-          compactionTask.getTuningConfig().getIndexSpec(),
+          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
           new UniformGranularitySpec(
               Granularities.HOUR,
               Granularities.MINUTE,
@@ -990,7 +990,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ),
           Collections.emptyList(),
           null,
-          compactionTask.getTuningConfig().getIndexSpec(),
+          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
           new UniformGranularitySpec(
               Granularities.HOUR,
               Granularities.MINUTE,

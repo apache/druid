@@ -33,6 +33,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
@@ -70,7 +71,7 @@ public abstract class DimensionSchema
         return new DoubleDimensionSchema(name);
       default:
         // the auto column indexer can handle any type
-        return new AutoTypeColumnSchema(name, null);
+        return AutoTypeColumnSchema.of(name);
     }
   }
 
@@ -164,6 +165,17 @@ public abstract class DimensionSchema
         IncrementalIndex.makeDefaultCapabilitiesFromValueType(getColumnType()),
         multiValueHandling
     );
+  }
+
+  /**
+   * Computes the 'effective' {@link DimensionSchema}, allowing columns which provide mechanisms for customizing storage
+   * format to fill in values from the segment level {@link IndexSpec} defaults. This is useful for comparising the
+   * operator explicitly defined schema with the 'effective' schema that was written to the segments for things like
+   * comparing compaction state.
+   */
+  public DimensionSchema getEffectiveSchema(IndexSpec indexSpec)
+  {
+    return this;
   }
 
   @Override

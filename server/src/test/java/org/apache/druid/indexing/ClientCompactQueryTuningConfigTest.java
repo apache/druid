@@ -34,7 +34,7 @@ public class ClientCompactQueryTuningConfigTest
     EqualsVerifier.forClass(ClientCompactionTaskQueryTuningConfig.class)
                   .withPrefabValues(
                       IndexSpec.class,
-                      IndexSpec.DEFAULT,
+                      IndexSpec.getDefault(),
                       IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build()
                   ).usingGetClass()
                   .verify();

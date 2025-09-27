@@ -272,7 +272,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                              .aggregators(new DoubleSumAggregatorFactory("dsum", "d"))
                              .build(),
       AggregateProjectionSpec.builder("json")
-                             .groupingColumns(new AutoTypeColumnSchema("f", null))
+                             .groupingColumns(AutoTypeColumnSchema.of("f"))
                              .aggregators(new LongSumAggregatorFactory("_c_sum", "c"))
                              .build(),
       AggregateProjectionSpec.builder("a_filter_b_aaonly_hourly_cd_sum")
@@ -414,7 +414,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                               new LongDimensionSchema("c"),
                               new DoubleDimensionSchema("d"),
                               new FloatDimensionSchema("e"),
-                              new AutoTypeColumnSchema("f", null),
+                              AutoTypeColumnSchema.of("f"),
                               new StringDimensionSchema("missing")
                           )
                       );
@@ -2153,9 +2153,9 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
   private static AutoTypeColumnSchema toAutoColumn(DimensionSchema x)
   {
     if (PROJECTION_TIME_COLUMNS.contains(x.getName())) {
-      return new AutoTypeColumnSchema(x.getName(), ColumnType.LONG);
+      return new AutoTypeColumnSchema(x.getName(), ColumnType.LONG, null);
     }
-    return new AutoTypeColumnSchema(x.getName(), null);
+    return AutoTypeColumnSchema.of(x.getName());
   }
 
   private static IndexBuilder makeBuilder(DimensionsSpec dimensionsSpec, boolean autoSchema, boolean writeNullColumns)

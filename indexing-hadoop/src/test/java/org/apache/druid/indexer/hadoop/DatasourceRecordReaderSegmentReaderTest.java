@@ -236,7 +236,7 @@ public class DatasourceRecordReaderSegmentReaderTest
       for (String line : rows) {
         index.add(parser.parse(line));
       }
-      indexMerger.persist(index, segmentDir, IndexSpec.DEFAULT, null);
+      indexMerger.persist(index, segmentDir, IndexSpec.getDefault(), null);
     }
   }
 }

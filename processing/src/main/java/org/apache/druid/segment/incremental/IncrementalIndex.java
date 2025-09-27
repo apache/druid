@@ -60,6 +60,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.EncodedKeyComponent;
 import org.apache.druid.segment.FloatColumnSelector;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.NestedCommonFormatColumnHandler;
@@ -520,7 +521,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
           wasNewDim = true;
           final DimensionHandler<?, ?, ?> handler;
           if (useSchemaDiscovery) {
-            handler = new NestedCommonFormatColumnHandler(dimension, null);
+            handler = new NestedCommonFormatColumnHandler(dimension, null, IndexSpec.getDefault().getAutoColumnFormatSpec());
           } else {
             // legacy behavior: for schemaless type discovery, everything is a String
             handler = DimensionHandlerUtils.getHandlerFromCapabilities(

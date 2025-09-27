@@ -155,7 +155,7 @@ public class ParallelIndexTuningConfigTest
                   .usingGetClass()
                   .withPrefabValues(
                       IndexSpec.class,
-                      IndexSpec.DEFAULT,
+                      IndexSpec.getDefault(),
                       IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build()
                   )
                   .verify();
