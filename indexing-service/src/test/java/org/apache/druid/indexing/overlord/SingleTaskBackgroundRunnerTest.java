@@ -339,10 +339,9 @@ public class SingleTaskBackgroundRunnerTest
     runner.stop();
 
     Assert.assertEquals(TaskState.FAILED, statusHolder.get().getStatusCode());
-    Assert.assertEquals(
-        "Canceled as task execution process stopped",
-        statusHolder.get().getErrorMsg()
-    );
+
+    // Do not verify the failure error message as there is a race condition
+    // where the error message may either originate from NoopTask or the runner
   }
 
   private static class RestorableTask extends AbstractTask
