@@ -1151,38 +1151,38 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   /**
    * Create index on the table {@code tableName} with retry if not already exist, to be called after {@link #createTable}.
-   * Format of index name is either specified via legacy {@code legacyIndexNameFormat} or {@link #generateShortIndexName}.
+   * Format of index name is either specified via {@code fullIndexNameFormat} or {@link #generateShortIndexName}.
    *
-   * @param tableName             Name of the table to create index on
-   * @param legacyIndexNameFormat Template to create index ID. If null, uses the format: {@code IDX_{table name}_{columns}}.
-   * @param indexCols             List of un-escaped column names to be indexed on (case-sensitive).
+   * @param tableName           Name of the table to create index on
+   * @param fullIndexNameFormat Template to create index ID. If specified, the only placeholder should be for the tableName. Otherwise, uses the format: {@code IDX_{table name}_{columns}}.
+   * @param indexCols           List of un-escaped column names to be indexed on (case-sensitive).
    */
   public void createIndex(
       final String tableName,
-      final String legacyIndexNameFormat,
+      @Nullable final String fullIndexNameFormat,
       final List<String> indexCols
   )
   {
     final Set<String> createdIndexSet = getIndexOnTable(tableName);
     final String shortIndexName = generateShortIndexName(tableName, indexCols);
-    String legacyIndexName = StringUtils.toUpperCase(legacyIndexNameFormat != null
-                                                     ? StringUtils.format(legacyIndexNameFormat, tableName)
-                                                     : StringUtils.format(
-                                                         "IDX_%S_%S",
-                                                         tableName,
-                                                         Joiner.on("_").join(indexCols)
-                                                     ));
+    final String fullIndexName = StringUtils.toUpperCase(fullIndexNameFormat != null
+                                                         ? StringUtils.format(fullIndexNameFormat, tableName)
+                                                         : StringUtils.format(
+                                                             "IDX_%S_%S",
+                                                             tableName,
+                                                             Joiner.on("_").join(indexCols)
+                                                         ));
 
     // Avoid creating duplicate indices if an index with either naming convention already exists
-    if (createdIndexSet.contains(legacyIndexName)) {
-      log.info("Legacy index[%s] on Table[%s] already exists", legacyIndexName, tableName);
+    if (createdIndexSet.contains(fullIndexName)) {
+      log.info("Full index[%s] on Table[%s] already exists", fullIndexName, tableName);
       return;
     } else if (createdIndexSet.contains(shortIndexName)) {
       log.info("Short index[%s] on Table[%s] already exists", shortIndexName, tableName);
       return;
     }
 
-    final String indexName = tablesConfigSupplier.get().isUseShortIndexNames() ? shortIndexName : legacyIndexName;
+    final String indexName = tablesConfigSupplier.get().isUseShortIndexNames() ? shortIndexName : fullIndexName;
     try {
       retryWithHandle(
           (HandleCallback<Void>) handle -> {
@@ -1199,7 +1199,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       );
     }
     catch (Exception e) {
-      log.error(e, StringUtils.format("Exception while creating index[%s] on table[%s]", indexName, tableName));
+      log.error(e, "Exception while creating index[%s] on table[%s]", indexName, tableName);
     }
   }
 

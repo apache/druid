@@ -307,7 +307,7 @@ public class SQLMetadataConnectorTest
   public void test_useShortIndexNames_true_tableIndices_areNotAdded_ifExist()
   {
     tablesConfig = new MetadataStorageTablesConfig(
-        "druidTest_base_table_name_true",
+        "druidTest",
         null, null, null, null, null, null, null, null, null, null, null,
         true
     );
@@ -318,8 +318,8 @@ public class SQLMetadataConnectorTest
     connector.createSegmentTable(segmentsTable);
     connector.alterSegmentTable();
     connector.getDBI().withHandle(handle -> {
-      handle.execute("DROP INDEX IDX_B859F28F30657A58518416E445E0AA1A78A68177");
-      handle.execute(StringUtils.format("CREATE INDEX IDX_%1$s_USED ON %1$s(used)", segmentsTable));
+      handle.execute("DROP INDEX IDX_8FE3D20EC8C9CA932EA3FF6AC497D1A9E75ADDA0");
+      handle.execute("CREATE INDEX IDX_DRUIDTEST_SEGMENTS_USED ON druidTest_segments(used)");
       return null;
     });
 
@@ -327,9 +327,9 @@ public class SQLMetadataConnectorTest
     connector.alterSegmentTable();
 
     final Set<String> expectedIndices = Sets.newHashSet(
-        StringUtils.format("IDX_%S_USED", segmentsTable),
-        "IDX_3A789D647A2A70597C2AA5CB1DC4E0F231529B75",
-        "IDX_00F9CD53AC9353C0E98B554ECD8CF5A84D28370F"
+        "IDX_DRUIDTEST_SEGMENTS_USED",
+        "IDX_D011BD6ED76268701273CE512704C5AFA060D672",
+        "IDX_6381EF2DB4824C35C0E72EF9E166626ADB2B21A3"
     );
     assertIndicesPresentOnTable(segmentsTable, expectedIndices);
 
@@ -341,7 +341,7 @@ public class SQLMetadataConnectorTest
   public void test_useShortIndexNames_false_tableIndices_areNotAdded_ifExist()
   {
     tablesConfig = new MetadataStorageTablesConfig(
-        "druidTest_base_table_name",
+        "druidTest",
         null, null, null, null, null, null, null, null, null, null, null,
         false
     );
@@ -352,11 +352,8 @@ public class SQLMetadataConnectorTest
     connector.createSegmentTable(segmentsTable);
     connector.alterSegmentTable();
     connector.getDBI().withHandle(handle -> {
-      handle.execute(StringUtils.format("DROP INDEX IDX_%s_USED", segmentsTable));
-      handle.execute(StringUtils.format(
-          "CREATE INDEX IDX_3E94AF560719CBA0E08C0B35FB5DF8079DC6D595 ON %1$s(used)",
-          segmentsTable
-      ));
+      handle.execute("DROP INDEX IDX_DRUIDTEST_SEGMENTS_USED");
+      handle.execute("CREATE INDEX IDX_8FE3D20EC8C9CA932EA3FF6AC497D1A9E75ADDA0 ON druidTest_segments(used)");
       return null;
     });
 
@@ -364,9 +361,9 @@ public class SQLMetadataConnectorTest
     connector.alterSegmentTable();
 
     final Set<String> expectedIndices = Sets.newHashSet(
-        "IDX_3E94AF560719CBA0E08C0B35FB5DF8079DC6D595",
-        StringUtils.format("IDX_%S_DATASOURCE_USED_END_START", segmentsTable),
-        StringUtils.format("IDX_%S_DATASOURCE_UPGRADED_FROM_SEGMENT_ID", segmentsTable)
+        "IDX_8FE3D20EC8C9CA932EA3FF6AC497D1A9E75ADDA0",
+        "IDX_DRUIDTEST_SEGMENTS_DATASOURCE_USED_END_START",
+        "IDX_DRUIDTEST_SEGMENTS_DATASOURCE_UPGRADED_FROM_SEGMENT_ID"
     );
     assertIndicesPresentOnTable(segmentsTable, expectedIndices);
 
@@ -378,7 +375,7 @@ public class SQLMetadataConnectorTest
   public void test_useShortIndexNames_true_tableIndices_areAdded_IfNotExist()
   {
     tablesConfig = new MetadataStorageTablesConfig(
-        "druidTest_base_table_name_true",
+        "druidTest",
         null, null, null, null, null, null, null, null, null, null, null,
         true
     );
@@ -387,9 +384,9 @@ public class SQLMetadataConnectorTest
     final String segmentsTable = tablesConfig.getSegmentsTable();
 
     final Set<String> expectedIndices = Sets.newHashSet(
-        "IDX_B859F28F30657A58518416E445E0AA1A78A68177",
-        "IDX_3A789D647A2A70597C2AA5CB1DC4E0F231529B75",
-        "IDX_00F9CD53AC9353C0E98B554ECD8CF5A84D28370F"
+        "IDX_8FE3D20EC8C9CA932EA3FF6AC497D1A9E75ADDA0",
+        "IDX_D011BD6ED76268701273CE512704C5AFA060D672",
+        "IDX_6381EF2DB4824C35C0E72EF9E166626ADB2B21A3"
     );
 
     connector.createSegmentTable(segmentsTable);
@@ -403,12 +400,18 @@ public class SQLMetadataConnectorTest
   @Test
   public void test_useShortIndexNames_false_tableIndices_areAdded_IfNotExist()
   {
+    tablesConfig = new MetadataStorageTablesConfig(
+        "druidTest",
+        null, null, null, null, null, null, null, null, null, null, null,
+        false
+    );
+    connector = new TestDerbyConnector(new MetadataStorageConnectorConfig(), tablesConfig);
     final String segmentsTable = tablesConfig.getSegmentsTable();
 
     final Set<String> expectedIndices = Sets.newHashSet(
-        StringUtils.format("IDX_%S_USED", segmentsTable),
-        StringUtils.format("IDX_%S_DATASOURCE_USED_END_START", segmentsTable),
-        StringUtils.format("IDX_%S_DATASOURCE_UPGRADED_FROM_SEGMENT_ID", segmentsTable)
+        "IDX_DRUIDTEST_SEGMENTS_USED",
+        "IDX_DRUIDTEST_SEGMENTS_DATASOURCE_USED_END_START",
+        "IDX_DRUIDTEST_SEGMENTS_DATASOURCE_UPGRADED_FROM_SEGMENT_ID"
     );
 
     connector.createSegmentTable(segmentsTable);
@@ -416,6 +419,7 @@ public class SQLMetadataConnectorTest
 
     assertIndicesPresentOnTable(segmentsTable, expectedIndices);
     dropTable(segmentsTable);
+    connector.tearDown();
   }
 
   private void assertIndicesPresentOnTable(String tableName, Set<String> expectedIndices)

@@ -181,6 +181,9 @@ public class MetadataStorageTablesConfig
     return segmentSchemasTable;
   }
 
+  /**
+   * If enabled, this causes table indices to be created with short, unique SHA-based identifiers.
+   */
   public boolean isUseShortIndexNames()
   {
     return useShortIndexNames;
