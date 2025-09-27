@@ -394,6 +394,7 @@ These properties specify the JDBC connection and other configuration around the 
 |`druid.metadata.storage.tables.taskLock`|Used by the indexing service to store task locks.|`druid_tasklocks`|
 |`druid.metadata.storage.tables.supervisors`|Used by the indexing service to store supervisor configurations.|`druid_supervisors`|
 |`druid.metadata.storage.tables.audit`|The table to use for audit history of configuration changes, such as Coordinator rules.|`druid_audit`|
+|`druid.metadata.storage.tables.useShortIndexNames`|Whether to use SHA-based unique index names to ensure all indices are created.|`false`|
 
 ### Deep storage
 
