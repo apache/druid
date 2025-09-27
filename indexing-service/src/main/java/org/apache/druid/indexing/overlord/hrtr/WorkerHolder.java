@@ -69,6 +69,7 @@ public class WorkerHolder
   private Worker disabledWorker;
 
   protected final AtomicBoolean disabled;
+  private final AtomicBoolean syncedAtleastOnce = new AtomicBoolean(false);
 
   // Known list of tasks running/completed on this worker.
   protected final AtomicReference<Map<String, TaskAnnouncement>> tasksSnapshotRef;
@@ -299,9 +300,12 @@ public class WorkerHolder
     }
   }
 
+  /**
+   * Whether this worker has been synced successfully atleast once.
+   */
   public boolean isInitialized()
   {
-    return syncer.isInitialized();
+    return syncedAtleastOnce.get();
   }
 
   public boolean isEnabled()
@@ -425,6 +429,7 @@ public class WorkerHolder
 
       private void notifyListener(List<TaskAnnouncement> announcements, boolean isWorkerDisabled)
       {
+        syncedAtleastOnce.set(true);
         for (TaskAnnouncement announcement : announcements) {
           try {
             listener.taskAddedOrUpdated(announcement, WorkerHolder.this);
