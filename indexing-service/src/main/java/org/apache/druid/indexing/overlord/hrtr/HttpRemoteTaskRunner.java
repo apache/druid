@@ -1235,7 +1235,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
 
             immutableWorker = findWorkerToRunTask(ti.getTask());
             if (immutableWorker == null) {
-              log.info("No eligible worker to run task[%s]", ti.getTask().getId());
+              log.info("No eligible worker to run task[%s].", ti.getTask().getId());
               continue;
             }
 
