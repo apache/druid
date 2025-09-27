@@ -22,15 +22,16 @@ package org.apache.druid.k8s.overlord.common;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
+import org.apache.druid.k8s.overlord.common.httpclient.DruidKubernetesHttpClientFactory;
 
 public class DruidKubernetesClient implements KubernetesClientApi
 {
   private final KubernetesClient kubernetesClient;
 
-  public DruidKubernetesClient(DruidKubernetesHttpClientConfig httpClientConfig, Config kubernetesClientConfig)
+  public DruidKubernetesClient(DruidKubernetesHttpClientFactory httpClientFactory, Config kubernetesClientConfig)
   {
     this.kubernetesClient = new KubernetesClientBuilder()
-        .withHttpClientFactory(new DruidKubernetesHttpClientFactory(httpClientConfig))
+        .withHttpClientFactory(httpClientFactory)
         .withConfig(kubernetesClientConfig)
         .build();
   }
