@@ -1,0 +1,393 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#-------------------------------------------------------------------------
+apiVersion: "druid.apache.org/v1alpha1"
+kind: "Druid"
+metadata:
+  name: druid-test
+  namespace: test-namespace
+spec:
+  image: apache/druid:0.22.1
+  defaultProbes: true
+  podAnnotations:
+    key1: value1
+    key2: value2
+  securityContext:
+    fsGroup: 107
+    runAsUser: 106
+  readinessProbe:
+    httpGet:
+      path: /status
+  additionalContainer:
+    - image: universalforwarder-sidekick:next
+      containerName: forwarder
+      command:
+        - /bin/sidekick
+      imagePullPolicy: Always
+      securityContext:
+        runAsUser: 506
+      volumeMounts:
+        - name: logstore
+          mountPath: /logstore
+      env:
+        - name: SAMPLE_ENV
+          value: SAMPLE_VALUE
+      resources:
+        requests:
+          memory: "1Gi"
+          cpu: "500m"
+        limits:
+          memory: "1Gi"
+          cpu: "500m"
+      args:
+        - -loggingEnabled=true
+        - -dataCenter=dataCenter
+        - -environment=environment
+        - -application=application
+        - -instance=instance
+        - -logFiles=logFiles
+  zookeeper:
+    type: default
+    spec:
+      properties: |-
+        druid.zk.service.host=zookeeper-0.zookeeper,zookeeper-1.zookeeper,zookeeper-2.zookeeper
+        druid.zk.paths.base=/druid
+        druid.zk.service.compress=false
+  metadataStore:
+    type: default
+    spec:
+      properties: |-
+        druid.metadata.storage.type=postgresql
+        druid.metadata.storage.connector.connectURI=jdbc:postgresql://rdsaddr.us-west-2.rds.amazonaws.com:5432/druiddb
+        druid.metadata.storage.connector.user=iamuser
+        druid.metadata.storage.connector.password=changeme
+        druid.metadata.storage.connector.createTables=true
+  deepStorage:
+    type: default
+    spec:
+      properties: |-
+        druid.storage.type=s3
+        druid.storage.bucket=mybucket
+        druid.storage.baseKey=druid/segments
+        druid.s3.accessKey=accesskey
+        druid.s3.secretKey=secretkey
+  jvm.options: |-
+    -server
+    -XX:MaxDirectMemorySize=10240g
+    -Duser.timezone=UTC
+    -Dfile.encoding=UTF-8
+    -Dlog4j.debug
+    -XX:+ExitOnOutOfMemoryError
+    -XX:+HeapDumpOnOutOfMemoryError
+    -XX:+UseG1GC
+    -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+  log4j.config: |-
+    <?xml version="1.0" encoding="UTF-8" ?>
+    <Configuration status="WARN">
+        <Appenders>
+            <Console name="Console" target="SYSTEM_OUT">
+                <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
+            </Console>
+        </Appenders>
+        <Loggers>
+            <Root level="info">
+                <AppenderRef ref="Console"/>
+            </Root>
+        </Loggers>
+    </Configuration>
+  common.runtime.properties: |-
+    #
+    # Extensions
+    #
+    druid.extensions.loadList=["druid-datasketches", "druid-s3-extensions", "postgresql-metadata-storage"]
+
+    #
+    # Logging
+    #
+    # Log all runtime properties on startup. Disable to avoid logging properties on startup:
+    druid.startup.logging.logProperties=true
+
+    #
+    # Indexing service logs
+    #
+    # Store indexing logs in an S3 bucket named 'druid-deep-storage' with the
+    # prefix 'druid/indexing-logs'
+    druid.indexer.logs.type=s3
+    druid.indexer.logs.s3Bucket=mybucket
+    druid.indexer.logs.s3Prefix=druid/indexing-logs
+
+    #
+    # Service discovery
+    #
+    druid.selectors.indexing.serviceName=druid/overlord
+    druid.selectors.coordinator.serviceName=druid/coordinator
+
+    #
+    # Monitoring
+    #
+    druid.monitoring.monitors=["com.metamx.metrics.JvmMonitor"]
+    druid.emitter=logging
+    druid.emitter.logging.logLevel=info
+
+    # Storage type of double columns
+    # ommiting this will lead to index double as float at the storage layer
+    druid.indexing.doubleStorage=double
+  metricDimensions.json: |-
+    {
+      "query/time" : { "dimensions" : ["dataSource", "type"], "type" : "timer"}
+    }
+  nodes:
+    brokers:
+      nodeType: "broker"
+      services:
+        - spec:
+            type: ClusterIP
+            clusterIP: None
+        - metadata:
+            name: broker-%s-service
+            annotations:
+              service.beta.kubernetes.io/aws-load-balancer-internal: 0.0.0.0/0
+          spec:
+            type: LoadBalancer
+            ports:
+              - name: service-port
+                port: 8090
+                targetPort: 8080
+      druid.port: 8080
+      replicas: 2
+      podDisruptionBudgetSpec:
+        maxUnavailable: 1
+      livenessProbe:
+        httpGet:
+          path: /status
+      ports:
+        - name: random
+          containerPort: 8083
+      runtime.properties: |-
+        druid.service=druid/broker
+
+        # HTTP server threads
+        druid.broker.http.numConnections=5
+        druid.server.http.numThreads=25
+
+        # Processing threads and buffers
+        druid.processing.buffer.sizeBytes=1
+        druid.processing.numMergeBuffers=1
+        druid.processing.numThreads=1
+      extra.jvm.options: |-
+        -Xmx1G
+        -Xms1G
+      volumeClaimTemplates:
+        - metadata:
+            name: data-volume
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 2Gi
+            storageClassName: gp2
+
+      volumeMounts:
+        - mountPath: /druid/data
+          name: data-volume
+          readOnly: true
+      resources:
+        requests:
+          memory: "2Gi"
+          cpu: "4"
+        limits:
+          memory: "2Gi"
+          cpu: "4"
+
+    coordinators:
+      nodeType: "coordinator"
+      druid.port: 8080
+      replicas: 1
+      ports:
+        - name: random
+          containerPort: 8083
+      runtime.properties: |-
+        druid.service=druid/coordinator
+
+        # HTTP server threads
+        druid.coordinator.startDelay=PT30S
+        druid.coordinator.period=PT30S
+      extra.jvm.options: |-
+        -Xmx1G
+        -Xms1G
+      volumeClaimTemplates:
+        - metadata:
+            name: data-volume
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 2Gi
+            storageClassName: gp2
+
+      volumeMounts:
+        - mountPath: /druid/data
+          name: data-volume
+      resources:
+        requests:
+          memory: "2Gi"
+          cpu: "4"
+        limits:
+          memory: "2Gi"
+          cpu: "4"
+
+    historicals:
+      nodeType: "historical"
+      druid.port: 8080
+      replicas: 2
+      ports:
+        - name: random
+          containerPort: 8084
+      runtime.properties: |-
+        druid.service=druid/historical
+        druid.server.http.numThreads=10
+        druid.processing.buffer.sizeBytes=268435456
+        druid.processing.numMergeBuffers=1
+        druid.processing.numThreads=1
+        # Segment storage
+        druid.segmentCache.locations=[{\"path\":\"/druid/data/segments\",\"maxSize\":10737418240}]
+        druid.server.maxSize=10737418240
+      extra.jvm.options: |-
+        -Xmx1G
+        -Xms1G
+      volumeClaimTemplates:
+        - metadata:
+            name: data-volume
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 2Gi
+            storageClassName: gp2
+
+      volumeMounts:
+        - mountPath: /druid/data
+          name: data-volume
+      resources:
+        requests:
+          memory: "2Gi"
+          cpu: "4"
+        limits:
+          memory: "2Gi"
+          cpu: "4"
+
+    overlords:
+      nodeType: "overlord"
+      druid.port: 8080
+      replicas: 1
+      ports:
+        - name: random
+          containerPort: 8083
+      runtime.properties: |-
+        druid.service=druid/overlord
+
+        # HTTP server threads
+        druid.indexer.queue.startDelay=PT30S
+        druid.indexer.runner.type=remote
+        druid.indexer.storage.type=metadata
+      extra.jvm.options: |-
+        -Xmx1G
+        -Xms1G
+      volumeClaimTemplates:
+        - metadata:
+            name: data-volume
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 2Gi
+            storageClassName: gp2
+
+      volumeMounts:
+        - mountPath: /druid/data
+          name: data-volume
+      resources:
+        requests:
+          memory: "2Gi"
+          cpu: "4"
+        limits:
+          memory: "2Gi"
+          cpu: "4"
+
+    middlemanagers:
+      nodeType: "middleManager"
+      druid.port: 8080
+      replicas: 1
+      ports:
+        - name: peon-0-pt
+          containerPort: 8100
+        - name: peon-1-pt
+          containerPort: 8101
+        - name: peon-2-pt
+          containerPort: 8102
+        - name: peon-3-pt
+          containerPort: 8103
+        - name: peon-4-pt
+          containerPort: 8104
+        - name: peon-5-pt
+          containerPort: 8105
+        - name: peon-6-pt
+          containerPort: 8106
+        - name: peon-7-pt
+          containerPort: 8107
+        - name: peon-8-pt
+          containerPort: 8108
+        - name: peon-9-pt
+          containerPort: 8109
+
+      runtime.properties: |-
+        druid.service=druid/middleManager
+        druid.worker.capacity=1
+        druid.indexer.runner.javaOpts=-server -XX:MaxDirectMemorySize=10240g -Duser.timezone=UTC -Dfile.encoding=UTF-8 -Djava.io.tmpdir=/druid/data/tmp -Dlog4j.debug -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+PrintGCApplicationStoppedTime -XX:+PrintGCApplicationConcurrentTime -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=50 -XX:GCLogFileSize=10m -XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError -XX:+UseG1GC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager -Xloggc:/druid/data/logs/peon.gc.%t.%p.log -XX:HeapDumpPath=/druid/data/logs/peon.%t.%p.hprof -Xms1G -Xmx1G
+        druid.indexer.task.baseTaskDir=/druid/data/baseTaskDir
+        druid.server.http.numThreads=10
+        druid.indexer.fork.property.druid.processing.buffer.sizeBytes=268435456
+        druid.indexer.fork.property.druid.processing.numMergeBuffers=1
+        druid.indexer.fork.property.druid.processing.numThreads=1
+        druid.indexer.task.hadoopWorkingPath=/druid/data/hadoop-working-path
+        druid.indexer.task.defaultHadoopCoordinates=[\"org.apache.hadoop:hadoop-client:2.7.3\"]
+      extra.jvm.options: |-
+        -Xmx1G
+        -Xms1G
+      volumeClaimTemplates:
+        - metadata:
+            name: data-volume
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 2Gi
+            storageClassName: gp2
+
+      volumeMounts:
+        - mountPath: /druid/data
+          name: data-volume
+      resources:
+        requests:
+          memory: "3Gi"
+          cpu: "4"
+        limits:
+          memory: "3Gi"
+          cpu: "4"

@@ -1,0 +1,29 @@
+{
+  "hideMemberFields": [
+    "TypeMeta"
+  ],
+  "hideTypePatterns": [
+    "ParseError$",
+    "List$"
+  ],
+  "externalPackages": [
+    {
+      "typeMatchPrefix": "^k8s\\.io/apimachinery/pkg/apis/meta/v1\\.Duration$",
+      "docsURLTemplate": "https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration"
+    },
+    {
+      "typeMatchPrefix": "^k8s\\.io/apiextensions-apiserver/pkg/apis/apiextensions/v1\\.JSON$",
+      "docsURLTemplate": "https://pkg.go.dev/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1?tab=doc#JSON"
+    },
+    {
+      "typeMatchPrefix": "^k8s\\.io/(api|apimachinery/pkg/apis)/",
+      "docsURLTemplate": "https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#{{lower .TypeIdentifier}}-{{arrIndex .PackageSegments -1}}-{{arrIndex .PackageSegments -2}}"
+    }
+  ],
+  "typeDisplayNamePrefixOverrides": {
+    "k8s.io/api/": "Kubernetes ",
+    "k8s.io/apimachinery/pkg/apis/": "Kubernetes ",
+    "k8s.io/apiextensions-apiserver/": "Kubernetes "
+  },
+  "markdownDisabled": false
+}
