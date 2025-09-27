@@ -359,7 +359,8 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
         "Running task[%s] for [%d] millis",
         taskId, runDurationMillis
     );
-    Assertions.assertTrue(logs.contains(expectedLogLine));
+    Assertions.assertFalse(logs.isEmpty());
+    Assertions.assertTrue(logs.contains(expectedLogLine), "Actual logs are: " + logs);
   }
 
   private KafkaSupervisorSpec createKafkaSupervisor(String topic)
