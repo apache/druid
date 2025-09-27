@@ -56,7 +56,7 @@ public class DruidTestModule implements Module
 
     // Bind DruidNode instance to make Guice happy. This instance is currently unused.
     binder.bind(DruidNode.class).annotatedWith(Self.class).toInstance(
-        new DruidNode("integration-tests", "localhost", false, 9191, null, null, true, false)
+        new DruidNode("integration-tests", "localhost", false, 9191, null, null, true, false, null)
     );
 
     // Required for MSQIndexingModule

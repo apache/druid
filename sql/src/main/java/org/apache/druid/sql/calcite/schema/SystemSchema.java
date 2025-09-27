@@ -57,6 +57,7 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnType;
@@ -181,6 +182,7 @@ public class SystemSchema extends AbstractSchema
       .add("is_leader", ColumnType.LONG)
       .add("start_time", ColumnType.STRING)
       .add("version", ColumnType.STRING)
+      .add("labels", ColumnType.STRING)
       .build();
 
   static final RowSignature SERVER_SEGMENTS_SIGNATURE = RowSignature
@@ -245,7 +247,8 @@ public class SystemSchema extends AbstractSchema
             serverInventoryView,
             authorizerMapper,
             overlordClient,
-            coordinatorClient
+            coordinatorClient,
+            jsonMapper
         ),
         SERVER_SEGMENTS_TABLE,
         new ServerSegmentsTable(serverView, authorizerMapper),
@@ -526,13 +529,15 @@ public class SystemSchema extends AbstractSchema
     private final FilteredServerInventoryView serverInventoryView;
     private final OverlordClient overlordClient;
     private final CoordinatorClient coordinatorClient;
+    private final ObjectMapper jsonMapper;
 
     public ServersTable(
         DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
         FilteredServerInventoryView serverInventoryView,
         AuthorizerMapper authorizerMapper,
         OverlordClient overlordClient,
-        CoordinatorClient coordinatorClient
+        CoordinatorClient coordinatorClient,
+        ObjectMapper jsonMapper
     )
     {
       this.authorizerMapper = authorizerMapper;
@@ -540,6 +545,7 @@ public class SystemSchema extends AbstractSchema
       this.serverInventoryView = serverInventoryView;
       this.overlordClient = overlordClient;
       this.coordinatorClient = coordinatorClient;
+      this.jsonMapper = jsonMapper;
     }
 
     @Override
@@ -627,7 +633,7 @@ public class SystemSchema extends AbstractSchema
     /**
      * Returns a row for all node types which don't serve data. The returned row contains only static information.
      */
-    private static Object[] buildRowForNonDataServer(DiscoveryDruidNode discoveryDruidNode)
+    private Object[] buildRowForNonDataServer(DiscoveryDruidNode discoveryDruidNode)
     {
       final DruidNode node = discoveryDruidNode.getDruidNode();
       return new Object[]{
@@ -641,14 +647,15 @@ public class SystemSchema extends AbstractSchema
           UNKNOWN_SIZE,
           null,
           toStringOrNull(discoveryDruidNode.getStartTime()),
-          node.getVersion()
+          node.getVersion(),
+          node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels())
       };
     }
 
     /**
      * Returns a row for all node types which don't serve data. The returned row contains only static information.
      */
-    private static Object[] buildRowForNonDataServerWithLeadership(
+    private Object[] buildRowForNonDataServerWithLeadership(
         DiscoveryDruidNode discoveryDruidNode,
         boolean isLeader
     )
@@ -665,7 +672,8 @@ public class SystemSchema extends AbstractSchema
           UNKNOWN_SIZE,
           isLeader ? 1L : 0L,
           toStringOrNull(discoveryDruidNode.getStartTime()),
-          node.getVersion()
+          node.getVersion(),
+          node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels())
       };
     }
 
@@ -674,7 +682,7 @@ public class SystemSchema extends AbstractSchema
      * {@code serverFromInventoryView} if available which is the current state of the server. Otherwise, it
      * will get the information from {@code discoveryDruidNode} which has only static configurations.
      */
-    private static Object[] buildRowForDiscoverableDataServer(
+    private Object[] buildRowForDiscoverableDataServer(
         DiscoveryDruidNode discoveryDruidNode,
         @Nullable DruidServer serverFromInventoryView
     )
@@ -701,7 +709,8 @@ public class SystemSchema extends AbstractSchema
           druidServerToUse.getMaxSize(),
           null,
           toStringOrNull(discoveryDruidNode.getStartTime()),
-          node.getVersion()
+          node.getVersion(),
+          node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels())
       };
     }
 
