@@ -112,8 +112,7 @@ public class NoopTask extends AbstractTask implements PendingSegmentAllocatingTa
     log.info("Running task[%s] for [%d] millis", getId(), runTime);
     emitMetric(toolbox.getEmitter(), EVENT_STARTED, 1);
     if (isShutdown.await(runTime, TimeUnit.MILLISECONDS)) {
-      log.info("Task has been cancelled by user.");
-      return TaskStatus.failure(getId(), "Cancelled");
+      return TaskStatus.failure(getId(), "Canceled");
     } else {
       return TaskStatus.success(getId());
     }

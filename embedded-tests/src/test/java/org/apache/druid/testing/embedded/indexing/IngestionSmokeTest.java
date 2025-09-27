@@ -360,7 +360,6 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
         taskId, runDurationMillis
     );
     Assertions.assertTrue(logs.contains(expectedLogLine));
-    Assertions.assertTrue(logs.contains("Task has been cancelled by user"));
   }
 
   private KafkaSupervisorSpec createKafkaSupervisor(String topic)
