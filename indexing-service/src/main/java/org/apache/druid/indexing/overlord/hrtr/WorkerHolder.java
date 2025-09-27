@@ -69,7 +69,6 @@ public class WorkerHolder
   private Worker disabledWorker;
 
   protected final AtomicBoolean disabled;
-  private final AtomicBoolean syncerInitialized = new AtomicBoolean(false);
 
   // Known list of tasks running/completed on this worker.
   protected final AtomicReference<Map<String, TaskAnnouncement>> tasksSnapshotRef;
@@ -300,12 +299,9 @@ public class WorkerHolder
     }
   }
 
-  /**
-   * Whether this worker has been synced successfully atleast once.
-   */
   public boolean isInitialized()
   {
-    return syncerInitialized.get();
+    return syncer.isInitialized();
   }
 
   public boolean isEnabled()
@@ -429,7 +425,6 @@ public class WorkerHolder
 
       private void notifyListener(List<TaskAnnouncement> announcements, boolean isWorkerDisabled)
       {
-        syncerInitialized.set(true);
         for (TaskAnnouncement announcement : announcements) {
           try {
             listener.taskAddedOrUpdated(announcement, WorkerHolder.this);
