@@ -305,6 +305,8 @@ public class WorkerHolder
    */
   public boolean isInitialized()
   {
+    // Do not use syncer.isInitialized() to avoid delay of task assignment due to
+    // the HttpRemoteTaskRunner.pendingTaskExecutionLoop() going to sleep
     return syncedAtleastOnce.get();
   }
 
