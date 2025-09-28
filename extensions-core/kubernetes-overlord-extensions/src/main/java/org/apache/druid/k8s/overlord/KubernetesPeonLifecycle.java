@@ -264,7 +264,7 @@ public class KubernetesPeonLifecycle
   /**
    * Get task location for the Kubernetes pod running the peon process
    *
-   * @return
+   * @return {@link TaskLocation#unknown()} if the task has not started or if the status of the respective pod could not be fetched.
    */
   protected TaskLocation getTaskLocation()
   {
@@ -272,7 +272,6 @@ public class KubernetesPeonLifecycle
     if (State.PENDING.equals(currentState) || State.NOT_STARTED.equals(currentState)) {
       // This can happen if something external is checking the task location before the task has started.
       // For example, when MSQ controller has started but the workers have not been started yet, this can be called.
-      log.debug("Can't get task location for non-running job. [%s]", taskId.getOriginalTaskId());
       return TaskLocation.unknown();
     }
 
