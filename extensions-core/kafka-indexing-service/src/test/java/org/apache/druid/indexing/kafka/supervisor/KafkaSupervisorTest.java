@@ -4973,11 +4973,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     replayAll();
 
-    Assert.assertTrue(supervisor.isTaskCurrent(42, "id0", taskMap));
-    Assert.assertTrue(supervisor.isTaskCurrent(42, "id1", taskMap));
-    Assert.assertFalse(supervisor.isTaskCurrent(42, "id2", taskMap));
-    Assert.assertFalse(supervisor.isTaskCurrent(42, "id3", taskMap));
-    Assert.assertFalse(supervisor.isTaskCurrent(42, "id4", taskMap));
+    Assert.assertTrue(supervisor.isTaskCurrent(42, "id0", taskMap, ""));
+    Assert.assertTrue(supervisor.isTaskCurrent(42, "id1", taskMap, ""));
+    Assert.assertFalse(supervisor.isTaskCurrent(42, "id2", taskMap, ""));
+    Assert.assertFalse(supervisor.isTaskCurrent(42, "id3", taskMap, ""));
+    Assert.assertFalse(supervisor.isTaskCurrent(42, "id4", taskMap, ""));
     verifyAll();
   }
 
@@ -6093,7 +6093,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
 
     @Override
-    public boolean isTaskCurrent(int taskGroupId, String taskId, Map<String, Task> taskMap)
+    public boolean isTaskCurrent(int taskGroupId, String taskId, Map<String, Task> taskMap, String version)
     {
       return isTaskCurrentReturn;
     }

@@ -20,11 +20,13 @@
 package org.apache.druid.testing.embedded.indexing;
 
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.guice.ClusterTestingModule;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.supervisor.LagBasedAutoScalerConfigBuilder;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
+import org.apache.druid.testing.cluster.overlord.FaultyLagAggregator;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -43,7 +45,7 @@ import org.junit.jupiter.api.Timeout;
  * Embedded test to verify task scaling behaviour of {@code KafkaSupervisor} ingesting from a custom kafka topic.
  */
 @SuppressWarnings("resource")
-public class KafkaTaskScalingTest extends EmbeddedClusterTestBase
+public class KafkaTaskAutoScalingTest extends EmbeddedClusterTestBase
 {
   private static final String TOPIC = EmbeddedClusterApis.createTestDatasourceName();
 
@@ -78,8 +80,11 @@ public class KafkaTaskScalingTest extends EmbeddedClusterTestBase
     };
 
     indexer.addProperty("druid.worker.capacity", "10");
-    overlord.addProperty("druid.server.http.numThreads", "50");
+    overlord.addProperty("druid.server.http.numThreads", "50")
+            .addProperty("druid.unsafe.cluster.testing", "true");
+
     cluster.addExtension(KafkaIndexTaskModule.class)
+           .addExtension(ClusterTestingModule.class)
            .addResource(kafkaServer)
            .addServer(coordinator)
            .addServer(overlord)
@@ -93,108 +98,37 @@ public class KafkaTaskScalingTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  @Timeout(10)
-  public void test_supervisorTasksFinish_withNoDataAndShortTaskDuration()
+  @Timeout(50)
+  public void test_supervisorTasksScalesOutAndScalesIn_withPersistentTasksAndAutoScaler() throws Exception
   {
-    final int taskCount = 3;
-
-    final String supervisorId = dataSource + "_short_tasks";
-    final KafkaSupervisorSpec kafkaSupervisorSpec = createSupervisorSpec(supervisorId, taskCount, null, false);
-
-    Assertions.assertEquals(
-        supervisorId,
-        cluster.callApi().postSupervisor(kafkaSupervisorSpec)
-    );
-
-    try {
-      Thread.sleep(2000);
-    }
-    catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      Assertions.fail("Test interrupted");
-    }
-
-    final String successTaskCountResult = cluster.runSql(
-        "SELECT COUNT(*) FROM sys.tasks WHERE datasource = '%s' AND status = 'SUCCESS'",
-        dataSource
-    );
-    final int successfulTasks = Integer.parseInt(successTaskCountResult);
-
-    Assertions.assertEquals(
-        taskCount,
-        successfulTasks,
-        String.format("Expected all %d tasks to succeed, but only %d succeeded", taskCount, successfulTasks)
-    );
-
-    cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
-  }
-
-  @Test
-  @Timeout(20)
-  public void test_supervisorTasksDontFinish_withPersistentTasks()
-  {
-    final int taskCount = 3;
-
-    final String supervisorId = dataSource + "_persistent_short_tasks";
-    final KafkaSupervisorSpec kafkaSupervisorSpec = createSupervisorSpec(supervisorId, taskCount, null, true);
-
-    Assertions.assertEquals(
-        supervisorId,
-        cluster.callApi().postSupervisor(kafkaSupervisorSpec)
-    );
-
-    try {
-      Thread.sleep(10000);
-    }
-    catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      Assertions.fail("Test interrupted");
-    }
-
-    final String runningTaskCountResult = cluster.runSql(
-        "SELECT COUNT(*) FROM sys.tasks WHERE datasource = '%s' AND status = 'RUNNING'",
-        dataSource
-    );
-    final int runningTasks = Integer.parseInt(runningTaskCountResult);
-
-    Assertions.assertEquals(
-        taskCount,
-        runningTasks,
-        String.format("Expected all %d tasks to be running, but only %d were found running", taskCount, runningTasks)
-    );
-
-    cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
-  }
-
-  @Test
-  @Timeout(20)
-  public void test_supervisorTasksScalesIn_withPersistentTasksAndAutoScaler()
-  {
-    final int initialTaskCount = 3;
+    final int initialTaskCount = 1;
+    final int taskCountMax = 3;
     final int taskCountMin = 1;
 
     AutoScalerConfig autoScalerConfig = new LagBasedAutoScalerConfigBuilder()
         .withLagCollectionIntervalMillis(500)
         .withLagCollectionRangeMillis(1000)
         .withEnableTaskAutoScaler(true)
-        .withScaleActionPeriodMillis(5000)
-        .withScaleActionStartDelayMillis(5000)
-        .withScaleOutThreshold(10000)
+        .withScaleActionPeriodMillis(2000)
+        .withScaleActionStartDelayMillis(1000)
+        .withScaleOutThreshold(100)
         .withScaleInThreshold(1)
         .withTaskCountMin(taskCountMin)
-        .withTriggerScaleOutFractionThreshold(0.9)
-        .withTriggerScaleInFractionThreshold(0.001)
-        .withTaskCountMax(initialTaskCount)
+        .withTaskCountMax(taskCountMax)
         .withTaskCountStart(initialTaskCount)
-        .withScaleOutStep(0)
+        .withTriggerScaleOutFractionThreshold(0.001)
+        .withTriggerScaleInFractionThreshold(0.01)
+        .withScaleOutStep(1)
         .withScaleInStep(1)
-        .withMinTriggerScaleActionFrequencyMillis(1000)
+        .withMinTriggerScaleActionFrequencyMillis(3000)
         .withStopTaskCountRatio(1.0)
         .build();
 
-    String supervisorId = dataSource + "_persistent_autoscale_tasks";
-    final KafkaSupervisorSpec kafkaSupervisorSpec = createSupervisorSpec(
+    String supervisorId = dataSource + "_scale_out_and_in_to_zero";
+    String controllerId = "artificial-lag-controller";
+    final KafkaSupervisorSpec kafkaSupervisorSpec = createSupervisorSpecWithControlledLag(
         supervisorId,
+        controllerId,
         initialTaskCount,
         autoScalerConfig,
         true
@@ -205,35 +139,68 @@ public class KafkaTaskScalingTest extends EmbeddedClusterTestBase
         cluster.callApi().postSupervisor(kafkaSupervisorSpec)
     );
 
+    FaultyLagAggregator.injectLag(controllerId, 100000L);
+
     overlord.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("task/autoScaler/scaleActionTime"),
         agg -> agg.hasCountAtLeast(2)
     );
 
-    try {
-      Thread.sleep(2000); // Wait for a few seconds for the tasks to scale in
-    }
-    catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      Assertions.fail("Test interrupted");
-    }
+    Thread.sleep(5000);
 
-    final String runningTaskCountResult = cluster.runSql(
+    String runningTaskCountResult = cluster.runSql(
         "SELECT COUNT(*) FROM sys.tasks WHERE datasource = '%s' AND status = 'RUNNING'",
         dataSource
     );
+    int runningTasks = Integer.parseInt(runningTaskCountResult);
 
-    final int runningTasks = Integer.parseInt(runningTaskCountResult);
+    Assertions.assertEquals(
+        taskCountMax,
+        runningTasks,
+        String.format("Expected %d tasks to be running after scale up, but found %d", taskCountMax, runningTasks)
+    );
+
+    FaultyLagAggregator.injectLag(controllerId, 0L);
+
+    overlord.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("task/autoScaler/scaleActionTime"),
+        agg -> agg.hasCountAtLeast(2)
+    );
+    Thread.sleep(10000);
+
+    // ensure everything has shutdown.
+    runningTaskCountResult = cluster.runSql(
+        "SELECT COUNT(*) FROM sys.tasks WHERE datasource = '%s' AND status = 'RUNNING'",
+        dataSource
+    );
+    String successTaskCountResult = cluster.runSql(
+        "SELECT COUNT(*) FROM sys.tasks WHERE datasource = '%s' AND status = 'SUCCESS'",
+        dataSource
+    );
+    runningTasks = Integer.parseInt(runningTaskCountResult);
+    final int successTasks = Integer.parseInt(successTaskCountResult);
 
     Assertions.assertEquals(
         taskCountMin,
         runningTasks,
-        String.format("Expected all %d tasks to be running, but only %d were found running", taskCountMin, runningTasks)
+        String.format("Expected %d task to be running after scale down, but found %d", runningTasks, taskCountMin)
     );
+
+    int shutDownTasksExpected = taskCountMax - taskCountMin;
+
+    Assertions.assertTrue(
+        successTasks >= shutDownTasksExpected,
+        String.format("Expected at least %d task to be successfully completed, but found %d", shutDownTasksExpected, successTasks)
+    );
+
+    // Cleanup
+    FaultyLagAggregator.clearAllInjectedLag();
+    cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
   }
 
-  private KafkaSupervisorSpec createSupervisorSpec(
+  private KafkaSupervisorSpec createSupervisorSpecWithControlledLag(
       String supervisorId,
+      String controllerId,
       int taskCount,
       AutoScalerConfig autoScalerConfig,
       boolean usePersistentTasks
@@ -249,8 +216,9 @@ public class KafkaTaskScalingTest extends EmbeddedClusterTestBase
             ioConfig -> ioConfig
                 .withConsumerProperties(kafkaServer.consumerProperties())
                 .withTaskCount(taskCount)
-                .withTaskDuration(Period.millis(500))
+                .withTaskDuration(Period.millis(30000))
                 .withAutoScalerConfig(autoScalerConfig)
+                .withLagAggregator(new FaultyLagAggregator(1, controllerId))
         )
         .withId(supervisorId)
         .withUsePersistentTasks(usePersistentTasks)

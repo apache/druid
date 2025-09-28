@@ -1046,6 +1046,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   protected class CheckpointNotice implements Notice
   {
+    private static final int DEFAULT_REENTRY_DELAY = 1500;
     private final int taskGroupId;
     private final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> checkpointMetadata;
     private static final String TYPE = "checkpoint_notice";
@@ -1097,7 +1098,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           // It might be possible that the task has not been discovered to the taskgroup yet and have received a checkpoint before hand,
           // For now, I will attempt to repush the checkpoint request in the handler.
           log.warn("New checkpoint is null for taskGroup [%s]", taskGroupId);
-          addNotice(this);
+          scheduledExec.schedule(() -> addNotice(this), DEFAULT_REENTRY_DELAY, TimeUnit.MILLISECONDS);
         }
       }
     }
@@ -2419,6 +2420,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       taskCount++;
       @SuppressWarnings("unchecked")
       final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> seekableStreamIndexTask = (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType>) task;
+      SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> taskIoConfig;
+      final String taskSpecVersion;
+      if (spec.usePersistentTasks()) {
+        // Fetch the current ioConfig being run on the task
+        final TaskConfigResponse<PartitionIdType, SequenceOffsetType> runningConfig = FutureUtils.get(
+            taskClient.getTaskConfigAsync(task.getId()), true);
+        taskIoConfig = runningConfig.getIoConfig();
+        taskSpecVersion = runningConfig.getSupervisorSpecVersion();
+      } else {
+        taskSpecVersion = "";
+        taskIoConfig = seekableStreamIndexTask.getIOConfig();
+      }
+
       final String taskId = task.getId();
 
       // Check if the task has any inactive partitions. If so, terminate the task. Even if some of the
@@ -2426,10 +2440,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       // to more rapidly ensure that all active partitions are evenly distributed and being read, and to avoid
       // having to map expired partitions which are no longer tracked in partitionIds to a task group.
       if (supportsPartitionExpiration()) {
-        Set<PartitionIdType> taskPartitions = seekableStreamIndexTask.getIOConfig()
-                                                                     .getStartSequenceNumbers()
-                                                                     .getPartitionSequenceNumberMap()
-                                                                     .keySet();
+        Set<PartitionIdType> taskPartitions = taskIoConfig
+            .getStartSequenceNumbers()
+            .getPartitionSequenceNumberMap()
+            .keySet();
         Set<PartitionIdType> inactivePartitionsInTask = Sets.difference(
             taskPartitions,
             new HashSet<>(partitionIds)
@@ -2452,11 +2466,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       // state, we will permit it to complete even if it doesn't match our current partition allocation to support
       // seamless schema migration.
 
-      Iterator<PartitionIdType> it = seekableStreamIndexTask.getIOConfig()
-                                                            .getStartSequenceNumbers()
-                                                            .getPartitionSequenceNumberMap()
-                                                            .keySet()
-                                                            .iterator();
+      Iterator<PartitionIdType> it = taskIoConfig
+          .getStartSequenceNumbers()
+          .getPartitionSequenceNumberMap()
+          .keySet()
+          .iterator();
       final Integer taskGroupId = (it.hasNext() ? getTaskGroupIdForPartition(it.next()) : null);
 
       if (taskGroupId != null) {
@@ -2480,19 +2494,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                       try {
                         log.debug("Task [%s], status [%s]", taskId, status);
                         if (status == SeekableStreamIndexTaskRunner.Status.PUBLISHING) {
-                          seekableStreamIndexTask.getIOConfig()
-                                                 .getStartSequenceNumbers()
-                                                 .getPartitionSequenceNumberMap()
-                                                 .keySet()
-                                                 .forEach(
-                                                     partition -> addDiscoveredTaskToPendingCompletionTaskGroups(
-                                                         getTaskGroupIdForPartition(
-                                                             partition),
-                                                         taskId,
-                                                         seekableStreamIndexTask.getIOConfig()
-                                                                                .getStartSequenceNumbers()
-                                                                                .getPartitionSequenceNumberMap()
-                                                     ));
+                          taskIoConfig
+                              .getStartSequenceNumbers()
+                              .getPartitionSequenceNumberMap()
+                              .keySet()
+                              .forEach(
+                                  partition -> addDiscoveredTaskToPendingCompletionTaskGroups(
+                                      getTaskGroupIdForPartition(
+                                          partition),
+                                      taskId,
+                                      taskIoConfig
+                                          .getStartSequenceNumbers()
+                                          .getPartitionSequenceNumberMap()
+                                  ));
 
                           // update partitionGroups with the publishing task's sequences (if they are greater than what is
                           // existing) so that the next tasks will start reading from where this task left off.
@@ -2532,10 +2546,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                             }
                           }
                         } else {
-                          for (PartitionIdType partition : seekableStreamIndexTask.getIOConfig()
-                                                                                  .getStartSequenceNumbers()
-                                                                                  .getPartitionSequenceNumberMap()
-                                                                                  .keySet()) {
+                          for (PartitionIdType partition : taskIoConfig
+                              .getStartSequenceNumbers()
+                              .getPartitionSequenceNumberMap()
+                              .keySet()) {
                             if (!taskGroupId.equals(getTaskGroupIdForPartition(partition))) {
                               log.warn(
                                   "Stopping task[%s] as it does not match the current partition allocation.",
@@ -2548,7 +2562,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                           }
                           // make sure the task's io and tuning configs match with the supervisor config
                           // if it is current then only create corresponding taskGroup if it does not exist
-                          if (!isTaskCurrent(taskGroupId, taskId, activeTaskMap)) {
+                          if (!isTaskCurrent(taskGroupId, taskId, activeTaskMap, taskSpecVersion)) {
                             log.info("Stopping task[%s] as it does not match the current supervisor spec.", taskId);
 
                             // Returning false triggers a call to stopTask.
@@ -2563,17 +2577,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                   return new TaskGroup(
                                       taskGroupId,
                                       ImmutableMap.copyOf(
-                                          seekableStreamIndexTask.getIOConfig()
-                                                                 .getStartSequenceNumbers()
-                                                                 .getPartitionSequenceNumberMap()
+                                          taskIoConfig
+                                              .getStartSequenceNumbers()
+                                              .getPartitionSequenceNumberMap()
                                       ),
                                       null,
-                                      seekableStreamIndexTask.getIOConfig().getMinimumMessageTime(),
-                                      seekableStreamIndexTask.getIOConfig().getMaximumMessageTime(),
-                                      seekableStreamIndexTask.getIOConfig()
+                                      taskIoConfig.getMinimumMessageTime(),
+                                      taskIoConfig.getMaximumMessageTime(),
+                                      taskIoConfig
                                                              .getStartSequenceNumbers()
                                                              .getExclusivePartitions(),
-                                      seekableStreamIndexTask.getIOConfig().getBaseSequenceName()
+                                      taskIoConfig.getBaseSequenceName()
                                   );
                                 }
                             );
@@ -3040,7 +3054,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * @return true if the task was created by the current supervisor
    */
   @VisibleForTesting
-  public boolean isTaskCurrent(int taskGroupId, String taskId, Map<String, Task> activeTaskMap)
+  public boolean isTaskCurrent(int taskGroupId, String taskId, Map<String, Task> activeTaskMap, String version)
   {
     final Task genericTask;
 
@@ -3060,7 +3074,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     // If the persistent tasks are present, we should use the version.
     if (spec.usePersistentTasks()) {
-      return isPersistentTaskCurrent(task);
+      return version.equals(spec.getVersion().get());
     }
 
     // We recompute the sequence name hash for the supervisor's own configuration and compare this to the hash created
@@ -3097,22 +3111,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  /**
-   * Verifies whether the running config version of the persistent task matches one in current supervisor spec.
-   */
-  private boolean isPersistentTaskCurrent(SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task)
-  {
-    try {
-      final String currentVersion = spec.getVersion().get();
-      final TaskConfigResponse<PartitionIdType, SequenceOffsetType> runningConfig = FutureUtils.get(
-          taskClient.getTaskConfigAsync(task.getId()), true);
-      return currentVersion.equals(runningConfig.getSupervisorSpecVersion());
-    }
-    catch (Exception e) {
-      log.error(e, "Could not fetch running config for task[%s]", task.getId());
-      return false;
-    }
-  }
 
   @VisibleForTesting
   public String generateSequenceName(
@@ -4083,9 +4081,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         Entry<String, TaskData> task = iTasks.next();
         String taskId = task.getKey();
         TaskData taskData = task.getValue();
+        final String version = spec.usePersistentTasks() ? getRunningSpecVersionOnTask(taskId) : spec.getVersion().get();
 
         // stop and remove bad tasks from the task group
-        if (!isTaskCurrent(groupId, taskId, activeTaskMap)) {
+        if (!isTaskCurrent(groupId, taskId, activeTaskMap, version)) {
           log.info("Stopping task[%s] as it does not match the expected sequence range and ingestion spec.", taskId);
           futures.add(stopTask(taskId, false));
           iTasks.remove();
@@ -4115,6 +4114,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     // Ignore return value; just await.
     coalesceAndAwait(futures);
+  }
+
+  private String getRunningSpecVersionOnTask(String taskId)
+  {
+    try {
+      final TaskConfigResponse<PartitionIdType, SequenceOffsetType> runningConfig = FutureUtils.get(
+          taskClient.getTaskConfigAsync(taskId), true);
+      return runningConfig.getSupervisorSpecVersion();
+    }
+    catch (InterruptedException | ExecutionException e) {
+      log.warn("Interrupted while fetching running spec version for task[%s]", taskId);
+      return "";
+    }
   }
 
   private void checkIfStreamInactiveAndTurnSupervisorIdle()
