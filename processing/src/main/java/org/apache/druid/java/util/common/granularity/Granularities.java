@@ -37,7 +37,6 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -145,10 +144,11 @@ public class Granularities
 
   /**
    * Translates a {@link Granularity} to a {@link ExpressionVirtualColumn} on {@link ColumnHolder#TIME_COLUMN_NAME} of
-   * the equivalent grouping column. If granularity is {@link #ALL}, this method returns null since we are not grouping
-   * on time. If granularity is a {@link PeriodGranularity} with UTC timezone and no origin, this method returns a
-   * virtual column with {@link TimestampFloorExprMacro.TimestampFloorExpr} of the specified period. If granularity is
-   * {@link #NONE}, or any other kind of granularity (duration, period with non-utc timezone or origin) this method
+   * the equivalent grouping column.
+   * <ul>
+   * <li>If granularity is {@link #ALL}, this method returns null since we are not grouping on time.
+   * <li>If granularity is a {@link PeriodGranularity}, we'd map it to {@link TimestampFloorExprMacro.TimestampFloorExpr}.
+   * <li>If granularity is {@link #NONE}, or any other kind of granularity (duration, period with non-utc timezone or origin) this method
    * returns a virtual column with {@link org.apache.druid.math.expr.IdentifierExpr} specifying
    * {@link ColumnHolder#TIME_COLUMN_NAME} directly.
    */
@@ -158,16 +158,14 @@ public class Granularities
     if (ALL.equals(granularity)) {
       return null;
     }
+
     final String expression;
-    if (NONE.equals(granularity) || granularity instanceof DurationGranularity) {
-      expression = ColumnHolder.TIME_COLUMN_NAME;
-    } else {
+    if (granularity instanceof PeriodGranularity) {
       PeriodGranularity period = (PeriodGranularity) granularity;
-      if (!ISOChronology.getInstanceUTC().getZone().equals(period.getTimeZone()) || period.getOrigin() != null) {
-        expression = ColumnHolder.TIME_COLUMN_NAME;
-      } else {
-        expression = TimestampFloorExprMacro.forQueryGranularity(period.getPeriod());
-      }
+      expression = TimestampFloorExprMacro.forQueryGranularity(period);
+    } else {
+      // DurationGranularity or any other granularity that is not a PeriodGranularity
+      expression = ColumnHolder.TIME_COLUMN_NAME;
     }
 
     return new ExpressionVirtualColumn(
@@ -194,14 +192,26 @@ public class Granularities
   public static Granularity fromVirtualColumn(VirtualColumn virtualColumn)
   {
     if (virtualColumn instanceof ExpressionVirtualColumn) {
-      final ExpressionVirtualColumn expressionVirtualColumn = (ExpressionVirtualColumn) virtualColumn;
-      final Expr expr = expressionVirtualColumn.getParsedExpression().get();
-      if (expr instanceof TimestampFloorExprMacro.TimestampFloorExpr) {
-        final TimestampFloorExprMacro.TimestampFloorExpr gran = (TimestampFloorExprMacro.TimestampFloorExpr) expr;
-        if (gran.getArg().getBindingIfIdentifier() != null) {
-          return gran.getGranularity();
-        }
-      }
+      return fromExpr(((ExpressionVirtualColumn) virtualColumn).getParsedExpression().get());
+    }
+    return null;
+  }
+
+  @Nullable
+  private static Granularity fromExpr(Expr expr)
+  {
+    String identifier = expr.getBindingIfIdentifier();
+    if (identifier != null) {
+      // If the grouping is based on __time directly, return None.
+      // Otherwise, grouping based on non-time columns, return ALL.
+      return identifier.equals(ColumnHolder.TIME_COLUMN_NAME)
+             ? Granularities.NONE
+             : Granularities.ALL;
+    }
+
+    if (expr instanceof TimestampFloorExprMacro.TimestampFloorExpr) {
+      final TimestampFloorExprMacro.TimestampFloorExpr gran = (TimestampFloorExprMacro.TimestampFloorExpr) expr;
+      return gran.getGranularity();
     }
     return null;
   }

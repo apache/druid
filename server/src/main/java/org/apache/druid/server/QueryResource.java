@@ -84,6 +84,7 @@ public class QueryResource implements QueryCountStatsProvider
   public static final String ERROR_MESSAGE_TRAILER_HEADER = "X-Error-Message";
   public static final String RESPONSE_COMPLETE_TRAILER_HEADER = "X-Druid-Response-Complete";
   public static final String HEADER_ETAG = "ETag";
+  public static final String WRITE_EXCEPTION_BODY_AS_RESPONSE_ROW = "writeExceptionBodyAsResponseRow";
 
   protected final QueryLifecycleFactory queryLifecycleFactory;
   protected final ObjectMapper jsonMapper;

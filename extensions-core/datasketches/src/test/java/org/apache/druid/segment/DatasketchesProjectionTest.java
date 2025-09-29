@@ -227,7 +227,7 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
                            IncrementalIndexSchema.builder()
                                                  .withDimensionsSpec(dimensionsSpec)
                                                  .withRollup(false)
-                                                 .withMinTimestamp(CursorFactoryProjectionTest.TIMESTAMP.getMillis())
+                                                 .withMinTimestamp(CursorFactoryProjectionTest.UTC_MIDNIGHT.getMillis())
                                                  .withProjections(autoSchema ? AUTO_PROJECTIONS : PROJECTIONS)
                                                  .build()
                        )

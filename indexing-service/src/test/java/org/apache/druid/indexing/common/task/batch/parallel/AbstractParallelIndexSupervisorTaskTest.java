@@ -423,6 +423,10 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY,
           SinglePhaseParallelIndexTaskRunner.DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION
       );
+      task.addToContextIfAbsent(
+          PartialDimensionDistributionTask.CTX_BLOOM_FILTER_EXPECTED_INSERTIONS,
+          1_000
+      );
       final ListenableFuture<TaskStatus> statusFuture = service.submit(
           () -> {
             try {

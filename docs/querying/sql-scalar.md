@@ -115,7 +115,7 @@ String functions accept strings and return a type appropriate to the function.
 |`REPLACE(expr, substring, replacement)`|Replaces instances of `substring` in `expr` with `replacement` and returns the result.|
 |`REPEAT(expr, N)`|Repeats `expr` `N` times.|
 |`REVERSE(expr)`|Reverses `expr`.|
-|`STRING_FORMAT(pattern[, args...])`|Returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html#format(java.lang.String,java.lang.Object...)).|
+|`STRING_FORMAT(pattern[, args...])`|Returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html#format(java.lang.String,java.lang.Object...)).|
 |`STRPOS(expr, substring)`|Returns the index of `substring` within `expr`, with indexes starting from 1. If `substring` is not found, returns 0.|
 |`SUBSTRING(expr, index[, length])`|Returns a substring of `expr` starting at a given one-based index. If `length` is omitted, extracts characters to the end of the string, otherwise returns a substring of `length` UTF-16 characters.|
 |`SUBSTR(expr, index[, length])`|Alias for `SUBSTRING`.|

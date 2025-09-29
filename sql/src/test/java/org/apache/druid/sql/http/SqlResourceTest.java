@@ -333,7 +333,8 @@ public class SqlResourceTest extends CalciteTestBase
             TEST_RESPONSE_CONTEXT_CONFIG,
             DUMMY_DRUID_NODE
         ),
-        DefaultQueryConfig.NIL
+        DefaultQueryConfig.NIL,
+        new ServerConfig()
     );
   }
 
@@ -436,15 +437,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     final MockHttpServletResponse response = postForAsyncResponse(sqlQuery, makeRegularUserReq());
 
-    // In tests, MockHttpServletResponse stores headers as a MultiMap.
-    // This allows the same header key to be set multiple times (e.g., once at the start and once at the end of query processing).
-    // As a result, we observe duplicate context entries for this test in the expected set.
-    // This differs from typical behavior for other headers, where a new value would overwrite any previously set value.
     final Object expectedMissingHeaders = ImmutableList.of(
-        ImmutableMap.of(
-            "uncoveredIntervals", "2030-01-01/78149827981274-01-01",
-            "uncoveredIntervalsOverflowed", "true"
-        ),
         ImmutableMap.of(
             "uncoveredIntervals", "2030-01-01/78149827981274-01-01",
             "uncoveredIntervalsOverflowed", "true"
@@ -609,7 +602,8 @@ public class SqlResourceTest extends CalciteTestBase
             TEST_RESPONSE_CONTEXT_CONFIG,
             DUMMY_DRUID_NODE
         ),
-        queryConfigWithTimezone
+        queryConfigWithTimezone,
+        new ServerConfig()
     );
 
     final List<Map<String, Object>> rows = doPost(
@@ -1720,7 +1714,8 @@ public class SqlResourceTest extends CalciteTestBase
             TEST_RESPONSE_CONTEXT_CONFIG,
             DUMMY_DRUID_NODE
         ),
-        DefaultQueryConfig.NIL
+        DefaultQueryConfig.NIL,
+        new ServerConfig()
     );
 
     String errorMessage = "This will be supported in Druid 9999";

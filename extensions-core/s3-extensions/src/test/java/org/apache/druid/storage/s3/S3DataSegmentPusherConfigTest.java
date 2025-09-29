@@ -40,7 +40,7 @@ public class S3DataSegmentPusherConfigTest
   public void testSerialization() throws IOException
   {
     String jsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\","
-                        + "\"disableAcl\":false,\"maxListingLength\":2000,\"useS3aSchema\":false}";
+                        + "\"disableAcl\":false,\"maxListingLength\":2000,\"useS3aSchema\":false,\"zip\":true}";
 
     S3DataSegmentPusherConfig config = JSON_MAPPER.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
     Map<String, String> expected = JSON_MAPPER.readValue(jsonConfig, Map.class);
@@ -53,7 +53,7 @@ public class S3DataSegmentPusherConfigTest
   {
     String jsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\"}";
     String expectedJsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\","
-                                + "\"disableAcl\":false,\"maxListingLength\":1024,\"useS3aSchema\":false}";
+                                + "\"disableAcl\":false,\"maxListingLength\":1024,\"useS3aSchema\":false,\"zip\":true}";
     S3DataSegmentPusherConfig config = JSON_MAPPER.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
     Map<String, String> expected = JSON_MAPPER.readValue(expectedJsonConfig, Map.class);
     Map<String, String> actual = JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(config), Map.class);
@@ -64,7 +64,7 @@ public class S3DataSegmentPusherConfigTest
   public void testSerializationValidatingMaxListingLength() throws IOException
   {
     String jsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\","
-                        + "\"disableAcl\":false,\"maxListingLength\":-1}";
+                        + "\"disableAcl\":false,\"maxListingLength\":-1,\"zip\":true}";
     Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
     S3DataSegmentPusherConfig config = JSON_MAPPER.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
