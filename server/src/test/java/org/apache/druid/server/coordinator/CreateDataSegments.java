@@ -105,6 +105,10 @@ public class CreateDataSegments
     return this;
   }
 
+  /**
+   * Specifies the version to use for creating the segments. Default version is
+   * {@code "1"}.
+   */
   public CreateDataSegments withVersion(String version)
   {
     this.version = version;
