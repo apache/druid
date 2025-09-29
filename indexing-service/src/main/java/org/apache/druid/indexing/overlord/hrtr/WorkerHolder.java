@@ -305,8 +305,12 @@ public class WorkerHolder
    */
   public boolean isInitialized()
   {
-    // Do not use syncer.isInitialized() to avoid delay of task assignment due to
-    // the HttpRemoteTaskRunner.pendingTaskExecutionLoop() going to sleep
+    // Do not use syncer.isInitialized() as it becomes true only after the first
+    // fullSync() or deltaSync() callback has completed. But the callback itself
+    // wakes up the HttpRemoteTaskRunner.pendingTaskExecutionLoop() which checks
+    // if this WorkerHolder is initialized before assigning tasks to it.
+    // If not initialized, execution loop goes to sleep for 1 minute thus delaying
+    // task assignment.
     return syncedAtleastOnce.get();
   }
 
@@ -431,7 +435,6 @@ public class WorkerHolder
 
       private void notifyListener(List<TaskAnnouncement> announcements, boolean isWorkerDisabled)
       {
-        syncedAtleastOnce.set(true);
         for (TaskAnnouncement announcement : announcements) {
           try {
             listener.taskAddedOrUpdated(announcement, WorkerHolder.this);
@@ -446,6 +449,7 @@ public class WorkerHolder
           }
         }
 
+        syncedAtleastOnce.set(true);
         if (isWorkerDisabled != disabled.get()) {
           disabled.set(isWorkerDisabled);
           log.info("Worker[%s] disabled set to [%s].", worker.getHost(), isWorkerDisabled);
