@@ -28,9 +28,9 @@ import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Runs some basic ingestion tests against latest image Druid containers running
- * on a K3s cluster with druid-operator.
+ * on a K3s cluster with druid-operator and using {@code k8s} task runner type.
  */
-public class KubernetesClusterWithOperatorDockerTest extends IngestionSmokeTest implements LatestImageDockerTest
+public class KubernetesTaskRunnerDockerTest extends IngestionSmokeTest implements LatestImageDockerTest
 {
   private static final String MANIFEST_TEMPLATE = "manifests/druid-service-with-operator.yaml";
 
