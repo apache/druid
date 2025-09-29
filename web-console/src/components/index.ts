@@ -51,6 +51,7 @@ export * from './refresh-button/refresh-button';
 export * from './rule-editor/rule-editor';
 export * from './segment-timeline/segment-timeline';
 export * from './show-json/show-json';
+export * from './show-json-or-stages/show-json-or-stages';
 export * from './show-log/show-log';
 export * from './show-value/show-value';
 export * from './splitter-layout/splitter-layout';

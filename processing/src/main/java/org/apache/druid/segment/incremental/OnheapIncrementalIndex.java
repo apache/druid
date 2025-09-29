@@ -395,6 +395,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     return Projections.findMatchingProjection(
         buildSpec,
         aggregateProjections,
+        getInterval(),
         (specName, columnName) -> projections.get(specName).getDimensionsMap().containsKey(columnName)
                                   || getColumnCapabilities(columnName) == null,
         projections::get

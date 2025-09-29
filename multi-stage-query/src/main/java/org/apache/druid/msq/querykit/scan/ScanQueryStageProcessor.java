@@ -30,6 +30,7 @@ import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.querykit.BaseLeafStageProcessor;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.scan.ScanQuery;
@@ -79,6 +80,17 @@ public class ScanQueryStageProcessor extends BaseLeafStageProcessor
         .intervals(QuerySegmentSpec.ETERNITY)
         .filters(newFilter)
         .virtualColumns(virtualColumns)
+        .columns(signature.getColumnNames())
+        .columnTypes(signature.getColumnTypes())
+        .build();
+    return new ScanQueryStageProcessor(scanQuery);
+  }
+
+  public static ScanQueryStageProcessor makeSegmentMapFnProcessor(RowSignature signature, DataSource dataSource)
+  {
+    ScanQuery scanQuery = Druids.newScanQueryBuilder()
+        .dataSource(dataSource)
+        .intervals(QuerySegmentSpec.ETERNITY)
         .columns(signature.getColumnNames())
         .columnTypes(signature.getColumnTypes())
         .build();

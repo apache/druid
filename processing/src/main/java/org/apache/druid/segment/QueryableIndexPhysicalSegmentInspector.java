@@ -20,8 +20,8 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.segment.column.BaseColumn;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
@@ -49,7 +49,7 @@ public class QueryableIndexPhysicalSegmentInspector implements PhysicalSegmentIn
   @Nullable
   public Comparable getMinValue(String dimension)
   {
-    ColumnHolder columnHolder = index.getColumnHolder(dimension);
+    BaseColumnHolder columnHolder = index.getColumnHolder(dimension);
     if (columnHolder != null && columnHolder.getCapabilities().hasBitmapIndexes()) {
       ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
       DictionaryEncodedStringValueIndex index = indexSupplier.as(DictionaryEncodedStringValueIndex.class);
@@ -62,7 +62,7 @@ public class QueryableIndexPhysicalSegmentInspector implements PhysicalSegmentIn
   @Nullable
   public Comparable getMaxValue(String dimension)
   {
-    ColumnHolder columnHolder = index.getColumnHolder(dimension);
+    BaseColumnHolder columnHolder = index.getColumnHolder(dimension);
     if (columnHolder != null && columnHolder.getCapabilities().hasBitmapIndexes()) {
       ColumnIndexSupplier indexSupplier = columnHolder.getIndexSupplier();
       DictionaryEncodedStringValueIndex index = indexSupplier.as(DictionaryEncodedStringValueIndex.class);
@@ -74,7 +74,7 @@ public class QueryableIndexPhysicalSegmentInspector implements PhysicalSegmentIn
   @Override
   public int getDimensionCardinality(String column)
   {
-    ColumnHolder columnHolder = index.getColumnHolder(column);
+    BaseColumnHolder columnHolder = index.getColumnHolder(column);
     if (columnHolder == null) {
       // NullDimensionSelector has cardinality = 1 (one null, nothing else).
       return 1;

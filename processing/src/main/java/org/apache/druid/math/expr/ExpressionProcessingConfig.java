@@ -21,14 +21,11 @@ package org.apache.druid.math.expr;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 
 public class ExpressionProcessingConfig
 {
-  private static final Logger LOG = new Logger(ExpressionProcessingConfig.class);
-
   public static final String NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING = "druid.expressions.useStrictBooleans";
   // Coerce arrays to multi value strings
   public static final String PROCESS_ARRAYS_AS_MULTIVALUE_STRINGS_CONFIG_STRING =
@@ -47,23 +44,13 @@ public class ExpressionProcessingConfig
   @JsonProperty("allowVectorizeFallback")
   private final boolean allowVectorizeFallback;
 
-  @Deprecated
-  @JsonProperty("useStrictBooleans")
-  private final boolean useStrictBooleans;
-
   @JsonCreator
   public ExpressionProcessingConfig(
-      @Deprecated @JsonProperty("useStrictBooleans") @Nullable Boolean useStrictBooleans,
       @JsonProperty("processArraysAsMultiValueStrings") @Nullable Boolean processArraysAsMultiValueStrings,
       @JsonProperty("homogenizeNullMultiValueStringArrays") @Nullable Boolean homogenizeNullMultiValueStringArrays,
       @JsonProperty("allowVectorizeFallback") @Nullable Boolean allowVectorizeFallback
   )
   {
-    this.useStrictBooleans = getWithPropertyFallback(
-        useStrictBooleans,
-        NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING,
-        "true"
-    );
     this.processArraysAsMultiValueStrings = getWithPropertyFallbackFalse(
         processArraysAsMultiValueStrings,
         PROCESS_ARRAYS_AS_MULTIVALUE_STRINGS_CONFIG_STRING
@@ -72,9 +59,10 @@ public class ExpressionProcessingConfig
         homogenizeNullMultiValueStringArrays,
         HOMOGENIZE_NULL_MULTIVALUE_STRING_ARRAYS
     );
-    this.allowVectorizeFallback = getWithPropertyFallbackFalse(
+    this.allowVectorizeFallback = getWithPropertyFallback(
         allowVectorizeFallback,
-        ALLOW_VECTORIZE_FALLBACK
+        ALLOW_VECTORIZE_FALLBACK,
+        "true"
     );
   }
 

@@ -47,10 +47,16 @@ public interface ColumnHolder
 
   int getLength();
 
-  BaseColumn getColumn();
+  /**
+   * Returns a column object that can be used to request specialized interfaces.
+   * For a physical column, this will be an instance of {@link BaseColumn}.
+   *
+   * @see BaseColumnHolder which guarantees {@link BaseColumn}
+   */
+  SelectableColumn getColumn();
 
   @Nullable
-  default Supplier<? extends BaseColumn> getColumnSupplier()
+  default Supplier<? extends SelectableColumn> getColumnSupplier()
   {
     return this::getColumn;
   }

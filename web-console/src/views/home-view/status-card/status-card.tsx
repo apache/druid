@@ -34,8 +34,8 @@ export const StatusCard = React.memo(function StatusCard() {
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [statusSummaryState] = useQueryManager<null, StatusSummary>({
     initQuery: null,
-    processQuery: async (_, cancelToken) => {
-      const statusResp = await Api.instance.get('/status', { cancelToken });
+    processQuery: async (_, signal) => {
+      const statusResp = await Api.instance.get('/status', { signal });
       return {
         version: statusResp.data.version,
         extensionCount: statusResp.data.modules.length,

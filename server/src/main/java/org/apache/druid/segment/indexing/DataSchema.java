@@ -415,9 +415,88 @@ public class DataSchema
       }
     }
 
+    return getFieldsOrThrowIfErrors(fields);
+  }
+
+  /**
+   * Validates that each {@link AggregateProjectionSpec} does not have duplicate column names in
+   * {@link AggregateProjectionSpec#groupingColumns} and {@link AggregateProjectionSpec#aggregators} and that segment
+   * {@link Granularity} is at least as coarse as {@link AggregateProjectionMetadata.Schema#effectiveGranularity}
+   */
+  public static void validateProjections(
+      @Nullable List<AggregateProjectionSpec> projections,
+      @Nullable Granularity segmentGranularity
+  )
+  {
+    if (projections != null) {
+      final Set<String> names = Sets.newHashSetWithExpectedSize(projections.size());
+      for (AggregateProjectionSpec projection : projections) {
+        if (names.contains(projection.getName())) {
+          throw InvalidInput.exception("projection[%s] is already defined, projection names must be unique", projection.getName());
+        }
+        names.add(projection.getName());
+        final AggregateProjectionMetadata.Schema schema = projection.toMetadataSchema();
+
+        if (schema.getTimeColumnName() != null) {
+          final Granularity projectionGranularity = schema.getEffectiveGranularity();
+          if (segmentGranularity != null) {
+            if (segmentGranularity.isFinerThan(projectionGranularity)) {
+              throw InvalidInput.exception(
+                  "projection[%s] has granularity[%s] which must be finer than or equal to segment granularity[%s]",
+                  projection.getName(),
+                  projectionGranularity,
+                  segmentGranularity
+              );
+            }
+          }
+        }
+
+        final Map<String, Multiset<String>> fields = new TreeMap<>();
+        int position = 0;
+        for (DimensionSchema grouping : projection.getGroupingColumns()) {
+          final String field = grouping.getName();
+          if (Strings.isNullOrEmpty(field)) {
+            throw DruidException
+                .forPersona(DruidException.Persona.USER)
+                .ofCategory(DruidException.Category.INVALID_INPUT)
+                .build("Encountered grouping column with null or empty name at position[%d]", position);
+          }
+          fields.computeIfAbsent(field, k -> TreeMultiset.create()).add("projection[" + projection.getName() + "] grouping column list");
+          position++;
+        }
+        for (AggregatorFactory aggregator : projection.getAggregators()) {
+          final String field = aggregator.getName();
+          if (Strings.isNullOrEmpty(field)) {
+            throw DruidException
+                .forPersona(DruidException.Persona.USER)
+                .ofCategory(DruidException.Category.INVALID_INPUT)
+                .build("Encountered aggregator with null or empty name at position[%d]", position);
+          }
+
+          fields.computeIfAbsent(field, k -> TreeMultiset.create()).add("projection[" + projection.getName() + "] aggregators list");
+          position++;
+        }
+
+        getFieldsOrThrowIfErrors(fields);
+      }
+    }
+  }
+
+  /**
+   * Helper method that processes a validation result stored as a {@link Map} of field names to {@link Multiset} of
+   * where they were defined. An error is indicated by the multi-set having more than a single entry
+   * (such as if a field is defined as both a dimension and an aggregator). If all fields have only a single entry, this
+   * method returns the list of output field names. If there are duplicates, this method throws a {@link DruidException}
+   * collecting all validation errors to help indicate where a field is defined
+   *
+   * @see #computeAndValidateOutputFieldNames
+   * @see #validateProjections(List, Granularity)
+   */
+  private static Set<String> getFieldsOrThrowIfErrors(Map<String, Multiset<String>> validatedFields)
+  {
     final List<String> errors = new ArrayList<>();
 
-    for (Map.Entry<String, Multiset<String>> fieldEntry : fields.entrySet()) {
+    for (Map.Entry<String, Multiset<String>> fieldEntry : validatedFields.entrySet()) {
       if (fieldEntry.getValue().entrySet().stream().mapToInt(Multiset.Entry::getCount).sum() > 1) {
         errors.add(
             StringUtils.format(
@@ -440,42 +519,11 @@ public class DataSchema
     }
 
     if (errors.isEmpty()) {
-      return fields.keySet();
+      return validatedFields.keySet();
     } else {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build("Cannot specify a column more than once: %s", String.join("; ", errors));
-    }
-  }
-
-  public static void validateProjections(
-      @Nullable List<AggregateProjectionSpec> projections,
-      @Nullable Granularity segmentGranularity
-  )
-  {
-    if (projections != null) {
-      final Set<String> names = Sets.newHashSetWithExpectedSize(projections.size());
-      for (AggregateProjectionSpec projection : projections) {
-        if (names.contains(projection.getName())) {
-          throw InvalidInput.exception("projection[%s] is already defined, projection names must be unique", projection.getName());
-        }
-        names.add(projection.getName());
-        final AggregateProjectionMetadata.Schema schema = projection.toMetadataSchema();
-        if (schema.getTimeColumnName() == null) {
-          continue;
-        }
-        final Granularity projectionGranularity = schema.getEffectiveGranularity();
-        if (segmentGranularity != null) {
-          if (segmentGranularity.isFinerThan(projectionGranularity)) {
-            throw InvalidInput.exception(
-                "projection[%s] has granularity[%s] which must be finer than or equal to segment granularity[%s]",
-                projection.getName(),
-                projectionGranularity,
-                segmentGranularity
-            );
-          }
-        }
-      }
     }
   }
 

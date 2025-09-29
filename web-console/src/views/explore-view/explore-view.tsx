@@ -20,7 +20,6 @@ import './modules';
 
 import { Button, Intent, Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { CancelToken } from 'axios';
 import type { Timezone } from 'chronoshift';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
@@ -59,17 +58,17 @@ const QUERY_LOG = new QueryLog();
 
 const queryRunner = new QueryRunner({
   inflateDateStrategy: 'fromSqlTypes',
-  executor: async (sqlQueryPayload, isSql, cancelToken) => {
+  executor: async ({ payload, isSql, signal }) => {
     if (!isSql) throw new Error('should never get here');
-    QUERY_LOG.addQuery(sqlQueryPayload.query);
-    return Api.instance.post('/druid/v2/sql', sqlQueryPayload, { cancelToken });
+    QUERY_LOG.addQuery(payload.query);
+    return Api.instance.post('/druid/v2/sql', payload, { signal });
   },
 });
 
 async function runSqlQuery(
   query: string | SqlQuery,
   timezone: Timezone | undefined,
-  cancelToken?: CancelToken,
+  signal?: AbortSignal,
 ): Promise<QueryResult> {
   try {
     return await queryRunner.runQuery({
@@ -78,28 +77,28 @@ async function runSqlQuery(
         sqlStringifyArrays: false,
       },
       extraQueryContext: timezone ? { sqlTimeZone: timezone.toString() } : undefined,
-      cancelToken,
+      signal,
     });
   } catch (e) {
     throw new DruidError(e);
   }
 }
 
-async function introspectSource(source: string, cancelToken?: CancelToken): Promise<QuerySource> {
+async function introspectSource(source: string, signal?: AbortSignal): Promise<QuerySource> {
   const query = SqlQuery.parse(source);
   const introspectResult = await runSqlQuery(
     QuerySource.makeLimitZeroIntrospectionQuery(query),
     undefined,
-    cancelToken,
+    signal,
   );
 
-  cancelToken?.throwIfRequested();
+  signal?.throwIfAborted();
   const baseIntrospectResult = QuerySource.isSingleStarQuery(query)
     ? introspectResult
     : await runSqlQuery(
         QuerySource.makeLimitZeroIntrospectionQuery(QuerySource.stripToBaseSource(query)),
         undefined,
-        cancelToken,
+        signal,
       );
 
   return QuerySource.fromIntrospectResult(
@@ -213,7 +212,7 @@ export const ExploreView = React.memo(function ExploreView({ capabilities }: Exp
   const runSqlPlusQuery = useMemo(() => {
     return async (
       query: string | SqlQuery | { query: string | SqlQuery; timezone?: Timezone },
-      cancelToken?: CancelToken,
+      signal?: AbortSignal,
     ) => {
       if (!querySource) throw new Error('no querySource');
       let parsedQuery: SqlQuery;
@@ -231,7 +230,7 @@ export const ExploreView = React.memo(function ExploreView({ capabilities }: Exp
       const { query: rewrittenQuery, maxTime } = await rewriteMaxDataTime(
         rewriteAggregate(parsedQuery, querySource.measures),
       );
-      const results = await runSqlQuery(rewrittenQuery, queryTimezone, cancelToken);
+      const results = await runSqlQuery(rewrittenQuery, queryTimezone, signal);
 
       return results
         .attachQuery({ query: '' }, parsedQuery)

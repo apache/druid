@@ -70,6 +70,7 @@ import java.util.stream.IntStream;
  */
 public class UnionQueryTest extends EmbeddedClusterTestBase
 {
+  private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
 
@@ -83,7 +84,7 @@ public class UnionQueryTest extends EmbeddedClusterTestBase
         .addServer(overlord)
         .addServer(coordinator)
         .addServer(new EmbeddedIndexer())
-        .addServer(new EmbeddedBroker())
+        .addServer(broker)
         .addServer(new EmbeddedHistorical());
   }
 
@@ -110,7 +111,7 @@ public class UnionQueryTest extends EmbeddedClusterTestBase
           )
           .withId(IdUtils.getRandomId());
       cluster.callApi().runTask(task, overlord);
-      cluster.callApi().waitForAllSegmentsToBeAvailable(datasourceName, coordinator);
+      cluster.callApi().waitForAllSegmentsToBeAvailable(datasourceName, coordinator, broker);
     }
 
     // Verify some native queries

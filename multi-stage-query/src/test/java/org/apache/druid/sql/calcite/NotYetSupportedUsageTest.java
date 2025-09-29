@@ -48,7 +48,9 @@ public class NotYetSupportedUsageTest
     Set<NotYetSupported.Modes> modes = new HashSet<>(Arrays.asList(NotYetSupported.Modes.values()));
     for (Method method : methodsAnnotatedWith) {
       NotYetSupported annot = method.getAnnotation(NotYetSupported.class);
-      modes.remove(annot.value());
+      for (Modes m : annot.value()) {
+        modes.remove(m);
+      }
     }
 
     assertEquals("There are unused modes which should be removed", Collections.emptySet(), modes);
@@ -67,7 +69,11 @@ public class NotYetSupportedUsageTest
       @Override
       public int compare(ReportEntry l, ReportEntry r)
       {
-        int res = l.className.compareTo(r.className);
+        int res = l.mode.scope.compareTo(r.mode.scope);
+        if (res != 0) {
+          return res;
+        }
+        res = l.className.compareTo(r.className);
         if (res != 0) {
           return res;
         }
@@ -104,7 +110,7 @@ public class NotYetSupportedUsageTest
     @Override
     public String toString()
     {
-      return " | " + className + " | " + methodNames.size() + " | " + mode + " | " + mode.regex + " | ";
+      return " | " + mode.scope + " | " + className + " | " + methodNames.size() + " | " + mode.name() + " | " + mode.regex + " | ";
     }
   }
 
@@ -115,16 +121,18 @@ public class NotYetSupportedUsageTest
 
     Map<List<Object>, ReportEntry> mentryMap = new HashMap<>();
     for (Method method : methodsAnnotatedWith) {
-      ReportEntry entry = new ReportEntry(
-          method.getDeclaringClass().getSimpleName(),
-          method.getName(),
-          getAnnotation(method)
-      );
-      ReportEntry existing = mentryMap.get(entry.getKey());
-      if (existing != null) {
-        existing.merge(entry);
-      } else {
-        mentryMap.put(entry.getKey(), entry);
+      for (Modes mode : getAnnotation(method)) {
+        ReportEntry entry = new ReportEntry(
+            method.getDeclaringClass().getSimpleName(),
+            method.getName(),
+            mode
+        );
+        ReportEntry existing = mentryMap.get(entry.getKey());
+        if (existing != null) {
+          existing.merge(entry);
+        } else {
+          mentryMap.put(entry.getKey(), entry);
+        }
       }
     }
 
@@ -136,7 +144,7 @@ public class NotYetSupportedUsageTest
 
   }
 
-  private Modes getAnnotation(Method method)
+  private Modes[] getAnnotation(Method method)
   {
     NotYetSupported annotation = method.getAnnotation(NotYetSupported.class);
     if (annotation == null) {
