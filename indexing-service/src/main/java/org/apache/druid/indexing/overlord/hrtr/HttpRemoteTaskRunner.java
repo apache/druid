@@ -1206,7 +1206,6 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
         ImmutableWorkerInfo immutableWorker = null;
 
         synchronized (statusLock) {
-          log.info("Trying to assign [%d] pending tasks: %s", pendingTaskIds.size(), pendingTaskIds);
           Iterator<String> iter = pendingTaskIds.iterator();
           while (iter.hasNext()) {
             String taskId = iter.next();
@@ -1235,7 +1234,6 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
 
             immutableWorker = findWorkerToRunTask(ti.getTask());
             if (immutableWorker == null) {
-              log.info("No eligible worker to run task[%s].", ti.getTask().getId());
               continue;
             }
 
@@ -1722,7 +1720,6 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
   public void stateChanged(boolean enabled, WorkerHolder workerHolder)
   {
     synchronized (statusLock) {
-      log.info("Worker[%s] is now enabled[%s]", workerHolder.getWorker().getHost(), enabled);
       statusLock.notifyAll();
     }
   }
