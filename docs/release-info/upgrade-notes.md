@@ -44,7 +44,7 @@ If you're already using this feature, you don't need to take any action.
 
 #### Hadoop-based ingestion
 
-Hadoop-based ingestion has been deprecated since Druid 32.0 and will be removed as early as Druid 35.0.0. 
+Hadoop-based ingestion has been deprecated since Druid 32.0 and is scheduled to be removed in Druid 37.0.0. 
 
 We recommend one of Druid's other supported ingestion methods, such as [SQL-based ingestion](../multi-stage-query/index.md) or [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md).
 
