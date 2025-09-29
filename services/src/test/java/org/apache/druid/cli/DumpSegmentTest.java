@@ -56,8 +56,8 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnConfig;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -162,8 +162,8 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     QueryableIndex queryableIndex = Mockito.mock(QueryableIndex.class);
     ObjectMapper mapper = new DefaultObjectMapper();
     BitmapFactory bitmapFactory = new RoaringBitmapFactory();
-    ColumnHolder xHolder = Mockito.mock(ColumnHolder.class);
-    ColumnHolder yHolder = Mockito.mock(ColumnHolder.class);
+    BaseColumnHolder xHolder = Mockito.mock(BaseColumnHolder.class);
+    BaseColumnHolder yHolder = Mockito.mock(BaseColumnHolder.class);
     ColumnIndexSupplier indexSupplier = Mockito.mock(ColumnIndexSupplier.class);
     DictionaryEncodedStringValueIndex valueIndex = Mockito.mock(DictionaryEncodedStringValueIndex.class);
 

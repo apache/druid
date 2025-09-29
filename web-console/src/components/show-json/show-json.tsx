@@ -39,8 +39,8 @@ export const ShowJson = React.memo(function ShowJson(props: ShowJsonProps) {
   const { endpoint, transform, downloadFilename } = props;
 
   const [jsonState] = useQueryManager<null, string>({
-    processQuery: async (_, cancelToken) => {
-      const resp = await Api.instance.get(endpoint, { cancelToken });
+    processQuery: async (_, signal) => {
+      const resp = await Api.instance.get(endpoint, { signal });
       let data = resp.data;
       if (transform) data = transform(data);
       return typeof data === 'string' ? data : JSONBig.stringify(data, undefined, 2);

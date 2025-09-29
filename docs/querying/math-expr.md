@@ -81,7 +81,7 @@ The following built-in functions are available.
 |name|description|
 |----|-----------|
 |concat|concat(expr, expr...) concatenate a list of strings|
-|format|format(pattern[, args...]) returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html#format(java.lang.String,java.lang.Object...)).|
+|format|format(pattern[, args...]) returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html#format(java.lang.String,java.lang.Object...)).|
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
 |lookup|lookup(expr, lookup-name[,replaceMissingValueWith]) looks up expr in a registered,`replaceMissingValueWith` is an optional constant string [query-time lookup](../querying/lookups.md)|
 |parse_long|parse_long(string[, radix]) parses a string as a long with the given radix, or 10 (decimal) if a radix is not provided.|

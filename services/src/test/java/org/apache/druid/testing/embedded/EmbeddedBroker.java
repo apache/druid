@@ -49,6 +49,7 @@ public class EmbeddedBroker extends EmbeddedDruidServer<EmbeddedBroker>
     private Broker(LifecycleInitHandler handler)
     {
       this.handler = handler;
+      addProperty("druid.sql.planner.metadataRefreshPeriod", "PT0.1s");
     }
 
     @Override

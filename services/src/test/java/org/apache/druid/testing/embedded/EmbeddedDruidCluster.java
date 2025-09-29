@@ -146,6 +146,21 @@ public class EmbeddedDruidCluster implements EmbeddedResource
   }
 
   /**
+   * Configures this cluster to use the given default timeout with the
+   * {@link LatchableEmitter}. Slow tests may set a higher value for the timeout
+   * to avoid failures. If the cluster does not {@link #useLatchableEmitter()},
+   * this method has no effect. Default timeout is 10 seconds.
+   */
+  public EmbeddedDruidCluster useDefaultTimeoutForLatchableEmitter(long timeoutSeconds)
+  {
+    addCommonProperty(
+        "druid.emitter.latching.defaultWaitTimeoutMillis",
+        String.valueOf(timeoutSeconds * 1000)
+    );
+    return this;
+  }
+
+  /**
    * Adds an extension to this cluster. The list of extensions is populated in
    * the common property {@code druid.extensions.modulesForEmbeddedTest}.
    */

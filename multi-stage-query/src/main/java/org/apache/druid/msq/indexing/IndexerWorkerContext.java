@@ -30,7 +30,6 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.ControllerClient;
-import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.FrameWriterSpec;
 import org.apache.druid.msq.exec.MSQMetriceEventBuilder;
@@ -83,6 +82,7 @@ public class IndexerWorkerContext implements WorkerContext
   private final ProcessingBuffersProvider processingBuffersProvider;
   private final int maxConcurrentStages;
   private final boolean includeAllCounters;
+  private final int threadCount;
 
   // Written under synchronized(this) using double-checked locking.
   private volatile ResourceHolder<ProcessingBuffersSet> processingBuffersSet;
@@ -118,6 +118,11 @@ public class IndexerWorkerContext implements WorkerContext
         IndexerControllerContext.DEFAULT_MAX_CONCURRENT_STAGES
     );
     this.includeAllCounters = MultiStageQueryContext.getIncludeAllCounters(queryContext);
+    
+    // Compute thread count once in constructor
+    final int baseThreadCount = memoryIntrospector.numProcessingThreads();
+    final Integer maxThreads = MultiStageQueryContext.getMaxThreads(queryContext);
+    this.threadCount = (maxThreads != null && maxThreads > 0) ? Math.min(baseThreadCount, maxThreads) : baseThreadCount;
     final StorageConnectorProvider storageConnectorProvider = injector.getInstance(Key.get(
         StorageConnectorProvider.class,
         MultiStageQuery.class
@@ -286,19 +291,13 @@ public class IndexerWorkerContext implements WorkerContext
   @Override
   public int threadCount()
   {
-    return memoryIntrospector.numProcessingThreads();
+    return threadCount;
   }
 
   @Override
   public DruidNode selfNode()
   {
     return toolbox.getDruidNode();
-  }
-
-  @Override
-  public DataServerQueryHandlerFactory dataServerQueryHandlerFactory()
-  {
-    return dataServerQueryHandlerFactory;
   }
 
   @Override

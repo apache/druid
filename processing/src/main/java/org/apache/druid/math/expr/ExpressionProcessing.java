@@ -45,19 +45,13 @@ public class ExpressionProcessing
   @VisibleForTesting
   public static void initializeForTests()
   {
-    INSTANCE = new ExpressionProcessingConfig(null, null, null, null);
+    INSTANCE = new ExpressionProcessingConfig(null, null, null);
   }
 
   @VisibleForTesting
   public static void initializeForHomogenizeNullMultiValueStrings()
   {
-    INSTANCE = new ExpressionProcessingConfig(null, null, true, null);
-  }
-
-  @VisibleForTesting
-  public static void initializeForFallback()
-  {
-    INSTANCE = new ExpressionProcessingConfig(null, null, null, true);
+    INSTANCE = new ExpressionProcessingConfig(null, true, null);
   }
 
   /**

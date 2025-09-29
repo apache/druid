@@ -533,14 +533,14 @@ FROM test_json_cols;
 #-------------------------------------------------------------------------
 SELECT json_value(c1, '$.a_bool' RETURNING boolean) c
 FROM test_json_cols;
-+-------+
-| c     |
-+-------+
-| false |
-| false |
-|       |
-|       |
-+-------+
++------+
+| c    |
++------+
+| true |
+| true |
+|      |
+|      |
++------+
 (4 rows)
 
 !ok
@@ -550,14 +550,14 @@ FROM test_json_cols;
 #-------------------------------------------------------------------------
 SELECT json_value(c1, '$.a_obj.a_bool' RETURNING boolean) c
 FROM test_json_cols;
-+-------+
-| c     |
-+-------+
-| false |
-| false |
-|       |
-|       |
-+-------+
++------+
+| c    |
++------+
+| true |
+| true |
+|      |
+|      |
++------+
 (4 rows)
 
 !ok
@@ -567,14 +567,14 @@ FROM test_json_cols;
 #-------------------------------------------------------------------------
 SELECT json_value(c1, '$.a_array[0].a_bool' RETURNING boolean) c
 FROM test_json_cols;
-+-------+
-| c     |
-+-------+
-| false |
-| false |
-|       |
-|       |
-+-------+
++------+
+| c    |
++------+
+| true |
+| true |
+|      |
+|      |
++------+
 (4 rows)
 
 !ok

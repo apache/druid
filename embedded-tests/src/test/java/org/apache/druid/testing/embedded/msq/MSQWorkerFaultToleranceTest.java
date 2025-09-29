@@ -46,10 +46,10 @@ import java.util.Map;
  */
 public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
 {
+  private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer()
-      .addProperty("druid.plaintextPort", "7091")
       .addProperty("druid.worker.capacity", "1");
 
   private EmbeddedMSQApis msqApis;
@@ -65,7 +65,7 @@ public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
         .addServer(overlord)
         .addServer(coordinator)
         .addServer(indexer)
-        .addServer(new EmbeddedBroker())
+        .addServer(broker)
         .addServer(new EmbeddedHistorical());
   }
 
@@ -92,6 +92,7 @@ public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
 
     // Add a faulty Indexer to the cluster so that worker is launched but doesn't finish
     final EmbeddedIndexer faultyIndexer = new EmbeddedIndexer()
+        .addProperty("druid.plaintextPort", "7091")
         .addProperty("druid.unsafe.cluster.testing", "true")
         .addProperty("druid.unsafe.cluster.testing.overlordClient.taskStatusDelay", "PT1H")
         .addProperty("druid.worker.capacity", "1");
@@ -105,6 +106,13 @@ public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
     final String workerTaskId = (String) matchingEvent.getUserDims().get(DruidMetrics.TASK_ID);
     Thread.sleep(100);
 
+    // Add a functional Indexer where the worker can be relaunched
+    final EmbeddedIndexer functionalIndexer = new EmbeddedIndexer()
+        .addProperty("druid.plaintextPort", "6091")
+        .addProperty("druid.worker.capacity", "1");
+    cluster.addServer(functionalIndexer);
+    functionalIndexer.start();
+
     // Cancel the worker task and verify that it has failed
     cluster.callApi().onLeaderOverlord(o -> o.cancelTask(workerTaskId));
     overlord.latchableEmitter().waitForEvent(
@@ -114,15 +122,9 @@ public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
     );
     faultyIndexer.stop();
 
-    // Add a functional Indexer so that the worker is relaunched successfully
-    final EmbeddedIndexer functionalIndexer = new EmbeddedIndexer()
-        .addProperty("druid.worker.capacity", "1");
-    cluster.addServer(functionalIndexer);
-    functionalIndexer.start();
-
     // Verify that the controller task eventually succeeds
     cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord.latchableEmitter());
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     cluster.callApi().verifySqlQuery(
         "SELECT __time, isRobot, added, delta, deleted, namespace FROM %s",

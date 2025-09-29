@@ -40,6 +40,7 @@ public class ConcurrentAppendReplaceTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
+  private final EmbeddedBroker broker = new EmbeddedBroker();
 
   @Override
   protected EmbeddedDruidCluster createCluster()
@@ -49,7 +50,7 @@ public class ConcurrentAppendReplaceTest extends EmbeddedClusterTestBase
                                .addServer(overlord)
                                .addServer(coordinator)
                                .addServer(new EmbeddedIndexer())
-                               .addServer(new EmbeddedBroker())
+                               .addServer(broker)
                                .addServer(new EmbeddedHistorical());
   }
 
@@ -94,7 +95,7 @@ public class ConcurrentAppendReplaceTest extends EmbeddedClusterTestBase
     Assertions.assertEquals("1970-01-01T00:00:00.000ZS", segmentId2.getVersion());
     Assertions.assertEquals(0, segmentId2.getPartitionNum());
 
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
     Assertions.assertEquals(
         data1Row,
         cluster.runSql("SELECT * FROM %s", dataSource)

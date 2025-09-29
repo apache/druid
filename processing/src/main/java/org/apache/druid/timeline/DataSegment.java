@@ -37,6 +37,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.jackson.CommaListJoinDeserializer;
 import org.apache.druid.jackson.CommaListJoinSerializer;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -179,9 +180,10 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   }
 
   @JsonCreator
-  public DataSegment(
+  private DataSegment(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("interval") Interval interval,
+      // We take interval input as a String so we can deserialize it optimally via Intervals.fromString(interval).
+      @JsonProperty("interval") String interval,
       @JsonProperty("version") String version,
       // use `Map` *NOT* `LoadSpec` because we want to do lazy materialization to prevent dependency pollution
       @JsonProperty("loadSpec") @Nullable Map<String, Object> loadSpec,
@@ -195,6 +197,37 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       @JsonProperty("binaryVersion") Integer binaryVersion,
       @JsonProperty("size") long size,
       @JacksonInject PruneSpecsHolder pruneSpecsHolder
+  )
+  {
+    this(
+        dataSource,
+        Intervals.fromString(interval),
+        version,
+        loadSpec,
+        dimensions,
+        metrics,
+        projections,
+        shardSpec,
+        lastCompactionState,
+        binaryVersion,
+        size,
+        pruneSpecsHolder
+    );
+  }
+
+  public DataSegment(
+      String dataSource,
+      Interval interval,
+      String version,
+      @Nullable Map<String, Object> loadSpec,
+      @Nullable List<String> dimensions,
+      @Nullable List<String> metrics,
+      @Nullable List<String> projections,
+      @Nullable ShardSpec shardSpec,
+      @Nullable CompactionState lastCompactionState,
+      Integer binaryVersion,
+      long size,
+      PruneSpecsHolder pruneSpecsHolder
   )
   {
     this.id = SegmentId.of(dataSource, interval, version, shardSpec);

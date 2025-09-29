@@ -20,6 +20,7 @@
 package org.apache.druid.metadata.storage.sqlserver;
 
 import junit.framework.Assert;
+import org.apache.druid.metadata.MetadataStorageActionHandler;
 import org.apache.druid.metadata.storage.sqlserver.SQLServerConnector.CustomStatementRewriter;
 import org.junit.Before;
 import org.junit.Test;
@@ -128,8 +129,7 @@ public class CustomStatementRewriterTest
 
   /**
    *
-   * @see org.apache.druid.metadata.SQLMetadataStorageActionHandler#setStatus(String,
-   *      boolean, Object)
+   * @see MetadataStorageActionHandler#setStatus(String, boolean, org.apache.druid.indexer.TaskStatus)
    *
    */
   @Test

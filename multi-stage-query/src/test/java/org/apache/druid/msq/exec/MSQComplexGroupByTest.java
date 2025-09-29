@@ -420,7 +420,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                                                         .intervals(querySegmentSpec(Filtration.eternity()))
                                                         .columns("obj")
                                                         .columnTypes(ColumnType.NESTED_DATA)
-                                                        .context(defaultScanQueryContext(context, rowSignature))
+                                                        .context(context)
                                                         .orderBy(Collections.singletonList(OrderBy.ascending("obj")))
                                                         .build()
                                              )
