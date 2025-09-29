@@ -198,7 +198,14 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     for (int i = 0; i < segmentsToLoad.length; i++) {
       final File file = segmentsToLoad[i];
       log.info("Loading segment cache file [%d/%d][%s].", i + 1, segmentsToLoad.length, file);
-      addFilesToCachedSegments(file, ignoredFilesCounter, cachedSegments);
+      try {
+        addFilesToCachedSegments(file, ignoredFilesCounter, cachedSegments);
+      }
+      catch (Exception e) {
+        log.makeAlert(e, "Failed to load segment from segment cache file.")
+           .addData("file", file)
+           .emit();
+      }
     }
 
     if (ignoredFilesCounter.get() > 0) {
@@ -210,64 +217,57 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return cachedSegments;
   }
 
-  private void addFilesToCachedSegments(File file, AtomicInteger ignored, List<DataSegment> cachedSegments)
+  private void addFilesToCachedSegments(File file, AtomicInteger ignored, List<DataSegment> cachedSegments) throws IOException
   {
-    try {
-      final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
-      boolean removeInfo = false;
-      if (!segment.getId().toString().equals(file.getName())) {
-        log.warn("Ignoring cache file[%s] for segment[%s].", file.getPath(), segment.getId());
-        ignored.incrementAndGet();
-      } else {
-        removeInfo = true;
-        final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
-        for (StorageLocation location : locations) {
-          // check for migrate from old nested local storage path format
-          final File legacyPath = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
-          if (legacyPath.exists()) {
-            final File destination = cacheEntry.toPotentialLocation(location.getPath());
-            FileUtils.mkdirp(destination);
-            final File[] oldFiles = legacyPath.listFiles();
-            final File[] newFiles = destination.listFiles();
-            // make sure old files exist and new files do not exist
-            if (oldFiles != null && oldFiles.length > 0 && newFiles != null && newFiles.length == 0) {
-              Files.move(legacyPath.toPath(), destination.toPath(), StandardCopyOption.ATOMIC_MOVE);
-            }
-            cleanupLegacyCacheLocation(location.getPath(), legacyPath);
+    final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
+    boolean removeInfo = false;
+    if (!segment.getId().toString().equals(file.getName())) {
+      log.warn("Ignoring cache file[%s] for segment[%s].", file.getPath(), segment.getId());
+      ignored.incrementAndGet();
+    } else {
+      removeInfo = true;
+      final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
+      for (StorageLocation location : locations) {
+        // check for migrate from old nested local storage path format
+        final File legacyPath = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
+        if (legacyPath.exists()) {
+          final File destination = cacheEntry.toPotentialLocation(location.getPath());
+          FileUtils.mkdirp(destination);
+          final File[] oldFiles = legacyPath.listFiles();
+          final File[] newFiles = destination.listFiles();
+          // make sure old files exist and new files do not exist
+          if (oldFiles != null && oldFiles.length > 0 && newFiles != null && newFiles.length == 0) {
+            Files.move(legacyPath.toPath(), destination.toPath(), StandardCopyOption.ATOMIC_MOVE);
           }
+          cleanupLegacyCacheLocation(location.getPath(), legacyPath);
+        }
 
-          if (cacheEntry.checkExists(location.getPath())) {
-            removeInfo = false;
-            final boolean reserveResult;
-            if (config.isVirtualStorage()) {
-              reserveResult = location.reserveWeak(cacheEntry);
-            } else {
-              reserveResult = location.reserve(cacheEntry);
-            }
-            if (!reserveResult) {
-              log.makeAlert(
-                  "storage[%s:%,d] has more segments than it is allowed. Currently loading Segment[%s:%,d]. Please increase druid.segmentCache.locations maxSize param",
-                  location.getPath(),
-                  location.availableSizeBytes(),
-                  segment.getId(),
-                  segment.getSize()
-              ).emit();
-            }
-            cachedSegments.add(segment);
+        if (cacheEntry.checkExists(location.getPath())) {
+          removeInfo = false;
+          final boolean reserveResult;
+          if (config.isVirtualStorage()) {
+            reserveResult = location.reserveWeak(cacheEntry);
+          } else {
+            reserveResult = location.reserve(cacheEntry);
           }
+          if (!reserveResult) {
+            log.makeAlert(
+                "storage[%s:%,d] has more segments than it is allowed. Currently loading Segment[%s:%,d]. Please increase druid.segmentCache.locations maxSize param",
+                location.getPath(),
+                location.availableSizeBytes(),
+                segment.getId(),
+                segment.getSize()
+            ).emit();
+          }
+          cachedSegments.add(segment);
         }
       }
-
-      if (removeInfo) {
-        final SegmentId segmentId = segment.getId();
-        log.warn("Unable to find cache file for segment[%s]. Deleting lookup entry.", segmentId);
-        removeInfoFile(segment);
-      }
     }
-    catch (Exception e) {
-      log.makeAlert(e, "Failed to load segment from segment cache file.")
-         .addData("file", file)
-         .emit();
+
+    if (removeInfo) {
+      final SegmentId segmentId = segment.getId();
+      log.warn("Unable to find cache file for segment[%s]. Deleting lookup entry.", segmentId);
+      removeInfoFile(segment);
     }
   }
 
