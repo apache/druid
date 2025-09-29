@@ -195,7 +195,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
     final File[] segmentsToLoad = retrieveSegmentMetadataFiles();
     final ConcurrentLinkedQueue<DataSegment> cachedSegments = new ConcurrentLinkedQueue<>();
-    AtomicInteger ignoredfileCounter = new AtomicInteger(0);
+    AtomicInteger ignoredFilesCounter = new AtomicInteger(0);
     CountDownLatch latch = new CountDownLatch(segmentsToLoad.length);
     ExecutorService exec = Objects.requireNonNullElseGet(loadOnBootstrapExec, MoreExecutors::newDirectExecutorService);
 
@@ -205,8 +205,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     for (File file : segmentsToLoad) {
       exec.submit(() -> {
         try {
-          addFilesToCachedSegments(file, ignoredfileCounter, cachedSegments);
-        } catch (Exception e) {
+          loadToCachedSegmentsFromFile(cachedSegments, file, ignoredFilesCounter);
+        }
+        catch (Exception e) {
           log.makeAlert(e, "Failed to load segment from segment cache file.")
              .addData("file", file)
              .emit();
@@ -227,9 +228,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     stopwatch.stop();
     log.info("Retrieved [%d,%d] cached segments in [%d]ms.", cachedSegments.size(), segmentsToLoad.length, stopwatch.millisElapsed());
 
-    if (ignoredfileCounter.get() > 0) {
+    if (ignoredFilesCounter.get() > 0) {
       log.makeAlert("Ignored misnamed segment cache files on startup.")
-         .addData("numIgnored", ignoredfileCounter.get())
+         .addData("numIgnored", ignoredFilesCounter.get())
          .emit();
     }
 
@@ -244,13 +245,17 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return files == null ? new File[0] : files;
   }
 
-  private void addFilesToCachedSegments(File file, AtomicInteger ignored, List<DataSegment> cachedSegments) throws IOException
+  private void loadToCachedSegmentsFromFile(
+      ConcurrentLinkedQueue<DataSegment> cachedSegments,
+      File file,
+      AtomicInteger ignoredFilesCounter
+  ) throws IOException
   {
     final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
 
     if (!segment.getId().toString().equals(file.getName())) {
       log.warn("Ignoring cache file[%s] for segment[%s].", file.getPath(), segment.getId());
-      ignored.incrementAndGet();
+      ignoredFilesCounter.incrementAndGet();
       return;
     }
 
