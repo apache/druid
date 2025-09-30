@@ -33,6 +33,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
 import java.io.OutputStream;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -114,7 +115,8 @@ public class QueryResultPusherTest
         counter,
         queryId,
         contentType,
-        extraHeaders)
+        extraHeaders,
+        Collections.emptyMap())
     {
 
       @Override

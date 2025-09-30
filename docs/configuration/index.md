@@ -196,9 +196,9 @@ and `druid.tlsPort` properties on each service. Please see `Configuration` secti
 
 Druid uses Jetty as an embedded web server. To learn more about TLS/SSL, certificates, and related concepts in Jetty, including explanations of the configuration settings below, see "Configuring SSL/TLS KeyStores" in the [Jetty Operations Guide](https://www.eclipse.org/jetty/documentation.php).
 
-For information about TLS/SSL support in Java in general, see the [Java Secure Socket Extension (JSSE) Reference Guide](https://docs.oracle.com/en/java/javase/11/security/java-secure-socket-extension-jsse-reference-guide.html).
+For information about TLS/SSL support in Java in general, see the [Java Secure Socket Extension (JSSE) Reference Guide](https://docs.oracle.com/en/java/javase/17/security/java-secure-socket-extension-jsse-reference-guide.html).
 The [Java Cryptography Architecture
-Standard Algorithm Name Documentation for JDK 11](https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html) lists all possible
+Standard Algorithm Name Documentation for JDK 17](https://docs.oracle.com/en/java/javase/17/docs/specs/security/standard-names.html) lists all possible
 values for the following properties, among others provided by the Java implementation.
 
 |Property|Description|Default|Required|
@@ -231,7 +231,7 @@ These properties apply to the SSLContext that will be provided to the internal H
 |`druid.client.https.trustStoreAlgorithm`|Algorithm to be used by TrustManager to validate certificate chains|`javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm()`|no|
 |`druid.client.https.trustStorePassword`|The [Password Provider](../operations/password-provider.md) or String password for the Trust Store.|none|yes|
 
-This [document](https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html) lists all the possible
+This [document](https://docs.oracle.com/en/java/javase/17/docs/specs/security/standard-names.html) lists all the possible
 values for the above mentioned configs among others provided by Java implementation.
 
 ### Authentication and authorization
@@ -394,6 +394,7 @@ These properties specify the JDBC connection and other configuration around the 
 |`druid.metadata.storage.tables.taskLock`|Used by the indexing service to store task locks.|`druid_tasklocks`|
 |`druid.metadata.storage.tables.supervisors`|Used by the indexing service to store supervisor configurations.|`druid_supervisors`|
 |`druid.metadata.storage.tables.audit`|The table to use for audit history of configuration changes, such as Coordinator rules.|`druid_audit`|
+|`druid.metadata.storage.tables.useShortIndexNames`|Whether to use SHA-based unique index names to ensure all indices are created.|`false`|
 
 ### Deep storage
 
@@ -1502,6 +1503,7 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.server.http.enableForwardedRequestCustomizer`|If enabled, adds Jetty ForwardedRequestCustomizer which reads X-Forwarded-* request headers to manipulate servlet request object when Druid is used behind a proxy.|false|
 |`druid.server.http.allowedHttpMethods`|List of HTTP methods that should be allowed in addition to the ones required by Druid APIs. Druid APIs require GET, PUT, POST, and DELETE, which are always allowed. This option is not useful unless you have installed an extension that needs these additional HTTP methods or that adds functionality related to CORS. None of Druid's bundled extensions require these methods.|`[]`|
 |`druid.server.http.contentSecurityPolicy`|Content-Security-Policy header value to set on each non-POST response. Setting this property to an empty string, or omitting it, both result in the default `frame-ancestors: none` being set.|`frame-ancestors 'none'`|
+|`druid.server.http.uriCompliance`|Jetty `UriCompliance` mode for Druid's embedded Jetty servers. To modify, override this config with the string representation of any `UriCompliance` mode that [Jetty supports](https://javadoc.jetty.org/jetty-12/org/eclipse/jetty/http/UriCompliance.html).|LEGACY|
 
 #### Indexer processing resources
 

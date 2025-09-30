@@ -220,18 +220,6 @@ public class VirtualColumnRegistry
   }
 
   /**
-   * @deprecated use {@link #findVirtualColumnExpressions(List)} instead
-   */
-  @Deprecated
-  public List<VirtualColumn> findVirtualColumns(List<String> allColumns)
-  {
-    return allColumns.stream()
-                     .filter(this::isVirtualColumnDefined)
-                     .map(this::getVirtualColumn)
-                     .collect(Collectors.toList());
-  }
-
-  /**
    * @deprecated use {@link #getOrCreateVirtualColumnForExpression(DruidExpression, ColumnType)} instead
    */
   @Deprecated
@@ -243,23 +231,6 @@ public class VirtualColumnRegistry
   {
     final String name = getOrCreateVirtualColumnForExpression(expression, valueType);
     return getVirtualColumn(name);
-  }
-
-  /**
-   * @deprecated use {@link #getOrCreateVirtualColumnForExpression(DruidExpression, RelDataType)} instead
-   */
-  @Deprecated
-  public VirtualColumn getOrCreateVirtualColumnForExpression(
-      PlannerContext plannerContext,
-      DruidExpression expression,
-      RelDataType dataType
-  )
-  {
-    return getOrCreateVirtualColumnForExpression(
-        plannerContext,
-        expression,
-        Calcites.getColumnTypeForRelDataType(dataType)
-    );
   }
 
   private static ExpressionAndTypeHint wrap(DruidExpression expression, ColumnType typeHint)

@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.rel;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -89,7 +88,6 @@ import org.apache.druid.query.topn.TopNMetricSpec;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -127,14 +125,6 @@ import java.util.stream.Collectors;
  */
 public class DruidQuery
 {
-  /**
-   * Native query context key that is set when {@link EngineFeature#SCAN_NEEDS_SIGNATURE}.
-   *
-   * {@link Deprecated} Instead of the context value {@link ScanQuery#getRowSignature()} can be used.
-   */
-  @Deprecated
-  public static final String CTX_SCAN_SIGNATURE = "scanSignature";
-
   /**
    * Maximum number of time-granular buckets that we allow for non-Druid tables.
    * <p>
@@ -1739,62 +1729,9 @@ public class DruidQuery
         orderByColumns,
         filtration.getDimFilter(),
         scanColumnsList,
-        withScanSignatureIfNeeded(
-            virtualColumns,
-            scanColumnsList,
-            plannerContext.queryContextMap()
-        ),
+        plannerContext.queryContextMap(),
         outputRowSignature.buildSafeSignature(scanColumnsList).getColumnTypes()
     );
-  }
-
-  /**
-   * Returns a copy of "queryContext" with {@link #CTX_SCAN_SIGNATURE} added if the execution context has the
-   * {@link EngineFeature#SCAN_NEEDS_SIGNATURE} feature.
-   *
-   * {@link Deprecated} Instead of the context value {@link ScanQuery#getRowSignature()} can be used.
-   */
-  @Deprecated
-  private Map<String, Object> withScanSignatureIfNeeded(
-      final VirtualColumns virtualColumns,
-      final List<String> scanColumns,
-      final Map<String, Object> queryContext
-  )
-  {
-    if (!plannerContext.featureAvailable(EngineFeature.SCAN_NEEDS_SIGNATURE)) {
-      return queryContext;
-    }
-    final RowSignature signature = buildRowSignature(virtualColumns, scanColumns);
-
-    try {
-      Map<String, Object> revised = new HashMap<>(queryContext);
-      revised.put(
-          CTX_SCAN_SIGNATURE,
-          plannerContext.getJsonMapper().writeValueAsString(signature)
-      );
-      return revised;
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  private RowSignature buildRowSignature(final VirtualColumns virtualColumns, final List<String> columns)
-  {
-    // Compute the signature of the columns that we are selecting.
-    final RowSignature.Builder builder = RowSignature.builder();
-
-    for (final String columnName : columns) {
-      final ColumnCapabilities capabilities =
-          virtualColumns.getColumnCapabilitiesWithFallback(sourceRowSignature, columnName);
-
-      if (capabilities == null) {
-        // No type for this column. This is a planner bug.
-        throw new ISE("No type for column [%s]", columnName);
-      }
-      builder.add(columnName, capabilities.toColumnType());
-    }
-    return builder.build();
   }
 
   public DimFilter getFilter()
