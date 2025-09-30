@@ -272,7 +272,6 @@ public class IndexSpec
       bob.withAutoColumnFormatSpec(defaultSpec.autoColumnFormatSpec.getEffectiveSpec(this));
     }
 
-
     return bob.build();
   }
 
@@ -323,6 +322,7 @@ public class IndexSpec
            ", metricCompression=" + metricCompression +
            ", longEncoding=" + longEncoding +
            ", complexMetricCompression=" + complexMetricCompression +
+           ", autoColumnFormatSpec=" + autoColumnFormatSpec +
            ", jsonCompression=" + jsonCompression +
            ", segmentLoader=" + segmentLoader +
            '}';
