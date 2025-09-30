@@ -964,7 +964,7 @@ Each line can be further parsed using [`parseSpec`](#parsespec).
 
 :::caution[Deprecated]
 
-Hadoop-based ingestion is deprecated. For more information, see the [upgrade notes](../release-info/upgrade-notes.md#hadoop-based-ingestion)
+Hadoop-based ingestion is deprecated. For more information, see the [upgrade notes](../release-info/upgrade-notes.md#hadoop-based-ingestion).
 
 :::
 
@@ -1032,7 +1032,7 @@ For example, using Avro Hadoop parser with custom reader's schema file:
 
 :::caution[Deprecated]
 
-Hadoop-based ingestion is deprecated. For more information, see the [upgrade notes](../release-info/upgrade-notes.md#hadoop-based-ingestion)
+Hadoop-based ingestion is deprecated. For more information, see the [upgrade notes](../release-info/upgrade-notes.md#hadoop-based-ingestion).
 
 :::
 
@@ -1284,7 +1284,7 @@ setting `"mapreduce.job.user.classpath.first": "true"`, then this will not be an
 
 :::caution[Deprecated]
 
-Hadoop-based ingestion is deprecated. For more information, see the [upgrade notes](../release-info/upgrade-notes.md#hadoop-based-ingestion)
+Hadoop-based ingestion is deprecated. For more information, see the [upgrade notes](../release-info/upgrade-notes.md#hadoop-based-ingestion).
 
 :::
 
@@ -1435,7 +1435,7 @@ However, the Parquet Avro Hadoop Parser was the original basis for supporting th
 
 :::caution[Deprecated]
 
-Hadoop-based ingestion is deprecated. For more information, see the [upgrade notes](../release-info/upgrade-notes.md#hadoop-based-ingestion)
+Hadoop-based ingestion is deprecated. For more information, see the [upgrade notes](../release-info/upgrade-notes.md#hadoop-based-ingestion).
 
 :::
 
