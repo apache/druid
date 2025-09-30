@@ -41,7 +41,6 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.CloseableUtils;
 
@@ -222,7 +221,6 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
         CacheKeyBuilder builder = new CacheKeyBuilder(SCAN_QUERY)
             .appendCacheable(query.getVirtualColumns())
             .appendString(query.getResultFormat().toString())
-            .appendInt(query.getBatchSize())
             .appendLong(query.getScanRowsOffset())
             .appendLong(query.getScanRowsLimit())
             .appendCacheable(query.getFilter())
@@ -233,12 +231,6 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
           for (OrderBy orderBy : query.getOrderBys()) {
             builder.appendString(orderBy.getColumnName())
                    .appendString(orderBy.getOrder().toString());
-          }
-        }
-
-        if (query.getColumnTypes() != null && !query.getColumnTypes().isEmpty()) {
-          for (ColumnType columnType : query.getColumnTypes()) {
-            builder.appendString(columnType.toString());
           }
         }
 

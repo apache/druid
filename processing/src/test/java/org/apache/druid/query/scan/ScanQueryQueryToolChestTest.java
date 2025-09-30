@@ -639,32 +639,6 @@ public class ScanQueryQueryToolChestTest
   }
 
   @Test
-  public void testCacheKeyWithColumnTypes()
-  {
-    ScanQuery queryWithColumnTypes = Druids.newScanQueryBuilder()
-        .dataSource("foo")
-        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2025-01-01/2025-01-02"))))
-        .columns("dim1", "metric1")
-        .columnTypes(ColumnType.STRING, ColumnType.LONG)
-        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
-        .build();
-
-    ScanQuery queryWithoutColumnTypes = Druids.newScanQueryBuilder()
-        .dataSource("foo")
-        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2025-01-01/2025-01-02"))))
-        .columns("dim1", "metric1")
-        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
-        .build();
-
-    CacheStrategy<ScanResultValue, ScanResultValue, ScanQuery> strategy = toolChest.getCacheStrategy(queryWithColumnTypes, null);
-
-    byte[] cacheKeyWithColumnTypes = strategy.computeCacheKey(queryWithColumnTypes);
-    byte[] cacheKeyWithoutColumnTypes = strategy.computeCacheKey(queryWithoutColumnTypes);
-
-    Assert.assertFalse(Arrays.equals(cacheKeyWithColumnTypes, cacheKeyWithoutColumnTypes));
-  }
-
-  @Test
   public void testCacheKeyWithOffsetAndLimit()
   {
     ScanQuery queryWithOffsetLimit = Druids.newScanQueryBuilder()
