@@ -257,11 +257,11 @@ public class CompactionStatusTest
         + "required[IndexSpec{bitmapSerdeFactory=RoaringBitmapSerdeFactory{},"
         + " dimensionCompression=lz4, stringDictionaryEncoding=Utf8{},"
         + " metricCompression=lz4, longEncoding=longs, complexMetricCompression=null,"
-        + " jsonCompression=null, segmentLoader=null}], "
+        + " autoColumnFormatSpec=null, jsonCompression=null, segmentLoader=null}], "
         + "current[IndexSpec{bitmapSerdeFactory=RoaringBitmapSerdeFactory{},"
         + " dimensionCompression=zstd, stringDictionaryEncoding=Utf8{},"
         + " metricCompression=lz4, longEncoding=longs, complexMetricCompression=null,"
-        + " jsonCompression=null, segmentLoader=null}]"
+        + " autoColumnFormatSpec=null, jsonCompression=null, segmentLoader=null}]"
     );
   }
 
