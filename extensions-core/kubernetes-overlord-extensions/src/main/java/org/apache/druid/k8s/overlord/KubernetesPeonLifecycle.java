@@ -34,6 +34,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.JobResponse;
@@ -49,7 +50,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -92,6 +97,9 @@ public class KubernetesPeonLifecycle
   private final ObjectMapper mapper;
   private final TaskStateListener stateListener;
   private final SettableFuture<Boolean> taskStartedSuccessfullyFuture;
+  private final ExecutorService logWatchExecutor;
+  private final long logWatchInitializationTimeoutMs;
+  private final long logWatchCopyLogTimeoutMs;
 
   @MonotonicNonNull
   private LogWatch logWatch;
@@ -104,7 +112,9 @@ public class KubernetesPeonLifecycle
       KubernetesPeonClient kubernetesClient,
       TaskLogs taskLogs,
       ObjectMapper mapper,
-      TaskStateListener stateListener
+      TaskStateListener stateListener,
+      long logWatchInitializationTimeoutMs,
+      long logWatchCopyLogTimeoutMs
   )
   {
     this.task = task;
@@ -114,6 +124,11 @@ public class KubernetesPeonLifecycle
     this.mapper = mapper;
     this.stateListener = stateListener;
     this.taskStartedSuccessfullyFuture = SettableFuture.create();
+    this.logWatchInitializationTimeoutMs = logWatchInitializationTimeoutMs;
+    this.logWatchCopyLogTimeoutMs = logWatchCopyLogTimeoutMs;
+    this.logWatchExecutor = Executors.newSingleThreadExecutor(
+        Execs.makeThreadFactory("k8s-logwatch-" + taskId.getOriginalTaskId() + "-%d")
+    );
   }
 
   /**
@@ -334,15 +349,27 @@ public class KubernetesPeonLifecycle
     if (logWatch != null) {
       log.debug("There is already a log watcher for %s", taskId.getOriginalTaskId());
       return;
+    } else if (logWatchExecutor.isShutdown()) {
+      log.warn("Log watch executor is shutdown for %s. Cannot start log watcher.", taskId.getOriginalTaskId());
+      return;
     }
     try {
-      Optional<LogWatch> maybeLogWatch = kubernetesClient.getPeonLogWatcher(taskId);
+      Future<Optional<LogWatch>> future = logWatchExecutor.submit(() -> kubernetesClient.getPeonLogWatcher(taskId));
+      Optional<LogWatch> maybeLogWatch = future.get(logWatchInitializationTimeoutMs, TimeUnit.MILLISECONDS);
       if (maybeLogWatch.isPresent()) {
         logWatch = maybeLogWatch.get();
       }
     }
+    catch (TimeoutException e) {
+      log.warn("Initializing log watcher timed out after %d ms for task [%s]. LogWatch not initialized.",
+               logWatchInitializationTimeoutMs, taskId.getOriginalTaskId());
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      log.warn("Initializing log watcher was interrupted for task [%s]. LogWatch not initialized.", taskId.getOriginalTaskId());
+    }
     catch (Exception e) {
-      log.error(e, "Error watching logs from task: %s", taskId);
+      log.error(e, "Error watching logs from task: %s. LogWatch not initialized.", taskId);
     }
   }
 
@@ -352,8 +379,37 @@ public class KubernetesPeonLifecycle
       Path file = Files.createTempFile(taskId.getOriginalTaskId(), "log");
       try {
         startWatchingLogs();
-        if (logWatch != null) {
-          FileUtils.copyInputStreamToFile(logWatch.getOutput(), file.toFile());
+        if (logWatch != null && !logWatchExecutor.isShutdown()) {
+          // Copy log output with timeout protection
+          Future<?> copyFuture = logWatchExecutor.submit(() -> {
+            try {
+              FileUtils.copyInputStreamToFile(logWatch.getOutput(), file.toFile());
+            }
+            catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+          });
+
+          try {
+            copyFuture.get(logWatchCopyLogTimeoutMs, TimeUnit.MILLISECONDS);
+          }
+          catch (TimeoutException e) {
+            log.warn("Copying task logs timed out after %d ms for task [%s]. Logs may be incomplete. This does not have any impact on the"
+                     + " work done by the task, but the logs may be innaccessible. If this continues to happen, check"
+                     + " Kubernetes server logs for potential errors.",
+                     logWatchCopyLogTimeoutMs, taskId.getOriginalTaskId());
+          }
+          catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Copying task logs was interrupted for task [%s]. Logs may be incomplete. This does not have any impact on the"
+                     + " work done by the task, but the logs may be innaccessible. If this continues to happen, check"
+                     + " Kubernetes server logs for potential errors.", taskId.getOriginalTaskId());
+          }
+          catch (Exception e) {
+            log.error(e, "Failed to copy task logs for task [%s]. This does not have any impact on the"
+                         + " work done by the task, but the logs may be innaccessible. If this continues to happen, check"
+                         + " Kubernetes server logs for potential errors.", taskId.getOriginalTaskId());
+          }
         } else {
           log.debug("Log stream not found for %s", taskId.getOriginalTaskId());
           FileUtils.writeStringToFile(
@@ -388,6 +444,8 @@ public class KubernetesPeonLifecycle
     if (!State.STOPPED.equals(state.get())) {
       updateState(new State[]{State.NOT_STARTED, State.PENDING, State.RUNNING}, State.STOPPED);
     }
+    // Shutdown the executor to release resources and interrupt any hanging log operations
+    logWatchExecutor.shutdownNow();
   }
 
   private void updateState(State[] acceptedStates, State targetState)

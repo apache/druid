@@ -792,6 +792,9 @@ Should you require the needed permissions for interacting across Kubernetes name
 | `druid.indexer.runner.graceTerminationPeriodSeconds` | `Long` | Number of seconds you want to wait after a sigterm for container lifecycle hooks to complete. Keep at a smaller value if you want tasks to hold locks for shorter periods. | `PT30S` (K8s default) | No |
 | `druid.indexer.runner.capacity` | `Integer` | Number of concurrent jobs that can be sent to Kubernetes. | `2147483647` | No |
 | `druid.indexer.runner.cpuCoreInMicro` | `Integer` | Number of CPU micro core for the task. | `1000` | No |
+| `druid.indexer.runner.logSaveTimeout` | `Duration` | How long to wait for task logs to be saved before giving up. | `PT300S` | NO |
+| `druid.indexer.runner.logWatchInitializationTimeout` | `Duration` | How long to wait for Initializing a LogWatch on k8s peon pod before giving up. | `PT30S` | NO |
+
 
 ### Metrics added
 

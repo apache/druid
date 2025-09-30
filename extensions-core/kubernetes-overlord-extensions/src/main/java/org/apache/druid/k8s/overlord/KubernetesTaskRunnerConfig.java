@@ -106,6 +106,16 @@ public class KubernetesTaskRunnerConfig
   private Period k8sjobLaunchTimeout = new Period("PT1H");
 
   @JsonProperty
+  @NotNull
+  // how long to wait for log saving operations to complete
+  private Period logSaveTimeout = new Period("PT300S");
+
+  @JsonProperty
+  @NotNull
+  // how long to wait for log saving operations to complete
+  private Period logWatchInitializationTimeout = new Period("PT30S");
+
+  @JsonProperty
   // ForkingTaskRunner inherits the monitors from the MM, in k8s mode
   // the peon inherits the monitors from the overlord, so if someone specifies
   // a TaskCountStatsMonitor in the overlord for example, the peon process
@@ -158,7 +168,9 @@ public class KubernetesTaskRunnerConfig
       Map<String, String> labels,
       Map<String, String> annotations,
       Integer capacity,
-      Period taskJoinTimeout
+      Period taskJoinTimeout,
+      Period logSaveTimeout,
+      Period logWatchInitTimeout
   )
   {
     this.namespace = namespace;
@@ -231,6 +243,14 @@ public class KubernetesTaskRunnerConfig
     this.capacity = ObjectUtils.defaultIfNull(
         capacity,
         this.capacity
+    );
+    this.logSaveTimeout = ObjectUtils.defaultIfNull(
+        logSaveTimeout,
+        this.logSaveTimeout
+    );
+    this.logWatchInitializationTimeout = ObjectUtils.defaultIfNull(
+        logWatchInitTimeout,
+        this.logWatchInitializationTimeout
     );
   }
 
@@ -336,6 +356,16 @@ public class KubernetesTaskRunnerConfig
     return capacity;
   }
 
+  public Period getLogSaveTimeout()
+  {
+    return logSaveTimeout;
+  }
+
+  public Period getLogWatchInitializationTimeout()
+  {
+    return logWatchInitializationTimeout;
+  }
+
   public static Builder builder()
   {
     return new Builder();
@@ -363,6 +393,8 @@ public class KubernetesTaskRunnerConfig
     private Map<String, String> annotations;
     private Integer capacity;
     private Period taskJoinTimeout;
+    private Period logSaveTimeout;
+    private Period logWatchInitializationTimeout;
 
     public Builder()
     {
@@ -489,6 +521,18 @@ public class KubernetesTaskRunnerConfig
       return this;
     }
 
+    public Builder withLogSaveTimeout(Period logSaveTimeout)
+    {
+      this.logSaveTimeout = logSaveTimeout;
+      return this;
+    }
+
+    public Builder withLogWatchInitializationTimeout(Period logWatchInitTimeout)
+    {
+      this.logWatchInitializationTimeout = logWatchInitTimeout;
+      return this;
+    }
+
     public KubernetesTaskRunnerConfig build()
     {
       return new KubernetesTaskRunnerConfig(
@@ -511,7 +555,9 @@ public class KubernetesTaskRunnerConfig
           this.labels,
           this.annotations,
           this.capacity,
-          this.taskJoinTimeout
+          this.taskJoinTimeout,
+          this.logSaveTimeout,
+          this.logWatchInitializationTimeout
       );
     }
   }

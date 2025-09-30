@@ -93,7 +93,13 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
         kubernetesTaskRunnerConfig,
         peonClient,
         httpClient,
-        new KubernetesPeonLifecycleFactory(peonClient, taskLogs, smileMapper),
+        new KubernetesPeonLifecycleFactory(
+            peonClient,
+            taskLogs,
+            smileMapper,
+            kubernetesTaskRunnerConfig.getLogSaveTimeout().toStandardDuration().getMillis(),
+            kubernetesTaskRunnerConfig.getLogWatchInitializationTimeout().toStandardDuration().getMillis()
+        ),
         emitter
     );
     return runner;
