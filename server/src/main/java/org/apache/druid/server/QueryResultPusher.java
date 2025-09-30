@@ -67,6 +67,7 @@ public abstract class QueryResultPusher
   private final QueryResource.QueryMetricCounter counter;
   private final MediaType contentType;
   private final Map<String, String> extraHeaders;
+  private final Map<String, Object> queryContext;
   private final Map<String, String> trailerFields;
 
   private StreamingHttpResponseAccumulator accumulator;
@@ -81,7 +82,8 @@ public abstract class QueryResultPusher
       QueryResource.QueryMetricCounter counter,
       String queryId,
       MediaType contentType,
-      Map<String, String> extraHeaders
+      Map<String, String> extraHeaders,
+      Map<String, Object> queryContext
   )
   {
     this.request = request;
@@ -92,6 +94,7 @@ public abstract class QueryResultPusher
     this.counter = counter;
     this.contentType = contentType;
     this.extraHeaders = extraHeaders;
+    this.queryContext = queryContext;
     this.trailerFields = new HashMap<>();
   }
 
@@ -254,11 +257,25 @@ public abstract class QueryResultPusher
       resultsWriter.recordFailure(e);
 
       if (accumulator != null && accumulator.isInitialized()) {
-        // We already started sending a response when we got the error message.  In this case we just give up
-        // and hope that the partial stream generates a meaningful failure message for our client.  We could consider
-        // also throwing the exception body into the response to make it easier for the client to choke if it manages
-        // to parse a meaningful object out, but that's potentially an API change so we leave that as an exercise for
-        // the future.
+        // We already started sending a response when we got the error message.  In this case we write the exception
+        // message as a row, assuming the caller (SqlResource, QueryResource or a custom endpoint) would be able to
+        // parse it and throw an exception on their side. It's assumed that if the caller is setting the
+        // WRITE_EXCEPTION_BODY_AS_RESPONSE_ROW context value, they are able to handle this kind of response. If it's
+        // not set, caller will continue to see a json parsing exception.
+        if (queryContext != null
+            && Boolean.parseBoolean(String.valueOf(queryContext.get(QueryResource.WRITE_EXCEPTION_BODY_AS_RESPONSE_ROW)))) {
+          try {
+            accumulator.writer.writeRow(e);
+            accumulator.writer.writeResponseEnd();
+          }
+          catch (IOException ioException) {
+            log.warn(
+                ioException,
+                "Suppressing IOException thrown writing error response for query [%s]",
+                queryId
+            );
+          }
+        }
         trailerFields.put(QueryResource.ERROR_MESSAGE_TRAILER_HEADER, e.getMessage());
         trailerFields.put(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER, "false");
         return null;

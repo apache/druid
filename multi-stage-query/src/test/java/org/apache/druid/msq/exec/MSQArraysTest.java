@@ -762,7 +762,7 @@ public class MSQArraysTest extends MSQTestBase
             ColumnType.LONG,
             TestExprMacroTable.INSTANCE
         ))
-        .context(defaultScanQueryContext(adjustedContext, scanSignature))
+        .context(adjustedContext)
         .build();
 
     testSelectQuery().setSql("SELECT\n"
@@ -838,7 +838,7 @@ public class MSQArraysTest extends MSQTestBase
         .columns("arrayString")
         .columnTypes(scanSignature.getColumnTypes())
         .orderBy(Collections.singletonList(OrderBy.descending("arrayString")))
-        .context(defaultScanQueryContext(context, scanSignature))
+        .context(context)
         .build();
 
     testSelectQuery().setSql("SELECT\n"
@@ -902,7 +902,7 @@ public class MSQArraysTest extends MSQTestBase
         .columns("arrayLong")
         .columnTypes(scanSignature.getColumnTypes())
         .orderBy(Collections.singletonList(OrderBy.ascending("arrayLong")))
-        .context(defaultScanQueryContext(context, scanSignature))
+        .context(context)
         .build();
 
     testSelectQuery().setSql("SELECT\n"
@@ -966,7 +966,7 @@ public class MSQArraysTest extends MSQTestBase
         .columns("arrayDouble")
         .columnTypes(scanSignature.getColumnTypes())
         .orderBy(Collections.singletonList(OrderBy.ascending("arrayDouble")))
-        .context(defaultScanQueryContext(context, scanSignature))
+        .context(context)
         .build();
 
     testSelectQuery().setSql("SELECT\n"
@@ -1018,7 +1018,7 @@ public class MSQArraysTest extends MSQTestBase
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("a_bool")
         .columnTypes(scanSignature.getColumnTypes())
-        .context(defaultScanQueryContext(context, scanSignature))
+        .context(context)
         .build();
 
     testSelectQuery().setSql("SELECT a_bool FROM TABLE(\n"
@@ -1067,7 +1067,7 @@ public class MSQArraysTest extends MSQTestBase
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("a_bool")
         .columnTypes(scanSignature.getColumnTypes())
-        .context(defaultScanQueryContext(context, scanSignature))
+        .context(context)
         .build();
 
     testSelectQuery().setSql("SELECT a_bool FROM TABLE(\n"

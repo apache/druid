@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.TaskStatusResponse;
@@ -30,17 +31,25 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.NoopTask;
+import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.SubTaskCompleteEvent;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
+import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -296,8 +305,21 @@ public class TaskMonitorTest
       if (task.throwUnknownTypeIdError) {
         throw new RuntimeException(new ISE("Could not resolve type id 'test_task_id'"));
       }
-      taskRunner.submit(() -> tasks.put(task.getId(), task.run(null).getStatusCode()));
+      TaskToolbox taskToolbox = makeToolbox();
+      taskRunner.submit(() -> tasks.put(task.getId(), task.run(taskToolbox).getStatusCode()));
       return Futures.immediateFuture(null);
+    }
+
+    private TaskToolbox makeToolbox()
+    {
+      ObjectMapper jsonMapper = TestHelper.JSON_MAPPER;
+      IndexIO indexIO = new IndexIO(jsonMapper, ColumnConfig.DEFAULT);
+      return new TaskToolbox.Builder()
+          .indexIO(indexIO)
+          .emitter(new StubServiceEmitter())
+          .indexMergerV9(new IndexMergerV9(jsonMapper, indexIO, TmpFileSegmentWriteOutMediumFactory.instance(), false))
+          .taskReportFileWriter(new NoopTestTaskReportFileWriter())
+          .build();
     }
 
     @Override
