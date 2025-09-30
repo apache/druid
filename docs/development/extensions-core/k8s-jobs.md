@@ -793,7 +793,7 @@ Should you require the needed permissions for interacting across Kubernetes name
 | `druid.indexer.runner.capacity` | `Integer` | Number of concurrent jobs that can be sent to Kubernetes. | `2147483647` | No |
 | `druid.indexer.runner.cpuCoreInMicro` | `Integer` | Number of CPU micro core for the task. | `1000` | No |
 | `druid.indexer.runner.logSaveTimeout` | `Duration` | How long to wait for task logs to be saved before giving up. | `PT300S` | NO |
-| `druid.indexer.runner.logWatchInitializationTimeout` | `Duration` | How long to wait for Initializing a LogWatch on k8s peon pod before giving up. | `PT30S` | NO |
+| `druid.indexer.runner.logWatchInitializationTimeout` | `Duration` | How long to wait when initializing a log watch for a peon pod before giving up. | `PT30S` | NO |
 
 
 ### Metrics added
