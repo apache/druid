@@ -20,23 +20,29 @@
 package org.apache.druid.query.scan;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.FrameSignaturePair;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryToolChestTestHelper;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -440,5 +446,248 @@ public class ScanQueryQueryToolChestTest
             )
         )
     );
+  }
+
+  @Test
+  public void testCacheStrategy()
+  {
+    ScanQuery query = Druids.newScanQueryBuilder()
+        .dataSource("foo")
+        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))))
+        .columns("dim1", "dim2")
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+        .batchSize(4096)
+        .offset(10)
+        .limit(100)
+        .build();
+
+    CacheStrategy<ScanResultValue, ScanResultValue, ScanQuery> strategy = toolChest.getCacheStrategy(query, null);
+
+    Assert.assertNotNull(strategy);
+    Assert.assertTrue(strategy.isCacheable(query, true, false));
+    Assert.assertFalse(strategy.isCacheable(query, false, true));
+    Assert.assertTrue(strategy.isCacheable(query, true, true));
+
+    byte[] cacheKey = strategy.computeCacheKey(query);
+    Assert.assertNotNull(cacheKey);
+    Assert.assertTrue(cacheKey.length > 0);
+
+    byte[] resultLevelCacheKey = strategy.computeResultLevelCacheKey(query);
+    Assert.assertNotNull(resultLevelCacheKey);
+    Assert.assertTrue(resultLevelCacheKey.length > 0);
+    
+    // For ScanQuery, result-level and segment-level cache keys should be the same
+    Assert.assertArrayEquals(cacheKey, resultLevelCacheKey);
+
+    ScanResultValue testResult = new ScanResultValue(
+        "test_segment",
+        ImmutableList.of("dim1", "dim2"),
+        ImmutableList.of(
+            ImmutableMap.of("dim1", "value1", "dim2", "value2"),
+            ImmutableMap.of("dim1", "value3", "dim2", "value4")
+        )
+    );
+
+    ScanResultValue cachedValue = strategy.prepareForCache(false).apply(testResult);
+    ScanResultValue fromCache = strategy.pullFromCache(false).apply(cachedValue);
+
+    Assert.assertEquals(testResult, fromCache);
+  }
+
+  @Test
+  public void testCacheDisabledForBySegmentQueries()
+  {
+    ScanQuery query = Druids.newScanQueryBuilder()
+                            .dataSource("foo")
+                            .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))))
+                            .columns("dim1", "dim2")
+                            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+                            .batchSize(4096)
+                            .offset(10)
+                            .limit(100)
+                            .context(ImmutableMap.of("bySegment", true))
+                            .build();
+
+    CacheStrategy<ScanResultValue, ScanResultValue, ScanQuery> strategy = toolChest.getCacheStrategy(query, null);
+
+    Assert.assertNotNull(strategy);
+    Assert.assertFalse(strategy.isCacheable(query, true, false));
+    Assert.assertFalse(strategy.isCacheable(query, false, true));
+  }
+
+  @Test
+  public void testCacheKeyDifferentQueries()
+  {
+    ScanQuery query1 = Druids.newScanQueryBuilder()
+        .dataSource("foo")
+        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2025-01-01/2025-01-02"))))
+        .columns("dim1", "dim2")
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+        .build();
+
+    ScanQuery query2 = Druids.newScanQueryBuilder()
+        .dataSource("foo")
+        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2025-01-01/2025-01-02"))))
+        .columns("dim1", "dim3")
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+        .build();
+
+    ScanQuery query3 = Druids.newScanQueryBuilder()
+        .dataSource("foo")
+        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2025-01-01/2025-01-02"))))
+        .columns("dim1", "dim2")
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+        .build();
+
+    CacheStrategy<ScanResultValue, ScanResultValue, ScanQuery> strategy = toolChest.getCacheStrategy(query1, null);
+
+    byte[] cacheKey1 = strategy.computeCacheKey(query1);
+    byte[] cacheKey2 = strategy.computeCacheKey(query2);
+    byte[] cacheKey3 = strategy.computeCacheKey(query3);
+
+    Assert.assertFalse(Arrays.equals(cacheKey1, cacheKey2));
+    Assert.assertFalse(Arrays.equals(cacheKey1, cacheKey3));
+    Assert.assertFalse(Arrays.equals(cacheKey2, cacheKey3));
+  }
+
+  @Test
+  public void testCacheKeyWithFilters()
+  {
+    ScanQuery queryWithFilter = Druids.newScanQueryBuilder()
+        .dataSource("foo")
+        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2025-01-01/2025-01-02"))))
+        .columns("dim1", "dim2")
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+        .filters(new EqualityFilter("dim1", ColumnType.STRING, "test", null))
+        .build();
+
+    ScanQuery queryWithoutFilter = Druids.newScanQueryBuilder()
+        .dataSource("foo")
+        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2025-01-01/2025-01-02"))))
+        .columns("dim1", "dim2")
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+        .build();
+
+    CacheStrategy<ScanResultValue, ScanResultValue, ScanQuery> strategy = toolChest.getCacheStrategy(queryWithFilter, null);
+
+    byte[] cacheKeyWithFilter = strategy.computeCacheKey(queryWithFilter);
+    byte[] cacheKeyWithoutFilter = strategy.computeCacheKey(queryWithoutFilter);
+
+    Assert.assertFalse(Arrays.equals(cacheKeyWithFilter, cacheKeyWithoutFilter));
+  }
+
+  @Test
+  public void testCacheKeyWithVirtualColumns()
+  {
+    ScanQuery queryWithVirtual = Druids.newScanQueryBuilder()
+        .dataSource("foo")
+        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2025-01-01/2025-01-02"))))
+        .columns("dim1", "virtual_col")
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+        .virtualColumns(new ExpressionVirtualColumn("virtual_col", "dim1 + '_suffix'", ColumnType.STRING, ExprMacroTable.nil()))
+        .build();
+
+    ScanQuery queryWithoutVirtual = Druids.newScanQueryBuilder()
+        .dataSource("foo")
+        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2025-01-01/2025-01-02"))))
+        .columns("dim1")
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+        .build();
+
+    CacheStrategy<ScanResultValue, ScanResultValue, ScanQuery> strategy = toolChest.getCacheStrategy(queryWithVirtual, null);
+
+    byte[] cacheKeyWithVirtual = strategy.computeCacheKey(queryWithVirtual);
+    byte[] cacheKeyWithoutVirtual = strategy.computeCacheKey(queryWithoutVirtual);
+
+    Assert.assertFalse(Arrays.equals(cacheKeyWithVirtual, cacheKeyWithoutVirtual));
+  }
+
+  @Test
+  public void testCacheKeyWithOrderBy()
+  {
+    ScanQuery queryWithOrderBy = Druids.newScanQueryBuilder()
+        .dataSource("foo")
+        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2025-01-01/2025-01-02"))))
+        .columns("dim1", "dim2")
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+        .orderBy(List.of(OrderBy.descending("dim1")))
+        .build();
+
+    ScanQuery queryWithoutOrderBy = Druids.newScanQueryBuilder()
+        .dataSource("foo")
+        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2025-01-01/2025-01-02"))))
+        .columns("dim1", "dim2")
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+        .build();
+
+    ScanQuery queryWithDifferentOrderBy = Druids.newScanQueryBuilder()
+        .dataSource("foo")
+        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2025-01-01/2025-01-02"))))
+        .columns("dim1", "dim2")
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+                                                .orderBy(List.of(OrderBy.ascending("dim1")))
+        .build();
+
+    final CacheStrategy<ScanResultValue, ScanResultValue, ScanQuery> strategy = toolChest.getCacheStrategy(queryWithOrderBy, null);
+
+    final byte[] cacheKeyWithOrderBy = strategy.computeCacheKey(queryWithOrderBy);
+    final byte[] cacheKeyWithoutOrderBy = strategy.computeCacheKey(queryWithoutOrderBy);
+    final byte[] cacheKeyWithDifferentOrderBy = strategy.computeCacheKey(queryWithDifferentOrderBy);
+
+    Assert.assertFalse(Arrays.equals(cacheKeyWithOrderBy, cacheKeyWithoutOrderBy));
+    Assert.assertFalse(Arrays.equals(cacheKeyWithOrderBy, cacheKeyWithDifferentOrderBy));
+  }
+
+  @Test
+  public void testCacheKeyWithColumnTypes()
+  {
+    ScanQuery queryWithColumnTypes = Druids.newScanQueryBuilder()
+        .dataSource("foo")
+        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2025-01-01/2025-01-02"))))
+        .columns("dim1", "metric1")
+        .columnTypes(ColumnType.STRING, ColumnType.LONG)
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+        .build();
+
+    ScanQuery queryWithoutColumnTypes = Druids.newScanQueryBuilder()
+        .dataSource("foo")
+        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2025-01-01/2025-01-02"))))
+        .columns("dim1", "metric1")
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+        .build();
+
+    CacheStrategy<ScanResultValue, ScanResultValue, ScanQuery> strategy = toolChest.getCacheStrategy(queryWithColumnTypes, null);
+
+    byte[] cacheKeyWithColumnTypes = strategy.computeCacheKey(queryWithColumnTypes);
+    byte[] cacheKeyWithoutColumnTypes = strategy.computeCacheKey(queryWithoutColumnTypes);
+
+    Assert.assertFalse(Arrays.equals(cacheKeyWithColumnTypes, cacheKeyWithoutColumnTypes));
+  }
+
+  @Test
+  public void testCacheKeyWithOffsetAndLimit()
+  {
+    ScanQuery queryWithOffsetLimit = Druids.newScanQueryBuilder()
+        .dataSource("foo")
+        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2025-01-01/2025-01-02"))))
+        .columns("dim1", "dim2")
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+        .offset(10)
+        .limit(100)
+        .build();
+
+    ScanQuery queryWithoutOffsetLimit = Druids.newScanQueryBuilder()
+        .dataSource("foo")
+        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2025-01-01/2025-01-02"))))
+        .columns("dim1", "dim2")
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+        .build();
+
+    CacheStrategy<ScanResultValue, ScanResultValue, ScanQuery> strategy = toolChest.getCacheStrategy(queryWithOffsetLimit, null);
+
+    byte[] cacheKeyWithOffsetLimit = strategy.computeCacheKey(queryWithOffsetLimit);
+    byte[] cacheKeyWithoutOffsetLimit = strategy.computeCacheKey(queryWithoutOffsetLimit);
+
+    Assert.assertFalse(Arrays.equals(cacheKeyWithOffsetLimit, cacheKeyWithoutOffsetLimit));
   }
 }

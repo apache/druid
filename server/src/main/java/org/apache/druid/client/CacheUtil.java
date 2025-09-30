@@ -29,7 +29,6 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.nio.ByteBuffer;
 
 public class CacheUtil
@@ -174,18 +173,18 @@ public class CacheUtil
    * @param cacheStrategy result of {@link QueryToolChest#getCacheStrategy} on this query
    * @param cacheConfig   current active cache config
    * @param serverType    BROKER or DATA
-   * @param bySegment     segement level or result-level cache
+   * @param segmentLevel     segement level or result-level cache
    */
   static <T> boolean isQueryCacheable(
       final Query<T> query,
       @Nullable final CacheStrategy<T, Object, Query<T>> cacheStrategy,
       final CacheConfig cacheConfig,
       final ServerType serverType,
-      final boolean bySegment
+      final boolean segmentLevel
   )
   {
     return cacheStrategy != null
-           && cacheStrategy.isCacheable(query, serverType.willMergeRunners(), bySegment)
+           && cacheStrategy.isCacheable(query, serverType.willMergeRunners(), segmentLevel)
            && cacheConfig.isQueryCacheable(query)
            && query.getDataSource().isCacheable(serverType == ServerType.BROKER);
   }

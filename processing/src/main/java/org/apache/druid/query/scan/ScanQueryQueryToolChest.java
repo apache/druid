@@ -20,6 +20,7 @@
 package org.apache.druid.query.scan;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.Iterables;
@@ -30,22 +31,28 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.GenericQueryMetricsFactory;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
+import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.CloseableUtils;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, ScanQuery>
 {
+  private static final byte SCAN_QUERY = 0x13;
   private static final TypeReference<ScanResultValue> TYPE_REFERENCE = new TypeReference<>() {};
 
   private final GenericQueryMetricsFactory queryMetricsFactory;
@@ -189,6 +196,80 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
           return Sequences.simple(arrays);
         }
     );
+  }
+
+  @Override
+  public CacheStrategy<ScanResultValue, ScanResultValue, ScanQuery> getCacheStrategy(
+      final ScanQuery query,
+      @Nullable final ObjectMapper objectMapper
+  )
+  {
+    return new CacheStrategy<>()
+    {
+      @Override
+      public boolean isCacheable(ScanQuery query, boolean willMergeRunners, boolean segmentLevel)
+      {
+        // Currently, there is no bijective mapping from ScanResultValue to Result<BySegmentResultValueClass<ScanResultValue>>.
+        // This means queries will fail if:
+        //   - A query is issued with bySegment:true
+        //   - Segment-level cache is enabled on the broker (in which case it sends bySegment queries to data nodes).
+        return !query.context().isBySegment() && (!segmentLevel || willMergeRunners);
+      }
+
+      @Override
+      public byte[] computeCacheKey(ScanQuery query)
+      {
+        CacheKeyBuilder builder = new CacheKeyBuilder(SCAN_QUERY)
+            .appendCacheable(query.getVirtualColumns())
+            .appendString(query.getResultFormat().toString())
+            .appendInt(query.getBatchSize())
+            .appendLong(query.getScanRowsOffset())
+            .appendLong(query.getScanRowsLimit())
+            .appendCacheable(query.getFilter())
+            .appendStrings(query.getColumns() != null ? query.getColumns() : List.of())
+            .appendString(query.getTimeOrder().toString());
+
+        if (query.getOrderBys() != null && !query.getOrderBys().isEmpty()) {
+          for (OrderBy orderBy : query.getOrderBys()) {
+            builder.appendString(orderBy.getColumnName())
+                   .appendString(orderBy.getOrder().toString());
+          }
+        }
+
+        if (query.getColumnTypes() != null && !query.getColumnTypes().isEmpty()) {
+          for (ColumnType columnType : query.getColumnTypes()) {
+            builder.appendString(columnType.toString());
+          }
+        }
+
+        return builder.build();
+      }
+
+      @Override
+      public byte[] computeResultLevelCacheKey(ScanQuery query)
+      {
+        // Use the same key as segment-level cache no result-level transformations like aggregations
+        return computeCacheKey(query);
+      }
+
+      @Override
+      public TypeReference<ScanResultValue> getCacheObjectClazz()
+      {
+        return TYPE_REFERENCE;
+      }
+
+      @Override
+      public Function<ScanResultValue, ScanResultValue> prepareForCache(boolean isResultLevelCache)
+      {
+        return input -> input;
+      }
+
+      @Override
+      public Function<ScanResultValue, ScanResultValue> pullFromCache(boolean isResultLevelCache)
+      {
+        return input -> input;
+      }
+    };
   }
 
   private static Function<?, Object[]> getResultFormatMapper(ScanQuery.ResultFormat resultFormat, List<String> fields)
