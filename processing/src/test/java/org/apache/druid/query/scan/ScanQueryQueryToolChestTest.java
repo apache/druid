@@ -664,4 +664,32 @@ public class ScanQueryQueryToolChestTest
 
     Assert.assertFalse(Arrays.equals(cacheKeyWithOffsetLimit, cacheKeyWithoutOffsetLimit));
   }
+
+  @Test
+  public void testCacheKeyWithDifferentResultFormat()
+  {
+    ScanQuery queryWithCompactedList = Druids.newScanQueryBuilder()
+                                           .dataSource("foo")
+                                           .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2025-01-01/2025-01-02"))))
+                                           .columns("dim1", "dim2")
+                                           .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                           .offset(10)
+                                           .limit(100)
+                                           .build();
+
+    ScanQuery queryWithResultFormatList = Druids.newScanQueryBuilder()
+                                           .dataSource("foo")
+                                           .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2025-01-01/2025-01-02"))))
+                                           .columns("dim1", "dim2")
+                                           .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+                                           .offset(10)
+                                           .limit(100)
+                                           .build();
+    CacheStrategy<ScanResultValue, ScanResultValue, ScanQuery> strategy = toolChest.getCacheStrategy(queryWithCompactedList, null);
+
+    byte[] cacheKeyWithCompactedList = strategy.computeCacheKey(queryWithCompactedList);
+    byte[] cacheKeyWithResultFormatList = strategy.computeCacheKey(queryWithResultFormatList);
+
+    Assert.assertFalse(Arrays.equals(cacheKeyWithCompactedList, cacheKeyWithResultFormatList));
+  }
 }

@@ -52,6 +52,7 @@ import java.util.Optional;
 public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, ScanQuery>
 {
   private static final byte SCAN_QUERY = 0x13;
+  private static final byte CACHE_STRATEGY_VERSION = 0x1;
   private static final TypeReference<ScanResultValue> TYPE_REFERENCE = new TypeReference<>() {};
 
   private final GenericQueryMetricsFactory queryMetricsFactory;
@@ -219,6 +220,8 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
       public byte[] computeCacheKey(ScanQuery query)
       {
         CacheKeyBuilder builder = new CacheKeyBuilder(SCAN_QUERY)
+            .appendByte(CACHE_STRATEGY_VERSION)
+            .appendCacheable(query.getDataSource())
             .appendCacheable(query.getVirtualColumns())
             .appendString(query.getResultFormat().toString())
             .appendLong(query.getScanRowsOffset())
@@ -227,8 +230,9 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
             .appendStrings(query.getColumns() != null ? query.getColumns() : List.of())
             .appendString(query.getTimeOrder().toString());
 
-        if (query.getOrderBys() != null && !query.getOrderBys().isEmpty()) {
-          for (OrderBy orderBy : query.getOrderBys()) {
+        List<OrderBy> orderBys = query.getOrderBys();
+        if (orderBys != null) {
+          for (OrderBy orderBy : orderBys) {
             builder.appendString(orderBy.getColumnName())
                    .appendString(orderBy.getOrder().toString());
           }
