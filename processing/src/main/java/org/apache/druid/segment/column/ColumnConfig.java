@@ -32,6 +32,14 @@ public interface ColumnConfig
 
   ColumnConfig DEFAULT = new ColumnConfig() {};
 
+  ColumnConfig READ_RAW_JSON = new ColumnConfig()
+  {
+    @Override
+    public boolean deriveJsonColumnFromIndexes()
+    {
+      return false;
+    }
+  };
   /**
    * Use range indexes if dictionary range is same size or smaller than selection size
    */
@@ -73,5 +81,10 @@ public interface ColumnConfig
   default double skipValueRangeIndexScale()
   {
     return DEFAULT_SKIP_VALUE_RANGE_INDEX_SCALE;
+  }
+
+  default boolean deriveJsonColumnFromIndexes()
+  {
+    return true;
   }
 }
