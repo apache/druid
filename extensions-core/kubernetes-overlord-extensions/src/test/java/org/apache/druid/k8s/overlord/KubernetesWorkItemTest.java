@@ -28,7 +28,6 @@ import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
-import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -37,8 +36,6 @@ import org.junit.runner.RunWith;
 @RunWith(EasyMockRunner.class)
 public class KubernetesWorkItemTest extends EasyMockSupport
 {
-  private static final Period LOG_SAVE_TIMEOUT = new Period("PT300S");
-
   private KubernetesWorkItem workItem;
   private Task task;
   private K8sTaskId taskId;
@@ -133,8 +130,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
-        null,
-        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
+        null
     );
     workItem = new KubernetesWorkItem(task, null, peonLifecycle);
 
@@ -150,8 +146,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
-        null,
-        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
+        null
     ) {
       @Override
       protected State getState()
@@ -174,8 +169,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
-        null,
-        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
+        null
     ) {
       @Override
       protected State getState()
@@ -198,8 +192,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
-        null,
-        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
+        null
     ) {
       @Override
       protected State getState()
@@ -222,8 +215,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
-        null,
-        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
+        null
     );
     workItem = new KubernetesWorkItem(task, null, peonLifecycle);
     Assert.assertFalse(workItem.streamTaskLogs().isPresent());
@@ -238,8 +230,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
-        null,
-        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
+        null
     );
     workItem = new KubernetesWorkItem(task, null, peonLifecycle);
 

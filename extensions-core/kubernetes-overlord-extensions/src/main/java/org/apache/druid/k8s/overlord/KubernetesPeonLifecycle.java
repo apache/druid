@@ -34,7 +34,6 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.JobResponse;
@@ -50,11 +49,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -97,7 +92,6 @@ public class KubernetesPeonLifecycle
   private final ObjectMapper mapper;
   private final TaskStateListener stateListener;
   private final SettableFuture<Boolean> taskStartedSuccessfullyFuture;
-  private final long logSaveTimeoutMs;
 
   @MonotonicNonNull
   private LogWatch logWatch;
@@ -110,8 +104,7 @@ public class KubernetesPeonLifecycle
       KubernetesPeonClient kubernetesClient,
       TaskLogs taskLogs,
       ObjectMapper mapper,
-      TaskStateListener stateListener,
-      long logSaveTimeoutMs
+      TaskStateListener stateListener
   )
   {
     this.task = task;
@@ -121,7 +114,6 @@ public class KubernetesPeonLifecycle
     this.mapper = mapper;
     this.stateListener = stateListener;
     this.taskStartedSuccessfullyFuture = SettableFuture.create();
-    this.logSaveTimeoutMs = logSaveTimeoutMs;
   }
 
   /**
@@ -355,33 +347,6 @@ public class KubernetesPeonLifecycle
   }
 
   protected void saveLogs()
-  {
-    ExecutorService executor = Executors.newSingleThreadExecutor(Execs.makeThreadFactory("k8s-tasklog-persist-%d"));
-    try {
-      Future<?> future = executor.submit(this::doSaveLogs);
-      future.get(logSaveTimeoutMs, TimeUnit.MILLISECONDS);
-    }
-    catch (TimeoutException e) {
-      log.warn("Persisting task logs timed out after %d ms for task [%s]. This does not have any impact on the"
-               + " work done by the task, but the logs may be innaccessible. If this continues to happen, check"
-               + " Kubernetes server logs for potential errors.", logSaveTimeoutMs, taskId.getOriginalTaskId());
-    }
-    catch (Exception e) {
-      log.error(e, "Persisting task logs failed for task [%s] This does not have any impact on the"
-                   + " work done by the task, but the logs may be innaccessible. If this continues to happen, check"
-                   + " Kubernetes server logs for potential errors.", taskId.getOriginalTaskId());
-    }
-    finally {
-      executor.shutdownNow();
-      // shutdownNow does not always allow finally blocks to run, so we make sure to close the logWatch here too if it
-      // wasn't closed in doSaveLogs
-      if (logWatch != null) {
-        logWatch.close();
-      }
-    }
-  }
-
-  private void doSaveLogs()
   {
     try {
       Path file = Files.createTempFile(taskId.getOriginalTaskId(), "log");
