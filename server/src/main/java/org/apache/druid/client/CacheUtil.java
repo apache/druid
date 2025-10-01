@@ -173,7 +173,7 @@ public class CacheUtil
    * @param cacheStrategy result of {@link QueryToolChest#getCacheStrategy} on this query
    * @param cacheConfig   current active cache config
    * @param serverType    BROKER or DATA
-   * @param segmentLevel     segement level or result-level cache
+   * @param segmentLevel  segment level or result-level cache
    */
   static <T> boolean isQueryCacheable(
       final Query<T> query,
