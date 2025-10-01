@@ -76,7 +76,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -85,13 +87,13 @@ import java.util.stream.Collectors;
  * The KubernetesTaskRunner runs tasks by transforming the task spec into a K8s Job spec based
  * on the TaskAdapter it is configured with. The KubernetesTaskRunner has a pool of threads
  * (configurable with the capacity configuration) to track the jobs (1 thread tracks 1 job).
- *
+ * <p>
  * Each thread calls down to the KubernetesPeonLifecycle class to submit the Job to K8s and then
  * waits for the lifecycle class to report back with the Job's status (success/failure).
- *
+ * <p>
  * If there are not enough threads in the thread pool to execute and wait for a job, then the
  * task is put in a queue and left in WAITING state until another task completes.
- *
+ * <p>
  * When the KubernetesTaskRunner comes up it attempts to restore its internal mapping of tasks
  * from Kubernetes by listing running jobs and calling join on each job, which spawns a thread to
  * wait for the fabric8 client library to report back, similar to what happens when a new
@@ -109,17 +111,20 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   protected final TaskAdapter adapter;
 
   private final KubernetesPeonClient client;
-  private final KubernetesTaskRunnerConfig config;
+  private final KubernetesTaskRunnerEffectiveConfig config;
   private final ListeningExecutorService exec;
+  private final ThreadPoolExecutor tpe;
   private final HttpClient httpClient;
   private final PeonLifecycleFactory peonLifecycleFactory;
   private final ServiceEmitter emitter;
   // currently worker categories aren't supported, so it's hardcoded.
   protected static final String WORKER_CATEGORY = "_k8s_worker_category";
 
+  private int currentCapacity;
+
   public KubernetesTaskRunner(
       TaskAdapter adapter,
-      KubernetesTaskRunnerConfig config,
+      KubernetesTaskRunnerEffectiveConfig config,
       KubernetesPeonClient client,
       HttpClient httpClient,
       PeonLifecycleFactory peonLifecycleFactory,
@@ -132,10 +137,11 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     this.httpClient = httpClient;
     this.peonLifecycleFactory = peonLifecycleFactory;
     this.cleanupExecutor = Executors.newScheduledThreadPool(1);
-    this.exec = MoreExecutors.listeningDecorator(
-        Execs.multiThreaded(config.getCapacity(), "k8s-task-runner-%d")
-    );
     this.emitter = emitter;
+
+    this.currentCapacity = config.getCapacity();
+    this.tpe = new ThreadPoolExecutor(currentCapacity, currentCapacity, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(), Execs.makeThreadFactory("k8s-task-runner-%d", null));
+    this.exec = MoreExecutors.listeningDecorator(this.tpe);
   }
 
   @Override
@@ -151,6 +157,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public ListenableFuture<TaskStatus> run(Task task)
   {
+    syncCapacityWithDynamicConfig();
+
     synchronized (tasks) {
       return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(
           task,
@@ -166,6 +174,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
 
   protected KubernetesWorkItem joinAsync(Task task)
   {
+    syncCapacityWithDynamicConfig();
+
     synchronized (tasks) {
       return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(
           task,
@@ -177,6 +187,24 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
           )
       ));
     }
+  }
+
+  private void syncCapacityWithDynamicConfig()
+  {
+    int newCapacity = config.getCapacity();
+    if (newCapacity == currentCapacity) {
+      return;
+    }
+    log.info("Adjusting k8s task runner capacity from [%d] to [%d]", currentCapacity, newCapacity);
+    // maximum pool size must always be greater than or equal to the core pool size
+    if (newCapacity < currentCapacity) {
+      tpe.setCorePoolSize(newCapacity);
+      tpe.setMaximumPoolSize(newCapacity);
+    } else {
+      tpe.setMaximumPoolSize(newCapacity);
+      tpe.setCorePoolSize(newCapacity);
+    }
+    currentCapacity = newCapacity;
   }
 
   private TaskStatus runTask(Task task)
@@ -294,7 +322,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     synchronized (tasks) {
       tasks.remove(taskid);
     }
-    
+
   }
 
   @Override
@@ -420,7 +448,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Map<String, Long> getTotalTaskSlotCount()
   {
-    return ImmutableMap.of(WORKER_CATEGORY, (long) config.getCapacity());
+    return ImmutableMap.of(WORKER_CATEGORY, (long) currentCapacity);
   }
 
   @Override
@@ -438,13 +466,13 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Map<String, Long> getIdleTaskSlotCount()
   {
-    return ImmutableMap.of(WORKER_CATEGORY, (long) Math.max(0, config.getCapacity() - tasks.size()));
+    return ImmutableMap.of(WORKER_CATEGORY, (long) Math.max(0, currentCapacity - tasks.size()));
   }
 
   @Override
   public Map<String, Long> getUsedTaskSlotCount()
   {
-    return ImmutableMap.of(WORKER_CATEGORY, (long) Math.min(config.getCapacity(), tasks.size()));
+    return ImmutableMap.of(WORKER_CATEGORY, (long) Math.min(currentCapacity, tasks.size()));
   }
 
   @Override
@@ -535,7 +563,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public int getTotalCapacity()
   {
-    return config.getCapacity();
+    return currentCapacity;
   }
 
   @Override

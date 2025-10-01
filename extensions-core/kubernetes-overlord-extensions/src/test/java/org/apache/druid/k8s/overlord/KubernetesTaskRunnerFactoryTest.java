@@ -41,7 +41,7 @@ import java.io.IOException;
 public class KubernetesTaskRunnerFactoryTest
 {
   private ObjectMapper objectMapper;
-  private KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig;
+  private KubernetesTaskRunnerEffectiveConfig kubernetesTaskRunnerConfig;
   private TaskLogs taskLogs;
 
   private DruidKubernetesClient druidKubernetesClient;
@@ -52,13 +52,14 @@ public class KubernetesTaskRunnerFactoryTest
   public void setup()
   {
     objectMapper = new TestUtils().getTestObjectMapper();
-    kubernetesTaskRunnerConfig = KubernetesTaskRunnerConfig.builder()
+    KubernetesTaskRunnerStaticConfig kubernetesTaskRunnerStaticConfig = KubernetesTaskRunnerStaticConfig.builder()
         .withCapacity(1)
         .build();
     taskLogs = new NoopTaskLogs();
     druidKubernetesClient =
         new DruidKubernetesClient(new DruidKubernetesHttpClientConfig(), new ConfigBuilder().build());
     taskAdapter = new TestTaskAdapter();
+    kubernetesTaskRunnerConfig = new KubernetesTaskRunnerEffectiveConfig(kubernetesTaskRunnerStaticConfig, () -> null);
   }
 
   @Test

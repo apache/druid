@@ -33,7 +33,7 @@ import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
-import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.apache.druid.k8s.overlord.KubernetesTaskRunnerStaticConfig;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesHttpClientConfig;
 import org.apache.druid.k8s.overlord.common.JobResponse;
@@ -109,9 +109,9 @@ public class DruidPeonClientIntegrationTest
     PodSpec podSpec = K8sTestUtils.getDummyPodSpec();
 
     Task task = K8sTestUtils.getTask();
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("default")
-        .build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerStaticConfig.builder()
+                                                                              .withNamespace("default")
+                                                                              .build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         k8sClient,
         config,

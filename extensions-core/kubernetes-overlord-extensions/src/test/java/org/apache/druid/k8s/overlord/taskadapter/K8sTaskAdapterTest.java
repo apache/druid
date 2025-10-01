@@ -51,7 +51,7 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.apache.druid.k8s.overlord.KubernetesTaskRunnerStaticConfig;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
@@ -138,12 +138,12 @@ class K8sTaskAdapterTest
       }
     };
 
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("test")
-        .withOverlordNamespace("test_different")
-        .withAnnotations(ImmutableMap.of("annotation_key", "annotation_value"))
-        .withLabels(ImmutableMap.of("label_key", "label_value"))
-        .build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerStaticConfig.builder()
+                                                                              .withNamespace("test")
+                                                                              .withOverlordNamespace("test_different")
+                                                                              .withAnnotations(ImmutableMap.of("annotation_key", "annotation_value"))
+                                                                              .withLabels(ImmutableMap.of("label_key", "label_value"))
+                                                                              .build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
         config,
@@ -175,9 +175,9 @@ class K8sTaskAdapterTest
   {
     // given a task create a k8s job
     TestKubernetesClient testClient = new TestKubernetesClient(client);
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("test")
-        .build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerStaticConfig.builder()
+                                                                              .withNamespace("test")
+                                                                              .build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
         config,
@@ -229,9 +229,9 @@ class K8sTaskAdapterTest
       }
     };
 
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("test")
-        .build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerStaticConfig.builder()
+                                                                              .withNamespace("test")
+                                                                              .build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
         config,
@@ -277,9 +277,9 @@ class K8sTaskAdapterTest
   public void toTask_useTaskPayloadManager() throws IOException
   {
     TestKubernetesClient testClient = new TestKubernetesClient(client);
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("test")
-        .build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerStaticConfig.builder()
+                                                                              .withNamespace("test")
+                                                                              .build();
     Task taskInTaskPayloadManager = K8sTestUtils.getTask();
     TaskLogs mockTestLogs = Mockito.mock(TaskLogs.class);
     Mockito.when(mockTestLogs.streamTaskPayload("ID")).thenReturn(com.google.common.base.Optional.of(
@@ -309,7 +309,7 @@ class K8sTaskAdapterTest
   public void getTaskId()
   {
     TestKubernetesClient testClient = new TestKubernetesClient(client);
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder().build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerStaticConfig.builder().build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
         config,
@@ -331,7 +331,7 @@ class K8sTaskAdapterTest
   public void getTaskId_noAnnotations()
   {
     TestKubernetesClient testClient = new TestKubernetesClient(client);
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder().build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerStaticConfig.builder().build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
         config,
@@ -353,7 +353,7 @@ class K8sTaskAdapterTest
   public void getTaskId_missingTaskIdAnnotation()
   {
     TestKubernetesClient testClient = new TestKubernetesClient(client);
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder().build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerStaticConfig.builder().build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
         config,
@@ -458,9 +458,9 @@ class K8sTaskAdapterTest
         new File("/tmp/"),
         0
     );
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("test")
-        .build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerStaticConfig.builder()
+                                                                              .withNamespace("test")
+                                                                              .build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
         config,
@@ -481,10 +481,10 @@ class K8sTaskAdapterTest
     );
 
     // we have an override, but nothing in the overlord
-    config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("test")
-        .withPeonMonitors(ImmutableList.of("org.apache.druid.java.util.metrics.JvmMonitor"))
-        .build();
+    config = KubernetesTaskRunnerStaticConfig.builder()
+                                             .withNamespace("test")
+                                             .withPeonMonitors(ImmutableList.of("org.apache.druid.java.util.metrics.JvmMonitor"))
+                                             .build();
     adapter = new SingleContainerTaskAdapter(
         testClient,
         config,
@@ -532,9 +532,9 @@ class K8sTaskAdapterTest
   {
     TestKubernetesClient testClient = new TestKubernetesClient(client);
     Pod pod = K8sTestUtils.fileToResource("ephemeralPodSpec.yaml", Pod.class);
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("namespace")
-        .build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerStaticConfig.builder()
+                                                                              .withNamespace("namespace")
+                                                                              .build();
 
     SingleContainerTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
@@ -582,9 +582,9 @@ class K8sTaskAdapterTest
   {
     TestKubernetesClient testClient = new TestKubernetesClient(client);
     Pod pod = K8sTestUtils.fileToResource("probesPodSpec.yaml", Pod.class);
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-                                                                  .withNamespace("test")
-                                                                  .build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerStaticConfig.builder()
+                                                                              .withNamespace("test")
+                                                                              .build();
 
     SingleContainerTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
@@ -635,11 +635,11 @@ class K8sTaskAdapterTest
 
     List<String> javaOpts = new ArrayList<>();
     javaOpts.add("-Xms1G -Xmx2G -XX:MaxDirectMemorySize=3G");
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-                                                                  .withNamespace("namespace")
-                                                                  .withJavaOptsArray(javaOpts)
-                                                                  .withCpuCore(2000)
-                                                                  .build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerStaticConfig.builder()
+                                                                              .withNamespace("namespace")
+                                                                              .withJavaOptsArray(javaOpts)
+                                                                              .withCpuCore(2000)
+                                                                              .build();
 
     SingleContainerTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,

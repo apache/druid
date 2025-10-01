@@ -20,6 +20,7 @@
 package org.apache.druid.k8s.overlord;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -39,6 +40,8 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
+import org.apache.druid.k8s.overlord.execution.DefaultKubernetesTaskRunnerDynamicConfig;
+import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -79,16 +82,21 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   @Mock private ServiceEmitter emitter;
   @Mock private ListenableFuture<TaskStatus> statusFuture;
 
-  private KubernetesTaskRunnerConfig config;
+  private KubernetesTaskRunnerStaticConfig staticConfig;
+  private KubernetesTaskRunnerEffectiveConfig config;
   private KubernetesTaskRunner runner;
   private Task task;
 
   @Before
   public void setup()
   {
-    config = KubernetesTaskRunnerConfig.builder()
+    staticConfig = KubernetesTaskRunnerStaticConfig.builder()
         .withCapacity(1)
         .build();
+
+    Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef = () -> new DefaultKubernetesTaskRunnerDynamicConfig(null, 1);
+
+    config = new KubernetesTaskRunnerEffectiveConfig(staticConfig, dynamicConfigRef);
 
     task = K8sTestUtils.createTask(ID, 0);
 

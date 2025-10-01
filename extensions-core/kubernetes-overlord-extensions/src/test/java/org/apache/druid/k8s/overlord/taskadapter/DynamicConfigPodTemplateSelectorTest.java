@@ -29,6 +29,8 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.k8s.overlord.KubernetesTaskRunnerEffectiveConfig;
+import org.apache.druid.k8s.overlord.KubernetesTaskRunnerStaticConfig;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.k8s.overlord.execution.DefaultKubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
@@ -53,14 +55,16 @@ public class DynamicConfigPodTemplateSelectorTest
   private Path tempDir;
   private ObjectMapper mapper;
   private PodTemplate podTemplateSpec;
-  private Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef;
+  private KubernetesTaskRunnerEffectiveConfig effectiveConfig;
 
   @BeforeEach
   public void setup()
   {
     mapper = new TestUtils().getTestObjectMapper();
     podTemplateSpec = K8sTestUtils.fileToResource("basePodTemplate.yaml", PodTemplate.class);
-    dynamicConfigRef = () -> new DefaultKubernetesTaskRunnerDynamicConfig(KubernetesTaskRunnerDynamicConfig.DEFAULT_STRATEGY);
+    Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef = () -> new DefaultKubernetesTaskRunnerDynamicConfig(KubernetesTaskRunnerDynamicConfig.DEFAULT_STRATEGY, 1);
+    KubernetesTaskRunnerStaticConfig staticConfig = KubernetesTaskRunnerStaticConfig.builder().build();
+    effectiveConfig = new KubernetesTaskRunnerEffectiveConfig(staticConfig, dynamicConfigRef);
   }
 
   @Test
@@ -71,7 +75,7 @@ public class DynamicConfigPodTemplateSelectorTest
         IAE.class,
         () -> new DynamicConfigPodTemplateSelector(
             new Properties(),
-            dynamicConfigRef
+            effectiveConfig
         )
     );
     Assertions.assertEquals(
@@ -93,7 +97,7 @@ public class DynamicConfigPodTemplateSelectorTest
         IAE.class,
         () -> new DynamicConfigPodTemplateSelector(
             props,
-            dynamicConfigRef
+            effectiveConfig
         )
     );
 
@@ -111,7 +115,7 @@ public class DynamicConfigPodTemplateSelectorTest
 
     DynamicConfigPodTemplateSelector adapter = new DynamicConfigPodTemplateSelector(
         props,
-        dynamicConfigRef
+        effectiveConfig
     );
 
     Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
@@ -146,7 +150,7 @@ public class DynamicConfigPodTemplateSelectorTest
 
     DynamicConfigPodTemplateSelector selector = new DynamicConfigPodTemplateSelector(
         props,
-        dynamicConfigRef
+        effectiveConfig
     );
 
     Task kafkaTask = new NoopTask("id", "id", "datasource", 0, 0, null)
@@ -191,9 +195,10 @@ public class DynamicConfigPodTemplateSelectorTest
     props.setProperty("druid.indexer.runner.k8s.podTemplate.noop", noopTemplatePath.toString());
 
     Assert.assertThrows(IAE.class, () -> new DynamicConfigPodTemplateSelector(
-        props,
-        dynamicConfigRef
-    ));
+            props,
+            effectiveConfig
+        )
+    );
   }
 
   @Test
@@ -208,7 +213,7 @@ public class DynamicConfigPodTemplateSelectorTest
 
     DynamicConfigPodTemplateSelector podTemplateSelector = new DynamicConfigPodTemplateSelector(
         props,
-        dynamicConfigRef
+        effectiveConfig
     );
 
     Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
@@ -242,16 +247,21 @@ public class DynamicConfigPodTemplateSelectorTest
     Properties props = new Properties();
     props.setProperty("druid.indexer.runner.k8s.podTemplate.base", baseTemplatePath.toString());
     props.setProperty("druid.indexer.runner.k8s.podTemplate.lowThroughput", lowThroughputTemplatePath.toString());
-    dynamicConfigRef = () -> new DefaultKubernetesTaskRunnerDynamicConfig(new SelectorBasedPodTemplateSelectStrategy(
-        Collections.singletonList(
-            new Selector("lowThroughput", null, null, Sets.newSet(dataSource)
+    Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef = () -> new DefaultKubernetesTaskRunnerDynamicConfig(
+        new SelectorBasedPodTemplateSelectStrategy(
+            Collections.singletonList(
+                new Selector("lowThroughput", null, null, Sets.newSet(dataSource)
+                )
             )
-        )
-    ));
+        ), 1
+    );
+
+    KubernetesTaskRunnerStaticConfig staticConfig = KubernetesTaskRunnerStaticConfig.builder().build();
+    effectiveConfig = new KubernetesTaskRunnerEffectiveConfig(staticConfig, dynamicConfigRef);
 
     DynamicConfigPodTemplateSelector podTemplateSelector = new DynamicConfigPodTemplateSelector(
         props,
-        dynamicConfigRef
+        effectiveConfig
     );
 
     Task taskWithMatchedDatasource = new NoopTask("id", "id", dataSource, 0, 0, null);
@@ -276,7 +286,7 @@ public class DynamicConfigPodTemplateSelectorTest
 
     DynamicConfigPodTemplateSelector adapter = new DynamicConfigPodTemplateSelector(
         props,
-        dynamicConfigRef
+        effectiveConfig
     );
 
     Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
@@ -311,7 +321,7 @@ public class DynamicConfigPodTemplateSelectorTest
 
     DynamicConfigPodTemplateSelector adapter = new DynamicConfigPodTemplateSelector(
         props,
-        dynamicConfigRef
+        effectiveConfig
     );
 
     Task task = new NoopTask("id", "id", "datasource", 0, 0, null);

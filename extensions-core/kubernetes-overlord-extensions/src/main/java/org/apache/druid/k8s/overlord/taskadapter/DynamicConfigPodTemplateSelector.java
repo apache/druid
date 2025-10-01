@@ -26,8 +26,7 @@ import io.fabric8.kubernetes.client.utils.Serialization;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
-import org.apache.druid.k8s.overlord.execution.PodTemplateSelectStrategy;
+import org.apache.druid.k8s.overlord.KubernetesTaskRunnerEffectiveConfig;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -43,17 +42,17 @@ public class DynamicConfigPodTemplateSelector implements PodTemplateSelector
                                               + ".k8s.podTemplate.";
 
   private final Properties properties;
-  private final Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef;
+  private final KubernetesTaskRunnerEffectiveConfig effectiveConfig;
   // Supplier allows Overlord to read the most recent pod template file without calling initializeTemplatesFromFileSystem() again.
   private HashMap<String, Supplier<PodTemplate>> podTemplates;
 
   public DynamicConfigPodTemplateSelector(
       Properties properties,
-      Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef
+      KubernetesTaskRunnerEffectiveConfig effectiveConfig
   )
   {
     this.properties = properties;
-    this.dynamicConfigRef = dynamicConfigRef;
+    this.effectiveConfig = effectiveConfig;
     initializeTemplatesFromFileSystem();
   }
 
@@ -120,14 +119,6 @@ public class DynamicConfigPodTemplateSelector implements PodTemplateSelector
   @Override
   public Optional<PodTemplateWithName> getPodTemplateForTask(Task task)
   {
-    PodTemplateSelectStrategy podTemplateSelectStrategy;
-    KubernetesTaskRunnerDynamicConfig dynamicConfig = dynamicConfigRef.get();
-    if (dynamicConfig == null || dynamicConfig.getPodTemplateSelectStrategy() == null) {
-      podTemplateSelectStrategy = KubernetesTaskRunnerDynamicConfig.DEFAULT_STRATEGY;
-    } else {
-      podTemplateSelectStrategy = dynamicConfig.getPodTemplateSelectStrategy();
-    }
-
-    return Optional.of(podTemplateSelectStrategy.getPodTemplateForTask(task, podTemplates));
+    return Optional.of(effectiveConfig.getPodTemplateSelectStrategy().getPodTemplateForTask(task, podTemplates));
   }
 }

@@ -32,7 +32,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.apache.druid.k8s.overlord.KubernetesTaskRunnerStaticConfig;
 import org.apache.druid.k8s.overlord.common.Base64Compression;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
@@ -58,7 +58,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class PodTemplateTaskAdapterTest
 {
-  private KubernetesTaskRunnerConfig taskRunnerConfig;
+  private KubernetesTaskRunnerStaticConfig taskRunnerConfig;
   private PodTemplate podTemplateSpec;
   private TaskConfig taskConfig;
   private DruidNode node;
@@ -68,7 +68,7 @@ public class PodTemplateTaskAdapterTest
   @BeforeEach
   public void setup()
   {
-    taskRunnerConfig = KubernetesTaskRunnerConfig.builder().withNamespace("namespace").build();
+    taskRunnerConfig = KubernetesTaskRunnerStaticConfig.builder().withNamespace("namespace").build();
     taskConfig = new TaskConfigBuilder().setBaseDir("/tmp").build();
     node = new DruidNode(
         "test",
@@ -189,7 +189,7 @@ public class PodTemplateTaskAdapterTest
   public void test_getTaskIdWithK8sTaskPodNamePrefix()
   {
     TestPodTemplateSelector podTemplateSelector = new TestPodTemplateSelector(podTemplateSpec);
-    taskRunnerConfig = KubernetesTaskRunnerConfig.builder().withK8sTaskPodNamePrefix("k8sTaskPodNamePrefix").build();
+    taskRunnerConfig = KubernetesTaskRunnerStaticConfig.builder().withK8sTaskPodNamePrefix("k8sTaskPodNamePrefix").build();
 
     PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
         taskRunnerConfig,

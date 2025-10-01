@@ -39,7 +39,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   public static final String TYPE_NAME = "k8s";
   private final ObjectMapper smileMapper;
   private final HttpClient httpClient;
-  private final KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig;
+  private final KubernetesTaskRunnerEffectiveConfig kubernetesTaskRunnerConfig;
   private final TaskLogs taskLogs;
   private final DruidKubernetesClient druidKubernetesClient;
   private final ServiceEmitter emitter;
@@ -51,7 +51,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   public KubernetesTaskRunnerFactory(
       @Smile ObjectMapper smileMapper,
       @EscalatedGlobal final HttpClient httpClient,
-      KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig,
+      KubernetesTaskRunnerEffectiveConfig kubernetesTaskRunnerConfig,
       TaskLogs taskLogs,
       DruidKubernetesClient druidKubernetesClient,
       ServiceEmitter emitter,
