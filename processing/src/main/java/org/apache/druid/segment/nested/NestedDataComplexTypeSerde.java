@@ -19,10 +19,7 @@
 
 package org.apache.druid.segment.nested;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.NestedCommonFormatColumnHandler;
@@ -41,7 +38,6 @@ import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class NestedDataComplexTypeSerde extends ComplexMetricSerde
@@ -103,107 +99,41 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
       @Override
       public int compare(Object o1, Object o2)
       {
-        return Comparators.<StructuredData>naturalNullsFirst()
-                          .compare(StructuredData.wrap(o1), StructuredData.wrap(o2));
+        return TypeStrategies.NestedDataTypeStrategy.INSTANCE.compare(o1, o2);
       }
 
       @Override
       public Class<? extends Object> getClazz()
       {
-        return StructuredData.class;
+        return TypeStrategies.NestedDataTypeStrategy.INSTANCE.getClazz();
       }
 
       @Nullable
       @Override
       public StructuredData fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
-        return deserializeBuffer(buffer, numBytes);
+        return TypeStrategies.NestedDataTypeStrategy.INSTANCE.fromByteBuffer(buffer, numBytes);
       }
 
       @Nullable
       @Override
       public byte[] toBytes(@Nullable Object val)
       {
-        return serializeToBytes(val);
+        return TypeStrategies.NestedDataTypeStrategy.INSTANCE.toBytes(val);
       }
 
       @Override
       public boolean readRetainsBufferReference()
       {
-        return false;
+        return TypeStrategies.NestedDataTypeStrategy.INSTANCE.readRetainsBufferReference();
       }
     };
-  }
-
-  /**
-   * Reads numBytes from the position to the limit of the byte buffer argument and deserailizes it into
-   * a {@link StructuredData} object using {@link ColumnSerializerUtils#SMILE_MAPPER}.
-   */
-  public static StructuredData deserializeBuffer(ByteBuffer buf)
-  {
-    return deserializeBuffer(buf, buf.remaining());
-  }
-
-  /**
-   * Reads numBytes from the byte buffer argument and deserailizes it into a {@link StructuredData} object
-   * using {@link ColumnSerializerUtils#SMILE_MAPPER}.
-   */
-  public static StructuredData deserializeBuffer(ByteBuffer buf, int numBytes)
-  {
-    if (numBytes == 0) {
-      return null;
-    }
-
-    final byte[] bytes = new byte[numBytes];
-    buf.get(bytes, 0, numBytes);
-    return deserializeBytes(bytes);
-  }
-
-  /**
-   * Converts the bytes array into a {@link StructuredData} object using {@link ColumnSerializerUtils#SMILE_MAPPER}.
-   */
-  public static StructuredData deserializeBytes(byte[] bytes)
-  {
-    return deserializeBytes(bytes, 0, bytes.length);
-  }
-
-  /**
-   * Reads the bytes between offset and len from the byte array and deserializes a {@link StructuredData} object from
-   * it, using {@link ColumnSerializerUtils#SMILE_MAPPER}.
-   */
-  public static StructuredData deserializeBytes(byte[] bytes, int offset, int len)
-  {
-    if (len == 0) {
-      return null;
-    }
-    try {
-      return ColumnSerializerUtils.SMILE_MAPPER.readValue(bytes, offset, len, StructuredData.class);
-    }
-    catch (IOException e) {
-      throw DruidException.defensive(e, "Unable to deserialize value");
-    }
-  }
-
-  /**
-   * Returns a byte array containing the val as serialized by {@link ColumnSerializerUtils#SMILE_MAPPER}.
-   */
-  public static byte[] serializeToBytes(@Nullable Object val)
-  {
-    if (val == null) {
-      return new byte[0];
-    }
-    try {
-      return ColumnSerializerUtils.SMILE_MAPPER.writeValueAsBytes(val);
-    }
-    catch (JsonProcessingException e) {
-      throw DruidException.defensive(e, "Unable to serialize value [%s]", val);
-    }
   }
 
   @Override
   public TypeStrategy<Object> getTypeStrategy()
   {
-    return new TypeStrategies.JsonTypeStrategy(getObjectStrategy());
+    return TypeStrategies.NestedDataTypeStrategy.INSTANCE;
   }
 
   @Override

@@ -19,17 +19,20 @@
 
 package org.apache.druid.segment.column;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Longs;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.nested.StructuredData;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -702,14 +705,9 @@ public class TypeStrategies
     }
   }
 
-  public static final class JsonTypeStrategy implements TypeStrategy<Object>
+  public static final class NestedDataTypeStrategy implements TypeStrategy<Object>
   {
-    private final ObjectStrategy<Object> objectStrategy;
-
-    public JsonTypeStrategy(ObjectStrategy<Object> objectStrategy)
-    {
-      this.objectStrategy = objectStrategy;
-    }
+    public static final NestedDataTypeStrategy INSTANCE = new NestedDataTypeStrategy();
 
     @Override
     public int estimateSizeBytes(Object value)
@@ -721,20 +719,37 @@ public class TypeStrategies
     public Object read(ByteBuffer buffer)
     {
       final int len = buffer.getInt();
-      return objectStrategy.fromByteBuffer(buffer, len);
+      return fromByteBuffer(buffer, len);
+    }
+
+    @Nullable
+    public StructuredData fromByteBuffer(ByteBuffer buffer, int numBytes)
+    {
+      if (numBytes == 0) {
+        return null;
+      }
+
+      final byte[] bytes = new byte[numBytes];
+      buffer.get(bytes, 0, numBytes);
+      try {
+        return ColumnSerializerUtils.SMILE_MAPPER.readValue(bytes, 0, bytes.length, StructuredData.class);
+      }
+      catch (IOException e) {
+        throw DruidException.defensive(e, "Unable to deserialize value");
+      }
     }
 
     @Override
     public boolean readRetainsBufferReference()
     {
-      return objectStrategy.readRetainsBufferReference();
+      return false;
     }
 
     @Override
     public int write(ByteBuffer buffer, Object value, int maxSizeBytes)
     {
       TypeStrategies.checkMaxSize(buffer.remaining(), maxSizeBytes, ColumnType.NESTED_DATA);
-      byte[] bytes = objectStrategy.toBytes(value);
+      final byte[] bytes = toBytes(value);
       final int sizeBytes = Integer.BYTES + bytes.length;
       if (sizeBytes > maxSizeBytes) {
         return maxSizeBytes - sizeBytes;
@@ -744,10 +759,24 @@ public class TypeStrategies
       return sizeBytes;
     }
 
+    @Nullable
+    public byte[] toBytes(@Nullable Object val)
+    {
+      if (val == null) {
+        return new byte[0];
+      }
+      try {
+        return ColumnSerializerUtils.SMILE_MAPPER.writeValueAsBytes(val);
+      }
+      catch (JsonProcessingException e) {
+        throw DruidException.defensive(e, "Unable to serialize value [%s]", val);
+      }
+    }
+
     @Override
     public int compare(Object o1, Object o2)
     {
-      return objectStrategy.compare(o1, o2);
+      return StructuredData.COMPARATOR.compare(StructuredData.wrap(o1), StructuredData.wrap(o2));
     }
 
     @Override
@@ -765,13 +794,13 @@ public class TypeStrategies
     @Override
     public boolean equals(Object a, Object b)
     {
-      return Objects.equals(a, b);
+      return Objects.equals(StructuredData.wrap(a), StructuredData.wrap(b));
     }
 
     @Override
     public Class<?> getClazz()
     {
-      return objectStrategy.getClazz();
+      return StructuredData.class;
     }
   }
 }
