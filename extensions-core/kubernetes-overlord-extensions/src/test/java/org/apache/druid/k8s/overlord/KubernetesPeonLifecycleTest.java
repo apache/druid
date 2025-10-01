@@ -1087,10 +1087,12 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     InputStream slowInputStream = new InputStream() {
       @Override
-      public int read() throws IOException {
+      public int read() throws IOException
+      {
         try {
           Thread.sleep(5000);
-        } catch (InterruptedException e) {
+        }
+        catch (InterruptedException e) {
           throw new IOException(e);
         }
         return -1;
