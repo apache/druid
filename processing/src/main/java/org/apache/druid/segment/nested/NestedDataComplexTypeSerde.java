@@ -95,7 +95,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
   }
 
   @Override
-  public ObjectStrategy getObjectStrategy()
+  public ObjectStrategy<Object> getObjectStrategy()
   {
     return new ObjectStrategy<>()
     {
@@ -107,7 +107,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
       }
 
       @Override
-      public Class<? extends StructuredData> getClazz()
+      public Class<? extends Object> getClazz()
       {
         return StructuredData.class;
       }
@@ -123,7 +123,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
       @Override
       public byte[] toBytes(@Nullable Object val)
       {
-        return serializeToBytes(StructuredData.wrap(val));
+        return serializeToBytes(val);
       }
 
       @Override
@@ -200,7 +200,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
   }
 
   @Override
-  public TypeStrategy<StructuredData> getTypeStrategy()
+  public TypeStrategy<Object> getTypeStrategy()
   {
     return new TypeStrategies.JsonTypeStrategy(getObjectStrategy());
   }
@@ -208,7 +208,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
   @Override
   public byte[] toBytes(@Nullable Object val)
   {
-    return getObjectStrategy().toBytes(StructuredData.wrap(val));
+    return getObjectStrategy().toBytes(val);
   }
 
   public static class NestedColumnFormatV4 implements ColumnFormat

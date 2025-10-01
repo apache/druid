@@ -702,11 +702,11 @@ public class TypeStrategies
     }
   }
 
-  public static final class JsonTypeStrategy implements TypeStrategy
+  public static final class JsonTypeStrategy implements TypeStrategy<Object>
   {
-    private final ObjectStrategy objectStrategy;
+    private final ObjectStrategy<Object> objectStrategy;
 
-    public JsonTypeStrategy(ObjectStrategy objectStrategy)
+    public JsonTypeStrategy(ObjectStrategy<Object> objectStrategy)
     {
       this.objectStrategy = objectStrategy;
     }
@@ -714,7 +714,7 @@ public class TypeStrategies
     @Override
     public int estimateSizeBytes(Object value)
     {
-      return StructuredData.wrap(value).getSizeEstimate();
+      return Objects.requireNonNull(StructuredData.wrap(value)).getSizeEstimate();
     }
 
     @Override
@@ -734,7 +734,7 @@ public class TypeStrategies
     public int write(ByteBuffer buffer, Object value, int maxSizeBytes)
     {
       TypeStrategies.checkMaxSize(buffer.remaining(), maxSizeBytes, ColumnType.NESTED_DATA);
-      byte[] bytes = objectStrategy.toBytes(StructuredData.wrap(value));
+      byte[] bytes = objectStrategy.toBytes(value);
       final int sizeBytes = Integer.BYTES + bytes.length;
       if (sizeBytes > maxSizeBytes) {
         return maxSizeBytes - sizeBytes;

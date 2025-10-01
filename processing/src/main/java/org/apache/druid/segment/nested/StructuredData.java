@@ -150,8 +150,6 @@ public class StructuredData implements Comparable<StructuredData>
   {
     if (this == o) {
       return 0;
-    } else if (o == null) {
-      return 1;
     }
 
     if (isNull() && o.isNull()) {
@@ -186,7 +184,12 @@ public class StructuredData implements Comparable<StructuredData>
 
     // finally compare hashes. there is a small chance of collisions for objects that are not equal but have the
     // same hash, we could revisit this later if needed
-    return Long.compare(hash.getAsLong(), o.hash.getAsLong());
+    int hashCompare = Long.compare(hash.getAsLong(), o.hash.getAsLong());
+    if (hashCompare != 0) {
+      return hashCompare;
+    }
+
+    return Integer.compare(getSizeEstimate(), o.getSizeEstimate());
   }
 
   @Override
