@@ -108,12 +108,7 @@ public class KubernetesTaskRunnerConfig
   @JsonProperty
   @NotNull
   // how long to wait for log saving operations to complete
-  private Period logSaveTimeout = new Period("PT300S");
-
-  @JsonProperty
-  @NotNull
-  // how long to wait for log saving operations to complete
-  private Period logWatchInitializationTimeout = new Period("PT30S");
+  private Period podLogOperationTimeout = new Period("PT300S");
 
   @JsonProperty
   // ForkingTaskRunner inherits the monitors from the MM, in k8s mode
@@ -169,8 +164,7 @@ public class KubernetesTaskRunnerConfig
       Map<String, String> annotations,
       Integer capacity,
       Period taskJoinTimeout,
-      Period logSaveTimeout,
-      Period logWatchInitTimeout
+      Period podLogOperationTimeout
   )
   {
     this.namespace = namespace;
@@ -244,13 +238,9 @@ public class KubernetesTaskRunnerConfig
         capacity,
         this.capacity
     );
-    this.logSaveTimeout = ObjectUtils.defaultIfNull(
-        logSaveTimeout,
-        this.logSaveTimeout
-    );
-    this.logWatchInitializationTimeout = ObjectUtils.defaultIfNull(
-        logWatchInitTimeout,
-        this.logWatchInitializationTimeout
+    this.podLogOperationTimeout = ObjectUtils.defaultIfNull(
+        podLogOperationTimeout,
+        this.podLogOperationTimeout
     );
   }
 
@@ -356,14 +346,9 @@ public class KubernetesTaskRunnerConfig
     return capacity;
   }
 
-  public Period getLogSaveTimeout()
+  public Period getPodLogOperationTimeout()
   {
-    return logSaveTimeout;
-  }
-
-  public Period getLogWatchInitializationTimeout()
-  {
-    return logWatchInitializationTimeout;
+    return podLogOperationTimeout;
   }
 
   public static Builder builder()
@@ -393,8 +378,7 @@ public class KubernetesTaskRunnerConfig
     private Map<String, String> annotations;
     private Integer capacity;
     private Period taskJoinTimeout;
-    private Period logSaveTimeout;
-    private Period logWatchInitializationTimeout;
+    private Period podLogOperationTimeout;
 
     public Builder()
     {
@@ -521,15 +505,9 @@ public class KubernetesTaskRunnerConfig
       return this;
     }
 
-    public Builder withLogSaveTimeout(Period logSaveTimeout)
+    public Builder withPodLogOperationTimeout(Period podLogOperationTimeout)
     {
-      this.logSaveTimeout = logSaveTimeout;
-      return this;
-    }
-
-    public Builder withLogWatchInitializationTimeout(Period logWatchInitTimeout)
-    {
-      this.logWatchInitializationTimeout = logWatchInitTimeout;
+      this.podLogOperationTimeout = podLogOperationTimeout;
       return this;
     }
 
@@ -556,8 +534,7 @@ public class KubernetesTaskRunnerConfig
           this.annotations,
           this.capacity,
           this.taskJoinTimeout,
-          this.logSaveTimeout,
-          this.logWatchInitializationTimeout
+          this.podLogOperationTimeout
       );
     }
   }

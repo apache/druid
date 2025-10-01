@@ -97,9 +97,7 @@ public class KubernetesPeonLifecycle
   private final ObjectMapper mapper;
   private final TaskStateListener stateListener;
   private final SettableFuture<Boolean> taskStartedSuccessfullyFuture;
-  private final ExecutorService logWatchExecutor;
-  private final long logWatchInitializationTimeoutMs;
-  private final long logWatchCopyLogTimeoutMs;
+  private final long logWatchOperationTimeoutMs;
 
   @MonotonicNonNull
   private LogWatch logWatch;
@@ -113,8 +111,7 @@ public class KubernetesPeonLifecycle
       TaskLogs taskLogs,
       ObjectMapper mapper,
       TaskStateListener stateListener,
-      long logWatchInitializationTimeoutMs,
-      long logWatchCopyLogTimeoutMs
+      long logWatchOperationTimeoutMs
   )
   {
     this.task = task;
@@ -124,11 +121,7 @@ public class KubernetesPeonLifecycle
     this.mapper = mapper;
     this.stateListener = stateListener;
     this.taskStartedSuccessfullyFuture = SettableFuture.create();
-    this.logWatchInitializationTimeoutMs = logWatchInitializationTimeoutMs;
-    this.logWatchCopyLogTimeoutMs = logWatchCopyLogTimeoutMs;
-    this.logWatchExecutor = Executors.newSingleThreadExecutor(
-        Execs.makeThreadFactory("k8s-logwatch-" + taskId.getOriginalTaskId() + "-%d")
-    );
+    this.logWatchOperationTimeoutMs = logWatchOperationTimeoutMs;
   }
 
   /**
@@ -349,20 +342,18 @@ public class KubernetesPeonLifecycle
     if (logWatch != null) {
       log.debug("There is already a log watcher for %s", taskId.getOriginalTaskId());
       return;
-    } else if (logWatchExecutor.isShutdown()) {
-      log.warn("Log watch executor is shutdown for %s. Cannot start log watcher.", taskId.getOriginalTaskId());
-      return;
     }
     try {
-      Future<Optional<LogWatch>> future = logWatchExecutor.submit(() -> kubernetesClient.getPeonLogWatcher(taskId));
-      Optional<LogWatch> maybeLogWatch = future.get(logWatchInitializationTimeoutMs, TimeUnit.MILLISECONDS);
+      ExecutorService executor = Executors.newSingleThreadExecutor(Execs.makeThreadFactory("k8s-tasklog-init-watch-%d"));
+      Future<Optional<LogWatch>> future = executor.submit(() -> kubernetesClient.getPeonLogWatcher(taskId));
+      Optional<LogWatch> maybeLogWatch = future.get(logWatchOperationTimeoutMs, TimeUnit.MILLISECONDS);
       if (maybeLogWatch.isPresent()) {
         logWatch = maybeLogWatch.get();
       }
     }
     catch (TimeoutException e) {
       log.warn("Initializing log watcher timed out after %d ms for task [%s]. LogWatch not initialized.",
-               logWatchInitializationTimeoutMs, taskId.getOriginalTaskId());
+               logWatchOperationTimeoutMs, taskId.getOriginalTaskId());
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -379,9 +370,10 @@ public class KubernetesPeonLifecycle
       Path file = Files.createTempFile(taskId.getOriginalTaskId(), "log");
       try {
         startWatchingLogs();
-        if (logWatch != null && !logWatchExecutor.isShutdown()) {
+        if (logWatch != null) {
           // Copy log output with timeout protection
-          Future<?> copyFuture = logWatchExecutor.submit(() -> {
+          ExecutorService executor = Executors.newSingleThreadExecutor(Execs.makeThreadFactory("k8s-tasklog-persist-%d"));
+          Future<?> copyFuture = executor.submit(() -> {
             try {
               FileUtils.copyInputStreamToFile(logWatch.getOutput(), file.toFile());
             }
@@ -391,13 +383,13 @@ public class KubernetesPeonLifecycle
           });
 
           try {
-            copyFuture.get(logWatchCopyLogTimeoutMs, TimeUnit.MILLISECONDS);
+            copyFuture.get(logWatchOperationTimeoutMs, TimeUnit.MILLISECONDS);
           }
           catch (TimeoutException e) {
             log.warn("Copying task logs timed out after %d ms for task [%s]. Logs may be incomplete. This does not have any impact on the"
                      + " work done by the task, but the logs may be innaccessible. If this continues to happen, check"
                      + " Kubernetes server logs for potential errors.",
-                     logWatchCopyLogTimeoutMs, taskId.getOriginalTaskId());
+                     logWatchOperationTimeoutMs, taskId.getOriginalTaskId());
           }
           catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -444,8 +436,6 @@ public class KubernetesPeonLifecycle
     if (!State.STOPPED.equals(state.get())) {
       updateState(new State[]{State.NOT_STARTED, State.PENDING, State.RUNNING}, State.STOPPED);
     }
-    // Shutdown the executor to release resources and interrupt any hanging log operations
-    logWatchExecutor.shutdownNow();
   }
 
   private void updateState(State[] acceptedStates, State targetState)
