@@ -91,15 +91,15 @@ public class CompressedVariableSizedBlobColumnSupplier implements Supplier<Compr
     this.numElements = numElements;
     this.offsetReaderSupplier = offsetsBuffer == null
                                 ? null
-                                : () -> CompressedLongsReader.fromByteBuffer(offsetsBuffer, compressionOrder).get();
+                                : CompressedLongsReader.fromByteBuffer(offsetsBuffer, compressionOrder);
     this.blockDataReaderSupplier = dataBuffer == null
                                    ? null
-                                   : () -> CompressedBlockReader.fromByteBuffer(
+                                   : CompressedBlockReader.fromByteBuffer(
                                        dataBuffer,
                                        compressionOrder,
                                        valueOrder,
                                        copyValuesOnRead
-                                   ).get();
+                                   );
   }
 
   @Override
