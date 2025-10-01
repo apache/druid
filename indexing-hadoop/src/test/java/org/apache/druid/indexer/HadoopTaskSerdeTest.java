@@ -55,7 +55,7 @@ import org.junit.rules.ExpectedException;
 public class HadoopTaskSerdeTest
 {
   private final ObjectMapper jsonMapper;
-  private final IndexSpec indexSpec = IndexSpec.DEFAULT;
+  private final IndexSpec indexSpec = IndexSpec.getDefault();
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
