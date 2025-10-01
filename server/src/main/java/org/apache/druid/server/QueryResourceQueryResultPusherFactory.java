@@ -105,7 +105,8 @@ public class QueryResourceQueryResultPusherFactory
           counter,
           queryLifecycle.getQueryId(),
           MediaType.valueOf(io.getResponseWriter().getResponseType()),
-          ImmutableMap.of()
+          ImmutableMap.of(),
+          queryLifecycle.getQuery().getContext()
       );
       this.req = req;
       this.queryLifecycle = queryLifecycle;

@@ -17,29 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.metadata;
+package org.apache.druid.segment.nested;
 
-/**
- * A config object for tests, use by overriding the specific getter methods and returning what you want
- */
-public class TestMetadataStorageTablesConfig extends MetadataStorageTablesConfig
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+import org.apache.druid.java.util.common.StringUtils;
+
+public enum ObjectStorageEncoding
 {
-  public TestMetadataStorageTablesConfig()
+  SMILE;
+
+  @JsonValue
+  @Override
+  public String toString()
   {
-    super(
-        "test",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    return StringUtils.toLowerCase(this.name());
+  }
+
+  @JsonCreator
+  public static ObjectStorageEncoding fromString(String name)
+  {
+    if (name == null) {
+      return SMILE;
+    }
+    return valueOf(StringUtils.toUpperCase(name));
   }
 }

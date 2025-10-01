@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
-import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.ColumnarLongsSerializer;
 import org.apache.druid.segment.data.CompressionFactory;
@@ -47,12 +46,12 @@ public class ScalarLongColumnSerializer extends ScalarNestedCommonFormatColumnSe
 
   public ScalarLongColumnSerializer(
       String name,
-      IndexSpec indexSpec,
+      NestedCommonFormatColumnFormatSpec columnFormatSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       Closer closer
   )
   {
-    super(name, indexSpec, segmentWriteOutMedium, closer);
+    super(name, columnFormatSpec, segmentWriteOutMedium, closer);
   }
 
   @Override
@@ -97,8 +96,8 @@ public class ScalarLongColumnSerializer extends ScalarNestedCommonFormatColumnSe
         segmentWriteOutMedium,
         StringUtils.format("%s.long_column", name),
         ByteOrder.nativeOrder(),
-        indexSpec.getLongEncoding(),
-        indexSpec.getDimensionCompression(),
+        columnFormatSpec.getLongColumnEncoding(),
+        columnFormatSpec.getLongColumnCompression(),
         segmentWriteOutMedium.getCloser()
     );
     longsSerializer.open();

@@ -142,7 +142,7 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
                                                              .withMinTimestamp(0)
                                                              .build()
                                    )
-                                   .indexSpec(IndexSpec.DEFAULT)
+                                   .indexSpec(IndexSpec.getDefault())
                                    .inputSource(inputSource)
                                    .inputFormat(TestIndex.DEFAULT_JSON_INPUT_FORMAT)
                                    .transform(TransformSpec.NONE)
