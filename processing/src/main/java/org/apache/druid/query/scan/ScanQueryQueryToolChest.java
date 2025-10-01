@@ -41,6 +41,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.CloseableUtils;
 
@@ -221,21 +222,22 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
       {
         CacheKeyBuilder builder = new CacheKeyBuilder(SCAN_QUERY)
             .appendByte(CACHE_STRATEGY_VERSION)
-            .appendCacheable(query.getDataSource())
             .appendCacheable(query.getVirtualColumns())
             .appendString(query.getResultFormat().toString())
             .appendLong(query.getScanRowsOffset())
             .appendLong(query.getScanRowsLimit())
             .appendCacheable(query.getFilter())
             .appendStrings(query.getColumns() != null ? query.getColumns() : List.of())
-            .appendString(query.getTimeOrder().toString());
+            .appendCacheable(query.getTimeOrder());
 
         List<OrderBy> orderBys = query.getOrderBys();
         if (orderBys != null) {
-          for (OrderBy orderBy : orderBys) {
-            builder.appendString(orderBy.getColumnName())
-                   .appendString(orderBy.getOrder().toString());
-          }
+          builder.appendCacheables(orderBys);
+        }
+
+        List<ColumnType> columnTypes = query.getColumnTypes();
+        if (columnTypes != null) {
+          builder.appendCacheables(columnTypes);
         }
 
         return builder.build();
