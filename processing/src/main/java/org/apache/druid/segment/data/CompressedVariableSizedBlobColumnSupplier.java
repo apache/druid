@@ -22,6 +22,7 @@ package org.apache.druid.segment.data;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -79,8 +80,8 @@ public class CompressedVariableSizedBlobColumnSupplier implements Supplier<Compr
   private final Supplier<CompressedBlockReader> blockDataReaderSupplier;
 
   private CompressedVariableSizedBlobColumnSupplier(
-      ByteBuffer offsetsBuffer,
-      ByteBuffer dataBuffer,
+      @Nullable ByteBuffer offsetsBuffer,
+      @Nullable ByteBuffer dataBuffer,
       ByteOrder compressionOrder,
       ByteOrder valueOrder,
       int numElements,
@@ -88,17 +89,34 @@ public class CompressedVariableSizedBlobColumnSupplier implements Supplier<Compr
   )
   {
     this.numElements = numElements;
-    this.offsetReaderSupplier = CompressedLongsReader.fromByteBuffer(offsetsBuffer, compressionOrder);
-    this.blockDataReaderSupplier = CompressedBlockReader.fromByteBuffer(dataBuffer, compressionOrder, valueOrder, copyValuesOnRead);
+    this.offsetReaderSupplier = offsetsBuffer == null
+                                ? null
+                                : () -> CompressedLongsReader.fromByteBuffer(offsetsBuffer, compressionOrder).get();
+    this.blockDataReaderSupplier = dataBuffer == null
+                                   ? null
+                                   : () -> CompressedBlockReader.fromByteBuffer(
+                                       dataBuffer,
+                                       compressionOrder,
+                                       valueOrder,
+                                       copyValuesOnRead
+                                   ).get();
   }
 
   @Override
   public CompressedVariableSizedBlobColumn get()
   {
+    if (offsetReaderSupplier == null || blockDataReaderSupplier == null) {
+      return null;
+    }
     return new CompressedVariableSizedBlobColumn(
         numElements,
         offsetReaderSupplier.get(),
         blockDataReaderSupplier.get()
     );
+  }
+
+  int getNumElements()
+  {
+    return numElements;
   }
 }

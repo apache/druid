@@ -85,6 +85,7 @@ public class CompressedComplexColumnSerializer<T> implements GenericColumnSerial
     writer = new CompressedVariableSizedBlobColumnSerializer(
         ColumnSerializerUtils.getInternalFileName(name, FILE_NAME),
         segmentWriteOutMedium,
+        indexSpec.getAutoColumnFormatSpec().getObjectStorageEncoding(),
         indexSpec.getComplexMetricCompression()
     );
     writer.open();

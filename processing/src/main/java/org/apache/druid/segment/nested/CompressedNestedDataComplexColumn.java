@@ -42,7 +42,6 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
-import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -96,6 +95,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -330,12 +330,25 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
       return null;
     }
 
-    if (compressedRawColumn == null) {
+    if (compressedRawColumn == null && !columnConfig.deriveJsonColumnFromIndexes()) {
       compressedRawColumn = closer.register(compressedRawColumnSupplier.get());
     }
 
-    final ByteBuffer valueBuffer = compressedRawColumn.get(rowNum);
-    return STRATEGY.fromByteBuffer(valueBuffer, valueBuffer.remaining());
+    if (compressedRawColumn != null) {
+      final ByteBuffer valueBuffer = compressedRawColumn.get(rowNum);
+      return STRATEGY.fromByteBuffer(valueBuffer, valueBuffer.remaining());
+    }
+
+    ReadableOffset offset = new AtomicIntegerReadableOffset(new AtomicInteger(rowNum));
+    final List<StructuredDataBuilder.Element> elements =
+        fieldPathMap.keySet().stream()
+                    .map(path -> StructuredDataBuilder.Element.of(
+                        path,
+                        (Objects.requireNonNull(getColumnHolder(path)).getColumn()).makeColumnValueSelector(offset)
+                                                                                   .getObject()
+                    ))
+                    .collect(Collectors.toList());
+    return new StructuredDataBuilder(elements).build();
   }
 
   @Override
@@ -350,17 +363,21 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
           offset
       );
     }
-    final List<Pair<List<NestedPathPart>, BaseColumn>> fieldColumns;
-    if (columnConfig.deriveJsonColumnFromIndexes()) {
-      fieldColumns = fieldPathMap.keySet().stream()
-                                 .map(path -> Pair.of(path, Objects.requireNonNull(getColumnHolder(path)).getColumn()))
-                                 .collect(Collectors.toList());
-    } else {
-      fieldColumns = null;
-      if (compressedRawColumn == null) {
-        compressedRawColumn = closer.register(compressedRawColumnSupplier.get());
-      }
+    if (compressedRawColumn == null && !columnConfig.deriveJsonColumnFromIndexes()) {
+      compressedRawColumn = closer.register(compressedRawColumnSupplier.get());
     }
+    final List<Pair<List<NestedPathPart>, ColumnValueSelector>> fieldSelectors =
+        compressedRawColumn != null
+        ? null
+        : fieldPathMap.keySet()
+                      .stream()
+                      .map(path -> Pair.of(
+                          path,
+                          ((DictionaryEncodedColumn) Objects.requireNonNull(getColumnHolder(path))
+                                                            .getColumn()).makeColumnValueSelector(offset)
+                      ))
+                      .collect(Collectors.toList());
+
 
     return new ObjectColumnSelector()
     {
@@ -371,16 +388,17 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
         if (nullValues.get(offset.getOffset())) {
           return null;
         }
-        if (columnConfig.deriveJsonColumnFromIndexes()) {
-          List<StructuredDataBuilder.Element> elements = fieldColumns
-              .stream()
-              .map(c -> StructuredDataBuilder.Element.of(c.lhs, c.rhs.makeColumnValueSelector(offset).getObject()))
-              .collect(Collectors.toList());
-          return new StructuredDataBuilder(elements).build();
-        } else {
+        if (compressedRawColumn != null) {
           final ByteBuffer valueBuffer = compressedRawColumn.get(offset.getOffset());
           return STRATEGY.fromByteBuffer(valueBuffer, valueBuffer.remaining());
         }
+        List<StructuredDataBuilder.Element> elements =
+            Objects.requireNonNull(fieldSelectors)
+                   .stream()
+                   .map(c -> StructuredDataBuilder.Element.of(c.lhs, c.rhs.getObject()))
+                   .collect(Collectors.toList());
+        return new StructuredDataBuilder(elements).build();
+
       }
 
       @Override
@@ -409,9 +427,23 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
           offset
       );
     }
-    if (compressedRawColumn == null) {
+
+    if (compressedRawColumn == null && !columnConfig.deriveJsonColumnFromIndexes()) {
       compressedRawColumn = closer.register(compressedRawColumnSupplier.get());
     }
+    AtomicInteger rowNumber = new AtomicInteger(-1);
+    AtomicIntegerReadableOffset atomicOffset = new AtomicIntegerReadableOffset(rowNumber);
+    final List<Pair<List<NestedPathPart>, ColumnValueSelector>> fieldSelectors =
+        compressedRawColumn != null ? null :
+        fieldPathMap.keySet()
+                    .stream()
+                    .map(path -> Pair.of(
+                        path,
+                        ((DictionaryEncodedColumn) Objects.requireNonNull(getColumnHolder(path))
+                                                          .getColumn()).makeColumnValueSelector(atomicOffset)
+                    ))
+                    .collect(Collectors.toList());
+
     return new VectorObjectSelector()
     {
       final Object[] vector = new Object[offset.getMaxVectorSize()];
@@ -453,8 +485,17 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
           // maybe someday can use bitmap batch operations for nulls?
           return null;
         }
-        final ByteBuffer valueBuffer = compressedRawColumn.get(offset);
-        return STRATEGY.fromByteBuffer(valueBuffer, valueBuffer.remaining());
+        if (compressedRawColumn != null) {
+          final ByteBuffer valueBuffer = compressedRawColumn.get(offset);
+          return STRATEGY.fromByteBuffer(valueBuffer, valueBuffer.remaining());
+        } else {
+          rowNumber.set(offset);
+          List<StructuredDataBuilder.Element> elements = fieldSelectors
+              .stream()
+              .map(c -> StructuredDataBuilder.Element.of(c.lhs, c.rhs.getObject()))
+              .collect(Collectors.toList());
+          return new StructuredDataBuilder(elements).build();
+        }
       }
 
       @Override
@@ -1190,6 +1231,28 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
     public int compare(Object o1, Object o2)
     {
       return Integer.compare(((Number) o1).intValue(), ((Number) o2).intValue());
+    }
+  }
+
+  private static class AtomicIntegerReadableOffset implements ReadableOffset
+  {
+    private final AtomicInteger offset;
+
+    AtomicIntegerReadableOffset(AtomicInteger offset)
+    {
+      this.offset = offset;
+    }
+
+    @Override
+    public int getOffset()
+    {
+      return offset.get();
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+
     }
   }
 }
