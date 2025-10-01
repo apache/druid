@@ -22,6 +22,7 @@ package org.apache.druid.segment.serde;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.GenericColumnSerializer;
@@ -30,6 +31,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.ByteBufferWriter;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSerializer;
 import org.apache.druid.segment.data.ObjectStrategy;
+import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.ByteArrayOutputStream;
@@ -85,8 +87,8 @@ public class CompressedComplexColumnSerializer<T> implements GenericColumnSerial
     writer = new CompressedVariableSizedBlobColumnSerializer(
         ColumnSerializerUtils.getInternalFileName(name, FILE_NAME),
         segmentWriteOutMedium,
-        indexSpec.getAutoColumnFormatSpec().getObjectStorageEncoding(),
-        indexSpec.getComplexMetricCompression()
+        GuavaUtils.firstNonNull(indexSpec.getAutoColumnFormatSpec(), NestedCommonFormatColumnFormatSpec.DEFAULT)
+                  .getObjectStorageEncoding(), indexSpec.getComplexMetricCompression()
     );
     writer.open();
 

@@ -40,7 +40,7 @@ import java.util.Objects;
  */
 public class NestedCommonFormatColumnFormatSpec
 {
-  private static final NestedCommonFormatColumnFormatSpec DEFAULT =
+  public static final NestedCommonFormatColumnFormatSpec DEFAULT =
       NestedCommonFormatColumnFormatSpec.builder()
                                         .setObjectFieldsDictionaryEncoding(StringEncodingStrategy.UTF8_STRATEGY)
                                         .setObjectStorageEncoding(ObjectStorageEncoding.SMILE)
