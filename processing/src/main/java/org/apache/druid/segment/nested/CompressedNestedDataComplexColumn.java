@@ -80,6 +80,7 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.utils.CloseableUtils;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -159,7 +160,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     this.columnName = columnName;
     this.logicalType = logicalType;
     this.nullValues = nullValues;
-    this.fieldPathMap = new LinkedHashMap<>(fields.size());
+    this.fieldPathMap = CollectionUtils.newLinkedHashMapWithExpectedSize(fields.size());
     for (int i = 0; i < fields.size(); i++) {
       String field = fields.get(i);
       fieldPathMap.put(parsePath(field), Pair.of(fields.get(i), i));

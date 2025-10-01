@@ -98,7 +98,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   public static final String DATA_SOURCE_ARRAYS = "arrays";
   public static final String DATA_SOURCE_ALL = "all_auto";
   public static final String DATA_SOURCE_ALL_REALTIME = "all_auto_realtime";
-  public static final String DATA_SOURCE_ALL_RAW_JSON = "all_auto_raw_json";
+
+  public static final ColumnConfig DEFAULT_DERIVE_JSON_CONFIG = ColumnConfig.DERIVE_JSON;
 
   public static final List<ImmutableMap<String, Object>> RAW_ROWS = ImmutableList.of(
       ImmutableMap.<String, Object>builder()
@@ -197,7 +198,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     {
       BuiltInTypesModule.registerHandlersAndSerde();
       final QueryableIndex index =
-          IndexBuilder.create()
+          IndexBuilder.create(DEFAULT_DERIVE_JSON_CONFIG)
                       .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(
@@ -213,7 +214,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       .buildMMappedIndex();
 
       final QueryableIndex indexMix11 =
-          IndexBuilder.create()
+          IndexBuilder.create(DEFAULT_DERIVE_JSON_CONFIG)
                       .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(
@@ -230,7 +231,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
 
       final QueryableIndex indexMix12 =
-          IndexBuilder.create()
+          IndexBuilder.create(DEFAULT_DERIVE_JSON_CONFIG)
                       .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(
@@ -246,7 +247,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       .buildMMappedIndex();
 
       final QueryableIndex indexMix21 =
-          IndexBuilder.create()
+          IndexBuilder.create(DEFAULT_DERIVE_JSON_CONFIG)
                       .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(
@@ -262,7 +263,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       .buildMMappedIndex();
 
       final QueryableIndex indexMix22 =
-          IndexBuilder.create()
+          IndexBuilder.create(DEFAULT_DERIVE_JSON_CONFIG)
                       .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(
@@ -278,7 +279,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       .buildMMappedIndex();
 
       final QueryableIndex indexArrays =
-          IndexBuilder.create()
+          IndexBuilder.create(DEFAULT_DERIVE_JSON_CONFIG)
                       .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(
@@ -302,7 +303,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       .buildMMappedIndex();
 
       final QueryableIndex indexAllTypesAuto =
-          IndexBuilder.create()
+          IndexBuilder.create(DEFAULT_DERIVE_JSON_CONFIG)
                       .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(
@@ -326,7 +327,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       .buildMMappedIndex();
 
       final IncrementalIndex indexAllTypesAutoRealtime =
-          IndexBuilder.create()
+          IndexBuilder.create(DEFAULT_DERIVE_JSON_CONFIG)
                       .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(
@@ -348,30 +349,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
                       .inputTmpDir(tempDirProducer.newTempFolder())
                       .buildIncrementalIndex();
-
-      final QueryableIndex indexAllTypesAutoRawJson =
-          IndexBuilder.create(ColumnConfig.READ_RAW_JSON)
-                      .tmpDir(tempDirProducer.newTempFolder())
-                      .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                      .schema(
-                          new IncrementalIndexSchema.Builder()
-                              .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
-                              .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
-                              .withMetrics(
-                                  new CountAggregatorFactory("cnt")
-                              )
-                              .withRollup(false)
-                              .build()
-                      )
-                      .inputSource(
-                          ResourceInputSource.of(
-                              NestedDataTestUtils.class.getClassLoader(),
-                              NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE
-                          )
-                      )
-                      .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
-                      .inputTmpDir(tempDirProducer.newTempFolder())
-                      .buildMMappedIndex();
 
       walker.add(
           DataSegment.builder()
@@ -445,15 +422,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                      .size(0)
                      .build(),
           indexAllTypesAutoRealtime
-      ).add(
-          DataSegment.builder()
-                     .dataSource(DATA_SOURCE_ALL_RAW_JSON)
-                     .version("1")
-                     .interval(indexAllTypesAuto.getDataInterval())
-                     .shardSpec(new LinearShardSpec(1))
-                     .size(0)
-                     .build(),
-          indexAllTypesAutoRawJson
       );
 
       return walker;
@@ -5986,378 +5954,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         RowSignature.builder()
                     .add("variant", ColumnType.STRING)
                     .add("EXPR$1", ColumnType.LONG)
-                    .build()
-    );
-  }
-
-  @Test
-  public void testScanAllTypesAutoRawJson()
-  {
-    // Variant types are not supported by MSQ.
-    msqIncompatible();
-    skipVectorize();
-    testQuery(
-        "SELECT * FROM druid.all_auto_raw_json",
-        ImmutableList.of(
-            Druids.newScanQueryBuilder()
-                  .dataSource(DATA_SOURCE_ALL_RAW_JSON)
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .columns(
-                      "__time", "str", "long", "double", "bool",
-                      "variant", "variantNumeric", "variantEmptyObj", "variantEmtpyArray", "variantWithArrays",
-                      "obj", "complexObj", "arrayString", "arrayStringNulls", "arrayLong",
-                      "arrayLongNulls", "arrayDouble", "arrayDoubleNulls", "arrayVariant", "arrayBool",
-                      "arrayNestedLong", "arrayObject", "null", "cstr", "clong",
-                      "cdouble", "cObj", "cstringArray", "cLongArray", "cDoubleArray",
-                      "cEmptyArray", "cEmptyObj", "cNullArray", "cEmptyObjectArray", "cObjectArray",
-                      "cnt"
-                  )
-                  .columnTypes(
-                      ColumnType.LONG,
-                      ColumnType.STRING,
-                      ColumnType.LONG,
-                      ColumnType.DOUBLE,
-                      ColumnType.LONG,
-                      ColumnType.STRING,
-                      ColumnType.DOUBLE,
-                      ColumnType.ofComplex("json"),
-                      ColumnType.LONG_ARRAY,
-                      ColumnType.STRING_ARRAY,
-                      ColumnType.ofComplex("json"),
-                      ColumnType.ofComplex("json"),
-                      ColumnType.STRING_ARRAY,
-                      ColumnType.STRING_ARRAY,
-                      ColumnType.LONG_ARRAY,
-                      ColumnType.LONG_ARRAY,
-                      ColumnType.DOUBLE_ARRAY,
-                      ColumnType.DOUBLE_ARRAY,
-                      ColumnType.STRING_ARRAY,
-                      ColumnType.LONG_ARRAY,
-                      ColumnType.ofComplex("json"),
-                      ColumnType.ofComplex("json"),
-                      ColumnType.STRING,
-                      ColumnType.STRING,
-                      ColumnType.LONG,
-                      ColumnType.DOUBLE,
-                      ColumnType.ofComplex("json"),
-                      ColumnType.STRING_ARRAY,
-                      ColumnType.LONG_ARRAY,
-                      ColumnType.DOUBLE_ARRAY,
-                      ColumnType.LONG_ARRAY,
-                      ColumnType.ofComplex("json"),
-                      ColumnType.LONG_ARRAY,
-                      ColumnType.ofComplex("json"),
-                      ColumnType.ofComplex("json"),
-                      ColumnType.LONG
-                  )
-                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .build()
-        ),
-        ImmutableList.of(
-            new Object[]{
-                1672531200000L,
-                null,
-                null,
-                null,
-                1L,
-                "51",
-                -0.13D,
-                "1",
-                "[]",
-                "[51,-35]",
-                "{\"a\":700,\"b\":{\"x\":\"g\",\"y\":1.1,\"z\":[9,null,9,9]},\"c\":null,\"v\":[]}",
-                "{\"x\":400,\"y\":[{\"l\":[null],\"m\":100,\"n\":5},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{}}",
-                null,
-                "[\"a\",\"b\"]",
-                null,
-                "[2,3]",
-                null,
-                "[null]",
-                null,
-                "[1,0,1]",
-                null,
-                "[{\"x\":1},{\"x\":2}]",
-                null,
-                "hello",
-                1234L,
-                1.234D,
-                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"],\"d\":[]}}",
-                "[\"a\",\"b\",\"c\"]",
-                "[1,2,3]",
-                "[1.1,2.2,3.3]",
-                "[]",
-                "{}",
-                "[null,null]",
-                "[{},{},{}]",
-                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
-                1L
-            },
-            new Object[]{
-                1672531200000L,
-                "",
-                2L,
-                null,
-                0L,
-                "b",
-                1.1D,
-                "\"b\"",
-                "2",
-                "b",
-                "{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]},\"c\":[\"a\",\"b\"],\"v\":[]}",
-                "{\"x\":10,\"y\":[{\"l\":[\"b\",\"b\",\"c\"],\"m\":\"b\",\"n\":2},[1,2,3]],\"z\":{\"a\":[5.5],\"b\":false}}",
-                "[\"a\",\"b\",\"c\"]",
-                "[null,\"b\"]",
-                "[2,3]",
-                null,
-                "[3.3,4.4,5.5]",
-                "[999.0,null,5.5]",
-                "[null,null,2.2]",
-                "[1,1]",
-                "[null,[null],[]]",
-                "[{\"x\":3},{\"x\":4}]",
-                null,
-                "hello",
-                1234L,
-                1.234D,
-                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"],\"d\":[]}}",
-                "[\"a\",\"b\",\"c\"]",
-                "[1,2,3]",
-                "[1.1,2.2,3.3]",
-                "[]",
-                "{}",
-                "[null,null]",
-                "[{},{},{}]",
-                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
-                1L
-            },
-            new Object[]{
-                1672531200000L,
-                "a",
-                1L,
-                1.0D,
-                1L,
-                "1",
-                1.0D,
-                "1",
-                "1",
-                "1",
-                "{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]},\"c\":[100],\"v\":[]}",
-                "{\"x\":1234,\"y\":[{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}",
-                "[\"a\",\"b\"]",
-                "[\"a\",\"b\"]",
-                "[1,2,3]",
-                "[1,null,3]",
-                "[1.1,2.2,3.3]",
-                "[1.1,2.2,null]",
-                "[\"a\",\"1\",\"2.2\"]",
-                "[1,0,1]",
-                "[[1,2,null],[3,4]]",
-                "[{\"x\":1},{\"x\":2}]",
-                null,
-                "hello",
-                1234L,
-                1.234D,
-                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"],\"d\":[]}}",
-                "[\"a\",\"b\",\"c\"]",
-                "[1,2,3]",
-                "[1.1,2.2,3.3]",
-                "[]",
-                "{}",
-                "[null,null]",
-                "[{},{},{}]",
-                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
-                1L
-            },
-            new Object[]{
-                1672531200000L,
-                "b",
-                4L,
-                3.3D,
-                1L,
-                "1",
-                null,
-                "{}",
-                "4",
-                "1",
-                "{\"a\":400,\"b\":{\"x\":\"d\",\"y\":1.1,\"z\":[3,4]},\"c\":{\"a\":1},\"v\":[]}",
-                "{\"x\":1234,\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}",
-                "[\"d\",\"e\"]",
-                "[\"b\",\"b\"]",
-                "[1,4]",
-                "[1]",
-                "[2.2,3.3,4.0]",
-                null,
-                "[\"a\",\"b\",\"c\"]",
-                "[null,0,1]",
-                "[[1,2],[3,4],[5,6,7]]",
-                "[{\"x\":null},{\"x\":2}]",
-                null,
-                "hello",
-                1234L,
-                1.234D,
-                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"],\"d\":[]}}",
-                "[\"a\",\"b\",\"c\"]",
-                "[1,2,3]",
-                "[1.1,2.2,3.3]",
-                "[]",
-                "{}",
-                "[null,null]",
-                "[{},{},{}]",
-                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
-                1L
-            },
-            new Object[]{
-                1672531200000L,
-                "c",
-                null,
-                4.4D,
-                1L,
-                "hello",
-                -1000.0D,
-                "{}",
-                "[]",
-                "hello",
-                "{\"a\":500,\"b\":{\"x\":\"e\",\"z\":[1,2,3,4]},\"c\":\"hello\",\"v\":\"a\"}",
-                "{\"x\":11,\"y\":[],\"z\":{\"a\":[null],\"b\":false}}",
-                null,
-                null,
-                "[1,2,3]",
-                "[]",
-                "[1.1,2.2,3.3]",
-                null,
-                null,
-                "[0]",
-                null,
-                "[{\"x\":1000},{\"y\":2000}]",
-                null,
-                "hello",
-                1234L,
-                1.234D,
-                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"],\"d\":[]}}",
-                "[\"a\",\"b\",\"c\"]",
-                "[1,2,3]",
-                "[1.1,2.2,3.3]",
-                "[]",
-                "{}",
-                "[null,null]",
-                "[{},{},{}]",
-                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
-                1L
-            },
-            new Object[]{
-                1672531200000L,
-                "d",
-                5L,
-                5.9D,
-                0L,
-                null,
-                3.33D,
-                "\"a\"",
-                "6",
-                null,
-                "{\"a\":600,\"b\":{\"x\":\"f\",\"y\":1.1,\"z\":[6,7,8,9]},\"c\":12.3,\"v\":\"b\"}",
-                null,
-                "[\"a\",\"b\"]",
-                null,
-                null,
-                "[null,2,9]",
-                null,
-                "[999.0,5.5,null]",
-                "[\"a\",\"1\",\"2.2\"]",
-                "[]",
-                "[[1],[1,2,null]]",
-                "[{\"a\":1},{\"b\":2}]",
-                null,
-                "hello",
-                1234L,
-                1.234D,
-                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"],\"d\":[]}}",
-                "[\"a\",\"b\",\"c\"]",
-                "[1,2,3]",
-                "[1.1,2.2,3.3]",
-                "[]",
-                "{}",
-                "[null,null]",
-                "[{},{},{}]",
-                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
-                1L
-            },
-            new Object[]{
-                1672531200000L,
-                "null",
-                3L,
-                2.0D,
-                null,
-                "3.0",
-                1.0D,
-                "3.3",
-                "3",
-                "3.0",
-                "{\"a\":300}",
-                "{\"x\":4.4,\"y\":[{\"l\":[],\"m\":100,\"n\":3},{\"l\":[\"a\"]},{\"l\":[\"b\"],\"n\":[]}],\"z\":{\"a\":[],\"b\":true}}",
-                "[\"b\",\"c\"]",
-                "[\"d\",null,\"b\"]",
-                "[1,2,3,4]",
-                "[1,2,3]",
-                "[1.1,3.3]",
-                "[null,2.2,null]",
-                "[1,null,1]",
-                "[1,null,1]",
-                "[[1],null,[1,2,3]]",
-                "[null,{\"x\":2}]",
-                null,
-                "hello",
-                1234L,
-                1.234D,
-                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"],\"d\":[]}}",
-                "[\"a\",\"b\",\"c\"]",
-                "[1,2,3]",
-                "[1.1,2.2,3.3]",
-                "[]",
-                "{}",
-                "[null,null]",
-                "[{},{},{}]",
-                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
-                1L
-            }
-        ),
-        RowSignature.builder()
-                    .add("__time", ColumnType.LONG)
-                    .add("str", ColumnType.STRING)
-                    .add("long", ColumnType.LONG)
-                    .add("double", ColumnType.DOUBLE)
-                    .add("bool", ColumnType.LONG)
-                    .add("variant", ColumnType.STRING)
-                    .add("variantNumeric", ColumnType.DOUBLE)
-                    .add("variantEmptyObj", ColumnType.NESTED_DATA)
-                    .add("variantEmtpyArray", ColumnType.LONG_ARRAY)
-                    .add("variantWithArrays", ColumnType.STRING_ARRAY)
-                    .add("obj", ColumnType.NESTED_DATA)
-                    .add("complexObj", ColumnType.NESTED_DATA)
-                    .add("arrayString", ColumnType.STRING_ARRAY)
-                    .add("arrayStringNulls", ColumnType.STRING_ARRAY)
-                    .add("arrayLong", ColumnType.LONG_ARRAY)
-                    .add("arrayLongNulls", ColumnType.LONG_ARRAY)
-                    .add("arrayDouble", ColumnType.DOUBLE_ARRAY)
-                    .add("arrayDoubleNulls", ColumnType.DOUBLE_ARRAY)
-                    .add("arrayVariant", ColumnType.STRING_ARRAY)
-                    .add("arrayBool", ColumnType.LONG_ARRAY)
-                    .add("arrayNestedLong", ColumnType.NESTED_DATA)
-                    .add("arrayObject", ColumnType.NESTED_DATA)
-                    .add("null", ColumnType.STRING)
-                    .add("cstr", ColumnType.STRING)
-                    .add("clong", ColumnType.LONG)
-                    .add("cdouble", ColumnType.DOUBLE)
-                    .add("cObj", ColumnType.NESTED_DATA)
-                    .add("cstringArray", ColumnType.STRING_ARRAY)
-                    .add("cLongArray", ColumnType.LONG_ARRAY)
-                    .add("cDoubleArray", ColumnType.DOUBLE_ARRAY)
-                    .add("cEmptyArray", ColumnType.LONG_ARRAY)
-                    .add("cEmptyObj", ColumnType.NESTED_DATA)
-                    .add("cNullArray", ColumnType.LONG_ARRAY)
-                    .add("cEmptyObjectArray", ColumnType.NESTED_DATA)
-                    .add("cObjectArray", ColumnType.NESTED_DATA)
-                    .add("cnt", ColumnType.LONG)
                     .build()
     );
   }

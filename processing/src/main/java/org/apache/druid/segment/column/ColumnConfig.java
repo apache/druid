@@ -32,12 +32,12 @@ public interface ColumnConfig
 
   ColumnConfig DEFAULT = new ColumnConfig() {};
 
-  ColumnConfig READ_RAW_JSON = new ColumnConfig()
+  ColumnConfig DERIVE_JSON = new ColumnConfig()
   {
     @Override
     public boolean deriveJsonColumnFromIndexes()
     {
-      return false;
+      return true;
     }
   };
   /**
@@ -85,6 +85,6 @@ public interface ColumnConfig
 
   default boolean deriveJsonColumnFromIndexes()
   {
-    return true;
+    return false;
   }
 }
