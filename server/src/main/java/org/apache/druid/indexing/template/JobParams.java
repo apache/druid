@@ -24,7 +24,21 @@ import org.joda.time.DateTime;
 /**
  * Provides parameters required to create a {@link BatchIndexingJob}.
  */
-public interface JobParams
+public class JobParams
 {
-  DateTime getScheduleStartTime();
+  private final DateTime scheduleStartTime;
+
+  public JobParams(DateTime scheduleStartTime)
+  {
+    this.scheduleStartTime = scheduleStartTime;
+  }
+
+  /**
+   * Timestamp denoting the start of the current run of the scheduler which has
+   * triggered creation of jobs using these {@link JobParams}.
+   */
+  public DateTime getScheduleStartTime()
+  {
+    return scheduleStartTime;
+  }
 }

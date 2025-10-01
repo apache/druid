@@ -68,8 +68,7 @@ public class CatalogCompactionJobTemplate implements CompactionJobTemplate
   @Override
   public Granularity getSegmentGranularity()
   {
-    final CompactionJobTemplate delegate = getDelegate();
-    return delegate == null ? null : delegate.getSegmentGranularity();
+    return getDelegate().getSegmentGranularity();
   }
 
   @Override
@@ -78,20 +77,14 @@ public class CatalogCompactionJobTemplate implements CompactionJobTemplate
       CompactionJobParams params
   )
   {
-    final CompactionJobTemplate delegate = getDelegate();
-    if (delegate == null) {
-      return List.of();
-    } else {
-      return delegate.createCompactionJobs(source, params);
-    }
+    return getDelegate().createCompactionJobs(source, params);
   }
 
-  @Nullable
   private CompactionJobTemplate getDelegate()
   {
     final ResolvedTable resolvedTable = catalog.resolveTable(tableId);
     if (resolvedTable == null) {
-      return null;
+      throw InvalidInput.exception("Could not find table[%s] in the catalog", tableId);
     }
 
     final BatchIndexingJobTemplate delegate

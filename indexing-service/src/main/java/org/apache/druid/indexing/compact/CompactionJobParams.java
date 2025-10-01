@@ -28,9 +28,8 @@ import org.joda.time.DateTime;
 /**
  * Parameters used while creating a {@link CompactionJob} using a {@link CompactionJobTemplate}.
  */
-public class CompactionJobParams implements JobParams
+public class CompactionJobParams extends JobParams
 {
-  private final DateTime scheduleStartTime;
   private final TimelineProvider timelineProvider;
   private final ClusterCompactionConfig clusterCompactionConfig;
   private final CompactionSnapshotBuilder snapshotBuilder;
@@ -42,28 +41,39 @@ public class CompactionJobParams implements JobParams
       CompactionSnapshotBuilder snapshotBuilder
   )
   {
-    this.scheduleStartTime = scheduleStartTime;
+    super(scheduleStartTime);
     this.clusterCompactionConfig = clusterCompactionConfig;
     this.timelineProvider = timelineProvider;
     this.snapshotBuilder = snapshotBuilder;
   }
 
-  @Override
-  public DateTime getScheduleStartTime()
-  {
-    return scheduleStartTime;
-  }
-
+  /**
+   * Cluster-level compaction config containing details such as the engine,
+   * compaction search policy, etc. to use while creating {@link CompactionJob}.
+   */
   public ClusterCompactionConfig getClusterCompactionConfig()
   {
     return clusterCompactionConfig;
   }
 
+  /**
+   * Provides the full {@link SegmentTimeline} of used segments for the given
+   * datasource. This timeline is used to identify eligible intervals for which
+   * compaction jobs should be created.
+   */
   public SegmentTimeline getTimeline(String dataSource)
   {
     return timelineProvider.getTimelineForDataSource(dataSource);
   }
 
+  /**
+   * Used to build an {@link org.apache.druid.server.coordinator.AutoCompactionSnapshot}
+   * for all the datasources at the end of the current run. During the run, as
+   * candidate intervals are identified as compacted, skipped or pending, they
+   * should be updated in this snapshot builder by invoking
+   * {@link CompactionSnapshotBuilder#addToComplete}, {@link CompactionSnapshotBuilder#addToSkipped}
+   * and {@link CompactionSnapshotBuilder#addToPending} respectively.
+   */
   public CompactionSnapshotBuilder getSnapshotBuilder()
   {
     return snapshotBuilder;

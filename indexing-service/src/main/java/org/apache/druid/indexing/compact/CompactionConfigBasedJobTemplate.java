@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.compact;
 
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.input.DruidDatasourceDestination;
 import org.apache.druid.indexing.input.DruidInputSource;
@@ -108,7 +109,12 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
   @Override
   public String getType()
   {
-    throw new UnsupportedOperationException("This template type cannot be serialized");
+    throw DruidException.defensive(
+        "This template cannot be serialized. It is an adapter used to create jobs"
+        + " using a legacy DataSourceCompactionConfig. Do not use this template"
+        + " in a supervisor spec directly. Use types [compactCatalog], [compactMsq]"
+        + " or [compactInline] instead."
+    );
   }
 
   /**
