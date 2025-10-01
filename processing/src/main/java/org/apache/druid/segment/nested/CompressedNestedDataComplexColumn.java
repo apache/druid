@@ -104,14 +104,14 @@ import java.util.stream.Collectors;
  * 'raw' {@link StructuredData} values and provides selectors for nested field columns specified by ordered lists of
  * {@link NestedPathPart}.
  * <p>
- * The list of available nested paths is stored in {@link #fields}, and their associated types stored in
- * {@link #fieldInfo} which can be accessed by the index of the field in {@link #fields}.
+ * The list of available nested paths is stored in {@link #fieldsSupplier}, and their associated types stored in
+ * {@link #fieldInfo} which can be accessed by the index of the field in {@link #fieldsSupplier}.
  * <p>
  * In the case that the nested column has only a single field, and that field is the 'root' path, specified by
  * {@link #rootFieldPath}, the selectors created for the complex column itself will use the 'root' path selectors
  * instead.
  */
-public abstract class CompressedNestedDataComplexColumn<TStringDictionary extends Indexed<ByteBuffer>>
+public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends Indexed<ByteBuffer>, TStringDictionary extends Indexed<ByteBuffer>>
     extends NestedDataComplexColumn implements NestedCommonFormatColumn
 {
   private static final Map<Class<?>, Function<CompressedNestedDataComplexColumn, ?>> AS_MAP =
@@ -145,7 +145,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       @SuppressWarnings("unused") ColumnConfig columnConfig,
       CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
       ImmutableBitmap nullValues,
-      GenericIndexed<String> fields,
+      Supplier<TKeyDictionary> fieldsSupplier,
       FieldTypeInfo fieldInfo,
       Supplier<TStringDictionary> stringDictionary,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
@@ -160,10 +160,11 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     this.columnName = columnName;
     this.logicalType = logicalType;
     this.nullValues = nullValues;
+    final TKeyDictionary fields = fieldsSupplier.get();
     this.fieldPathMap = CollectionUtils.newLinkedHashMapWithExpectedSize(fields.size());
     for (int i = 0; i < fields.size(); i++) {
-      String field = fields.get(i);
-      fieldPathMap.put(parsePath(field), Pair.of(fields.get(i), i));
+      String field = StringUtils.fromUtf8(fields.get(i));
+      fieldPathMap.put(parsePath(field), Pair.of(field, i));
     }
     this.fieldInfo = fieldInfo;
     this.stringDictionarySupplier = stringDictionary;

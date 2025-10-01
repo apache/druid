@@ -69,8 +69,8 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertNull(config.getMaxTotalRows());
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(0, config.getMaxPendingPersists());
-    Assert.assertEquals(IndexSpec.DEFAULT, config.getIndexSpec());
-    Assert.assertEquals(IndexSpec.DEFAULT, config.getIndexSpecForIntermediatePersists());
+    Assert.assertEquals(IndexSpec.getDefault(), config.getIndexSpec());
+    Assert.assertEquals(IndexSpec.getDefault(), config.getIndexSpecForIntermediatePersists());
     Assert.assertFalse(config.isReportParseExceptions());
     Assert.assertEquals(Duration.ofMinutes(15).toMillis(), config.getHandoffConditionTimeout());
     Assert.assertEquals(1, config.getNumPersistThreads());
@@ -139,8 +139,8 @@ public class KafkaIndexTaskTuningConfigTest
         .withMaxRowsPerSegment(2)
         .withMaxTotalRows(10L)
         .withMaxPendingPersists(4)
-        .withIndexSpec(IndexSpec.DEFAULT)
-        .withIndexSpecForIntermediatePersists(IndexSpec.DEFAULT)
+        .withIndexSpec(IndexSpec.getDefault())
+        .withIndexSpecForIntermediatePersists(IndexSpec.getDefault())
         .withReportParseExceptions(true)
         .withMaxColumnsToMerge(5)
         .build();
@@ -154,7 +154,7 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(new Period("PT3S"), copy.getIntermediatePersistPeriod());
     Assert.assertNull(copy.getBasePersistDirectory());
     Assert.assertEquals(4, copy.getMaxPendingPersists());
-    Assert.assertEquals(IndexSpec.DEFAULT, copy.getIndexSpec());
+    Assert.assertEquals(IndexSpec.getDefault(), copy.getIndexSpec());
     Assert.assertTrue(copy.isReportParseExceptions());
     Assert.assertEquals(5L, copy.getHandoffConditionTimeout());
     Assert.assertEquals(2, copy.getNumPersistThreads());
@@ -174,8 +174,8 @@ public class KafkaIndexTaskTuningConfigTest
         new Period("PT3S"),
         new File("/tmp/xxx"),
         4,
-        IndexSpec.DEFAULT,
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
+        IndexSpec.getDefault(),
         true,
         5L,
         null,
@@ -227,8 +227,8 @@ public class KafkaIndexTaskTuningConfigTest
         10L,
         new Period("PT3S"),
         4,
-        IndexSpec.DEFAULT,
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
+        IndexSpec.getDefault(),
         true,
         5L,
         null,
@@ -273,7 +273,7 @@ public class KafkaIndexTaskTuningConfigTest
     EqualsVerifier.forClass(KafkaIndexTaskTuningConfig.class)
                   .withPrefabValues(
                       IndexSpec.class,
-                      IndexSpec.DEFAULT,
+                      IndexSpec.getDefault(),
                       IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build()
                   )
                   .usingGetClass()

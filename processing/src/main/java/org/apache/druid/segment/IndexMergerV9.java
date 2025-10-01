@@ -1052,6 +1052,10 @@ public class IndexMergerV9 implements IndexMerger
       throw new IAE("Trying to persist an empty index!");
     }
 
+    // need to call this here even though multiphaseMerge also calls this because we need to ensure the bitmap factory
+    // is populated when creating the IncrementalIndexAdapter
+    indexSpec = indexSpec.getEffectiveSpec();
+
     final DateTime firstTimestamp = index.getMinTime();
     final DateTime lastTimestamp = index.getMaxTime();
     if (!(dataInterval.contains(firstTimestamp) && dataInterval.contains(lastTimestamp))) {
@@ -1163,6 +1167,10 @@ public class IndexMergerV9 implements IndexMerger
     FileUtils.mkdirp(outDir);
 
     List<File> tempDirs = new ArrayList<>();
+
+    indexSpec = indexSpec.getEffectiveSpec();
+    indexSpecForIntermediatePersists = indexSpecForIntermediatePersists.getEffectiveSpec();
+    log.info("Building segment with IndexSpec[%s]", indexSpec);
 
     if (maxColumnsToMerge == IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE) {
       return merge(
