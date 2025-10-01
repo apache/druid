@@ -343,8 +343,8 @@ public class KubernetesPeonLifecycle
       log.debug("There is already a log watcher for %s", taskId.getOriginalTaskId());
       return;
     }
+    ExecutorService executor = Executors.newSingleThreadExecutor(Execs.makeThreadFactory("k8s-tasklog-init-watch-%d"));
     try {
-      ExecutorService executor = Executors.newSingleThreadExecutor(Execs.makeThreadFactory("k8s-tasklog-init-watch-%d"));
       Future<Optional<LogWatch>> future = executor.submit(() -> kubernetesClient.getPeonLogWatcher(taskId));
       Optional<LogWatch> maybeLogWatch = future.get(logWatchOperationTimeoutMs, TimeUnit.MILLISECONDS);
       if (maybeLogWatch.isPresent()) {
@@ -361,6 +361,9 @@ public class KubernetesPeonLifecycle
     }
     catch (Exception e) {
       log.error(e, "Error watching logs from task: %s. LogWatch not initialized.", taskId);
+    }
+    finally {
+      executor.shutdownNow();
     }
   }
 
@@ -401,6 +404,9 @@ public class KubernetesPeonLifecycle
             log.error(e, "Failed to copy task logs for task [%s]. This does not have any impact on the"
                          + " work done by the task, but the logs may be innaccessible. If this continues to happen, check"
                          + " Kubernetes server logs for potential errors.", taskId.getOriginalTaskId());
+          }
+          finally {
+            executor.shutdownNow();
           }
         } else {
           log.debug("Log stream not found for %s", taskId.getOriginalTaskId());
