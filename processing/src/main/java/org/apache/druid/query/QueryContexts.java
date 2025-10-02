@@ -122,6 +122,8 @@ public class QueryContexts
   // query's runtime
   public static final String QUERY_RESOURCE_ID = "queryResourceId";
 
+  public static final String UNAVAILABLE_SEGMENTS_ACTION_KEY = "unavailableSegmentsAction";
+
   // SQL query context keys
   public static final String CTX_SQL_QUERY_ID = BaseQuery.SQL_QUERY_ID;
   public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";

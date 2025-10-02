@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.DataSourcesSnapshot;
@@ -41,12 +42,15 @@ import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.JettyUtils;
+import org.apache.druid.server.coordination.ChangeRequestHistory;
+import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegmentChange;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.joda.time.Interval;
@@ -80,6 +84,7 @@ import java.util.stream.Stream;
 public class MetadataResource
 {
   private static final Logger log = new Logger(MetadataResource.class);
+
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final AuthorizerMapper authorizerMapper;
@@ -201,6 +206,138 @@ public class MetadataResource
     }
   }
 
+  /**
+   * <p>This endpoint is used by MetadataSegmentView in broker to keep an up-to-date list of segments present in the system.
+   * This endpoint lists segments present in the system and can also incrementally provide the segments added/dropped
+   * since last response.</p>
+   * <br>Flow
+   * <ol>
+   * <li>Client sends first request /druid/coordinator/v1/metadata/changedSegments?counter=-1
+   * Server responds with list of segments currently present and a <counter,hash> pair. </li>
+   * <li>Client sends subsequent requests /druid/coordinator/v1/metadata/changedSegments?counter=<counter>&hash=<hash>
+   * Where <counter,hash> values are used from the last response. Server responds with list of segment updates
+   * since given counter.</li>
+   * </ol>
+   *
+   * @param req request
+   * @param dataSources requested datasources
+   * @param counter counter received in last response.
+   * @param hash hash received in last response.
+   */
+  @GET
+  @Path("/changedSegments")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getChangedSegments(
+      @Context final HttpServletRequest req,
+      @QueryParam("datasources") final @Nullable Set<String> dataSources,
+      @QueryParam("counter") long counter,
+      @QueryParam("hash") long hash
+  )
+  {
+    Set<String> requiredDataSources = (null == dataSources) ? new HashSet<>() : dataSources;
+
+    log.debug(
+        "Changed segments requested. counter [%d], hash [%d], dataSources [%s]",
+        counter,
+        hash,
+        requiredDataSources
+    );
+
+    DataSourcesSnapshot dataSourcesSnapshot = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments();
+    ChangeRequestHistory<List<DataSegmentChange>> changeRequestHistory = segmentsMetadataManager.getChangeRequestHistory();
+
+    ChangeRequestsSnapshot<List<DataSegmentChange>> changeRequestsSnapshot = changeRequestHistory.getRequestsSinceSync(
+        new ChangeRequestHistory.Counter(counter, hash));
+    List<List<DataSegmentChange>> requests = changeRequestsSnapshot.getRequests();
+    List<DataSegmentChange> flatRequests = new ArrayList<>();
+    if (null != requests) {
+      requests.forEach(flatRequests::addAll);
+    }
+
+    List<DataSegmentChange> dataSegmentChanges;
+    ChangeRequestHistory.Counter lastCounter = changeRequestsSnapshot.getCounter();
+    boolean reset = false;
+    String resetCause = "";
+    if (changeRequestsSnapshot.isResetCounter()) {
+      reset = true;
+      dataSegmentChanges =
+          dataSourcesSnapshot
+              .getDataSourcesWithAllUsedSegments()
+              .stream()
+              .flatMap(druidDataSource -> druidDataSource.getSegments().stream())
+              .filter(segment -> requiredDataSources.isEmpty()
+                                 || requiredDataSources.contains(segment.getDataSource()))
+              .map(segment -> {
+                Long numRows = null;
+                if (coordinatorSegmentMetadataCache != null) {
+                  AvailableSegmentMetadata availableSegmentMetadata = coordinatorSegmentMetadataCache.getAvailableSegmentMetadata(
+                      segment.getDataSource(),
+                      segment.getId()
+                  );
+                  if (null != availableSegmentMetadata) {
+                    numRows = availableSegmentMetadata.getNumRows();
+                  }
+                }
+                return new DataSegmentChange(
+                    new SegmentStatusInCluster(
+                        segment,
+                        dataSourcesSnapshot.getOvershadowedSegments().contains(segment),
+                        null,
+                        numRows,
+                        false, //
+                        getHandedOffStateForSegment(
+                            dataSourcesSnapshot,
+                            segment.getDataSource(),
+                            segment.getId()
+                        )
+                    ),
+                    DataSegmentChange.SegmentLifecycleChangeType.SEGMENT_ADDED
+                );
+              })
+              .collect(Collectors.toList());
+      resetCause = changeRequestsSnapshot.getResetCause();
+      log.debug("Returning full snapshot. segment count [%d], counter [%d], hash [%d]",
+                dataSegmentChanges.size(), lastCounter.getCounter(), lastCounter.getHash()
+      );
+    } else {
+      dataSegmentChanges = flatRequests;
+      dataSegmentChanges = dataSegmentChanges
+          .stream()
+          .filter(segment -> requiredDataSources.isEmpty()
+                             || requiredDataSources.contains(segment.getSegmentStatusInCluster()
+                                                                    .getDataSegment()
+                                                                    .getDataSource()))
+          .collect(Collectors.toList());
+      log.debug("Returning delta snapshot. segment count [%d], counter [%d], hash [%d]",
+                dataSegmentChanges.size(), lastCounter.getCounter(), lastCounter.getHash()
+      );
+    }
+
+    final Function<DataSegmentChange, Iterable<ResourceAction>> raGenerator =
+        segment -> Collections.singletonList(
+            AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(
+                segment.getSegmentStatusInCluster().getDataSegment().getDataSource()
+            )
+        );
+
+    final Iterable<DataSegmentChange> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
+        req,
+        dataSegmentChanges,
+        raGenerator,
+        authorizerMapper
+    );
+
+    ChangeRequestsSnapshot<DataSegmentChange> finalChanges = new ChangeRequestsSnapshot<>(
+        reset,
+        resetCause,
+        lastCounter,
+        Lists.newArrayList(authorizedSegments)
+    );
+
+    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
+    return builder.entity(finalChanges).build();
+  }
+
   private Response getAllUsedSegmentsWithAdditionalDetails(
       HttpServletRequest req,
       @Nullable Set<String> dataSources,
@@ -238,13 +375,15 @@ public class MetadataResource
             }
           }
           segmentAlreadySeen.add(segment.getId());
+          boolean handedOffState = getHandedOffStateForSegment(dataSourcesSnapshot, segment.getDataSource(), segment.getId());
           return new SegmentStatusInCluster(
               segment,
               isOvershadowed,
               replicationFactor,
               numRows,
               // published segment can't be realtime
-              false
+              false,
+              handedOffState
           );
         });
 
@@ -262,15 +401,14 @@ public class MetadataResource
                    new SegmentStatusInCluster(
                        availableSegmentMetadata.getSegment(),
                        false,
-                       // replication factor is null for unpublished segments
-                       null,
+                       null, // replication factor is null for unpublished segments
                        availableSegmentMetadata.getNumRows(),
-                       availableSegmentMetadata.isRealtime() != 0
+                       availableSegmentMetadata.isRealtime() != 0,
+                       false // realtime segments are not handed off yet
                    ));
 
       finalSegments = Stream.concat(segmentStatus, realtimeSegmentStatus);
     }
-
     final Function<SegmentStatusInCluster, Iterable<ResourceAction>> raGenerator = segment -> Collections
         .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
 
@@ -283,6 +421,16 @@ public class MetadataResource
 
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
     return builder.entity(authorizedSegments).build();
+  }
+
+  private boolean getHandedOffStateForSegment(
+      DataSourcesSnapshot dataSourcesSnapshot,
+      String dataSource, SegmentId segmentId
+  )
+  {
+    return dataSourcesSnapshot.getLoadedSegmentsPerDataSource()
+                       .getOrDefault(dataSource, new HashSet<>())
+                       .contains(segmentId);
   }
 
   /**

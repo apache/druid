@@ -23,13 +23,14 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.Maps;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegmentChange;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -157,6 +158,13 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
     );
   }
 
+  @Override
+  public int markSegmentAsLoaded(SegmentId segmentId)
+  {
+    return 0;
+  }
+
+  @Override
   public boolean markSegmentAsUnused(SegmentId segmentId)
   {
     boolean updated = usedSegments.remove(segmentId.toString()) != null;
@@ -247,5 +255,11 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   private void invalidateDatasourcesSnapshot()
   {
     snapshot = null;
+  }
+
+  @Override
+  public ChangeRequestHistory<List<DataSegmentChange>> getChangeRequestHistory()
+  {
+    return null;
   }
 }
