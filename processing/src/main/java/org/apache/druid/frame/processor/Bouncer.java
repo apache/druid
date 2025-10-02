@@ -89,24 +89,16 @@ public class Bouncer
 
   public ListenableFuture<Ticket> ticket()
   {
-    // Acquire parent ticket first, if there's a parent.
-    if (parentBouncer != null) {
-      return FutureUtils.transformAsync(parentBouncer.ticket(), this::ticketInternal);
-    } else {
-      return ticketInternal(null);
-    }
-  }
-
-  /**
-   * Acquire a ticket from this Bouncer. Precondition: if there is a parentBouncer, only call this method when
-   * holding a parent ticket.
-   */
-  private ListenableFuture<Ticket> ticketInternal(@Nullable final Ticket parentTicket)
-  {
+    // Acquire our ticket first, then acquire a parent ticket. Only return our ticket once the parent ticket
+    // is also acquired.
     synchronized (lock) {
       if (currentCount < maxCount) {
         currentCount++;
-        return Futures.immediateFuture(new Ticket(parentTicket));
+        if (parentBouncer != null) {
+          return FutureUtils.transform(parentBouncer.ticket(), Ticket::new);
+        } else {
+          return Futures.immediateFuture(new Ticket(null));
+        }
       } else {
         final SettableFuture<Ticket> future = SettableFuture.create();
         waiters.add(future);
