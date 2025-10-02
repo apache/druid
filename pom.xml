@@ -114,7 +114,7 @@
         <slf4j.version>2.0.16</slf4j.version>
         <jna.version>5.13.0</jna.version>
         <jna-platform.version>5.13.0</jna-platform.version>
-        <hadoop.compile.version>3.3.6</hadoop.compile.version>
+        <hadoop.compile.version>3.4.2</hadoop.compile.version>
         <graaljs.version>22.3.5</graaljs.version>
         <mockito.version>5.14.2</mockito.version>
         <aws.sdk.version>1.12.784</aws.sdk.version>
