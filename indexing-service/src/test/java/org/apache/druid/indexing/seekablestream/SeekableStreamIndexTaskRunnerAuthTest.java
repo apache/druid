@@ -375,7 +375,7 @@ public class SeekableStreamIndexTaskRunnerAuthTest
         SeekableStreamIndexTaskIOConfig<String, String> ioConfig
     )
     {
-      super(id, null, null, dataSchema, tuningConfig, ioConfig, null, null);
+      super(id, null, null, dataSchema, tuningConfig, ioConfig, null, null, null, "v1");
     }
 
     @Override
@@ -392,6 +392,12 @@ public class SeekableStreamIndexTaskRunnerAuthTest
 
     @Override
     protected RecordSupplier<String, String, ByteEntity> newTaskRecordSupplier(final TaskToolbox toolbox)
+    {
+      return null;
+    }
+
+    @Override
+    public SeekableStreamIndexTask<String, String, ?> withNewIoConfig(SeekableStreamIndexTaskIOConfig<String, String> newIoConfig)
     {
       return null;
     }

@@ -31,6 +31,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.utils.RuntimeInfo;
@@ -67,7 +68,9 @@ public class RabbitStreamIndexTask extends SeekableStreamIndexTask<String, Long,
         tuningConfig,
         ioConfig,
         context,
-        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE)
+        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE),
+        null,
+        null
     );
     this.configMapper = configMapper;
 
@@ -120,6 +123,21 @@ public class RabbitStreamIndexTask extends SeekableStreamIndexTask<String, Long,
       tuningConfig.getRecordBufferOfferTimeout(),
       maxRecordsPerPoll
       );
+  }
+
+  @Override
+  public SeekableStreamIndexTask<String, Long, ?> withNewIoConfig(SeekableStreamIndexTaskIOConfig<String, Long> newIoConfig)
+  {
+    return new RabbitStreamIndexTask(
+        getId(),
+        getSupervisorId(),
+        getTaskResource(),
+        getDataSchema(),
+        getTuningConfig(),
+        (RabbitStreamIndexTaskIOConfig) newIoConfig,
+        getContext(),
+        configMapper
+    );
   }
 
   @Override

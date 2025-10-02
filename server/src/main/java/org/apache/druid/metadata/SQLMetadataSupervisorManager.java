@@ -89,6 +89,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
   {
     dbi.withHandle(
         handle -> {
+          String created_date = spec.getVersion().orElse(DateTimes.nowUtc().toString());
           handle.createStatement(
               StringUtils.format(
                   "INSERT INTO %s (spec_id, created_date, payload) VALUES (:spec_id, :created_date, :payload)",
@@ -96,7 +97,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
               )
           )
                 .bind("spec_id", id)
-                .bind("created_date", DateTimes.nowUtc().toString())
+                .bind("created_date", created_date)
                 .bind("payload", jsonMapper.writeValueAsBytes(spec))
                 .execute();
 

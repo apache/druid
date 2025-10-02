@@ -82,7 +82,8 @@ public class RabbitStreamSupervisorSpec extends SeekableStreamSupervisorSpec
         emitter,
         monitorSchedulerConfig,
         rowIngestionMetersFactory,
-        supervisorStateManagerConfig);
+        supervisorStateManagerConfig,
+        null);
   }
 
   @Override

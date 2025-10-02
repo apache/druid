@@ -98,6 +98,11 @@ public abstract class OrderedSequenceNumber<SequenceOffsetType>
   public boolean isMoreToReadBeforeReadingRecord(OrderedSequenceNumber<SequenceOffsetType> end,
                                                  boolean isEndOffsetExclusive)
   {
+    // This happens in the situations where earlier sequences had a different partition mapping and has now been updated.
+    // Since the end is not defined, we can't really say if there is more to read or not.
+    if (end.sequenceNumber == null) {
+      return false;
+    }
     final int compareToEnd = this.compareTo(end);
     return isEndOffsetExclusive ? compareToEnd < 0 : compareToEnd <= 0;
   }

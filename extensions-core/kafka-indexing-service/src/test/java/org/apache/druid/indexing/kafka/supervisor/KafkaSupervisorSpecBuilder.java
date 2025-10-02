@@ -30,6 +30,7 @@ import java.util.function.Consumer;
 public class KafkaSupervisorSpecBuilder
 {
   private String id;
+  private Boolean usePersistentTasks;
   private final DataSchema.Builder dataSchema = new DataSchema.Builder();
   private final KafkaIOConfigBuilder ioConfig = new KafkaIOConfigBuilder();
   private final KafkaTuningConfigBuilder tuningConfig = new KafkaTuningConfigBuilder();
@@ -55,6 +56,12 @@ public class KafkaSupervisorSpecBuilder
   public KafkaSupervisorSpecBuilder withId(String id)
   {
     this.id = id;
+    return this;
+  }
+  
+  public KafkaSupervisorSpecBuilder withUsePersistentTasks(Boolean usePersistentTasks)
+  {
+    this.usePersistentTasks = usePersistentTasks;
     return this;
   }
 
@@ -89,6 +96,7 @@ public class KafkaSupervisorSpecBuilder
         ioConfig.build(),
         null,
         false,
+        usePersistentTasks,
         // Jackson injected params, not needed while posting a supervisor to the Overlord
         null, null, null, null, null, null, null, null, null
     );
