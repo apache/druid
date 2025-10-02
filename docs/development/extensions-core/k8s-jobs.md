@@ -48,9 +48,9 @@ Other configurations required are:
 Druid operators can dynamically tune certain features within this extension. You don't need to restart the Overlord
 service for these changes to take effect.
 
-Druid can dynamically tune [pod template selection](#pod-template-selection), which allows you to configure the pod 
-template based on the task to be run. To enable dynamic pod template selection, first configure the 
-[custom template pod adapter](#custom-template-pod-adapter).
+Druid can dynamically tune [pod template selection](#pod-template-selection) and [capacity](#properties).
+
+Pod template selection allows you to configure the pod template based on the task to be run. To enable dynamic pod template selection, first configure the [custom template pod adapter](#custom-template-pod-adapter).
 
 Use the following APIs to view and update the dynamic configuration for the Kubernetes task runner.
 
@@ -126,7 +126,8 @@ Host: http://ROUTER_IP:ROUTER_PORT
         "type": ["index_kafka"]
       }
     ]
-  }
+  },
+  "capacity": 12
 }
 ```
 </details>
@@ -193,7 +194,8 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/k8s/taskrunner/executionconf
         "type": ["index_kafka"]
       }
     ]
-  }
+  },
+  "capacity": 6
 }'
 ```
 
@@ -225,7 +227,8 @@ Content-Type: application/json
         "type": ["index_kafka"]
       }
     ]
-  }
+  },
+  "capacity": 6
 }
 ```
 
@@ -309,7 +312,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
       "comment": "",
       "ip": "127.0.0.1"
     },
-    "payload": "{\"type\": \"default\",\"podTemplateSelectStrategy\":{\"type\": \"taskType\"}",
+    "payload": "{\"type\": \"default\",\"podTemplateSelectStrategy\":{\"type\": \"taskType\"},\"capacity\":6",
     "auditTime": "2024-06-13T20:59:51.622Z"
   }
 ]
