@@ -19,11 +19,9 @@
 
 package org.apache.druid.segment.data;
 
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.segment.CompressedPools;
-import org.apache.druid.segment.nested.ObjectStorageEncoding;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
@@ -42,7 +40,6 @@ public class CompressedVariableSizedBlobColumnSerializer implements Serializer
   private final String offsetsFile;
   private final String blobsFile;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
-  private final ObjectStorageEncoding objectStorageEncoding;
   private final CompressionStrategy compression;
 
   private int numValues;
@@ -54,7 +51,6 @@ public class CompressedVariableSizedBlobColumnSerializer implements Serializer
   public CompressedVariableSizedBlobColumnSerializer(
       final String filenameBase,
       final SegmentWriteOutMedium segmentWriteOutMedium,
-      final ObjectStorageEncoding objectStorageEncoding,
       final CompressionStrategy compression
   )
   {
@@ -62,7 +58,6 @@ public class CompressedVariableSizedBlobColumnSerializer implements Serializer
     this.offsetsFile = getCompressedOffsetsFileName(filenameBase);
     this.blobsFile = getCompressedBlobsFileName(filenameBase);
     this.segmentWriteOutMedium = segmentWriteOutMedium;
-    this.objectStorageEncoding = objectStorageEncoding;
     this.compression = compression;
     this.numValues = 0;
   }
@@ -71,40 +66,28 @@ public class CompressedVariableSizedBlobColumnSerializer implements Serializer
   {
     numValues = 0;
     currentOffset = 0;
-    if (ObjectStorageEncoding.SMILE.equals(objectStorageEncoding)) {
-      offsetsSerializer = new CompressedLongsSerializer(
-          segmentWriteOutMedium,
-          compression,
-          segmentWriteOutMedium.getCloser()
-      );
-      offsetsSerializer.open();
+    offsetsSerializer = new CompressedLongsSerializer(
+        segmentWriteOutMedium,
+        compression,
+        segmentWriteOutMedium.getCloser()
+    );
+    offsetsSerializer.open();
 
-      valuesSerializer = new CompressedBlockSerializer(
-          segmentWriteOutMedium,
-          compression,
-          CompressedPools.BUFFER_SIZE,
-          segmentWriteOutMedium.getCloser()
-      );
-      valuesSerializer.open();
-    } else if (ObjectStorageEncoding.NONE.equals(objectStorageEncoding)) {
-      // skip  skip serialize
-    } else {
-      throw DruidException.defensive("unreachable");
-    }
-
+    valuesSerializer = new CompressedBlockSerializer(
+        segmentWriteOutMedium,
+        compression,
+        CompressedPools.BUFFER_SIZE,
+        segmentWriteOutMedium.getCloser()
+    );
+    valuesSerializer.open();
   }
 
   public void addValue(byte[] bytes) throws IOException
   {
-    if (ObjectStorageEncoding.SMILE.equals(objectStorageEncoding)) {
-      valuesSerializer.addValue(bytes);
-      currentOffset += bytes.length;
-      offsetsSerializer.add(currentOffset);
-    } else if (ObjectStorageEncoding.NONE.equals(objectStorageEncoding)) {
-      // skip serialize
-    } else {
-      throw DruidException.defensive("unreachable");
-    }
+    valuesSerializer.addValue(bytes);
+
+    currentOffset += bytes.length;
+    offsetsSerializer.add(currentOffset);
     numValues++;
     if (numValues < 0) {
       throw new ColumnCapacityExceededException(filenameBase);
@@ -113,15 +96,9 @@ public class CompressedVariableSizedBlobColumnSerializer implements Serializer
 
   public void addValue(ByteBuffer bytes) throws IOException
   {
-    if (ObjectStorageEncoding.SMILE.equals(objectStorageEncoding)) {
-      currentOffset += bytes.remaining();
-      valuesSerializer.addValue(bytes);
-      offsetsSerializer.add(currentOffset);
-    } else if (ObjectStorageEncoding.NONE.equals(objectStorageEncoding)) {
-      // skip serialize
-    } else {
-      throw DruidException.defensive("unreachable");
-    }
+    currentOffset += bytes.remaining();
+    valuesSerializer.addValue(bytes);
+    offsetsSerializer.add(currentOffset);
     numValues++;
     if (numValues < 0) {
       throw new ColumnCapacityExceededException(filenameBase);
@@ -139,13 +116,11 @@ public class CompressedVariableSizedBlobColumnSerializer implements Serializer
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     META_SERDE_HELPER.writeTo(channel, this);
-    if (ObjectStorageEncoding.SMILE.equals(objectStorageEncoding)) {
-      try (SmooshedWriter sub = smoosher.addWithSmooshedWriter(offsetsFile, offsetsSerializer.getSerializedSize())) {
-        offsetsSerializer.writeTo(sub, smoosher);
-      }
-      try (SmooshedWriter sub = smoosher.addWithSmooshedWriter(blobsFile, valuesSerializer.getSerializedSize())) {
-        valuesSerializer.writeTo(sub, smoosher);
-      }
+    try (SmooshedWriter sub = smoosher.addWithSmooshedWriter(offsetsFile, offsetsSerializer.getSerializedSize())) {
+      offsetsSerializer.writeTo(sub, smoosher);
+    }
+    try (SmooshedWriter sub = smoosher.addWithSmooshedWriter(blobsFile, valuesSerializer.getSerializedSize())) {
+      valuesSerializer.writeTo(sub, smoosher);
     }
   }
 

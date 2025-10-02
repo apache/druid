@@ -329,7 +329,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
       compressedRawColumn = closer.register(compressedRawColumnSupplier.get());
     }
 
-    if (compressedRawColumn != null) {
+    if (compressedRawColumnSupplier != null) {
       final ByteBuffer valueBuffer = compressedRawColumn.get(rowNum);
       return STRATEGY.fromByteBuffer(valueBuffer, valueBuffer.remaining());
     }
@@ -337,12 +337,16 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
     ReadableOffset offset = new AtomicIntegerReadableOffset(new AtomicInteger(rowNum));
     final List<StructuredDataBuilder.Element> elements =
         getAllParsedFields().stream()
-                            .map(pair -> StructuredDataBuilder.Element.of(
-                                pair.rhs,
-                                getColumnHolder(pair.lhs.fieldName, pair.lhs.fieldIndex).getColumn()
-                                                                                        .makeColumnValueSelector(offset)
-                                                                                        .getObject()
-                            ))
+                            .map(pair -> {
+                              NestedFieldDictionaryEncodedColumn column = (NestedFieldDictionaryEncodedColumn) getColumnHolder(
+                                  pair.lhs.fieldName,
+                                  pair.lhs.fieldIndex
+                              ).getColumn();
+                              return StructuredDataBuilder.Element.of(
+                                  pair.rhs,
+                                  column.lookupObject(rowNum)
+                              );
+                            })
                             .collect(Collectors.toList());
     return new StructuredDataBuilder(elements).build();
   }
@@ -386,7 +390,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
         if (nullValues.get(offset.getOffset())) {
           return null;
         }
-        if (compressedRawColumn != null) {
+        if (compressedRawColumnSupplier != null) {
           final ByteBuffer valueBuffer = compressedRawColumn.get(offset.getOffset());
           return STRATEGY.fromByteBuffer(valueBuffer, valueBuffer.remaining());
         }
@@ -485,7 +489,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
           // maybe someday can use bitmap batch operations for nulls?
           return null;
         }
-        if (compressedRawColumn != null) {
+        if (compressedRawColumnSupplier != null) {
           final ByteBuffer valueBuffer = compressedRawColumn.get(offset);
           return STRATEGY.fromByteBuffer(valueBuffer, valueBuffer.remaining());
         } else {

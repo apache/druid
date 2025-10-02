@@ -23,7 +23,6 @@ import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.segment.CompressedPools;
-import org.apache.druid.segment.nested.ObjectStorageEncoding;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.junit.Assert;
@@ -46,55 +45,6 @@ public class CompressedVariableSizeBlobColumnTest
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
   @Test
-  public void testNoneEncoding() throws IOException
-  {
-    // value sizes increase until they span at least 3 pages of compressed buffers
-    final File tmpFile = tempFolder.newFolder();
-    final FileSmoosher smoosher = new FileSmoosher(tmpFile);
-
-    final File tmpFile2 = tempFolder.newFolder();
-    final SegmentWriteOutMedium writeOutMedium =
-        TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(tmpFile2);
-
-    final String fileNameBase = "test";
-
-    final CompressionStrategy compressionStrategy = CompressionStrategy.LZ4;
-    CompressedVariableSizedBlobColumnSerializer serializer = new CompressedVariableSizedBlobColumnSerializer(
-        fileNameBase,
-        writeOutMedium,
-        ObjectStorageEncoding.NONE,
-        compressionStrategy
-    );
-    serializer.open();
-
-    int numWritten = 0;
-    final Random r = ThreadLocalRandom.current();
-    for (int i = 0; i < r.nextInt(10); i++) {
-      byte[] value = new byte[r.nextInt(5)];
-      serializer.addValue(value);
-      numWritten++;
-    }
-
-    SmooshedWriter writer = smoosher.addWithSmooshedWriter(fileNameBase, serializer.getSerializedSize());
-    serializer.writeTo(writer, smoosher);
-    writer.close();
-    smoosher.close();
-    SmooshedFileMapper fileMapper = SmooshedFileMapper.load(tmpFile);
-
-    ByteBuffer base = fileMapper.mapFile(fileNameBase);
-    CompressedVariableSizedBlobColumnSupplier supplier = CompressedVariableSizedBlobColumnSupplier.fromByteBuffer(
-        fileNameBase,
-        base,
-        ByteOrder.nativeOrder(),
-        ByteOrder.nativeOrder(),
-        fileMapper
-    );
-
-    Assert.assertEquals(numWritten, supplier.getNumElements());
-    Assert.assertNull(supplier.get());
-  }
-
-  @Test
   public void testSomeValues() throws IOException
   {
     // value sizes increase until they span at least 3 pages of compressed buffers
@@ -111,7 +61,6 @@ public class CompressedVariableSizeBlobColumnTest
     CompressedVariableSizedBlobColumnSerializer serializer = new CompressedVariableSizedBlobColumnSerializer(
         fileNameBase,
         writeOutMedium,
-        ObjectStorageEncoding.SMILE,
         compressionStrategy
     );
     serializer.open();
@@ -176,7 +125,6 @@ public class CompressedVariableSizeBlobColumnTest
     CompressedVariableSizedBlobColumnSerializer serializer = new CompressedVariableSizedBlobColumnSerializer(
         fileNameBase,
         writeOutMedium,
-        ObjectStorageEncoding.SMILE,
         compressionStrategy
     );
     serializer.open();
@@ -240,7 +188,6 @@ public class CompressedVariableSizeBlobColumnTest
     CompressedVariableSizedBlobColumnSerializer serializer = new CompressedVariableSizedBlobColumnSerializer(
         fileNameBase,
         writeOutMedium,
-        ObjectStorageEncoding.SMILE,
         compressionStrategy
     );
     serializer.open();

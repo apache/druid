@@ -22,7 +22,6 @@ package org.apache.druid.segment.data;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -76,12 +75,12 @@ public class CompressedVariableSizedBlobColumnSupplier implements Supplier<Compr
 
   private final int numElements;
 
-  @Nullable private final Supplier<CompressedLongsReader> offsetReaderSupplier;
-  @Nullable private final Supplier<CompressedBlockReader> blockDataReaderSupplier;
+  private final Supplier<CompressedLongsReader> offsetReaderSupplier;
+  private final Supplier<CompressedBlockReader> blockDataReaderSupplier;
 
   private CompressedVariableSizedBlobColumnSupplier(
-      @Nullable ByteBuffer offsetsBuffer,
-      @Nullable ByteBuffer dataBuffer,
+      ByteBuffer offsetsBuffer,
+      ByteBuffer dataBuffer,
       ByteOrder compressionOrder,
       ByteOrder valueOrder,
       int numElements,
@@ -89,34 +88,17 @@ public class CompressedVariableSizedBlobColumnSupplier implements Supplier<Compr
   )
   {
     this.numElements = numElements;
-    this.offsetReaderSupplier = offsetsBuffer == null
-                                ? null
-                                : CompressedLongsReader.fromByteBuffer(offsetsBuffer, compressionOrder);
-    this.blockDataReaderSupplier = dataBuffer == null
-                                   ? null
-                                   : CompressedBlockReader.fromByteBuffer(
-                                       dataBuffer,
-                                       compressionOrder,
-                                       valueOrder,
-                                       copyValuesOnRead
-                                   );
+    this.offsetReaderSupplier = CompressedLongsReader.fromByteBuffer(offsetsBuffer, compressionOrder);
+    this.blockDataReaderSupplier = CompressedBlockReader.fromByteBuffer(dataBuffer, compressionOrder, valueOrder, copyValuesOnRead);
   }
 
   @Override
   public CompressedVariableSizedBlobColumn get()
   {
-    if (offsetReaderSupplier == null || blockDataReaderSupplier == null) {
-      return null;
-    }
     return new CompressedVariableSizedBlobColumn(
         numElements,
         offsetReaderSupplier.get(),
         blockDataReaderSupplier.get()
     );
-  }
-
-  int getNumElements()
-  {
-    return numElements;
   }
 }
