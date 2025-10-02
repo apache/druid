@@ -25,12 +25,13 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
  * ExecutorService which is terminated and shutdown from the moment of creation and not able to accept any tasks.
  */
-final class DummyExecutorService implements ExecutorService
+final class DummyExecutorService implements ExecutorService, ScheduledExecutorFactory
 {
   static final DummyExecutorService INSTANCE = new DummyExecutorService();
 
@@ -114,6 +115,12 @@ final class DummyExecutorService implements ExecutorService
 
   @Override
   public void execute(Runnable command)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ScheduledExecutorService create(int corePoolSize, String nameFormat)
   {
     throw new UnsupportedOperationException();
   }

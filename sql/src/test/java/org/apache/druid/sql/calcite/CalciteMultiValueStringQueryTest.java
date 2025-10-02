@@ -38,6 +38,7 @@ import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.epinephelinae.UnexpectedMultiValueDimensionException;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
@@ -118,12 +119,11 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     testQueryThrows(
         "SELECT concat(dim3, 'foo'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         groupByOnMultiValueColumnDisabled,
-        RuntimeException.class,
+        UnexpectedMultiValueDimensionException.class,
         ThrowableMessageMatcher.hasMessage(
             CoreMatchers.containsString(
                 StringUtils.format(
-                    "org.apache.druid.query.groupby.epinephelinae.UnexpectedMultiValueDimensionException: "
-                    + "Encountered multi-value dimension [%s] that cannot be processed with '%s' set to false."
+                    "Encountered multi-value dimension [%s] that cannot be processed with '%s' set to false."
                     + " Consider setting '%s' to true in your query context.",
                     "v0",
                     GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,

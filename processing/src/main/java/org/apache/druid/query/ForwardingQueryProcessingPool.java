@@ -20,11 +20,15 @@
 package org.apache.druid.query;
 
 import com.google.common.util.concurrent.ForwardingListeningExecutorService;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import javax.annotation.Nullable;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Default implementation of {@link QueryProcessingPool} that just forwards operations, including query execution tasks,
@@ -33,16 +37,50 @@ import java.util.concurrent.ExecutorService;
 public class ForwardingQueryProcessingPool extends ForwardingListeningExecutorService implements QueryProcessingPool
 {
   private final ListeningExecutorService delegate;
+  @Nullable
+  private final ScheduledExecutorService timeoutService;
 
   public ForwardingQueryProcessingPool(ExecutorService executorService)
   {
+    this(MoreExecutors.listeningDecorator(executorService), null);
+  }
+
+  public ForwardingQueryProcessingPool(
+      ExecutorService executorService,
+      @Nullable ScheduledExecutorService timeoutService
+  )
+  {
     this.delegate = MoreExecutors.listeningDecorator(executorService);
+    if (timeoutService != null) {
+      this.timeoutService = MoreExecutors.listeningDecorator(timeoutService);
+    } else {
+      this.timeoutService = null;
+    }
   }
 
   @Override
   public <T, V> ListenableFuture<T> submitRunnerTask(PrioritizedQueryRunnerCallable<T, V> task)
   {
     return delegate().submit(task);
+  }
+
+  @Override
+  public <T, V> ListenableFuture<T> submitRunnerTask(
+      PrioritizedQueryRunnerCallable<T, V> task,
+      long timeout,
+      TimeUnit unit
+  )
+  {
+    if (timeoutService != null) {
+      return Futures.withTimeout(
+          delegate().submit(task),
+          timeout,
+          TimeUnit.MILLISECONDS,
+          timeoutService
+      );
+    } else {
+      return submitRunnerTask(task);
+    }
   }
 
   @Override

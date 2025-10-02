@@ -44,6 +44,8 @@ public class QueryContexts
   public static final String PRIORITY_KEY = "priority";
   public static final String LANE_KEY = "lane";
   public static final String TIMEOUT_KEY = "timeout";
+  public static final String PER_SEGMENT_TIMEOUT_KEY = "perSegmentTimeout";
+  public static final String IS_SINGLE_THREADED_KEY = "isSingleThreaded";
   public static final String MAX_SCATTER_GATHER_BYTES_KEY = "maxScatterGatherBytes";
   public static final String MAX_QUEUED_BYTES_KEY = "maxQueuedBytes";
   public static final String DEFAULT_TIMEOUT_KEY = "defaultTimeout";

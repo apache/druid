@@ -32,7 +32,6 @@ import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Collections;
@@ -504,6 +503,36 @@ public class QueryContext
             timeout
         )
     );
+  }
+
+  public boolean hasPerSegmentTimeout()
+  {
+    return getPerSegmentTimeout() != QueryContexts.NO_TIMEOUT;
+  }
+
+  public long getPerSegmentTimeout()
+  {
+    return getPerSegmentTimeout(QueryContexts.NO_TIMEOUT);
+  }
+
+  public long getPerSegmentTimeout(long defaultTimeout)
+  {
+    final long perSegmentTimeout = getLong(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, defaultTimeout);
+    if (perSegmentTimeout >= 0) {
+      return perSegmentTimeout;
+    }
+    throw new BadQueryContextException(
+        StringUtils.format(
+            "Per-segment timeout [%s] must be a non negative value, but was %d",
+            QueryContexts.PER_SEGMENT_TIMEOUT_KEY,
+            perSegmentTimeout
+        )
+    );
+  }
+
+  public boolean useSingleThreaded()
+  {
+    return getBoolean(QueryContexts.IS_SINGLE_THREADED_KEY, false);
   }
 
   @Nullable

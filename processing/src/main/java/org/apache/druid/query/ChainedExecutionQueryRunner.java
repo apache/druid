@@ -21,13 +21,8 @@ package org.apache.druid.query;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.MergeIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -36,10 +31,6 @@ import org.apache.druid.query.context.ResponseContext;
 
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 /**
  * A QueryRunner that combines a list of other QueryRunners and executes them in parallel on an executor.
@@ -62,7 +53,6 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
   private final Iterable<QueryRunner<T>> queryables;
   private final QueryWatcher queryWatcher;
 
-
   public ChainedExecutionQueryRunner(
       QueryProcessingPool queryProcessingPool,
       QueryWatcher queryWatcher,
@@ -78,96 +68,60 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
   public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
   {
     Query<T> query = queryPlus.getQuery();
-    final int priority = query.context().getPriority();
     final Ordering ordering = query.getResultOrdering();
     final QueryPlus<T> threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
+    final long timeoutAt = System.currentTimeMillis() + query.context().getTimeout();
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<>()
         {
           @Override
           public Iterator<T> make()
           {
-            // Make it a List<> to materialize all of the values (so that it will submit everything to the executor)
-            List<ListenableFuture<Iterable<T>>> futures =
-                Lists.newArrayList(
-                    Iterables.transform(
-                        queryables,
-                        input -> {
-                          if (input == null) {
-                            throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
-                          }
+            SegmentProcessingPoolUtil<T, Iterable<T>> processingUtil = new SegmentProcessingPoolUtil<>(
+                queryProcessingPool,
+                queryWatcher
+            );
+            List<Iterable<T>> results = processingUtil.submitRunnersAndWaitForResults(
+                queryables,
+                threadSafeQueryPlus,
+                input -> {
+                  try {
+                    Sequence<T> result = input.run(threadSafeQueryPlus, responseContext);
+                    if (result == null) {
+                      throw new ISE("Got a null result! Segments are missing!");
+                    }
 
-                          return queryProcessingPool.submitRunnerTask(
-                              new AbstractPrioritizedQueryRunnerCallable<>(priority, input)
-                              {
-                                @Override
-                                public Iterable<T> call()
-                                {
-                                  try {
-                                    Sequence<T> result = input.run(threadSafeQueryPlus, responseContext);
-                                    if (result == null) {
-                                      throw new ISE("Got a null result! Segments are missing!");
-                                    }
+                    List<T> retVal = result.toList();
+                    if (retVal == null) {
+                      throw new ISE("Got a null list of results");
+                    }
 
-                                    List<T> retVal = result.toList();
-                                    if (retVal == null) {
-                                      throw new ISE("Got a null list of results");
-                                    }
+                    return retVal;
+                  }
+                  catch (QueryInterruptedException e) {
+                    throw new RuntimeException(e);
+                  }
+                  catch (QueryTimeoutException e) {
+                    throw e;
+                  }
+                  catch (Exception e) {
+                    if (query.context().isDebug()) {
+                      log.error(e, "Exception with one of the sequences!");
+                    } else {
+                      log.noStackTrace().error(e, "Exception with one of the sequences!");
+                    }
+                    Throwables.propagateIfPossible(e);
+                    throw new RuntimeException(e);
+                  }
+                },
+                query.context().useSingleThreaded(),
+                timeoutAt
+            );
 
-                                    return retVal;
-                                  }
-                                  catch (QueryInterruptedException e) {
-                                    throw new RuntimeException(e);
-                                  }
-                                  catch (QueryTimeoutException e) {
-                                    throw e;
-                                  }
-                                  catch (Exception e) {
-                                    if (query.context().isDebug()) {
-                                      log.error(e, "Exception with one of the sequences!");
-                                    } else {
-                                      log.noStackTrace().error(e, "Exception with one of the sequences!");
-                                    }
-                                    Throwables.propagateIfPossible(e);
-                                    throw new RuntimeException(e);
-                                  }
-                                }
-                              });
-                        }
-                    )
-                );
-
-            ListenableFuture<List<Iterable<T>>> future = Futures.allAsList(futures);
-            queryWatcher.registerQueryFuture(query, future);
-
-            try {
-              final QueryContext context = query.context();
-              return new MergeIterable<>(
-                  context.hasTimeout() ?
-                      future.get(context.getTimeout(), TimeUnit.MILLISECONDS) :
-                      future.get(),
-                  ordering.nullsFirst()
-              ).iterator();
-            }
-            catch (InterruptedException e) {
-              log.noStackTrace().warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
-              //Note: canceling combinedFuture first so that it can complete with INTERRUPTED as its final state. See ChainedExecutionQueryRunnerTest.testQueryTimeout()
-              GuavaUtils.cancelAll(true, future, futures);
-              throw new QueryInterruptedException(e);
-            }
-            catch (CancellationException e) {
-              throw new QueryInterruptedException(e);
-            }
-            catch (TimeoutException e) {
-              log.warn("Query timeout, cancelling pending results for query id [%s]", query.getId());
-              GuavaUtils.cancelAll(true, future, futures);
-              throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query [%s] timed out", query.getId()));
-            }
-            catch (ExecutionException e) {
-              GuavaUtils.cancelAll(true, future, futures);
-              Throwables.propagateIfPossible(e.getCause());
-              throw new RuntimeException(e.getCause());
-            }
+            return new MergeIterable<>(
+                results,
+                ordering.nullsFirst()
+            ).iterator();
           }
 
           @Override

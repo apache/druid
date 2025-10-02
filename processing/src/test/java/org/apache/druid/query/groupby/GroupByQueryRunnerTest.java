@@ -138,9 +138,6 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.Description;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
@@ -151,7 +148,6 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.internal.matchers.ThrowableCauseMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.ExternalResource;
 import org.junit.runner.RunWith;
@@ -166,7 +162,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -1362,30 +1357,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     final String dimName = "placementish";
 
     if (!vectorize) {
-      expectedException.expect(RuntimeException.class);
-      expectedException.expectCause(CoreMatchers.instanceOf(ExecutionException.class));
-      expectedException.expectCause(
-          ThrowableCauseMatcher.hasCause(CoreMatchers.instanceOf(UnexpectedMultiValueDimensionException.class))
-      );
-      expectedException.expect(
-          new BaseMatcher<Throwable>()
-          {
-            @Override
-            public boolean matches(Object o)
-            {
-              final UnexpectedMultiValueDimensionException cause =
-                  (UnexpectedMultiValueDimensionException) ((Throwable) o).getCause().getCause();
-
-              return dimName.equals(cause.getDimensionName());
-            }
-
-            @Override
-            public void describeTo(Description description)
-            {
-              description.appendText("an UnexpectedMultiValueDimensionException with dimension [placementish]");
-            }
-          }
-      );
+      expectedException.expect(UnexpectedMultiValueDimensionException.class);
       expectedException.expectMessage(
           StringUtils.format(
               "Encountered multi-value dimension [%s] that cannot be processed with '%s' set to false."

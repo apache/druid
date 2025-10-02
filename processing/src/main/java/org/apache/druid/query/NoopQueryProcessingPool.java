@@ -131,4 +131,14 @@ public class NoopQueryProcessingPool implements QueryProcessingPool
   {
     return DruidException.defensive("Unexpected call made to NoopQueryProcessingPool");
   }
+
+  @Override
+  public <T, V> ListenableFuture<T> submitRunnerTask(
+      PrioritizedQueryRunnerCallable<T, V> task,
+      long timeout,
+      TimeUnit unit
+  )
+  {
+    throw unsupportedException();
+  }
 }

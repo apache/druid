@@ -27,6 +27,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
@@ -1317,8 +1318,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     testQueryThrows(
         "SELECT  count(*) FROM wikipedia where channel = (select channel from wikipedia order by __time desc LIMIT 2 OFFSET 6)",
-        RuntimeException.class,
-        "java.util.concurrent.ExecutionException: org.apache.druid.error.DruidException: Subquery expression returned more than one row"
+        DruidException.class,
+        "Subquery expression returned more than one row"
     );
   }
 

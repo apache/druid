@@ -22,6 +22,7 @@ package org.apache.druid.query.groupby;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.guice.BuiltInTypesModule;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
@@ -811,9 +812,9 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
 
     if (!allCanVectorize) {
       if (vectorize == QueryContexts.Vectorize.FORCE) {
-        Throwable t = Assert.assertThrows(RuntimeException.class, runner::get);
+        Throwable t = Assert.assertThrows(ISE.class, runner::get);
         Assert.assertEquals(
-            "java.util.concurrent.ExecutionException: java.lang.RuntimeException: org.apache.druid.java.util.common.ISE: Cannot vectorize!",
+            "Cannot vectorize!",
             t.getMessage()
         );
         return;
