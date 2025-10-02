@@ -346,7 +346,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           buffer,
           builder,
           columnConfig,
-          formatSpec,
+          formatSpec != null ? formatSpec.getBitmapEncoding() : bitmapSerdeFactory,
           byteOrder,
           parent == null ? null : (NestedDataColumnSupplier) parent.getColumnSupplier()
       );

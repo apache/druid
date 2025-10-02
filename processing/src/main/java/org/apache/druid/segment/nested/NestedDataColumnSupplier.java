@@ -53,7 +53,7 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
       ByteBuffer bb,
       ColumnBuilder columnBuilder,
       ColumnConfig columnConfig,
-      NestedCommonFormatColumnFormatSpec nestedCommonFormatColumnFormatSpec,
+      BitmapSerdeFactory bitmapSerdeFactory,
       ByteOrder byteOrder,
       NestedDataColumnSupplier parent
   )
@@ -129,13 +129,12 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
           );
         }
 
-
         final ByteBuffer rawBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
             NestedCommonFormatColumnSerializer.RAW_FILE_NAME
         );
-        compressedRawColumnSupplier = ObjectStorageEncoding.NONE.equals(nestedCommonFormatColumnFormatSpec.getObjectStorageEncoding())
+        compressedRawColumnSupplier = rawBuffer == null
                                       ? null
                                       : CompressedVariableSizedBlobColumnSupplier.fromByteBuffer(
                                           ColumnSerializerUtils.getInternalFileName(
@@ -154,13 +153,9 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
               columnName,
               ColumnSerializerUtils.NULL_BITMAP_FILE_NAME
           );
-          nullValues = nestedCommonFormatColumnFormatSpec.getBitmapEncoding()
-                                                         .getObjectStrategy()
-                                                         .fromByteBufferWithSize(nullIndexBuffer);
+          nullValues = bitmapSerdeFactory.getObjectStrategy().fromByteBufferWithSize(nullIndexBuffer);
         } else {
-          nullValues = nestedCommonFormatColumnFormatSpec.getBitmapEncoding()
-                                                         .getBitmapFactory()
-                                                         .makeEmptyImmutableBitmap();
+          nullValues = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();
         }
 
         return new NestedDataColumnSupplier(
@@ -175,7 +170,7 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
             arrayDictionarySupplier,
             columnConfig,
             mapper,
-            nestedCommonFormatColumnFormatSpec.getBitmapEncoding(),
+            bitmapSerdeFactory,
             byteOrder,
             logicalType
         );
@@ -191,7 +186,8 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
   private final String columnName;
   private final Supplier<? extends Indexed<ByteBuffer>> fieldSupplier;
   private final FieldTypeInfo fieldInfo;
-  @Nullable private final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
+  @Nullable
+  private final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
   private final ImmutableBitmap nullValues;
   private final Supplier<? extends Indexed<ByteBuffer>> stringDictionarySupplier;
   private final Supplier<FixedIndexed<Long>> longDictionarySupplier;

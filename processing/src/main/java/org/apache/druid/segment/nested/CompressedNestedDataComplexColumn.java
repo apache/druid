@@ -137,7 +137,6 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
   private final ByteOrder byteOrder;
   private final ConcurrentHashMap<Integer, BaseColumnHolder> columns = new ConcurrentHashMap<>();
   private CompressedVariableSizedBlobColumn compressedRawColumn;
-  private ArrayField arrayField;
 
   public CompressedNestedDataComplexColumn(
       String columnName,
@@ -393,14 +392,14 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
         if (compressedRawColumnSupplier != null) {
           final ByteBuffer valueBuffer = compressedRawColumn.get(offset.getOffset());
           return STRATEGY.fromByteBuffer(valueBuffer, valueBuffer.remaining());
+        } else {
+          List<StructuredDataBuilder.Element> elements =
+              Objects.requireNonNull(fieldSelectors)
+                     .stream()
+                     .map(c -> StructuredDataBuilder.Element.of(c.lhs, c.rhs.getObject()))
+                     .collect(Collectors.toList());
+          return new StructuredDataBuilder(elements).build();
         }
-        List<StructuredDataBuilder.Element> elements =
-            Objects.requireNonNull(fieldSelectors)
-                   .stream()
-                   .map(c -> StructuredDataBuilder.Element.of(c.lhs, c.rhs.getObject()))
-                   .collect(Collectors.toList());
-        return new StructuredDataBuilder(elements).build();
-
       }
 
       @Override
@@ -1273,16 +1272,23 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
   private Field getBaseOrArrayFieldFromPath(List<NestedPathPart> path)
   {
     TKeyDictionary fields = fieldsSupplier.get();
-    List<NestedPathPart> arrayPath = (!path.isEmpty() && path.get(path.size() - 1) instanceof NestedPathArrayElement)
-                                     ? path.subList(0, path.size() - 1)
-                                     : null;
+    List<List<NestedPathPart>> parsed = new ArrayList<>(fields.size());
     for (int i = 0; i < fields.size(); i++) {
       String field = StringUtils.fromUtf8(fields.get(i));
-      List<NestedPathPart> parsed = parsePath(field);
-      if (parsed.equals(path)) {
+      parsed.add(parsePath(field));
+      if (parsed.get(i).equals(path)) {
         return new BaseField(field, i);
-      } else if (parsed.equals(arrayPath)) {
-        return new ArrayField(new BaseField(field, i), ((NestedPathArrayElement) path.get(path.size() - 1)).getIndex());
+      }
+    }
+    if (!path.isEmpty() && path.get(path.size() - 1) instanceof NestedPathArrayElement) {
+      List<NestedPathPart> arrayPath = path.subList(0, path.size() - 1);
+      for (int i = 0; i < fields.size(); i++) {
+        if (parsed.get(i).equals(arrayPath)) {
+          return new ArrayField(
+              new BaseField(StringUtils.fromUtf8(fields.get(i)), i),
+              ((NestedPathArrayElement) path.get(path.size() - 1)).getIndex()
+          );
+        }
       }
     }
     return null;
