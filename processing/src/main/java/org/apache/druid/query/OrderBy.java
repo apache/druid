@@ -22,12 +22,13 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 
 import java.util.Objects;
 
-public class OrderBy
+public class OrderBy implements Cacheable
 {
   public static OrderBy ascending(String columnName)
   {
@@ -112,4 +113,9 @@ public class OrderBy
     return StringUtils.format("%s %s", columnName, order == Order.ASCENDING ? "ASC" : "DESC");
   }
 
+  @Override
+  public byte[] getCacheKey()
+  {
+    return StringUtils.toUtf8(toString());
+  }
 }
