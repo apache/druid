@@ -34,6 +34,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -59,8 +60,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Supplier;
 
@@ -188,83 +192,129 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           "canHandleSegments() is false. getCachedSegments() must be invoked only when canHandleSegments() returns true."
       );
     }
-    final File infoDir = getEffectiveInfoDir();
-    FileUtils.mkdirp(infoDir);
 
-    final List<DataSegment> cachedSegments = new ArrayList<>();
-    final File[] segmentsToLoad = infoDir.listFiles();
+    final File[] segmentsToLoad = retrieveSegmentMetadataFiles();
+    final ConcurrentLinkedQueue<DataSegment> cachedSegments = new ConcurrentLinkedQueue<>();
+    AtomicInteger ignoredFilesCounter = new AtomicInteger(0);
+    CountDownLatch latch = new CountDownLatch(segmentsToLoad.length);
 
-    int ignored = 0;
-
-    for (int i = 0; i < segmentsToLoad.length; i++) {
-      final File file = segmentsToLoad[i];
-      log.info("Loading segment cache file [%d/%d][%s].", i + 1, segmentsToLoad.length, file);
-      try {
-        final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
-        boolean removeInfo = false;
-        if (!segment.getId().toString().equals(file.getName())) {
-          log.warn("Ignoring cache file[%s] for segment[%s].", file.getPath(), segment.getId());
-          ignored++;
-        } else {
-          removeInfo = true;
-          final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
-          for (StorageLocation location : locations) {
-            // check for migrate from old nested local storage path format
-            final File legacyPath = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
-            if (legacyPath.exists()) {
-              final File destination = cacheEntry.toPotentialLocation(location.getPath());
-              FileUtils.mkdirp(destination);
-              final File[] oldFiles = legacyPath.listFiles();
-              final File[] newFiles = destination.listFiles();
-              // make sure old files exist and new files do not exist
-              if (oldFiles != null && oldFiles.length > 0 && newFiles != null && newFiles.length == 0) {
-                Files.move(legacyPath.toPath(), destination.toPath(), StandardCopyOption.ATOMIC_MOVE);
-              }
-              cleanupLegacyCacheLocation(location.getPath(), legacyPath);
-            }
-
-            if (cacheEntry.checkExists(location.getPath())) {
-              removeInfo = false;
-              final boolean reserveResult;
-              if (config.isVirtualStorage()) {
-                reserveResult = location.reserveWeak(cacheEntry);
-              } else {
-                reserveResult = location.reserve(cacheEntry);
-              }
-              if (!reserveResult) {
-                log.makeAlert(
-                    "storage[%s:%,d] has more segments than it is allowed. Currently loading Segment[%s:%,d]. Please increase druid.segmentCache.locations maxSize param",
-                    location.getPath(),
-                    location.availableSizeBytes(),
-                    segment.getId(),
-                    segment.getSize()
-                ).emit();
-              }
-              cachedSegments.add(segment);
-            }
-          }
-        }
-
-        if (removeInfo) {
-          final SegmentId segmentId = segment.getId();
-          log.warn("Unable to find cache file for segment[%s]. Deleting lookup entry.", segmentId);
-          removeInfoFile(segment);
-        }
-      }
-      catch (Exception e) {
-        log.makeAlert(e, "Failed to load segment from segment cache file.")
-           .addData("file", file)
-           .emit();
-      }
+    boolean hasCreatedNewExecutorServiceForCachingSegments = false;
+    ExecutorService executorService;
+    if (loadOnBootstrapExec != null) {
+      executorService = loadOnBootstrapExec;
+    } else {
+      executorService = MoreExecutors.newDirectExecutorService();
+      hasCreatedNewExecutorServiceForCachingSegments = true;
     }
 
-    if (ignored > 0) {
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    log.info("Retrieving [%d] cached segment metadata files to cache.", segmentsToLoad.length);
+
+    for (File file : segmentsToLoad) {
+      executorService.submit(() -> {
+        try {
+          loadToCachedSegmentsFromFile(cachedSegments, file, ignoredFilesCounter);
+        }
+        catch (Exception e) {
+          log.makeAlert(e, "Failed to load segment from segment cache file.")
+             .addData("file", file)
+             .emit();
+        }
+
+        latch.countDown();
+      });
+    }
+
+    try {
+      latch.await();
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      log.makeAlert(e, "Interrupted when trying to retrieve cached segment metadata files");
+    }
+
+    stopwatch.stop();
+    log.info("Retrieved [%d,%d] cached segments in [%d]ms.", cachedSegments.size(), segmentsToLoad.length, stopwatch.millisElapsed());
+
+    if (hasCreatedNewExecutorServiceForCachingSegments) {
+      executorService.shutdown();
+    }
+
+    if (ignoredFilesCounter.get() > 0) {
       log.makeAlert("Ignored misnamed segment cache files on startup.")
-         .addData("numIgnored", ignored)
+         .addData("numIgnored", ignoredFilesCounter.get())
          .emit();
     }
 
-    return cachedSegments;
+    return new ArrayList<>(cachedSegments);
+  }
+
+  private File[] retrieveSegmentMetadataFiles() throws IOException
+  {
+    final File infoDir = getEffectiveInfoDir();
+    FileUtils.mkdirp(infoDir);
+    File[] files = infoDir.listFiles();
+    return files == null ? new File[0] : files;
+  }
+
+  private void loadToCachedSegmentsFromFile(
+      ConcurrentLinkedQueue<DataSegment> cachedSegments,
+      File file,
+      AtomicInteger ignoredFilesCounter
+  ) throws IOException
+  {
+    final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
+
+    if (!segment.getId().toString().equals(file.getName())) {
+      log.warn("Ignoring cache file[%s] for segment[%s].", file.getPath(), segment.getId());
+      ignoredFilesCounter.incrementAndGet();
+      return;
+    }
+
+    boolean removeInfo = true;
+    final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
+
+    for (StorageLocation location : locations) {
+      // check for migrate from old nested local storage path format
+      final File legacyPath = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
+      if (legacyPath.exists()) {
+        final File destination = cacheEntry.toPotentialLocation(location.getPath());
+        FileUtils.mkdirp(destination);
+        final File[] oldFiles = legacyPath.listFiles();
+        final File[] newFiles = destination.listFiles();
+        // make sure old files exist and new files do not exist
+        if (oldFiles != null && oldFiles.length > 0 && newFiles != null && newFiles.length == 0) {
+          Files.move(legacyPath.toPath(), destination.toPath(), StandardCopyOption.ATOMIC_MOVE);
+        }
+        cleanupLegacyCacheLocation(location.getPath(), legacyPath);
+      }
+
+      if (cacheEntry.checkExists(location.getPath())) {
+        removeInfo = false;
+        final boolean reserveResult;
+        if (config.isVirtualStorage()) {
+          reserveResult = location.reserveWeak(cacheEntry);
+        } else {
+          reserveResult = location.reserve(cacheEntry);
+        }
+        if (!reserveResult) {
+          log.makeAlert(
+              "storage[%s:%,d] has more segments than it is allowed. Currently loading Segment[%s:%,d]. Please increase druid.segmentCache.locations maxSize param",
+              location.getPath(),
+              location.availableSizeBytes(),
+              segment.getId(),
+              segment.getSize()
+          ).emit();
+        }
+        cachedSegments.add(segment);
+      }
+    }
+
+    if (removeInfo) {
+      final SegmentId segmentId = segment.getId();
+      log.warn("Unable to find cache file for segment[%s]. Deleting lookup entry.", segmentId);
+      removeInfoFile(segment);
+    }
   }
 
   @Override
