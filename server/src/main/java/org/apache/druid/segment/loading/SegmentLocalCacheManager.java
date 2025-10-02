@@ -67,7 +67,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 /**
  *
@@ -198,13 +197,21 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     final ConcurrentLinkedQueue<DataSegment> cachedSegments = new ConcurrentLinkedQueue<>();
     AtomicInteger ignoredFilesCounter = new AtomicInteger(0);
     CountDownLatch latch = new CountDownLatch(segmentsToLoad.length);
-    ExecutorService exec = Objects.requireNonNullElseGet(loadOnBootstrapExec, MoreExecutors::newDirectExecutorService);
+
+    boolean hasCreatedNewExecutorServiceForCachingSegments = false;
+    ExecutorService executorService;
+    if (loadOnBootstrapExec != null) {
+      executorService = loadOnBootstrapExec;
+    } else {
+      executorService = MoreExecutors.newDirectExecutorService();
+      hasCreatedNewExecutorServiceForCachingSegments = true;
+    }
 
     Stopwatch stopwatch = Stopwatch.createStarted();
     log.info("Retrieving [%d] cached segment metadata files to cache.", segmentsToLoad.length);
 
     for (File file : segmentsToLoad) {
-      exec.submit(() -> {
+      executorService.submit(() -> {
         try {
           loadToCachedSegmentsFromFile(cachedSegments, file, ignoredFilesCounter);
         }
@@ -228,6 +235,10 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
     stopwatch.stop();
     log.info("Retrieved [%d,%d] cached segments in [%d]ms.", cachedSegments.size(), segmentsToLoad.length, stopwatch.millisElapsed());
+
+    if (hasCreatedNewExecutorServiceForCachingSegments) {
+      executorService.shutdown();
+    }
 
     if (ignoredFilesCounter.get() > 0) {
       log.makeAlert("Ignored misnamed segment cache files on startup.")
