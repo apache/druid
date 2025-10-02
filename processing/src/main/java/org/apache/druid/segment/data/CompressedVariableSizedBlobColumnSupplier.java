@@ -76,8 +76,8 @@ public class CompressedVariableSizedBlobColumnSupplier implements Supplier<Compr
 
   private final int numElements;
 
-  private final Supplier<CompressedLongsReader> offsetReaderSupplier;
-  private final Supplier<CompressedBlockReader> blockDataReaderSupplier;
+  @Nullable private final Supplier<CompressedLongsReader> offsetReaderSupplier;
+  @Nullable private final Supplier<CompressedBlockReader> blockDataReaderSupplier;
 
   private CompressedVariableSizedBlobColumnSupplier(
       @Nullable ByteBuffer offsetsBuffer,
