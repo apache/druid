@@ -97,7 +97,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
             peonClient,
             taskLogs,
             smileMapper,
-            kubernetesTaskRunnerConfig.getPodLogOperationTimeout().toStandardDuration().getMillis()
+            kubernetesTaskRunnerConfig.getLogSaveTimeout().toStandardDuration().getMillis()
         ),
         emitter
     );

@@ -99,7 +99,7 @@ public class KubernetesPeonLifecycle
   private final ObjectMapper mapper;
   private final TaskStateListener stateListener;
   private final SettableFuture<Boolean> taskStartedSuccessfullyFuture;
-  private final long logWatchOperationTimeoutMs;
+  private final long logSaveTimeout;
 
   @MonotonicNonNull
   private LogWatch logWatch;
@@ -113,7 +113,7 @@ public class KubernetesPeonLifecycle
       TaskLogs taskLogs,
       ObjectMapper mapper,
       TaskStateListener stateListener,
-      long logWatchOperationTimeoutMs
+      long logSaveTimeout
   )
   {
     this.task = task;
@@ -123,7 +123,7 @@ public class KubernetesPeonLifecycle
     this.mapper = mapper;
     this.stateListener = stateListener;
     this.taskStartedSuccessfullyFuture = SettableFuture.create();
-    this.logWatchOperationTimeoutMs = logWatchOperationTimeoutMs;
+    this.logSaveTimeout = logSaveTimeout;
   }
 
   /**
@@ -353,7 +353,7 @@ public class KubernetesPeonLifecycle
     }
     Optional<LogWatch> maybeLogWatch = executeWithTimeout(
         () -> kubernetesClient.getPeonLogWatcher(taskId),
-        logWatchOperationTimeoutMs,
+        logSaveTimeout,
         "initializing K8s LogWatch",
         "LogWatch failed to initialize. Peon may not be able to stream and persist task logs."
         + "  If this continues to happen, check Kubernetes server logs for potential errors."
@@ -383,7 +383,7 @@ public class KubernetesPeonLifecycle
                 FileUtils.copyInputStreamToFile(logWatch.getOutput(), file.toFile());
                 return null;
               },
-              logWatchOperationTimeoutMs,
+              logSaveTimeout,
               "coyping and persisting task logs",
               "This failure does not have any impact on the"
               + " ingestion work done by the task, but the logs may be partial or innaccessible. If "

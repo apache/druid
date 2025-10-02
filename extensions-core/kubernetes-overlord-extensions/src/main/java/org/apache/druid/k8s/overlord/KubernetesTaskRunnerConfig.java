@@ -108,7 +108,7 @@ public class KubernetesTaskRunnerConfig
   @JsonProperty
   @NotNull
   // how long to wait for log saving operations to complete
-  private Period podLogOperationTimeout = new Period("PT300S");
+  private Period logSaveTimeout = new Period("PT300S");
 
   @JsonProperty
   // ForkingTaskRunner inherits the monitors from the MM, in k8s mode
@@ -164,7 +164,7 @@ public class KubernetesTaskRunnerConfig
       Map<String, String> annotations,
       Integer capacity,
       Period taskJoinTimeout,
-      Period podLogOperationTimeout
+      Period logSaveTimeout
   )
   {
     this.namespace = namespace;
@@ -238,9 +238,9 @@ public class KubernetesTaskRunnerConfig
         capacity,
         this.capacity
     );
-    this.podLogOperationTimeout = ObjectUtils.defaultIfNull(
-        podLogOperationTimeout,
-        this.podLogOperationTimeout
+    this.logSaveTimeout = ObjectUtils.defaultIfNull(
+        logSaveTimeout,
+        this.logSaveTimeout
     );
   }
 
@@ -346,9 +346,9 @@ public class KubernetesTaskRunnerConfig
     return capacity;
   }
 
-  public Period getPodLogOperationTimeout()
+  public Period getLogSaveTimeout()
   {
-    return podLogOperationTimeout;
+    return logSaveTimeout;
   }
 
   public static Builder builder()
@@ -378,7 +378,7 @@ public class KubernetesTaskRunnerConfig
     private Map<String, String> annotations;
     private Integer capacity;
     private Period taskJoinTimeout;
-    private Period podLogOperationTimeout;
+    private Period logSaveTimeout;
 
     public Builder()
     {
@@ -505,9 +505,9 @@ public class KubernetesTaskRunnerConfig
       return this;
     }
 
-    public Builder withPodLogOperationTimeout(Period podLogOperationTimeout)
+    public Builder withLogSaveTimeout(Period logSaveTimeout)
     {
-      this.podLogOperationTimeout = podLogOperationTimeout;
+      this.logSaveTimeout = logSaveTimeout;
       return this;
     }
 
@@ -534,7 +534,7 @@ public class KubernetesTaskRunnerConfig
           this.annotations,
           this.capacity,
           this.taskJoinTimeout,
-          this.podLogOperationTimeout
+          this.logSaveTimeout
       );
     }
   }
