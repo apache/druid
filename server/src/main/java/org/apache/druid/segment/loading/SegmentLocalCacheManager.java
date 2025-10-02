@@ -54,7 +54,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.util.Collection;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -67,6 +67,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -185,7 +186,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public Collection<DataSegment> getCachedSegments() throws IOException
+  public List<DataSegment> getCachedSegments() throws IOException
   {
     if (!canHandleSegments()) {
       throw DruidException.defensive(
@@ -234,7 +235,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
          .emit();
     }
 
-    return cachedSegments;
+    return new ArrayList<>(cachedSegments);
   }
 
   private File[] retrieveSegmentMetadataFiles() throws IOException

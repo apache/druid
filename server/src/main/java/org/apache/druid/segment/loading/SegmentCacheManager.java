@@ -29,7 +29,7 @@ import org.apache.druid.timeline.DataSegment;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -47,7 +47,7 @@ public interface SegmentCacheManager
    * Return a list of cached segments from local disk, if any. This should be called only when
    * {@link #canHandleSegments()} is true.
    */
-  Collection<DataSegment> getCachedSegments() throws IOException;
+  List<DataSegment> getCachedSegments() throws IOException;
 
   /**
    * Store a segment info file for the supplied segment on disk. This operation is idempotent when called multiple

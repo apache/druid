@@ -46,7 +46,7 @@ import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.io.IOException;
-import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -379,7 +379,7 @@ public class SegmentManager
    * Return a list of cached segments, if any. This should be called only when
    * {@link #canHandleSegments()} is true.
    */
-  public Collection<DataSegment> getCachedSegments() throws IOException
+  public List<DataSegment> getCachedSegments() throws IOException
   {
     return cacheManager.getCachedSegments();
   }
