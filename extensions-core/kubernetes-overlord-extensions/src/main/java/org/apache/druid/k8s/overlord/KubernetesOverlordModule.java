@@ -133,6 +133,8 @@ public class KubernetesOverlordModule implements DruidModule
       config.setHttpProxy(null);
     }
 
+    config.setNamespace(kubernetesTaskRunnerConfig.getNamespace());
+
     client = new DruidKubernetesClient(httpClientConfig, config);
 
     lifecycle.addHandler(

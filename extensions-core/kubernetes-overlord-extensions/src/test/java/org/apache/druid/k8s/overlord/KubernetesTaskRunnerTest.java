@@ -136,7 +136,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         .endMetadata()
         .build();
 
-    EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job));
+    EasyMock.expect(peonClient.getPeonJobs(false)).andReturn(ImmutableList.of(job));
     EasyMock.expect(taskAdapter.toTask(job)).andReturn(task);
     EasyMock.expect(kubernetesPeonLifecycle.getTaskStartedSuccessfullyFuture()).andReturn(
         settableFuture
@@ -192,7 +192,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         .endMetadata()
         .build();
 
-    EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job, job2));
+    EasyMock.expect(peonClient.getPeonJobs(false)).andReturn(ImmutableList.of(job, job2));
     EasyMock.expect(taskAdapter.toTask(job)).andReturn(task);
     EasyMock.expect(taskAdapter.toTask(job2)).andThrow(new IOException("deserialization exception"));
 
@@ -235,7 +235,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         .endMetadata()
         .build();
 
-    EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job));
+    EasyMock.expect(peonClient.getPeonJobs(false)).andReturn(ImmutableList.of(job));
     EasyMock.expect(taskAdapter.toTask(job)).andThrow(new IOException());
 
     replayAll();

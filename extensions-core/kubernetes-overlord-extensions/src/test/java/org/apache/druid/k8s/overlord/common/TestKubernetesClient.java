@@ -19,7 +19,10 @@
 
 package org.apache.druid.k8s.overlord.common;
 
+import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.informers.SharedIndexInformer;
 
 public class TestKubernetesClient implements KubernetesClientApi
 {
@@ -38,8 +41,32 @@ public class TestKubernetesClient implements KubernetesClientApi
   }
 
   @Override
+  public <T> T executePodCacheRequest(KubernetesInformerExecutor<T, Pod> executor)
+  {
+    return null;
+  }
+
+  @Override
+  public <T> T executeJobCacheRequest(KubernetesInformerExecutor<T, Job> executor)
+  {
+    return null;
+  }
+
+  @Override
   public KubernetesClient getClient()
   {
     return client;
+  }
+
+  @Override
+  public SharedIndexInformer<Pod> getPodInformer()
+  {
+    return null;
+  }
+
+  @Override
+  public SharedIndexInformer<Job> getJobInformer()
+  {
+    return null;
   }
 }

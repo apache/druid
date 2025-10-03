@@ -19,13 +19,30 @@
 
 package org.apache.druid.k8s.overlord.common;
 
+import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
+import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
+import io.fabric8.kubernetes.client.informers.SharedIndexInformer;
+import org.apache.druid.java.util.emitter.EmittingLogger;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 
 public class DruidKubernetesClient implements KubernetesClientApi
 {
+  private static final EmittingLogger log = new EmittingLogger(DruidKubernetesClient.class);
+
+  private static final long INFORMER_RESYNC_PERIOD_MS = 30 * 1000L; // todo make this configurable by operator
+
   private final KubernetesClient kubernetesClient;
+  private final SharedIndexInformer<Pod> podInformer;
+  private final SharedIndexInformer<Job> jobInformer;
 
   public DruidKubernetesClient(DruidKubernetesHttpClientConfig httpClientConfig, Config kubernetesClientConfig)
   {
@@ -33,6 +50,8 @@ public class DruidKubernetesClient implements KubernetesClientApi
         .withHttpClientFactory(new DruidKubernetesHttpClientFactory(httpClientConfig))
         .withConfig(kubernetesClientConfig)
         .build();
+    this.podInformer = setupPodInformer(kubernetesClient.getNamespace());
+    this.jobInformer = setupJobInformer(kubernetesClient.getNamespace());
   }
 
   @Override
@@ -40,6 +59,19 @@ public class DruidKubernetesClient implements KubernetesClientApi
   {
     return executor.executeRequest(kubernetesClient);
   }
+
+  @Override
+  public <T> T executePodCacheRequest(KubernetesInformerExecutor<T, Pod> executor)
+  {
+    return executor.executeRequest(podInformer);
+  }
+
+  @Override
+  public <T> T executeJobCacheRequest(KubernetesInformerExecutor<T, Job> executor)
+  {
+    return executor.executeRequest(jobInformer);
+  }
+
 
   /**
    * This client automatically gets closed by the druid lifecycle, it should not be closed when used as it is
@@ -51,5 +83,95 @@ public class DruidKubernetesClient implements KubernetesClientApi
   public KubernetesClient getClient()
   {
     return this.kubernetesClient;
+  }
+
+  @Override
+  public SharedIndexInformer<Pod> getPodInformer()
+  {
+    return podInformer;
+  }
+
+  @Override
+  public SharedIndexInformer<Job> getJobInformer()
+  {
+    return jobInformer;
+  }
+
+  private SharedIndexInformer<Pod> setupPodInformer(String namespace)
+  {
+    SharedIndexInformer<Pod> podInformer =
+        kubernetesClient.pods()
+                        .inNamespace(namespace)
+                        .inform(new ResourceEventHandler<>() {
+                          @Override
+                          public void onAdd(Pod pod) {
+                            log.info("Pod " + pod.getMetadata().getName() + " got added");
+                          }
+                          @Override
+                          public void onUpdate(Pod oldPod, Pod newPod) {
+                            log.info("Pod " + oldPod.getMetadata().getName() + " got updated");
+                          }
+                          @Override
+                          public void onDelete(Pod pod, boolean deletedFinalStateUnknown) {
+                            log.info("Pod " + pod.getMetadata().getName() + " got deleted");
+                          }
+                          }, INFORMER_RESYNC_PERIOD_MS);
+
+    Function<Pod, List<String>> jobNameIndexer = pod -> {
+      if (pod.getMetadata() != null && pod.getMetadata().getLabels() != null) {
+        String jobName = pod.getMetadata().getLabels().get("job-name");
+        if (jobName != null) {
+          return Collections.singletonList(jobName);
+        }
+      }
+      return Collections.emptyList();
+    };
+
+    Map<String, Function<Pod, List<String>>> customPodIndexers = new HashMap<>();
+    customPodIndexers.put("byJobName", jobNameIndexer);
+
+    podInformer.addIndexers(customPodIndexers);
+    return podInformer;
+  }
+
+  private SharedIndexInformer<Job> setupJobInformer(String namespace)
+  {
+    SharedIndexInformer<Job> jobInformer =
+        kubernetesClient.batch()
+                        .v1()
+                        .jobs()
+                        .inNamespace(namespace)
+                        .withLabel(DruidK8sConstants.LABEL_KEY)
+                        .inform(new ResourceEventHandler<>() {
+                          @Override
+                          public void onAdd(Job job) {
+                            log.info("Job " + job.getMetadata().getName() + " got added");
+                          }
+                          @Override
+                          public void onUpdate(Job oldJob, Job newJob) {
+                            log.info("Job " + oldJob.getMetadata().getName() + " got updated");
+                          }
+                          @Override
+                          public void onDelete(Job job, boolean deletedFinalStateUnknown) {
+                            log.info("Job " + job.getMetadata().getName() + " got deleted");
+                          }
+                          }, INFORMER_RESYNC_PERIOD_MS);
+
+    Function<Job, List<String>> overlordNamespaceIndexer = job -> {
+      if (job.getMetadata() != null && job.getMetadata().getLabels() != null) {
+        String overlordNamespace = job.getMetadata().getLabels().get(DruidK8sConstants.OVERLORD_NAMESPACE_KEY);
+        if (overlordNamespace != null) {
+          return Collections.singletonList(overlordNamespace);
+        }
+      }
+      return Collections.emptyList();
+    };
+
+    Map<String, Function<Job, List<String>>> customJobIndexers = new HashMap<>();
+    customJobIndexers.put("byOverlordNamespace", overlordNamespaceIndexer);
+
+    jobInformer.addIndexers(customJobIndexers);
+
+    return jobInformer;
   }
 }

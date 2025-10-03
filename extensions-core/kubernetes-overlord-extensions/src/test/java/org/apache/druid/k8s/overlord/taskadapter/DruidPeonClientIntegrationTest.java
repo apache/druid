@@ -135,7 +135,7 @@ public class DruidPeonClientIntegrationTest
     peonClient.launchPeonJobAndWaitForStart(job, task, 1, TimeUnit.MINUTES);
 
     // there should be one job that is a k8s peon job that exists
-    List<Job> jobs = peonClient.getPeonJobs();
+    List<Job> jobs = peonClient.getPeonJobs(false);
     assertEquals(1, jobs.size());
 
     K8sTaskId taskId = new K8sTaskId(null, task.getId());
@@ -185,7 +185,7 @@ public class DruidPeonClientIntegrationTest
     assertTrue(peonClient.deletePeonJob(taskId));
 
     // we cleaned up the job, none should exist
-    List<Job> existingJobs = peonClient.getPeonJobs();
+    List<Job> existingJobs = peonClient.getPeonJobs(false);
     assertEquals(0, existingJobs.size());
   }
 }

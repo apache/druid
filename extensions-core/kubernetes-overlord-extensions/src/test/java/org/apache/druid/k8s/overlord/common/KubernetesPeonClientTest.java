@@ -355,7 +355,7 @@ public class KubernetesPeonClientTest
 
     client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job).create();
 
-    List<Job> jobs = instance.getPeonJobs();
+    List<Job> jobs = instance.getPeonJobs(false);
 
     Assertions.assertEquals(1, jobs.size());
   }
@@ -375,7 +375,7 @@ public class KubernetesPeonClientTest
 
     client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job).create();
 
-    List<Job> jobs = instance.getPeonJobs();
+    List<Job> jobs = instance.getPeonJobs(false);
 
     Assertions.assertEquals(1, jobs.size());
   }
@@ -395,7 +395,7 @@ public class KubernetesPeonClientTest
 
     client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job).create();
 
-    List<Job> jobs = instance.getPeonJobs();
+    List<Job> jobs = instance.getPeonJobs(false);
 
     Assertions.assertEquals(0, jobs.size());
   }
@@ -414,7 +414,7 @@ public class KubernetesPeonClientTest
 
     client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job).create();
 
-    List<Job> jobs = instance.getPeonJobs();
+    List<Job> jobs = instance.getPeonJobs(false);
 
     Assertions.assertEquals(0, jobs.size());
   }
@@ -422,7 +422,7 @@ public class KubernetesPeonClientTest
   @Test
   void test_getPeonJobs_withoutJob_returnsEmptyList()
   {
-    List<Job> jobs = instance.getPeonJobs();
+    List<Job> jobs = instance.getPeonJobs(false);
     Assertions.assertEquals(0, jobs.size());
   }
 
@@ -594,7 +594,7 @@ public class KubernetesPeonClientTest
     String k8sJobName = new K8sTaskId(TASK_NAME_PREFIX, ID).getK8sJobName();
     KubernetesResourceNotFoundException e = Assertions.assertThrows(
         KubernetesResourceNotFoundException.class,
-        () -> instance.getPeonPodWithRetries(clientApi.getClient(), k8sJobName, 1, 1)
+        () -> instance.getPeonPodWithRetries(clientApi.getPodInformer(), k8sJobName, 1, 1)
     );
 
     Assertions.assertEquals(e.getMessage(),
@@ -632,7 +632,7 @@ public class KubernetesPeonClientTest
     // Task declared to retry for 3 times should only try once when a blacklisted event message is found.
     KubernetesResourceNotFoundException e = Assertions.assertThrows(
         KubernetesResourceNotFoundException.class,
-        () -> instance.getPeonPodWithRetries(clientApi.getClient(), k8sJobName, 0, 3)
+        () -> instance.getPeonPodWithRetries(clientApi.getPodInformer(), k8sJobName, 0, 3)
     );
 
     // Ensure event message is propagated to the users.
@@ -798,8 +798,8 @@ public class KubernetesPeonClientTest
 
     // Should return the pod successfully
     Pod result = instance.waitForPodResultWithRetries(
-        clientApi.getClient(), 
-        pod, 
+        clientApi.getPodInformer(),
+        pod,
         1, 
         TimeUnit.SECONDS, 
         0, 
@@ -835,8 +835,8 @@ public class KubernetesPeonClientTest
     DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> instance.waitForPodResultWithRetries(
-            clientApi.getClient(), 
-            pod, 
+            clientApi.getPodInformer(),
+            pod,
             1, 
             TimeUnit.MILLISECONDS, // Very short timeout to force failure
             0, 

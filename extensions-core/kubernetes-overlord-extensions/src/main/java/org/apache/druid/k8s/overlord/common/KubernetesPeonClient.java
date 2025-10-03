@@ -29,6 +29,7 @@ import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
+import io.fabric8.kubernetes.client.informers.SharedIndexInformer;
 import io.vertx.core.http.HttpClosedException;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
@@ -55,6 +56,7 @@ public class KubernetesPeonClient
   private final String overlordNamespace;
   private final boolean debugJobs;
   private final ServiceEmitter emitter;
+  private final boolean useEventsAnalysisOnPodNotFound = false;
 
   public KubernetesPeonClient(
       KubernetesClientApi clientApi,
@@ -111,28 +113,75 @@ public class KubernetesPeonClient
 
   public JobResponse waitForPeonJobCompletion(K8sTaskId taskId, long howLong, TimeUnit unit)
   {
-    return clientApi.executeRequest(client -> {
-      Job job = client.batch()
-                      .v1()
-                      .jobs()
-                      .inNamespace(namespace)
-                      .withName(taskId.getK8sJobName())
-                      .waitUntilCondition(
-                          x -> (x == null) || (x.getStatus() != null && x.getStatus().getActive() == null
-                          && (x.getStatus().getFailed() != null || x.getStatus().getSucceeded() != null)),
-                          howLong,
-                          unit
-                      );
+    long timeoutMs = unit.toMillis(howLong);
+    long startTime = System.currentTimeMillis();
+    long pollInterval = 5000;
+    long jobAppearanceGracePeriodMs = 90000; // 90 seconds grace for job to appear in cache
+
+    boolean jobSeenInCache = false;
+
+    do {
+      if (!clientApi.getJobInformer().hasSynced()) {
+        // Checking before the informer has synced will likely result in a false negative.
+        try {
+          Thread.sleep(pollInterval);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new RuntimeException(e);
+        }
+        continue;
+      }
+
+      Job job = clientApi.executeJobCacheRequest((informer) ->
+                                                     informer.getIndexer()
+                                                             .byIndex("byOverlordNamespace", overlordNamespace).stream()
+                                                             .filter(j -> taskId.getK8sJobName().equals(j.getMetadata().getName()))
+                                                             .findFirst()
+                                                             .orElse(null));
+
       if (job == null) {
+        long elapsed = System.currentTimeMillis() - startTime;
+
+        // Give grace period for job to appear in cache after creation
+        if (!jobSeenInCache && elapsed < jobAppearanceGracePeriodMs) {
+          log.debug("Job [%s] not yet in cache, waiting... (elapsed: %d ms)", taskId, elapsed);
+          try {
+            Thread.sleep(pollInterval);
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
+          }
+          continue;
+        }
+
+        // After grace period or if we've seen it before, job is truly missing
         log.info("K8s job for the task [%s] was not found. It can happen if the task was canceled", taskId);
         return new JobResponse(null, PeonPhase.FAILED);
       }
-      if (job.getStatus().getSucceeded() != null) {
-        return new JobResponse(job, PeonPhase.SUCCEEDED);
+
+      // Job found! Mark that we've seen it
+      jobSeenInCache = true;
+
+      // Check if job is complete
+      if (job.getStatus().getActive() == null || job.getStatus().getActive() == 0) {
+        if (job.getStatus().getSucceeded() != null) {
+          return new JobResponse(job, PeonPhase.SUCCEEDED);
+        }
+        log.warn("Task %s failed with status %s", taskId, job.getStatus());
+        return new JobResponse(job, PeonPhase.FAILED);
       }
-      log.warn("Task %s failed with status %s", taskId, job.getStatus());
-      return new JobResponse(job, PeonPhase.FAILED);
-    });
+
+      // Job still running, wait and check again
+      try {
+        Thread.sleep(pollInterval);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new RuntimeException(e);
+      }
+    } while (System.currentTimeMillis() - startTime < timeoutMs);
+
+    log.warn("Timed out waiting for job [%s] to complete", taskId);
+    return new JobResponse(null, PeonPhase.FAILED);
   }
 
   public boolean deletePeonJob(K8sTaskId taskId)
@@ -200,41 +249,60 @@ public class KubernetesPeonClient
     }
   }
 
-  public List<Job> getPeonJobs()
+  public List<Job> getPeonJobs(boolean useCache)
   {
+    if (useCache) {
+      if (!clientApi.getJobInformer().hasSynced()) {
+        log.warn("K8s job informer cache not synced, getting jobs directly from k8s");
+        useCache = false;
+      }
+    }
+
     return this.overlordNamespace.isEmpty()
-           ? getPeonJobsWithoutOverlordNamespaceKeyLabels()
-           : getPeonJobsWithOverlordNamespaceKeyLabels();
+           ? getPeonJobsWithoutOverlordNamespaceKeyLabels(useCache)
+           : getPeonJobsWithOverlordNamespaceKeyLabels(useCache);
   }
 
-  private List<Job> getPeonJobsWithoutOverlordNamespaceKeyLabels()
+  private List<Job> getPeonJobsWithoutOverlordNamespaceKeyLabels(boolean useCache)
   {
-    return clientApi.executeRequest(client -> client.batch()
-                                                    .v1()
-                                                    .jobs()
-                                                    .inNamespace(namespace)
-                                                    .withLabel(DruidK8sConstants.LABEL_KEY)
-                                                    .list()
-                                                    .getItems());
+    if (useCache) {
+      return clientApi.executeJobCacheRequest(informer -> informer.getIndexer().list());
+    } else {
+      return clientApi.executeRequest(client -> client.batch()
+                                                      .v1()
+                                                      .jobs()
+                                                      .inNamespace(namespace)
+                                                      .withLabel(DruidK8sConstants.LABEL_KEY)
+                                                      .list()
+                                                      .getItems());
+    }
   }
 
-  private List<Job> getPeonJobsWithOverlordNamespaceKeyLabels()
+  private List<Job> getPeonJobsWithOverlordNamespaceKeyLabels(boolean useCache)
   {
-    return clientApi.executeRequest(client -> client.batch()
-                                                    .v1()
-                                                    .jobs()
-                                                    .inNamespace(namespace)
-                                                    .withLabel(DruidK8sConstants.LABEL_KEY)
-                                                    .withLabel(DruidK8sConstants.OVERLORD_NAMESPACE_KEY, overlordNamespace)
-                                                    .list()
-                                                    .getItems());
+    if (useCache) {
+      return clientApi.executeJobCacheRequest(informer -> informer.getIndexer()
+                                                                  .byIndex("byOverlordNamespace", overlordNamespace));
+    } else {
+      return clientApi.executeRequest(client -> client.batch()
+                                                      .v1()
+                                                      .jobs()
+                                                      .inNamespace(namespace)
+                                                      .withLabel(DruidK8sConstants.LABEL_KEY)
+                                                      .withLabel(
+                                                          DruidK8sConstants.OVERLORD_NAMESPACE_KEY,
+                                                          overlordNamespace
+                                                      )
+                                                      .list()
+                                                      .getItems());
+    }
   }
 
   public int deleteCompletedPeonJobsOlderThan(long howFarBack, TimeUnit timeUnit)
   {
     AtomicInteger numDeleted = new AtomicInteger();
     return clientApi.executeRequest(client -> {
-      List<Job> jobs = getJobsToCleanup(getPeonJobs(), howFarBack, timeUnit);
+      List<Job> jobs = getJobsToCleanup(getPeonJobs(true), howFarBack, timeUnit);
       jobs.forEach(x -> {
         if (!client.batch()
                    .v1()
@@ -269,27 +337,23 @@ public class KubernetesPeonClient
 
   public Optional<Pod> getPeonPod(String jobName)
   {
-    return clientApi.executeRequest(client -> getPeonPod(client, jobName));
+    return clientApi.executePodCacheRequest(informer -> getPeonPod(informer, jobName));
   }
 
-  private Optional<Pod> getPeonPod(KubernetesClient client, String jobName)
+  private Optional<Pod> getPeonPod(SharedIndexInformer informer, String jobName)
   {
-    List<Pod> pods = client.pods()
-        .inNamespace(namespace)
-        .withLabel("job-name", jobName)
-        .list()
-        .getItems();
+    List<Pod> pods = informer.getIndexer().byIndex("byJobName", jobName);
     return pods.isEmpty() ? Optional.absent() : Optional.of(pods.get(0));
   }
 
   public Pod waitForPodResultWithRetries(final Pod pod, long howLong, TimeUnit timeUnit)
   {
-    return clientApi.executeRequest(client -> waitForPodResultWithRetries(client, pod, howLong, timeUnit, 5, RetryUtils.DEFAULT_MAX_TRIES));
+    return clientApi.executePodCacheRequest(informer -> waitForPodResultWithRetries(informer, pod, howLong, timeUnit, 5, RetryUtils.DEFAULT_MAX_TRIES));
   }
 
   public Pod getPeonPodWithRetries(String jobName)
   {
-    return clientApi.executeRequest(client -> getPeonPodWithRetries(client, jobName, 5, RetryUtils.DEFAULT_MAX_TRIES));
+    return clientApi.executePodCacheRequest(informer -> getPeonPodWithRetries(informer, jobName, 5, RetryUtils.DEFAULT_MAX_TRIES));
   }
 
   public void createK8sJobWithRetries(Job job)
@@ -359,33 +423,25 @@ public class KubernetesPeonClient
    * The method will wait up to the specified timeout for the pod to become ready, and retry the entire wait operation
    * if transient connection issues are encountered.
    *
-   * @param client the Kubernetes client to use for pod operations
-   * @param pod the pod to wait for
-   * @param howLong the maximum time to wait for the pod to become ready
-   * @param timeUnit the time unit for the wait timeout
+   * @param pod        the pod to wait for
+   * @param howLong    the maximum time to wait for the pod to become ready
+   * @param timeUnit   the time unit for the wait timeout
    * @param quietTries number of initial retry attempts without logging warnings
-   * @param maxTries maximum total number of retry attempts
+   * @param maxTries   maximum total number of retry attempts
    * @return the pod in its ready state, or null if the pod disappeared or wait operation failed
    * @throws DruidException if waiting fails after all retry attempts or encounters non-retryable errors
    */
   @VisibleForTesting
-  Pod waitForPodResultWithRetries(KubernetesClient client, Pod pod, long howLong, TimeUnit timeUnit, int quietTries, int maxTries)
+  Pod waitForPodResultWithRetries(SharedIndexInformer<Pod> informer, Pod pod, long howLong, TimeUnit timeUnit, int quietTries, int maxTries)
   {
     try {
       return RetryUtils.retry(
-          () -> client.pods()
-                    .inNamespace(namespace)
-                    .withName(pod.getMetadata().getName())
-                    .waitUntilCondition(
-                        p -> {
-                          if (p == null) {
-                            return true;
-                          }
-                          return p.getStatus() != null && p.getStatus().getPodIP() != null;
-                        }, howLong, timeUnit),
-          this::isRetryableTransientConnectionPoolException, quietTries, maxTries);
-    }
-    catch (Exception e) {
+          () -> waitForPodResultUsingCache(informer, pod, howLong, timeUnit),
+          this::isRetryableTransientConnectionPoolException,
+          quietTries,
+          maxTries
+      );
+    } catch (Exception e) {
       throw DruidException.defensive(e, "Error when waiting for pod[%s] to start", pod.getMetadata().getName());
     }
   }
@@ -404,7 +460,7 @@ public class KubernetesPeonClient
    *   <li>Pod not found scenarios, except when blacklisted error messages from {@link DruidK8sConstants#BLACKLISTED_PEON_POD_ERROR_MESSAGES} are encountered</li>
    * </ul>
    *
-   * @param client the Kubernetes client to use for pod and event operations
+   * @param informer the Kubernetes informer to use for pod and event operations
    * @param jobName the name of the job whose pod should be retrieved
    * @param quietTries number of initial retry attempts without logging warnings
    * @param maxTries maximum total number of retry attempts
@@ -413,18 +469,24 @@ public class KubernetesPeonClient
    * @throws DruidException if retrieval fails due to other errors
    */
   @VisibleForTesting
-  Pod getPeonPodWithRetries(KubernetesClient client, String jobName, int quietTries, int maxTries)
+  Pod getPeonPodWithRetries(SharedIndexInformer<Pod> informer, String jobName, int quietTries, int maxTries)
   {
     try {
       return RetryUtils.retry(
           () -> {
-            Optional<Pod> maybePod = getPeonPod(client, jobName);
+            Optional<Pod> maybePod = getPeonPod(informer, jobName);
             if (maybePod.isPresent()) {
               return maybePod.get();
             }
 
-            // If the pod is missing, we can take a look at job events to discover potential problems with pod creation.
-            List<Event> events = getPeonEvents(client, jobName);
+            List<Event> events;
+            if (useEventsAnalysisOnPodNotFound) {
+              // If the pod is missing, we can take a look at job events to discover potential problems with pod creation.
+              // This is an optional analysis step as it requires an additional API call and may not be desirable in all environments.
+              events = clientApi.executeRequest((client) -> getPeonEvents(client, jobName));
+            } else {
+              events = List.of();
+            }
 
             if (events.isEmpty()) {
               throw new KubernetesResourceNotFoundException("K8s pod with label[job-name=%s] not found", jobName);
@@ -513,6 +575,60 @@ public class KubernetesPeonClient
       return List.of();
     }
   }
+
+  private Pod waitForPodResultUsingCache(SharedIndexInformer<Pod> informer, Pod pod, long howLong, TimeUnit timeUnit)
+  {
+    log.info("Waiting for pod[%s] to be in running state using pod cache", pod.getMetadata().getName());
+    long timeoutMs = timeUnit.toMillis(howLong);
+    long startTime = System.currentTimeMillis();
+    long pollInterval = 2000; // Poll every 2 seconds
+
+    String podName = pod.getMetadata().getName();
+
+    do {
+      if (informer.hasSynced()) {
+        // Wait for informer to sync
+        try {
+          Thread.sleep(pollInterval);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new RuntimeException(e);
+        }
+        continue;
+      }
+
+      Pod currentPod = informer.getIndexer().list().stream()
+                               .filter(p -> podName.equals(p.getMetadata().getName()))
+                               .findFirst()
+                               .orElse(null);
+      if (currentPod == null) {
+        // Pod disappeared
+        return null;
+      }
+
+      // Check if pod is ready (has IP)
+      if (currentPod.getStatus() != null && currentPod.getStatus().getPodIP() != null) {
+        return currentPod;
+      }
+
+      // Wait before polling again
+      long remainingTime = timeoutMs - (System.currentTimeMillis() - startTime);
+      if (remainingTime <= 0) {
+        break;
+      }
+
+      try {
+        Thread.sleep(Math.min(pollInterval, remainingTime));
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new RuntimeException(e);
+      }
+    } while (System.currentTimeMillis() - startTime < timeoutMs);
+
+    // Timeout - return null
+    return null;
+  }
+
 
   private void emitK8sPodMetrics(Task task, String metric, long durationMs)
   {
