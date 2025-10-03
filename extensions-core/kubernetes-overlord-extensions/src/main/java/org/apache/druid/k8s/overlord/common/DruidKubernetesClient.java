@@ -167,8 +167,16 @@ public class DruidKubernetesClient implements KubernetesClientApi
       return Collections.emptyList();
     };
 
+    Function<Job, List<String>> jobNameIndexer = job -> {
+      if (job.getMetadata() != null && job.getMetadata().getName() != null) {
+        return Collections.singletonList(job.getMetadata().getName());
+      }
+      return Collections.emptyList();
+    };
+
     Map<String, Function<Job, List<String>>> customJobIndexers = new HashMap<>();
     customJobIndexers.put("byOverlordNamespace", overlordNamespaceIndexer);
+    customJobIndexers.put("byJobName", jobNameIndexer);
 
     jobInformer.addIndexers(customJobIndexers);
 
