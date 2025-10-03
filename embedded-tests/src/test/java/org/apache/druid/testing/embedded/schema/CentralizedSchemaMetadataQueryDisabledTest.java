@@ -60,7 +60,8 @@ public class CentralizedSchemaMetadataQueryDisabledTest
     @Override
     protected EmbeddedDruidCluster createCluster()
     {
-      return configureCluster(super.createCluster());
+      return configureCluster(super.createCluster())
+          .useDefaultTimeoutForLatchableEmitter(60);
     }
   }
 

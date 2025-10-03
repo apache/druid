@@ -36,7 +36,7 @@ import java.nio.ByteOrder;
 import java.util.List;
 
 public final class NestedDataColumnV3<TStringDictionary extends Indexed<ByteBuffer>>
-    extends CompressedNestedDataComplexColumn<TStringDictionary>
+    extends CompressedNestedDataComplexColumn<Indexed<ByteBuffer>, TStringDictionary>
 {
   public NestedDataColumnV3(
       String columnName,
@@ -44,7 +44,7 @@ public final class NestedDataColumnV3<TStringDictionary extends Indexed<ByteBuff
       ColumnConfig columnConfig,
       CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
       ImmutableBitmap nullValues,
-      GenericIndexed<String> fields,
+      GenericIndexed<ByteBuffer> fields,
       FieldTypeInfo fieldInfo,
       Supplier<TStringDictionary> stringDictionary,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
@@ -60,7 +60,7 @@ public final class NestedDataColumnV3<TStringDictionary extends Indexed<ByteBuff
         columnConfig,
         compressedRawColumnSupplier,
         nullValues,
-        fields,
+        fields::singleThreaded,
         fieldInfo,
         stringDictionary,
         longDictionarySupplier,
