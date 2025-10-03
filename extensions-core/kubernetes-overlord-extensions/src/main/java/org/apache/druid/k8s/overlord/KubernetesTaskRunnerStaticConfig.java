@@ -144,6 +144,10 @@ public class KubernetesTaskRunnerStaticConfig implements KubernetesTaskRunnerCon
   @NotNull
   private Integer capacity = Integer.MAX_VALUE;
 
+  public KubernetesTaskRunnerStaticConfig()
+  {
+  }
+
   public KubernetesTaskRunnerStaticConfig(
       @Nonnull String namespace,
       String overlordNamespace,
