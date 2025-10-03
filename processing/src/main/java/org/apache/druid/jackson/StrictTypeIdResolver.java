@@ -86,11 +86,6 @@ public class StrictTypeIdResolver extends TypeIdResolverBase
   @Override
   public JavaType typeFromId(DatabindContext context, String id) throws JsonProcessingException
   {
-    if (id == null) {
-      // fallback to default implementation if configured
-      return null;
-    }
-
     JavaType type = delegate.typeFromId(context, id);
     if (type == null) {
       // in TypeNameIdResolver, it'd fall back to defaultImpl if configured, but we want to error out instead
