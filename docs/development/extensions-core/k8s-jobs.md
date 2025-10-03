@@ -48,7 +48,7 @@ Other configurations required are:
 Druid operators can dynamically tune certain features within this extension. You don't need to restart the Overlord
 service for these changes to take effect.
 
-Druid can dynamically tune [pod template selection](#pod-template-selection) and [capacity](#properties).
+Druid can dynamically tune [pod template selection](#pod-template-selection) and [capacity](#properties). Where capacity refers to `druid.indexer.runner.capacity`.
 
 Pod template selection allows you to configure the pod template based on the task to be run. To enable dynamic pod template selection, first configure the [custom template pod adapter](#custom-template-pod-adapter).
 
