@@ -34,6 +34,8 @@ import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryTimeoutException;
@@ -57,12 +59,14 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 @RunWith(Parameterized.class)
 public class GroupByQueryRunnerFailureTest
 {
-  private ExecutorService processingPool;
+  private QueryProcessingPool processingPool;
   private static final DruidProcessingConfig DEFAULT_PROCESSING_CONFIG = new DruidProcessingConfig()
   {
 
@@ -143,7 +147,10 @@ public class GroupByQueryRunnerFailureTest
         MERGE_BUFFER_POOL.maxSize(),
         MERGE_BUFFER_POOL.getPoolSize()
     );
-    processingPool = Execs.multiThreaded(2, "GroupByQueryRunnerFailureTestExecutor-%d");
+    processingPool = new ForwardingQueryProcessingPool(
+        Execs.multiThreaded(2, "GroupByQueryRunnerFailureTestExecutor-%d"),
+        Execs.scheduledSingleThreaded("GroupByQueryRunnerFailureTestExecutor-Timeout-%d")
+    );
   }
 
   @After
@@ -282,7 +289,7 @@ public class GroupByQueryRunnerFailureTest
   }
 
   @Test(timeout = 60_000L)
-  public void testTimeoutExceptionOnQueryable()
+  public void testTimeoutExceptionOnQueryable_singleThreaded()
   {
     final GroupByQuery query = GroupByQuery
         .builder()
@@ -324,8 +331,8 @@ public class GroupByQueryRunnerFailureTest
     );
   }
 
-  @Test(timeout = 20_000L)
-  public void testPerSegmentTimeoutCausesQueryTimeout()
+  @Test(timeout = 60_000L)
+  public void testTimeoutExceptionOnQueryable_multiThreaded()
   {
     final GroupByQuery query = GroupByQuery
         .builder()
@@ -334,7 +341,104 @@ public class GroupByQueryRunnerFailureTest
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setGranularity(Granularities.ALL)
-        .overrideContext(ImmutableMap.of(
+        .overrideContext(Map.of(QueryContexts.TIMEOUT_KEY, 1))
+        .build();
+
+    GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(
+        GroupByQueryRunnerTest.DEFAULT_MAPPER,
+        new GroupByQueryConfig()
+        {
+
+          @Override
+          public boolean isSingleThreaded()
+          {
+            return true;
+          }
+        }
+    );
+    QueryRunner<ResultRow> mockRunner = (queryPlus, responseContext) -> {
+      try {
+        Thread.sleep(100);
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+      return Sequences.empty();
+    };
+
+    QueryRunner<ResultRow> mergeRunners = factory.mergeRunners(
+        Execs.directExecutor(),
+        List.of(runner, mockRunner)
+    );
+
+    Assert.assertThrows(
+        QueryTimeoutException.class,
+        () -> GroupByQueryRunnerTestHelper.runQuery(factory, mergeRunners, query)
+    );
+  }
+
+  @Test(timeout = 20_000L)
+  public void test_multiThreaded_perSegmentTimeout_causes_queryTimeout()
+  {
+    final GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
+        .setGranularity(Granularities.ALL)
+        .overrideContext(Map.of(
+            QueryContexts.TIMEOUT_KEY,
+            300_000,
+            QueryContexts.PER_SEGMENT_TIMEOUT_KEY,
+            100
+        ))
+        .build();
+
+    GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(
+        GroupByQueryRunnerTest.DEFAULT_MAPPER,
+        new GroupByQueryConfig()
+        {
+
+          @Override
+          public boolean isSingleThreaded()
+          {
+            return false;
+          }
+        }
+    );
+    QueryRunner<ResultRow> mockRunner = (queryPlus, responseContext) -> {
+      try {
+        Thread.sleep(1000);
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+      return Sequences.empty();
+    };
+
+    QueryRunner<ResultRow> mergeRunners = factory.mergeRunners(
+        processingPool,
+        List.of(runner, mockRunner)
+    );
+
+    Assert.assertThrows(
+        QueryTimeoutException.class,
+        () -> GroupByQueryRunnerTestHelper.runQuery(factory, mergeRunners, query)
+    );
+  }
+
+  @Test(timeout = 20_000L)
+  public void test_singleThreaded_perSegmentTimeout_causes_queryTimeout()
+  {
+    final GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
+        .setGranularity(Granularities.ALL)
+        .overrideContext(Map.of(
             QueryContexts.TIMEOUT_KEY,
             300_000,
             QueryContexts.PER_SEGMENT_TIMEOUT_KEY,
@@ -365,13 +469,119 @@ public class GroupByQueryRunnerFailureTest
     };
 
     QueryRunner<ResultRow> mergeRunners = factory.mergeRunners(
-        new ForwardingQueryProcessingPool(processingPool),
-        ImmutableList.of(runner, mockRunner)
+        processingPool,
+        List.of(runner, mockRunner)
     );
 
     Assert.assertThrows(
         QueryTimeoutException.class,
         () -> GroupByQueryRunnerTestHelper.runQuery(factory, mergeRunners, query)
     );
+  }
+
+  @Test(timeout = 5_000L)
+  public void test_perSegmentTimeout_crossQuery() throws Exception
+  {
+    GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(
+        GroupByQueryRunnerTest.DEFAULT_MAPPER,
+        new GroupByQueryConfig()
+        {
+          @Override
+          public boolean isSingleThreaded()
+          {
+            return false;
+          }
+        }
+    );
+
+    final GroupByQuery slowQuery = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
+        .setGranularity(Granularities.ALL)
+        .overrideContext(Map.of(
+            QueryContexts.TIMEOUT_KEY, 300_000,
+            QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 1_000
+        ))
+        .queryId("slow")
+        .build();
+
+    final GroupByQuery fastQuery = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
+        .setGranularity(Granularities.ALL)
+        .overrideContext(Map.of(
+            QueryContexts.TIMEOUT_KEY, 5_000,
+            QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 100
+        ))
+        .queryId("fast")
+        .build();
+
+    CountDownLatch slowStart = new CountDownLatch(2);
+    CountDownLatch fastStart = new CountDownLatch(1);
+
+    QueryRunner<ResultRow> signalingSlowRunner = (queryPlus, responseContext) -> {
+      slowStart.countDown();
+      try {
+        Thread.sleep(60_000L);
+      }
+      catch (InterruptedException e) {
+        throw new QueryInterruptedException(e);
+      }
+      return Sequences.empty();
+    };
+    QueryRunner<ResultRow> fastRunner = (queryPlus, responseContext) -> {
+      fastStart.countDown();
+      return Sequences.empty();
+    };
+
+    Thread slowQueryThread = new Thread(() -> {
+      try {
+        GroupByQueryRunnerTestHelper.runQuery(
+            factory,
+            factory.mergeRunners(
+                processingPool,
+                List.of(signalingSlowRunner, signalingSlowRunner)
+            ), slowQuery
+        );
+      }
+      catch (QueryTimeoutException e) {
+        return;
+      }
+      Assert.fail("Expected QueryTimeoutException for slow query");
+    });
+
+    slowQueryThread.start();
+    slowStart.await();
+
+    Thread fastQueryThread = new Thread(() -> {
+      try {
+        GroupByQueryRunnerTestHelper.runQuery(
+            factory,
+            factory.mergeRunners(
+                processingPool,
+                List.of(fastRunner)
+            ), fastQuery
+        );
+      }
+      catch (Exception e) {
+        Assert.fail("Expected fast query to succeed");
+      }
+    });
+
+    fastQueryThread.start();
+    boolean fastStartedEarly = fastStart.await(500, TimeUnit.MILLISECONDS);
+    Assert.assertFalse(
+        "Fast query should be blocked and not started while slow queries are running",
+        fastStartedEarly
+    );
+
+    fastQueryThread.join();
+    slowQueryThread.join();
   }
 }

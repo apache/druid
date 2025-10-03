@@ -32,13 +32,11 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
-import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
@@ -49,14 +47,12 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
-import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.metadata.metadata.AggregatorMergeStrategy;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
@@ -83,7 +79,6 @@ import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -112,7 +107,6 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   private static final AggregateProjectionMetadata.Schema PROJECTION2_SCHEMA = TestIndex.PROJECTIONS.get(1).toMetadataSchema();
   private static final int PROJECTION1_ROWS = 279;
   private static final int PROJECTION2_ROWS = 93;
-  private ExecutorService processingPool;
 
   @SuppressWarnings("unchecked")
   public static QueryRunner makeMMappedQueryRunner(
@@ -342,12 +336,6 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         null,
         null
     );
-  }
-
-  @Before
-  public void setUp()
-  {
-    processingPool = Execs.multiThreaded(2, "SegmentMetadataQueryTestExecutor-%d");
   }
 
   @Test
@@ -1938,36 +1926,6 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                              .expectMessageIs(
                                  "Both lenientAggregatorMerge [false] and aggregatorMergeStrategy [latest] parameters cannot be set."
                                  + " Consider using aggregatorMergeStrategy since lenientAggregatorMerge is deprecated.")
-    );
-  }
-
-  @Test
-  public void testPerSegmentTimeout()
-  {
-    QueryRunner<SegmentAnalysis> mockRunner = (queryPlus, responseContext) -> {
-      try {
-        Thread.sleep(100);
-      }
-      catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
-      return Sequences.empty();
-    };
-    QueryRunner<SegmentAnalysis> mergedRunner = FACTORY.mergeRunners(
-        new ForwardingQueryProcessingPool(processingPool),
-        ImmutableList.of(mockRunner)
-    );
-    SegmentMetadataQuery query = Druids.newSegmentMetadataQueryBuilder()
-                                       .dataSource("test")
-                                       .intervals("2013/2014")
-                                       .context(ImmutableMap.of(
-                                           QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 10
-                                       ))
-                                       .build();
-
-    Assert.assertThrows(
-        QueryTimeoutException.class,
-        () -> mergedRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList()
     );
   }
 }

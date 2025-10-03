@@ -270,7 +270,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
                                   }
                                   catch (Exception e) {
                                     log.error(e, "Exception with one of the sequences!");
-                                    Throwables.propagateIfPossible(e);
+                                    Throwables.throwIfUnchecked(e);
                                     throw new RuntimeException(e);
                                   }
                                 }
@@ -387,29 +387,23 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
         }
       }
     }
-    catch (InterruptedException e) {
-      log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
-      GuavaUtils.cancelAll(true, future, futures);
-      throw new QueryInterruptedException(e);
-    }
-    catch (CancellationException e) {
+    catch (InterruptedException | CancellationException e) {
+      log.noStackTrace().warn(e, "Query interrupted, cancelling pending results for query [%s]", query.getId());
       GuavaUtils.cancelAll(true, future, futures);
       throw new QueryInterruptedException(e);
     }
     catch (QueryTimeoutException | TimeoutException e) {
-      log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
+      log.noStackTrace().warn(e, "Query timeout, cancelling pending results for query [%s]", query.getId());
       GuavaUtils.cancelAll(true, future, futures);
-      throw new QueryTimeoutException();
+      throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query [%s] timed out", query.getId()));
     }
     catch (ExecutionException e) {
+      log.noStackTrace().warn(e, "Query error, cancelling pending results for query [%s]", query.getId());
       GuavaUtils.cancelAll(true, future, futures);
       Throwable cause = e.getCause();
+      // Nested per-segment future timeout
       if (cause instanceof TimeoutException) {
-        log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
-        throw new QueryTimeoutException(StringUtils.nonStrictFormat(
-            "Query [%s] timed out",
-            query.getId()
-        ));
+        throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query [%s] timed out", query.getId()));
       }
       throw new RuntimeException(e);
     }

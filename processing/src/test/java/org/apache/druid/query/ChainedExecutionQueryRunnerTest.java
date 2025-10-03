@@ -19,6 +19,7 @@
 
 package org.apache.druid.query;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -35,6 +36,7 @@ import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,6 +54,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -60,11 +63,22 @@ import java.util.stream.Collectors;
 public class ChainedExecutionQueryRunnerTest
 {
   private final Lock neverRelease = new ReentrantLock();
+  private QueryProcessingPool processingPool;
 
   @Before
   public void setup()
   {
     neverRelease.lock();
+    processingPool = new ForwardingQueryProcessingPool(
+        Execs.multiThreaded(2, "ChainedExecutionQueryRunnerTestExecutor-%d"),
+        Execs.scheduledSingleThreaded("ChainedExecutionQueryRunnerTestExecutor-Timeout-%d")
+    );
+  }
+
+  @After
+  public void tearDown()
+  {
+    processingPool.shutdown();
   }
 
   @Test(timeout = 60_000L)
@@ -121,7 +135,7 @@ public class ChainedExecutionQueryRunnerTest
     );
 
     ChainedExecutionQueryRunner chainedRunner = new ChainedExecutionQueryRunner<>(
-        new ForwardingQueryProcessingPool(exec),
+        processingPool,
         watcher,
         Lists.newArrayList(
             runners
@@ -245,7 +259,7 @@ public class ChainedExecutionQueryRunnerTest
     );
 
     ChainedExecutionQueryRunner chainedRunner = new ChainedExecutionQueryRunner<>(
-        new ForwardingQueryProcessingPool(exec),
+        processingPool,
         watcher,
         Lists.newArrayList(
             runners
@@ -347,25 +361,16 @@ public class ChainedExecutionQueryRunnerTest
   @Test(timeout = 10_000L)
   public void testPerSegmentTimeout()
   {
-    ExecutorService exec = PrioritizedExecutorService.create(
-        new Lifecycle(), new DruidProcessingConfig()
-        {
-          @Override
-          public String getFormatString()
-          {
-            return "test";
-          }
-
-          @Override
-          public int getNumThreads()
-          {
-            return 2;
-          }
-        }
-    );
-
-    QueryRunner<Integer> slowRunner = new TimeoutQueryRunner(500);
-    QueryRunner<Integer> fastRunner = new TimeoutQueryRunner(0);
+    QueryRunner<Integer> slowRunner = (queryPlus, responseContext) -> {
+      try {
+        Thread.sleep(500);
+        return Sequences.of(2);
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+    };
+    QueryRunner<Integer> fastRunner = (queryPlus, responseContext) -> Sequences.of(1);
 
     QueryWatcher watcher = EasyMock.createStrictMock(QueryWatcher.class);
     watcher.registerQueryFuture(
@@ -376,7 +381,7 @@ public class ChainedExecutionQueryRunnerTest
     EasyMock.replay(watcher);
 
     ChainedExecutionQueryRunner chainedRunner = new ChainedExecutionQueryRunner<>(
-        new ForwardingQueryProcessingPool(exec),
+        processingPool,
         watcher,
         Arrays.asList(slowRunner, fastRunner)
     );
@@ -406,34 +411,95 @@ public class ChainedExecutionQueryRunnerTest
     Assert.assertNotNull("Exception should be thrown", thrown);
     Assert.assertTrue(
         "Should be QueryTimeoutException or caused by it",
-        thrown instanceof QueryTimeoutException
-        || (thrown.getCause() != null && thrown.getCause() instanceof QueryTimeoutException)
+        Throwables.getRootCause(thrown) instanceof QueryTimeoutException
     );
 
     EasyMock.verify(watcher);
   }
 
-  private static class TimeoutQueryRunner implements QueryRunner<Integer>
+  @Test(timeout = 5_000L)
+  public void test_perSegmentTimeout_crossQuery() throws Exception
   {
-    private final long delayMs;
+    final CountDownLatch slowStarted = new CountDownLatch(2);
+    final CountDownLatch fastStarted = new CountDownLatch(1);
 
-    TimeoutQueryRunner(long delayMs)
-    {
-      this.delayMs = delayMs;
-    }
-
-    @Override
-    public Sequence<Integer> run(QueryPlus<Integer> queryPlus, ResponseContext responseContext)
-    {
+    QueryRunner<Result<TimeseriesResultValue>> slowRunner = (queryPlus, responseContext) -> {
+      slowStarted.countDown();
       try {
-        if (delayMs > 0) {
-          Thread.sleep(delayMs);
-        }
+        Thread.sleep(60_000L);
       }
       catch (InterruptedException e) {
         throw new QueryInterruptedException(e);
       }
-      return Sequences.simple(Collections.singletonList((int) delayMs));
+      return Sequences.empty();
+    };
+
+    QueryRunner<Result<TimeseriesResultValue>> fastRunner = (queryPlus, responseContext) -> {
+      fastStarted.countDown();
+      return Sequences.simple(Collections.singletonList(
+          new Result<>(null, new TimeseriesResultValue(ImmutableMap.of("count", 1)))
+      ));
+    };
+
+    TimeseriesQuery slowQuery = Druids.newTimeseriesQueryBuilder()
+                                      .dataSource("test")
+                                      .intervals("2014/2015")
+                                      .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
+                                      .context(ImmutableMap.of(
+                                          QueryContexts.TIMEOUT_KEY, 300_000L,
+                                          QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 1_000L
+                                      ))
+                                      .queryId("slow")
+                                      .build();
+
+    TimeseriesQuery fastQuery = Druids.newTimeseriesQueryBuilder()
+                                      .dataSource("test")
+                                      .intervals("2014/2015")
+                                      .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
+                                      .context(ImmutableMap.of(
+                                          QueryContexts.TIMEOUT_KEY, 5_000L,
+                                          QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 3_000L
+                                      ))
+                                      .queryId("fast")
+                                      .build();
+
+    ChainedExecutionQueryRunner<Result<TimeseriesResultValue>> slowChainedRunner = new ChainedExecutionQueryRunner<>(
+        processingPool,
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
+        Arrays.asList(slowRunner, slowRunner)
+    );
+    ChainedExecutionQueryRunner<Result<TimeseriesResultValue>> fastChainedRunner = new ChainedExecutionQueryRunner<>(
+        processingPool,
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
+        Collections.singletonList(fastRunner)
+    );
+
+    ExecutorService exec = Execs.multiThreaded(2, "QueryExecutor-%d");
+    try {
+      Future<List<Result<TimeseriesResultValue>>> slowFuture = exec.submit(() -> slowChainedRunner.run(QueryPlus.wrap(
+          slowQuery)).toList());
+
+      slowStarted.await();
+
+      Future<List<Result<TimeseriesResultValue>>> fastFuture = exec.submit(() -> fastChainedRunner.run(QueryPlus.wrap(
+          fastQuery)).toList());
+
+      boolean fastStartedEarly = fastStarted.await(500, TimeUnit.MILLISECONDS);
+      Assert.assertFalse(
+          "Fast query should be blocked and not started while slow queries are running",
+          fastStartedEarly
+      );
+
+      ExecutionException ex = Assert.assertThrows(ExecutionException.class, slowFuture::get);
+      Assert.assertTrue(Throwables.getRootCause(ex) instanceof QueryTimeoutException);
+      Assert.assertEquals(
+          Collections.singletonList(
+              new Result<>(null, new TimeseriesResultValue(ImmutableMap.of("count", 1)))
+          ), fastFuture.get()
+      );
+    }
+    finally {
+      exec.shutdownNow();
     }
   }
 

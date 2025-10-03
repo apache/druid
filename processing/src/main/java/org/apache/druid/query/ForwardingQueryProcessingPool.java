@@ -25,7 +25,6 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.ExecutorService;
@@ -44,14 +43,17 @@ public class ForwardingQueryProcessingPool extends ForwardingListeningExecutorSe
   public ForwardingQueryProcessingPool(ExecutorService executorService, @Nullable ScheduledExecutorService timeoutService)
   {
     this.delegate = MoreExecutors.listeningDecorator(executorService);
-    this.timeoutService = timeoutService;
+    if (timeoutService != null) {
+      this.timeoutService = MoreExecutors.listeningDecorator(timeoutService);
+    } else {
+      this.timeoutService = null;
+    }
   }
 
   @VisibleForTesting
   public ForwardingQueryProcessingPool(ExecutorService executorService)
   {
-    this.delegate = MoreExecutors.listeningDecorator(executorService);
-    this.timeoutService = ScheduledExecutors.fixed(1, "ForwardingQueryProcessingPool-Timeout-%d");
+    this(executorService, null);
   }
 
   @Override
@@ -82,5 +84,14 @@ public class ForwardingQueryProcessingPool extends ForwardingListeningExecutorSe
   protected ListeningExecutorService delegate()
   {
     return delegate;
+  }
+
+  @Override
+  public void shutdown()
+  {
+    super.shutdown(); // shutdown delegate()
+    if (timeoutService != null) {
+      timeoutService.shutdown();
+    }
   }
 }

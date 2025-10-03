@@ -53,7 +53,7 @@ public interface QueryProcessingPool extends ListeningExecutorService
 
 
   /**
-   * Submits the query execution unit task for asynchronous execution, with a provided timeout.
+   * Submits the query execution task for asynchronous execution, with a provided timeout.
    *
    * @param task    - Task to be submitted.
    * @param <T>     - Task result type
