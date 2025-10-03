@@ -33,6 +33,8 @@ import javax.annotation.Nullable;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Evaluates Kafka header filters for pre-ingestion filtering.
@@ -44,6 +46,7 @@ public class KafkaHeaderBasedFilterEvaluator
   private final Filter filter;
   private final Charset encoding;
   private final Cache<ByteBuffer, String> stringDecodingCache;
+  private final Set<String> filterValues;
 
   public KafkaHeaderBasedFilterEvaluator(KafkaHeaderBasedInclusionConfig headerBasedInclusionConfig)
   {
@@ -58,10 +61,15 @@ public class KafkaHeaderBasedFilterEvaluator
       throw new IllegalStateException("Unsupported filter type: " + filter.getClass().getSimpleName());
     }
 
-    log.info("Initialized Kafka header filter with encoding [%s] - direct evaluation for [%s] with Caffeine string cache (max %d entries)",
+    // Convert SortedSet to HashSet for O(1) lookups instead of O(log n) TreeSet lookups
+    InDimFilter inFilter = (InDimFilter) filter;
+    this.filterValues = new HashSet<>(inFilter.getValues());
+
+    log.info("Initialized Kafka header filter with encoding [%s] - direct evaluation for [%s] with Caffeine string cache (max %d entries) and HashSet lookup (%d filter values)",
              headerBasedInclusionConfig.getEncoding(),
              this.filter.getClass().getSimpleName(),
-             headerBasedInclusionConfig.getStringDecodingCacheSize());
+             headerBasedInclusionConfig.getStringDecodingCacheSize(),
+             this.filterValues.size());
   }
 
 
@@ -109,7 +117,7 @@ public class KafkaHeaderBasedFilterEvaluator
       return true;
     }
 
-    return inFilter.getValues().contains(headerValue);
+    return filterValues.contains(headerValue);
   }
 
 
