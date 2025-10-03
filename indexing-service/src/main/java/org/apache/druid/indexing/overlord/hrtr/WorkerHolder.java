@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord.hrtr;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import com.google.common.base.Optional;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
@@ -37,13 +38,17 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
+import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.server.coordination.ChangeRequestHttpSyncer;
+import org.apache.druid.utils.Throwables;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,10 +65,18 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class WorkerHolder
 {
+  /**
+   * Worker state enum for HttpRemoteTaskRunnerV2 state management
+   */
+  public enum WorkerState {
+    READY,          // Ready to accept tasks
+    PENDING_ASSIGN, // Has unacknowledged task assignment
+    LAZY,           // Marked for termination
+    BLACKLISTED     // Temporarily unavailable due to failures
+  }
   private static final EmittingLogger log = new EmittingLogger(WorkerHolder.class);
 
   public static final TypeReference<ChangeRequestsSnapshot<WorkerHistoryItem>> WORKER_SYNC_RESP_TYPE_REF = new TypeReference<>() {};
-
 
   private final Worker worker;
   private Worker disabledWorker;
@@ -77,6 +90,9 @@ public class WorkerHolder
   private final AtomicReference<DateTime> lastCompletedTaskTime = new AtomicReference<>(DateTimes.nowUtc());
   private final AtomicReference<DateTime> blacklistedUntil = new AtomicReference<>();
   private final AtomicInteger continuouslyFailedTasksCount = new AtomicInteger(0);
+  
+  // Worker state for task runner management - defaults to READY
+  private final AtomicReference<WorkerState> workerState = new AtomicReference<>(WorkerState.READY);
 
   private final ChangeRequestHttpSyncer<WorkerHistoryItem> syncer;
 
@@ -183,6 +199,37 @@ public class WorkerHolder
     this.continuouslyFailedTasksCount.incrementAndGet();
   }
 
+  /**
+   * Get the current worker state for task runner management
+   */
+  public WorkerState getWorkerState()
+  {
+    return workerState.get();
+  }
+
+  /**
+   * Set the worker state for task runner management
+   */
+  public void setWorkerState(WorkerState newState)
+  {
+    WorkerState oldState = workerState.getAndSet(newState);
+    if (oldState != newState) {
+      log.debug("Worker[%s] state changed from [%s] to [%s]", worker.getHost(), oldState, newState);
+    }
+  }
+
+  /**
+   * Compare and set the worker state atomically
+   */
+  public boolean compareAndSetWorkerState(WorkerState expectedState, WorkerState newState)
+  {
+    boolean success = workerState.compareAndSet(expectedState, newState);
+    if (success && expectedState != newState) {
+      log.debug("Worker[%s] state changed from [%s] to [%s]", worker.getHost(), expectedState, newState);
+    }
+    return success;
+  }
+
   public boolean assignTask(Task task)
   {
     if (disabled.get()) {
@@ -280,6 +327,97 @@ public class WorkerHolder
       }
 
       log.error("Failed to shutdown task[%s] on worker[%s] failed.", taskId, worker.getHost());
+    }
+  }
+
+  /**
+   * Stream task log from worker
+   */
+  public Optional<InputStream> streamTaskLog(String taskId, long offset) throws IOException
+  {
+    final URL url = TaskRunnerUtils.makeWorkerURL(
+        worker,
+        "/druid/worker/v1/task/%s/log?offset=%s",
+        taskId,
+        Long.toString(offset)
+    );
+
+    try {
+      return Optional.of(httpClient.go(
+          new Request(HttpMethod.GET, url),
+          new InputStreamResponseHandler()
+      ).get());
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(e);
+    }
+    catch (ExecutionException e) {
+      IOException ioException = Throwables.getCauseOfType(e.getCause(), IOException.class);
+      if (ioException != null) {
+        throw ioException;
+      }
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Stream task reports from worker
+   */
+  public Optional<InputStream> streamTaskReports(String taskId) throws IOException
+  {
+    final URL url = TaskRunnerUtils.makeWorkerURL(
+        worker,
+        "/druid/worker/v1/task/%s/reports",
+        taskId
+    );
+
+    try {
+      return Optional.of(httpClient.go(
+          new Request(HttpMethod.GET, url),
+          new InputStreamResponseHandler()
+      ).get());
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(e);
+    }
+    catch (ExecutionException e) {
+      IOException ioException = Throwables.getCauseOfType(e.getCause(), IOException.class);
+      if (ioException != null) {
+        throw ioException;
+      }
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Stream task status from worker
+   */
+  public Optional<InputStream> streamTaskStatus(String taskId) throws IOException
+  {
+    final URL url = TaskRunnerUtils.makeWorkerURL(
+        worker,
+        "/druid/worker/v1/task/%s/status",
+        taskId
+    );
+
+    try {
+      return Optional.of(httpClient.go(
+          new Request(HttpMethod.GET, url),
+          new InputStreamResponseHandler()
+      ).get());
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(e);
+    }
+    catch (ExecutionException e) {
+      IOException ioException = Throwables.getCauseOfType(e.getCause(), IOException.class);
+      if (ioException != null) {
+        throw ioException;
+      }
+      throw new RuntimeException(e);
     }
   }
 
