@@ -136,6 +136,8 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 Updates the dynamic configuration for the Kubernetes Task Runner
 
+Note: Both `podTemplateSelectStrategy` and `capacity` are optional fields. A POST request may include either, both, or neither.
+
 ##### URL
 
 `POST` `/druid/indexer/v1/k8s/taskrunner/executionconfig`
