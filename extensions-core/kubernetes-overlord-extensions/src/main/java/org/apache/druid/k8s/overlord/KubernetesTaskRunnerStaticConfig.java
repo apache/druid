@@ -139,11 +139,7 @@ public class KubernetesTaskRunnerStaticConfig implements KubernetesTaskRunnerCon
   @NotNull
   private Integer capacity = Integer.MAX_VALUE;
 
-  public KubernetesTaskRunnerStaticConfig()
-  {
-  }
-
-  private KubernetesTaskRunnerStaticConfig(
+  public KubernetesTaskRunnerStaticConfig(
       @Nonnull String namespace,
       String overlordNamespace,
       String k8sTaskPodNamePrefix,
@@ -168,77 +164,77 @@ public class KubernetesTaskRunnerStaticConfig implements KubernetesTaskRunnerCon
   )
   {
     this.namespace = namespace;
-    this.overlordNamespace = ObjectUtils.defaultIfNull(
+    this.overlordNamespace = ObjectUtils.getIfNull(
         overlordNamespace,
         this.overlordNamespace
     );
     this.k8sTaskPodNamePrefix = k8sTaskPodNamePrefix;
-    this.debugJobs = ObjectUtils.defaultIfNull(
+    this.debugJobs = ObjectUtils.getIfNull(
         debugJobs,
         this.debugJobs
     );
-    this.sidecarSupport = ObjectUtils.defaultIfNull(
+    this.sidecarSupport = ObjectUtils.getIfNull(
         sidecarSupport,
         this.sidecarSupport
     );
-    this.primaryContainerName = ObjectUtils.defaultIfNull(
+    this.primaryContainerName = ObjectUtils.getIfNull(
         primaryContainerName,
         this.primaryContainerName
     );
-    this.kubexitImage = ObjectUtils.defaultIfNull(
+    this.kubexitImage = ObjectUtils.getIfNull(
         kubexitImage,
         this.kubexitImage
     );
-    this.graceTerminationPeriodSeconds = ObjectUtils.defaultIfNull(
+    this.graceTerminationPeriodSeconds = ObjectUtils.getIfNull(
         graceTerminationPeriodSeconds,
         this.graceTerminationPeriodSeconds
     );
     this.disableClientProxy = disableClientProxy;
-    this.maxTaskDuration = ObjectUtils.defaultIfNull(
+    this.maxTaskDuration = ObjectUtils.getIfNull(
         maxTaskDuration,
         this.maxTaskDuration
     );
-    this.taskCleanupDelay = ObjectUtils.defaultIfNull(
+    this.taskCleanupDelay = ObjectUtils.getIfNull(
         taskCleanupDelay,
         this.taskCleanupDelay
     );
-    this.taskCleanupInterval = ObjectUtils.defaultIfNull(
+    this.taskCleanupInterval = ObjectUtils.getIfNull(
         taskCleanupInterval,
         this.taskCleanupInterval
     );
-    this.k8sjobLaunchTimeout = ObjectUtils.defaultIfNull(
+    this.k8sjobLaunchTimeout = ObjectUtils.getIfNull(
         k8sjobLaunchTimeout,
         this.k8sjobLaunchTimeout
     );
-    this.taskJoinTimeout = ObjectUtils.defaultIfNull(
+    this.taskJoinTimeout = ObjectUtils.getIfNull(
         taskJoinTimeout,
         this.taskJoinTimeout
     );
-    this.logSaveTimeout = ObjectUtils.defaultIfNull(
+    this.logSaveTimeout = ObjectUtils.getIfNull(
         logSaveTimeout,
         this.logSaveTimeout
     );
-    this.peonMonitors = ObjectUtils.defaultIfNull(
+    this.peonMonitors = ObjectUtils.getIfNull(
         peonMonitors,
         this.peonMonitors
     );
-    this.javaOptsArray = ObjectUtils.defaultIfNull(
+    this.javaOptsArray = ObjectUtils.getIfNull(
         javaOptsArray,
         this.javaOptsArray
     );
-    this.cpuCoreInMicro = ObjectUtils.defaultIfNull(
+    this.cpuCoreInMicro = ObjectUtils.getIfNull(
         cpuCoreInMicro,
         this.cpuCoreInMicro
     );
-    this.labels = ObjectUtils.defaultIfNull(
+    this.labels = ObjectUtils.getIfNull(
         labels,
         this.labels
     );
-    this.annotations = ObjectUtils.defaultIfNull(
+    this.annotations = ObjectUtils.getIfNull(
         annotations,
         this.annotations
     );
-    this.capacity = ObjectUtils.defaultIfNull(
+    this.capacity = ObjectUtils.getIfNull(
         capacity,
         this.capacity
     );
@@ -370,193 +366,5 @@ public class KubernetesTaskRunnerStaticConfig implements KubernetesTaskRunnerCon
   public Integer getCapacity()
   {
     return capacity;
-  }
-
-  public static Builder builder()
-  {
-    return new Builder();
-  }
-
-  public static class Builder
-  {
-    private String namespace;
-    private String overlordNamespace;
-    private String k8sTaskPodNamePrefix;
-    private boolean debugJob;
-    private boolean sidecarSupport;
-    private String primaryContainerName;
-    private String kubexitImage;
-    private Long graceTerminationPeriodSeconds;
-    private boolean disableClientProxy;
-    private Period maxTaskDuration;
-    private Period taskCleanupDelay;
-    private Period taskCleanupInterval;
-    private Period k8sjobLaunchTimeout;
-    private List<String> peonMonitors;
-    private List<String> javaOptsArray;
-    private int cpuCoreInMicro;
-    private Map<String, String> labels;
-    private Map<String, String> annotations;
-    private Integer capacity;
-    private Period taskJoinTimeout;
-    private Period logSaveTimeout;
-
-    public Builder()
-    {
-    }
-
-    public Builder withNamespace(String namespace)
-    {
-      this.namespace = namespace;
-      return this;
-    }
-
-    public Builder withOverlordNamespace(String overlordNamespace)
-    {
-      this.overlordNamespace = overlordNamespace;
-      return this;
-    }
-
-    public Builder withK8sTaskPodNamePrefix(String k8sTaskPodNamePrefix)
-    {
-      this.k8sTaskPodNamePrefix = k8sTaskPodNamePrefix;
-      return this;
-    }
-
-    public Builder withDebugJob(boolean debugJob)
-    {
-      this.debugJob = debugJob;
-      return this;
-    }
-
-    public Builder withSidecarSupport(boolean sidecarSupport)
-    {
-      this.sidecarSupport = sidecarSupport;
-      return this;
-    }
-
-    public Builder withPrimaryContainerName(String primaryContainerName)
-    {
-      this.primaryContainerName = primaryContainerName;
-      return this;
-    }
-
-    public Builder withKubexitImage(String kubexitImage)
-    {
-      this.kubexitImage = kubexitImage;
-      return this;
-    }
-
-    public Builder withGraceTerminationPeriodSeconds(Long graceTerminationPeriodSeconds)
-    {
-      this.graceTerminationPeriodSeconds = graceTerminationPeriodSeconds;
-      return this;
-    }
-
-    public Builder withDisableClientProxy(boolean disableClientProxy)
-    {
-      this.disableClientProxy = disableClientProxy;
-      return this;
-    }
-
-    public Builder withTaskTimeout(Period taskTimeout)
-    {
-      this.maxTaskDuration = taskTimeout;
-      return this;
-    }
-
-    public Builder withTaskCleanupDelay(Period taskCleanupDelay)
-    {
-      this.taskCleanupDelay = taskCleanupDelay;
-      return this;
-    }
-
-    public Builder withTaskCleanupInterval(Period taskCleanupInterval)
-    {
-      this.taskCleanupInterval = taskCleanupInterval;
-      return this;
-    }
-
-    public Builder withK8sJobLaunchTimeout(Period k8sjobLaunchTimeout)
-    {
-      this.k8sjobLaunchTimeout = k8sjobLaunchTimeout;
-      return this;
-    }
-
-    public Builder withPeonMonitors(List<String> peonMonitors)
-    {
-      this.peonMonitors = peonMonitors;
-      return this;
-    }
-
-    public Builder withCpuCore(int cpuCore)
-    {
-      this.cpuCoreInMicro = cpuCore;
-      return this;
-    }
-
-    public Builder withJavaOptsArray(List<String> javaOptsArray)
-    {
-      this.javaOptsArray = javaOptsArray;
-      return this;
-    }
-
-    public Builder withLabels(Map<String, String> labels)
-    {
-      this.labels = labels;
-      return this;
-    }
-
-    public Builder withAnnotations(Map<String, String> annotations)
-    {
-      this.annotations = annotations;
-      return this;
-    }
-
-
-    public Builder withCapacity(@Min(0) @Max(Integer.MAX_VALUE) Integer capacity)
-    {
-      this.capacity = capacity;
-      return this;
-    }
-
-    public Builder withTaskJoinTimeout(Period taskJoinTimeout)
-    {
-      this.taskJoinTimeout = taskJoinTimeout;
-      return this;
-    }
-
-    public Builder withLogSaveTimeout(Period logSaveTimeout)
-    {
-      this.logSaveTimeout = logSaveTimeout;
-      return this;
-    }
-
-    public KubernetesTaskRunnerStaticConfig build()
-    {
-      return new KubernetesTaskRunnerStaticConfig(
-          this.namespace,
-          this.overlordNamespace,
-          this.k8sTaskPodNamePrefix,
-          this.debugJob,
-          this.sidecarSupport,
-          this.primaryContainerName,
-          this.kubexitImage,
-          this.graceTerminationPeriodSeconds,
-          this.disableClientProxy,
-          this.maxTaskDuration,
-          this.taskCleanupDelay,
-          this.taskCleanupInterval,
-          this.k8sjobLaunchTimeout,
-          this.logSaveTimeout,
-          this.peonMonitors,
-          this.javaOptsArray,
-          this.cpuCoreInMicro,
-          this.labels,
-          this.annotations,
-          this.capacity,
-          this.taskJoinTimeout
-      );
-    }
   }
 }
