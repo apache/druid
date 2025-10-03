@@ -33,6 +33,7 @@ import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
+import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerStaticConfig;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.k8s.overlord.common.PeonCommandContext;
@@ -87,9 +88,9 @@ class MultiContainerTaskAdapterTest
   {
     TestKubernetesClient testClient = new TestKubernetesClient(client);
     Pod pod = K8sTestUtils.fileToResource("multiContainerPodSpec.yaml", Pod.class);
-    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerStaticConfig.builder()
-                                                                              .withNamespace("namespace")
-                                                                              .build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
+                                                                        .withNamespace("namespace")
+                                                                        .build();
     MultiContainerTaskAdapter adapter = new MultiContainerTaskAdapter(
         testClient,
         config,
@@ -138,7 +139,7 @@ class MultiContainerTaskAdapterTest
   {
     TestKubernetesClient testClient = new TestKubernetesClient(client);
     Pod pod = K8sTestUtils.fileToResource("multiContainerPodSpecOrder.yaml", Pod.class);
-    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerStaticConfig.builder()
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
                                                                               .withNamespace("namespace")
                                                                               .withPrimaryContainerName("primary")
                                                                               .build();
@@ -192,7 +193,7 @@ class MultiContainerTaskAdapterTest
   {
     TestKubernetesClient testClient = new TestKubernetesClient(client);
     Pod pod = K8sTestUtils.fileToResource("podSpec.yaml", Pod.class);
-    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerStaticConfig.builder()
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
                                                                               .withNamespace("namespace")
                                                                               .withPrimaryContainerName("primary")
                                                                               .withPeonMonitors(ImmutableList.of("org.apache.druid.java.util.metrics.JvmMonitor"))

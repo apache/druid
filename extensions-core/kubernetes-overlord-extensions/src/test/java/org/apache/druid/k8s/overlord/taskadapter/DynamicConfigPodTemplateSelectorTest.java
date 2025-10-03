@@ -29,6 +29,7 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerEffectiveConfig;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerStaticConfig;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
@@ -63,7 +64,7 @@ public class DynamicConfigPodTemplateSelectorTest
     mapper = new TestUtils().getTestObjectMapper();
     podTemplateSpec = K8sTestUtils.fileToResource("basePodTemplate.yaml", PodTemplate.class);
     Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef = () -> new DefaultKubernetesTaskRunnerDynamicConfig(KubernetesTaskRunnerDynamicConfig.DEFAULT_STRATEGY, 1);
-    KubernetesTaskRunnerStaticConfig staticConfig = KubernetesTaskRunnerStaticConfig.builder().build();
+    KubernetesTaskRunnerStaticConfig staticConfig = KubernetesTaskRunnerConfig.builder().build();
     effectiveConfig = new KubernetesTaskRunnerEffectiveConfig(staticConfig, dynamicConfigRef);
   }
 
@@ -256,7 +257,7 @@ public class DynamicConfigPodTemplateSelectorTest
         ), 1
     );
 
-    KubernetesTaskRunnerStaticConfig staticConfig = KubernetesTaskRunnerStaticConfig.builder().build();
+    KubernetesTaskRunnerStaticConfig staticConfig = KubernetesTaskRunnerConfig.builder().build();
     effectiveConfig = new KubernetesTaskRunnerEffectiveConfig(staticConfig, dynamicConfigRef);
 
     DynamicConfigPodTemplateSelector podTemplateSelector = new DynamicConfigPodTemplateSelector(

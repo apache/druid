@@ -52,7 +52,7 @@ public class KubernetesTaskRunnerFactoryTest
   public void setup()
   {
     objectMapper = new TestUtils().getTestObjectMapper();
-    KubernetesTaskRunnerStaticConfig kubernetesTaskRunnerStaticConfig = KubernetesTaskRunnerStaticConfig.builder()
+    KubernetesTaskRunnerStaticConfig kubernetesTaskRunnerStaticConfig = KubernetesTaskRunnerConfig.builder()
         .withCapacity(1)
         .build();
     taskLogs = new NoopTaskLogs();

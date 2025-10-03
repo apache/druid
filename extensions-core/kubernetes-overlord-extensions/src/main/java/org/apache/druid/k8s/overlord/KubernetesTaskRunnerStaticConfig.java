@@ -32,6 +32,12 @@ import javax.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Static configuration for the Kubernetes-based task runner used by the Overlord.
+ * <p>
+ * This configuration is populated from runtime properties with the prefix
+ * {@code druid.indexer.runner}.
+ */
 public class KubernetesTaskRunnerStaticConfig implements KubernetesTaskRunnerConfig
 {
   @JsonProperty

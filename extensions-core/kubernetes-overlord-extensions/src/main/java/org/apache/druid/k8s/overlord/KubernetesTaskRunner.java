@@ -111,7 +111,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   protected final TaskAdapter adapter;
 
   private final KubernetesPeonClient client;
-  private final KubernetesTaskRunnerEffectiveConfig config;
+  private final KubernetesTaskRunnerConfig config;
   private final ListeningExecutorService exec;
   private final ThreadPoolExecutor tpe;
   private final HttpClient httpClient;
@@ -124,7 +124,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
 
   public KubernetesTaskRunner(
       TaskAdapter adapter,
-      KubernetesTaskRunnerEffectiveConfig config,
+      KubernetesTaskRunnerConfig config,
       KubernetesPeonClient client,
       HttpClient httpClient,
       PeonLifecycleFactory peonLifecycleFactory,

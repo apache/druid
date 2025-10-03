@@ -90,7 +90,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   @Before
   public void setup()
   {
-    staticConfig = KubernetesTaskRunnerStaticConfig.builder()
+    staticConfig = KubernetesTaskRunnerConfig.builder()
         .withCapacity(1)
         .build();
 

@@ -60,7 +60,7 @@ public class KubernetesTaskRunnerStaticConfigTest
   @Test
   public void test_builder_preservesDefaults()
   {
-    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerStaticConfig.builder()
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
         .withNamespace("namespace")
         .withDisableClientProxy(true)
         .build();
@@ -85,7 +85,7 @@ public class KubernetesTaskRunnerStaticConfigTest
   @Test
   public void test_builder()
   {
-    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerStaticConfig.builder()
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
         .withNamespace("namespace")
         .withDebugJob(true)
         .withSidecarSupport(true)
