@@ -33,10 +33,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Static configuration for the Kubernetes-based task runner used by the Overlord.
- * <p>
  * This configuration is populated from runtime properties with the prefix
- * {@code druid.indexer.runner}.
+ * {@code druid.indexer.runner}. It is the base configuration that
+ * {@link KubernetesTaskRunnerEffectiveConfig} will use if no dynamic config is provided.
  */
 public class KubernetesTaskRunnerStaticConfig implements KubernetesTaskRunnerConfig
 {
