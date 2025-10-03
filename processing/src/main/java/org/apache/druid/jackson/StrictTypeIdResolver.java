@@ -19,92 +19,106 @@
 
 package org.apache.druid.jackson;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DatabindContext;
+import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.cfg.MapperConfig;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator;
+import com.fasterxml.jackson.databind.jsontype.TypeIdResolver;
+import com.fasterxml.jackson.databind.jsontype.impl.StdTypeResolverBuilder;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
-import org.apache.druid.java.util.common.IAE;
+import com.fasterxml.jackson.databind.jsontype.impl.TypeNameIdResolver;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Collection;
 
 /**
- * A custom {@link com.fasterxml.jackson.databind.jsontype.TypeIdResolver} that enforces strict type id validation.
+ * A strict {@link TypeIdResolver} implementation that validates all incoming type ids.
  * <p>
- * During deserialization, the JSON property used as the type discriminator must match one of the registered subtypes.
+ * During deserialization, the type discriminator in the JSON must correspond to a registered subtype;
+ * otherwise this resolver will throw an exception instead of silently accepting or defaulting.
  * <p>
- * If the type is missing, the resolver can fall back to a configured default implementation.
+ * An optional default implementation may still be configured and used only when the type id is absent.
  */
 public class StrictTypeIdResolver extends TypeIdResolverBase
 {
-  private Map<String, Class<?>> typeMap;
-  private JavaType baseType;
-
-  @Override
-  public void init(JavaType baseType)
+  public static class Builder extends StdTypeResolverBuilder
   {
-    this.baseType = baseType;
+    @Override
+    protected TypeIdResolver idResolver(
+        MapperConfig<?> config,
+        JavaType baseType,
+        PolymorphicTypeValidator subtypeValidator,
+        Collection<NamedType> subtypes,
+        boolean forSer,
+        boolean forDeser
+    )
+    {
+      this._customIdResolver = new StrictTypeIdResolver(config, baseType, subtypes, forSer, forDeser);
+      return this._customIdResolver;
+    }
   }
 
-  private void ensureTypeMap()
+  protected final JavaType baseType;
+  protected final TypeNameIdResolver delegate;
+
+  StrictTypeIdResolver()
   {
-    if (typeMap != null) {
-      return;
+    // Required default constructor for Jackson, the instance is never used
+    baseType = null;
+    delegate = null;
+  }
+
+  StrictTypeIdResolver(
+      MapperConfig<?> config,
+      JavaType baseType,
+      Collection<NamedType> subtypes,
+      boolean forSer,
+      boolean forDeser
+  )
+  {
+    this.baseType = baseType;
+    this.delegate = TypeNameIdResolver.construct(config, baseType, subtypes, forSer, forDeser);
+  }
+
+  @Override
+  public JavaType typeFromId(DatabindContext context, String id) throws JsonProcessingException
+  {
+    if (id == null) {
+      // fallback to default implementation if configured
+      return null;
     }
 
-    typeMap = new HashMap<>();
-    Class<?> raw = baseType.getRawClass();
-    // walk class hierarchy to collect @JsonSubTypes
-    while (raw != null) {
-      JsonSubTypes subTypes = raw.getAnnotation(JsonSubTypes.class);
-      if (subTypes != null) {
-        for (JsonSubTypes.Type t : subTypes.value()) {
-          typeMap.put(t.name(), t.value());
-        }
-      }
-      raw = raw.getSuperclass();
+    JavaType type = delegate.typeFromId(context, id);
+    if (type == null) {
+      // in TypeNameIdResolver, it'd fall back to defaultImpl if configured, but we want to error out instead
+      throw ((DeserializationContext) context).invalidTypeIdException(
+          baseType,
+          id,
+          "known type ids = " + delegate.getDescForKnownTypeIds()
+      );
     }
-
-    if (typeMap.isEmpty()) {
-      throw new IllegalStateException("No @JsonSubTypes found for " + baseType.getRawClass());
-    }
+    return type;
   }
 
   @Override
   public String idFromValue(Object value)
   {
-    ensureTypeMap();
-    Class<?> clazz = value.getClass();
-    // find the name from @JsonSubTypes
-    for (Map.Entry<String, Class<?>> e : typeMap.entrySet()) {
-      if (e.getValue().equals(clazz)) {
-        return e.getKey();
-      }
-    }
-    throw new IllegalArgumentException("Unknown class: " + clazz.getName());
+    return delegate.idFromValue(value);
   }
 
   @Override
   public String idFromValueAndType(Object value, Class<?> suggestedType)
   {
-    ensureTypeMap();
-    return idFromValue(value);
+    return delegate.idFromValueAndType(value, suggestedType);
   }
 
   @Override
-  public JavaType typeFromId(DatabindContext context, String id)
+  public String getDescForKnownTypeIds()
   {
-    ensureTypeMap();
-    if (id == null) {
-      // Missing type, caller decides default
-      return null;
-    }
-    Class<?> clazz = typeMap.get(id);
-    if (clazz == null) {
-      throw new IAE("Unknown type[%s]", id);
-    }
-    return context.constructType(clazz);
+    return delegate.getDescForKnownTypeIds();
   }
 
   @Override

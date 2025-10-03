@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
+import com.fasterxml.jackson.databind.annotation.JsonTypeResolver;
 import com.google.common.base.Strings;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.annotations.PublicApi;
@@ -64,7 +64,7 @@ import java.util.Objects;
  * </p>
  */
 @PublicApi
-@JsonTypeIdResolver(StrictTypeIdResolver.class)
+@JsonTypeResolver(StrictTypeIdResolver.Builder.class)
 @JsonTypeInfo(use = JsonTypeInfo.Id.CUSTOM, property = "type", defaultImpl = StringDimensionSchema.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = DimensionSchema.STRING_TYPE_NAME, value = StringDimensionSchema.class),

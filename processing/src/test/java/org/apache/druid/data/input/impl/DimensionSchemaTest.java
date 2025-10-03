@@ -20,7 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.java.util.common.IAE;
+import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -52,8 +52,12 @@ public class DimensionSchemaTest
   public void testDeserializeStrictTypeId() throws Exception
   {
     final String invalidType = "{\"type\":\"invalid\",\"name\":\"foo\",\"multiValueHandling\":\"ARRAY\",\"createBitmapIndex\":false}";
-    IAE e = Assert.assertThrows(IAE.class, () -> OBJECT_MAPPER.readValue(invalidType, DimensionSchema.class));
-    Assert.assertEquals("Unknown type[invalid]", e.getMessage());
+    InvalidTypeIdException e = Assert.assertThrows(
+        InvalidTypeIdException.class,
+        () -> OBJECT_MAPPER.readValue(invalidType, DimensionSchema.class)
+    );
+    Assert.assertTrue(e.getMessage().contains(
+        "Could not resolve type id 'invalid' as a subtype of `org.apache.druid.data.input.impl.DimensionSchema`: known type ids = [auto, double, float, json, long, spatial, string]"));
   }
 
   @Test
