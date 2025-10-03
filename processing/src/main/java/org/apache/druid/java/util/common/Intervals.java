@@ -80,12 +80,15 @@ public final class Intervals
    */
   public static Interval fromString(String string)
   {
-    Interval interval = null;
     if (canDeserializeIntervalOptimallyFromString(string)) {
-      interval = tryOptimizedIntervalDeserialization(string);
+      Interval interval = tryOptimizedIntervalDeserialization(string);
+
+      if (interval != null) {
+        return interval;
+      }
     }
 
-    return interval == null ? Intervals.of(string) : interval;
+    return Intervals.of(string);
   }
 
   private static boolean canDeserializeIntervalOptimallyFromString(String intervalText)
