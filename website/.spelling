@@ -175,6 +175,7 @@ Kerberos
 KeyStores
 Kinesis
 Kubernetes
+KubernetesClient
 Lakehouse
 LDAPS
 LRU
@@ -342,6 +343,7 @@ endpointConfig
 enum
 expectedType
 expr
+fabric8
 failover
 failovers
 featureSpec
@@ -454,6 +456,7 @@ numerics
 numShards
 parameterize
 objectGlob
+okhttp
 parameterized
 parse_json
 parseable
@@ -623,6 +626,7 @@ vectorizeVirtualColumns
 versioned
 versioning
 virtualColumns
+vert.x
 w.r.t.
 walkthrough
 whitelist
