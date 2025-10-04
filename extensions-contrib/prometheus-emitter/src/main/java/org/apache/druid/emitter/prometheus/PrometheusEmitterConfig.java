@@ -77,6 +77,10 @@ public class PrometheusEmitterConfig
   @JsonProperty
   private final Duration waitForShutdownDelay;
 
+  @JsonProperty
+  @Nullable
+  private final Long metricTtlMs;
+
   @JsonCreator
   public PrometheusEmitterConfig(
       @JsonProperty("strategy") @Nullable Strategy strategy,
@@ -86,10 +90,11 @@ public class PrometheusEmitterConfig
       @JsonProperty("pushGatewayAddress") @Nullable String pushGatewayAddress,
       @JsonProperty("addHostAsLabel") boolean addHostAsLabel,
       @JsonProperty("addServiceAsLabel") boolean addServiceAsLabel,
-      @JsonProperty("flushPeriod") Integer flushPeriod,
+      @JsonProperty("flushPeriod") @Nullable Integer flushPeriod,
       @JsonProperty("extraLabels") @Nullable Map<String, String> extraLabels,
       @JsonProperty("deletePushGatewayMetricsOnShutdown") @Nullable Boolean deletePushGatewayMetricsOnShutdown,
-      @JsonProperty("waitForShutdownDelay") @Nullable Long waitForShutdownDelay
+      @JsonProperty("waitForShutdownDelay") @Nullable Long waitForShutdownDelay,
+      @JsonProperty("metricTtlMs") @Nullable Long metricTtlMs
   )
   {
     this.strategy = strategy != null ? strategy : Strategy.exporter;
@@ -128,6 +133,18 @@ public class PrometheusEmitterConfig
                               )
                           );
     }
+
+    if (metricTtlMs != null && metricTtlMs <= 0) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(
+                              StringUtils.format(
+                                  "Invalid value for metricTtlMs[%s] specified, metricTtlMs must be > 0.",
+                                  metricTtlMs
+                              )
+                          );
+    }
+    this.metricTtlMs = metricTtlMs;
 
     // Validate label names early to prevent Prometheus exceptions later.
     for (String key : this.extraLabels.keySet()) {
@@ -199,6 +216,12 @@ public class PrometheusEmitterConfig
   public Duration getWaitForShutdownDelay()
   {
     return waitForShutdownDelay;
+  }
+
+  @Nullable
+  public Long getMetricTtlMs()
+  {
+    return metricTtlMs;
   }
 
   public enum Strategy

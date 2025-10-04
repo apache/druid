@@ -39,7 +39,7 @@ public class PrometheusEmitterConfigTest
 
     // Expect an exception thrown by our own PrometheusEmitterConfig due to invalid label key
     Exception exception = Assert.assertThrows(DruidException.class, () -> {
-      new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, true, 60, extraLabels, false, null);
+      new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, true, 60, extraLabels, false, null, null);
     });
 
     String expectedMessage = "Invalid metric label name [label Name]. Label names must conform to the pattern [[a-zA-Z_:][a-zA-Z0-9_:]*]";
@@ -51,7 +51,7 @@ public class PrometheusEmitterConfigTest
   @Test
   public void testDefaultConstructor()
   {
-    PrometheusEmitterConfig config = new PrometheusEmitterConfig(null, null, null, null, null, false, false, null, null, null, null);
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(null, null, null, null, null, false, false, null, null, null, null, null);
     Assert.assertEquals(PrometheusEmitterConfig.Strategy.exporter, config.getStrategy());
     Assert.assertEquals("druid", config.getNamespace());
     Assert.assertNull(config.getDimensionMapPath());
@@ -60,7 +60,7 @@ public class PrometheusEmitterConfigTest
   @Test
   public void testExporterStrategy()
   {
-    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "druid", null, 8080, null, true, true, null, null, null, null);
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "druid", null, 8080, null, true, true, null, null, null, null, null);
     Assert.assertEquals(PrometheusEmitterConfig.Strategy.exporter, config.getStrategy());
     Assert.assertEquals("druid", config.getNamespace());
     Assert.assertEquals(8080, config.getPort());
@@ -68,14 +68,14 @@ public class PrometheusEmitterConfigTest
     Assert.assertTrue(config.isAddHostAsLabel());
 
     Assert.assertThrows(IllegalArgumentException.class, () -> {
-      new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, null, null, false, false, null, null, null, null);
+      new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, null, null, false, false, null, null, null, null, null);
     });
   }
 
   @Test
   public void testPushgatewayStrategy()
   {
-    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "druid", null, null, "localhost:9091", false, false, 30, null, true, 5000L);
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "druid", null, null, "localhost:9091", false, false, 30, null, true, 5000L, null);
     Assert.assertEquals(PrometheusEmitterConfig.Strategy.pushgateway, config.getStrategy());
     Assert.assertEquals("druid", config.getNamespace());
     Assert.assertEquals("localhost:9091", config.getPushGatewayAddress());
@@ -83,7 +83,7 @@ public class PrometheusEmitterConfigTest
     Assert.assertFalse(config.isAddHostAsLabel());
 
     Assert.assertThrows(IllegalArgumentException.class, () -> {
-      new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, null, null, null, null, false, false, null, null, null, null);
+      new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, null, null, null, null, false, false, null, null, null, null, null);
     });
   }
 
@@ -91,7 +91,7 @@ public class PrometheusEmitterConfigTest
   public void testInvalidFlushPeriod()
   {
     IllegalArgumentException illegalArgumentException = Assert.assertThrows(IllegalArgumentException.class, () -> {
-      new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, null, null, null, "localhost:9091", false, false, 0, null, null, null);
+      new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, null, null, null, "localhost:9091", false, false, 0, null, null, null, null);
     });
     Assert.assertEquals("flushPeriod must be greater than 0.", illegalArgumentException.getMessage());
   }
@@ -102,7 +102,7 @@ public class PrometheusEmitterConfigTest
     DruidException druidException = Assert.assertThrows(DruidException.class, () -> {
       Map<String, String> extraLabels = new HashMap<>();
       extraLabels.put("invalid label", "value");
-      new PrometheusEmitterConfig(null, null, null, null, null, false, false, null, extraLabels, null, null);
+      new PrometheusEmitterConfig(null, null, null, null, null, false, false, null, extraLabels, null, null, null);
     });
     Assert.assertEquals("Invalid metric label name [invalid label]. Label names must conform to the pattern [[a-zA-Z_:][a-zA-Z0-9_:]*].", druidException.getMessage());
   }
@@ -111,7 +111,7 @@ public class PrometheusEmitterConfigTest
   public void testNegativeWaitForShutdownDelay()
   {
     DruidException druidException = Assert.assertThrows(DruidException.class, () -> {
-      new PrometheusEmitterConfig(null, null, null, null, null, false, false, null, null, null, -1L);
+      new PrometheusEmitterConfig(null, null, null, null, null, false, false, null, null, null, -1L, null);
     });
     Assert.assertEquals("Invalid value for waitForShutdownDelay[-1] specified, waitForShutdownDelay must be >= 0.", druidException.getMessage());
   }
