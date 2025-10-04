@@ -59,6 +59,7 @@ public class PrometheusEmitter implements Emitter
   private PushGateway pushGateway;
   private volatile String identifier;
   private ScheduledExecutorService exec;
+  private ScheduledExecutorService ttlExecutor;
 
   static PrometheusEmitter of(PrometheusEmitterConfig config)
   {
@@ -92,6 +93,18 @@ public class PrometheusEmitter implements Emitter
         }
       } else {
         log.error("HTTPServer is already started");
+      }
+      // Start TTL scheduler if TTL is configured
+      if (config.getMetricTtlMs() != null) {
+        ttlExecutor = ScheduledExecutors.fixed(1, "PrometheusTTLExecutor-%s");
+        // Check TTL every minute
+        ttlExecutor.scheduleAtFixedRate(
+            this::checkMetricTtl,
+            config.getMetricTtlMs(),
+            config.getMetricTtlMs(),
+            TimeUnit.MILLISECONDS
+        );
+        log.info("Started TTL scheduler with TTL of %d milliseconds", config.getMetricTtlMs());
       }
     } else if (strategy.equals(PrometheusEmitterConfig.Strategy.pushgateway)) {
       String address = config.getPushGatewayAddress();
@@ -140,6 +153,7 @@ public class PrometheusEmitter implements Emitter
 
     DimensionsAndCollector metric = metrics.getByName(name, service);
     if (metric != null) {
+      metric.updateLastUpdateTime();
       String[] labelValues = new String[metric.getDimensions().length];
       String[] labelNames = metric.getDimensions();
 
@@ -211,6 +225,9 @@ public class PrometheusEmitter implements Emitter
       if (server != null) {
         server.close();
       }
+      if (ttlExecutor != null) {
+        ttlExecutor.shutdownNow();
+      }
     } else {
       exec.shutdownNow();
       flush();
@@ -247,6 +264,11 @@ public class PrometheusEmitter implements Emitter
     return server;
   }
 
+  public Metrics getMetrics()
+  {
+    return metrics;
+  }
+
   public PushGateway getPushGateway()
   {
     return pushGateway;
@@ -255,5 +277,22 @@ public class PrometheusEmitter implements Emitter
   public void setPushGateway(PushGateway pushGateway)
   {
     this.pushGateway = pushGateway;
+  }
+
+  private void checkMetricTtl()
+  {
+    if (config.getMetricTtlMs() == null) {
+      return;
+    }
+
+    Map<String, DimensionsAndCollector> map = metrics.getRegisteredMetrics();
+    for (Map.Entry<String, DimensionsAndCollector> entry : map.entrySet()) {
+      if (entry.getValue().isExpired(config.getMetricTtlMs())) {
+        log.info("Metric [%s] has expired (last updated %d ms ago)",
+                 entry.getKey(),
+                 System.currentTimeMillis() - entry.getValue().getLastUpdateTime());
+        entry.getValue().getCollector().clear();
+      }
+    }
   }
 }

@@ -20,6 +20,7 @@
 package org.apache.druid.emitter.prometheus;
 
 import io.prometheus.client.SimpleCollector;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class DimensionsAndCollector
 {
@@ -27,6 +28,7 @@ public class DimensionsAndCollector
   private final SimpleCollector collector;
   private final double conversionFactor;
   private final double[] histogramBuckets;
+  private final AtomicLong lastUpdateTime;
 
   DimensionsAndCollector(String[] dimensions, SimpleCollector collector, double conversionFactor, double[] histogramBuckets)
   {
@@ -34,6 +36,7 @@ public class DimensionsAndCollector
     this.collector = collector;
     this.conversionFactor = conversionFactor;
     this.histogramBuckets = histogramBuckets;
+    this.lastUpdateTime = new AtomicLong(System.currentTimeMillis());
   }
 
   public String[] getDimensions()
@@ -54,5 +57,21 @@ public class DimensionsAndCollector
   public double[] getHistogramBuckets()
   {
     return histogramBuckets;
+  }
+
+  public void updateLastUpdateTime()
+  {
+    lastUpdateTime.set(System.currentTimeMillis());
+  }
+
+  public long getLastUpdateTime()
+  {
+    return lastUpdateTime.get();
+  }
+
+  public boolean isExpired(long ttlMillis)
+  {
+    long currentTime = System.currentTimeMillis();
+    return (currentTime - lastUpdateTime.get()) > ttlMillis;
   }
 }
