@@ -75,7 +75,6 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
         final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
 
 
-
         if (parent != null) {
           fieldsSupplier = parent.fieldSupplier;
           fieldInfo = parent.fieldInfo;
@@ -130,22 +129,23 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
           );
         }
 
-
         final ByteBuffer rawBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
             NestedCommonFormatColumnSerializer.RAW_FILE_NAME
         );
-        compressedRawColumnSupplier = CompressedVariableSizedBlobColumnSupplier.fromByteBuffer(
-            ColumnSerializerUtils.getInternalFileName(
-                columnName,
-                NestedCommonFormatColumnSerializer.RAW_FILE_NAME
-            ),
-            rawBuffer,
-            byteOrder,
-            byteOrder, // byte order doesn't matter since serde is byte blobs
-            mapper
-        );
+        compressedRawColumnSupplier = rawBuffer == null
+                                      ? null
+                                      : CompressedVariableSizedBlobColumnSupplier.fromByteBuffer(
+                                          ColumnSerializerUtils.getInternalFileName(
+                                              columnName,
+                                              NestedCommonFormatColumnSerializer.RAW_FILE_NAME
+                                          ),
+                                          rawBuffer,
+                                          byteOrder,
+                                          byteOrder, // byte order doesn't matter since serde is byte blobs
+                                          mapper
+                                      );
         if (hasNulls) {
           columnBuilder.setHasNulls(true);
           final ByteBuffer nullIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
@@ -186,6 +186,7 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
   private final String columnName;
   private final Supplier<? extends Indexed<ByteBuffer>> fieldSupplier;
   private final FieldTypeInfo fieldInfo;
+  @Nullable
   private final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
   private final ImmutableBitmap nullValues;
   private final Supplier<? extends Indexed<ByteBuffer>> stringDictionarySupplier;
@@ -204,7 +205,7 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
       String columnName,
       Supplier<? extends Indexed<ByteBuffer>> fieldSupplier,
       FieldTypeInfo fieldInfo,
-      CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
+      @Nullable CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
       ImmutableBitmap nullValues,
       Supplier<? extends Indexed<ByteBuffer>> stringDictionarySupplier,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,

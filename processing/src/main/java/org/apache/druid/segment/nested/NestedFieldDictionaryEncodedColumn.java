@@ -169,6 +169,23 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
     return null;
   }
 
+  public Object lookupObject(int id)
+  {
+    final int globalId = dictionary.get(id);
+    if (globalId < adjustArrayId) {
+      return lookupGlobalScalarObject(globalId);
+    }
+    int[] arr = globalArrayDictionary.get(globalId - adjustArrayId);
+    if (arr == null) {
+      return null;
+    }
+    final Object[] array = new Object[arr.length];
+    for (int i = 0; i < arr.length; i++) {
+      array[i] = lookupGlobalScalarObject(arr[i]);
+    }
+    return array;
+  }
+
   @Override
   public int lookupId(String name)
   {
@@ -979,6 +996,7 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
         @Nullable
         private PeekableIntIterator nullIterator = nullBitmap != null ? nullBitmap.peekableIterator() : null;
         private int offsetMark = -1;
+
         @Override
         public double[] getDoubleVector()
         {
