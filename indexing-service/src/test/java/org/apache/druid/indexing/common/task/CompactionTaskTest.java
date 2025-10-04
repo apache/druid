@@ -1962,7 +1962,7 @@ public class CompactionTaskTest
         .taskActionClient(taskActionClient)
         .joinableFactory(NoopJoinableFactory.INSTANCE)
         .indexIO(indexIO)
-        .indexMergerV9(new IndexMergerV9(
+        .indexMerger(new IndexMergerV9(
             OBJECT_MAPPER,
             indexIO,
             OffHeapMemorySegmentWriteOutMediumFactory.instance(),

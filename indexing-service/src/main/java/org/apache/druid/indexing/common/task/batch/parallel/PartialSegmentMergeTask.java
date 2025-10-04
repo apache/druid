@@ -45,7 +45,6 @@ import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
-import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.SegmentSchemaMapping;
@@ -271,7 +270,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
             dataSchema,
             tuningConfig,
             toolbox.getIndexIO(),
-            toolbox.getIndexMergerV9(),
+            toolbox.getIndexMerger(),
             segmentFilesToMerge,
             tuningConfig.getMaxNumSegmentsToMerge(),
             persistDir,
@@ -346,7 +345,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
       DataSchema dataSchema,
       ParallelIndexTuningConfig tuningConfig,
       IndexIO indexIO,
-      IndexMergerV9 merger,
+      IndexMerger merger,
       List<File> indexes,
       int maxNumSegmentsToMerge,
       File baseOutDir,

@@ -33,7 +33,7 @@ import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
@@ -144,9 +144,9 @@ public class IndexerFrameContext implements FrameContext
   }
 
   @Override
-  public IndexMergerV9 indexMerger()
+  public IndexMerger indexMerger()
   {
-    return context.toolbox().getIndexMergerV9();
+    return context.toolbox().getIndexMerger();
   }
 
   @Override

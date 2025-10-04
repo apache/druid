@@ -317,7 +317,7 @@ public class TaskMonitorTest
       return new TaskToolbox.Builder()
           .indexIO(indexIO)
           .emitter(new StubServiceEmitter())
-          .indexMergerV9(new IndexMergerV9(jsonMapper, indexIO, TmpFileSegmentWriteOutMediumFactory.instance(), false))
+          .indexMerger(new IndexMergerV9(jsonMapper, indexIO, TmpFileSegmentWriteOutMediumFactory.instance(), false))
           .taskReportFileWriter(new NoopTestTaskReportFileWriter())
           .build();
     }

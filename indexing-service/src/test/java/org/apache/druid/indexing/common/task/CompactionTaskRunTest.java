@@ -2089,7 +2089,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .jsonMapper(objectMapper)
         .taskWorkDir(temporaryFolder.newFolder())
         .indexIO(getIndexIO())
-        .indexMergerV9(getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
+        .indexMerger(getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
         .taskReportFileWriter(new SingleFileTaskReportFileWriter(reportsFile))
         .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
         .chatHandlerProvider(new NoopChatHandlerProvider())

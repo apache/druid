@@ -34,7 +34,7 @@ import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -144,7 +144,7 @@ public class DartFrameContext implements FrameContext
   }
 
   @Override
-  public IndexMergerV9 indexMerger()
+  public IndexMerger indexMerger()
   {
     throw DruidException.defensive("Ingestion not implemented");
   }

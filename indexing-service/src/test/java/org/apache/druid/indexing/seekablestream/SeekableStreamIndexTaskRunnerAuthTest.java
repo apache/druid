@@ -145,7 +145,7 @@ public class SeekableStreamIndexTaskRunnerAuthTest
         .taskReportFileWriter(new NoopTestTaskReportFileWriter())
         .authorizerMapper(authorizerMapper)
         .rowIngestionMetersFactory(NoopRowIngestionMeters::new)
-        .indexMergerV9(new IndexMergerV9(mapper, indexIO, TmpFileSegmentWriteOutMediumFactory.instance(), false))
+        .indexMerger(new IndexMergerV9(mapper, indexIO, TmpFileSegmentWriteOutMediumFactory.instance(), false))
         .build();
     taskRunner.run(toolbox);
   }
