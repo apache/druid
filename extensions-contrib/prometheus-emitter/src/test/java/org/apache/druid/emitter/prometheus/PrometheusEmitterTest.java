@@ -438,7 +438,7 @@ public class PrometheusEmitterTest
   @Test
   public void testMetricTtlExpiration()
   {
-    Long metricTtl = 1000L;
+    long metricTtl = 1000L;
     PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "test", null, 0, null, false, true, 60, null, false, null, metricTtl);
     PrometheusEmitter emitter = new PrometheusEmitter(config);
     emitter.start();
@@ -472,7 +472,7 @@ public class PrometheusEmitterTest
   @Test
   public void testMetricTtlUpdate()
   {
-    Long metricTtl = 1000L;
+    long metricTtl = 1000L;
     PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "test", null, 0, null, false, true, 60, null, false, null, metricTtl);
     PrometheusEmitter emitter = new PrometheusEmitter(config);
     emitter.start();
