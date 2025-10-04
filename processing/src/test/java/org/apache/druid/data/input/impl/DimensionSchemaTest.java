@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -44,6 +45,28 @@ public class DimensionSchemaTest
     Assert.assertEquals(
         schema2,
         OBJECT_MAPPER.readValue(OBJECT_MAPPER.writeValueAsString(schema2), DimensionSchema.class)
+    );
+  }
+
+  @Test
+  public void testDeserializeStrictTypeId() throws Exception
+  {
+    final String invalidType = "{\"type\":\"invalid\",\"name\":\"foo\",\"multiValueHandling\":\"ARRAY\",\"createBitmapIndex\":false}";
+    InvalidTypeIdException e = Assert.assertThrows(
+        InvalidTypeIdException.class,
+        () -> OBJECT_MAPPER.readValue(invalidType, DimensionSchema.class)
+    );
+    Assert.assertTrue(e.getMessage().contains(
+        "Could not resolve type id 'invalid' as a subtype of `org.apache.druid.data.input.impl.DimensionSchema`: known type ids = [auto, double, float, json, long, spatial, string]"));
+  }
+
+  @Test
+  public void testDeserializeDefaultAsString() throws Exception
+  {
+    final String noType = "{\"name\":\"foo\",\"multiValueHandling\":\"ARRAY\",\"createBitmapIndex\":false}";
+    Assert.assertEquals(
+        new StringDimensionSchema("foo", DimensionSchema.MultiValueHandling.ARRAY, false),
+        OBJECT_MAPPER.readValue(noType, DimensionSchema.class)
     );
   }
 }

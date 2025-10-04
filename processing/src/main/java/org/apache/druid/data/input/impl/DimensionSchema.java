@@ -25,9 +25,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.databind.annotation.JsonTypeResolver;
 import com.google.common.base.Strings;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.jackson.StrictTypeIdResolver;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.AutoTypeColumnSchema;
@@ -44,9 +46,27 @@ import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import java.util.Objects;
 
 /**
+ * Defines the schema of a single dimension in a dataset.
+ * <p>
+ * Includes metadata such as the dimension's name, type, and whether it
+ * can hold multiple values. Supports Jackson serialization/deserialization,
+ * including polymorphic types via {@code @JsonSubTypes}.
+ * </p>
+ *
+ * <p>
+ * Example JSON:
+ * <pre>{@code
+ * {
+ *     "type": "string",
+ *     "name": "country",
+ *     "multiValue": false
+ * }
+ * }</pre>
+ * </p>
  */
 @PublicApi
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = StringDimensionSchema.class)
+@JsonTypeResolver(StrictTypeIdResolver.Builder.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.CUSTOM, property = "type", defaultImpl = StringDimensionSchema.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = DimensionSchema.STRING_TYPE_NAME, value = StringDimensionSchema.class),
     @JsonSubTypes.Type(name = DimensionSchema.LONG_TYPE_NAME, value = LongDimensionSchema.class),
