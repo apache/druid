@@ -45,8 +45,10 @@ public class DruidKubernetesClient implements KubernetesClientApi
   private final SharedIndexInformer<Pod> podInformer;
   private final SharedIndexInformer<Job> jobInformer;
 
-  public DruidKubernetesClient(DruidKubernetesHttpClientConfig httpClientConfig, Config kubernetesClientConfig,
-                               boolean enableCache
+  public DruidKubernetesClient(
+      DruidKubernetesHttpClientConfig httpClientConfig,
+      Config kubernetesClientConfig,
+      boolean enableCache
   )
   {
     this.kubernetesClient = new KubernetesClientBuilder()
@@ -116,20 +118,28 @@ public class DruidKubernetesClient implements KubernetesClientApi
     SharedIndexInformer<Pod> podInformer =
         kubernetesClient.pods()
                         .inNamespace(namespace)
-                        .inform(new ResourceEventHandler<>() {
-                          @Override
-                          public void onAdd(Pod pod) {
-                            log.info("Pod " + pod.getMetadata().getName() + " got added");
-                          }
-                          @Override
-                          public void onUpdate(Pod oldPod, Pod newPod) {
-                            log.info("Pod " + oldPod.getMetadata().getName() + " got updated");
-                          }
-                          @Override
-                          public void onDelete(Pod pod, boolean deletedFinalStateUnknown) {
-                            log.info("Pod " + pod.getMetadata().getName() + " got deleted");
-                          }
-                          }, INFORMER_RESYNC_PERIOD_MS);
+                        .inform(
+                            new ResourceEventHandler<>()
+                            {
+                              @Override
+                              public void onAdd(Pod pod)
+                              {
+                                log.info("Pod " + pod.getMetadata().getName() + " got added");
+                              }
+
+                              @Override
+                              public void onUpdate(Pod oldPod, Pod newPod)
+                              {
+                                log.info("Pod " + oldPod.getMetadata().getName() + " got updated");
+                              }
+
+                              @Override
+                              public void onDelete(Pod pod, boolean deletedFinalStateUnknown)
+                              {
+                                log.info("Pod " + pod.getMetadata().getName() + " got deleted");
+                              }
+                            }, INFORMER_RESYNC_PERIOD_MS
+                        );
 
     Function<Pod, List<String>> jobNameIndexer = pod -> {
       if (pod.getMetadata() != null && pod.getMetadata().getLabels() != null) {
@@ -156,20 +166,28 @@ public class DruidKubernetesClient implements KubernetesClientApi
                         .jobs()
                         .inNamespace(namespace)
                         .withLabel(DruidK8sConstants.LABEL_KEY)
-                        .inform(new ResourceEventHandler<>() {
-                          @Override
-                          public void onAdd(Job job) {
-                            log.info("Job " + job.getMetadata().getName() + " got added");
-                          }
-                          @Override
-                          public void onUpdate(Job oldJob, Job newJob) {
-                            log.info("Job " + oldJob.getMetadata().getName() + " got updated");
-                          }
-                          @Override
-                          public void onDelete(Job job, boolean deletedFinalStateUnknown) {
-                            log.info("Job " + job.getMetadata().getName() + " got deleted");
-                          }
-                          }, INFORMER_RESYNC_PERIOD_MS);
+                        .inform(
+                            new ResourceEventHandler<>()
+                            {
+                              @Override
+                              public void onAdd(Job job)
+                              {
+                                log.info("Job " + job.getMetadata().getName() + " got added");
+                              }
+
+                              @Override
+                              public void onUpdate(Job oldJob, Job newJob)
+                              {
+                                log.info("Job " + oldJob.getMetadata().getName() + " got updated");
+                              }
+
+                              @Override
+                              public void onDelete(Job job, boolean deletedFinalStateUnknown)
+                              {
+                                log.info("Job " + job.getMetadata().getName() + " got deleted");
+                              }
+                            }, INFORMER_RESYNC_PERIOD_MS
+                        );
 
     Function<Job, List<String>> overlordNamespaceIndexer = job -> {
       if (job.getMetadata() != null && job.getMetadata().getLabels() != null) {

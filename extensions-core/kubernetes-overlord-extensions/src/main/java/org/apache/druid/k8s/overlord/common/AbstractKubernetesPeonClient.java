@@ -56,7 +56,7 @@ public abstract class AbstractKubernetesPeonClient
   private final boolean debugJobs;
   private final ServiceEmitter emitter;
 
-   AbstractKubernetesPeonClient(
+  AbstractKubernetesPeonClient(
       KubernetesClientApi clientApi,
       String namespace,
       String overlordNamespace,
@@ -94,13 +94,13 @@ public abstract class AbstractKubernetesPeonClient
    * Waits for a pod associated with a job to be created and reach ready state using the pod cache.
    * This method polls the informer cache until the pod appears and has a pod IP assigned.
    *
-   * @param jobName the name of the job whose pod we're waiting for
-   * @param howLong the maximum time to wait
+   * @param jobName  the name of the job whose pod we're waiting for
+   * @param howLong  the maximum time to wait
    * @param timeUnit the time unit for the timeout
    * @return the pod in ready state, or null if the pod disappeared after being seen
    * @throws DruidException if the pod never appears within the timeout period
    */
-  protected abstract Pod waitUntilPeonPodCreatedAndReady( String jobName, long howLong, TimeUnit timeUnit);
+  protected abstract Pod waitUntilPeonPodCreatedAndReady(String jobName, long howLong, TimeUnit timeUnit);
 
   /**
    * Launches the given Job. Waits for the associated pod and job to be created and start running.
@@ -121,7 +121,10 @@ public abstract class AbstractKubernetesPeonClient
 
     // Evaluate result of job launch
     if (result == null) {
-      throw new ISE("K8s pod for the task [%s] appeared and disappeared. It can happen if the task was canceled", task.getId());
+      throw new ISE(
+          "K8s pod for the task [%s] appeared and disappeared. It can happen if the task was canceled",
+          task.getId()
+      );
     }
     log.info("Pod for job[%s] is in state [%s] for task[%s].", jobName, result.getStatus().getPhase(), task.getId());
     long duration = System.currentTimeMillis() - start;
@@ -155,12 +158,12 @@ public abstract class AbstractKubernetesPeonClient
     KubernetesClient k8sClient = clientApi.getClient();
     try {
       LogWatch logWatch = k8sClient.batch()
-          .v1()
-          .jobs()
-          .inNamespace(namespace)
-          .withName(taskId.getK8sJobName())
-          .inContainer("main")
-          .watchLog();
+                                   .v1()
+                                   .jobs()
+                                   .inNamespace(namespace)
+                                   .withName(taskId.getK8sJobName())
+                                   .inContainer("main")
+                                   .watchLog();
       if (logWatch == null) {
         return Optional.absent();
       }
@@ -177,12 +180,12 @@ public abstract class AbstractKubernetesPeonClient
     KubernetesClient k8sClient = clientApi.getClient();
     try {
       InputStream logStream = k8sClient.batch()
-                                   .v1()
-                                   .jobs()
-                                   .inNamespace(namespace)
-                                   .withName(taskId.getK8sJobName())
-                                   .inContainer("main")
-                                   .getLogInputStream();
+                                       .v1()
+                                       .jobs()
+                                       .inNamespace(namespace)
+                                       .withName(taskId.getK8sJobName())
+                                       .inContainer("main")
+                                       .getLogInputStream();
       if (logStream == null) {
         return Optional.absent();
       }
@@ -250,10 +253,10 @@ public abstract class AbstractKubernetesPeonClient
    * The retry logic only applies to transient connection pool exceptions. Other exceptions will cause the method to
    * fail immediately.
    *
-   * @param client the Kubernetes client to use for job creation
-   * @param job the Kubernetes job to create
+   * @param client     the Kubernetes client to use for job creation
+   * @param job        the Kubernetes job to create
    * @param quietTries number of initial retry attempts without logging warnings
-   * @param maxTries maximum total number of retry attempts
+   * @param maxTries   maximum total number of retry attempts
    * @throws DruidException if job creation fails after all retry attempts or encounters non-retryable errors
    */
   @VisibleForTesting

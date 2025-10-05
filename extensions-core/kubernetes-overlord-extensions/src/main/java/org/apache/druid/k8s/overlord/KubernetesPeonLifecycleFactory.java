@@ -21,8 +21,8 @@ package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.AbstractKubernetesPeonClient;
+import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.tasklogs.TaskLogs;
 
 public class KubernetesPeonLifecycleFactory implements PeonLifecycleFactory
