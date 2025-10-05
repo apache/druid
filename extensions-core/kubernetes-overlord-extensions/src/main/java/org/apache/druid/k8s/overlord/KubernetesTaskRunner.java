@@ -54,7 +54,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
-import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
+import org.apache.druid.k8s.overlord.common.AbstractKubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.KubernetesResourceNotFoundException;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.tasklogs.TaskLogStreamer;
@@ -108,7 +108,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   protected final ConcurrentHashMap<String, KubernetesWorkItem> tasks = new ConcurrentHashMap<>();
   protected final TaskAdapter adapter;
 
-  private final KubernetesPeonClient client;
+  private final AbstractKubernetesPeonClient client;
   private final KubernetesTaskRunnerConfig config;
   private final ListeningExecutorService exec;
   private final HttpClient httpClient;
@@ -120,7 +120,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public KubernetesTaskRunner(
       TaskAdapter adapter,
       KubernetesTaskRunnerConfig config,
-      KubernetesPeonClient client,
+      AbstractKubernetesPeonClient client,
       HttpClient httpClient,
       PeonLifecycleFactory peonLifecycleFactory,
       ServiceEmitter emitter
@@ -348,7 +348,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     // Load tasks from previously running jobs and wait for their statuses to start running.
     final List<ListenableFuture<Boolean>> taskStatusActiveList = new ArrayList<>();
     // Get all existing peon jobs.
-    final List<Job> peonJobs = client.getPeonJobs(true);
+    final List<Job> peonJobs = client.getPeonJobs();
 
     log.info("Locating [%,d] active tasks.", peonJobs.size());
     for (Job job : peonJobs) {

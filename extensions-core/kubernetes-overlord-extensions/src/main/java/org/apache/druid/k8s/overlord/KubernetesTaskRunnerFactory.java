@@ -27,7 +27,9 @@ import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
-import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
+import org.apache.druid.k8s.overlord.common.AbstractKubernetesPeonClient;
+import org.apache.druid.k8s.overlord.common.CachingKubernetesPeonClient;
+import org.apache.druid.k8s.overlord.common.DirectKubernetesPeonClient;
 import org.apache.druid.k8s.overlord.taskadapter.PodTemplateTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.tasklogs.TaskLogs;
@@ -70,22 +72,44 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   @Override
   public KubernetesTaskRunner build()
   {
-    KubernetesPeonClient peonClient;
-    if (adapterTypeAllowingTasksInDifferentNamespaces.contains(taskAdapter.getAdapterType())) {
-      peonClient = new KubernetesPeonClient(
-          druidKubernetesClient,
-          kubernetesTaskRunnerConfig.getNamespace(),
-          kubernetesTaskRunnerConfig.getOverlordNamespace(),
-          kubernetesTaskRunnerConfig.isDebugJobs(),
-          emitter
-      );
+    AbstractKubernetesPeonClient peonClient;
+    boolean enableCache = kubernetesTaskRunnerConfig.isEnablePeonClientCache();
+    boolean useOverlordNamespace = adapterTypeAllowingTasksInDifferentNamespaces.contains(taskAdapter.getAdapterType());
+
+    if (enableCache) {
+      if (useOverlordNamespace) {
+        peonClient = new CachingKubernetesPeonClient(
+            druidKubernetesClient,
+            kubernetesTaskRunnerConfig.getNamespace(),
+            kubernetesTaskRunnerConfig.getOverlordNamespace(),
+            kubernetesTaskRunnerConfig.isDebugJobs(),
+            emitter
+        );
+      } else {
+        peonClient = new CachingKubernetesPeonClient(
+            druidKubernetesClient,
+            kubernetesTaskRunnerConfig.getNamespace(),
+            kubernetesTaskRunnerConfig.isDebugJobs(),
+            emitter
+        );
+      }
     } else {
-      peonClient = new KubernetesPeonClient(
-          druidKubernetesClient,
-          kubernetesTaskRunnerConfig.getNamespace(),
-          kubernetesTaskRunnerConfig.isDebugJobs(),
-          emitter
-      );
+      if (useOverlordNamespace) {
+        peonClient = new DirectKubernetesPeonClient(
+            druidKubernetesClient,
+            kubernetesTaskRunnerConfig.getNamespace(),
+            kubernetesTaskRunnerConfig.getOverlordNamespace(),
+            kubernetesTaskRunnerConfig.isDebugJobs(),
+            emitter
+        );
+      } else {
+        peonClient = new DirectKubernetesPeonClient(
+            druidKubernetesClient,
+            kubernetesTaskRunnerConfig.getNamespace(),
+            kubernetesTaskRunnerConfig.isDebugJobs(),
+            emitter
+        );
+      }
     }
 
     runner = new KubernetesTaskRunner(

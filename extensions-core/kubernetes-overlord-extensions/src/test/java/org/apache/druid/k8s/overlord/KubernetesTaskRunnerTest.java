@@ -38,7 +38,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
-import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
+import org.apache.druid.k8s.overlord.common.AbstractKubernetesPeonClient;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -74,7 +74,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
   @Mock private HttpClient httpClient;
   @Mock private TaskAdapter taskAdapter;
-  @Mock private KubernetesPeonClient peonClient;
+  @Mock private AbstractKubernetesPeonClient peonClient;
   @Mock private KubernetesPeonLifecycle kubernetesPeonLifecycle;
   @Mock private ServiceEmitter emitter;
   @Mock private ListenableFuture<TaskStatus> statusFuture;
@@ -136,7 +136,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         .endMetadata()
         .build();
 
-    EasyMock.expect(peonClient.getPeonJobs(false)).andReturn(ImmutableList.of(job));
+    EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job));
     EasyMock.expect(taskAdapter.toTask(job)).andReturn(task);
     EasyMock.expect(kubernetesPeonLifecycle.getTaskStartedSuccessfullyFuture()).andReturn(
         settableFuture
@@ -192,7 +192,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         .endMetadata()
         .build();
 
-    EasyMock.expect(peonClient.getPeonJobs(false)).andReturn(ImmutableList.of(job, job2));
+    EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job, job2));
     EasyMock.expect(taskAdapter.toTask(job)).andReturn(task);
     EasyMock.expect(taskAdapter.toTask(job2)).andThrow(new IOException("deserialization exception"));
 
@@ -235,7 +235,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         .endMetadata()
         .build();
 
-    EasyMock.expect(peonClient.getPeonJobs(false)).andReturn(ImmutableList.of(job));
+    EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job));
     EasyMock.expect(taskAdapter.toTask(job)).andThrow(new IOException());
 
     replayAll();

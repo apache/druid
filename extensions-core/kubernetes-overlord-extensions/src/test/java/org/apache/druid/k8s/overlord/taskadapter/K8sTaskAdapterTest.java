@@ -121,7 +121,7 @@ class K8sTaskAdapterTest
   void testAddingLabelsAndAnnotations() throws IOException
   {
     final PodSpec podSpec = K8sTestUtils.getDummyPodSpec();
-    TestKubernetesClient testClient = new TestKubernetesClient(client)
+    TestKubernetesClient testClient = new TestKubernetesClient(client, null, null)
     {
       @SuppressWarnings("unchecked")
       @Override
@@ -174,7 +174,7 @@ class K8sTaskAdapterTest
   public void serializingAndDeserializingATask() throws IOException
   {
     // given a task create a k8s job
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    TestKubernetesClient testClient = new TestKubernetesClient(client, null, null);
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
         .withNamespace("test")
         .build();
@@ -212,7 +212,7 @@ class K8sTaskAdapterTest
   public void fromTask_dontSetTaskJSON() throws IOException
   {
     final PodSpec podSpec = K8sTestUtils.getDummyPodSpec();
-    TestKubernetesClient testClient = new TestKubernetesClient(client)
+    TestKubernetesClient testClient = new TestKubernetesClient(client, null, null)
     {
       @SuppressWarnings("unchecked")
       @Override
@@ -276,7 +276,7 @@ class K8sTaskAdapterTest
   @Test
   public void toTask_useTaskPayloadManager() throws IOException
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    TestKubernetesClient testClient = new TestKubernetesClient(client, null, null);
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
         .withNamespace("test")
         .build();
@@ -308,7 +308,7 @@ class K8sTaskAdapterTest
   @Test
   public void getTaskId()
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    TestKubernetesClient testClient = new TestKubernetesClient(client, null, null);
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder().build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
@@ -330,7 +330,7 @@ class K8sTaskAdapterTest
   @Test
   public void getTaskId_noAnnotations()
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    TestKubernetesClient testClient = new TestKubernetesClient(client, null, null);
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder().build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
@@ -352,7 +352,7 @@ class K8sTaskAdapterTest
   @Test
   public void getTaskId_missingTaskIdAnnotation()
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    TestKubernetesClient testClient = new TestKubernetesClient(client, null, null);
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder().build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
@@ -451,7 +451,7 @@ class K8sTaskAdapterTest
   @Test
   void testAddingMonitors() throws IOException
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    TestKubernetesClient testClient = new TestKubernetesClient(client, null, null);
     PeonCommandContext context = new PeonCommandContext(
         new ArrayList<>(),
         new ArrayList<>(),
@@ -530,7 +530,7 @@ class K8sTaskAdapterTest
   @Test
   void testEphemeralStorageIsRespected() throws IOException
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    TestKubernetesClient testClient = new TestKubernetesClient(client, null, null);
     Pod pod = K8sTestUtils.fileToResource("ephemeralPodSpec.yaml", Pod.class);
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
         .withNamespace("namespace")
@@ -580,7 +580,7 @@ class K8sTaskAdapterTest
   @Test
   void testProbesRemoved() throws IOException
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    TestKubernetesClient testClient = new TestKubernetesClient(client, null, null);
     Pod pod = K8sTestUtils.fileToResource("probesPodSpec.yaml", Pod.class);
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
                                                                   .withNamespace("test")
@@ -630,7 +630,7 @@ class K8sTaskAdapterTest
   @Test
   void testCPUResourceIsRespected() throws IOException
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    TestKubernetesClient testClient = new TestKubernetesClient(client, null, null);
     Pod pod = K8sTestUtils.fileToResource("ephemeralPodSpec.yaml", Pod.class);
 
     List<String> javaOpts = new ArrayList<>();

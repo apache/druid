@@ -81,6 +81,10 @@ public class KubernetesTaskRunnerConfig
   private boolean disableClientProxy;
 
   @JsonProperty
+  // enable using kubernetes informer cache for peon client operations
+  private boolean enableKubernetesClientCaching = false;
+
+  @JsonProperty
   @NotNull
   private Period maxTaskDuration = new Period("PT4H");
 
@@ -153,6 +157,7 @@ public class KubernetesTaskRunnerConfig
       String kubexitImage,
       Long graceTerminationPeriodSeconds,
       boolean disableClientProxy,
+      boolean enableKubernetesClientCaching,
       Period maxTaskDuration,
       Period taskCleanupDelay,
       Period taskCleanupInterval,
@@ -194,6 +199,10 @@ public class KubernetesTaskRunnerConfig
         this.graceTerminationPeriodSeconds
     );
     this.disableClientProxy = disableClientProxy;
+    this.enableKubernetesClientCaching = ObjectUtils.defaultIfNull(
+        enableKubernetesClientCaching,
+        this.enableKubernetesClientCaching
+    );
     this.maxTaskDuration = ObjectUtils.defaultIfNull(
         maxTaskDuration,
         this.maxTaskDuration
@@ -290,6 +299,11 @@ public class KubernetesTaskRunnerConfig
     return disableClientProxy;
   }
 
+  public boolean isEnablePeonClientCache()
+  {
+    return enableKubernetesClientCaching;
+  }
+
   public Period getTaskTimeout()
   {
     return maxTaskDuration;
@@ -367,6 +381,7 @@ public class KubernetesTaskRunnerConfig
     private String kubexitImage;
     private Long graceTerminationPeriodSeconds;
     private boolean disableClientProxy;
+    private boolean enableKubernetesClientCaching;
     private Period maxTaskDuration;
     private Period taskCleanupDelay;
     private Period taskCleanupInterval;
@@ -435,6 +450,12 @@ public class KubernetesTaskRunnerConfig
     public Builder withDisableClientProxy(boolean disableClientProxy)
     {
       this.disableClientProxy = disableClientProxy;
+      return this;
+    }
+
+    public Builder withEnablePeonClientCache(boolean enableKubernetesClientCaching)
+    {
+      this.enableKubernetesClientCaching = enableKubernetesClientCaching;
       return this;
     }
 
@@ -523,6 +544,7 @@ public class KubernetesTaskRunnerConfig
           this.kubexitImage,
           this.graceTerminationPeriodSeconds,
           this.disableClientProxy,
+          this.enableKubernetesClientCaching,
           this.maxTaskDuration,
           this.taskCleanupDelay,
           this.taskCleanupInterval,

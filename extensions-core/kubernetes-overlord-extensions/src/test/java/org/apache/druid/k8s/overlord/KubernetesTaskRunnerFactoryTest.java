@@ -57,7 +57,7 @@ public class KubernetesTaskRunnerFactoryTest
         .build();
     taskLogs = new NoopTaskLogs();
     druidKubernetesClient =
-        new DruidKubernetesClient(new DruidKubernetesHttpClientConfig(), new ConfigBuilder().build());
+        new DruidKubernetesClient(new DruidKubernetesHttpClientConfig(), new ConfigBuilder().build(), false);
     taskAdapter = new TestTaskAdapter();
   }
 

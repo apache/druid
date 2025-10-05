@@ -135,7 +135,7 @@ public class KubernetesOverlordModule implements DruidModule
 
     config.setNamespace(kubernetesTaskRunnerConfig.getNamespace());
 
-    client = new DruidKubernetesClient(httpClientConfig, config);
+    client = new DruidKubernetesClient(httpClientConfig, config, kubernetesTaskRunnerConfig.isEnablePeonClientCache());
 
     lifecycle.addHandler(
         new Lifecycle.Handler()

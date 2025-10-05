@@ -28,10 +28,17 @@ public class TestKubernetesClient implements KubernetesClientApi
 {
 
   private final KubernetesClient client;
+  private final SharedIndexInformer<Pod> podInformer;
+  private final SharedIndexInformer<Job> jobInformer;
 
-  public TestKubernetesClient(KubernetesClient client)
+  public TestKubernetesClient(KubernetesClient client,
+                              SharedIndexInformer<Pod> podInformer,
+                              SharedIndexInformer<Job> jobInformer
+  )
   {
     this.client = client;
+    this.podInformer = podInformer;
+    this.jobInformer = jobInformer;
   }
 
   @Override
@@ -43,13 +50,13 @@ public class TestKubernetesClient implements KubernetesClientApi
   @Override
   public <T> T executePodCacheRequest(KubernetesInformerExecutor<T, Pod> executor)
   {
-    return null;
+    return executor.executeRequest(podInformer);
   }
 
   @Override
   public <T> T executeJobCacheRequest(KubernetesInformerExecutor<T, Job> executor)
   {
-    return null;
+    return executor.executeRequest(jobInformer);
   }
 
   @Override
@@ -61,12 +68,12 @@ public class TestKubernetesClient implements KubernetesClientApi
   @Override
   public SharedIndexInformer<Pod> getPodInformer()
   {
-    return null;
+    return podInformer;
   }
 
   @Override
   public SharedIndexInformer<Job> getJobInformer()
   {
-    return null;
+    return jobInformer;
   }
 }

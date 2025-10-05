@@ -34,7 +34,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.k8s.overlord.common.JobResponse;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
-import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
+import org.apache.druid.k8s.overlord.common.AbstractKubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.PeonPhase;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.easymock.EasyMock;
@@ -63,7 +63,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   private static final Period LOG_SAVE_TIMEOUT = new Period("PT300S");
   private static final Period SHORT_LOG_SAVE_TIMEOUT = new Period("PT1S");
 
-  @Mock KubernetesPeonClient kubernetesClient;
+  @Mock
+  AbstractKubernetesPeonClient kubernetesClient;
   @Mock TaskLogs taskLogs;
 
   @Mock LogWatch logWatch;

@@ -26,6 +26,7 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
 import io.fabric8.kubernetes.client.informers.SharedIndexInformer;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import java.util.Collections;
@@ -44,14 +45,21 @@ public class DruidKubernetesClient implements KubernetesClientApi
   private final SharedIndexInformer<Pod> podInformer;
   private final SharedIndexInformer<Job> jobInformer;
 
-  public DruidKubernetesClient(DruidKubernetesHttpClientConfig httpClientConfig, Config kubernetesClientConfig)
+  public DruidKubernetesClient(DruidKubernetesHttpClientConfig httpClientConfig, Config kubernetesClientConfig,
+                               boolean enableCache
+  )
   {
     this.kubernetesClient = new KubernetesClientBuilder()
         .withHttpClientFactory(new DruidKubernetesHttpClientFactory(httpClientConfig))
         .withConfig(kubernetesClientConfig)
         .build();
-    this.podInformer = setupPodInformer(kubernetesClient.getNamespace());
-    this.jobInformer = setupJobInformer(kubernetesClient.getNamespace());
+    if (enableCache) {
+      this.podInformer = setupPodInformer(kubernetesClient.getNamespace());
+      this.jobInformer = setupJobInformer(kubernetesClient.getNamespace());
+    } else {
+      this.podInformer = null;
+      this.jobInformer = null;
+    }
   }
 
   @Override
@@ -63,12 +71,18 @@ public class DruidKubernetesClient implements KubernetesClientApi
   @Override
   public <T> T executePodCacheRequest(KubernetesInformerExecutor<T, Pod> executor)
   {
+    if (podInformer == null) {
+      throw DruidException.defensive("Pod informer is not initialized, caching is disabled");
+    }
     return executor.executeRequest(podInformer);
   }
 
   @Override
   public <T> T executeJobCacheRequest(KubernetesInformerExecutor<T, Job> executor)
   {
+    if (jobInformer == null) {
+      throw DruidException.defensive("Job informer is not initialized, caching is disabled");
+    }
     return executor.executeRequest(jobInformer);
   }
 
