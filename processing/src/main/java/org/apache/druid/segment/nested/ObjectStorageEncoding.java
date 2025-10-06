@@ -17,18 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.segment.nested;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.StringUtils;
 
-public enum Order implements Cacheable
+public enum ObjectStorageEncoding
 {
-  ASCENDING,
-  DESCENDING,
-  NONE;
+  SMILE;
 
   @JsonValue
   @Override
@@ -38,14 +35,11 @@ public enum Order implements Cacheable
   }
 
   @JsonCreator
-  public static Order fromString(String name)
+  public static ObjectStorageEncoding fromString(String name)
   {
+    if (name == null) {
+      return SMILE;
+    }
     return valueOf(StringUtils.toUpperCase(name));
-  }
-
-  @Override
-  public byte[] getCacheKey()
-  {
-    return StringUtils.toUtf8(toString());
   }
 }

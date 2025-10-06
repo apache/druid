@@ -256,6 +256,26 @@ public class OverlordCompactionResourceTest
   }
 
   @Test
+  public void test_getAllCompactionSnapshots_redirectsToCoordinator_ifSchedulerIsDisabled()
+  {
+    useSupervisors.set(false);
+
+    final AutoCompactionSnapshot snapshot =
+        AutoCompactionSnapshot.builder(TestDataSource.WIKI).build();
+
+    setupMockRequestForUser("druid");
+    EasyMock.expect(httpRequest.getMethod()).andReturn("GET").once();
+
+    EasyMock.expect(coordinatorClient.getCompactionSnapshots(null))
+            .andReturn(Futures.immediateFuture(new CompactionStatusResponse(List.of(snapshot))));
+    replayAll();
+
+    final Response response = compactionResource.getAllCompactionSnapshots(httpRequest);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(new CompactionStatusResponse(List.of(snapshot)), response.getEntity());
+  }
+
+  @Test
   public void test_getDatasourceCompactionConfig()
   {
     final String supervisorId = CompactionSupervisorSpec.getSupervisorIdForDatasource(TestDataSource.WIKI);

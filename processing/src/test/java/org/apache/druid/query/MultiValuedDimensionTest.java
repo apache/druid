@@ -170,7 +170,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
 
     persistedSegmentDir = FileUtils.createTempDir();
     TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory)
-              .persist(incrementalIndex, persistedSegmentDir, IndexSpec.DEFAULT, null);
+              .persist(incrementalIndex, persistedSegmentDir, IndexSpec.getDefault(), null);
     queryableIndex = TestHelper.getTestIndexIO().loadIndex(persistedSegmentDir);
 
 
@@ -203,7 +203,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
     }
     persistedSegmentDirNullSampler = FileUtils.createTempDir();
     TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory)
-              .persist(incrementalIndexNullSampler, persistedSegmentDirNullSampler, IndexSpec.DEFAULT, null);
+              .persist(incrementalIndexNullSampler, persistedSegmentDirNullSampler, IndexSpec.getDefault(), null);
 
     queryableIndexNullSampler = TestHelper.getTestIndexIO().loadIndex(persistedSegmentDirNullSampler);
   }

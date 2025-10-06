@@ -21,6 +21,7 @@ package org.apache.druid.server.compaction;
 
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.indexer.granularity.GranularitySpec;
@@ -32,11 +33,14 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.timeline.CompactionState;
@@ -255,11 +259,11 @@ public class CompactionStatusTest
         + "required[IndexSpec{bitmapSerdeFactory=RoaringBitmapSerdeFactory{},"
         + " dimensionCompression=lz4, stringDictionaryEncoding=Utf8{},"
         + " metricCompression=lz4, longEncoding=longs, complexMetricCompression=null,"
-        + " jsonCompression=null, segmentLoader=null}], "
+        + " autoColumnFormatSpec=null, jsonCompression=null, segmentLoader=null}], "
         + "current[IndexSpec{bitmapSerdeFactory=RoaringBitmapSerdeFactory{},"
         + " dimensionCompression=zstd, stringDictionaryEncoding=Utf8{},"
         + " metricCompression=lz4, longEncoding=longs, complexMetricCompression=null,"
-        + " jsonCompression=null, segmentLoader=null}]"
+        + " autoColumnFormatSpec=null, jsonCompression=null, segmentLoader=null}]"
     );
   }
 
@@ -426,6 +430,114 @@ public class CompactionStatusTest
     final CompactionStatus status = CompactionStatus.compute(
         CompactionCandidate.from(List.of(segment), Granularities.HOUR),
         compactionConfig
+    );
+    Assert.assertFalse(status.isComplete());
+  }
+
+  @Test
+  public void testStatusWhenAutoSchemaMatch()
+  {
+    final GranularitySpec currentGranularitySpec
+        = new UniformGranularitySpec(Granularities.HOUR, null, null);
+    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, 0L);
+
+    final CompactionState lastCompactionState = new CompactionState(
+        currentPartitionsSpec,
+        DimensionsSpec.builder()
+                      .setDimensions(
+                          List.of(
+                              AutoTypeColumnSchema.of("x").getEffectiveSchema(IndexSpec.getDefault().getEffectiveSpec()),
+                              AutoTypeColumnSchema.of("y").getEffectiveSchema(IndexSpec.getDefault().getEffectiveSpec())
+                          )
+                      )
+                      .build(),
+        null,
+        null,
+        IndexSpec.getDefault().getEffectiveSpec(),
+        currentGranularitySpec,
+        Collections.emptyList()
+    );
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withDimensionsSpec(
+            new UserCompactionTaskDimensionsConfig(
+                List.of(
+                    new AutoTypeColumnSchema(
+                        "x",
+                        null,
+                        NestedCommonFormatColumnFormatSpec.builder()
+                                                          .setDoubleColumnCompression(CompressionStrategy.LZ4)
+                                                          .build()
+                    ),
+                    AutoTypeColumnSchema.of("y")
+                )
+            )
+        )
+        .withTuningConfig(createTuningConfig(currentPartitionsSpec, IndexSpec.getDefault()))
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))
+        .withProjections(Collections.emptyList())
+        .build();
+
+    final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
+    final CompactionStatus status = CompactionStatus.compute(
+        CompactionCandidate.from(Collections.singletonList(segment)),
+        compactionConfig,
+        OBJECT_MAPPER
+    );
+    Assert.assertTrue(status.isComplete());
+  }
+
+  @Test
+  public void testStatusWhenAutoSchemaMismatch()
+  {
+    final GranularitySpec currentGranularitySpec
+        = new UniformGranularitySpec(Granularities.HOUR, null, null);
+    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, 0L);
+
+    final CompactionState lastCompactionState = new CompactionState(
+        currentPartitionsSpec,
+        DimensionsSpec.builder()
+                      .setDimensions(
+                          List.of(
+                              AutoTypeColumnSchema.of("x").getEffectiveSchema(IndexSpec.getDefault()),
+                              AutoTypeColumnSchema.of("y").getEffectiveSchema(IndexSpec.getDefault())
+                          )
+                      )
+                      .build(),
+        null,
+        null,
+        IndexSpec.getDefault(),
+        currentGranularitySpec,
+        Collections.emptyList()
+    );
+    final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withDimensionsSpec(
+            new UserCompactionTaskDimensionsConfig(
+                List.of(
+                    new AutoTypeColumnSchema(
+                        "x",
+                        null,
+                        NestedCommonFormatColumnFormatSpec.builder()
+                                                          .setDoubleColumnCompression(CompressionStrategy.ZSTD)
+                                                          .build()
+                    ),
+                    AutoTypeColumnSchema.of("y")
+                )
+            )
+        )
+        .withTuningConfig(createTuningConfig(currentPartitionsSpec, IndexSpec.getDefault()))
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))
+        .withProjections(Collections.emptyList())
+        .build();
+
+    final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
+    final CompactionStatus status = CompactionStatus.compute(
+        CompactionCandidate.from(Collections.singletonList(segment)),
+        compactionConfig,
+        OBJECT_MAPPER
     );
     Assert.assertFalse(status.isComplete());
   }
