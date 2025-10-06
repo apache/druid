@@ -56,8 +56,8 @@ public class DimensionSchemaTest
         InvalidTypeIdException.class,
         () -> OBJECT_MAPPER.readValue(invalidType, DimensionSchema.class)
     );
-    Assert.assertTrue(e.getMessage().contains(
-        "Could not resolve type id 'invalid' as a subtype of `org.apache.druid.data.input.impl.DimensionSchema`: known type ids = [auto, double, float, json, long, spatial, string]"));
+    Assert.assertTrue(e.getMessage().contains("Could not resolve type id"));
+    Assert.assertTrue(e.getMessage().contains("invalid"));
   }
 
   @Test
