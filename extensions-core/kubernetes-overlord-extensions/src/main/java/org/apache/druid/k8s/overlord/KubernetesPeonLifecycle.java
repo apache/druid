@@ -462,7 +462,7 @@ public class KubernetesPeonLifecycle
     ExecutorService executor = Executors.newSingleThreadExecutor(
         Execs.makeThreadFactory("k8s-peon-lifecycle-util-" + taskId.getOriginalTaskId() + "-%d"));
     try {
-      Future<T> future = executor.submit(runnable);
+      Future<T> future = executor.submit(callable);
       return future.get(timeoutMillis, TimeUnit.MILLISECONDS);
     }
     catch (TimeoutException e) {
