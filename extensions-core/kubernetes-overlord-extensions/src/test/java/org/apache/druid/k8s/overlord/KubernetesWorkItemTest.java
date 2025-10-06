@@ -37,7 +37,7 @@ import org.junit.runner.RunWith;
 @RunWith(EasyMockRunner.class)
 public class KubernetesWorkItemTest extends EasyMockSupport
 {
-  private static final Period LOG_SAVE_TIMEOUT = new Period("PT30S");
+  private static final Period LOG_SAVE_TIMEOUT = new Period("PT300S");
 
   private KubernetesWorkItem workItem;
   private Task task;

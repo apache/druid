@@ -62,7 +62,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   private static final String ID = "id";
   private static final TaskStatus SUCCESS = TaskStatus.success(ID);
   private static final Period LOG_SAVE_TIMEOUT = new Period("PT300S");
-  private static final Period LOG_SAVE_TIMEOUT_SHORT = new Period("PT1S");
+  private static final Period SHORT_LOG_SAVE_TIMEOUT = new Period("PT1S");
 
   @Mock KubernetesPeonClient kubernetesClient;
   @Mock TaskLogs taskLogs;
@@ -1063,7 +1063,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         taskLogs,
         mapper,
         stateListener,
-        LOG_SAVE_TIMEOUT_SHORT.toStandardDuration().getMillis()
+        SHORT_LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
     EasyMock.expect(kubernetesClient.getPeonLogWatcher(k8sTaskId))
             .andAnswer(() -> {
@@ -1106,7 +1106,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         taskLogs,
         mapper,
         stateListener,
-        LOG_SAVE_TIMEOUT_SHORT.toStandardDuration().getMillis()
+        SHORT_LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
     EasyMock.expect(kubernetesClient.getPeonLogWatcher(k8sTaskId)).andReturn(Optional.of(logWatch)).once();
     EasyMock.expect(logWatch.getOutput()).andReturn(slowInputStream);
