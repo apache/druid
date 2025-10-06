@@ -111,7 +111,6 @@ import java.util.stream.Collectors;
 /**
  * Embedded mode of integration-tests originally present in {@code ITAutoCompactionTest}.
  */
-@Disabled("Disabled due to issues with compaction task not publishing schema to broker")
 public class AutoCompactionTest extends CompactionTestBase
 {
   private static final Logger LOG = new Logger(AutoCompactionTest.class);
@@ -201,8 +200,10 @@ public class AutoCompactionTest extends CompactionTestBase
   @Override
   protected EmbeddedDruidCluster createCluster()
   {
+    // Use timeout required for hash partitioning task
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
+                               .useDefaultTimeoutForLatchableEmitter(30)
                                .addExtension(SketchModule.class)
                                .addExtension(HllSketchModule.class)
                                .addExtension(DoublesSketchModule.class)
@@ -620,6 +621,17 @@ public class AutoCompactionTest extends CompactionTestBase
           0,
           2,
           0);
+
+      final List<AutoCompactionSnapshot> allSnapshots = compactionResource.getAllCompactionSnapshots();
+      Assertions.assertFalse(allSnapshots.isEmpty());
+
+      AutoCompactionSnapshot snapshot = allSnapshots
+          .stream()
+          .filter(s -> s.getDataSource().equals(fullDatasourceName))
+          .findFirst()
+          .orElse(null);
+      Assertions.assertNotNull(snapshot);
+      Assertions.assertEquals(snapshot.getBytesAwaitingCompaction(), 0L);
     }
   }
 
@@ -778,6 +790,7 @@ public class AutoCompactionTest extends CompactionTestBase
 
   @MethodSource("getEngine")
   @ParameterizedTest(name = "compactionEngine={0}")
+  @Disabled("Disabled due to issues with compaction task not publishing schema to broker")
   public void testAutoCompactionDutyWithSegmentGranularityAndWithDropExistingTrue(CompactionEngine engine) throws Exception
   {
     // Interval is "2013-08-31/2013-09-02", segment gran is DAY,
@@ -901,6 +914,7 @@ public class AutoCompactionTest extends CompactionTestBase
 
   @MethodSource("getEngine")
   @ParameterizedTest(name = "compactionEngine={0}")
+  @Disabled("Disabled due to issues with compaction task not publishing schema to broker")
   public void testAutoCompactionDutyWithSegmentGranularityAndWithDropExistingTrueThenFalse(CompactionEngine engine) throws Exception
   {
     // Interval is "2013-08-31/2013-09-02", segment gran is DAY,
@@ -1175,6 +1189,7 @@ public class AutoCompactionTest extends CompactionTestBase
 
   @MethodSource("getEngine")
   @ParameterizedTest(name = "compactionEngine={0}")
+  @Disabled("Disabled due to issues with compaction task not publishing schema to broker")
   public void testAutoCompactionDutyWithSegmentGranularityAndSmallerSegmentGranularityCoveringMultipleSegmentsInTimelineAndDropExistingTrue(CompactionEngine engine) throws Exception
   {
     loadData(INDEX_TASK);
