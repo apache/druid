@@ -457,7 +457,7 @@ public class KubernetesPeonLifecycle
    * logged and null will be returned.
    * </p>
    */
-  private <T> @Nullable T executeWithTimeout(Callable<T> runnable, long timeoutMillis, String operationName, String errorMessage)
+  private <T> @Nullable T executeWithTimeout(Callable<T> callable, long timeoutMillis, String operationName, String errorMessage)
   {
     ExecutorService executor = Executors.newSingleThreadExecutor(
         Execs.makeThreadFactory("k8s-peon-lifecycle-util-" + taskId.getOriginalTaskId() + "-%d"));
@@ -466,13 +466,13 @@ public class KubernetesPeonLifecycle
       return future.get(timeoutMillis, TimeUnit.MILLISECONDS);
     }
     catch (TimeoutException e) {
-      log.warn("Operation [%s] timed out after %d ms for task [%s]. %s", operationName, timeoutMillis, taskId.getOriginalTaskId(), errorMessage);
+      log.warn("Operation[%s] for task[%s] timed out after [%d] ms with error[%s].", operationName, taskId.getOriginalTaskId(), timeoutMillis, errorMessage);
     }
     catch (InterruptedException e) {
-      log.warn("Operation [%s] was interrupted for task [%s]. %s", operationName, taskId.getOriginalTaskId(), errorMessage);
+      log.warn("Operation[%s] for task[%s] was interrupted with error[%s].", operationName, taskId.getOriginalTaskId(), errorMessage);
     }
     catch (Exception e) {
-      log.error(e, "Error during operation [%s] for task: %s. %s", operationName, taskId, errorMessage);
+      log.error(e, "Error during operation[%s] for task[%s]: %s", operationName, taskId, errorMessage);
     }
     finally {
       executor.shutdownNow();
