@@ -469,7 +469,6 @@ public class KubernetesPeonLifecycle
       log.warn("Operation [%s] timed out after %d ms for task [%s]. %s", operationName, timeoutMillis, taskId.getOriginalTaskId(), errorMessage);
     }
     catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
       log.warn("Operation [%s] was interrupted for task [%s]. %s", operationName, taskId.getOriginalTaskId(), errorMessage);
     }
     catch (Exception e) {
