@@ -154,11 +154,10 @@ public class StructuredData implements Comparable<StructuredData>
       return 0;
     }
 
-    if (isNull() && o.isNull()) {
-      return 0;
-    } else if (isNull()) {
+    if (isNull()) {
       return -1;
-    } else if (o.isNull()) {
+    }
+    if (o.isNull()) {
       return 1;
     }
 
