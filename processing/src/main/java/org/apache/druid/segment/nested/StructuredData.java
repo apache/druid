@@ -32,7 +32,9 @@ import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Objects;
 import java.util.function.LongSupplier;
 
 public class StructuredData implements Comparable<StructuredData>
@@ -148,7 +150,7 @@ public class StructuredData implements Comparable<StructuredData>
   @Override
   public int compareTo(StructuredData o)
   {
-    if (this == o) {
+    if (this.equals(o)) {
       return 0;
     }
 
@@ -184,12 +186,7 @@ public class StructuredData implements Comparable<StructuredData>
 
     // finally compare hashes. there is a small chance of collisions for objects that are not equal but have the
     // same hash, we could revisit this later if needed
-    int hashCompare = Long.compare(hash.getAsLong(), o.hash.getAsLong());
-    if (hashCompare != 0) {
-      return hashCompare;
-    }
-
-    return Integer.compare(getSizeEstimate(), o.getSizeEstimate());
+    return Long.compare(hash.getAsLong(), o.hash.getAsLong());
   }
 
   @Override
@@ -202,8 +199,10 @@ public class StructuredData implements Comparable<StructuredData>
       return false;
     }
     StructuredData that = (StructuredData) o;
-    // guarantees that equals is consistent with compareTo
-    return compareTo(that) == 0;
+    if (value instanceof Object[] && that.value instanceof Object[]) {
+      return Arrays.deepEquals((Object[]) value, (Object[]) that.value);
+    }
+    return Objects.equals(value, that.value);
   }
 
   @Override

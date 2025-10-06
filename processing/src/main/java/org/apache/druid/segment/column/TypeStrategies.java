@@ -53,6 +53,7 @@ public class TypeStrategies
   public static final FloatTypeStrategy FLOAT = new FloatTypeStrategy();
   public static final DoubleTypeStrategy DOUBLE = new DoubleTypeStrategy();
   public static final StringTypeStrategy STRING = new StringTypeStrategy();
+  public static final NestedDataTypeStrategy NESTED = new NestedDataTypeStrategy();
   public static final ConcurrentHashMap<String, TypeStrategy<?>> COMPLEX_STRATEGIES = new ConcurrentHashMap<>();
 
   /**
@@ -707,8 +708,6 @@ public class TypeStrategies
 
   public static final class NestedDataTypeStrategy implements TypeStrategy<Object>
   {
-    public static final NestedDataTypeStrategy INSTANCE = new NestedDataTypeStrategy();
-
     @Override
     public int estimateSizeBytes(Object value)
     {

@@ -99,33 +99,33 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
       @Override
       public int compare(Object o1, Object o2)
       {
-        return TypeStrategies.NestedDataTypeStrategy.INSTANCE.compare(o1, o2);
+        return TypeStrategies.NESTED.compare(o1, o2);
       }
 
       @Override
       public Class<? extends Object> getClazz()
       {
-        return TypeStrategies.NestedDataTypeStrategy.INSTANCE.getClazz();
+        return TypeStrategies.NESTED.getClazz();
       }
 
       @Nullable
       @Override
       public StructuredData fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
-        return TypeStrategies.NestedDataTypeStrategy.INSTANCE.fromByteBuffer(buffer, numBytes);
+        return TypeStrategies.NESTED.fromByteBuffer(buffer, numBytes);
       }
 
       @Nullable
       @Override
       public byte[] toBytes(@Nullable Object val)
       {
-        return TypeStrategies.NestedDataTypeStrategy.INSTANCE.toBytes(val);
+        return TypeStrategies.NESTED.toBytes(val);
       }
 
       @Override
       public boolean readRetainsBufferReference()
       {
-        return TypeStrategies.NestedDataTypeStrategy.INSTANCE.readRetainsBufferReference();
+        return TypeStrategies.NESTED.readRetainsBufferReference();
       }
     };
   }
@@ -133,7 +133,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
   @Override
   public TypeStrategy<Object> getTypeStrategy()
   {
-    return TypeStrategies.NestedDataTypeStrategy.INSTANCE;
+    return TypeStrategies.NESTED;
   }
 
   @Override
