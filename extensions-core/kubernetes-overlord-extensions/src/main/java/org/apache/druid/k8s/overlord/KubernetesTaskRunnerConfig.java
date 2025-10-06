@@ -157,14 +157,14 @@ public class KubernetesTaskRunnerConfig
       Period taskCleanupDelay,
       Period taskCleanupInterval,
       Period k8sjobLaunchTimeout,
+      Period logSaveTimeout,
       List<String> peonMonitors,
       List<String> javaOptsArray,
       int cpuCoreInMicro,
       Map<String, String> labels,
       Map<String, String> annotations,
       Integer capacity,
-      Period taskJoinTimeout,
-      Period logSaveTimeout
+      Period taskJoinTimeout
   )
   {
     this.namespace = namespace;
@@ -214,6 +214,10 @@ public class KubernetesTaskRunnerConfig
         taskJoinTimeout,
         this.taskJoinTimeout
     );
+    this.logSaveTimeout = ObjectUtils.defaultIfNull(
+        logSaveTimeout,
+        this.logSaveTimeout
+    );
     this.peonMonitors = ObjectUtils.defaultIfNull(
         peonMonitors,
         this.peonMonitors
@@ -237,10 +241,6 @@ public class KubernetesTaskRunnerConfig
     this.capacity = ObjectUtils.defaultIfNull(
         capacity,
         this.capacity
-    );
-    this.logSaveTimeout = ObjectUtils.defaultIfNull(
-        logSaveTimeout,
-        this.logSaveTimeout
     );
   }
 
@@ -316,6 +316,11 @@ public class KubernetesTaskRunnerConfig
     return k8sjobLaunchTimeout;
   }
 
+  public Period getLogSaveTimeout()
+  {
+    return logSaveTimeout;
+  }
+
   public List<String> getPeonMonitors()
   {
     return peonMonitors;
@@ -344,11 +349,6 @@ public class KubernetesTaskRunnerConfig
   public Integer getCapacity()
   {
     return capacity;
-  }
-
-  public Period getLogSaveTimeout()
-  {
-    return logSaveTimeout;
   }
 
   public static Builder builder()
@@ -527,14 +527,14 @@ public class KubernetesTaskRunnerConfig
           this.taskCleanupDelay,
           this.taskCleanupInterval,
           this.k8sjobLaunchTimeout,
+          this.logSaveTimeout,
           this.peonMonitors,
           this.javaOptsArray,
           this.cpuCoreInMicro,
           this.labels,
           this.annotations,
           this.capacity,
-          this.taskJoinTimeout,
-          this.logSaveTimeout
+          this.taskJoinTimeout
       );
     }
   }
