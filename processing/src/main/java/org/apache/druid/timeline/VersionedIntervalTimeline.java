@@ -23,6 +23,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeMap;
+import com.google.common.collect.TreeRangeMap;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.UOE;
@@ -30,6 +33,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.apache.druid.utils.CollectionUtils;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -89,14 +93,13 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
   );
   // true interval -> version -> timelineEntry
   private final Map<Interval, TreeMap<VersionType, TimelineEntry>> allTimelineEntries = new HashMap<>();
+  private final RangeMap<DateTime, TreeMap<VersionType, TimelineEntry>> allTimeRanges = TreeRangeMap.create();
   private final AtomicInteger numObjects = new AtomicInteger();
 
   private final Comparator<? super VersionType> versionComparator;
 
   // Set this to true if the client needs to skip tombstones upon lookup (like the broker)
   private final boolean skipObjectsWithNoData;
-
-  private static boolean exactIntervalMatch = (System.getProperty("experimental.timeline.exactIntervalMatch") != null);
 
   public VersionedIntervalTimeline(Comparator<? super VersionType> versionComparator)
   {
@@ -212,6 +215,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
           TreeMap<VersionType, TimelineEntry> versionEntry = new TreeMap<>(versionComparator);
           versionEntry.put(version, entry);
           allTimelineEntries.put(interval, versionEntry);
+          allTimeRanges.put(Range.closedOpen(interval.getStart(), interval.getEnd()), versionEntry);
           numObjects.incrementAndGet();
         } else {
           entry = exists.get(version);
@@ -271,6 +275,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
         versionEntries.remove(version);
         if (versionEntries.isEmpty()) {
           allTimelineEntries.remove(interval);
+          allTimeRanges.remove(Range.closedOpen(interval.getStart(), interval.getEnd()));
         }
 
         remove(incompletePartitionsTimeline, interval, entry, true);
@@ -301,14 +306,15 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
         }
       }
 
-      if (!exactIntervalMatch) {
-        // If an exact interval match is not found search for an encapsulating interval
-        for (Entry<Interval, TreeMap<VersionType, TimelineEntry>> entry : allTimelineEntries.entrySet()) {
-          if (entry.getKey().contains(interval)) {
-            TimelineEntry foundEntry = entry.getValue().get(version);
-            if (foundEntry != null) {
-              return foundEntry.getPartitionHolder().getChunk(partitionNum);
-            }
+      // If an exact interval match is not found look for a matching range
+      RangeMap<DateTime, TreeMap<VersionType, TimelineEntry>> possibleMatches = allTimeRanges.subRangeMap(Range.closedOpen(interval.getStart(), interval.getEnd()));
+      for (Entry<Range<DateTime>, TreeMap<VersionType, TimelineEntry>> entry : possibleMatches.asMapOfRanges().entrySet()) {
+        Range<DateTime> range = entry.getKey();
+        Interval eninterval = new Interval(range.lowerEndpoint(), range.upperEndpoint());
+        if (eninterval.contains(interval)) {
+          TimelineEntry foundEntry = entry.getValue().get(version);
+          if (foundEntry != null) {
+            return foundEntry.getPartitionHolder().getChunk(partitionNum);
           }
         }
       }
