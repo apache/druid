@@ -39,7 +39,7 @@ public class DruidKubernetesOkHttpHttpClientConfigTest
         DruidKubernetesOkHttpHttpClientConfig.class
     );
 
-    Assert.assertTrue(config.isUseCustomDispatcherExecutor());
+    Assert.assertFalse(config.isUseCustomDispatcherExecutor());
     Assert.assertEquals(50, config.getCoreWorkerThreads());
     Assert.assertEquals(50, config.getMaxWorkerThreads());
     Assert.assertEquals(60L, config.getWorkerThreadKeepAliveTime());

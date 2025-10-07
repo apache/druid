@@ -27,7 +27,7 @@ import javax.validation.constraints.Min;
 public class DruidKubernetesOkHttpHttpClientConfig
 {
   @JsonProperty
-  private boolean useCustomDispatcherExecutor = true;
+  private boolean useCustomDispatcherExecutor = false;
 
   @JsonProperty
   @Nullable

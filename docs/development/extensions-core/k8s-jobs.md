@@ -925,7 +925,7 @@ This configuration is experimental and subject to change. The Druid developer co
 
 |Property| Possible Values |Description| Default |required|
 |--------|-----------------|-----------|---------|--------|
-|`druid.indexer.runner.k8sAndWorker.http.okhttp.useCustomDispatcherExecutor`|`Boolean`|Flag indicating if okhttp client will use a custom defined thread pool for okhttp http client request dispatcher|true|No|
+|`druid.indexer.runner.k8sAndWorker.http.okhttp.useCustomDispatcherExecutor`|`Boolean`|Flag indicating if okhttp client will use a custom defined thread pool for okhttp http client request dispatcher|false|No|
 |`druid.indexer.runner.k8sAndWorker.http.okhttp.coreWorkerThreads`|`Integer`|The number of threads to keep in the pool, even if they are idle. Only applicable if `useCustomDispatcherExecutor` is true.|50|No|
 |`druid.indexer.runner.k8sAndWorker.http.okhttp.maxWorkerThreads`|`Integer`|Maximum number of threads in the custom thread pool for okhttp client request dispatcher. Must be greater than or equal to `druid.indexer.runner.k8sAndWorker.http.okhttp.coreWorkerThreads` Only applicable if `useCustomDispatcherExecutor` is true.|`druid.indexer.runner.k8sAndWorker.http.okhttp.coreWorkerThreads`|No|
 |`druid.indexer.runner.k8sAndWorker.http.okhttp.workerThreadKeepAliveTime`|`Long`|Idle timeout in seconds for non-core threads in the worker thread pool. Only applicable if `useCustomDispatcherExecutor` is true.|60|No|
