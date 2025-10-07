@@ -609,10 +609,21 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
 
     int rowCounter = 0;
     while (offset.withinBounds()) {
-      Map row = ARRAY_TEST_DATA.get(rowCounter);
+      final Map<String, Object> row;
+      if (ObjectStorageEncoding.NONE.equals(columnFormatSpec.getObjectStorageEncoding())) {
+        // if raw object is not stored, the derived object will have sorted key and no nulls
+        row = new TreeMap<>(ARRAY_TEST_DATA.get(rowCounter));
+        row.entrySet().removeIf(entry -> entry.getValue() == null);
+      } else {
+        row = ARRAY_TEST_DATA.get(rowCounter);
+      }
       Assert.assertEquals(
           JSON_MAPPER.writeValueAsString(row),
           JSON_MAPPER.writeValueAsString(StructuredData.unwrap(rawSelector.getObject()))
+      );
+      Assert.assertEquals(
+          JSON_MAPPER.writeValueAsString(row),
+          JSON_MAPPER.writeValueAsString(StructuredData.unwrap(column.getRowValue(rowCounter)))
       );
 
       Object[] s = (Object[]) row.get("s");
@@ -665,7 +676,14 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
 
       for (int i = 0; i < vectorOffset.getCurrentVectorSize(); i++, rowCounter++) {
 
-        Map row = ARRAY_TEST_DATA.get(rowCounter);
+        final Map<String, Object> row;
+        if (ObjectStorageEncoding.NONE.equals(columnFormatSpec.getObjectStorageEncoding())) {
+          // if raw object is not stored, the derived object will have sorted key and no nulls
+          row = new TreeMap<>(ARRAY_TEST_DATA.get(rowCounter));
+          row.entrySet().removeIf(entry -> entry.getValue() == null);
+        } else {
+          row = ARRAY_TEST_DATA.get(rowCounter);
+        }
         Assert.assertEquals(
             JSON_MAPPER.writeValueAsString(row),
             JSON_MAPPER.writeValueAsString(StructuredData.unwrap(rawVector[i]))
@@ -714,7 +732,14 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
       final boolean[] dElementNulls = dElementFilteredVectorSelector.getNullVector();
 
       for (int i = 0; i < bitmapVectorOffset.getCurrentVectorSize(); i++, rowCounter += 2) {
-        Map row = ARRAY_TEST_DATA.get(rowCounter);
+        final Map<String, Object> row;
+        if (ObjectStorageEncoding.NONE.equals(columnFormatSpec.getObjectStorageEncoding())) {
+          // if raw object is not stored, the derived object will have sorted key and no nulls
+          row = new TreeMap<>(ARRAY_TEST_DATA.get(rowCounter));
+          row.entrySet().removeIf(entry -> entry.getValue() == null);
+        } else {
+          row = ARRAY_TEST_DATA.get(rowCounter);
+        }
         Assert.assertEquals(
             JSON_MAPPER.writeValueAsString(row),
             JSON_MAPPER.writeValueAsString(StructuredData.unwrap(rawVector[i]))
