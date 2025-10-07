@@ -451,7 +451,7 @@ public class PrometheusEmitterTest
 
     Assert.assertNotNull("Test metric should be registered", testMetric);
     Assert.assertFalse("Metric should not be expired initially",
-                       testMetric.isExpired(flushPeriod));
+                       testMetric.isExpired());
 
     // Wait for the metric to expire (ttl + 1 second buffer)
     try {
@@ -462,7 +462,7 @@ public class PrometheusEmitterTest
     }
 
     Assert.assertTrue("Metric should be expired after TTL",
-                      testMetric.isExpired(flushPeriod));
+                      testMetric.isExpired());
     emitter.close();
   }
 
@@ -484,12 +484,12 @@ public class PrometheusEmitterTest
     DimensionsAndCollector testMetric = registeredMetrics.get("segment/loadQueue/count");
 
     Assert.assertNotNull(
-      "Test metric should be registered",
-      testMetric
+        "Test metric should be registered",
+        testMetric
     );
     Assert.assertFalse(
-      "Metric should not be expired initially",
-      testMetric.isExpired(flushPeriod)
+        "Metric should not be expired initially",
+        testMetric.isExpired()
     );
 
     // Wait for a little, but not long enough for the metric to expire
@@ -502,15 +502,15 @@ public class PrometheusEmitterTest
     }
 
     Assert.assertFalse(
-      "Metric should not be expired",
-      testMetric.isExpired(flushPeriod)
+        "Metric should not be expired",
+        testMetric.isExpired()
     );
     emitter.emit(event);
 
     long timeSinceLastUpdate = testMetric.getMillisSinceLastUpdate();
     Assert.assertTrue(
-      "Update time should have been refreshed",
-      timeSinceLastUpdate < waitTime
+        "Update time should have been refreshed",
+        timeSinceLastUpdate < waitTime
     );
     emitter.close();
   }

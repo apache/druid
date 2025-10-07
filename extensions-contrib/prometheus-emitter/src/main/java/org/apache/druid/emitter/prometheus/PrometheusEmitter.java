@@ -74,7 +74,8 @@ public class PrometheusEmitter implements Emitter
         config.getDimensionMapPath(),
         config.isAddHostAsLabel(),
         config.isAddServiceAsLabel(),
-        config.getExtraLabels()
+        config.getExtraLabels(),
+        config.getFlushPeriod()
     );
   }
 
@@ -292,11 +293,11 @@ public class PrometheusEmitter implements Emitter
 
     Map<String, DimensionsAndCollector> map = metrics.getRegisteredMetrics();
     for (Map.Entry<String, DimensionsAndCollector> entry : map.entrySet()) {
-      if (entry.getValue().isExpired(config.getFlushPeriod())) {
+      if (entry.getValue().isExpired()) {
         log.debug(
-          "Metric [%s] has expired (last updated [%d] ms ago)",
-          entry.getKey(),
-          entry.getValue().getMillisSinceLastUpdate()
+            "Metric [%s] has expired (last updated [%d] ms ago)",
+            entry.getKey(),
+            entry.getValue().getMillisSinceLastUpdate()
         );
         entry.getValue().getCollector().clear();
       }

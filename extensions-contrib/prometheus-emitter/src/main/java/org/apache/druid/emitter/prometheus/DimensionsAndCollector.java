@@ -30,14 +30,16 @@ public class DimensionsAndCollector
   private final double conversionFactor;
   private final double[] histogramBuckets;
   private final Stopwatch updateTimer;
+  private final Integer ttlSeconds;
 
-  DimensionsAndCollector(String[] dimensions, SimpleCollector collector, double conversionFactor, double[] histogramBuckets)
+  DimensionsAndCollector(String[] dimensions, SimpleCollector collector, double conversionFactor, double[] histogramBuckets, Integer ttlSeconds)
   {
     this.dimensions = dimensions;
     this.collector = collector;
     this.conversionFactor = conversionFactor;
     this.histogramBuckets = histogramBuckets;
     this.updateTimer = Stopwatch.createStarted();
+    this.ttlSeconds = ttlSeconds;
   }
 
   public String[] getDimensions()
@@ -70,7 +72,7 @@ public class DimensionsAndCollector
     return updateTimer.millisElapsed();
   }
 
-  public boolean isExpired(long ttlSeconds)
+  public boolean isExpired()
   {
     return updateTimer.hasElapsed(Duration.standardSeconds(ttlSeconds));
   }

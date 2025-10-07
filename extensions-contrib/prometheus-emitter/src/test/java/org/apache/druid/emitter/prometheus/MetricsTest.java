@@ -32,7 +32,7 @@ public class MetricsTest
   @Test
   public void testMetricsConfiguration()
   {
-    Metrics metrics = new Metrics("test", null, true, true, null);
+    Metrics metrics = new Metrics("test", null, true, true, null, null);
     DimensionsAndCollector dimensionsAndCollector = metrics.getByName("query/time", "historical");
     Assert.assertNotNull(dimensionsAndCollector);
     String[] dimensions = dimensionsAndCollector.getDimensions();
@@ -59,7 +59,7 @@ public class MetricsTest
     Map<String, String> extraLabels = new HashMap<>();
     extraLabels.put("extra_label", "value");
 
-    Metrics metrics = new Metrics("test_2", null, true, true, extraLabels);
+    Metrics metrics = new Metrics("test_2", null, true, true, extraLabels, null);
     DimensionsAndCollector dimensionsAndCollector = metrics.getByName("query/time", "historical");
     Assert.assertNotNull(dimensionsAndCollector);
     String[] dimensions = dimensionsAndCollector.getDimensions();
@@ -90,7 +90,7 @@ public class MetricsTest
 
     // Expect an exception thrown by Prometheus code due to invalid metric label
     Exception exception = Assert.assertThrows(IllegalArgumentException.class, () -> {
-      new Metrics("test_3", null, true, true, extraLabels);
+      new Metrics("test_3", null, true, true, extraLabels, null);
     });
 
     String expectedMessage = "Invalid metric label name: extra label";
@@ -102,7 +102,7 @@ public class MetricsTest
   @Test
   public void testMetricsConfigurationWithNonExistentMetric()
   {
-    Metrics metrics = new Metrics("test_4", null, true, true, null);
+    Metrics metrics = new Metrics("test_4", null, true, true, null, null);
     DimensionsAndCollector nonExistentDimsCollector = metrics.getByName("non/existent", "historical");
     Assert.assertNull(nonExistentDimsCollector);
   }
@@ -111,7 +111,7 @@ public class MetricsTest
   public void testMetricsConfigurationWithUnSupportedType()
   {
     ISE iseException = Assert.assertThrows(ISE.class, () -> {
-      new Metrics("test_5", "src/test/resources/defaultInvalidMetricsTest.json", true, true, null);
+      new Metrics("test_5", "src/test/resources/defaultInvalidMetricsTest.json", true, true, null, null);
     });
     Assert.assertEquals("Failed to parse metric configuration", iseException.getMessage());
   }
@@ -119,7 +119,7 @@ public class MetricsTest
   @Test
   public void testMetricsConfigurationWithTimerHistogramBuckets()
   {
-    Metrics metrics = new Metrics("test_6", "src/test/resources/defaultMetricsTest.json", true, true, null);
+    Metrics metrics = new Metrics("test_6", "src/test/resources/defaultMetricsTest.json", true, true, null, null);
     DimensionsAndCollector dimensionsAndCollector = metrics.getByName("query/time", "historical");
     Assert.assertNotNull(dimensionsAndCollector);
     String[] dimensions = dimensionsAndCollector.getDimensions();
