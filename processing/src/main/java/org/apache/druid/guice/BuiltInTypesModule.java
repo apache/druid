@@ -30,6 +30,7 @@ import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionHandlerProvider;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.NestedCommonFormatColumnHandler;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.StructuredData;
@@ -51,6 +52,21 @@ public class BuiltInTypesModule implements DruidModule
    * {@link #initDimensionHandlerAndMvHandlingMode(DefaultColumnFormatConfig)}.
    */
   private static DimensionSchema.MultiValueHandling STRING_MV_MODE = DimensionSchema.MultiValueHandling.SORTED_ARRAY;
+  private static IndexSpec DEFAULT_INDEX_SPEC = IndexSpec.builder().build();
+
+  /**
+   * @return the configured string multi value handling mode from the system config if set; otherwise, returns
+   * the default.
+   */
+  public static DimensionSchema.MultiValueHandling getStringMultiValueHandlingMode()
+  {
+    return STRING_MV_MODE;
+  }
+
+  public static IndexSpec getDefaultIndexSpec()
+  {
+    return DEFAULT_INDEX_SPEC;
+  }
 
   @Override
   public List<? extends Module> getJacksonModules()
@@ -72,31 +88,11 @@ public class BuiltInTypesModule implements DruidModule
   @LazySingleton
   public SideEffectRegisterer initDimensionHandlerAndMvHandlingMode(DefaultColumnFormatConfig formatsConfig)
   {
-    if (formatsConfig.getNestedColumnFormatVersion() == null || formatsConfig.getNestedColumnFormatVersion() == 5) {
-      DimensionHandlerUtils.registerDimensionHandlerProvider(
-          NestedDataComplexTypeSerde.TYPE_NAME,
-          new NestedCommonFormatHandlerProvider()
-      );
-    }
-
     setStringMultiValueHandlingModeIfConfigured(formatsConfig.getStringMultiValueHandlingMode());
+    setIndexSpecDefaults(formatsConfig.getIndexSpec());
+    setNestedColumnDefaults(formatsConfig);
+
     return new SideEffectRegisterer();
-  }
-
-  private static void setStringMultiValueHandlingModeIfConfigured(@Nullable String stringMultiValueHandlingMode)
-  {
-    if (stringMultiValueHandlingMode != null) {
-      STRING_MV_MODE = DimensionSchema.MultiValueHandling.fromString(stringMultiValueHandlingMode);
-    }
-  }
-
-  /**
-   * @return the configured string multi value handling mode from the system config if set; otherwise, returns
-   * the default.
-   */
-  public static DimensionSchema.MultiValueHandling getStringMultiValueHandlingMode()
-  {
-    return STRING_MV_MODE;
   }
 
   public static List<SimpleModule> getJacksonModulesList()
@@ -132,6 +128,31 @@ public class BuiltInTypesModule implements DruidModule
     }
   }
 
+  private static void setStringMultiValueHandlingModeIfConfigured(@Nullable String stringMultiValueHandlingMode)
+  {
+    if (stringMultiValueHandlingMode != null) {
+      STRING_MV_MODE = DimensionSchema.MultiValueHandling.fromString(stringMultiValueHandlingMode);
+    }
+  }
+
+  @VisibleForTesting
+  static void setIndexSpecDefaults(@Nullable IndexSpec indexSpec)
+  {
+    if (indexSpec != null) {
+      DEFAULT_INDEX_SPEC = indexSpec;
+    }
+  }
+
+  private static void setNestedColumnDefaults(DefaultColumnFormatConfig formatsConfig)
+  {
+    if (formatsConfig.getNestedColumnFormatVersion() == null || formatsConfig.getNestedColumnFormatVersion() == 5) {
+      DimensionHandlerUtils.registerDimensionHandlerProvider(
+          NestedDataComplexTypeSerde.TYPE_NAME,
+          new NestedCommonFormatHandlerProvider()
+      );
+    }
+  }
+
   public static class NestedCommonFormatHandlerProvider
       implements DimensionHandlerProvider<StructuredData, StructuredData, StructuredData>
   {
@@ -139,7 +160,7 @@ public class BuiltInTypesModule implements DruidModule
     @Override
     public DimensionHandler<StructuredData, StructuredData, StructuredData> get(String dimensionName)
     {
-      return new NestedCommonFormatColumnHandler(dimensionName, null);
+      return new NestedCommonFormatColumnHandler(dimensionName, null, IndexSpec.getDefault().getAutoColumnFormatSpec());
     }
   }
 

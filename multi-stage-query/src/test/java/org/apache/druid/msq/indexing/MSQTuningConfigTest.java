@@ -71,7 +71,7 @@ public class MSQTuningConfigTest
     EqualsVerifier.forClass(MSQTuningConfig.class)
                   .withPrefabValues(
                       IndexSpec.class,
-                      IndexSpec.DEFAULT,
+                      IndexSpec.getDefault(),
                       IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build()
                   )
                   .usingGetClass()
@@ -86,7 +86,7 @@ public class MSQTuningConfigTest
     Assert.assertEquals(100000, msqTuningConfig.getMaxRowsInMemory());
     Assert.assertEquals(PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT, msqTuningConfig.getRowsPerSegment());
     Assert.assertEquals(null, msqTuningConfig.getMaxNumSegments());
-    Assert.assertEquals(IndexSpec.DEFAULT, msqTuningConfig.getIndexSpec());
+    Assert.assertEquals(IndexSpec.getDefault(), msqTuningConfig.getIndexSpec());
   }
 
   @Test

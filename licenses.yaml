@@ -223,39 +223,9 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.18.4.1
+version: 2.19.2
 libraries:
   - com.fasterxml.jackson.core: jackson-core
-notice: |
-  # Jackson JSON processor
-
-  Jackson is a high-performance, Free/Open Source JSON processing library.
-  It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
-  been in development since 2007.
-  It is currently developed by a community of developers, as well as supported
-  commercially by FasterXML.com.
-
-  ## Licensing
-
-  Jackson core and extension components may licensed under different licenses.
-  To find the details that apply to this artifact see the accompanying LICENSE file.
-  For more information, including possible other licensing options, contact
-  FasterXML.com (http://fasterxml.com).
-
-  ## Credits
-
-  A list of contributors may be found from CREDITS file, which is included
-  in some artifacts (usually source distributions); but is always available
-  from the source code management (SCM) system project uses.
-
----
-
-name: Jackson
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 2.18.4
-libraries:
   - com.fasterxml.jackson.core: jackson-annotations
   - com.fasterxml.jackson.dataformat: jackson-dataformat-cbor
   - com.fasterxml.jackson.dataformat: jackson-dataformat-smile
@@ -296,7 +266,7 @@ name: Jackson
 license_category: binary
 module: extensions-contrib/druid-deltalake-extensions
 license_name: Apache License version 2.0
-version: 2.18.4
+version: 2.19.2
 libraries:
   - com.fasterxml.jackson.core: jackson-databind
 notice: |
@@ -697,7 +667,7 @@ name: Apache Commons Lang
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.17.0
+version: 3.18.0
 libraries:
   - org.apache.commons: commons-lang3
 notices:
@@ -890,7 +860,7 @@ name: kubernetes fabric java client
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 7.2.0
+version: 7.4.0
 libraries:
   - io.fabric8: kubernetes-client-api
   - io.fabric8: kubernetes-model-batch
@@ -1094,14 +1064,13 @@ libraries:
   - io.prometheus: simpleclient_tracer_otel
   - io.prometheus: simpleclient_tracer_otel_agent
 
-
 ---
 
 name: org.snakeyaml snakeyaml-engine
 license_category: binary
-module: extensions-core/druid-kubernetes-overlord-extensions
+module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 2.9
+version: "2.10"
 libraries:
   - org.snakeyaml: snakeyaml-engine
 
@@ -1109,9 +1078,9 @@ libraries:
 
 name: org.yaml snakeyaml
 license_category: binary
-module: extensions-core/druid-kubernetes-overlord-extensions
+module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 2.3
+version: 2.4
 libraries:
   - org.yaml: snakeyaml
 
@@ -2896,7 +2865,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.18.4
+version: 2.19.2
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0

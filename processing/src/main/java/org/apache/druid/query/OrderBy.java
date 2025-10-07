@@ -22,12 +22,13 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 
 import java.util.Objects;
 
-public class OrderBy
+public class OrderBy implements Cacheable
 {
   public static OrderBy ascending(String columnName)
   {
@@ -68,6 +69,25 @@ public class OrderBy
     return order;
   }
 
+  /**
+   * Returns true if the given {@link OrderBy} is the exact reverse, meaning they have the same column name
+   * in revrersed order.
+   */
+  public boolean isExactReverse(OrderBy that)
+  {
+    if (!columnName.equals(that.columnName)) {
+      return false;
+    }
+    switch (order) {
+      case ASCENDING:
+        return Order.DESCENDING.equals(that.order);
+      case DESCENDING:
+        return Order.ASCENDING.equals(that.order);
+      default:
+        throw new IAE("No order[%s] for column[%s]", order, columnName);
+    }
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -93,4 +113,9 @@ public class OrderBy
     return StringUtils.format("%s %s", columnName, order == Order.ASCENDING ? "ASC" : "DESC");
   }
 
+  @Override
+  public byte[] getCacheKey()
+  {
+    return StringUtils.toUtf8(toString());
+  }
 }

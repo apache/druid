@@ -49,6 +49,7 @@ import org.junit.runner.RunWith;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutionException;
@@ -402,7 +403,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     stateListener.stateChanged(KubernetesPeonLifecycle.State.STOPPED, ID);
     EasyMock.expectLastCall().once();
     logWatch.close();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall();
 
     Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
@@ -452,11 +453,13 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     taskLogs.pushTaskLog(EasyMock.eq(ID), EasyMock.anyObject(File.class));
     EasyMock.expectLastCall();
     logWatch.close();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall();
     stateListener.stateChanged(KubernetesPeonLifecycle.State.RUNNING, ID);
     EasyMock.expectLastCall().once();
     stateListener.stateChanged(KubernetesPeonLifecycle.State.STOPPED, ID);
     EasyMock.expectLastCall().once();
+    logWatch.close();
+    EasyMock.expectLastCall();
 
     Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
@@ -561,7 +564,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     stateListener.stateChanged(KubernetesPeonLifecycle.State.STOPPED, ID);
     EasyMock.expectLastCall().once();
     logWatch.close();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall();
 
     Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
@@ -615,7 +618,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     stateListener.stateChanged(KubernetesPeonLifecycle.State.STOPPED, ID);
     EasyMock.expectLastCall().once();
     logWatch.close();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall();
 
     Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
@@ -657,7 +660,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     stateListener.stateChanged(KubernetesPeonLifecycle.State.STOPPED, ID);
     EasyMock.expectLastCall().once();
     logWatch.close();
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall();
 
     Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
@@ -1051,7 +1054,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   }
 
   @Test
-  public void test_join_saveLogsTimeout_handledGracefully() throws IOException
+  public void test_startWatchingLogs_logWatchInitialize_timeout()
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
@@ -1060,62 +1063,66 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         taskLogs,
         mapper,
         stateListener,
-        SHORT_LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()  // 1 second timeout for task log save
+        SHORT_LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
-
-    Job job = new JobBuilder()
-        .withNewMetadata()
-        .withName(ID)
-        .endMetadata()
-        .withNewStatus()
-        .withSucceeded(1)
-        .withStartTime("2022-09-19T23:31:50Z")
-        .withCompletionTime("2022-09-19T23:32:48Z")
-        .endStatus()
-        .build();
-
-    EasyMock.expect(kubernetesClient.waitForPeonJobCompletion(
-        EasyMock.eq(k8sTaskId),
-        EasyMock.anyLong(),
-        EasyMock.eq(TimeUnit.MILLISECONDS)
-    )).andReturn(new JobResponse(job, PeonPhase.SUCCEEDED));
-
-    EasyMock.expect(kubernetesClient.getPeonLogWatcher(k8sTaskId)).andReturn(Optional.of(logWatch));
-    EasyMock.expect(taskLogs.streamTaskStatus(ID)).andReturn(Optional.of(
-        IOUtils.toInputStream(mapper.writeValueAsString(SUCCESS), StandardCharsets.UTF_8)
-    ));
-
-    // Mock pushTaskLog to sleep longer than the timeout (2 seconds > 1 second timeout)
-    taskLogs.pushTaskLog(EasyMock.eq(ID), EasyMock.anyObject(File.class));
-    EasyMock.expectLastCall().andAnswer(() -> {
-      Thread.sleep(2000); // Sleep for 2 seconds
-      return null;
-    });
-
-    stateListener.stateChanged(KubernetesPeonLifecycle.State.RUNNING, ID);
-    EasyMock.expectLastCall().once();
-    stateListener.stateChanged(KubernetesPeonLifecycle.State.STOPPED, ID);
-    EasyMock.expectLastCall().once();
-    logWatch.close();
-    EasyMock.expectLastCall().atLeastOnce();
-
-    Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
+    EasyMock.expect(kubernetesClient.getPeonLogWatcher(k8sTaskId))
+            .andAnswer(() -> {
+              Thread.sleep(5000); // Exceeds 1 second timeout
+              return Optional.of(logWatch);
+            });
 
     replayAll();
-
-    // The test should complete without hanging, even though log save times out
     long startTime = System.currentTimeMillis();
-    TaskStatus taskStatus = peonLifecycle.join(0L);
+    peonLifecycle.startWatchingLogs();
     long duration = System.currentTimeMillis() - startTime;
+    // Anything less than 5 seconds means the Executor timeed  out correctly, because the mock sleeps for 5 seconds
+    Assert.assertTrue("Test should complete quickly due to timeout", duration < 2500);
+    verifyAll();
+  }
 
-    // Should complete in ~1 second (timeout), not 5+ seconds (sleep duration)
-    Assert.assertTrue("Test should complete quickly due to timeout", duration < 1500);
+  @Test
+  public void test_saveLogs_streamLogs_timeout() throws IOException
+  {
+    EasyMock.reset(logWatch);
 
+    InputStream slowInputStream = new InputStream() {
+      @Override
+      public int read() throws IOException
+      {
+        try {
+          Thread.sleep(5000);
+        }
+        catch (InterruptedException e) {
+          throw new IOException(e);
+        }
+        return -1;
+      }
+    };
+
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
+        task,
+        k8sTaskId,
+        kubernetesClient,
+        taskLogs,
+        mapper,
+        stateListener,
+        SHORT_LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
+    );
+    EasyMock.expect(kubernetesClient.getPeonLogWatcher(k8sTaskId)).andReturn(Optional.of(logWatch)).once();
+    EasyMock.expect(logWatch.getOutput()).andReturn(slowInputStream);
+    logWatch.close();
+    EasyMock.expectLastCall();
+    taskLogs.pushTaskLog(EasyMock.eq(ID), EasyMock.anyObject(File.class));
+    EasyMock.expectLastCall();
+
+    replayAll();
+    long startTime = System.currentTimeMillis();
+    peonLifecycle.saveLogs();
+    long duration = System.currentTimeMillis() - startTime;
+    // Anything less than 5 seconds means the Executor timeed  out correctly, because the mock sleeps for 5 seconds
+    Assert.assertTrue("Test should complete quickly due to timeout", duration < 2500);
     verifyAll();
 
-    // Task should still succeed - log timeout doesn't affect task result
-    Assert.assertEquals(SUCCESS.withDuration(58000), taskStatus);
-    Assert.assertEquals(KubernetesPeonLifecycle.State.STOPPED, peonLifecycle.getState());
   }
 
   private void setPeonLifecycleState(KubernetesPeonLifecycle peonLifecycle, KubernetesPeonLifecycle.State state)

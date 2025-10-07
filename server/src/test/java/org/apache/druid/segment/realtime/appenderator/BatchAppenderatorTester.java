@@ -168,7 +168,7 @@ public class BatchAppenderatorTester implements AutoCloseable
         maxRowsInMemory,
         maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
         skipBytesInMemoryOverheadCheck,
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
         0,
         false,
         0L,

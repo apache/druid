@@ -179,7 +179,7 @@ public class RunWorkOrder
       setUpCompletionCallbacks();
     }
     catch (Throwable t) {
-      stopUnchecked(t);
+      stop(t);
     }
   }
 
@@ -193,7 +193,7 @@ public class RunWorkOrder
    * @param t error to send to {@link RunWorkOrderListener#onFailure}, if success/failure has not already been sent.
    *          Will also be thrown at the end of this method.
    */
-  public void stop(@Nullable Throwable t) throws InterruptedException
+  public void stop(@Nullable Throwable t)
   {
     if (state.compareAndSet(State.INIT, State.STOPPING)
         || state.compareAndSet(State.STARTED, State.STOPPING)
@@ -236,30 +236,25 @@ public class RunWorkOrder
       stopLatch.countDown();
     }
 
-    stopLatch.await();
+    // If stopLatch.await() is interrupted, remember that but keep waiting. This method should only return when
+    // the worker is fully stopped, otherwise cleanup may not have fully happened.
+    boolean interrupted = false;
+    while (stopLatch.getCount() > 0) {
+      try {
+        stopLatch.await();
+      }
+      catch (InterruptedException e) {
+        interrupted = true;
+      }
+    }
+
+    if (interrupted) {
+      Thread.currentThread().interrupt();
+    }
 
     if (t != null) {
-      Throwables.throwIfInstanceOf(t, InterruptedException.class);
       Throwables.throwIfUnchecked(t);
       throw new RuntimeException(t);
-    }
-  }
-
-  /**
-   * Calls {@link #stop(Throwable)}. If the call to {@link #stop(Throwable)} throws {@link InterruptedException},
-   * this method sets the interrupt flag and throws an unchecked exception.
-   *
-   * @param t error to send to {@link RunWorkOrderListener#onFailure}, if success/failure has not already been sent.
-   *          Will also be thrown at the end of this method.
-   */
-  public void stopUnchecked(@Nullable final Throwable t)
-  {
-    try {
-      stop(t);
-    }
-    catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new RuntimeException(e);
     }
   }
 

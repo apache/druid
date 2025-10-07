@@ -91,6 +91,7 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
     return EmbeddedDruidCluster
         .withEmbeddedDerbyAndZookeeper()
         .useLatchableEmitter()
+        .useDefaultTimeoutForLatchableEmitter(20)
         .addExtensions(S3StorageConnectorModule.class)
         .addResource(storageResource)
         .addResource(msqStorageResource)

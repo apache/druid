@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.querykit.scan;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
@@ -43,7 +42,6 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.sql.calcite.rel.DruidQuery;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -59,18 +57,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
 
   public static RowSignature getAndValidateSignature(final ScanQuery scanQuery, final ObjectMapper jsonMapper)
   {
-    RowSignature scanSignature;
-    try {
-      final String s = scanQuery.context().getString(DruidQuery.CTX_SCAN_SIGNATURE);
-      if (s == null) {
-        scanSignature = scanQuery.getRowSignature();
-      } else {
-        scanSignature = jsonMapper.readValue(s, RowSignature.class);
-      }
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
+    RowSignature scanSignature = scanQuery.getRowSignature();
     // Verify the signature prior to any actual processing.
     QueryKitUtils.verifyRowSignature(scanSignature);
     return scanSignature;
