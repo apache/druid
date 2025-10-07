@@ -290,7 +290,7 @@ public class PrometheusEmitter implements Emitter
     Map<String, DimensionsAndCollector> map = metrics.getRegisteredMetrics();
     for (Map.Entry<String, DimensionsAndCollector> entry : map.entrySet()) {
       if (entry.getValue().isExpired(config.getFlushPeriod())) {
-        log.info("Metric [%s] has expired (last updated %d ms ago)",
+        log.debug("Metric [%s] has expired (last updated %d ms ago)",
                  entry.getKey(),
                  entry.getValue().getTimeSinceLastUpdate());
         entry.getValue().getCollector().clear();
