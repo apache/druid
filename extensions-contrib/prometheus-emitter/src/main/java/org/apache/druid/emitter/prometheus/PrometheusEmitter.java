@@ -59,7 +59,6 @@ public class PrometheusEmitter implements Emitter
   private PushGateway pushGateway;
   private volatile String identifier;
   private ScheduledExecutorService exec;
-  private ScheduledExecutorService ttlExecutor;
 
   static PrometheusEmitter of(PrometheusEmitterConfig config)
   {
@@ -96,9 +95,9 @@ public class PrometheusEmitter implements Emitter
       }
       // Start TTL scheduler if TTL is configured
       if (config.getFlushPeriod() != null) {
-        ttlExecutor = ScheduledExecutors.fixed(1, "PrometheusTTLExecutor-%s");
+        exec = ScheduledExecutors.fixed(1, "PrometheusTTLExecutor-%s");
         // Check TTL every minute
-        ttlExecutor.scheduleAtFixedRate(
+        exec.scheduleAtFixedRate(
             this::cleanUpStaleMetrics,
             config.getFlushPeriod(),
             config.getFlushPeriod(),
@@ -227,8 +226,8 @@ public class PrometheusEmitter implements Emitter
       if (server != null) {
         server.close();
       }
-      if (ttlExecutor != null) {
-        ttlExecutor.shutdownNow();
+      if (exec != null) {
+        exec.shutdownNow();
       }
     } else {
       exec.shutdownNow();
