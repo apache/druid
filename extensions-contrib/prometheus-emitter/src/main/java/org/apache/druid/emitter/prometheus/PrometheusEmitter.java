@@ -96,14 +96,13 @@ public class PrometheusEmitter implements Emitter
       // Start TTL scheduler if TTL is configured
       if (config.getFlushPeriod() != null) {
         exec = ScheduledExecutors.fixed(1, "PrometheusTTLExecutor-%s");
-        // Check TTL every minute
         exec.scheduleAtFixedRate(
             this::cleanUpStaleMetrics,
             config.getFlushPeriod(),
             config.getFlushPeriod(),
             TimeUnit.SECONDS
         );
-        log.info("Started TTL scheduler with TTL of %d seconds", config.getFlushPeriod());
+        log.info("Started TTL scheduler with TTL of [%d] seconds.", config.getFlushPeriod());
       }
     } else if (strategy.equals(PrometheusEmitterConfig.Strategy.pushgateway)) {
       String address = config.getPushGatewayAddress();
@@ -223,11 +222,11 @@ public class PrometheusEmitter implements Emitter
   public void close()
   {
     if (strategy.equals(PrometheusEmitterConfig.Strategy.exporter)) {
-      if (server != null) {
-        server.close();
-      }
       if (exec != null) {
         exec.shutdownNow();
+      }
+      if (server != null) {
+        server.close();
       }
     } else {
       exec.shutdownNow();
@@ -280,6 +279,11 @@ public class PrometheusEmitter implements Emitter
     this.pushGateway = pushGateway;
   }
 
+  /**
+   * Cleans up stale metrics that have not been updated within the configured TTL.
+   * This method is called periodically by the TTL scheduler when using the 'exporter' strategy with
+   * a configured flushPeriod.
+   */
   private void cleanUpStaleMetrics()
   {
     if (config.getFlushPeriod() == null) {
@@ -289,9 +293,11 @@ public class PrometheusEmitter implements Emitter
     Map<String, DimensionsAndCollector> map = metrics.getRegisteredMetrics();
     for (Map.Entry<String, DimensionsAndCollector> entry : map.entrySet()) {
       if (entry.getValue().isExpired(config.getFlushPeriod())) {
-        log.debug("Metric [%s] has expired (last updated %d ms ago)",
-                 entry.getKey(),
-                 entry.getValue().getTimeSinceLastUpdate());
+        log.debug(
+          "Metric [%s] has expired (last updated [%d] ms ago)",
+          entry.getKey(),
+          entry.getValue().getMillisSinceLastUpdate()
+        );
         entry.getValue().getCollector().clear();
       }
     }

@@ -23,8 +23,6 @@ import io.prometheus.client.SimpleCollector;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.joda.time.Duration;
 
-import java.util.concurrent.TimeUnit;
-
 public class DimensionsAndCollector
 {
   private final String[] dimensions;
@@ -64,17 +62,16 @@ public class DimensionsAndCollector
 
   public void resetLastUpdateTime()
   {
-    updateTimer.reset();
-    updateTimer.start();
+    updateTimer.restart();
   }
 
-  public long getTimeSinceLastUpdate()
+  public long getMillisSinceLastUpdate()
   {
     return updateTimer.millisElapsed();
   }
 
   public boolean isExpired(long ttlSeconds)
   {
-    return updateTimer.hasElapsed(new Duration(TimeUnit.SECONDS.toMillis(ttlSeconds)));
+    return updateTimer.hasElapsed(Duration.standardSeconds(ttlSeconds));
   }
 }
