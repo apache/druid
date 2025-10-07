@@ -27,6 +27,7 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.data.input.impl.DelimitedInputFormat;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -39,6 +40,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.AutoTypeColumnSchema;
+import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexSpec;
@@ -49,6 +51,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.SegmentId;
@@ -66,6 +69,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 
 public class NestedDataTestUtils
 {
@@ -91,34 +95,15 @@ public class NestedDataTestUtils
       DimensionsSpec.builder()
                     .useSchemaDiscovery(true)
                     .build();
+  private static final List<String> COLUMN_NAMES = Arrays.asList(
+      "dim",
+      "nest_json",
+      "nester_json",
+      "variant_json",
+      "list_json",
+      "nonexistent"
+  );
 
-  public static final DimensionsSpec TSV_SCHEMA =
-      DimensionsSpec.builder()
-                    .setDimensions(
-                        Arrays.asList(
-                            AutoTypeColumnSchema.of("dim"),
-                            AutoTypeColumnSchema.of("nest_json"),
-                            AutoTypeColumnSchema.of("nester_json"),
-                            AutoTypeColumnSchema.of("variant_json"),
-                            AutoTypeColumnSchema.of("list_json"),
-                            AutoTypeColumnSchema.of("nonexistent")
-                        )
-                    )
-                    .build();
-
-  public static final DimensionsSpec TSV_NESTED_SCHEMA =
-      DimensionsSpec.builder()
-                    .setDimensions(
-                        Arrays.asList(
-                            new NestedDataColumnSchema("dim", 5),
-                            new NestedDataColumnSchema("nest_json", 5),
-                            new NestedDataColumnSchema("nester_json", 5),
-                            new NestedDataColumnSchema("variant_json", 5),
-                            new NestedDataColumnSchema("list_json", 5),
-                            new NestedDataColumnSchema("nonexistent", 5)
-                        )
-                    )
-                    .build();
   public static final InputRowSchema AUTO_SCHEMA = new InputRowSchema(
       TIMESTAMP_SPEC,
       AUTO_DISCOVERY,
@@ -163,30 +148,41 @@ public class NestedDataTestUtils
 
   public static List<Segment> createSimpleSegmentsTsv(
       TemporaryFolder tempFolder,
+      NestedCommonFormatColumnFormatSpec spec,
       Closer closer
   )
       throws Exception
   {
+    List<DimensionSchema> dimensionsSpecs =
+        COLUMN_NAMES.stream()
+                    .map(name -> (DimensionSchema) new AutoTypeColumnSchema(name, null, spec))
+                    .collect(Collectors.toList());
     return createSimpleNestedTestDataTsvSegments(
         tempFolder,
         closer,
         Granularities.NONE,
-        TSV_SCHEMA,
+        DimensionsSpec.builder().setDimensions(dimensionsSpecs).build(),
         true
     );
   }
 
   public static List<Segment> createSimpleSegmentsTsvNested(
       TemporaryFolder tempFolder,
+      NestedCommonFormatColumnFormatSpec spec,
       Closer closer
   )
       throws Exception
   {
+    DefaultColumnFormatConfig config = new DefaultColumnFormatConfig(null, null, null);
+    List<DimensionSchema> dimensionsSpecs =
+        COLUMN_NAMES.stream()
+                    .map(name -> (DimensionSchema) new NestedDataColumnSchema(name, 5, spec, config))
+                    .collect(Collectors.toList());
     return createSimpleNestedTestDataTsvSegments(
         tempFolder,
         closer,
         Granularities.NONE,
-        TSV_NESTED_SCHEMA,
+        DimensionsSpec.builder().setDimensions(dimensionsSpecs).build(),
         true
     );
   }
