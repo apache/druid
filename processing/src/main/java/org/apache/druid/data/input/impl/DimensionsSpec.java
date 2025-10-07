@@ -37,7 +37,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -128,8 +128,8 @@ public class DimensionsSpec
                       : Lists.newArrayList(dimensions);
 
     this.dimensionExclusions = (dimensionExclusions == null)
-                               ? new HashSet<>()
-                               : Sets.newHashSet(dimensionExclusions);
+                                ? new LinkedHashSet<>()
+                                : new LinkedHashSet<>(dimensionExclusions);
 
     List<SpatialDimensionSchema> spatialDims = (spatialDimensions == null)
                                                ? new ArrayList<>()
