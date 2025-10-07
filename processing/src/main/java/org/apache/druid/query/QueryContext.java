@@ -549,16 +549,16 @@ public class QueryContext
     return getPerSegmentTimeout(QueryContexts.NO_TIMEOUT);
   }
 
-  public long getPerSegmentTimeout(long defaultTimeout)
+  public long getPerSegmentTimeout(long defaultPerSegmentTimeout)
   {
-    final long timeout = getLong(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, defaultTimeout);
+    final long timeout = getLong(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, defaultPerSegmentTimeout);
     if (timeout >= 0) {
       return timeout;
     }
 
     throw new BadQueryContextException(
         StringUtils.format(
-            "Per-segment timeout [%s] must be a non negative value, but was %d",
+            "Per-segment timeout [%s] must be a non negative value, but was [%d]",
             QueryContexts.PER_SEGMENT_TIMEOUT_KEY,
             timeout
         )

@@ -180,7 +180,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
               Throwable cause = e.getCause();
               // Nested per-segment future timeout
               if (cause instanceof TimeoutException) {
-                throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query [%s] timed out", query.getId()));
+                throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query timeout, cancelling pending results for query [%s]. Per-segment timeout exceeded.", query.getId()));
               }
               Throwables.throwIfUnchecked(cause);
               throw new RuntimeException(cause);

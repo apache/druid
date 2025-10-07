@@ -403,7 +403,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
       Throwable cause = e.getCause();
       // Nested per-segment future timeout
       if (cause instanceof TimeoutException) {
-        throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query [%s] timed out", query.getId()));
+        throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query timeout, cancelling pending results for query [%s]. Per-segment timeout exceeded.", query.getId()));
       }
       throw new RuntimeException(e);
     }

@@ -62,6 +62,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 @RunWith(Parameterized.class)
 public class GroupByQueryRunnerFailureTest
@@ -299,6 +300,7 @@ public class GroupByQueryRunnerFailureTest
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setGranularity(Granularities.ALL)
         .overrideContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))
+        .queryId("test")
         .build();
 
     GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(
@@ -325,10 +327,12 @@ public class GroupByQueryRunnerFailureTest
 
     QueryRunner<ResultRow> mergeRunners = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner, mockRunner));
 
-    Assert.assertThrows(
+    QueryTimeoutException ex = Assert.assertThrows(
         QueryTimeoutException.class,
         () -> GroupByQueryRunnerTestHelper.runQuery(factory, mergeRunners, query)
     );
+    // Assert overall timeout is triggered
+    Assert.assertEquals("Query [test] timed out", ex.getMessage());
   }
 
   @Test(timeout = 60_000L)
@@ -342,6 +346,7 @@ public class GroupByQueryRunnerFailureTest
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setGranularity(Granularities.ALL)
         .overrideContext(Map.of(QueryContexts.TIMEOUT_KEY, 1))
+        .queryId("test")
         .build();
 
     GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(
@@ -371,10 +376,12 @@ public class GroupByQueryRunnerFailureTest
         List.of(runner, mockRunner)
     );
 
-    Assert.assertThrows(
+    QueryTimeoutException ex = Assert.assertThrows(
         QueryTimeoutException.class,
         () -> GroupByQueryRunnerTestHelper.runQuery(factory, mergeRunners, query)
     );
+    // Assert overall timeout is triggered
+    Assert.assertEquals("Query [test] timed out", ex.getMessage());
   }
 
   @Test(timeout = 20_000L)
@@ -393,6 +400,7 @@ public class GroupByQueryRunnerFailureTest
             QueryContexts.PER_SEGMENT_TIMEOUT_KEY,
             100
         ))
+        .queryId("test")
         .build();
 
     GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(
@@ -422,10 +430,12 @@ public class GroupByQueryRunnerFailureTest
         List.of(runner, mockRunner)
     );
 
-    Assert.assertThrows(
+    QueryTimeoutException ex = Assert.assertThrows(
         QueryTimeoutException.class,
         () -> GroupByQueryRunnerTestHelper.runQuery(factory, mergeRunners, query)
     );
+    // Assert per-segment timeout is triggered
+    Assert.assertEquals("Query timeout, cancelling pending results for query [test]. Per-segment timeout exceeded.", ex.getMessage());
   }
 
   @Test(timeout = 20_000L)
@@ -444,6 +454,7 @@ public class GroupByQueryRunnerFailureTest
             QueryContexts.PER_SEGMENT_TIMEOUT_KEY,
             100
         ))
+        .queryId("test")
         .build();
 
     GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(
@@ -473,10 +484,12 @@ public class GroupByQueryRunnerFailureTest
         List.of(runner, mockRunner)
     );
 
-    Assert.assertThrows(
+    QueryTimeoutException ex = Assert.assertThrows(
         QueryTimeoutException.class,
         () -> GroupByQueryRunnerTestHelper.runQuery(factory, mergeRunners, query)
     );
+    // Assert per-segment timeout is triggered
+    Assert.assertEquals("Query timeout, cancelling pending results for query [test]. Per-segment timeout exceeded.", ex.getMessage());
   }
 
   @Test(timeout = 5_000L)
@@ -540,6 +553,7 @@ public class GroupByQueryRunnerFailureTest
       return Sequences.empty();
     };
 
+    AtomicReference<Throwable> thrown = new AtomicReference<>();
     Thread slowQueryThread = new Thread(() -> {
       try {
         GroupByQueryRunnerTestHelper.runQuery(
@@ -551,6 +565,7 @@ public class GroupByQueryRunnerFailureTest
         );
       }
       catch (QueryTimeoutException e) {
+        thrown.set(e);
         return;
       }
       Assert.fail("Expected QueryTimeoutException for slow query");
@@ -583,5 +598,7 @@ public class GroupByQueryRunnerFailureTest
 
     fastQueryThread.join();
     slowQueryThread.join();
+
+    Assert.assertEquals("Query timeout, cancelling pending results for query [slow]. Per-segment timeout exceeded.", thrown.get().getMessage());
   }
 }

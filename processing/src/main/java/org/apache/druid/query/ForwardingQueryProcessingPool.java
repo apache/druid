@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Default implementation of {@link QueryProcessingPool} that just forwards operations, including query execution tasks,
  * to an underlying {@link ExecutorService}
+ * Exposes a method {@link #submitRunnerTask(PrioritizedQueryRunnerCallable, long, TimeUnit)} which allows execution tasks to be serviced a custom timeout.
  */
 public class ForwardingQueryProcessingPool extends ForwardingListeningExecutorService implements QueryProcessingPool
 {

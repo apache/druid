@@ -395,6 +395,7 @@ public class ChainedExecutionQueryRunnerTest
                                           QueryContexts.TIMEOUT_KEY, 5_000L
                                       )
                                   )
+                                  .queryId("test")
                                   .build();
     Sequence seq = chainedRunner.run(QueryPlus.wrap(query));
 
@@ -413,6 +414,7 @@ public class ChainedExecutionQueryRunnerTest
         "Should be QueryTimeoutException or caused by it",
         Throwables.getRootCause(thrown) instanceof QueryTimeoutException
     );
+    Assert.assertEquals("Query timeout, cancelling pending results for query [test]. Per-segment timeout exceeded.", thrown.getMessage());
 
     EasyMock.verify(watcher);
   }
@@ -492,6 +494,7 @@ public class ChainedExecutionQueryRunnerTest
 
       ExecutionException ex = Assert.assertThrows(ExecutionException.class, slowFuture::get);
       Assert.assertTrue(Throwables.getRootCause(ex) instanceof QueryTimeoutException);
+      Assert.assertEquals("Query timeout, cancelling pending results for query [slow]. Per-segment timeout exceeded.", ex.getCause().getMessage());
       Assert.assertEquals(
           Collections.singletonList(
               new Result<>(null, new TimeseriesResultValue(ImmutableMap.of("count", 1)))

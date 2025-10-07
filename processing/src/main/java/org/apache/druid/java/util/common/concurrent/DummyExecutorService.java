@@ -19,21 +19,18 @@
 
 package org.apache.druid.java.util.common.concurrent;
 
-import javax.validation.constraints.NotNull;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
  * ExecutorService which is terminated and shutdown from the moment of creation and not able to accept any tasks.
  */
-final class DummyExecutorService implements ExecutorService, ScheduledExecutorService
+final class DummyExecutorService implements ExecutorService
 {
   static final DummyExecutorService INSTANCE = new DummyExecutorService();
 
@@ -117,40 +114,6 @@ final class DummyExecutorService implements ExecutorService, ScheduledExecutorSe
 
   @Override
   public void execute(Runnable command)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public @NotNull ScheduledFuture<?> schedule(@NotNull Runnable command, long delay, @NotNull TimeUnit unit)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public @NotNull <V> ScheduledFuture<V> schedule(@NotNull Callable<V> callable, long delay, @NotNull TimeUnit unit)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public @NotNull ScheduledFuture<?> scheduleAtFixedRate(
-      @NotNull Runnable command,
-      long initialDelay,
-      long period,
-      @NotNull TimeUnit unit
-  )
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public @NotNull ScheduledFuture<?> scheduleWithFixedDelay(
-      @NotNull Runnable command,
-      long initialDelay,
-      long delay,
-      @NotNull TimeUnit unit
-  )
   {
     throw new UnsupportedOperationException();
   }
