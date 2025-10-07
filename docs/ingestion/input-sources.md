@@ -1189,12 +1189,12 @@ To use the Delta Lake input source, load the extension [`druid-deltalake-extensi
 You can use the Delta input source to read data stored in a Delta Lake table. For a given table, the input source scans
 the latest snapshot from the configured table. Druid ingests the underlying delta files from the table.
 
-| Property|Description| Default|Required |
-|---------|-----------|-----------------|
-|type|Set this value to `delta`.| None|yes|
-|tablePath|The location of the Delta table.|None|yes|
-|filter|The JSON Object that filters data files within a snapshot.|None|no|
-|snapshotVersion|The snapshot version to read from the Delta table. An integer value must be specified.|Latest|no|
+| Property | Description | Default | Required |
+|----------|-------------|---------|----------|
+| type | Set this value to `delta`. | None | yes |
+| tablePath | The location of the Delta table. | None | yes |
+| filter | The JSON Object that filters data files within a snapshot. | None | no |
+| snapshotVersion | The snapshot version to read from the Delta table. An integer value must be specified. | Latest | no |
 
 ### Delta filter object
 
