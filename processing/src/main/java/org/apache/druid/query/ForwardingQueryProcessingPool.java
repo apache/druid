@@ -78,7 +78,7 @@ public class ForwardingQueryProcessingPool extends ForwardingListeningExecutorSe
           timeoutService
       );
     }
-    return delegate().submit(task);
+    return submitRunnerTask(task);
   }
 
   @Override
