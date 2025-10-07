@@ -51,6 +51,7 @@ import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategy;
+import org.apache.druid.segment.data.AtomicIntegerReadableOffset;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ColumnarDoubles;
 import org.apache.druid.segment.data.ColumnarInts;
@@ -183,7 +184,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
   public SortedMap<String, FieldTypeInfo.MutableTypeSet> getFieldTypeInfo()
   {
     SortedMap<String, FieldTypeInfo.MutableTypeSet> fieldMap = new TreeMap<>();
-    for (BaseField field : getAllBaseFields()) {
+    for (NestedField field : getAllNestedFields()) {
       FieldTypeInfo.TypeSet types = fieldInfo.getTypes(field.fieldIndex);
       fieldMap.put(field.fieldName, new FieldTypeInfo.MutableTypeSet(types.getByteValue()));
     }
@@ -199,7 +200,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
   @Override
   public List<List<NestedPathPart>> getNestedFields()
   {
-    return getAllParsedBaseFields().stream().map(pair -> pair.rhs).collect(Collectors.toList());
+    return getAllParsedNestedFields().stream().map(pair -> pair.rhs).collect(Collectors.toList());
   }
 
   public TStringDictionary getUtf8BytesDictionary()
@@ -332,7 +333,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
       return STRATEGY.fromByteBuffer(valueBuffer, valueBuffer.remaining());
     }
 
-    final List<StructuredDataBuilder.Element> elements = getAllParsedBaseFields()
+    final List<StructuredDataBuilder.Element> elements = getAllParsedNestedFields()
         .stream()
         .map(pair -> {
           NestedFieldDictionaryEncodedColumn column = (NestedFieldDictionaryEncodedColumn) getColumnHolder(
@@ -348,7 +349,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
   {
-    List<BaseField> allFields = getAllBaseFields();
+    List<NestedField> allFields = getAllNestedFields();
     if (!logicalType.equals(ColumnType.NESTED_DATA)
         && allFields.size() == 1
         && rootFieldPath.equals(Iterables.getOnlyElement(allFields).fieldName)) {
@@ -369,15 +370,15 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
       };
     } else {
       List<Pair<List<NestedPathPart>, ColumnValueSelector>> fieldSelectors =
-          getAllParsedBaseFields().stream()
-                                  .map(pair -> Pair.of(
-                                      pair.rhs,
-                                      ((DictionaryEncodedColumn) getColumnHolder(
-                                          pair.lhs.fieldName,
-                                          pair.lhs.fieldIndex
-                                      ).getColumn()).makeColumnValueSelector(offset)
-                                  ))
-                                  .collect(Collectors.toList());
+          getAllParsedNestedFields().stream()
+                                    .map(pair -> Pair.of(
+                                        pair.rhs,
+                                        ((DictionaryEncodedColumn) getColumnHolder(
+                                            pair.lhs.fieldName,
+                                            pair.lhs.fieldIndex
+                                        ).getColumn()).makeColumnValueSelector(offset)
+                                    ))
+                                    .collect(Collectors.toList());
       valueProvider = () -> {
         List<StructuredDataBuilder.Element> elements = fieldSelectors
             .stream()
@@ -415,7 +416,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
   @Override
   public VectorObjectSelector makeVectorObjectSelector(ReadableVectorOffset offset)
   {
-    List<Pair<BaseField, List<NestedPathPart>>> allFields = getAllParsedBaseFields();
+    List<Pair<NestedField, List<NestedPathPart>>> allFields = getAllParsedNestedFields();
     if (!logicalType.equals(ColumnType.NESTED_DATA)
         && allFields.size() == 1
         && rootFieldPath.equals(Iterables.getOnlyElement(allFields).lhs.fieldName)) {
@@ -519,7 +520,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
   @Override
   public VectorValueSelector makeVectorValueSelector(ReadableVectorOffset offset)
   {
-    List<BaseField> allFields = getAllBaseFields();
+    List<NestedField> allFields = getAllNestedFields();
     if (!logicalType.equals(ColumnType.NESTED_DATA)
         && allFields.size() == 1
         && rootFieldPath.equals(Iterables.getOnlyElement(allFields).fieldName)) {
@@ -563,15 +564,15 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
       ReadableOffset readableOffset
   )
   {
-    final Field field = getBaseOrArrayFieldFromPath(path);
-    if (field instanceof BaseField) {
+    final Field field = getNestedFieldOrNestedArrayElementFromPath(path);
+    if (field instanceof NestedField) {
       DictionaryEncodedColumn<?> col = (DictionaryEncodedColumn<?>) getColumnHolder(
-          ((BaseField) field).fieldName,
-          ((BaseField) field).fieldIndex
+          ((NestedField) field).fieldName,
+          ((NestedField) field).fieldIndex
       ).getColumn();
       return col.makeDimensionSelector(readableOffset, extractionFn);
-    } else if (field instanceof ArrayField) {
-      final ArrayField arrayField = (ArrayField) field;
+    } else if (field instanceof NestedArrayElement) {
+      final NestedArrayElement arrayField = (NestedArrayElement) field;
       final int elementNumber = arrayField.elementNumber;
       if (elementNumber < 0) {
         throw new IAE(
@@ -580,8 +581,8 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
         );
       }
       DictionaryEncodedColumn<?> col = (DictionaryEncodedColumn<?>) getColumnHolder(
-          arrayField.baseField.fieldName,
-          arrayField.baseField.fieldIndex
+          arrayField.nestedField.fieldName,
+          arrayField.nestedField.fieldIndex
       ).getColumn();
       ColumnValueSelector<?> arraySelector = col.makeColumnValueSelector(readableOffset);
       return new BaseSingleValueDimensionSelector()
@@ -629,13 +630,13 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
       ReadableOffset readableOffset
   )
   {
-    Field field = getBaseOrArrayFieldFromPath(path);
-    if (field instanceof BaseField) {
-      final BaseField baseField = (BaseField) field;
-      return getColumnHolder(baseField.fieldName, baseField.fieldIndex).getColumn()
-                                                                       .makeColumnValueSelector(readableOffset);
-    } else if (field instanceof ArrayField) {
-      final ArrayField arrayField = (ArrayField) field;
+    Field field = getNestedFieldOrNestedArrayElementFromPath(path);
+    if (field instanceof NestedField) {
+      final NestedField nestedField = (NestedField) field;
+      return getColumnHolder(nestedField.fieldName, nestedField.fieldIndex).getColumn()
+                                                                           .makeColumnValueSelector(readableOffset);
+    } else if (field instanceof NestedArrayElement) {
+      final NestedArrayElement arrayField = (NestedArrayElement) field;
       final int elementNumber = arrayField.elementNumber;
       if (elementNumber < 0) {
         throw DruidException.forPersona(DruidException.Persona.USER)
@@ -646,8 +647,8 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
                             );
       }
       DictionaryEncodedColumn<?> col = (DictionaryEncodedColumn<?>) getColumnHolder(
-          arrayField.baseField.fieldName,
-          arrayField.baseField.fieldIndex
+          arrayField.nestedField.fieldName,
+          arrayField.nestedField.fieldIndex
       ).getColumn();
       ColumnValueSelector arraySelector = col.makeColumnValueSelector(readableOffset);
       return new ColumnValueSelector<>()
@@ -718,12 +719,12 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
       ReadableVectorOffset readableOffset
   )
   {
-    final Field field = getBaseOrArrayFieldFromPath(path);
-    if (field instanceof BaseField) {
-      BaseField baseField = (BaseField) field;
+    final Field field = getNestedFieldOrNestedArrayElementFromPath(path);
+    if (field instanceof NestedField) {
+      NestedField nestedField = (NestedField) field;
       DictionaryEncodedColumn<?> col = (DictionaryEncodedColumn<?>) getColumnHolder(
-          baseField.fieldName,
-          baseField.fieldIndex
+          nestedField.fieldName,
+          nestedField.fieldIndex
       ).getColumn();
       return col.makeSingleValueDimensionVectorSelector(readableOffset);
     } else {
@@ -745,13 +746,13 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
       ReadableVectorOffset readableOffset
   )
   {
-    final Field field = getBaseOrArrayFieldFromPath(path);
-    if (field instanceof BaseField) {
-      BaseField baseField = (BaseField) field;
-      return getColumnHolder(baseField.fieldName, baseField.fieldIndex).getColumn()
-                                                                       .makeVectorObjectSelector(readableOffset);
-    } else if (field instanceof ArrayField) {
-      final ArrayField arrayField = (ArrayField) field;
+    final Field field = getNestedFieldOrNestedArrayElementFromPath(path);
+    if (field instanceof NestedField) {
+      NestedField nestedField = (NestedField) field;
+      return getColumnHolder(nestedField.fieldName, nestedField.fieldIndex).getColumn()
+                                                                           .makeVectorObjectSelector(readableOffset);
+    } else if (field instanceof NestedArrayElement) {
+      final NestedArrayElement arrayField = (NestedArrayElement) field;
       final int elementNumber = arrayField.elementNumber;
       if (elementNumber < 0) {
         throw DruidException.forPersona(DruidException.Persona.USER)
@@ -762,8 +763,8 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
                             );
       }
       VectorObjectSelector arraySelector = getColumnHolder(
-          arrayField.baseField.fieldName,
-          arrayField.baseField.fieldIndex
+          arrayField.nestedField.fieldName,
+          arrayField.nestedField.fieldIndex
       ).getColumn().makeVectorObjectSelector(readableOffset);
       return new VectorObjectSelector()
       {
@@ -958,12 +959,12 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
   @Override
   public Set<ColumnType> getFieldTypes(List<NestedPathPart> path)
   {
-    final Field field = getBaseOrArrayFieldFromPath(path);
-    if (field instanceof BaseField) {
-      return FieldTypeInfo.convertToSet(fieldInfo.getTypes(((BaseField) field).fieldIndex).getByteValue());
-    } else if (field instanceof ArrayField) {
-      final ArrayField arrayField = (ArrayField) field;
-      final Set<ColumnType> arrayFieldTypes = FieldTypeInfo.convertToSet(fieldInfo.getTypes(arrayField.baseField.fieldIndex)
+    final Field field = getNestedFieldOrNestedArrayElementFromPath(path);
+    if (field instanceof NestedField) {
+      return FieldTypeInfo.convertToSet(fieldInfo.getTypes(((NestedField) field).fieldIndex).getByteValue());
+    } else if (field instanceof NestedArrayElement) {
+      final NestedArrayElement arrayField = (NestedArrayElement) field;
+      final Set<ColumnType> arrayFieldTypes = FieldTypeInfo.convertToSet(fieldInfo.getTypes(arrayField.nestedField.fieldIndex)
                                                                                   .getByteValue());
       final Set<ColumnType> elementTypes = Sets.newHashSetWithExpectedSize(arrayFieldTypes.size());
       for (ColumnType type : arrayFieldTypes) {
@@ -982,14 +983,14 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
   @Override
   public ColumnType getFieldLogicalType(List<NestedPathPart> path)
   {
-    final Field field = getBaseOrArrayFieldFromPath(path);
-    if (field instanceof BaseField) {
-      final Set<ColumnType> fieldTypes = FieldTypeInfo.convertToSet(fieldInfo.getTypes(((BaseField) field).fieldIndex)
+    final Field field = getNestedFieldOrNestedArrayElementFromPath(path);
+    if (field instanceof NestedField) {
+      final Set<ColumnType> fieldTypes = FieldTypeInfo.convertToSet(fieldInfo.getTypes(((NestedField) field).fieldIndex)
                                                                              .getByteValue());
       return ColumnType.leastRestrictiveType(fieldTypes);
-    } else if (field instanceof ArrayField) {
-      final ArrayField arrayField = (ArrayField) field;
-      final Set<ColumnType> arrayFieldTypes = FieldTypeInfo.convertToSet(fieldInfo.getTypes(arrayField.baseField.fieldIndex)
+    } else if (field instanceof NestedArrayElement) {
+      final NestedArrayElement arrayField = (NestedArrayElement) field;
+      final Set<ColumnType> arrayFieldTypes = FieldTypeInfo.convertToSet(fieldInfo.getTypes(arrayField.nestedField.fieldIndex)
                                                                                   .getByteValue());
       ColumnType leastRestrictiveType = null;
       for (ColumnType type : arrayFieldTypes) {
@@ -1012,10 +1013,10 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
   @Override
   public BaseColumnHolder getColumnHolder(List<NestedPathPart> path)
   {
-    final Field field = getBaseOrArrayFieldFromPath(path);
-    if (field instanceof BaseField) {
-      final BaseField baseField = (BaseField) field;
-      return getColumnHolder(baseField.fieldName, baseField.fieldIndex);
+    final Field field = getNestedFieldOrNestedArrayElementFromPath(path);
+    if (field instanceof NestedField) {
+      final NestedField nestedField = (NestedField) field;
+      return getColumnHolder(nestedField.fieldName, nestedField.fieldIndex);
     }
     return null;
   }
@@ -1024,11 +1025,11 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
   @Override
   public ColumnIndexSupplier getColumnIndexSupplier(List<NestedPathPart> path)
   {
-    final Field field = getBaseOrArrayFieldFromPath(path);
-    if (field instanceof BaseField) {
-      final BaseField baseField = (BaseField) field;
-      return getColumnHolder(baseField.fieldName, baseField.fieldIndex).getIndexSupplier();
-    } else if (field instanceof ArrayField) {
+    final Field field = getNestedFieldOrNestedArrayElementFromPath(path);
+    if (field instanceof NestedField) {
+      final NestedField nestedField = (NestedField) field;
+      return getColumnHolder(nestedField.fieldName, nestedField.fieldIndex).getIndexSupplier();
+    } else if (field instanceof NestedArrayElement) {
       return NoIndexesColumnIndexSupplier.getInstance();
     }
     return null;
@@ -1037,10 +1038,10 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
   @Override
   public boolean isNumeric(List<NestedPathPart> path)
   {
-    final Field field = getBaseOrArrayFieldFromPath(path);
-    if (field instanceof BaseField) {
-      final BaseField baseField = (BaseField) field;
-      return getColumnHolder(baseField.fieldName, baseField.fieldIndex).getCapabilities().isNumeric();
+    final Field field = getNestedFieldOrNestedArrayElementFromPath(path);
+    if (field instanceof NestedField) {
+      final NestedField nestedField = (NestedField) field;
+      return getColumnHolder(nestedField.fieldName, nestedField.fieldIndex).getCapabilities().isNumeric();
     }
     return true;
   }
@@ -1246,30 +1247,36 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
     }
   }
 
-  private List<BaseField> getAllBaseFields()
+  private List<NestedField> getAllNestedFields()
   {
     TKeyDictionary fields = fieldsSupplier.get();
-    List<BaseField> allFields = new ArrayList<>(fields.size());
+    List<NestedField> allFields = new ArrayList<>(fields.size());
     for (int i = 0; i < fields.size(); i++) {
       String field = StringUtils.fromUtf8(fields.get(i));
-      allFields.add(new BaseField(field, i));
+      allFields.add(new NestedField(field, i));
     }
     return allFields;
   }
 
-  private List<Pair<BaseField, List<NestedPathPart>>> getAllParsedBaseFields()
+  private List<Pair<NestedField, List<NestedPathPart>>> getAllParsedNestedFields()
   {
     TKeyDictionary fields = fieldsSupplier.get();
-    List<Pair<BaseField, List<NestedPathPart>>> allFields = new ArrayList<>(fields.size());
+    List<Pair<NestedField, List<NestedPathPart>>> allFields = new ArrayList<>(fields.size());
     for (int i = 0; i < fields.size(); i++) {
       String field = StringUtils.fromUtf8(fields.get(i));
-      allFields.add(Pair.of(new BaseField(field, i), parsePath(field)));
+      allFields.add(Pair.of(new NestedField(field, i), parsePath(field)));
     }
     return allFields;
   }
 
+
+  /**
+   * Returns a representation of a field or array element within a nested object structure, given a path.
+   * <p>
+   * Returns null if the path does not correspond to any field or array element.
+   */
   @Nullable
-  private Field getBaseOrArrayFieldFromPath(List<NestedPathPart> path)
+  private Field getNestedFieldOrNestedArrayElementFromPath(List<NestedPathPart> path)
   {
     TKeyDictionary fields = fieldsSupplier.get();
     List<List<NestedPathPart>> parsed = new ArrayList<>(fields.size());
@@ -1277,15 +1284,15 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
       String field = StringUtils.fromUtf8(fields.get(i));
       parsed.add(parsePath(field));
       if (parsed.get(i).equals(path)) {
-        return new BaseField(field, i);
+        return new NestedField(field, i);
       }
     }
     if (!path.isEmpty() && path.get(path.size() - 1) instanceof NestedPathArrayElement) {
       List<NestedPathPart> arrayPath = path.subList(0, path.size() - 1);
       for (int i = 0; i < fields.size(); i++) {
         if (parsed.get(i).equals(arrayPath)) {
-          return new ArrayField(
-              new BaseField(StringUtils.fromUtf8(fields.get(i)), i),
+          return new NestedArrayElement(
+              new NestedField(StringUtils.fromUtf8(fields.get(i)), i),
               ((NestedPathArrayElement) path.get(path.size() - 1)).getIndex()
           );
         }
@@ -1294,53 +1301,40 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
     return null;
   }
 
+  /**
+   * Represents a single target element within a nested object structure.
+   */
   interface Field
   {
   }
 
-  private static class BaseField implements Field
+  /**
+   * Represents a field located within a nested object hierarchy, could be scalar or array.
+   */
+  private static class NestedField implements Field
   {
     private final String fieldName;
     private final int fieldIndex;
 
-    BaseField(String fieldName, int fieldIndex)
+    NestedField(String fieldName, int fieldIndex)
     {
       this.fieldName = fieldName;
       this.fieldIndex = fieldIndex;
     }
   }
 
-  private static class ArrayField implements Field
+  /**
+   * Represents an element located within an array field inside a nested object hierarchy.
+   */
+  private static class NestedArrayElement implements Field
   {
-    private final BaseField baseField;
+    private final NestedField nestedField;
     private final int elementNumber;
 
-    ArrayField(BaseField baseField, int elementNumber)
+    NestedArrayElement(NestedField nestedField, int elementNumber)
     {
-      this.baseField = baseField;
+      this.nestedField = nestedField;
       this.elementNumber = elementNumber;
-    }
-  }
-
-  private static class AtomicIntegerReadableOffset implements ReadableOffset
-  {
-    private final AtomicInteger offset;
-
-    AtomicIntegerReadableOffset(AtomicInteger offset)
-    {
-      this.offset = offset;
-    }
-
-    @Override
-    public int getOffset()
-    {
-      return offset.get();
-    }
-
-    @Override
-    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-    {
-
     }
   }
 }
