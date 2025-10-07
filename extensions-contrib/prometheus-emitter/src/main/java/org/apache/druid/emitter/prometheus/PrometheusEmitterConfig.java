@@ -77,10 +77,6 @@ public class PrometheusEmitterConfig
   @JsonProperty
   private final Duration waitForShutdownDelay;
 
-  @JsonProperty
-  @Nullable
-  private final Long metricTtlMs;
-
   @JsonCreator
   public PrometheusEmitterConfig(
       @JsonProperty("strategy") @Nullable Strategy strategy,
@@ -93,8 +89,7 @@ public class PrometheusEmitterConfig
       @JsonProperty("flushPeriod") @Nullable Integer flushPeriod,
       @JsonProperty("extraLabels") @Nullable Map<String, String> extraLabels,
       @JsonProperty("deletePushGatewayMetricsOnShutdown") @Nullable Boolean deletePushGatewayMetricsOnShutdown,
-      @JsonProperty("waitForShutdownDelay") @Nullable Long waitForShutdownDelay,
-      @JsonProperty("metricTtlMs") @Nullable Long metricTtlMs
+      @JsonProperty("waitForShutdownDelay") @Nullable Long waitForShutdownDelay
   )
   {
     this.strategy = strategy != null ? strategy : Strategy.exporter;
@@ -102,6 +97,9 @@ public class PrometheusEmitterConfig
     Preconditions.checkArgument(PATTERN.matcher(this.namespace).matches(), "Invalid namespace " + this.namespace);
     if (strategy == Strategy.exporter) {
       Preconditions.checkArgument(port != null, "For `exporter` strategy, port must be specified.");
+      if (Objects.nonNull(flushPeriod)) {
+        Preconditions.checkArgument(flushPeriod > 0, "flushPeriod must be greater than 0.");
+      }
     } else if (this.strategy == Strategy.pushgateway) {
       Preconditions.checkArgument(pushGatewayAddress != null, "For `pushgateway` strategy, pushGatewayAddress must be specified.");
       if (Objects.nonNull(flushPeriod)) {
@@ -133,18 +131,6 @@ public class PrometheusEmitterConfig
                               )
                           );
     }
-
-    if (metricTtlMs != null && metricTtlMs <= 0) {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              StringUtils.format(
-                                  "Invalid value for metricTtlMs[%s] specified, metricTtlMs must be > 0.",
-                                  metricTtlMs
-                              )
-                          );
-    }
-    this.metricTtlMs = metricTtlMs;
 
     // Validate label names early to prevent Prometheus exceptions later.
     for (String key : this.extraLabels.keySet()) {
@@ -216,12 +202,6 @@ public class PrometheusEmitterConfig
   public Duration getWaitForShutdownDelay()
   {
     return waitForShutdownDelay;
-  }
-
-  @Nullable
-  public Long getMetricTtlMs()
-  {
-    return metricTtlMs;
   }
 
   public enum Strategy

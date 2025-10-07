@@ -95,16 +95,16 @@ public class PrometheusEmitter implements Emitter
         log.error("HTTPServer is already started");
       }
       // Start TTL scheduler if TTL is configured
-      if (config.getMetricTtlMs() != null) {
+      if (config.getFlushPeriod() != null) {
         ttlExecutor = ScheduledExecutors.fixed(1, "PrometheusTTLExecutor-%s");
         // Check TTL every minute
         ttlExecutor.scheduleAtFixedRate(
-            this::checkMetricTtl,
-            config.getMetricTtlMs(),
-            config.getMetricTtlMs(),
-            TimeUnit.MILLISECONDS
+            this::cleanUpStaleMetrics,
+            config.getFlushPeriod(),
+            config.getFlushPeriod(),
+            TimeUnit.SECONDS
         );
-        log.info("Started TTL scheduler with TTL of %d milliseconds", config.getMetricTtlMs());
+        log.info("Started TTL scheduler with TTL of %d seconds", config.getFlushPeriod());
       }
     } else if (strategy.equals(PrometheusEmitterConfig.Strategy.pushgateway)) {
       String address = config.getPushGatewayAddress();
@@ -153,7 +153,6 @@ public class PrometheusEmitter implements Emitter
 
     DimensionsAndCollector metric = metrics.getByName(name, service);
     if (metric != null) {
-      metric.updateLastUpdateTime();
       String[] labelValues = new String[metric.getDimensions().length];
       String[] labelNames = metric.getDimensions();
 
@@ -181,11 +180,14 @@ public class PrometheusEmitter implements Emitter
 
       if (metric.getCollector() instanceof Counter) {
         ((Counter) metric.getCollector()).labels(labelValues).inc(value.doubleValue());
+        metric.resetLastUpdateTime();
       } else if (metric.getCollector() instanceof Gauge) {
         ((Gauge) metric.getCollector()).labels(labelValues).set(value.doubleValue());
+        metric.resetLastUpdateTime();
       } else if (metric.getCollector() instanceof Histogram) {
         ((Histogram) metric.getCollector()).labels(labelValues)
                                            .observe(value.doubleValue() / metric.getConversionFactor());
+        metric.resetLastUpdateTime();
       } else {
         log.error("Unrecognized metric type [%s]", metric.getCollector().getClass());
       }
@@ -279,18 +281,18 @@ public class PrometheusEmitter implements Emitter
     this.pushGateway = pushGateway;
   }
 
-  private void checkMetricTtl()
+  private void cleanUpStaleMetrics()
   {
-    if (config.getMetricTtlMs() == null) {
+    if (config.getFlushPeriod() == null) {
       return;
     }
 
     Map<String, DimensionsAndCollector> map = metrics.getRegisteredMetrics();
     for (Map.Entry<String, DimensionsAndCollector> entry : map.entrySet()) {
-      if (entry.getValue().isExpired(config.getMetricTtlMs())) {
+      if (entry.getValue().isExpired(config.getFlushPeriod())) {
         log.info("Metric [%s] has expired (last updated %d ms ago)",
                  entry.getKey(),
-                 System.currentTimeMillis() - entry.getValue().getLastUpdateTime());
+                 entry.getValue().getTimeSinceLastUpdate());
         entry.getValue().getCollector().clear();
       }
     }

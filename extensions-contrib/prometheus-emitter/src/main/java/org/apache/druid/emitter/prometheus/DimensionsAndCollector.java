@@ -20,7 +20,10 @@
 package org.apache.druid.emitter.prometheus;
 
 import io.prometheus.client.SimpleCollector;
-import java.util.concurrent.atomic.AtomicLong;
+import org.apache.druid.java.util.common.Stopwatch;
+import org.joda.time.Duration;
+
+import java.util.concurrent.TimeUnit;
 
 public class DimensionsAndCollector
 {
@@ -28,7 +31,7 @@ public class DimensionsAndCollector
   private final SimpleCollector collector;
   private final double conversionFactor;
   private final double[] histogramBuckets;
-  private final AtomicLong lastUpdateTime;
+  private final Stopwatch updateTimer;
 
   DimensionsAndCollector(String[] dimensions, SimpleCollector collector, double conversionFactor, double[] histogramBuckets)
   {
@@ -36,7 +39,7 @@ public class DimensionsAndCollector
     this.collector = collector;
     this.conversionFactor = conversionFactor;
     this.histogramBuckets = histogramBuckets;
-    this.lastUpdateTime = new AtomicLong(System.currentTimeMillis());
+    this.updateTimer = Stopwatch.createStarted();
   }
 
   public String[] getDimensions()
@@ -59,19 +62,19 @@ public class DimensionsAndCollector
     return histogramBuckets;
   }
 
-  public void updateLastUpdateTime()
+  public void resetLastUpdateTime()
   {
-    lastUpdateTime.set(System.currentTimeMillis());
+    updateTimer.reset();
+    updateTimer.start();
   }
 
-  public long getLastUpdateTime()
+  public long getTimeSinceLastUpdate()
   {
-    return lastUpdateTime.get();
+    return updateTimer.millisElapsed();
   }
 
-  public boolean isExpired(long ttlMillis)
+  public boolean isExpired(long ttlSeconds)
   {
-    long currentTime = System.currentTimeMillis();
-    return (currentTime - lastUpdateTime.get()) > ttlMillis;
+    return updateTimer.hasElapsed(new Duration(TimeUnit.SECONDS.toMillis(ttlSeconds)));
   }
 }

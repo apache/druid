@@ -33,6 +33,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.anyString;
@@ -45,7 +46,7 @@ public class PrometheusEmitterTest
   public void testEmitterWithServiceLabel()
   {
     CollectorRegistry.defaultRegistry.clear();
-    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, true, 60, null, false, null, null);
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, true, 60, null, false, null);
     PrometheusEmitterModule prometheusEmitterModule = new PrometheusEmitterModule();
     Emitter emitter = prometheusEmitterModule.getEmitter(config);
     ServiceMetricEvent build = ServiceMetricEvent.builder()
@@ -66,7 +67,7 @@ public class PrometheusEmitterTest
   public void testEmitterWithServiceAndHostLabel()
   {
     CollectorRegistry.defaultRegistry.clear();
-    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, true, true, 60, null, false, null, null);
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, true, true, 60, null, false, null);
     PrometheusEmitterModule prometheusEmitterModule = new PrometheusEmitterModule();
     Emitter emitter = prometheusEmitterModule.getEmitter(config);
     ServiceMetricEvent build = ServiceMetricEvent.builder()
@@ -89,7 +90,7 @@ public class PrometheusEmitterTest
     CollectorRegistry.defaultRegistry.clear();
     Map<String, String> extraLabels = new HashMap<>();
     extraLabels.put("labelName", "labelValue");
-    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, false, 60, extraLabels, false, null, null);
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, false, 60, extraLabels, false, null);
     PrometheusEmitterModule prometheusEmitterModule = new PrometheusEmitterModule();
     Emitter emitter = prometheusEmitterModule.getEmitter(config);
     ServiceMetricEvent build = ServiceMetricEvent.builder()
@@ -111,7 +112,7 @@ public class PrometheusEmitterTest
     CollectorRegistry.defaultRegistry.clear();
     Map<String, String> extraLabels = new HashMap<>();
     extraLabels.put("labelName", "labelValue");
-    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, true, 60, extraLabels, false, null, null);
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, true, 60, extraLabels, false, null);
     PrometheusEmitterModule prometheusEmitterModule = new PrometheusEmitterModule();
     Emitter emitter = prometheusEmitterModule.getEmitter(config);
     ServiceMetricEvent build = ServiceMetricEvent.builder()
@@ -132,7 +133,7 @@ public class PrometheusEmitterTest
   {
     CollectorRegistry.defaultRegistry.clear();
     Map<String, String> extraLabels = new HashMap<>();
-    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, true, 60, extraLabels, false, null, null);
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, true, 60, extraLabels, false, null);
     PrometheusEmitterModule prometheusEmitterModule = new PrometheusEmitterModule();
     Emitter emitter = prometheusEmitterModule.getEmitter(config);
     ServiceMetricEvent build = ServiceMetricEvent.builder()
@@ -155,7 +156,7 @@ public class PrometheusEmitterTest
     Map<String, String> extraLabels = new HashMap<>();
     extraLabels.put("labelName1", "labelValue1");
     extraLabels.put("labelName2", "labelValue2");
-    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, true, 60, extraLabels, false, null, null);
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, true, 60, extraLabels, false, null);
     PrometheusEmitterModule prometheusEmitterModule = new PrometheusEmitterModule();
     Emitter emitter = prometheusEmitterModule.getEmitter(config);
     ServiceMetricEvent build = ServiceMetricEvent.builder()
@@ -178,7 +179,7 @@ public class PrometheusEmitterTest
     // ExtraLabels contains a label that collides with a service label
     Map<String, String> extraLabels = new HashMap<>();
     extraLabels.put("server", "collisionLabelValue");
-    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, true, 60, extraLabels, false, null, null);
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, true, 60, extraLabels, false, null);
     PrometheusEmitterModule prometheusEmitterModule = new PrometheusEmitterModule();
     Emitter emitter = prometheusEmitterModule.getEmitter(config);
     ServiceMetricEvent build = ServiceMetricEvent.builder()
@@ -205,7 +206,7 @@ public class PrometheusEmitterTest
   public void testEmitterMetric()
   {
     CollectorRegistry.defaultRegistry.clear();
-    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace", null, 0, "pushgateway", true, true, 60, null, false, null, null);
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace", null, 0, "pushgateway", true, true, 60, null, false, null);
     PrometheusEmitterModule prometheusEmitterModule = new PrometheusEmitterModule();
     Emitter emitter = prometheusEmitterModule.getEmitter(config);
     ServiceMetricEvent build = ServiceMetricEvent.builder()
@@ -226,14 +227,14 @@ public class PrometheusEmitterTest
   @Test
   public void testEmitterStart()
   {
-    PrometheusEmitterConfig exportEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "namespace1", null, 0, null, true, true, 60, null, false, null, null);
+    PrometheusEmitterConfig exportEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "namespace1", null, 0, null, true, true, 60, null, false, null);
     PrometheusEmitter exportEmitter = new PrometheusEmitter(exportEmitterConfig);
     exportEmitter.start();
     Assert.assertNotNull(exportEmitter.getServer());
     Assert.assertTrue(exportEmitter.getServer() instanceof HTTPServer);
     exportEmitter.close();
 
-    PrometheusEmitterConfig pushEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace2", null, 0, "pushgateway", true, true, 60, null, false, null, null);
+    PrometheusEmitterConfig pushEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace2", null, 0, "pushgateway", true, true, 60, null, false, null);
     PrometheusEmitter pushEmitter = new PrometheusEmitter(pushEmitterConfig);
     pushEmitter.start();
     Assert.assertNotNull(pushEmitter.getPushGateway());
@@ -244,7 +245,7 @@ public class PrometheusEmitterTest
   @Test
   public void testEmitterPush() throws IOException
   {
-    PrometheusEmitterConfig emitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace3", null, 0, "pushgateway", true, true, 60, null, false, null, null);
+    PrometheusEmitterConfig emitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace3", null, 0, "pushgateway", true, true, 60, null, false, null);
 
     PushGateway mockPushGateway = mock(PushGateway.class);
     mockPushGateway.push(anyObject(Collector.class), anyString(), anyObject(ImmutableMap.class));
@@ -275,7 +276,6 @@ public class PrometheusEmitterTest
         60, 
         null,
         false,
-        null,
         null
     );
 
@@ -293,7 +293,6 @@ public class PrometheusEmitterTest
             50,
             null,
             false,
-            null,
             null
         )
     );
@@ -302,7 +301,7 @@ public class PrometheusEmitterTest
   @Test
   public void testEmitterStartWithHttpUrl()
   {
-    PrometheusEmitterConfig pushEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace4", null, 0, "http://pushgateway", true, true, 60, null, false, null, null);
+    PrometheusEmitterConfig pushEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace4", null, 0, "http://pushgateway", true, true, 60, null, false, null);
     PrometheusEmitter pushEmitter = new PrometheusEmitter(pushEmitterConfig);
     pushEmitter.start();
     Assert.assertNotNull(pushEmitter.getPushGateway());
@@ -311,7 +310,7 @@ public class PrometheusEmitterTest
   @Test
   public void testEmitterStartWithHttpsUrl()
   {
-    PrometheusEmitterConfig pushEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace5", null, 0, "https://pushgateway", true, true, 60, null, false, null, null);
+    PrometheusEmitterConfig pushEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace5", null, 0, "https://pushgateway", true, true, 60, null, false, null);
     PrometheusEmitter pushEmitter = new PrometheusEmitter(pushEmitterConfig);
     pushEmitter.start();
     Assert.assertNotNull(pushEmitter.getPushGateway());
@@ -334,7 +333,6 @@ public class PrometheusEmitterTest
             60,
             null,
             false,
-            null,
             null
         )
     );
@@ -351,7 +349,6 @@ public class PrometheusEmitterTest
         60,
         null,
         false,
-        null,
         null
     );
   }
@@ -359,7 +356,7 @@ public class PrometheusEmitterTest
   @Test
   public void testEmitterWithDeleteOnShutdown() throws IOException
   {
-    PrometheusEmitterConfig emitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace3", null, 0, "pushgateway", true, true, 60, null, true, null, null);
+    PrometheusEmitterConfig emitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace3", null, 0, "pushgateway", true, true, 60, null, true, null);
 
     PushGateway mockPushGateway = mock(PushGateway.class);
     mockPushGateway.push(anyObject(CollectorRegistry.class), anyString(), anyObject(ImmutableMap.class));
@@ -386,7 +383,7 @@ public class PrometheusEmitterTest
   @Test
   public void testEmitterWithDeleteOnShutdownAndWait() throws IOException
   {
-    PrometheusEmitterConfig emitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace6", null, 0, "pushgateway", true, true, 60, null, true, 1_000L, null);
+    PrometheusEmitterConfig emitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace6", null, 0, "pushgateway", true, true, 60, null, true, 1_000L);
 
     PushGateway mockPushGateway = mock(PushGateway.class);
     mockPushGateway.push(anyObject(CollectorRegistry.class), anyString(), anyObject(ImmutableMap.class));
@@ -413,7 +410,7 @@ public class PrometheusEmitterTest
   @Test
   public void testEmitterWithoutDeleteOnShutdown() throws IOException
   {
-    PrometheusEmitterConfig emitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace3", null, 0, "pushgateway", true, true, 60, null, false, null, null);
+    PrometheusEmitterConfig emitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace3", null, 0, "pushgateway", true, true, 60, null, false, null);
 
     PushGateway mockPushGateway = mock(PushGateway.class);
     mockPushGateway.push(anyObject(CollectorRegistry.class), anyString(), anyObject(ImmutableMap.class));
@@ -438,8 +435,8 @@ public class PrometheusEmitterTest
   @Test
   public void testMetricTtlExpiration()
   {
-    long metricTtl = 1000L;
-    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "test", null, 0, null, false, true, 60, null, false, null, metricTtl);
+    int flushPeriod = 3;
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "test", null, 0, null, false, true, flushPeriod, null, false, null);
     PrometheusEmitter emitter = new PrometheusEmitter(config);
     emitter.start();
 
@@ -454,26 +451,26 @@ public class PrometheusEmitterTest
 
     Assert.assertNotNull("Test metric should be registered", testMetric);
     Assert.assertFalse("Metric should not be expired initially",
-                       testMetric.isExpired(metricTtl));
+                       testMetric.isExpired(flushPeriod));
 
     // Wait for the metric to expire (ttl + 1 second buffer)
     try {
-      Thread.sleep(metricTtl + 1000);
+      Thread.sleep(TimeUnit.SECONDS.toMillis(flushPeriod) + 1000);
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
 
     Assert.assertTrue("Metric should be expired after TTL",
-                      testMetric.isExpired(metricTtl));
+                      testMetric.isExpired(flushPeriod));
     emitter.close();
   }
 
   @Test
   public void testMetricTtlUpdate()
   {
-    long metricTtl = 1000L;
-    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "test", null, 0, null, false, true, 60, null, false, null, metricTtl);
+    int flushPeriod = 3;
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "test", null, 0, null, false, true, flushPeriod, null, false, null);
     PrometheusEmitter emitter = new PrometheusEmitter(config);
     emitter.start();
 
@@ -488,24 +485,24 @@ public class PrometheusEmitterTest
 
     Assert.assertNotNull("Test metric should be registered", testMetric);
     Assert.assertFalse("Metric should not be expired initially",
-                       testMetric.isExpired(metricTtl));
+                       testMetric.isExpired(flushPeriod));
 
-    long initialUpdateTime = testMetric.getLastUpdateTime();
     // Wait for a little, but not long enough for the metric to expire
+    long waitTime = TimeUnit.SECONDS.toMillis(flushPeriod) / 5;
     try {
-      Thread.sleep(metricTtl / 10);
+      Thread.sleep(waitTime);
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
 
     Assert.assertFalse("Metric should not be expired",
-                       testMetric.isExpired(metricTtl));
+                       testMetric.isExpired(flushPeriod));
     emitter.emit(event);
-    // Check that the updated time is refreshed
-    long updatedTime = testMetric.getLastUpdateTime();
+
+    long timeSinceLastUpdate = testMetric.getTimeSinceLastUpdate();
     Assert.assertTrue("Update time should have been refreshed",
-                      updatedTime > initialUpdateTime);
+                      timeSinceLastUpdate < waitTime);
     emitter.close();
   }
 }
