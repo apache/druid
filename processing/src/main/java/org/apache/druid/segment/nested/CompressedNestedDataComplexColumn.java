@@ -340,7 +340,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
               pair.lhs.fieldName,
               pair.lhs.fieldIndex
           ).getColumn();
-          return StructuredDataBuilder.Element.of(pair.rhs, column.lookupObject(rowNum));
+          return StructuredDataBuilder.Element.of(pair.rhs, column.lookupObject(column.getSingleValueRow(rowNum)));
         })
         .collect(Collectors.toList());
     return new StructuredDataBuilder(elements).build();
