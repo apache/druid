@@ -98,12 +98,30 @@ public class PrometheusEmitterConfig
     if (strategy == Strategy.exporter) {
       Preconditions.checkArgument(port != null, "For `exporter` strategy, port must be specified.");
       if (Objects.nonNull(flushPeriod)) {
-        Preconditions.checkArgument(flushPeriod > 0, "flushPeriod must be greater than 0.");
+        if (flushPeriod <= 0) {
+          throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                              .ofCategory(DruidException.Category.INVALID_INPUT)
+                              .build(
+                                  StringUtils.format(
+                                      "Invalid value for flushPeriod[%s] specified, flushPeriod must be > 0.",
+                                      flushPeriod
+                                  )
+                              );
+        }
       }
     } else if (this.strategy == Strategy.pushgateway) {
       Preconditions.checkArgument(pushGatewayAddress != null, "For `pushgateway` strategy, pushGatewayAddress must be specified.");
       if (Objects.nonNull(flushPeriod)) {
-        Preconditions.checkArgument(flushPeriod > 0, "flushPeriod must be greater than 0.");
+        if (flushPeriod <= 0) {
+          throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                              .ofCategory(DruidException.Category.INVALID_INPUT)
+                              .build(
+                                  StringUtils.format(
+                                      "Invalid value for flushPeriod[%s] specified, flushPeriod must be > 0.",
+                                      flushPeriod
+                                  )
+                              );
+        }
       } else {
         flushPeriod = 15;
       }

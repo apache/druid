@@ -90,15 +90,15 @@ public class PrometheusEmitterConfigTest
   @Test
   public void testInvalidFlushPeriod()
   {
-    IllegalArgumentException illegalArgumentException = Assert.assertThrows(IllegalArgumentException.class, () -> {
-      new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, null, null, null, "localhost:9091", false, false, 0, null, null, null);
+    DruidException druidException = Assert.assertThrows(DruidException.class, () -> {
+      new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, null, null, null, "localhost:9091", false, false, -1, null, null, null);
     });
-    Assert.assertEquals("flushPeriod must be greater than 0.", illegalArgumentException.getMessage());
+    Assert.assertEquals("Invalid value for flushPeriod[-1] specified, flushPeriod must be > 0.", druidException.getMessage());
 
-    illegalArgumentException = Assert.assertThrows(IllegalArgumentException.class, () -> {
-      new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, "localhost:9091", false, false, 0, null, null, null);
+    druidException = Assert.assertThrows(DruidException.class, () -> {
+      new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, false, 0, null, null, null);
     });
-    Assert.assertEquals("flushPeriod must be greater than 0.", illegalArgumentException.getMessage());
+    Assert.assertEquals("Invalid value for flushPeriod[0] specified, flushPeriod must be > 0.", druidException.getMessage());
   }
 
   @Test
