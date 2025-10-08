@@ -826,130 +826,132 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
       ReadableVectorOffset readableOffset
   )
   {
-    final BaseColumnHolder columnHolder = getColumnHolder(path);
-    if (columnHolder != null) {
-      return columnHolder.getColumn().makeVectorValueSelector(readableOffset);
-    }
-    if (!path.isEmpty() && path.get(path.size() - 1) instanceof NestedPathArrayElement) {
-      final BaseColumnHolder arrayColumnHolder = getColumnHolder(path.subList(0, path.size() - 1));
-      if (arrayColumnHolder != null) {
-        final int elementNumber = ((NestedPathArrayElement) path.get(path.size() - 1)).getIndex();
-        if (elementNumber < 0) {
-          throw DruidException.forPersona(DruidException.Persona.USER)
-                              .ofCategory(DruidException.Category.INVALID_INPUT)
-                              .build(
-                                  "Cannot make array element selector for path [%s], negative array index not supported for this selector",
-                                  path
-                              );
-        }
-        VectorObjectSelector arraySelector = arrayColumnHolder.getColumn().makeVectorObjectSelector(readableOffset);
+    final Field field = getNestedFieldOrNestedArrayElementFromPath(path);
+    if (field instanceof NestedField) {
+      NestedField nestedField = (NestedField) field;
+      return getColumnHolder(nestedField.fieldName, nestedField.fieldIndex).getColumn()
+                                                                           .makeVectorValueSelector(readableOffset);
+    } else if (field instanceof NestedArrayElement) {
+      final NestedArrayElement arrayField = (NestedArrayElement) field;
+      final int elementNumber = arrayField.elementNumber;
+      if (elementNumber < 0) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build(
+                                "Cannot make array element selector for path [%s], negative array index not supported for this selector",
+                                path
+                            );
+      }
+      VectorObjectSelector arraySelector = getColumnHolder(
+          arrayField.nestedField.fieldName,
+          arrayField.nestedField.fieldIndex
+      ).getColumn().makeVectorObjectSelector(readableOffset);
 
-        return new VectorValueSelector()
+      return new VectorValueSelector()
+      {
+        private final long[] longs = new long[readableOffset.getMaxVectorSize()];
+        private final double[] doubles = new double[readableOffset.getMaxVectorSize()];
+        private final float[] floats = new float[readableOffset.getMaxVectorSize()];
+        private final boolean[] nulls = new boolean[readableOffset.getMaxVectorSize()];
+        private int id = ReadableVectorInspector.NULL_ID;
+
+        private void computeNumbers()
         {
-          private final long[] longs = new long[readableOffset.getMaxVectorSize()];
-          private final double[] doubles = new double[readableOffset.getMaxVectorSize()];
-          private final float[] floats = new float[readableOffset.getMaxVectorSize()];
-          private final boolean[] nulls = new boolean[readableOffset.getMaxVectorSize()];
-          private int id = ReadableVectorInspector.NULL_ID;
-
-          private void computeNumbers()
-          {
-            if (readableOffset.getId() != id) {
-              final Object[] maybeArrays = arraySelector.getObjectVector();
-              for (int i = 0; i < arraySelector.getCurrentVectorSize(); i++) {
-                Object maybeArray = maybeArrays[i];
-                if (maybeArray instanceof Object[]) {
-                  Object[] anArray = (Object[]) maybeArray;
-                  if (elementNumber < anArray.length) {
-                    if (anArray[elementNumber] instanceof Number) {
-                      Number n = (Number) anArray[elementNumber];
-                      longs[i] = n.longValue();
-                      doubles[i] = n.doubleValue();
-                      floats[i] = n.floatValue();
+          if (readableOffset.getId() != id) {
+            final Object[] maybeArrays = arraySelector.getObjectVector();
+            for (int i = 0; i < arraySelector.getCurrentVectorSize(); i++) {
+              Object maybeArray = maybeArrays[i];
+              if (maybeArray instanceof Object[]) {
+                Object[] anArray = (Object[]) maybeArray;
+                if (elementNumber < anArray.length) {
+                  if (anArray[elementNumber] instanceof Number) {
+                    Number n = (Number) anArray[elementNumber];
+                    longs[i] = n.longValue();
+                    doubles[i] = n.doubleValue();
+                    floats[i] = n.floatValue();
+                    nulls[i] = false;
+                  } else {
+                    Double d = anArray[elementNumber] instanceof String
+                               ? Doubles.tryParse((String) anArray[elementNumber])
+                               : null;
+                    if (d != null) {
+                      longs[i] = d.longValue();
+                      doubles[i] = d;
+                      floats[i] = d.floatValue();
                       nulls[i] = false;
                     } else {
-                      Double d = anArray[elementNumber] instanceof String
-                                 ? Doubles.tryParse((String) anArray[elementNumber])
-                                 : null;
-                      if (d != null) {
-                        longs[i] = d.longValue();
-                        doubles[i] = d;
-                        floats[i] = d.floatValue();
-                        nulls[i] = false;
-                      } else {
-                        nullElement(i);
-                      }
+                      nullElement(i);
                     }
-                  } else {
-                    nullElement(i);
                   }
                 } else {
-                  // not an array?
                   nullElement(i);
                 }
+              } else {
+                // not an array?
+                nullElement(i);
               }
-              id = readableOffset.getId();
             }
+            id = readableOffset.getId();
           }
+        }
 
-          private void nullElement(int i)
-          {
-            longs[i] = 0L;
-            doubles[i] = 0L;
-            floats[i] = 0L;
-            nulls[i] = true;
-          }
+        private void nullElement(int i)
+        {
+          longs[i] = 0L;
+          doubles[i] = 0L;
+          floats[i] = 0L;
+          nulls[i] = true;
+        }
 
-          @Override
-          public long[] getLongVector()
-          {
-            if (readableOffset.getId() != id) {
-              computeNumbers();
-            }
-            return longs;
+        @Override
+        public long[] getLongVector()
+        {
+          if (readableOffset.getId() != id) {
+            computeNumbers();
           }
+          return longs;
+        }
 
-          @Override
-          public float[] getFloatVector()
-          {
-            if (readableOffset.getId() != id) {
-              computeNumbers();
-            }
-            return floats;
+        @Override
+        public float[] getFloatVector()
+        {
+          if (readableOffset.getId() != id) {
+            computeNumbers();
           }
+          return floats;
+        }
 
-          @Override
-          public double[] getDoubleVector()
-          {
-            if (readableOffset.getId() != id) {
-              computeNumbers();
-            }
-            return doubles;
+        @Override
+        public double[] getDoubleVector()
+        {
+          if (readableOffset.getId() != id) {
+            computeNumbers();
           }
+          return doubles;
+        }
 
-          @Nullable
-          @Override
-          public boolean[] getNullVector()
-          {
-            if (readableOffset.getId() != id) {
-              computeNumbers();
-            }
-            return nulls;
+        @Nullable
+        @Override
+        public boolean[] getNullVector()
+        {
+          if (readableOffset.getId() != id) {
+            computeNumbers();
           }
+          return nulls;
+        }
 
-          @Override
-          public int getMaxVectorSize()
-          {
-            return arraySelector.getMaxVectorSize();
-          }
+        @Override
+        public int getMaxVectorSize()
+        {
+          return arraySelector.getMaxVectorSize();
+        }
 
-          @Override
-          public int getCurrentVectorSize()
-          {
-            return arraySelector.getCurrentVectorSize();
-          }
-        };
-      }
+        @Override
+        public int getCurrentVectorSize()
+        {
+          return arraySelector.getCurrentVectorSize();
+        }
+      };
     }
     return NilVectorSelector.create(readableOffset);
   }
@@ -1268,7 +1270,6 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
     }
     return allFields;
   }
-
 
   /**
    * Returns a representation of a field or array element within a nested object structure, given a path.
