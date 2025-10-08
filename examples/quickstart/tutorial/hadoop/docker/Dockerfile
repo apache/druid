@@ -112,7 +112,7 @@ RUN chown root:root /root/.ssh/config
 # ADD supervisord.conf /etc/supervisord.conf
 
 RUN wget -nv https://github.com/bitnami/wait-for-port/releases/download/v1.0/wait-for-port.zip && unzip wait-for-port.zip && mv wait-for-port /usr/bin && rm wait-for-port.zip
-RUN wget -nv https://github.com/apache/druid/raw/refs/heads/34.0.0/examples/quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz
+RUN wget -nv https://github.com/apache/druid/raw/refs/heads/35.0.0/examples/quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz
 
 ADD bootstrap.sh /etc/bootstrap.sh
 RUN chown root:root /etc/bootstrap.sh

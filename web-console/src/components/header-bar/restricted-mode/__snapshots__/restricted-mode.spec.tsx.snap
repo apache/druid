@@ -17,7 +17,7 @@ exports[`RestrictedMode matches snapshot when in auto capability detection mode 
         For more info refer to the
          
         <Memo(ExternalLink)
-          href="https://druid.apache.org/docs/latest/operations/web-console"
+          href="https://druid.apache.org/docs/35.0.0/operations/web-console"
         >
           web console documentation
         </Memo(ExternalLink)>
@@ -88,7 +88,7 @@ exports[`RestrictedMode matches snapshot when in manual capability detection mod
         For more info refer to the
          
         <Memo(ExternalLink)
-          href="https://druid.apache.org/docs/latest/operations/web-console"
+          href="https://druid.apache.org/docs/35.0.0/operations/web-console"
         >
           web console documentation
         </Memo(ExternalLink)>
