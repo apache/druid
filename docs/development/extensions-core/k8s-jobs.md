@@ -41,11 +41,11 @@ Task lifecycle code in Druid talks directly to the Kubernetes API server for all
 
 ### `SharedInformer` "Caching" *(Experimental)*
 
-Enabled by setting `druid.indexer.runner.k8s.useSharedInformer=true`, this mode uses Fabric8 `SharedInformer` objects for monitoring state changes in the remote K8s cluster, reducing the number of direct API calls to the Kubernetes API server. This can greatly reduce load on the API server, especially in environments with a high volume of tasks.
+Enabled by setting `druid.indexer.runner.k8s.useSharedInformer=true`, this mode uses `Fabric8` `SharedInformer` objects for monitoring state changes in the remote K8s cluster, reducing the number of direct API calls to the Kubernetes API server. This can greatly reduce load on the API server, especially in environments with a high volume of tasks.
 
 This mode is experimental and should be used with caution in production until it has been vetted more thoroughly by the community.
 
-The core idea is to use two SharedInformers—one for jobs and one for pods—to watch for changes in the remote K8s cluster. These informers maintain a local cache of jobs and pods that tasks can query. The informers can also notify listeners when changes occur, allowing tasks to react to state changes without polling the API server or creating per-task watches on the K8s cluster.
+The core idea is to use two `SharedInformers`, one for jobs and one for pods, to watch for changes in the remote K8s cluster. These informers maintain a local cache of jobs and pods that tasks can query. The informers can also notify listeners when changes occur, allowing tasks to react to state changes without polling the API server or creating per-task watches on the K8s cluster.
 
 
 ## Configuration
