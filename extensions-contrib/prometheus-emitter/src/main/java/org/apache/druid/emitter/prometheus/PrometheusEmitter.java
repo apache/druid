@@ -293,13 +293,14 @@ public class PrometheusEmitter implements Emitter
 
     Map<String, DimensionsAndCollector> map = metrics.getRegisteredMetrics();
     for (Map.Entry<String, DimensionsAndCollector> entry : map.entrySet()) {
-      if (entry.getValue().isExpired()) {
+      DimensionsAndCollector metric = entry.getValue();
+      if (metric.isExpired()) {
         log.debug(
             "Metric [%s] has expired (last updated [%d] ms ago)",
             entry.getKey(),
-            entry.getValue().getMillisSinceLastUpdate()
+            metric.getMillisSinceLastUpdate()
         );
-        entry.getValue().getCollector().clear();
+        metric.getCollector().clear();
       }
     }
   }
