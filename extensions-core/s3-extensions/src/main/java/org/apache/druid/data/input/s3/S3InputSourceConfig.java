@@ -39,24 +39,27 @@ public class S3InputSourceConfig
   private final String assumeRoleExternalId;
   private final PasswordProvider accessKeyId;
   private final PasswordProvider secretAccessKey;
+  private final PasswordProvider sessionToken;
 
   @JsonCreator
   public S3InputSourceConfig(
       @JsonProperty("accessKeyId") @Nullable PasswordProvider accessKeyId,
       @JsonProperty("secretAccessKey") @Nullable PasswordProvider secretAccessKey,
       @JsonProperty("assumeRoleArn") @Nullable String assumeRoleArn,
-      @JsonProperty("assumeRoleExternalId") @Nullable String assumeRoleExternalId
+      @JsonProperty("assumeRoleExternalId") @Nullable String assumeRoleExternalId,
+      @JsonProperty("sessionToken") @Nullable PasswordProvider sessionToken
   )
   {
     this.assumeRoleArn = assumeRoleArn;
     this.assumeRoleExternalId = assumeRoleExternalId;
-    if (accessKeyId != null || secretAccessKey != null) {
-      this.accessKeyId = Preconditions.checkNotNull(accessKeyId, "accessKeyId cannot be null if secretAccessKey is given");
-      this.secretAccessKey = Preconditions.checkNotNull(secretAccessKey, "secretAccessKey cannot be null if accessKeyId is given");
+    if (sessionToken != null || accessKeyId != null || secretAccessKey != null) {
+      this.accessKeyId = Preconditions.checkNotNull(accessKeyId, "accessKeyId cannot be null if secretAccessKey is given or sessionToken is given");
+      this.secretAccessKey = Preconditions.checkNotNull(secretAccessKey, "secretAccessKey cannot be null if accessKeyId is given or sessionToken is given");
     } else {
       this.accessKeyId = null;
       this.secretAccessKey = null;
     }
+    this.sessionToken = sessionToken;
   }
 
   @Nullable
@@ -91,6 +94,14 @@ public class S3InputSourceConfig
     return secretAccessKey;
   }
 
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public PasswordProvider getSessionToken()
+  {
+    return sessionToken;
+  }
+
   @JsonIgnore
   public boolean isCredentialsConfigured()
   {
@@ -106,6 +117,7 @@ public class S3InputSourceConfig
            ", secretAccessKey=" + secretAccessKey +
            ", assumeRoleArn=" + assumeRoleArn +
            ", assumeRoleExternalId=" + assumeRoleExternalId +
+           ", sessionToken=" + sessionToken +
            '}';
   }
 
@@ -122,12 +134,13 @@ public class S3InputSourceConfig
     return Objects.equals(accessKeyId, that.accessKeyId) &&
            Objects.equals(secretAccessKey, that.secretAccessKey) &&
            Objects.equals(assumeRoleArn, that.assumeRoleArn) &&
-           Objects.equals(assumeRoleExternalId, that.assumeRoleExternalId);
+           Objects.equals(assumeRoleExternalId, that.assumeRoleExternalId) &&
+           Objects.equals(sessionToken, that.sessionToken);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(accessKeyId, secretAccessKey, assumeRoleArn, assumeRoleExternalId);
+    return Objects.hash(accessKeyId, secretAccessKey, assumeRoleArn, assumeRoleExternalId, sessionToken);
   }
 }

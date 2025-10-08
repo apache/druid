@@ -36,7 +36,8 @@ public class S3InputSourceConfigTest
         new DefaultPasswordProvider("the-access-key"),
         new DefaultPasswordProvider("the-secret-key"),
         null,
-        null
+        null,
+        new DefaultPasswordProvider("the-secret-token")
     );
 
     Assert.assertEquals(
@@ -53,7 +54,8 @@ public class S3InputSourceConfigTest
         null,
         null,
         "the-role-arn",
-        "the-role-external-id"
+        "the-role-external-id",
+        null
     );
 
     Assert.assertEquals(

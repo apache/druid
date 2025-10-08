@@ -21,8 +21,10 @@ package org.apache.druid.data.input.s3;
 
 import com.amazonaws.Protocol;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSSessionCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -282,12 +284,23 @@ public class S3InputSource extends CloudObjectInputSource
   @Nonnull
   private AWSStaticCredentialsProvider createStaticCredentialsProvider(S3InputSourceConfig s3InputSourceConfig)
   {
-    return new AWSStaticCredentialsProvider(
-        new BasicAWSCredentials(
-            s3InputSourceConfig.getAccessKeyId().getPassword(),
-            s3InputSourceConfig.getSecretAccessKey().getPassword()
-        )
-    );
+    if (s3InputSourceConfig.getSessionToken() != null && !s3InputSourceConfig.getSessionToken()
+                                                                             .getPassword()
+                                                                             .isEmpty()) {
+      AWSSessionCredentials sessionCredentials = new BasicSessionCredentials(
+          s3InputSourceConfig.getAccessKeyId().getPassword(),
+          s3InputSourceConfig.getSecretAccessKey().getPassword(),
+          s3InputSourceConfig.getSessionToken().getPassword()
+      );
+      return new AWSStaticCredentialsProvider(sessionCredentials);
+    } else {
+      return new AWSStaticCredentialsProvider(
+          new BasicAWSCredentials(
+              s3InputSourceConfig.getAccessKeyId().getPassword(),
+              s3InputSourceConfig.getSecretAccessKey().getPassword()
+          )
+      );
+    }
   }
 
   @Nullable
