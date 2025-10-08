@@ -73,7 +73,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   public KubernetesTaskRunner build()
   {
     AbstractKubernetesPeonClient peonClient;
-    boolean enableCache = kubernetesTaskRunnerConfig.isEnablePeonClientCache();
+    boolean enableCache = kubernetesTaskRunnerConfig.isEnableKubernetesClientSharedInformers();
     boolean useOverlordNamespace = adapterTypeAllowingTasksInDifferentNamespaces.contains(taskAdapter.getAdapterType());
 
     if (enableCache) {

@@ -39,24 +39,29 @@ public class DruidKubernetesClient implements KubernetesClientApi
 {
   private static final EmittingLogger log = new EmittingLogger(DruidKubernetesClient.class);
 
-  private static final long INFORMER_RESYNC_PERIOD_MS = 30 * 1000L; // todo make this configurable by operator
+  public static final String ENABLE_INFORMERS_KEY = "druid.k8s.informers.enabled";
+  public static final String INFORMER_RESYNC_PERIOD_MS_KEY = "druid.k8s.informers.resyncPeriodMs";
+  private static final long DEFAULT_INFORMER_RESYNC_PERIOD_MS = 3000L;
 
   private final KubernetesClient kubernetesClient;
   private final SharedIndexInformer<Pod> podInformer;
   private final SharedIndexInformer<Job> jobInformer;
   private final KubernetesResourceEventNotifier eventNotifier;
+  private final long informerResyncPeriodMillis;
 
   public DruidKubernetesClient(
       DruidKubernetesHttpClientConfig httpClientConfig,
-      Config kubernetesClientConfig,
-      boolean enableCache
+      Config kubernetesClientConfig
   )
   {
     this.kubernetesClient = new KubernetesClientBuilder()
         .withHttpClientFactory(new DruidKubernetesHttpClientFactory(httpClientConfig))
         .withConfig(kubernetesClientConfig)
         .build();
-    if (enableCache) {
+
+    informerResyncPeriodMillis = (long) kubernetesClientConfig
+        .getAdditionalProperties().getOrDefault(INFORMER_RESYNC_PERIOD_MS_KEY, DEFAULT_INFORMER_RESYNC_PERIOD_MS);
+    if ((boolean) kubernetesClientConfig.getAdditionalProperties().getOrDefault(ENABLE_INFORMERS_KEY, false)) {
       this.eventNotifier = new KubernetesResourceEventNotifier();
       this.podInformer = setupPodInformer(kubernetesClient.getNamespace());
       this.jobInformer = setupJobInformer(kubernetesClient.getNamespace());
@@ -150,7 +155,7 @@ public class DruidKubernetesClient implements KubernetesClientApi
                                 log.debug("Pod[%s] got deleted", pod.getMetadata().getName());
                                 notifyPodChange(pod);
                               }
-                            }, INFORMER_RESYNC_PERIOD_MS
+                            }, informerResyncPeriodMillis
                         );
 
     Function<Pod, List<String>> jobNameIndexer = pod -> {
@@ -201,7 +206,7 @@ public class DruidKubernetesClient implements KubernetesClientApi
                                 log.debug("Job[%s] got deleted", job.getMetadata().getName());
                                 eventNotifier.notifyJobChange(job.getMetadata().getName(), job);
                               }
-                            }, INFORMER_RESYNC_PERIOD_MS
+                            }, informerResyncPeriodMillis
                         );
 
     Function<Job, List<String>> overlordNamespaceIndexer = job -> {
