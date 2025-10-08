@@ -242,69 +242,65 @@ public class JettyServerModule extends JerseyServletModule
 
     if (node.isEnableTlsPort()) {
       log.info("Creating https connector with port [%d]", node.getTlsPort());
-      if (sslContextFactoryBinding == null) {
-        // Never trust all certificates by default
-        sslContextFactory = new IdentityCheckOverrideSslContextFactory(tlsServerConfig, certificateChecker);
+      sslContextFactory = sslContextFactoryBinding == null ? new IdentityCheckOverrideSslContextFactory(tlsServerConfig, certificateChecker) : sslContextFactoryBinding.getProvider().get();
 
-        sslContextFactory.setKeyStorePath(tlsServerConfig.getKeyStorePath());
-        sslContextFactory.setKeyStoreType(tlsServerConfig.getKeyStoreType());
-        sslContextFactory.setKeyStorePassword(tlsServerConfig.getKeyStorePasswordProvider().getPassword());
-        sslContextFactory.setCertAlias(tlsServerConfig.getCertAlias());
-        sslContextFactory.setKeyManagerFactoryAlgorithm(tlsServerConfig.getKeyManagerFactoryAlgorithm() == null
-                                                        ? KeyManagerFactory.getDefaultAlgorithm()
-                                                        : tlsServerConfig.getKeyManagerFactoryAlgorithm());
-        sslContextFactory.setKeyManagerPassword(tlsServerConfig.getKeyManagerPasswordProvider() == null ?
-                                                null : tlsServerConfig.getKeyManagerPasswordProvider().getPassword());
-        if (tlsServerConfig.getIncludeCipherSuites() != null) {
-          sslContextFactory.setIncludeCipherSuites(
-              tlsServerConfig.getIncludeCipherSuites().toArray(new String[0]));
-        }
-        if (tlsServerConfig.getExcludeCipherSuites() != null) {
-          sslContextFactory.setExcludeCipherSuites(
-              tlsServerConfig.getExcludeCipherSuites().toArray(new String[0]));
-        }
-        if (tlsServerConfig.getIncludeProtocols() != null) {
-          sslContextFactory.setIncludeProtocols(
-              tlsServerConfig.getIncludeProtocols().toArray(new String[0]));
-        }
-        if (tlsServerConfig.getExcludeProtocols() != null) {
-          sslContextFactory.setExcludeProtocols(
-              tlsServerConfig.getExcludeProtocols().toArray(new String[0]));
-        }
+      // Never trust all certificates by default
+      sslContextFactory.setKeyStorePath(tlsServerConfig.getKeyStorePath());
+      sslContextFactory.setKeyStoreType(tlsServerConfig.getKeyStoreType());
+      sslContextFactory.setKeyStorePassword(tlsServerConfig.getKeyStorePasswordProvider().getPassword());
+      sslContextFactory.setCertAlias(tlsServerConfig.getCertAlias());
+      sslContextFactory.setKeyManagerFactoryAlgorithm(tlsServerConfig.getKeyManagerFactoryAlgorithm() == null
+                                                      ? KeyManagerFactory.getDefaultAlgorithm()
+                                                      : tlsServerConfig.getKeyManagerFactoryAlgorithm());
+      sslContextFactory.setKeyManagerPassword(tlsServerConfig.getKeyManagerPasswordProvider() == null ?
+                                              null : tlsServerConfig.getKeyManagerPasswordProvider().getPassword());
+      if (tlsServerConfig.getIncludeCipherSuites() != null) {
+        sslContextFactory.setIncludeCipherSuites(
+            tlsServerConfig.getIncludeCipherSuites().toArray(new String[0]));
+      }
+      if (tlsServerConfig.getExcludeCipherSuites() != null) {
+        sslContextFactory.setExcludeCipherSuites(
+            tlsServerConfig.getExcludeCipherSuites().toArray(new String[0]));
+      }
+      if (tlsServerConfig.getIncludeProtocols() != null) {
+        sslContextFactory.setIncludeProtocols(
+            tlsServerConfig.getIncludeProtocols().toArray(new String[0]));
+      }
+      if (tlsServerConfig.getExcludeProtocols() != null) {
+        sslContextFactory.setExcludeProtocols(
+            tlsServerConfig.getExcludeProtocols().toArray(new String[0]));
+      }
 
-        sslContextFactory.setNeedClientAuth(tlsServerConfig.isRequireClientCertificate());
-        sslContextFactory.setWantClientAuth(tlsServerConfig.isRequestClientCertificate());
-        if (tlsServerConfig.isRequireClientCertificate() || tlsServerConfig.isRequestClientCertificate()) {
-          if (tlsServerConfig.getCrlPath() != null) {
-            // setValidatePeerCerts is used just to enable revocation checking using a static CRL file.
-            // Certificate validation is always performed when client certificates are required.
-            sslContextFactory.setValidatePeerCerts(true);
-            sslContextFactory.setCrlPath(tlsServerConfig.getCrlPath());
-          }
-          if (tlsServerConfig.isValidateHostnames()) {
-            sslContextFactory.setEndpointIdentificationAlgorithm("HTTPS");
-          }
-          if (tlsServerConfig.getTrustStorePath() != null) {
-            sslContextFactory.setTrustStorePath(tlsServerConfig.getTrustStorePath());
-            sslContextFactory.setTrustStoreType(
-                tlsServerConfig.getTrustStoreType() == null
-                ? KeyStore.getDefaultType()
-                : tlsServerConfig.getTrustStoreType()
-            );
-            sslContextFactory.setTrustManagerFactoryAlgorithm(
-                tlsServerConfig.getTrustStoreAlgorithm() == null
-                ? TrustManagerFactory.getDefaultAlgorithm()
-                : tlsServerConfig.getTrustStoreAlgorithm()
-            );
-            sslContextFactory.setTrustStorePassword(
-                tlsServerConfig.getTrustStorePasswordProvider() == null
-                ? null
-                : tlsServerConfig.getTrustStorePasswordProvider().getPassword()
-            );
-          }
+      sslContextFactory.setNeedClientAuth(tlsServerConfig.isRequireClientCertificate());
+      sslContextFactory.setWantClientAuth(tlsServerConfig.isRequestClientCertificate());
+      if (tlsServerConfig.isRequireClientCertificate() || tlsServerConfig.isRequestClientCertificate()) {
+        if (tlsServerConfig.getCrlPath() != null) {
+          // setValidatePeerCerts is used just to enable revocation checking using a static CRL file.
+          // Certificate validation is always performed when client certificates are required.
+          sslContextFactory.setValidatePeerCerts(true);
+          sslContextFactory.setCrlPath(tlsServerConfig.getCrlPath());
         }
-      } else {
-        sslContextFactory = sslContextFactoryBinding.getProvider().get();
+        if (tlsServerConfig.isValidateHostnames()) {
+          sslContextFactory.setEndpointIdentificationAlgorithm("HTTPS");
+        }
+        if (tlsServerConfig.getTrustStorePath() != null) {
+          sslContextFactory.setTrustStorePath(tlsServerConfig.getTrustStorePath());
+          sslContextFactory.setTrustStoreType(
+              tlsServerConfig.getTrustStoreType() == null
+              ? KeyStore.getDefaultType()
+              : tlsServerConfig.getTrustStoreType()
+          );
+          sslContextFactory.setTrustManagerFactoryAlgorithm(
+              tlsServerConfig.getTrustStoreAlgorithm() == null
+              ? TrustManagerFactory.getDefaultAlgorithm()
+              : tlsServerConfig.getTrustStoreAlgorithm()
+          );
+          sslContextFactory.setTrustStorePassword(
+              tlsServerConfig.getTrustStorePasswordProvider() == null
+              ? null
+              : tlsServerConfig.getTrustStorePasswordProvider().getPassword()
+          );
+        }
       }
 
       final HttpConfiguration httpsConfiguration = new HttpConfiguration();
