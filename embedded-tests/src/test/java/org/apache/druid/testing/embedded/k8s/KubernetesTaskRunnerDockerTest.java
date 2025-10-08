@@ -27,12 +27,17 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 
 /**
- * Runs some basic ingestion tests against latest image Druid containers running
- * on a K3s cluster with druid-operator and using {@code k8s} task runner type.
+ * Base class for Kubernetes task runner tests. Subclasses configure whether to use
+ * SharedInformers for caching.
  */
-public class KubernetesTaskRunnerDockerTest extends IngestionSmokeTest implements LatestImageDockerTest
+abstract class BaseKubernetesTaskRunnerDockerTest extends IngestionSmokeTest implements LatestImageDockerTest
 {
-  private static final String MANIFEST_TEMPLATE = "manifests/druid-service-with-operator.yaml";
+  protected static final String MANIFEST_TEMPLATE = "manifests/druid-service-with-operator.yaml";
+
+  /**
+   * Subclasses override to enable/disable SharedInformer caching.
+   */
+  protected abstract boolean useSharedInformers();
 
   @Override
   protected EmbeddedDruidCluster addServers(EmbeddedDruidCluster cluster)
@@ -45,6 +50,7 @@ public class KubernetesTaskRunnerDockerTest extends IngestionSmokeTest implement
         .addProperty("druid.indexer.runner.type", "k8s")
         .addProperty("druid.indexer.runner.namespace", "druid")
         .addProperty("druid.indexer.runner.capacity", "4")
+        .addProperty("druid.indexer.runner.enableKubernetesClientSharedInformers", String.valueOf(useSharedInformers()))
         .usingPort(30090);
 
     final K3sClusterResource k3sCluster = new K3sClusterWithOperatorResource()
@@ -82,5 +88,32 @@ public class KubernetesTaskRunnerDockerTest extends IngestionSmokeTest implement
     Assertions.assertFalse(
         overlord.bindings().overlordLeaderSelector().isLeader()
     );
+  }
+}
+
+/**
+ * Runs ingestion tests using direct K8s API interaction (default mode).
+ * Each task makes direct API calls to the Kubernetes API server.
+ */
+class KubernetesTaskRunnerDirectModeDockerTest extends BaseKubernetesTaskRunnerDockerTest
+{
+  @Override
+  protected boolean useSharedInformers()
+  {
+    return false;
+  }
+}
+
+/**
+ * Runs ingestion tests using SharedInformer caching mode.
+ * Uses Fabric8 SharedInformers to maintain a local cache of Jobs and Pods,
+ * reducing load on the Kubernetes API server.
+ */
+class KubernetesTaskRunnerCachingModeDockerTest extends BaseKubernetesTaskRunnerDockerTest
+{
+  @Override
+  protected boolean useSharedInformers()
+  {
+    return true;
   }
 }
