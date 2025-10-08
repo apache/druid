@@ -86,6 +86,9 @@ public class TLSServerConfig
   @JsonProperty
   private int reloadSslContextSeconds = 60;
 
+  @JsonProperty
+  private boolean forceApplyConfig = false;
+
   public String getKeyStorePath()
   {
     return keyStorePath;
@@ -186,6 +189,11 @@ public class TLSServerConfig
     return reloadSslContext;
   }
 
+  public boolean getForceConfig()
+  {
+    return forceApplyConfig;
+  }
+
   @Override
   public String toString()
   {
@@ -207,6 +215,7 @@ public class TLSServerConfig
            ", crlPath='" + crlPath + '\'' +
            ", reloadSslContext='" + reloadSslContext + '\'' +
            ", reloadSslContextSeconds='" + reloadSslContextSeconds + '\'' +
+           ", forceApplyConfig=" + forceApplyConfig +
            '}';
   }
 }

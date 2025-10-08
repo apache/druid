@@ -242,10 +242,13 @@ public class JettyServerModule extends JerseyServletModule
 
     if (node.isEnableTlsPort()) {
       log.info("Creating https connector with port [%d]", node.getTlsPort());
-      if (sslContextFactoryBinding == null) {
-        // Never trust all certificates by default
-        sslContextFactory = new IdentityCheckOverrideSslContextFactory(tlsServerConfig, certificateChecker);
+      boolean hasBinding = sslContextFactoryBinding != null;
+      sslContextFactory = hasBinding
+                          ? sslContextFactoryBinding.getProvider().get()
+                          : new IdentityCheckOverrideSslContextFactory(tlsServerConfig, certificateChecker);
 
+      // Never trust all certificates by default
+      if (!hasBinding || tlsServerConfig.getForceConfig()) {
         sslContextFactory.setKeyStorePath(tlsServerConfig.getKeyStorePath());
         sslContextFactory.setKeyStoreType(tlsServerConfig.getKeyStoreType());
         sslContextFactory.setKeyStorePassword(tlsServerConfig.getKeyStorePasswordProvider().getPassword());
@@ -303,8 +306,6 @@ public class JettyServerModule extends JerseyServletModule
             );
           }
         }
-      } else {
-        sslContextFactory = sslContextFactoryBinding.getProvider().get();
       }
 
       final HttpConfiguration httpsConfiguration = new HttpConfiguration();
