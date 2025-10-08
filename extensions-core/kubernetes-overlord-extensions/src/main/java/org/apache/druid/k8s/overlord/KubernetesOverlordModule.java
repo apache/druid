@@ -135,8 +135,12 @@ public class KubernetesOverlordModule implements DruidModule
 
     config.setNamespace(kubernetesTaskRunnerConfig.getNamespace());
 
-    config.setAdditionalProperty(DruidKubernetesClient.ENABLE_INFORMERS_KEY, kubernetesTaskRunnerConfig.isEnableKubernetesClientSharedInformers());
-    config.setAdditionalProperty(DruidKubernetesClient.INFORMER_RESYNC_PERIOD_MS_KEY, kubernetesTaskRunnerConfig.getKubernetesClientInformerResyncPeriod());
+    config.setAdditionalProperty(
+        DruidKubernetesClient.ENABLE_INFORMERS_KEY,
+        kubernetesTaskRunnerConfig.isEnableKubernetesClientSharedInformers());
+    config.setAdditionalProperty(
+        DruidKubernetesClient.INFORMER_RESYNC_PERIOD_MS_KEY,
+        kubernetesTaskRunnerConfig.getKubernetesClientInformerResyncPeriod().toStandardDuration().getMillis());
 
     client = new DruidKubernetesClient(httpClientConfig, config);
 
