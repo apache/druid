@@ -21,7 +21,6 @@ package org.apache.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.file.SegmentFileMapper;
 
 import java.nio.ByteBuffer;

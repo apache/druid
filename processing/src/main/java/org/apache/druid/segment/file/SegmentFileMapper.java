@@ -33,6 +33,7 @@ import java.util.Set;
  * {@link org.apache.druid.segment.QueryableIndex}.
  *
  * @see org.apache.druid.segment.IndexIO#loadIndex(File)
+ * @see SegmentFileBuilder
  */
 public interface SegmentFileMapper extends Closeable
 {

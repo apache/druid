@@ -34,6 +34,7 @@ import java.nio.ByteBuffer;
  * @see org.apache.druid.segment.IndexMergerV9
  * @see org.apache.druid.segment.serde.Serializer
  * @see org.apache.druid.segment.column.ColumnDescriptor
+ * @see SegmentFileMapper
  */
 public interface SegmentFileBuilder extends Closeable
 {
