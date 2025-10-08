@@ -53,41 +53,7 @@ public class QueryCountStatsMonitorTest
         )
     );
 
-    queryCountStatsProvider = new QueryCountStatsProvider()
-    {
-      private long successEmitCount = 0;
-      private long failedEmitCount = 0;
-      private long interruptedEmitCount = 0;
-      private long timedOutEmitCount = 0;
-
-      @Override
-      public long getSuccessfulQueryCount()
-      {
-        successEmitCount += 1;
-        return successEmitCount;
-      }
-
-      @Override
-      public long getFailedQueryCount()
-      {
-        failedEmitCount += 2;
-        return failedEmitCount;
-      }
-
-      @Override
-      public long getInterruptedQueryCount()
-      {
-        interruptedEmitCount += 3;
-        return interruptedEmitCount;
-      }
-
-      @Override
-      public long getTimedOutQueryCount()
-      {
-        timedOutEmitCount += 4;
-        return timedOutEmitCount;
-      }
-    };
+    queryCountStatsProvider = new QueryCountStatsAccumulator();
 
     mergeBufferPool = new DefaultBlockingPool(() -> ByteBuffer.allocate(1024), 5);
     executorService = Executors.newSingleThreadExecutor();
@@ -106,15 +72,23 @@ public class QueryCountStatsMonitorTest
         new QueryCountStatsMonitor(queryCountStatsProvider, monitorsConfig, mergeBufferPool);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
+
+    // Simulate metrics emission
+    queryCountStatsProvider.incrementSuccessful();
+    queryCountStatsProvider.incrementFailed();
+    queryCountStatsProvider.incrementFailed();
+    queryCountStatsProvider.incrementInterrupted();
+    queryCountStatsProvider.incrementTimedOut();
+
     emitter.flush();
     // Trigger metric emission
     monitor.doMonitor(emitter);
     Assert.assertEquals(5, emitter.getNumEmittedEvents());
     emitter.verifyValue("query/success/count", 1L);
     emitter.verifyValue("query/failed/count", 2L);
-    emitter.verifyValue("query/interrupted/count", 3L);
-    emitter.verifyValue("query/timeout/count", 4L);
-    emitter.verifyValue("query/count", 10L);
+    emitter.verifyValue("query/interrupted/count", 1L);
+    emitter.verifyValue("query/timeout/count", 1L);
+    emitter.verifyValue("query/count", 5L);
   }
 
   @Test
@@ -126,6 +100,14 @@ public class QueryCountStatsMonitorTest
         new QueryCountStatsMonitor(queryCountStatsProvider, monitorsConfig, mergeBufferPool);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
+
+    // Simulate metrics emission
+    queryCountStatsProvider.incrementSuccessful();
+    queryCountStatsProvider.incrementFailed();
+    queryCountStatsProvider.incrementFailed();
+    queryCountStatsProvider.incrementInterrupted();
+    queryCountStatsProvider.incrementTimedOut();
+
     emitter.flush();
     // Trigger metric emission
     monitor.doMonitor(emitter);
@@ -134,8 +116,8 @@ public class QueryCountStatsMonitorTest
     emitter.verifyValue("mergeBuffer/pendingRequests", 0L);
     emitter.verifyValue("query/success/count", 1L);
     emitter.verifyValue("query/failed/count", 2L);
-    emitter.verifyValue("query/interrupted/count", 3L);
-    emitter.verifyValue("query/timeout/count", 4L);
-    emitter.verifyValue("query/count", 10L);
+    emitter.verifyValue("query/interrupted/count", 1L);
+    emitter.verifyValue("query/timeout/count", 1L);
+    emitter.verifyValue("query/count", 5L);
   }
 }

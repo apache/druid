@@ -74,6 +74,8 @@ import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
+import org.apache.druid.server.metrics.QueryCountStatsAccumulator;
+import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.apache.druid.server.mocks.MockHttpServletResponse;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
@@ -182,6 +184,7 @@ public class SqlResourceTest extends CalciteTestBase
   private NativeSqlEngine engine;
   private SqlStatementFactory sqlStatementFactory;
   private StubServiceEmitter stubServiceEmitter;
+  private QueryCountStatsProvider queryCountStatsProvider;
 
   private CountDownLatch lifecycleAddLatch;
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier = new SettableSupplier<>();
@@ -248,6 +251,7 @@ public class SqlResourceTest extends CalciteTestBase
     req = request();
 
     testRequestLogger = new TestRequestLogger();
+    queryCountStatsProvider = new QueryCountStatsAccumulator();
 
     final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
@@ -334,7 +338,8 @@ public class SqlResourceTest extends CalciteTestBase
             DUMMY_DRUID_NODE
         ),
         DefaultQueryConfig.NIL,
-        new ServerConfig()
+        new ServerConfig(),
+        queryCountStatsProvider
     );
   }
 
@@ -603,7 +608,8 @@ public class SqlResourceTest extends CalciteTestBase
             DUMMY_DRUID_NODE
         ),
         queryConfigWithTimezone,
-        new ServerConfig()
+        new ServerConfig(),
+        new QueryCountStatsAccumulator()
     );
 
     final List<Map<String, Object>> rows = doPost(
@@ -1715,7 +1721,8 @@ public class SqlResourceTest extends CalciteTestBase
             DUMMY_DRUID_NODE
         ),
         DefaultQueryConfig.NIL,
-        new ServerConfig()
+        new ServerConfig(),
+        queryCountStatsProvider
     );
 
     String errorMessage = "This will be supported in Druid 9999";
@@ -1869,7 +1876,9 @@ public class SqlResourceTest extends CalciteTestBase
       }
     }
     Assert.assertEquals(2, success);
+    Assert.assertEquals(2, queryCountStatsProvider.getSuccessfulQueryCount());
     Assert.assertEquals(1, limited);
+    Assert.assertEquals(1, queryCountStatsProvider.getFailedQueryCount());
     Assert.assertEquals(3, testRequestLogger.getSqlQueryLogs().size());
     Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
   }
@@ -1905,6 +1914,7 @@ public class SqlResourceTest extends CalciteTestBase
         ""
     );
     Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
+    Assert.assertEquals(1, queryCountStatsProvider.getTimedOutQueryCount());
   }
 
   @Test
