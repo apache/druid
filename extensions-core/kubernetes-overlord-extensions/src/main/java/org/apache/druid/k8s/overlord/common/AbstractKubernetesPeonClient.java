@@ -36,6 +36,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
+import javax.annotation.Nullable;
 import java.io.InputStream;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -91,6 +92,13 @@ public abstract class AbstractKubernetesPeonClient
   public abstract Optional<Pod> getPeonPod(String jobName);
 
   /**
+   * Get the Job with the given name, if it exists
+   *
+   * @return an Optional containing the Job if it exists, or absent if not found
+   */
+  public abstract Optional<Job> getPeonJob(String jobName);
+
+  /**
    * Waits for a pod associated with a job to be created and reach ready state using the pod cache.
    * This method polls the informer cache until the pod appears and has a pod IP assigned.
    *
@@ -100,6 +108,7 @@ public abstract class AbstractKubernetesPeonClient
    * @return the pod in ready state, or null if the pod disappeared after being seen
    * @throws DruidException if the pod never appears within the timeout period
    */
+  @Nullable
   protected abstract Pod waitUntilPeonPodCreatedAndReady(String jobName, long howLong, TimeUnit timeUnit);
 
   /**

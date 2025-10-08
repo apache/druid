@@ -44,6 +44,7 @@ public class DruidKubernetesClient implements KubernetesClientApi
   private final KubernetesClient kubernetesClient;
   private final SharedIndexInformer<Pod> podInformer;
   private final SharedIndexInformer<Job> jobInformer;
+  private final KubernetesResourceEventNotifier eventNotifier;
 
   public DruidKubernetesClient(
       DruidKubernetesHttpClientConfig httpClientConfig,
@@ -56,9 +57,11 @@ public class DruidKubernetesClient implements KubernetesClientApi
         .withConfig(kubernetesClientConfig)
         .build();
     if (enableCache) {
+      this.eventNotifier = new KubernetesResourceEventNotifier();
       this.podInformer = setupPodInformer(kubernetesClient.getNamespace());
       this.jobInformer = setupJobInformer(kubernetesClient.getNamespace());
     } else {
+      this.eventNotifier = null;
       this.podInformer = null;
       this.jobInformer = null;
     }
@@ -113,6 +116,12 @@ public class DruidKubernetesClient implements KubernetesClientApi
     return jobInformer;
   }
 
+  @Override
+  public KubernetesResourceEventNotifier getEventNotifier()
+  {
+    return eventNotifier;
+  }
+
   private SharedIndexInformer<Pod> setupPodInformer(String namespace)
   {
     SharedIndexInformer<Pod> podInformer =
@@ -124,19 +133,22 @@ public class DruidKubernetesClient implements KubernetesClientApi
                               @Override
                               public void onAdd(Pod pod)
                               {
-                                log.info("Pod " + pod.getMetadata().getName() + " got added");
+                                log.debug("Pod[%s] got added", pod.getMetadata().getName());
+                                notifyPodChange(pod);
                               }
 
                               @Override
                               public void onUpdate(Pod oldPod, Pod newPod)
                               {
-                                log.info("Pod " + oldPod.getMetadata().getName() + " got updated");
+                                log.debug("Pod[%s] got updated", oldPod.getMetadata().getName());
+                                notifyPodChange(newPod);
                               }
 
                               @Override
                               public void onDelete(Pod pod, boolean deletedFinalStateUnknown)
                               {
-                                log.info("Pod " + pod.getMetadata().getName() + " got deleted");
+                                log.debug("Pod[%s] got deleted", pod.getMetadata().getName());
+                                notifyPodChange(pod);
                               }
                             }, INFORMER_RESYNC_PERIOD_MS
                         );
@@ -172,19 +184,22 @@ public class DruidKubernetesClient implements KubernetesClientApi
                               @Override
                               public void onAdd(Job job)
                               {
-                                log.info("Job " + job.getMetadata().getName() + " got added");
+                                log.debug("Job[%s] got added", job.getMetadata().getName());
+                                eventNotifier.notifyJobChange(job.getMetadata().getName(), job);
                               }
 
                               @Override
                               public void onUpdate(Job oldJob, Job newJob)
                               {
-                                log.info("Job " + oldJob.getMetadata().getName() + " got updated");
+                                log.debug("Job[%s] got updated", newJob.getMetadata().getName());
+                                eventNotifier.notifyJobChange(newJob.getMetadata().getName(), newJob);
                               }
 
                               @Override
                               public void onDelete(Job job, boolean deletedFinalStateUnknown)
                               {
-                                log.info("Job " + job.getMetadata().getName() + " got deleted");
+                                log.debug("Job[%s] got deleted", job.getMetadata().getName());
+                                eventNotifier.notifyJobChange(job.getMetadata().getName(), job);
                               }
                             }, INFORMER_RESYNC_PERIOD_MS
                         );
@@ -213,5 +228,16 @@ public class DruidKubernetesClient implements KubernetesClientApi
     jobInformer.addIndexers(customJobIndexers);
 
     return jobInformer;
+  }
+
+  private void notifyPodChange(Pod pod)
+  {
+    if (pod.getMetadata() != null && pod.getMetadata().getLabels() != null) {
+      String jobName = pod.getMetadata().getLabels().get("job-name");
+      if (jobName != null) {
+        // Prevents us from trying to notify pod changes that are not indexing jobs
+        eventNotifier.notifyPodChange(jobName, pod);
+      }
+    }
   }
 }

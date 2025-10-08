@@ -128,6 +128,12 @@ public class DirectKubernetesPeonClient extends AbstractKubernetesPeonClient
     return clientApi.executeRequest(client -> getPeonPod(client, jobName));
   }
 
+  @Override
+  public Optional<Job> getPeonJob(String jobName)
+  {
+    return clientApi.executeRequest(client -> getPeonJob(client, jobName));
+  }
+
   @Nullable
   @Override
   protected Pod waitUntilPeonPodCreatedAndReady(String jobName, long howLong, TimeUnit timeUnit)
@@ -222,6 +228,17 @@ public class DirectKubernetesPeonClient extends AbstractKubernetesPeonClient
                            .list()
                            .getItems();
     return pods.isEmpty() ? Optional.absent() : Optional.of(pods.get(0));
+  }
+
+  private Optional<Job> getPeonJob(KubernetesClient client, String jobName)
+  {
+    Job job = client.batch()
+                    .v1()
+                    .jobs()
+                    .inNamespace(namespace)
+                    .withName(jobName)
+                    .get();
+    return job == null ? Optional.absent() : Optional.of(job);
   }
 
   /**

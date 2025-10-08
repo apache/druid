@@ -41,4 +41,6 @@ public interface KubernetesClientApi
   SharedIndexInformer<Pod> getPodInformer();
 
   SharedIndexInformer<Job> getJobInformer();
+
+  KubernetesResourceEventNotifier getEventNotifier();
 }

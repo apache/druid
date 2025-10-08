@@ -76,4 +76,10 @@ public class TestKubernetesClient implements KubernetesClientApi
   {
     return jobInformer;
   }
+
+  @Override
+  public KubernetesResourceEventNotifier getEventNotifier()
+  {
+    return null;
+  }
 }

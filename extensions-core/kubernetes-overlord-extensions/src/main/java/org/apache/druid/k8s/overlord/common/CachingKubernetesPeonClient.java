@@ -26,7 +26,9 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
+import javax.annotation.Nullable;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -66,87 +68,38 @@ public class CachingKubernetesPeonClient extends AbstractKubernetesPeonClient
   {
     long timeoutMs = unit.toMillis(howLong);
     long startTime = System.currentTimeMillis();
-    long pollInterval = 5000;
-    long jobAppearanceGracePeriodMs = 90000; // 90 seconds grace for job to appear in cache
 
-    boolean jobSeenInCache = false;
-
+    CompletableFuture<Job> jobFuture = clientApi.getEventNotifier().waitForJobChange(taskId.getK8sJobName());
     do {
-      if (!clientApi.getJobInformer().hasSynced()) {
-        // Checking before the informer has synced will likely result in a false negative.
-        try {
-          Thread.sleep(pollInterval);
-        }
-        catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          throw new RuntimeException(e);
-        }
-        continue;
-      }
-
-      Job job;
-      if (!overlordNamespace.isEmpty()) {
-        job = clientApi.executeJobCacheRequest((informer) ->
-                                                   informer.getIndexer()
-                                                           .byIndex("byOverlordNamespace", overlordNamespace).stream()
-                                                           .filter(j -> taskId.getK8sJobName()
-                                                                              .equals(j.getMetadata().getName()))
-                                                           .findFirst()
-                                                           .orElse(null));
-      } else {
-        job = clientApi.executeJobCacheRequest(informer ->
-                                                   informer.getIndexer()
-                                                           .byIndex("byJobName", taskId.getK8sJobName())
-                                                           .stream()
-                                                           .findFirst()
-                                                           .orElse(null));
-      }
-
-      if (job == null) {
-        long elapsed = System.currentTimeMillis() - startTime;
-
-        // Give grace period for job to appear in cache after creation
-        if (!jobSeenInCache && elapsed < jobAppearanceGracePeriodMs) {
-          log.debug("Job [%s] not yet in cache, waiting... (elapsed: %d ms)", taskId, elapsed);
-          try {
-            Thread.sleep(pollInterval);
-          }
-          catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
-          }
-          continue;
-        }
-
-        // After grace period or if we've seen it before, job is truly missing
-        log.warn("K8s job for the task [%s] was not found. It can happen if the task was canceled", taskId);
-        return new JobResponse(null, PeonPhase.FAILED);
-      }
-
-      // Job found! Mark that we've seen it
-      jobSeenInCache = true;
-
-      // Check if job is complete
-      if (job.getStatus().getActive() == null || job.getStatus().getActive() == 0) {
-        if (job.getStatus().getSucceeded() > 0) {
-          log.info("K8s job [%s] completed successfully", taskId);
-          return new JobResponse(job, PeonPhase.SUCCEEDED);
-        }
-        log.warn("K8s job [%s] failed with status %s", taskId, job.getStatus());
-        return new JobResponse(job, PeonPhase.FAILED);
-      }
-
-      // Job still running, wait and check again
       try {
-        Thread.sleep(pollInterval);
+        Optional<Job> maybeJob = getPeonJob(taskId.getK8sJobName());
+        if (maybeJob.isPresent()) {
+          Job job = maybeJob.get();
+          JobResponse currentResponse = determineJobResponse(job);
+          if (currentResponse.getPhase() != PeonPhase.RUNNING) {
+            return currentResponse;
+          }
+        }
+        Job job = jobFuture.get(timeoutMs, TimeUnit.MILLISECONDS);
+        // Immediately set up to watch for the next change in case we need to wait again
+        jobFuture = clientApi.getEventNotifier().waitForJobChange(taskId.getK8sJobName());
+        log.debug("Received job[%s] change notification", taskId.getK8sJobName());
+        if (job == null) {
+          log.warn("K8s job for the task[%s] was not found. It can happen if the task was canceled", taskId);
+          return new JobResponse(null, PeonPhase.FAILED);
+        }
+
+        JobResponse currentResponse = determineJobResponse(job);
+        if (currentResponse.getPhase() != PeonPhase.RUNNING) {
+          return currentResponse;
+        }
       }
-      catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new RuntimeException(e);
+      catch (Throwable e) {
+        log.warn("Exception[%s] waiting for job change notification for job[%s]. Error message[%s]", e.getClass().getName(), taskId.getK8sJobName(), e.getMessage());
       }
     } while (System.currentTimeMillis() - startTime < timeoutMs);
 
-    log.warn("Timed out waiting for K8s job [%s] to complete", taskId);
+    log.warn("Timed out waiting for K8s job[%s] to complete", taskId.getK8sJobName());
     return new JobResponse(null, PeonPhase.FAILED);
   }
 
@@ -172,75 +125,93 @@ public class CachingKubernetesPeonClient extends AbstractKubernetesPeonClient
   }
 
   @Override
-  protected Pod waitUntilPeonPodCreatedAndReady(String jobName, long howLong, TimeUnit timeUnit)
+  public Optional<Job> getPeonJob(String jobName)
   {
-    return clientApi.executePodCacheRequest(informer -> {
-      long timeoutMs = timeUnit.toMillis(howLong);
-      long startTime = System.currentTimeMillis();
-      long pollInterval = 2000; // Poll every 2 seconds
-
-      boolean podSeenInCache = false;
-      String podName = null;
-
-      do {
-        if (!informer.hasSynced()) {
-          // Wait for informer to sync
-          try {
-            Thread.sleep(pollInterval);
-          }
-          catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
-          }
-          continue;
-        }
-
-        List<Pod> pods = informer.getIndexer().byIndex("byJobName", jobName);
-
-        if (pods.isEmpty()) {
-          // If we've seen the pod before, and now it's gone, it was deleted
-          if (podSeenInCache) {
-            log.warn("Pod for job[%s] disappeared after being seen in cache", jobName);
-            return null;
-          }
-          // Otherwise keep waiting for it to appear
-        } else {
-          Pod currentPod = pods.get(0);
-          podSeenInCache = true;
-          podName = currentPod.getMetadata().getName();
-
-          // Check if pod is ready (has IP)
-          if (currentPod.getStatus() != null && currentPod.getStatus().getPodIP() != null) {
-            log.info("Pod[%s] for job[%s] is ready with IP: %s", podName, jobName, currentPod.getStatus().getPodIP());
-            return currentPod;
-          }
-
-          log.debug("Pod[%s] for job[%s] exists but not ready yet (no IP assigned)", podName, jobName);
-        }
-
-        // Wait before polling again
-        long remainingTime = timeoutMs - (System.currentTimeMillis() - startTime);
-        if (remainingTime <= 0) {
-          break;
-        }
-
-        try {
-          Thread.sleep(Math.min(pollInterval, remainingTime));
-        }
-        catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          throw new RuntimeException(e);
-        }
-      } while (System.currentTimeMillis() - startTime < timeoutMs);
-
-      // Timeout
-      if (podSeenInCache) {
-        log.warn("Timeout waiting for pod[%s] for job[%s] to become ready", podName, jobName);
-        return null;
-      } else {
-        throw DruidException.defensive("Timeout waiting for pod for job[%s] to be created", jobName);
-      }
+    return clientApi.executeJobCacheRequest(informer -> {
+      List<Job> jobs = informer.getIndexer().byIndex("byJobName", jobName);
+      return jobs.isEmpty() ? Optional.absent() : Optional.of(jobs.get(0));
     });
   }
 
+  @Override
+  @Nullable
+  protected Pod waitUntilPeonPodCreatedAndReady(String jobName, long howLong, TimeUnit timeUnit)
+  {
+    long timeoutMs = timeUnit.toMillis(howLong);
+    long startTime = System.currentTimeMillis();
+
+    String podName = "unknown";
+    boolean podSeenInCache = false;
+    CompletableFuture<Pod> podFuture = clientApi.getEventNotifier().waitForPodChange(jobName);
+    do {
+      try {
+        // First check to see if pod is already in cache and ready in case our completion future started after the update event fired
+        Optional<Pod> maybePod = getPeonPod(jobName);
+        if (maybePod.isPresent()) {
+          podSeenInCache = true;
+          // Check if pod is ready (has IP)
+          Pod pod = maybePod.get();
+          if (isPodReady(pod)) {
+            log.info("Pod[%s] for job[%s] is ready with IP[%s]", podName, jobName, pod.getStatus().getPodIP());
+            return pod;
+          } else {
+            log.debug("Pod[%s] for job[%s] exists but not ready yet (no IP assigned)", podName, jobName);
+          }
+        }
+
+        Pod pod = podFuture.get(timeoutMs, TimeUnit.MILLISECONDS);
+        podFuture = clientApi.getEventNotifier().waitForPodChange(jobName);
+        log.debug("Received pod[%s] change notification for job[%s]", podName, jobName);
+        if (pod == null) {
+          throw DruidException.defensive("Pod[%s] for job[%s] is null. This is unusual. Investigate Druid and k8s logs.", podName, jobName);
+        } else {
+          podSeenInCache = true;
+          if (isPodReady(pod)) {
+            log.info("Pod[%s] for job[%s] is ready with IP[%s]", podName, jobName, pod.getStatus().getPodIP());
+            return pod;
+          } else {
+            log.debug("Pod[%s] for job[%s] exists but not ready yet (no IP assigned)", podName, jobName);
+          }
+        }
+      }
+      catch (Throwable e) {
+        log.warn("Exception[%s] waiting for pod change notification for job [%s]. Error message[%s]", e.getClass().getName(), jobName, e.getMessage());
+      }
+    } while (System.currentTimeMillis() - startTime < timeoutMs);
+
+    // Timeout
+    if (podSeenInCache) {
+      log.warn("Timeout waiting for pod[%s] for job[%s] to become ready", podName, jobName);
+      return null;
+    } else {
+      throw DruidException.defensive("Timeout waiting for pod for job[%s] to be created", jobName);
+    }
+  }
+
+  /**
+   * Check if the pod is ready. For our purposes, this means it has been assigned an IP address.
+   */
+  private boolean isPodReady(Pod pod)
+  {
+    return pod.getStatus() != null && pod.getStatus().getPodIP() != null;
+  }
+
+  /**
+   * Determine the JobResponse based on the current state of the Job.
+   */
+  private JobResponse determineJobResponse(Job job)
+  {
+    if (job.getStatus().getSucceeded() != null || job.getStatus().getFailed() != null) {
+      if (job.getStatus().getSucceeded() != null && job.getStatus().getSucceeded() > 0) {
+        log.info("K8s job[%s] completed successfully", job.getMetadata().getName());
+        return new JobResponse(job, PeonPhase.SUCCEEDED);
+      } else {
+        log.warn("K8s job[%s] failed with status %s", job.getMetadata().getName(), job.getStatus());
+        return new JobResponse(job, PeonPhase.FAILED);
+      }
+    } else {
+      log.debug("K8s job[%s] is still active.", job.getMetadata().getName());
+      return new JobResponse(job, PeonPhase.RUNNING);
+    }
+  }
 }
