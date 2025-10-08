@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
+import com.google.inject.Inject;
+
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.jackson.StringObjectPairList;
 import org.apache.druid.java.util.common.DateTimes;
@@ -32,6 +34,8 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.utils.JvmUtils;
+import org.apache.druid.utils.RuntimeInfo;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -54,6 +58,8 @@ public class DiscoveryDruidNode
   private final DruidNode druidNode;
   private final NodeRole nodeRole;
   private final DateTime startTime;
+  private final Integer availableProcessors;
+  private final Long totalMemory;
 
   /**
    * Map of service name -> DruidServices.
@@ -65,20 +71,24 @@ public class DiscoveryDruidNode
    */
   private final Map<String, DruidService> services = new HashMap<>();
 
+  @Inject
   public DiscoveryDruidNode(
       DruidNode druidNode,
       NodeRole nodeRole,
-      Map<String, DruidService> services
+      Map<String, DruidService> services,
+      RuntimeInfo runtimeInfo
   )
   {
-    this(druidNode, nodeRole, services, DateTimes.nowUtc());
+    this(druidNode, nodeRole, services, DateTimes.nowUtc(), runtimeInfo.getAvailableProcessors(), JvmUtils.getTotalMemory());
   }
 
   public DiscoveryDruidNode(
       DruidNode druidNode,
       NodeRole nodeRole,
       Map<String, DruidService> services,
-      DateTime startTime
+      DateTime startTime,
+      Integer availableProcessors,
+      Long totalMemory
   )
   {
     this.druidNode = druidNode;
@@ -88,6 +98,10 @@ public class DiscoveryDruidNode
       this.services.putAll(services);
     }
     this.startTime = startTime;
+
+    // Happens if service is running older version of Druid
+    this.availableProcessors = availableProcessors != null ? availableProcessors : -1;
+    this.totalMemory = totalMemory != null ? totalMemory : -1;
   }
 
   @JsonCreator
@@ -96,6 +110,8 @@ public class DiscoveryDruidNode
       @JsonProperty("nodeType") NodeRole nodeRole,
       @JsonProperty("services") Map<String, StringObjectPairList> rawServices,
       @JsonProperty("startTime") DateTime startTime,
+      @JsonProperty("availableProcessors") Integer availableProcessors,
+      @JsonProperty("totalMemory") Long totalMemory,
       @JacksonInject ObjectMapper jsonMapper
   )
   {
@@ -111,7 +127,7 @@ public class DiscoveryDruidNode
         }
       }
     }
-    return new DiscoveryDruidNode(druidNode, nodeRole, services, startTime);
+    return new DiscoveryDruidNode(druidNode, nodeRole, services, startTime, availableProcessors, totalMemory);
   }
 
   /**
@@ -186,6 +202,18 @@ public class DiscoveryDruidNode
   public DateTime getStartTime()
   {
     return startTime;
+  }
+
+  @JsonProperty
+  public Integer getAvailableProcessors()
+  {
+    return availableProcessors;
+  }
+
+  @JsonProperty
+  public Long getTotalMemory()
+  {
+    return totalMemory;
   }
 
   @Nullable

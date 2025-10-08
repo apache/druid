@@ -292,8 +292,8 @@ export function formatRate(n: NumberLike) {
   return numeral(n).format('0,0.0') + '/s';
 }
 
-export function formatBytes(n: NumberLike): string {
-  return numeral(n).format('0.00 b');
+export function formatBytes(n: NumberLike, useBinaryBytes: boolean = false): string {
+  return numeral(n).format(useBinaryBytes ? '0.00 ib' : '0.00 b');
 }
 
 export function formatByteRate(n: NumberLike): string {
