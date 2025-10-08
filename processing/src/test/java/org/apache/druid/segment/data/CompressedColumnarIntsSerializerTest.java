@@ -30,7 +30,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.Smoosh;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
+import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
@@ -183,7 +183,7 @@ public class CompressedColumnarIntsSerializerTest
         serializer.addValue(random.nextInt() ^ Integer.MIN_VALUE);
       }
 
-      try (SmooshedWriter primaryWriter = smoosher.addWithSmooshedWriter(columnName, serializer.getSerializedSize())) {
+      try (SegmentFileChannel primaryWriter = smoosher.addWithChannel(columnName, serializer.getSerializedSize())) {
         serializer.writeTo(primaryWriter, smoosher);
       }
     }
@@ -315,7 +315,7 @@ public class CompressedColumnarIntsSerializerTest
 
     writer.open();
     writer.addValues(vals, 0, vals.length);
-    final SmooshedWriter channel = smoosher.addWithSmooshedWriter("test", writer.getSerializedSize());
+    final SegmentFileChannel channel = smoosher.addWithChannel("test", writer.getSerializedSize());
     writer.writeTo(channel, smoosher);
     channel.close();
     smoosher.close();

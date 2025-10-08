@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseSingleValueDimensionSelector;
@@ -69,6 +68,7 @@ import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.data.VSizeColumnarInts;
 import org.apache.druid.segment.data.WritableSupplier;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.serde.DictionaryEncodedColumnPartSerde;
 import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 import org.apache.druid.segment.vector.NilVectorSelector;
@@ -126,7 +126,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
   private final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
   @Nullable
   private final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
-  private final SmooshedFileMapper fileMapper;
+  private final SegmentFileMapper fileMapper;
   private final String rootFieldPath;
   private final ColumnType logicalType;
   private final String columnName;
@@ -147,7 +147,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
       @Nullable Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
-      SmooshedFileMapper fileMapper,
+      SegmentFileMapper fileMapper,
       BitmapSerdeFactory bitmapSerdeFactory,
       ByteOrder byteOrder,
       String rootFieldPath

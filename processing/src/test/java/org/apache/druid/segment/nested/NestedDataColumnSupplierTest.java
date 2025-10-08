@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.filter.SelectorPredicateFactory;
 import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
@@ -59,6 +58,7 @@ import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
@@ -273,7 +273,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
         serializer.serialize(valueSelector);
       }
 
-      try (SmooshedWriter writer = smoosher.addWithSmooshedWriter(fileNameBase, serializer.getSerializedSize())) {
+      try (SegmentFileChannel writer = smoosher.addWithChannel(fileNameBase, serializer.getSerializedSize())) {
         serializer.writeTo(writer, smoosher);
       }
       smoosher.close();

@@ -29,7 +29,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.Smoosh;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
+import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
@@ -259,7 +259,7 @@ public class CompressedVSizeColumnarIntsSerializerTest
       writer.addValue(val);
     }
 
-    final SmooshedWriter channel = smoosher.addWithSmooshedWriter(
+    final SegmentFileChannel channel = smoosher.addWithChannel(
         "test",
         writer.getSerializedSize()
     );
@@ -324,7 +324,7 @@ public class CompressedVSizeColumnarIntsSerializerTest
         serializer.addValue(random.nextInt() ^ Integer.MIN_VALUE);
       }
 
-      try (SmooshedWriter primaryWriter = smoosher.addWithSmooshedWriter(columnName, serializer.getSerializedSize())) {
+      try (SegmentFileChannel primaryWriter = smoosher.addWithChannel(columnName, serializer.getSerializedSize())) {
         serializer.writeTo(primaryWriter, smoosher);
       }
     }

@@ -25,6 +25,7 @@ import junit.framework.Assert;
 import org.apache.druid.java.util.common.BufferUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.file.SegmentFileChannel;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -63,7 +64,7 @@ public class SmooshedFileMapperTest
     File baseDir = folder.newFolder("base");
 
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
-      final SmooshedWriter writer = smoosher.addWithSmooshedWriter(StringUtils.format("%d", 19), 4);
+      final SegmentFileChannel writer = smoosher.addWithChannel(StringUtils.format("%d", 19), 4);
 
       for (int i = 0; i < 19; ++i) {
         File tmpFile = File.createTempFile(StringUtils.format("smoosh-%s", i), ".bin");
@@ -86,7 +87,7 @@ public class SmooshedFileMapperTest
 
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
       for (int i = 0; i < 19; ++i) {
-        final SmooshedWriter writer = smoosher.addWithSmooshedWriter(StringUtils.format("%d", i), 4);
+        final SegmentFileChannel writer = smoosher.addWithChannel(StringUtils.format("%d", i), 4);
         writer.write(ByteBuffer.wrap(Ints.toByteArray(i)));
       }
     }
@@ -98,7 +99,7 @@ public class SmooshedFileMapperTest
     File baseDir = folder.newFolder("base");
 
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
-      final SmooshedWriter writer = smoosher.addWithSmooshedWriter(StringUtils.format("%d", 19), 4);
+      final SegmentFileChannel writer = smoosher.addWithChannel(StringUtils.format("%d", 19), 4);
       writer.write(ByteBuffer.wrap(Ints.toByteArray(19)));
 
       for (int i = 0; i < 19; ++i) {
@@ -119,7 +120,7 @@ public class SmooshedFileMapperTest
     File baseDir = folder.newFolder("base");
 
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
-      final SmooshedWriter writer = smoosher.addWithSmooshedWriter(StringUtils.format("%s%d", prefix, 19), 4);
+      final SegmentFileChannel writer = smoosher.addWithChannel(StringUtils.format("%s%d", prefix, 19), 4);
       writer.write(ByteBuffer.wrap(Ints.toByteArray(19)));
 
       for (int i = 0; i < 19; ++i) {
@@ -140,7 +141,7 @@ public class SmooshedFileMapperTest
 
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
       for (int i = 0; i < 20; ++i) {
-        final SmooshedWriter writer = smoosher.addWithSmooshedWriter(StringUtils.format("%d", i), 7);
+        final SegmentFileChannel writer = smoosher.addWithChannel(StringUtils.format("%d", i), 7);
         writer.write(ByteBuffer.wrap(Ints.toByteArray(i)));
         try {
           writer.close();
@@ -180,7 +181,7 @@ public class SmooshedFileMapperTest
 
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
       boolean exceptionThrown = false;
-      try (final SmooshedWriter writer = smoosher.addWithSmooshedWriter("1", 2)) {
+      try (final SegmentFileChannel writer = smoosher.addWithChannel("1", 2)) {
         writer.write(ByteBuffer.wrap(Ints.toByteArray(1)));
       }
       catch (ISE e) {
@@ -206,7 +207,7 @@ public class SmooshedFileMapperTest
       try (RandomAccessFile raf = new RandomAccessFile(dataFile, "rw")) {
         raf.setLength(1 << 20); // 1 MiB
       }
-      smoosher.add(dataFile);
+      smoosher.add(dataFile.getName(), dataFile);
     }
     long totalMemoryUsedAfterAddingFile = BufferUtils.totalMemoryUsedByDirectAndMappedBuffers();
     // Assert no hanging file mappings left by either smoosher or smoosher.add(file)
