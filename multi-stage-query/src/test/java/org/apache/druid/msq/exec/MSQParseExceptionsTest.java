@@ -182,13 +182,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
             .columns("v0", "v1")
             .columnTypes(ColumnType.LONG, ColumnType.STRING)
             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-            .context(defaultScanQueryContext(
-                context,
-                RowSignature.builder()
-                            .add("v0", ColumnType.LONG)
-                            .add("v1", ColumnType.STRING)
-                            .build()
-            ))
+            .context(context)
             .build();
 
 
@@ -276,13 +270,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
             .columns("v0", "agent_category")
             .columnTypes(ColumnType.LONG, ColumnType.STRING)
             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-            .context(defaultScanQueryContext(
-                context,
-                RowSignature.builder()
-                            .add("v0", ColumnType.LONG)
-                            .add("agent_category", ColumnType.STRING)
-                            .build()
-            ))
+            .context(context)
             .build();
 
 

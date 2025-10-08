@@ -103,6 +103,11 @@ public class DimensionsSpec
     return new Builder();
   }
 
+  public static Builder builder(DimensionsSpec dimensionsSpec)
+  {
+    return new Builder(dimensionsSpec);
+  }
+
   public DimensionsSpec(List<DimensionSchema> dimensions)
   {
     this(dimensions, null, null, false, null, null);
@@ -363,6 +368,20 @@ public class DimensionsSpec
     private boolean includeAllDimensions;
     private boolean useSchemaDiscovery;
     private Boolean forceSegmentSortByTime;
+
+    private Builder()
+    {
+
+    }
+
+    private Builder(DimensionsSpec dimensionSpec)
+    {
+      this.dimensions = dimensionSpec.dimensions;
+      this.dimensionExclusions = List.copyOf(dimensionSpec.dimensionExclusions);
+      this.includeAllDimensions = dimensionSpec.includeAllDimensions;
+      this.useSchemaDiscovery = dimensionSpec.useSchemaDiscovery;
+      this.forceSegmentSortByTime = dimensionSpec.forceSegmentSortByTime;
+    }
 
     public Builder setDimensions(List<DimensionSchema> dimensions)
     {

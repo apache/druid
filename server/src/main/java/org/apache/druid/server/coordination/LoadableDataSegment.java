@@ -23,10 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import org.apache.druid.jackson.CommaListJoinDeserializer;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -35,15 +35,15 @@ import java.util.Map;
 /**
  * A deserialization aid used by {@link SegmentChangeRequestLoad}. The broker prunes the loadSpec from segments
  * for efficiency reasons, but the broker does need the loadSpec when it loads broadcast segments.
- *
+ * <p>
  * This class always uses the non-pruning default {@link PruneSpecsHolder}.
  */
 public class LoadableDataSegment extends DataSegment
 {
   @JsonCreator
-  public LoadableDataSegment(
+  private LoadableDataSegment(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("interval") Interval interval,
+      @JsonProperty("interval") String interval,
       @JsonProperty("version") String version,
       // use `Map` *NOT* `LoadSpec` because we want to do lazy materialization to prevent dependency pollution
       @JsonProperty("loadSpec") @Nullable Map<String, Object> loadSpec,
@@ -58,7 +58,7 @@ public class LoadableDataSegment extends DataSegment
   {
     super(
         dataSource,
-        interval,
+        Intervals.fromString(interval),
         version,
         loadSpec,
         dimensions,
@@ -70,6 +70,5 @@ public class LoadableDataSegment extends DataSegment
         size,
         PruneSpecsHolder.DEFAULT
     );
-
   }
 }

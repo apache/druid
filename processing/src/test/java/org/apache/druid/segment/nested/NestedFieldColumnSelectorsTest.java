@@ -343,7 +343,7 @@ public class NestedFieldColumnSelectorsTest extends InitializedNullHandlingTest
         NestedDataTestUtils.COUNT,
         Granularities.NONE,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
     Assert.assertEquals(1, segments.size());
     Segment segment = segments.get(0);
@@ -370,7 +370,7 @@ public class NestedFieldColumnSelectorsTest extends InitializedNullHandlingTest
         NestedDataTestUtils.COUNT,
         Granularities.NONE,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
     Assert.assertEquals(1, segments.size());
     Segment segment = segments.get(0);

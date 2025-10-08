@@ -96,12 +96,12 @@ public class NestedDataTestUtils
       DimensionsSpec.builder()
                     .setDimensions(
                         Arrays.asList(
-                            new AutoTypeColumnSchema("dim", null),
-                            new AutoTypeColumnSchema("nest_json", null),
-                            new AutoTypeColumnSchema("nester_json", null),
-                            new AutoTypeColumnSchema("variant_json", null),
-                            new AutoTypeColumnSchema("list_json", null),
-                            new AutoTypeColumnSchema("nonexistent", null)
+                            AutoTypeColumnSchema.of("dim"),
+                            AutoTypeColumnSchema.of("nest_json"),
+                            AutoTypeColumnSchema.of("nester_json"),
+                            AutoTypeColumnSchema.of("variant_json"),
+                            AutoTypeColumnSchema.of("list_json"),
+                            AutoTypeColumnSchema.of("nonexistent")
                         )
                     )
                     .build();
@@ -210,7 +210,7 @@ public class NestedDataTestUtils
         COUNT,
         granularity,
         rollup,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
   }
 
@@ -236,7 +236,7 @@ public class NestedDataTestUtils
         SIMPLE_DATA_FILE,
         Granularities.NONE,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
   }
 
@@ -322,7 +322,7 @@ public class NestedDataTestUtils
         COUNT,
         granularity,
         rollup,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
   }
 
@@ -505,7 +505,7 @@ public class NestedDataTestUtils
                                       tempFolder,
                                       closer,
                                       jsonInputFile,
-                                      IndexSpec.DEFAULT
+                                      IndexSpec.getDefault()
                                   )
                               )
                               .add(NestedDataTestUtils.createIncrementalIndexForJsonInput(tempFolder, jsonInputFile))
@@ -556,7 +556,7 @@ public class NestedDataTestUtils
                                       tempFolder,
                                       closer,
                                       jsonInputFile,
-                                      IndexSpec.DEFAULT
+                                      IndexSpec.getDefault()
                                   )
                               )
                               .addAll(
@@ -564,7 +564,7 @@ public class NestedDataTestUtils
                                       tempFolder,
                                       closer,
                                       jsonInputFile,
-                                      IndexSpec.DEFAULT
+                                      IndexSpec.getDefault()
                                   )
                               )
                               .build();
