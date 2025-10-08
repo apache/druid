@@ -90,30 +90,3 @@ abstract class BaseKubernetesTaskRunnerDockerTest extends IngestionSmokeTest imp
     );
   }
 }
-
-/**
- * Runs ingestion tests using direct K8s API interaction (default mode).
- * Each task makes direct API calls to the Kubernetes API server.
- */
-class KubernetesTaskRunnerDirectModeDockerTest extends BaseKubernetesTaskRunnerDockerTest
-{
-  @Override
-  protected boolean useSharedInformers()
-  {
-    return false;
-  }
-}
-
-/**
- * Runs ingestion tests using SharedInformer caching mode.
- * Uses Fabric8 SharedInformers to maintain a local cache of Jobs and Pods,
- * reducing load on the Kubernetes API server.
- */
-class KubernetesTaskRunnerCachingModeDockerTest extends BaseKubernetesTaskRunnerDockerTest
-{
-  @Override
-  protected boolean useSharedInformers()
-  {
-    return true;
-  }
-}
