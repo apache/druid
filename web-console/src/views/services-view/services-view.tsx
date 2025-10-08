@@ -656,6 +656,7 @@ ORDER BY
               </ul>
             );
           },
+          Aggregated: () => '',
         },
         {
           Header: 'Detail',
