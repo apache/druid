@@ -146,6 +146,26 @@ public abstract class SQLMetadataStorageActionHandler
     }
   }
 
+  @Override
+  public void update(
+      final String id,
+      final @NotNull Task entry
+  )
+  {
+    try {
+      getConnector().retryWithHandle(
+          handle -> updateEntryWithHandle(handle, id, entry),
+          this::isTransientDruidException
+      );
+    }
+    catch (CallbackFailedException e) {
+      propagateAsRuntimeException(e.getCause());
+    }
+    catch (Exception e) {
+      propagateAsRuntimeException(e);
+    }
+  }
+
   private void propagateAsRuntimeException(Throwable t)
   {
     Throwables.propagateIfPossible(t);
@@ -184,6 +204,28 @@ public abstract class SQLMetadataStorageActionHandler
             .bind("group_id", groupId)
             .bind("active", active)
             .bind("status_payload", jsonMapper.writeValueAsBytes(status))
+            .execute();
+      return null;
+    }
+    catch (Throwable t) {
+      throw wrapInDruidException(entryId, t);
+    }
+  }
+
+  private Void updateEntryWithHandle(
+      Handle handle,
+      String entryId,
+      Object entry
+  )
+  {
+    try {
+      final String sql = StringUtils.format(
+          "UPDATE %s SET payload = :payload WHERE id = :id",
+          getEntryTable()
+      );
+      handle.createStatement(sql)
+            .bind("id", entryId)
+            .bind("payload", jsonMapper.writeValueAsBytes(entry))
             .execute();
       return null;
     }

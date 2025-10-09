@@ -189,4 +189,12 @@ public interface MetadataStorageActionHandler
    */
   void populateTaskTypeAndGroupIdAsync();
 
+
+  /**
+   * Update the task entry with the given id.
+   */
+  void update(
+      String id,
+      @NotNull Task entry
+  );
 }

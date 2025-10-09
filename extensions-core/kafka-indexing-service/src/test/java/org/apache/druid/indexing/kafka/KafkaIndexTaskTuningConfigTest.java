@@ -144,7 +144,7 @@ public class KafkaIndexTaskTuningConfigTest
         .withReportParseExceptions(true)
         .withMaxColumnsToMerge(5)
         .build();
-    KafkaIndexTaskTuningConfig copy = original.convertToTaskTuningConfig();
+    KafkaIndexTaskTuningConfig copy = original.convertToTaskTuningConfig(null);
 
     Assert.assertEquals(original.getAppendableIndexSpec(), copy.getAppendableIndexSpec());
     Assert.assertEquals(1, copy.getMaxRowsInMemory());

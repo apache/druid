@@ -331,7 +331,7 @@ public class KinesisIndexTaskTuningConfigTest
         null,
         null
     );
-    KinesisIndexTaskTuningConfig copy = original.convertToTaskTuningConfig();
+    KinesisIndexTaskTuningConfig copy = original.convertToTaskTuningConfig(null);
 
     Assert.assertEquals(original.getAppendableIndexSpec(), copy.getAppendableIndexSpec());
     Assert.assertEquals(1, copy.getMaxRowsInMemory());

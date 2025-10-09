@@ -252,7 +252,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   }
 
   @Override
-  public KinesisIndexTaskTuningConfig convertToTaskTuningConfig()
+  public KinesisIndexTaskTuningConfig convertToTaskTuningConfig(Boolean usePerpetuallyRunningTasks)
   {
     return new KinesisIndexTaskTuningConfig(
         getAppendableIndexSpec(),
