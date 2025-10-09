@@ -116,7 +116,7 @@ public class S3InputSourceDefn extends FormattedInputSourceDefn
   private static final String ACCESS_KEY_ID_FIELD = "accessKeyId";
   private static final String SECRET_ACCESS_KEY_FIELD = "secretAccessKey";
   private static final String ASSUME_ROLE_ARN_FIELD = "assumeRoleArn";
-  private static final String SESSION_TOKEN_FIELD = "assumeRoleArn";
+  private static final String SESSION_TOKEN_FIELD = "sessionToken";
 
   @Override
   public String typeValue()

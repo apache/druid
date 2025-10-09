@@ -1479,7 +1479,6 @@ sqls
 connectorConfig
 httpAuthenticationPassword
 accessKeyId
-secretAccessKey
 accessKeyId
 sessionToken
 httpAuthenticationPassword

@@ -284,9 +284,7 @@ public class S3InputSource extends CloudObjectInputSource
   @Nonnull
   private AWSStaticCredentialsProvider createStaticCredentialsProvider(S3InputSourceConfig s3InputSourceConfig)
   {
-    if (s3InputSourceConfig.getSessionToken() != null && !s3InputSourceConfig.getSessionToken()
-                                                                             .getPassword()
-                                                                             .isEmpty()) {
+    if (s3InputSourceConfig.getSessionToken() != null) {
       AWSSessionCredentials sessionCredentials = new BasicSessionCredentials(
           s3InputSourceConfig.getAccessKeyId().getPassword(),
           s3InputSourceConfig.getSecretAccessKey().getPassword(),

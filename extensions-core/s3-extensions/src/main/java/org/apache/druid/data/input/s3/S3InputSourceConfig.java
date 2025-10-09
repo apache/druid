@@ -53,8 +53,8 @@ public class S3InputSourceConfig
     this.assumeRoleArn = assumeRoleArn;
     this.assumeRoleExternalId = assumeRoleExternalId;
     if (sessionToken != null || accessKeyId != null || secretAccessKey != null) {
-      this.accessKeyId = Preconditions.checkNotNull(accessKeyId, "accessKeyId cannot be null if secretAccessKey is given or sessionToken is given");
-      this.secretAccessKey = Preconditions.checkNotNull(secretAccessKey, "secretAccessKey cannot be null if accessKeyId is given or sessionToken is given");
+      this.accessKeyId = Preconditions.checkNotNull(accessKeyId, "'accessKeyId' cannot be null if 'secretAccessKey' or 'sessionToken' is given");
+      this.secretAccessKey = Preconditions.checkNotNull(secretAccessKey, "'secretAccessKey' cannot be null if 'accessKeyId' or 'sessionToken' is given");
     } else {
       this.accessKeyId = null;
       this.secretAccessKey = null;
