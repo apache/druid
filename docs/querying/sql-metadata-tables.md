@@ -238,7 +238,7 @@ Servers table lists all discovered servers in the cluster.
 |start_time|STRING|Timestamp in ISO8601 format when the server was announced in the cluster|
 |version|VARCHAR|Druid version running on the server|
 |available_processors|BIGINT|Total number of processors available to the server|
-|total_memory|BIGINT|Total memory in binary bytes available to the server|
+|total_memory|BIGINT|Total memory in bytes available to the server|
 To retrieve information about all servers, use the query:
 
 ```sql
