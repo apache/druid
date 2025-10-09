@@ -43,6 +43,7 @@ public class ExprEvalBindingVector<T> implements ExprEvalVector<T>
 
   @Nullable
   private boolean[] numericNulls;
+  private Object[] objects;
 
   public ExprEvalBindingVector(
       ExpressionType expressionType,
@@ -76,9 +77,10 @@ public class ExprEvalBindingVector<T> implements ExprEvalVector<T>
   public long[] getLongVector()
   {
     if (expressionType.isNumeric()) {
-      return bindings.getLongVector(bindingName);
+      longs = bindings.getLongVector(bindingName);
+    } else {
+      computeNumbers();
     }
-    computeNumbers();
     return longs;
   }
 
@@ -86,9 +88,10 @@ public class ExprEvalBindingVector<T> implements ExprEvalVector<T>
   public double[] getDoubleVector()
   {
     if (expressionType.isNumeric()) {
-      return bindings.getDoubleVector(bindingName);
+      doubles = bindings.getDoubleVector(bindingName);
+    } else {
+      computeNumbers();
     }
-    computeNumbers();
     return doubles;
   }
 
@@ -97,9 +100,10 @@ public class ExprEvalBindingVector<T> implements ExprEvalVector<T>
   public boolean[] getNullVector()
   {
     if (expressionType.isNumeric()) {
-      return bindings.getNullVector(bindingName);
+      numericNulls = bindings.getNullVector(bindingName);
+    } else {
+      computeNumbers();
     }
-    computeNumbers();
     return numericNulls;
   }
 
@@ -109,7 +113,7 @@ public class ExprEvalBindingVector<T> implements ExprEvalVector<T>
     if (expressionType.is(ExprType.LONG)) {
       final long[] values = bindings.getLongVector(bindingName);
       final boolean[] nulls = bindings.getNullVector(bindingName);
-      final Long[] objects = new Long[values.length];
+      objects = new Long[values.length];
       if (nulls != null) {
         for (int i = 0; i < values.length; i++) {
           objects[i] = nulls[i] ? null : values[i];
@@ -119,11 +123,10 @@ public class ExprEvalBindingVector<T> implements ExprEvalVector<T>
           objects[i] = values[i];
         }
       }
-      return objects;
     } else if (expressionType.is(ExprType.DOUBLE)) {
       final double[] values = bindings.getDoubleVector(bindingName);
       final boolean[] nulls = bindings.getNullVector(bindingName);
-      Double[] objects = new Double[values.length];
+      objects = new Double[values.length];
       if (nulls != null) {
         for (int i = 0; i < values.length; i++) {
           objects[i] = nulls[i] ? null : values[i];
@@ -133,9 +136,42 @@ public class ExprEvalBindingVector<T> implements ExprEvalVector<T>
           objects[i] = values[i];
         }
       }
-      return objects;
+    } else {
+      objects = bindings.getObjectVector(bindingName);
     }
-    return bindings.getObjectVector(bindingName);
+    return objects;
+  }
+
+  @Override
+  public boolean elementAsBoolean(int index)
+  {
+    if (expressionType.is(ExprType.LONG)) {
+      if (longs == null) {
+        // populate stuff
+        getLongVector();
+      }
+      if (numericNulls != null && numericNulls[index]) {
+        return Evals.asBoolean(0L);
+      }
+      return Evals.asBoolean(longs[index]);
+    } else if (expressionType.is(ExprType.DOUBLE)) {
+      if (doubles == null) {
+        getDoubleVector();
+      }
+      if (numericNulls != null && numericNulls[index]) {
+        return Evals.asBoolean(0.0);
+      }
+      return Evals.asBoolean(doubles[index]);
+    } else {
+      if (objects == null) {
+        getObjectVector();
+      }
+      if (expressionType.is(ExprType.STRING)) {
+        return Evals.asBoolean((String) objects[index]);
+      } else {
+        return ExprEval.ofType(expressionType, objects[index]).asBoolean();
+      }
+    }
   }
 
   private void computeNumbers()

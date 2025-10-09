@@ -184,7 +184,7 @@ Sample specs:
 |uris|JSON array of URIs where S3 objects to be ingested are located.|None|`uris` or `prefixes` or `objects` must be set|
 |prefixes|JSON array of URI prefixes for the locations of S3 objects to be ingested. Empty objects starting with one of the given prefixes will be skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of S3 Objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
-|objectGlob|A glob for the object part of the S3 URI. In the URI `s3://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `s3://foo/bar/file.json`, because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/FileSystem.html#getPathMatcher(java.lang.String)).|None|no|
+|objectGlob|A glob for the object part of the S3 URI. In the URI `s3://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `s3://foo/bar/file.json`, because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/FileSystem.html#getPathMatcher(java.lang.String)).|None|no|
 |systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (S3 URI starting with `s3://`), `__file_bucket` (S3 bucket), and `__file_path` (S3 object key).|None|no|
 | endpointConfig |Config for overriding the default S3 endpoint and signing region. This would allow ingesting data from a different S3 store. Please see [s3 config](../development/extensions-core/s3.md#connecting-to-s3-configuration) for more information.|None|No (defaults will be used if not given)
 | clientConfig |S3 client properties for the overridden s3 endpoint. This is used in conjunction with `endPointConfig`. Please see [s3 config](../development/extensions-core/s3.md#connecting-to-s3-configuration) for more information.|None|No (defaults will be used if not given)
@@ -289,7 +289,7 @@ Sample specs:
 |uris|JSON array of URIs where Google Cloud Storage objects to be ingested are located.|None|`uris` or `prefixes` or `objects` must be set|
 |prefixes|JSON array of URI prefixes for the locations of Google Cloud Storage objects to be ingested. Empty objects starting with one of the given prefixes will be skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of Google Cloud Storage objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
-|objectGlob|A glob for the object part of the S3 URI. In the URI `s3://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `s3://foo/bar/file.json`, because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/FileSystem.html#getPathMatcher(java.lang.String)).|None|no|
+|objectGlob|A glob for the object part of the S3 URI. In the URI `s3://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `s3://foo/bar/file.json`, because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/FileSystem.html#getPathMatcher(java.lang.String)).|None|no|
 
 Note that the Google Cloud Storage input source will skip all empty objects only when `prefixes` is specified.
 
@@ -377,7 +377,7 @@ Sample specs:
 |uris|JSON array of URIs where the Azure objects to be ingested are located. Use this format: `azureStorage://STORAGE_ACCOUNT/CONTAINER/PATH_TO_FILE`|None|One of the following must be set:`uris`, `prefixes`, or `objects`.|
 |prefixes|JSON array of URI prefixes for the locations of Azure objects to ingest. Use this format`azureStorage://STORAGE_ACCOUNT/CONTAINER/PREFIX`. Empty objects starting with any of the given prefixes are skipped.|None|One of the following must be set:`uris`, `prefixes`, or `objects`.|
 |objects|JSON array of Azure objects to ingest.|None|One of the following must be set:`uris`, `prefixes`, or `objects`.|
-|objectGlob|A glob for the object part of the Azure URI. In the URI `azureStorage://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `azureStorage://foo/bar/file.json` because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/FileSystem.html#getPathMatcher(java.lang.String)).|None|no|
+|objectGlob|A glob for the object part of the Azure URI. In the URI `azureStorage://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `azureStorage://foo/bar/file.json` because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/FileSystem.html#getPathMatcher(java.lang.String)).|None|no|
 |systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (Azure blob URI starting with `azureStorage://`), `__file_bucket` (Azure bucket), and `__file_path` (Azure object path).|None|no|
 |properties|Properties object for overriding the default Azure configuration. See below for more information.|None|No (defaults will be used if not given)|
 
@@ -471,7 +471,7 @@ Sample specs:
 |uris|JSON array of URIs where the Azure objects to be ingested are located, in the form `azure://<container>/<path-to-file>`|None|`uris` or `prefixes` or `objects` must be set|
 |prefixes|JSON array of URI prefixes for the locations of Azure objects to ingest, in the form `azure://<container>/<prefix>`. Empty objects starting with one of the given prefixes are skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of Azure objects to ingest.|None|`uris` or `prefixes` or `objects` must be set|
-|objectGlob|A glob for the object part of the Azure URI. In the URI `azure://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `azure://foo/bar/file.json`, because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/FileSystem.html#getPathMatcher(java.lang.String)).|None|no|
+|objectGlob|A glob for the object part of the Azure URI. In the URI `azure://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `azure://foo/bar/file.json`, because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/FileSystem.html#getPathMatcher(java.lang.String)).|None|no|
 |systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (Azure blob URI starting with `azure://`), `__file_bucket` (Azure bucket), and `__file_path` (Azure object path).|None|no|
 
 Note that the Azure input source skips all empty objects only when `prefixes` is specified.
@@ -1119,7 +1119,7 @@ Sample:
 
 ### Iceberg filter object
 
-This input source provides the following filters: `and`, `equals`, `interval`, and `or`. You can use these filters to filter out data files from a snapshot, reducing the number of files Druid has to ingest.
+This input source provides the following filters: `and`, `equals`, `interval`, `timeWindow`, `range` and `or`. You can use these filters to filter out data files from a snapshot, reducing the number of files Druid has to ingest.
 It is strongly recommended to apply filtering only on Iceberg partition columns. When filtering on non-partition columns, Iceberg filters may return rows that do not fully match the expression. To address this, it may help to define an additional filter in the [`transformSpec`](./ingestion-spec.md#transformspec) to remove residual rows.
 
 `equals` Filter:
@@ -1170,6 +1170,16 @@ It is strongly recommended to apply filtering only on Iceberg partition columns.
 |lowerOpen|Boolean indicating if lower bound is open in the interval of values defined by the range (`>` instead of `>=`). |false|no|
 |upperOpen|Boolean indicating if upper bound is open on the interval of values defined by range (`<` instead of `<=`). |false|no|
 
+`timeWindow` Filter:
+
+| Property|Description|Default| Required |
+|---------|-----------|-------|----------|
+|type| Set this value to `timeWindow`.|None|yes|
+|filterColumn|The column name from the iceberg table schema based on which filtering needs to happen. The filter column must be defined as TimestampType in Iceberg.|None|yes|
+|baseTime|Determines the reference timestamp from which the lookback and lookahead durations are applied to define the time window.|Current UTC timestamp|no|
+|lookbackDuration|Defines the duration that determines how far backward should the filter include data relative to `baseTime`.|P1D|no|
+|lookaheadDuration|Defines the duration that determines how far ahead should the filter include data relative to `baseTime`.|Zero|no|
+
 ## Delta Lake input source
 
 :::info[Required extension]
@@ -1179,12 +1189,12 @@ To use the Delta Lake input source, load the extension [`druid-deltalake-extensi
 You can use the Delta input source to read data stored in a Delta Lake table. For a given table, the input source scans
 the latest snapshot from the configured table. Druid ingests the underlying delta files from the table.
 
-| Property|Description| Default|Required |
-|---------|-----------|-----------------|
-|type|Set this value to `delta`.| None|yes|
-|tablePath|The location of the Delta table.|None|yes|
-|filter|The JSON Object that filters data files within a snapshot.|None|no|
-|snapshotVersion|The snapshot version to read from the Delta table. An integer value must be specified.|Latest|no|
+| Property | Description | Default | Required |
+|----------|-------------|---------|----------|
+| type | Set this value to `delta`. | None | yes |
+| tablePath | The location of the Delta table. | None | yes |
+| filter | The JSON Object that filters data files within a snapshot. | None | no |
+| snapshotVersion | The snapshot version to read from the Delta table. An integer value must be specified. | Latest | no |
 
 ### Delta filter object
 

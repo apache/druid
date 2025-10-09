@@ -41,12 +41,12 @@ export const LookupValuesTable = React.memo(function LookupValuesTable(
   props: LookupValuesTableProps,
 ) {
   const [entriesState] = useQueryManager<string, LookupRow[]>({
-    processQuery: async (lookupId, cancelToken) => {
+    processQuery: async (lookupId, signal) => {
       return await queryDruidSql<LookupRow>(
         {
           query: `SELECT "k", "v" FROM ${N('lookup').table(lookupId)} LIMIT 5000`,
         },
-        cancelToken,
+        signal,
       );
     },
     initQuery: props.lookupId,

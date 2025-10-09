@@ -472,6 +472,7 @@ public class CompactSegments implements CoordinatorCustomDuty
 
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
       final List<DataSegment> segmentsToCompact = entry.getSegments();
+      // ^ feed segmentsToCompact to config to get grouping of configs to segments
 
       // Create granularitySpec to send to compaction task
       Granularity segmentGranularityToUse = null;

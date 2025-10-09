@@ -33,7 +33,7 @@ import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -57,9 +57,6 @@ public class EmbeddedMSQRealtimeUnnestQueryTest extends BaseRealtimeQueryTest
     EmbeddedDruidCluster clusterWithKafka = super.createCluster();
 
     coordinator.addProperty("druid.manager.segments.useIncrementalCache", "always");
-
-    overlord.addProperty("druid.manager.segments.useIncrementalCache", "always")
-            .addProperty("druid.manager.segments.pollDuration", "PT0.1s");
 
     broker.addProperty("druid.msq.dart.controller.heapFraction", "0.9")
           .addProperty("druid.query.default.context.maxConcurrentStages", "1");
@@ -86,8 +83,8 @@ public class EmbeddedMSQRealtimeUnnestQueryTest extends BaseRealtimeQueryTest
         .addServer(indexer);
   }
 
-  @BeforeEach
-  void setUpEach()
+  @BeforeAll
+  void setupAll()
   {
     msqApis = new EmbeddedMSQApis(cluster, overlord);
 

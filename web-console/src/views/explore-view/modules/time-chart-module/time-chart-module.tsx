@@ -243,7 +243,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
           showOthers,
           oneExtra,
         },
-        cancelToken,
+        signal,
       ) => {
         if (!timeColumnName) {
           throw new Error(`Must have a column of type TIMESTAMP for the time chart to work`);
@@ -265,12 +265,12 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
                     .changeLimitValue(maxFacets + (showOthers ? 1 : 0)), // If we want to show others add 1 to check if we need to query for them
                   timezone,
                 },
-                cancelToken,
+                signal,
               )
             ).getColumnByIndex(0)!
           : undefined;
 
-        cancelToken.throwIfRequested();
+        signal.throwIfAborted();
 
         if (detectedFacets?.length === 0) {
           // If detectedFacets is empty then there is no data at all and no need to do a larger query
@@ -322,7 +322,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
               ),
             timezone,
           },
-          cancelToken,
+          signal,
         );
 
         const dataset = result.toObjectArray().map(

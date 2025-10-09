@@ -79,9 +79,9 @@
         <!-- when updating apache ranger, verify the usage of aws-bundle-sdk vs aws-logs-sdk
         and update as needed in extensions-core/druid-ranger-security/pm.xml  -->
         <apache.ranger.version>2.4.0</apache.ranger.version>
-        <gson.version>2.10.1</gson.version>
+        <gson.version>2.12.0</gson.version>
         <scala.library.version>2.13.14</scala.library.version>
-        <avatica.version>1.25.0</avatica.version>
+        <avatica.version>1.26.0</avatica.version>
         <avro.version>1.11.4</avro.version>
         <!--
             The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
@@ -94,14 +94,14 @@
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.2.22</dropwizard.metrics.version>
         <errorprone.version>2.35.1</errorprone.version>
+        <fabric8.version>7.4.0</fabric8.version>
         <fastutil.version>8.5.4</fastutil.version>
         <guava.version>32.1.3-jre</guava.version>
         <guice.version>5.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
-        <jetty.version>9.4.57.v20241219</jetty.version>
+        <jetty.version>12.0.25</jetty.version>
         <jersey.version>1.19.4</jersey.version>
-        <jackson.core.version>2.18.4.1</jackson.core.version>
-        <jackson.version>2.18.4</jackson.version>
+        <jackson.version>2.19.2</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
         <log4j.version>2.22.1</log4j.version>
         <mysql.version>8.2.0</mysql.version>
@@ -347,7 +347,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
-                <version>3.17.0</version>
+                <version>3.18.0</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -620,7 +620,7 @@
             <dependency>
                 <groupId>com.fasterxml.jackson</groupId>
                 <artifactId>jackson-bom</artifactId>
-                <version>${jackson.core.version}</version>
+                <version>${jackson.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -754,26 +754,44 @@
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-server</artifactId>
                 <version>${jetty.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.eclipse.jetty.toolchain</groupId>
+                        <artifactId>jetty-servlet-api</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-servlet</artifactId>
+                <groupId>org.eclipse.jetty.ee8</groupId>
+                <artifactId>jetty-ee8-servlet</artifactId>
+                <version>${jetty.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.eclipse.jetty.toolchain</groupId>
+                        <artifactId>jetty-servlet-api</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jetty.ee8</groupId>
+                <artifactId>jetty-ee8-servlets</artifactId>
                 <version>${jetty.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-servlets</artifactId>
-                <version>${jetty.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-proxy</artifactId>
+                <groupId>org.eclipse.jetty.ee8</groupId>
+                <artifactId>jetty-ee8-proxy</artifactId>
                 <version>${jetty.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-rewrite</artifactId>
                 <version>${jetty.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.eclipse.jetty.toolchain</groupId>
+                        <artifactId>jetty-servlet-api</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
@@ -1036,7 +1054,7 @@
             <dependency>
                 <groupId>javax.servlet</groupId>
                 <artifactId>javax.servlet-api</artifactId>
-                <version>3.1.0</version>
+                <version>4.0.1</version>
             </dependency>
             <dependency>
                 <groupId>javax.activation</groupId>
@@ -1624,7 +1642,7 @@
             <plugin>
                 <groupId>de.thetaphi</groupId>
                 <artifactId>forbiddenapis</artifactId>
-                <version>3.2</version>
+                <version>3.5.1</version>
                 <configuration>
                     <ignoreSignaturesOfMissingClasses>true</ignoreSignaturesOfMissingClasses>
                     <bundledSignatures>
@@ -1643,6 +1661,10 @@
                       <exclude>**/DruidSqlParserImpl.class</exclude>
                       <exclude>**/DruidSqlParserImplTokenManager.class</exclude>
                       <exclude>**/SimpleCharStream.class</exclude>
+                      <!-- Exclude JMH-generated classes -->
+                      <exclude>**/*_jmhType_*.class</exclude>
+                      <exclude>**/*_jmhTest_*.class</exclude>
+                      <exclude>**/*_generated*.class</exclude>
                     </excludes>
                     <suppressAnnotations>
                         <annotation>**.SuppressForbidden</annotation>
@@ -1737,6 +1759,7 @@
                                         <exclude>org.apache.logging.log4j:log4j-slf4j-impl</exclude>
                                         <!-- See https://github.com/apache/druid/pull/17370 -->
                                         <exclude>javax.xml.bind:jaxb-api</exclude>
+                                        <exclude>org.eclipse.jetty.toolchain:jetty-servlet-api</exclude>
                                     </excludes>
                                 </bannedDependencies>
                             </rules>

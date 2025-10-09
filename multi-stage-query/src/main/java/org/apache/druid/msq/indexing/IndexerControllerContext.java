@@ -38,6 +38,7 @@ import org.apache.druid.msq.exec.MSQMetriceEventBuilder;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.WorkerClient;
+import org.apache.druid.msq.exec.WorkerFailureListener;
 import org.apache.druid.msq.exec.WorkerManager;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig;
@@ -125,7 +126,8 @@ public class IndexerControllerContext implements ControllerContext
     final ControllerMemoryParameters memoryParameters =
         ControllerMemoryParameters.createProductionInstance(
             memoryIntrospector,
-            querySpec.getTuningConfig().getMaxNumWorkers()
+            querySpec.getTuningConfig().getMaxNumWorkers(),
+            MultiStageQueryContext.getFrameSize(querySpec.getContext())
         );
 
     final ControllerQueryKernelConfig config = makeQueryKernelConfig(querySpec, memoryParameters);
@@ -216,13 +218,15 @@ public class IndexerControllerContext implements ControllerContext
   public WorkerManager newWorkerManager(
       final String queryId,
       final MSQSpec querySpec,
-      final ControllerQueryKernelConfig queryKernelConfig
+      final ControllerQueryKernelConfig queryKernelConfig,
+      final WorkerFailureListener workerFailureListener
   )
   {
     return new MSQWorkerTaskLauncher(
         queryId,
         taskDataSource,
         overlordClient,
+        workerFailureListener,
         makeTaskContext(querySpec, queryKernelConfig, taskContext),
         // 10 minutes +- 2 minutes jitter
         TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L),
@@ -304,6 +308,8 @@ public class IndexerControllerContext implements ControllerContext
     final boolean removeNullBytes = MultiStageQueryContext.removeNullBytes(queryContext);
     final boolean includeAllCounters = MultiStageQueryContext.getIncludeAllCounters(queryContext);
     final boolean isReindex = MultiStageQueryContext.isReindex(queryContext);
+    final int frameSize = MultiStageQueryContext.getFrameSize(queryContext);
+    final Integer maxThreads = MultiStageQueryContext.getMaxThreads(queryContext);
     final ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
 
     builder
@@ -313,7 +319,12 @@ public class IndexerControllerContext implements ControllerContext
         .put(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, maxConcurrentStages)
         .put(MultiStageQueryContext.CTX_ROW_BASED_FRAME_TYPE, (int) rowBasedFrameType.version())
         .put(MultiStageQueryContext.CTX_REMOVE_NULL_BYTES, removeNullBytes)
-        .put(MultiStageQueryContext.CTX_INCLUDE_ALL_COUNTERS, includeAllCounters);
+        .put(MultiStageQueryContext.CTX_INCLUDE_ALL_COUNTERS, includeAllCounters)
+        .put(MultiStageQueryContext.CTX_MAX_FRAME_SIZE, frameSize);
+
+    if (maxThreads != null) {
+      builder.put(MultiStageQueryContext.CTX_MAX_THREADS, maxThreads);
+    }
 
     if (querySpec.getId() != null) {
       builder.put(BaseQuery.QUERY_ID, querySpec.getId());

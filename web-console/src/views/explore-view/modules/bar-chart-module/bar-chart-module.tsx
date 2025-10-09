@@ -150,8 +150,8 @@ ModuleRepository.registerModule<BarChartParameterValues>({
 
     const [sourceDataState, queryManager] = useQueryManager({
       query: dataQuery,
-      processQuery: async (query, cancelToken) => {
-        return (await runSqlQuery(query, cancelToken)).toObjectArray();
+      processQuery: async (query, signal) => {
+        return (await runSqlQuery(query, signal)).toObjectArray();
       },
     });
 

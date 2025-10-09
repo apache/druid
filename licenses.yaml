@@ -223,39 +223,9 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.18.4.1
+version: 2.19.2
 libraries:
   - com.fasterxml.jackson.core: jackson-core
-notice: |
-  # Jackson JSON processor
-
-  Jackson is a high-performance, Free/Open Source JSON processing library.
-  It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
-  been in development since 2007.
-  It is currently developed by a community of developers, as well as supported
-  commercially by FasterXML.com.
-
-  ## Licensing
-
-  Jackson core and extension components may licensed under different licenses.
-  To find the details that apply to this artifact see the accompanying LICENSE file.
-  For more information, including possible other licensing options, contact
-  FasterXML.com (http://fasterxml.com).
-
-  ## Credits
-
-  A list of contributors may be found from CREDITS file, which is included
-  in some artifacts (usually source distributions); but is always available
-  from the source code management (SCM) system project uses.
-
----
-
-name: Jackson
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 2.18.4
-libraries:
   - com.fasterxml.jackson.core: jackson-annotations
   - com.fasterxml.jackson.dataformat: jackson-dataformat-cbor
   - com.fasterxml.jackson.dataformat: jackson-dataformat-smile
@@ -296,7 +266,7 @@ name: Jackson
 license_category: binary
 module: extensions-contrib/druid-deltalake-extensions
 license_name: Apache License version 2.0
-version: 2.18.4
+version: 2.19.2
 libraries:
   - com.fasterxml.jackson.core: jackson-databind
 notice: |
@@ -697,7 +667,7 @@ name: Apache Commons Lang
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.17.0
+version: 3.18.0
 libraries:
   - org.apache.commons: commons-lang3
 notices:
@@ -799,7 +769,7 @@ name: pac4j-oidc java security library
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 4.5.7
+version: 5.7.3
 libraries:
   - org.pac4j: pac4j-oidc
 
@@ -809,9 +779,19 @@ name: pac4j-core java security library
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 4.5.7
+version: 5.7.3
 libraries:
   - org.pac4j: pac4j-core
+
+---
+
+name: pac4j-javaee java security library
+license_category: binary
+module: extensions/druid-pac4j
+license_name: Apache License version 2.0
+version: 5.7.3
+libraries:
+  - org.pac4j: pac4j-javaee
 
 ---
 
@@ -830,7 +810,7 @@ name: com.nimbusds nimbus-jose-jwt
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 8.22.1
+version: 9.37.2
 libraries:
   - com.nimbusds: nimbus-jose-jwt
 
@@ -840,7 +820,7 @@ name: com.nimbusds content-type
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 2.1
+version: 2.2
 libraries:
   - com.nimbusds: content-type
 
@@ -850,7 +830,7 @@ name: com.nimbusds oauth2-oidc-sdk
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 8.22
+version: 10.8
 libraries:
   - com.nimbusds: oauth2-oidc-sdk
 
@@ -880,7 +860,7 @@ name: kubernetes fabric java client
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 7.2.0
+version: 7.4.0
 libraries:
   - io.fabric8: kubernetes-client-api
   - io.fabric8: kubernetes-model-batch
@@ -1082,14 +1062,13 @@ libraries:
   - io.prometheus: simpleclient_tracer_otel
   - io.prometheus: simpleclient_tracer_otel_agent
 
-
 ---
 
 name: org.snakeyaml snakeyaml-engine
 license_category: binary
-module: extensions-core/druid-kubernetes-overlord-extensions
+module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 2.9
+version: "2.10"
 libraries:
   - org.snakeyaml: snakeyaml-engine
 
@@ -1097,9 +1076,9 @@ libraries:
 
 name: org.yaml snakeyaml
 license_category: binary
-module: extensions-core/druid-kubernetes-overlord-extensions
+module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 2.3
+version: 2.4
 libraries:
   - org.yaml: snakeyaml
 
@@ -1707,7 +1686,7 @@ name: Apache Calcite Avatica
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.25.0
+version: 1.26.0
 libraries:
   - org.apache.calcite.avatica: avatica-core
   - org.apache.calcite.avatica: avatica-metrics
@@ -2137,23 +2116,23 @@ notices:
 name: Jetty
 license_category: binary
 module: java-core
-license_name: Apache License version 2.0
-version: 9.4.57.v20241219
+license_name: Eclipse Public License 2.0
+version: 12.0.25
 libraries:
+  - org.eclipse.jetty: jetty-alpn-client
   - org.eclipse.jetty: jetty-client
-  - org.eclipse.jetty: jetty-continuation
   - org.eclipse.jetty: jetty-http
   - org.eclipse.jetty: jetty-io
-  - org.eclipse.jetty: jetty-proxy
   - org.eclipse.jetty: jetty-rewrite
   - org.eclipse.jetty: jetty-security
   - org.eclipse.jetty: jetty-server
-  - org.eclipse.jetty: jetty-servlet
-  - org.eclipse.jetty: jetty-servlets
+  - org.eclipse.jetty: jetty-session
   - org.eclipse.jetty: jetty-util
-  - org.eclipse.jetty: jetty-util-ajax
-  - org.eclipse.jetty: jetty-xml
-  - org.eclipse.jetty: jetty-webapp
+  - org.eclipse.jetty.ee8: jetty-ee8-nested
+  - org.eclipse.jetty.ee8: jetty-ee8-proxy
+  - org.eclipse.jetty.ee8: jetty-ee8-security
+  - org.eclipse.jetty.ee8: jetty-ee8-servlet
+  - org.eclipse.jetty.ee8: jetty-ee8-servlets
 notice: |
   ==============================================================
    Jetty Web Container
@@ -2544,7 +2523,7 @@ name: Gson
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 2.10.1
+version: 2.12.0
 libraries:
   - com.google.code.gson: gson
 
@@ -2884,7 +2863,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.18.4
+version: 2.19.2
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -3674,7 +3653,7 @@ name: Java Servlet API
 license_category: binary
 module: java-core
 license_name: CDDL 1.1
-version: 3.1.0
+version: 4.0.1
 copyright: Oracle and/or its affiliates.
 license_file_path: licenses/bin/javax.CDDL11
 libraries:
@@ -5834,7 +5813,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 1.1.5
+version: 1.2.0
 
 ---
 

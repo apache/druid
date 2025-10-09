@@ -193,6 +193,22 @@ public class CompactionResourceTestClient
     }
   }
 
+  public List<AutoCompactionSnapshot> getAllCompactionSnapshots()
+  {
+    String url = StringUtils.format("%s/compaction/status/datasources", getOverlordURL());
+
+    try {
+      final CompactionStatusResponse latestSnapshots = client.onLeaderOverlord(
+          mapper -> new RequestBuilder(HttpMethod.GET, url),
+          new TypeReference<>() {}
+      );
+      return Objects.requireNonNull(latestSnapshots).getLatestStatus();
+    }
+    catch (Exception e) {
+      return ServletResourceUtils.getDefaultValueIfCauseIs404ElseThrow(e, () -> null);
+    }
+  }
+
   public CompactionSimulateResult simulateRunOnCoordinator()
   {
     final ClusterCompactionConfig clusterConfig = getClusterConfig();

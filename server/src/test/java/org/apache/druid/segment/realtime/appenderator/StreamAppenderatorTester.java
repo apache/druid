@@ -113,7 +113,9 @@ public class StreamAppenderatorTester implements AutoCloseable
       final DataSegmentAnnouncer announcer,
       final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
       final ServiceEmitter serviceEmitter,
-      final PolicyEnforcer policyEnforcer
+      final PolicyEnforcer policyEnforcer,
+      final boolean releaseLocksOnHandoff,
+      final TaskIntervalUnlocker taskIntervalUnlocker
   )
   {
     objectMapper = new DefaultObjectMapper();
@@ -153,13 +155,14 @@ public class StreamAppenderatorTester implements AutoCloseable
         maxRowsInMemory,
         maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
         skipBytesInMemoryOverheadCheck,
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
         0,
         false,
         0L,
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
-        basePersistDirectory
+        basePersistDirectory,
+        releaseLocksOnHandoff
     );
 
     metrics = new SegmentGenerationMetrics();
@@ -250,7 +253,8 @@ public class StreamAppenderatorTester implements AutoCloseable
           policyEnforcer,
           rowIngestionMeters,
           new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-          centralizedDatasourceSchemaConfig
+          centralizedDatasourceSchemaConfig,
+          taskIntervalUnlocker
       );
     } else {
       SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
@@ -292,7 +296,8 @@ public class StreamAppenderatorTester implements AutoCloseable
           NoopPolicyEnforcer.instance(),
           rowIngestionMeters,
           new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-          centralizedDatasourceSchemaConfig
+          centralizedDatasourceSchemaConfig,
+          taskIntervalUnlocker
       );
     }
   }
@@ -357,6 +362,8 @@ public class StreamAppenderatorTester implements AutoCloseable
     private int delayInMilli = 0;
     private ServiceEmitter serviceEmitter;
     private PolicyEnforcer policyEnforcer = NoopPolicyEnforcer.instance();
+    private boolean releaseLocksOnHandoff;
+    private TaskIntervalUnlocker taskIntervalUnlocker = interval -> {};
 
     public Builder maxRowsInMemory(final int maxRowsInMemory)
     {
@@ -412,6 +419,18 @@ public class StreamAppenderatorTester implements AutoCloseable
       return this;
     }
 
+    public Builder releaseLocksOnHandoff(boolean releaseLocksOnHandoff)
+    {
+      this.releaseLocksOnHandoff = releaseLocksOnHandoff;
+      return this;
+    }
+
+    public Builder taskIntervalUnlocker(TaskIntervalUnlocker taskIntervalUnlocker)
+    {
+      this.taskIntervalUnlocker = taskIntervalUnlocker;
+      return this;
+    }
+
     public StreamAppenderatorTester build()
     {
       return new StreamAppenderatorTester(
@@ -425,7 +444,9 @@ public class StreamAppenderatorTester implements AutoCloseable
           new NoopDataSegmentAnnouncer(),
           CentralizedDatasourceSchemaConfig.create(),
           serviceEmitter,
-          policyEnforcer
+          policyEnforcer,
+          releaseLocksOnHandoff,
+          taskIntervalUnlocker
       );
     }
 
@@ -445,7 +466,9 @@ public class StreamAppenderatorTester implements AutoCloseable
           dataSegmentAnnouncer,
           config,
           serviceEmitter,
-          policyEnforcer
+          policyEnforcer,
+          releaseLocksOnHandoff,
+          taskIntervalUnlocker
       );
     }
   }

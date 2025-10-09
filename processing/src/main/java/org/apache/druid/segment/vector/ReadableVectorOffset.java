@@ -52,4 +52,17 @@ public interface ReadableVectorOffset extends ReadableVectorInspector
    * Throws an exception if "isContiguous" is true.
    */
   int[] getOffsets();
+
+  /**
+   * Gets the offset at a certain index. To be used in situations where the caller has no optimized path available for
+   * contiguous processing.
+   */
+  default int getOffset(int index)
+  {
+    if (isContiguous()) {
+      return getStartOffset() + index;
+    } else {
+      return getOffsets()[index];
+    }
+  }
 }

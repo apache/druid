@@ -85,7 +85,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       PolicyEnforcer policyEnforcer,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      TaskIntervalUnlocker taskIntervalUnlocker
   )
   {
     if (realtimeAppenderator != null) {
@@ -113,7 +114,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
           policyEnforcer,
           rowIngestionMeters,
           parseExceptionHandler,
-          centralizedDatasourceSchemaConfig
+          centralizedDatasourceSchemaConfig,
+          taskIntervalUnlocker
       );
     }
     return realtimeAppenderator;

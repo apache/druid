@@ -694,7 +694,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ImmutableList.of(
             StringDimensionSchema.create("strCol"),
             new DoubleDimensionSchema("dblCol"),
-            new AutoTypeColumnSchema("arrayCol", null)
+            AutoTypeColumnSchema.of("arrayCol")
         )
     );
     List<AggregatorFactory> metrics = ImmutableList.of(
@@ -743,7 +743,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
       ).persist(
           incrementalIndex,
           segmentDirectory,
-          IndexSpec.DEFAULT,
+          IndexSpec.getDefault(),
           null
       );
       segmentSize = FileUtils.getFileSize(segmentDirectory);
@@ -768,7 +768,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
             ImmutableList.of(
                 StringDimensionSchema.create("strCol"),
                 new DoubleDimensionSchema("dblCol"),
-                new AutoTypeColumnSchema("arrayCol", null)
+                AutoTypeColumnSchema.of("arrayCol")
             )
         ),
         ColumnsFilter.all(),
@@ -806,7 +806,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ImmutableList.of(
             StringDimensionSchema.create("strCol"),
             new DoubleDimensionSchema("dblCol"),
-            new AutoTypeColumnSchema("arrayCol", ColumnType.STRING_ARRAY)
+            new AutoTypeColumnSchema("arrayCol", ColumnType.STRING_ARRAY, null)
         )
     );
     List<AggregatorFactory> metrics = ImmutableList.of(
@@ -855,7 +855,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
       ).persist(
           incrementalIndex,
           segmentDirectory,
-          IndexSpec.DEFAULT,
+          IndexSpec.getDefault(),
           null
       );
       segmentSize = FileUtils.getFileSize(segmentDirectory);
@@ -880,7 +880,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
             ImmutableList.of(
                 StringDimensionSchema.create("strCol"),
                 new DoubleDimensionSchema("dblCol"),
-                new AutoTypeColumnSchema("arrayCol", ColumnType.STRING_ARRAY)
+                new AutoTypeColumnSchema("arrayCol", ColumnType.STRING_ARRAY, null)
             )
         ),
         ColumnsFilter.all(),
@@ -932,9 +932,21 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         new NoopSegmentCacheManager()
         {
           @Override
+          public void load(DataSegment segment)
+          {
+            // do nothing
+          }
+
+          @Override
           public File getSegmentFiles(DataSegment segment)
           {
             return segmentDirectory;
+          }
+
+          @Override
+          public void drop(DataSegment segment)
+          {
+            segmentDirectory.delete();
           }
         },
         DataSegment.builder()
@@ -1018,7 +1030,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
       ).persist(
           incrementalIndex,
           segmentDirectory,
-          IndexSpec.DEFAULT,
+          IndexSpec.getDefault(),
           null
       );
       segmentSize = FileUtils.getFileSize(segmentDirectory);

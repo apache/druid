@@ -141,6 +141,7 @@ public class MSQWorkerTask extends AbstractTask
   @Override
   public TaskStatus runTask(final TaskToolbox toolbox)
   {
+    emitMetric(toolbox.getEmitter(), "ingest/count", 1);
     try (final IndexerWorkerContext context = IndexerWorkerContext.createProductionInstance(this, toolbox, injector)) {
       // We'll run the worker in a separate thread, so we can interrupt the thread on shutdown or controller failure.
       final ListeningExecutorService workerExec =

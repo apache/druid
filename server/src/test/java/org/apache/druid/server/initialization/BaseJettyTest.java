@@ -31,12 +31,11 @@ import org.apache.druid.java.util.http.client.HttpClientInit;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
+import org.eclipse.jetty.ee8.servlet.DefaultServlet;
+import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee8.servlet.ServletHolder;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.HandlerList;
-import org.eclipse.jetty.servlet.DefaultServlet;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
 import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Before;
@@ -154,13 +153,12 @@ public abstract class BaseJettyTest
       JettyServerInitUtils.addExtensionFilters(root, injector);
       root.addFilter(GuiceFilter.class, "/*", null);
 
-      final HandlerList handlerList = new HandlerList();
-      handlerList.setHandlers(
-          new Handler[]{JettyServerInitUtils.wrapWithDefaultGzipHandler(
+      final Handler.Sequence handlerList = new Handler.Sequence(
+          JettyServerInitUtils.wrapWithDefaultGzipHandler(
               root,
               ServerConfig.DEFAULT_GZIP_INFLATE_BUFFER_SIZE,
               Deflater.DEFAULT_COMPRESSION
-          )}
+          )
       );
       server.setHandler(handlerList);
     }

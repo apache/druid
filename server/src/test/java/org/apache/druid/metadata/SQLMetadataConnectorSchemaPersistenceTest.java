@@ -50,13 +50,12 @@ public class SQLMetadataConnectorSchemaPersistenceTest
   public void testCreateTables()
   {
     final List<String> tables = new ArrayList<>();
-    final String entryType = tablesConfig.getTaskEntryType();
     tables.add(tablesConfig.getConfigTable());
     tables.add(tablesConfig.getSegmentSchemasTable());
     tables.add(tablesConfig.getSegmentsTable());
     tables.add(tablesConfig.getRulesTable());
-    tables.add(tablesConfig.getLockTable(entryType));
-    tables.add(tablesConfig.getEntryTable(entryType));
+    tables.add(tablesConfig.getTaskLockTable());
+    tables.add(tablesConfig.getTasksTable());
     tables.add(tablesConfig.getAuditTable());
     tables.add(tablesConfig.getSupervisorTable());
 
@@ -65,8 +64,8 @@ public class SQLMetadataConnectorSchemaPersistenceTest
     dropSequence.add(tablesConfig.getSegmentsTable());
     dropSequence.add(tablesConfig.getSegmentSchemasTable());
     dropSequence.add(tablesConfig.getRulesTable());
-    dropSequence.add(tablesConfig.getLockTable(entryType));
-    dropSequence.add(tablesConfig.getEntryTable(entryType));
+    dropSequence.add(tablesConfig.getTaskLockTable());
+    dropSequence.add(tablesConfig.getTasksTable());
     dropSequence.add(tablesConfig.getAuditTable());
     dropSequence.add(tablesConfig.getSupervisorTable());
 

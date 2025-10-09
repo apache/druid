@@ -70,7 +70,8 @@ class SqlResourceQueryResultPusher extends QueryResultPusher
         SqlResource.QUERY_METRIC_COUNTER,
         stmt.sqlQueryId(),
         MediaType.APPLICATION_JSON_TYPE,
-        headers
+        headers,
+        sqlQuery.getContext()
     );
     this.serverConfig = serverConfig;
     this.jsonMapper = jsonMapper;

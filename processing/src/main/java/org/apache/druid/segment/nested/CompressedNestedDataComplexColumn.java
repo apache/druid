@@ -36,11 +36,13 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseSingleValueDimensionSelector;
+import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.column.BaseColumn;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -73,6 +75,7 @@ import org.apache.druid.segment.vector.NilVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.utils.CloseableUtils;
@@ -97,14 +100,14 @@ import java.util.function.Function;
  * 'raw' {@link StructuredData} values and provides selectors for nested field columns specified by ordered lists of
  * {@link NestedPathPart}.
  * <p>
- * The list of available nested paths is stored in {@link #fields}, and their associated types stored in
- * {@link #fieldInfo} which can be accessed by the index of the field in {@link #fields}.
+ * The list of available nested paths is stored in {@link #fieldsSupplier}, and their associated types stored in
+ * {@link #fieldInfo} which can be accessed by the index of the field in {@link #fieldsSupplier}.
  * <p>
  * In the case that the nested column has only a single field, and that field is the 'root' path, specified by
  * {@link #rootFieldPath}, the selectors created for the complex column itself will use the 'root' path selectors
  * instead.
  */
-public abstract class CompressedNestedDataComplexColumn<TStringDictionary extends Indexed<ByteBuffer>>
+public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends Indexed<ByteBuffer>, TStringDictionary extends Indexed<ByteBuffer>>
     extends NestedDataComplexColumn implements NestedCommonFormatColumn
 {
   private static final Map<Class<?>, Function<CompressedNestedDataComplexColumn, ?>> AS_MAP =
@@ -116,7 +119,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   private final Closer closer;
   private final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
   private final ImmutableBitmap nullValues;
-  private final GenericIndexed<String> fields;
+  private final Supplier<TKeyDictionary> fieldsSupplier;
   private final FieldTypeInfo fieldInfo;
   private final Supplier<TStringDictionary> stringDictionarySupplier;
   private final Supplier<FixedIndexed<Long>> longDictionarySupplier;
@@ -129,7 +132,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   private final String columnName;
   private final BitmapSerdeFactory bitmapSerdeFactory;
   private final ByteOrder byteOrder;
-  private final ConcurrentHashMap<Integer, ColumnHolder> columns = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<Integer, BaseColumnHolder> columns = new ConcurrentHashMap<>();
   private CompressedVariableSizedBlobColumn compressedRawColumn;
 
   public CompressedNestedDataComplexColumn(
@@ -138,7 +141,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       @SuppressWarnings("unused") ColumnConfig columnConfig,
       CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
       ImmutableBitmap nullValues,
-      GenericIndexed<String> fields,
+      Supplier<TKeyDictionary> fieldsSupplier,
       FieldTypeInfo fieldInfo,
       Supplier<TStringDictionary> stringDictionary,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
@@ -153,7 +156,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     this.columnName = columnName;
     this.logicalType = logicalType;
     this.nullValues = nullValues;
-    this.fields = fields;
+    this.fieldsSupplier = fieldsSupplier;
     this.fieldInfo = fieldInfo;
     this.stringDictionarySupplier = stringDictionary;
     this.longDictionarySupplier = longDictionarySupplier;
@@ -177,9 +180,10 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   @Override
   public SortedMap<String, FieldTypeInfo.MutableTypeSet> getFieldTypeInfo()
   {
-    SortedMap<String, FieldTypeInfo.MutableTypeSet> fieldMap = new TreeMap<>();
+    final TKeyDictionary fields = fieldsSupplier.get();
+    final SortedMap<String, FieldTypeInfo.MutableTypeSet> fieldMap = new TreeMap<>();
     for (int i = 0; i < fields.size(); i++) {
-      String fieldPath = fields.get(i);
+      String fieldPath = StringUtils.fromUtf8(fields.get(i));
       FieldTypeInfo.TypeSet types = fieldInfo.getTypes(i);
       fieldMap.put(fieldPath, new FieldTypeInfo.MutableTypeSet(types.getByteValue()));
     }
@@ -195,9 +199,10 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   @Override
   public List<List<NestedPathPart>> getNestedFields()
   {
-    List<List<NestedPathPart>> fieldParts = new ArrayList<>(fields.size());
+    final TKeyDictionary fields = fieldsSupplier.get();
+    final List<List<NestedPathPart>> fieldParts = new ArrayList<>(fields.size());
     for (int i = 0; i < fields.size(); i++) {
-      fieldParts.add(parsePath(fields.get(i)));
+      fieldParts.add(parsePath(StringUtils.fromUtf8(fields.get(i))));
     }
     return fieldParts;
   }
@@ -335,9 +340,11 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
   {
-    if (!logicalType.equals(ColumnType.NESTED_DATA) && fields.size() == 1 && rootFieldPath.equals(fields.get(0))) {
+    final TKeyDictionary fields = fieldsSupplier.get();
+    if (!logicalType.equals(ColumnType.NESTED_DATA) && fields.size() == 1 && rootFieldPath.equals(StringUtils.fromUtf8(fields.get(0)))) {
       return makeColumnValueSelector(
           ImmutableList.of(),
+          null /* not used */,
           offset
       );
     }
@@ -375,9 +382,11 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   @Override
   public VectorObjectSelector makeVectorObjectSelector(ReadableVectorOffset offset)
   {
-    if (!logicalType.equals(ColumnType.NESTED_DATA) && fields.size() == 1 && rootFieldPath.equals(fields.get(0))) {
+    final TKeyDictionary fields = fieldsSupplier.get();
+    if (!logicalType.equals(ColumnType.NESTED_DATA) && fields.size() == 1 && rootFieldPath.equals(StringUtils.fromUtf8(fields.get(0)))) {
       return makeVectorObjectSelector(
           Collections.emptyList(),
+          null /* not used */,
           offset
       );
     }
@@ -446,9 +455,11 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   @Override
   public VectorValueSelector makeVectorValueSelector(ReadableVectorOffset offset)
   {
-    if (!logicalType.equals(ColumnType.NESTED_DATA) && fields.size() == 1 && rootFieldPath.equals(fields.get(0))) {
+    final TKeyDictionary fields = fieldsSupplier.get();
+    if (!logicalType.equals(ColumnType.NESTED_DATA) && fields.size() == 1 && rootFieldPath.equals(StringUtils.fromUtf8(fields.get(0)))) {
       return makeVectorValueSelector(
           Collections.emptyList(),
+          null /* not used */,
           offset
       );
     }
@@ -470,24 +481,33 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     CloseableUtils.closeAndWrapExceptions(closer);
   }
 
+  /**
+   * Create a selector for a nested path.
+   *
+   * @param path            the path
+   * @param selectorFactory unused
+   * @param readableOffset  offset for the selector
+   */
   @Override
   public DimensionSelector makeDimensionSelector(
       List<NestedPathPart> path,
-      ReadableOffset readableOffset,
-      ExtractionFn fn
+      ExtractionFn extractionFn,
+      ColumnSelectorFactory selectorFactory,
+      ReadableOffset readableOffset
   )
   {
+    final TKeyDictionary fields = fieldsSupplier.get();
     final String field = getField(path);
     Preconditions.checkNotNull(field, "Null field");
-    final int fieldIndex = fields.indexOf(field);
+    final int fieldIndex = fields.indexOf(StringUtils.toUtf8ByteBuffer(field));
     if (fieldIndex >= 0) {
       DictionaryEncodedColumn<?> col = (DictionaryEncodedColumn<?>) getColumnHolder(field, fieldIndex).getColumn();
-      return col.makeDimensionSelector(readableOffset, fn);
+      return col.makeDimensionSelector(readableOffset, extractionFn);
     }
     if (!path.isEmpty() && path.get(path.size() - 1) instanceof NestedPathArrayElement) {
       final NestedPathPart lastPath = path.get(path.size() - 1);
       final String arrayField = getField(path.subList(0, path.size() - 1));
-      final int arrayFieldIndex = fields.indexOf(arrayField);
+      final int arrayFieldIndex = fields.indexOf(StringUtils.toUtf8ByteBuffer(arrayField));
       if (arrayFieldIndex >= 0) {
         final int elementNumber = ((NestedPathArrayElement) lastPath).getIndex();
         if (elementNumber < 0) {
@@ -526,13 +546,25 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     return DimensionSelector.constant(null);
   }
 
+  /**
+   * Create a selector for a nested path.
+   *
+   * @param path            the path
+   * @param selectorFactory unused
+   * @param readableOffset  offset for the selector
+   */
   @Override
-  public ColumnValueSelector<?> makeColumnValueSelector(List<NestedPathPart> path, ReadableOffset readableOffset)
+  public ColumnValueSelector<?> makeColumnValueSelector(
+      List<NestedPathPart> path,
+      ColumnSelectorFactory selectorFactory,
+      ReadableOffset readableOffset
+  )
   {
+    final TKeyDictionary fields = fieldsSupplier.get();
     final String field = getField(path);
-    Preconditions.checkNotNull(field, "Null field");
 
-    final int fieldIndex = fields.indexOf(field);
+    Preconditions.checkNotNull(field, "Null field");
+    final int fieldIndex = fields.indexOf(StringUtils.toUtf8ByteBuffer(field));
     if (fieldIndex >= 0) {
       BaseColumn col = getColumnHolder(field, fieldIndex).getColumn();
       return col.makeColumnValueSelector(readableOffset);
@@ -540,7 +572,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     if (!path.isEmpty() && path.get(path.size() - 1) instanceof NestedPathArrayElement) {
       final NestedPathPart lastPath = path.get(path.size() - 1);
       final String arrayField = getField(path.subList(0, path.size() - 1));
-      final int arrayFieldIndex = fields.indexOf(arrayField);
+      final int arrayFieldIndex = fields.indexOf(StringUtils.toUtf8ByteBuffer(arrayField));
       if (arrayFieldIndex >= 0) {
         final int elementNumber = ((NestedPathArrayElement) lastPath).getIndex();
         if (elementNumber < 0) {
@@ -617,12 +649,14 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   @Override
   public SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(
       List<NestedPathPart> path,
+      VectorColumnSelectorFactory selectorFactory,
       ReadableVectorOffset readableOffset
   )
   {
+    final TKeyDictionary fields = fieldsSupplier.get();
     final String field = getField(path);
     Preconditions.checkNotNull(field, "Null field");
-    final int fieldIndex = fields.indexOf(field);
+    final int fieldIndex = fields.indexOf(StringUtils.toUtf8ByteBuffer(field));
     if (fieldIndex >= 0) {
       DictionaryEncodedColumn<?> col = (DictionaryEncodedColumn<?>) getColumnHolder(field, fieldIndex).getColumn();
       return col.makeSingleValueDimensionVectorSelector(readableOffset);
@@ -631,12 +665,24 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     }
   }
 
+  /**
+   * Create a selector for a nested path.
+   *
+   * @param path            the path
+   * @param selectorFactory unused
+   * @param readableOffset  offset for the selector
+   */
   @Override
-  public VectorObjectSelector makeVectorObjectSelector(List<NestedPathPart> path, ReadableVectorOffset readableOffset)
+  public VectorObjectSelector makeVectorObjectSelector(
+      List<NestedPathPart> path,
+      VectorColumnSelectorFactory selectorFactory,
+      ReadableVectorOffset readableOffset
+  )
   {
+    final TKeyDictionary fields = fieldsSupplier.get();
     final String field = getField(path);
     Preconditions.checkNotNull(field, "Null field");
-    final int fieldIndex = fields.indexOf(field);
+    final int fieldIndex = fields.indexOf(StringUtils.toUtf8ByteBuffer(field));
     if (fieldIndex >= 0) {
       BaseColumn col = getColumnHolder(field, fieldIndex).getColumn();
       return col.makeVectorObjectSelector(readableOffset);
@@ -644,7 +690,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     if (!path.isEmpty() && path.get(path.size() - 1) instanceof NestedPathArrayElement) {
       final NestedPathPart lastPath = path.get(path.size() - 1);
       final String arrayField = getField(path.subList(0, path.size() - 1));
-      final int arrayFieldIndex = fields.indexOf(arrayField);
+      final int arrayFieldIndex = fields.indexOf(StringUtils.toUtf8ByteBuffer(arrayField));
       if (arrayFieldIndex >= 0) {
         final int elementNumber = ((NestedPathArrayElement) lastPath).getIndex();
         if (elementNumber < 0) {
@@ -704,12 +750,24 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     return NilVectorSelector.create(readableOffset);
   }
 
+  /**
+   * Create a selector for a nested path.
+   *
+   * @param path            the path
+   * @param selectorFactory unused
+   * @param readableOffset  offset for the selector
+   */
   @Override
-  public VectorValueSelector makeVectorValueSelector(List<NestedPathPart> path, ReadableVectorOffset readableOffset)
+  public VectorValueSelector makeVectorValueSelector(
+      List<NestedPathPart> path,
+      VectorColumnSelectorFactory selectorFactory,
+      ReadableVectorOffset readableOffset
+  )
   {
+    final TKeyDictionary fields = fieldsSupplier.get();
     final String field = getField(path);
     Preconditions.checkNotNull(field, "Null field");
-    final int fieldIndex = fields.indexOf(field);
+    final int fieldIndex = fields.indexOf(StringUtils.toUtf8ByteBuffer(field));
     if (fieldIndex >= 0) {
       BaseColumn col = getColumnHolder(field, fieldIndex).getColumn();
       return col.makeVectorValueSelector(readableOffset);
@@ -717,7 +775,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     if (!path.isEmpty() && path.get(path.size() - 1) instanceof NestedPathArrayElement) {
       final NestedPathPart lastPath = path.get(path.size() - 1);
       final String arrayField = getField(path.subList(0, path.size() - 1));
-      final int arrayFieldIndex = fields.indexOf(arrayField);
+      final int arrayFieldIndex = fields.indexOf(StringUtils.toUtf8ByteBuffer(arrayField));
       if (arrayFieldIndex >= 0) {
         final int elementNumber = ((NestedPathArrayElement) lastPath).getIndex();
         if (elementNumber < 0) {
@@ -846,13 +904,14 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   @Override
   public Set<ColumnType> getFieldTypes(List<NestedPathPart> path)
   {
+    final TKeyDictionary fields = fieldsSupplier.get();
     String field = getField(path);
-    int index = fields.indexOf(field);
+    int index = fields.indexOf(StringUtils.toUtf8ByteBuffer(field));
     // if index is negative, check for an array element accessor in the path
     if (index < 0) {
       if (!path.isEmpty() && path.get(path.size() - 1) instanceof NestedPathArrayElement) {
         final String arrayField = getField(path.subList(0, path.size() - 1));
-        index = fields.indexOf(arrayField);
+        index = fields.indexOf(StringUtils.toUtf8ByteBuffer(arrayField));
       }
       if (index < 0) {
         return null;
@@ -877,12 +936,12 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   {
     final String field = getField(path);
     final Set<ColumnType> fieldTypes;
-    int index = fields.indexOf(field);
+    int index = fieldsSupplier.get().indexOf(StringUtils.toUtf8ByteBuffer(field));
     ColumnType leastRestrictiveType = null;
     if (index < 0) {
       if (!path.isEmpty() && path.get(path.size() - 1) instanceof NestedPathArrayElement) {
         final String arrayField = getField(path.subList(0, path.size() - 1));
-        index = fields.indexOf(arrayField);
+        index = fieldsSupplier.get().indexOf(StringUtils.toUtf8ByteBuffer(arrayField));
       }
       if (index < 0) {
         return null;
@@ -909,8 +968,9 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   @Override
   public ColumnHolder getColumnHolder(List<NestedPathPart> path)
   {
+    final TKeyDictionary fields = fieldsSupplier.get();
     final String field = getField(path);
-    final int fieldIndex = fields.indexOf(field);
+    final int fieldIndex = fields.indexOf(StringUtils.toUtf8ByteBuffer(field));
     return getColumnHolder(field, fieldIndex);
   }
 
@@ -918,14 +978,15 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   @Override
   public ColumnIndexSupplier getColumnIndexSupplier(List<NestedPathPart> path)
   {
+    final TKeyDictionary fields = fieldsSupplier.get();
     final String field = getField(path);
-    int fieldIndex = fields.indexOf(field);
+    int fieldIndex = fields.indexOf(StringUtils.toUtf8ByteBuffer(field));
     if (fieldIndex >= 0) {
       return getColumnHolder(field, fieldIndex).getIndexSupplier();
     }
     if (!path.isEmpty() && path.get(path.size() - 1) instanceof NestedPathArrayElement) {
       final String arrayField = getField(path.subList(0, path.size() - 1));
-      final int arrayFieldIndex = fields.indexOf(arrayField);
+      final int arrayFieldIndex = fields.indexOf(StringUtils.toUtf8ByteBuffer(arrayField));
       if (arrayFieldIndex >= 0) {
         return NoIndexesColumnIndexSupplier.getInstance();
       }
@@ -936,8 +997,9 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   @Override
   public boolean isNumeric(List<NestedPathPart> path)
   {
+    final TKeyDictionary fields = fieldsSupplier.get();
     final String field = getField(path);
-    final int fieldIndex = fields.indexOf(field);
+    final int fieldIndex = fields.indexOf(StringUtils.toUtf8ByteBuffer(field));
     if (fieldIndex < 0) {
       return true;
     }
@@ -947,19 +1009,23 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   @SuppressWarnings("unchecked")
   @Nullable
   @Override
-  public <T> T as(Class<? extends T> clazz)
+  public <T> T as(Class<T> clazz)
   {
-    //noinspection ReturnOfNull
-    return (T) AS_MAP.getOrDefault(clazz, arg -> null).apply(this);
+    final Function<CompressedNestedDataComplexColumn, ?> asFn = AS_MAP.get(clazz);
+    if (asFn != null) {
+      return (T) asFn.apply(this);
+    } else {
+      return super.as(clazz);
+    }
   }
 
-  private ColumnHolder getColumnHolder(String field, int fieldIndex)
+  private BaseColumnHolder getColumnHolder(String field, int fieldIndex)
   {
     return columns.computeIfAbsent(fieldIndex, (f) -> readNestedFieldColumn(field, fieldIndex));
   }
 
   @Nullable
-  private ColumnHolder readNestedFieldColumn(String field, int fieldIndex)
+  private BaseColumnHolder readNestedFieldColumn(String field, int fieldIndex)
   {
     try {
       if (fieldIndex < 0) {

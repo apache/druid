@@ -75,7 +75,7 @@ public class IndexBuilder
   private SegmentWriteOutMediumFactory segmentWriteOutMediumFactory = OffHeapMemorySegmentWriteOutMediumFactory.instance();
   private IndexMerger indexMerger;
   private File tmpDir;
-  private IndexSpec indexSpec = IndexSpec.DEFAULT;
+  private IndexSpec indexSpec = IndexSpec.getDefault();
   private int maxRows = DEFAULT_MAX_ROWS;
   private int intermediatePersistSize = ROWS_PER_INDEX_FOR_MERGING;
   private IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
@@ -465,10 +465,10 @@ public class IndexBuilder
     Preconditions.checkNotNull(inputSource, "inputSource");
     Preconditions.checkNotNull(inputFormat, "inputFormat");
     Preconditions.checkNotNull(inputSourceTmpDir, "inputSourceTmpDir");
-    TransformSpec tranformer = transformSpec != null ? transformSpec : TransformSpec.NONE;
+    TransformSpec transformer = transformSpec != null ? transformSpec : TransformSpec.NONE;
     InputRowSchema rowSchema = new InputRowSchema(schema.getTimestampSpec(), schema.getDimensionsSpec(), null);
     InputSourceReader reader = inputSource.reader(rowSchema, inputFormat, inputSourceTmpDir);
-    InputSourceReader transformingReader = tranformer.decorate(reader);
+    InputSourceReader transformingReader = transformer.decorate(reader);
     return transformingReader;
   }
 

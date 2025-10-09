@@ -80,21 +80,21 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
             new DoubleDimensionSchema("double"),
             new LongDimensionSchema("bool"),
             new StringDimensionSchema("variant"),
-            new AutoTypeColumnSchema("array", null),
-            new AutoTypeColumnSchema("nested", null)
+            AutoTypeColumnSchema.of("array"),
+            AutoTypeColumnSchema.of("nested")
         ),
         response.getLogicalDimensions()
     );
 
     Assert.assertEquals(
         ImmutableList.of(
-            new AutoTypeColumnSchema("string", null),
-            new AutoTypeColumnSchema("long", null),
-            new AutoTypeColumnSchema("double", null),
-            new AutoTypeColumnSchema("bool", null),
-            new AutoTypeColumnSchema("variant", null),
-            new AutoTypeColumnSchema("array", null),
-            new AutoTypeColumnSchema("nested", null)
+            AutoTypeColumnSchema.of("string"),
+            AutoTypeColumnSchema.of("long"),
+            AutoTypeColumnSchema.of("double"),
+            AutoTypeColumnSchema.of("bool"),
+            AutoTypeColumnSchema.of("variant"),
+            AutoTypeColumnSchema.of("array"),
+            AutoTypeColumnSchema.of("nested")
         ),
         response.getPhysicalDimensions()
     );
@@ -183,9 +183,9 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
                       new LongDimensionSchema("long"),
                       new DoubleDimensionSchema("double"),
                       new StringDimensionSchema("bool"),
-                      new AutoTypeColumnSchema("variant", null),
-                      new AutoTypeColumnSchema("array", null),
-                      new AutoTypeColumnSchema("nested", null)
+                      AutoTypeColumnSchema.of("variant"),
+                      AutoTypeColumnSchema.of("array"),
+                      AutoTypeColumnSchema.of("nested")
                   )
                   .build();
     final SamplerResponse response = inputSourceSampler.sample(

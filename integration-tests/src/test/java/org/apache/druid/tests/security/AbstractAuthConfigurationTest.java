@@ -284,7 +284,7 @@ public abstract class AbstractAuthConfigurationTest
     verifySystemSchemaServerQuery(
         adminClient,
         SYS_SCHEMA_SERVERS_QUERY,
-        getServersWithoutCurrentSizeAndStartTime(adminServers)
+        getServersWithoutNonConfigurableFields(adminServers)
     );
 
     LOG.info("Checking sys.server_segments query as admin...");
@@ -858,7 +858,7 @@ public abstract class AbstractAuthConfigurationTest
     String content = responseHolder.getContent();
     List<Map<String, Object>> responseMap = jsonMapper.readValue(content, SYS_SCHEMA_RESULTS_TYPE_REFERENCE);
     if (isServerQuery) {
-      responseMap = getServersWithoutCurrentSizeAndStartTime(responseMap);
+      responseMap = getServersWithoutNonConfigurableFields(responseMap);
     }
     Assert.assertEquals(responseMap, expectedResults);
   }
@@ -1005,7 +1005,7 @@ public abstract class AbstractAuthConfigurationTest
         SYS_SCHEMA_RESULTS_TYPE_REFERENCE
     );
 
-    adminServers = getServersWithoutCurrentSizeAndStartTime(
+    adminServers = getServersWithoutNonConfigurableFields(
         jsonMapper.readValue(
             fillServersTemplate(
                 config,
@@ -1025,10 +1025,12 @@ public abstract class AbstractAuthConfigurationTest
   }
 
   /**
-   * curr_size on historicals changes because cluster state is not isolated across different
+   * curr_size on historicals changes because cluster state is not isolated across
+   * different
    * integration tests, zero it out for consistent test results
+   * version and start_time are not configurable therefore we zero them as well
    */
-  protected static List<Map<String, Object>> getServersWithoutCurrentSizeAndStartTime(List<Map<String, Object>> servers)
+  protected static List<Map<String, Object>> getServersWithoutNonConfigurableFields(List<Map<String, Object>> servers)
   {
     return Lists.transform(
         servers,
@@ -1036,6 +1038,7 @@ public abstract class AbstractAuthConfigurationTest
           Map<String, Object> newServer = new HashMap<>(server);
           newServer.put("curr_size", 0);
           newServer.put("start_time", "0");
+          newServer.put("version", "0.0.0");
           return newServer;
         }
     );

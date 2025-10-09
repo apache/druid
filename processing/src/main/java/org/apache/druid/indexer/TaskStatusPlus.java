@@ -262,13 +262,13 @@ public class TaskStatusPlus
    * @param taskIdentifierInfo TaskInfo pair
    * @return corresponding TaskStatusPlus
    */
-  public static TaskStatusPlus fromTaskIdentifierInfo(TaskInfo<TaskIdentifier, TaskStatus> taskIdentifierInfo)
+  public static TaskStatusPlus fromTaskIdentifierInfo(TaskIdStatus taskIdentifierInfo)
   {
     TaskStatus status = taskIdentifierInfo.getStatus();
     return new TaskStatusPlus(
-        taskIdentifierInfo.getId(),
-        taskIdentifierInfo.getTask().getGroupId(),
-        taskIdentifierInfo.getTask().getType(),
+        taskIdentifierInfo.getTaskIdentifier().getId(),
+        taskIdentifierInfo.getTaskIdentifier().getGroupId(),
+        taskIdentifierInfo.getTaskIdentifier().getType(),
         taskIdentifierInfo.getCreatedTime(),
         DateTimes.EPOCH,
         status.getStatusCode(),

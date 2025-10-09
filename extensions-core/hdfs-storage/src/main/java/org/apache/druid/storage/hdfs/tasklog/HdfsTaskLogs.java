@@ -185,8 +185,9 @@ public class HdfsTaskLogs implements TaskLogs
     Path taskLogDir = new Path(config.getDirectory());
     FileSystem fs = taskLogDir.getFileSystem(hadoopConfig);
     if (fs.exists(taskLogDir)) {
+      FileStatus taskLogFileStatus = fs.getFileStatus(taskLogDir);
 
-      if (!fs.isDirectory(taskLogDir)) {
+      if (!taskLogFileStatus.isDirectory()) {
         throw new IOE("taskLogDir [%s] must be a directory.", taskLogDir);
       }
 

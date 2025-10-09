@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -84,6 +85,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.initialization.IndexerZkConfig;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.zookeeper.KeeperException;
@@ -129,8 +131,10 @@ import java.util.stream.Collectors;
  * workers to support deprecated RemoteTaskRunner. So a method "scheduleCompletedTaskStatusCleanupFromZk()" is added'
  * which should be removed in the release that removes RemoteTaskRunner legacy ZK updation WorkerTaskMonitor class.
  */
-public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
+public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, WorkerHolder.Listener
 {
+  public static final String TASK_DISCOVERED_COUNT = "task/discovered/count";
+
   private static final EmittingLogger log = new EmittingLogger(HttpRemoteTaskRunner.class);
 
   private final LifecycleLock lifecycleLock = new LifecycleLock();
@@ -611,17 +615,20 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           // tasks that we think are running on this worker. Provide that information to WorkerHolder that
           // manages the task syncing with that worker.
           for (Map.Entry<String, HttpRemoteTaskRunnerWorkItem> e : tasks.entrySet()) {
-            if (e.getValue().getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {
-              Worker w = e.getValue().getWorker();
-              if (w != null && w.getHost().equals(worker.getHost()) && e.getValue().getTask() != null) {
-                expectedAnnouncements.add(
-                    TaskAnnouncement.create(
-                        e.getValue().getTask(),
-                        TaskStatus.running(e.getKey()),
-                        e.getValue().getLocation()
-                    )
-                );
-              }
+            HttpRemoteTaskRunnerWorkItem workItem = e.getValue();
+            if (workItem.isRunningOnWorker(worker)) {
+              // This announcement is only used to notify when a task has disappeared on the worker
+              // So it is okay to set the dataSource and taskResource to null as they will not be used
+              expectedAnnouncements.add(
+                  TaskAnnouncement.create(
+                      workItem.getTaskId(),
+                      workItem.getTaskType(),
+                      null,
+                      TaskStatus.running(workItem.getTaskId()),
+                      workItem.getLocation(),
+                      null
+                  )
+              );
             }
           }
         }
@@ -630,7 +637,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             httpClient,
             config,
             workersSyncExec,
-            this::taskAddedOrUpdated,
+            this,
             worker,
             expectedAnnouncements
         );
@@ -1507,7 +1514,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     return Optional.fromNullable(provisioningService.getStats());
   }
 
-  @VisibleForTesting
+  @Override
   public void taskAddedOrUpdated(final TaskAnnouncement announcement, final WorkerHolder workerHolder)
   {
     final String taskId = announcement.getTaskId();
@@ -1543,6 +1550,9 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                   HttpRemoteTaskRunnerWorkItem.State.RUNNING
               );
               tasks.put(taskId, taskItem);
+              final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+              metricBuilder.setDimension(DruidMetrics.TASK_ID, taskId);
+              emitter.emit(metricBuilder.setMetric(TASK_DISCOVERED_COUNT, 1L));
               break;
             case SUCCESS:
             case FAILED:
@@ -1701,6 +1711,14 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       workerHolder.shutdownTask(taskId);
     }
 
+    synchronized (statusLock) {
+      statusLock.notifyAll();
+    }
+  }
+
+  @Override
+  public void stateChanged(boolean enabled, WorkerHolder workerHolder)
+  {
     synchronized (statusLock) {
       statusLock.notifyAll();
     }
@@ -1883,6 +1901,13 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       // It is possible to have it null when the TaskRunner is just started and discovered this taskId from a worker,
       // notifications don't contain whole Task instance but just metadata about the task.
       this.task = task;
+    }
+
+    public boolean isRunningOnWorker(Worker candidateWorker)
+    {
+      return getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING &&
+          getWorker() != null &&
+          Objects.equal(getWorker().getHost(), candidateWorker.getHost());
     }
 
     public Task getTask()

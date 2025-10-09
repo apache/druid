@@ -86,6 +86,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+
 @SqlTestFrameworkConfig.ComponentSupplier(NestedComponentSupplier.class)
 public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 {
@@ -152,11 +154,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       new TimestampSpec("t", "iso", null),
       DimensionsSpec.builder().setDimensions(
           ImmutableList.<DimensionSchema>builder()
-                       .add(new AutoTypeColumnSchema("string", null))
-                       .add(new AutoTypeColumnSchema("nest", null))
-                       .add(new AutoTypeColumnSchema("nester", null))
-                       .add(new AutoTypeColumnSchema("long", null))
-                       .add(new AutoTypeColumnSchema("string_sparse", null))
+                       .add(AutoTypeColumnSchema.of("string"))
+                       .add(AutoTypeColumnSchema.of("nest"))
+                       .add(AutoTypeColumnSchema.of("nester"))
+                       .add(AutoTypeColumnSchema.of("long"))
+                       .add(AutoTypeColumnSchema.of("string_sparse"))
                        .build()
       ).build(),
       null
@@ -167,8 +169,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       DimensionsSpec.builder().setDimensions(
           ImmutableList.<DimensionSchema>builder()
                        .add(new StringDimensionSchema("string"))
-                       .add(new AutoTypeColumnSchema("nest", null))
-                       .add(new AutoTypeColumnSchema("nester", null))
+                       .add(AutoTypeColumnSchema.of("nest"))
+                       .add(AutoTypeColumnSchema.of("nester"))
                        .add(new LongDimensionSchema("long"))
                        .add(new StringDimensionSchema("string_sparse"))
                        .build()
@@ -5452,13 +5454,15 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   public void testJoinOnNestedColumnThrows()
   {
     DruidException e = Assertions.assertThrows(DruidException.class, () -> {
-      testQuery(
-          "SELECT * FROM druid.nested a INNER JOIN druid.nested b ON a.nester = b.nester",
-          ImmutableList.of(),
-          ImmutableList.of()
-      );
+      testBuilder()
+          .sql("SELECT * FROM druid.nested a INNER JOIN druid.nested b ON a.nester = b.nester")
+          .run();
     });
-    Assertions.assertEquals("Cannot join when the join condition has column of type [COMPLEX<json>]", e.getMessage());
+
+    assertThat(
+        e.getMessage(),
+        CoreMatchers.containsString("Cannot join when the join condition has column of type [COMPLEX<json>]")
+    );
   }
 
   @Test
