@@ -50,12 +50,13 @@ export const TRANSFORM_FIELDS: Field<Transform>[] = [
   {
     name: 'expression',
     type: 'string',
-    placeholder: '"foo" + "bar"',
+    multiline: true,
+    placeholder: `ex: strlen(concat("foo", '-bar'))`,
     required: true,
     info: (
       <>
         A valid Druid{' '}
-        <ExternalLink href={`${getLink('DOCS')}/misc/math-expr`}>expression</ExternalLink>.
+        <ExternalLink href={`${getLink('DOCS')}/querying/math-expr`}>expression</ExternalLink>.
       </>
     ),
   },
