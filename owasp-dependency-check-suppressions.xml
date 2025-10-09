@@ -259,6 +259,17 @@
     <cve>CVE-2022-24823</cve> <!-- We don't decode user HTTP requests nor forward them to remote systems, we also don't support for java 6 or lower - https://github.com/advisories/GHSA-269q-hmxg-m83q -->
     <cve>CVE-2022-41881</cve>
     <cve>CVE-2023-34462</cve>	<!-- Suppressed since netty requests in Druid are internal, and not user-facing -->
+    <cve>CVE-2025-55163</cve> <!-- 8.2 -->
+    <cve>CVE-2025-58056</cve>
+    <cve>CVE-2025-58057</cve>
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+   file name: icu4j-77.1.jar
+   ]]></notes>
+      <packageUrl regex="true">^pkg:maven/com\.ibm\.icu/icu4j@77.1$</packageUrl>
+      <cve>CVE-2025-5222</cve> <!-- False positive: https://github.com/dependency-check/DependencyCheck/issues/7860 -->
   </suppress>
 
   <suppress>
@@ -423,6 +434,9 @@
     <cve>CVE-2023-39410</cve> <!-- This seems to be a legitimate vulnerability. But there is no fix as of yet in Hadoop repo -->
     <cve>CVE-2023-44487</cve> <!-- Occurs in the version of Hadoop used by Jetty, but it hasn't been fixed by Hadoop yet-->
     <cve>CVE-2023-36478</cve> <!-- Occurs in the version of Hadoop used by Jetty, but it hasn't been fixed by Hadoop yet-->
+    <cve>CVE-2025-48734</cve> <!-- 8.8 -->
+    <cve>CVE-2023-52428</cve> <!-- 7.5 -->
+    <cve>CVE-2024-13009</cve> <!-- 7.2 -->
   </suppress>
 
   <suppress>
