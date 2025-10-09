@@ -212,7 +212,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     if (ioConfig != null) {
       this.ioConfig = ioConfig;
     } else if (interval != null) {
-      this.ioConfig = new CompactionIOConfig(new CompactionIntervalSpec(interval, null), false, null);
+      this.ioConfig = new CompactionIOConfig(new CompactionIntervalSpec(interval, null, null), false, null);
     } else {
       // We already checked segments is not null or empty above.
       //noinspection ConstantConditions
@@ -242,7 +242,10 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
     this.projections = projections;
     this.tuningConfig = tuningConfig != null ? getTuningConfig(tuningConfig) : null;
-    this.segmentProvider = new SegmentProvider(dataSource, this.ioConfig.getInputSpec());
+    this.segmentProvider = new SegmentProvider(
+        this.ioConfig.getInputSpec().getDataSource() == null ? dataSource : this.ioConfig.getInputSpec().getDataSource(),
+        this.ioConfig.getInputSpec()
+    );
     // Note: The default compactionRunnerType used here should match the default runner used in CompactSegments#run
     // when no runner is detected in the returned compactionTaskQuery.
     this.compactionRunner = compactionRunner == null
@@ -517,6 +520,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     emitMetric(toolbox.getEmitter(), "ingest/count", 1);
 
     final Map<Interval, DataSchema> intervalDataSchemas = createDataSchemasForIntervals(
+        getDataSource(),
         toolbox,
         getTaskLockHelper().getLockGranularityToUse(),
         segmentProvider,
@@ -548,6 +552,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
    */
   @VisibleForTesting
   static Map<Interval, DataSchema> createDataSchemasForIntervals(
+      final String dataSource,
       final TaskToolbox toolbox,
       final LockGranularity lockGranularityInUse,
       final SegmentProvider segmentProvider,
@@ -613,7 +618,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         final DataSchema dataSchema = createDataSchema(
             toolbox.getEmitter(),
             metricBuilder,
-            segmentProvider.dataSource,
+            dataSource,
             interval,
             lazyFetchSegments(segmentsToCompact, toolbox.getSegmentCacheManager()),
             dimensionsSpec,
@@ -633,7 +638,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       final DataSchema dataSchema = createDataSchema(
           toolbox.getEmitter(),
           metricBuilder,
-          segmentProvider.dataSource,
+          dataSource,
           JodaUtils.umbrellaInterval(
               Iterables.transform(
                   timelineSegments,
@@ -1275,7 +1280,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
 
     public Builder interval(Interval interval)
     {
-      return inputSpec(new CompactionIntervalSpec(interval, null));
+      return inputSpec(new CompactionIntervalSpec(interval, null, null));
     }
 
     public Builder segments(List<DataSegment> segments)

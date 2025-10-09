@@ -87,7 +87,7 @@ public class CompactionTaskTest extends CompactionTestBase
       () -> TaskBuilder
           .ofTypeCompact()
           .context("storeCompactionState", true)
-          .ioConfig(new CompactionIntervalSpec(Intervals.of("2013-08-31/2013-09-02"), null), false);
+          .ioConfig(new CompactionIntervalSpec(Intervals.of("2013-08-31/2013-09-02"), null, null), false);
   private static final Supplier<TaskBuilder.Compact> PARALLEL_COMPACTION_TASK =
       () -> COMPACTION_TASK.get().tuningConfig(
           t -> t.withPartitionsSpec(new HashedPartitionsSpec(null, null, null))
@@ -98,7 +98,7 @@ public class CompactionTaskTest extends CompactionTestBase
       () -> TaskBuilder
           .ofTypeCompact()
           .context("storeCompactionState", true)
-          .ioConfig(new CompactionIntervalSpec(Intervals.of("2013-08-31/2013-09-02"), null), true);
+          .ioConfig(new CompactionIntervalSpec(Intervals.of("2013-08-31/2013-09-02"), null, null), true);
 
   private static final Supplier<TaskBuilder.Index> INDEX_TASK_WITH_TIMESTAMP =
       () -> MoreResources.Task.INDEX_TASK_WITH_AGGREGATORS.get().dimensions(

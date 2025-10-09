@@ -679,7 +679,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final CompactionTask compactionTask1 = compactionTaskBuilder()
         .ioConfig(
             new CompactionIOConfig(
-                new CompactionIntervalSpec(Intervals.of("2014-01-01/2014-01-02"), null),
+                new CompactionIntervalSpec(Intervals.of("2014-01-01/2014-01-02"), null, null),
                 false,
                 null
             )
@@ -709,7 +709,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final CompactionTask compactionTask1 = compactionTaskBuilder()
         .ioConfig(
             new CompactionIOConfig(
-                new CompactionIntervalSpec(Intervals.of("2014-01-01/2014-01-02"), null),
+                new CompactionIntervalSpec(Intervals.of("2014-01-01/2014-01-02"), null, null),
                 true,
                 null
             )
@@ -1111,7 +1111,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final CompactionTask partialCompactionTask = compactionTaskBuilder()
         .segmentGranularity(Granularities.MINUTE)
         // Set dropExisting to true
-        .inputSpec(new CompactionIntervalSpec(compactionPartialInterval, null), true)
+        .inputSpec(new CompactionIntervalSpec(compactionPartialInterval, null, null), true)
         .build();
     final Pair<TaskStatus, DataSegmentsWithSchemas> partialCompactionResult = runTask(partialCompactionTask);
     verifySchema(partialCompactionResult.rhs);
@@ -1173,7 +1173,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final CompactionTask fullCompactionTask = compactionTaskBuilder()
         .segmentGranularity(null)
         // Set dropExisting to true
-        .inputSpec(new CompactionIntervalSpec(Intervals.of("2014-01-01/2014-01-02"), null), true)
+        .inputSpec(new CompactionIntervalSpec(Intervals.of("2014-01-01/2014-01-02"), null, null), true)
         .build();
 
     // **** FULL COMPACTION ****
@@ -1263,7 +1263,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final CompactionTask partialCompactionTask = compactionTaskBuilder()
         .segmentGranularity(Granularities.MINUTE)
         // Set dropExisting to true
-        .inputSpec(new CompactionIntervalSpec(compactionPartialInterval, null), true)
+        .inputSpec(new CompactionIntervalSpec(compactionPartialInterval, null, null), true)
         .build();
     final Pair<TaskStatus, DataSegmentsWithSchemas> partialCompactionResult = runTask(partialCompactionTask);
     verifySchema(partialCompactionResult.rhs);
@@ -1317,7 +1317,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .segmentGranularity(null)
         // Set dropExisting to true
         // last 59 minutes of our 01, should be all tombstones
-        .inputSpec(new CompactionIntervalSpec(Intervals.of("2014-01-01T01:01:00/2014-01-01T02:00:00"), null), true)
+        .inputSpec(new CompactionIntervalSpec(Intervals.of("2014-01-01T01:01:00/2014-01-01T02:00:00"), null, null), true)
         .build();
 
     // **** Compaction over tombstones ****
@@ -1355,7 +1355,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final CompactionTask partialCompactionTask = compactionTaskBuilder()
         .segmentGranularity(Granularities.MINUTE)
         // Set dropExisting to false
-        .inputSpec(new CompactionIntervalSpec(partialInterval, null), false)
+        .inputSpec(new CompactionIntervalSpec(partialInterval, null, null), false)
         .build();
 
     final Pair<TaskStatus, DataSegmentsWithSchemas> partialCompactionResult = runTask(partialCompactionTask);
@@ -1377,7 +1377,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final CompactionTask fullCompactionTask = compactionTaskBuilder()
         .segmentGranularity(null)
         // Set dropExisting to false
-        .inputSpec(new CompactionIntervalSpec(Intervals.of("2014-01-01/2014-01-02"), null), false)
+        .inputSpec(new CompactionIntervalSpec(Intervals.of("2014-01-01/2014-01-02"), null, null), false)
         .build();
 
     final Pair<TaskStatus, DataSegmentsWithSchemas> fullCompactionResult = runTask(fullCompactionTask);

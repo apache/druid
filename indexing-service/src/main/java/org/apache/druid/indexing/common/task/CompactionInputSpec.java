@@ -51,4 +51,9 @@ public interface CompactionInputSpec
    * @param latestSegments       most recent published segments in the interval returned by {@link #findInterval}
    */
   boolean validateSegments(LockGranularity lockGranularityInUse, List<DataSegment> latestSegments);
+
+  /**
+   * Return the datasource to be used as input to the compaction task.
+   */
+  String getDataSource();
 }

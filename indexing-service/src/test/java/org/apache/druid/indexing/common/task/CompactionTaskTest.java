@@ -375,7 +375,7 @@ public class CompactionTaskTest
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
-    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS), null));
     builder.tuningConfig(createTuningConfig());
     builder.segmentGranularity(Granularities.HOUR);
     final CompactionTask taskCreatedWithSegmentGranularity = builder.build();
@@ -384,7 +384,7 @@ public class CompactionTaskTest
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
-    builder2.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder2.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS), null));
     builder2.tuningConfig(createTuningConfig());
     builder2.granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.HOUR, Granularities.DAY, null));
     final CompactionTask taskCreatedWithGranularitySpec = builder2.build();
@@ -401,7 +401,7 @@ public class CompactionTaskTest
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
-    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS), null));
     builder.tuningConfig(createTuningConfig());
     builder.segmentGranularity(Granularities.HOUR);
     builder.granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.MINUTE, Granularities.DAY, null));
@@ -431,7 +431,7 @@ public class CompactionTaskTest
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
-    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS), null));
     builder.tuningConfig(createTuningConfig());
     builder.transformSpec(transformSpec);
     final CompactionTask taskCreatedWithTransformSpec = builder.build();
@@ -449,7 +449,7 @@ public class CompactionTaskTest
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
-    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS), null));
     builder.tuningConfig(createTuningConfig());
     builder.metricsSpec(aggregatorFactories);
     final CompactionTask taskCreatedWithTransformSpec = builder.build();
@@ -466,7 +466,7 @@ public class CompactionTaskTest
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
-    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS), null));
     builder.tuningConfig(createTuningConfig());
     builder.segmentGranularity(Granularities.HOUR);
     builder.granularitySpec(new ClientCompactionTaskGranularitySpec(null, Granularities.DAY, null));
@@ -494,7 +494,7 @@ public class CompactionTaskTest
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
-    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS), null));
     builder.tuningConfig(createTuningConfig());
     builder.segmentGranularity(Granularities.HOUR);
     builder.granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.HOUR, Granularities.DAY, null));
@@ -511,7 +511,7 @@ public class CompactionTaskTest
     );
     final CompactionTask task = builder
         .inputSpec(
-            new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS))
+            new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS), null)
         )
         .tuningConfig(createTuningConfig())
         .context(ImmutableMap.of("testKey", "testContext"))
@@ -666,7 +666,7 @@ public class CompactionTaskTest
     );
     final CompactionTask task = builder
         .inputSpec(
-            new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS))
+            new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS), null)
         )
         .tuningConfig(createTuningConfig())
         .context(ImmutableMap.of("testKey", "testContext"))
@@ -770,7 +770,7 @@ public class CompactionTaskTest
   {
     final SegmentProvider provider = new SegmentProvider(
         "datasource",
-        new CompactionIntervalSpec(Intervals.of("2021-01-01/P1D"), null)
+        new CompactionIntervalSpec(Intervals.of("2021-01-01/P1D"), null, null)
     );
 
     expectedException.expect(IllegalStateException.class);
@@ -784,9 +784,10 @@ public class CompactionTaskTest
   public void testCreateIngestionSchema() throws IOException
   {
     final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null, null)),
         null,
         null,
         null,
@@ -847,9 +848,10 @@ public class CompactionTaskTest
         .build();
 
     final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null, null)),
         null,
         null,
         null,
@@ -911,9 +913,10 @@ public class CompactionTaskTest
         .build();
 
     final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null, null)),
         null,
         null,
         null,
@@ -976,9 +979,10 @@ public class CompactionTaskTest
         .build();
 
     final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null, null)),
         null,
         null,
         null,
@@ -1048,9 +1052,10 @@ public class CompactionTaskTest
     );
 
     final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null, null)),
         customSpec,
         null,
         null,
@@ -1100,9 +1105,10 @@ public class CompactionTaskTest
     };
 
     final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null, null)),
         null,
         null,
         customMetricsSpec,
@@ -1145,9 +1151,10 @@ public class CompactionTaskTest
   public void testCreateIngestionSchemaWithCustomSegments() throws IOException
   {
     final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null, null)),
         null,
         null,
         null,
@@ -1197,6 +1204,7 @@ public class CompactionTaskTest
     // Remove one segment in the middle
     segments.remove(segments.size() / 2);
     final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(segments)),
@@ -1229,6 +1237,7 @@ public class CompactionTaskTest
     indexIO.removeMetadata(Iterables.getFirst(indexIO.getQueryableIndexMap().keySet(), null));
     final List<DataSegment> segments = new ArrayList<>(SEGMENTS);
     final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(segments)),
@@ -1272,9 +1281,10 @@ public class CompactionTaskTest
   public void testSegmentGranularityAndNullQueryGranularity() throws IOException
   {
     final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null, null)),
         null,
         null,
         null,
@@ -1318,9 +1328,10 @@ public class CompactionTaskTest
   public void testQueryGranularityAndNullSegmentGranularity() throws IOException
   {
     final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null, null)),
         null,
         null,
         null,
@@ -1361,9 +1372,10 @@ public class CompactionTaskTest
   public void testQueryGranularityAndSegmentGranularityNonNull() throws IOException
   {
     final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null, null)),
         null,
         null,
         null,
@@ -1414,9 +1426,10 @@ public class CompactionTaskTest
   public void testNullGranularitySpec() throws IOException
   {
     final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null, null)),
         null,
         null,
         null,
@@ -1461,9 +1474,10 @@ public class CompactionTaskTest
       throws IOException
   {
     final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null, null)),
         null,
         null,
         null,
@@ -1508,9 +1522,10 @@ public class CompactionTaskTest
       throws IOException
   {
     final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null, null)),
         null,
         null,
         null,
@@ -1540,9 +1555,10 @@ public class CompactionTaskTest
       throws IOException
   {
     final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null, null)),
         null,
         null,
         null,
@@ -1574,9 +1590,10 @@ public class CompactionTaskTest
       throws IOException
   {
     final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+        DATA_SOURCE,
         toolbox,
         LockGranularity.TIME_CHUNK,
-        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null, null)),
         null,
         null,
         null,
@@ -1598,7 +1615,7 @@ public class CompactionTaskTest
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
-    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS), null));
     builder.compactionRunner(new TestMSQCompactionRunner());
     final CompactionTask compactionTask = builder.build();
     // granularitySpec=null should assume a possible rollup
@@ -1612,7 +1629,7 @@ public class CompactionTaskTest
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
-    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS), null));
     builder.compactionRunner(new TestMSQCompactionRunner());
     builder.tuningConfig(TuningConfigBuilder.forCompactionTask()
                                             .withForceGuaranteedRollup(true)
@@ -1636,7 +1653,7 @@ public class CompactionTaskTest
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
-    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS), null));
     builder.compactionRunner(new TestMSQCompactionRunner());
     builder.granularitySpec(new ClientCompactionTaskGranularitySpec(null, null, true));
 
@@ -1654,7 +1671,7 @@ public class CompactionTaskTest
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
-    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS), null));
     builder.compactionRunner(new TestMSQCompactionRunner());
 
     DimensionSchema stringDim = new StringDimensionSchema("string_dim_1", null, null);

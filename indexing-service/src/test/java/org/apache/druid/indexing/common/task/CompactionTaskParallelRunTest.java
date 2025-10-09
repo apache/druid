@@ -178,7 +178,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         getSegmentCacheManagerFactory()
     );
     final CompactionTask compactionTask = builder
-        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null, null))
         .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
         .build();
 
@@ -230,7 +230,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         getSegmentCacheManagerFactory()
     );
     final CompactionTask compactionTask = builder
-        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null, null))
         .tuningConfig(newTuningConfig(new HashedPartitionsSpec(null, 3, null), 2, true))
         .build();
 
@@ -293,7 +293,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         getSegmentCacheManagerFactory()
     );
     final CompactionTask compactionTask = builder
-        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null, null))
         .tuningConfig(newTuningConfig(new SingleDimensionPartitionsSpec(7, null, "dim", false), 2, true))
         .build();
 
@@ -342,7 +342,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     );
 
     final CompactionTask compactionTask = builder
-        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null, null))
         .tuningConfig(newTuningConfig(new SingleDimensionPartitionsSpec(7, null, "dim", false), 2, true))
         .dimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))))
         .metricsSpec(new AggregatorFactory[]{new LongSumAggregatorFactory("val", "val")})
@@ -396,7 +396,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         getSegmentCacheManagerFactory()
     );
     final CompactionTask compactionTask = builder
-        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null, null))
         .tuningConfig(newTuningConfig(
             new DimensionRangePartitionsSpec(7, null, Arrays.asList("dim1", "dim2"), false),
             2,
@@ -447,7 +447,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         getSegmentCacheManagerFactory()
     );
     final CompactionTask compactionTask = builder
-        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null, null))
         .tuningConfig(newTuningConfig(new SingleDimensionPartitionsSpec(7, null, "dim", false), 1, true))
         .build();
 
@@ -495,7 +495,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         getSegmentCacheManagerFactory()
     );
     final CompactionTask compactionTask = builder
-        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null, null))
         .tuningConfig(newTuningConfig(
             new DimensionRangePartitionsSpec(7, null, Arrays.asList("dim1", "dim2"), false),
             1,
@@ -543,7 +543,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         getSegmentCacheManagerFactory()
     );
     final CompactionTask compactionTask = builder
-        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null, null))
         .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
         .context(ImmutableMap.of(Tasks.STORE_COMPACTION_STATE_KEY, false))
         .build();
@@ -573,7 +573,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         getSegmentCacheManagerFactory()
     );
     final CompactionTask compactionTask = builder
-        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null, null))
         .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
         .transformSpec(new CompactionTransformSpec(new SelectorDimFilter("dim", "a", null)))
         .build();
@@ -624,7 +624,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         getSegmentCacheManagerFactory()
     );
     final CompactionTask compactionTask = builder
-        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null, null))
         .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
         .metricsSpec(new AggregatorFactory[]{
             new CountAggregatorFactory("cnt"),
@@ -679,7 +679,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         getSegmentCacheManagerFactory()
     );
     final CompactionTask compactionTask = builder
-        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null, null))
         .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
         .build();
 
@@ -728,7 +728,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         getSegmentCacheManagerFactory()
     );
     final CompactionTask compactionTask = builder
-        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null, null))
         .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
         .build();
 
@@ -820,7 +820,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     );
     final CompactionTask compactionTask = builder
         // Set the dropExisting flag to true in the IOConfig of the compaction task
-        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null), true)
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null, null), true)
         .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
         .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.MINUTE, null, null))
         .build();
@@ -865,7 +865,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         getSegmentCacheManagerFactory()
     );
     final CompactionTask compactionTask = builder
-        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null, null))
         .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
         .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.MINUTE, null, null))
         .build();
@@ -906,7 +906,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         getSegmentCacheManagerFactory()
     );
     final CompactionTask compactionTask = builder
-        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null, null))
         .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
         .build();
 
@@ -959,7 +959,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
                                .aggregators(new LongSumAggregatorFactory("val", "val"))
                                .build();
     final CompactionTask compactionTask = builder
-        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null, null))
         .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
         .projections(
             ImmutableList.of(

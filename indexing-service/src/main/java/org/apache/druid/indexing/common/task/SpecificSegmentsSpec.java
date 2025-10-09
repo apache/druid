@@ -28,6 +28,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -39,18 +40,26 @@ public class SpecificSegmentsSpec implements CompactionInputSpec
 
   private final List<String> segments;
 
+  @Nullable
+  private final String dataSource;
+
   public static SpecificSegmentsSpec fromSegments(List<DataSegment> segments)
   {
     Preconditions.checkArgument(!segments.isEmpty(), "Empty segment list");
     return new SpecificSegmentsSpec(
-        segments.stream().map(segment -> segment.getId().toString()).collect(Collectors.toList())
+        segments.stream().map(segment -> segment.getId().toString()).collect(Collectors.toList()),
+        null
     );
   }
 
   @JsonCreator
-  public SpecificSegmentsSpec(@JsonProperty("segments") List<String> segments)
+  public SpecificSegmentsSpec(
+      @JsonProperty("segments") List<String> segments,
+      @JsonProperty("dataSource") @Nullable String dataSource
+  )
   {
     this.segments = segments;
+    this.dataSource = dataSource;
     // Sort segments to use in validateSegments.
     Collections.sort(this.segments);
   }
@@ -59,6 +68,14 @@ public class SpecificSegmentsSpec implements CompactionInputSpec
   public List<String> getSegments()
   {
     return segments;
+  }
+
+  @Override
+  @Nullable
+  @JsonProperty
+  public String getDataSource()
+  {
+    return dataSource;
   }
 
   @Override

@@ -53,12 +53,14 @@ public class CompactionInputSpecTest
         new Object[]{
             new CompactionIntervalSpec(
                 INTERVAL,
-                SegmentUtils.hashIds(SEGMENTS)
+                SegmentUtils.hashIds(SEGMENTS),
+                null
             )
         },
         new Object[]{
             new SpecificSegmentsSpec(
-                SEGMENTS.stream().map(segment -> segment.getId().toString()).collect(Collectors.toList())
+                SEGMENTS.stream().map(segment -> segment.getId().toString()).collect(Collectors.toList()),
+                null
             )
         }
     );

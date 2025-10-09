@@ -43,11 +43,14 @@ public class CompactionIntervalSpec implements CompactionInputSpec
   private final Interval interval;
   @Nullable
   private final String sha256OfSortedSegmentIds;
+  @Nullable
+  private final String dataSource;
 
   @JsonCreator
   public CompactionIntervalSpec(
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("sha256OfSortedSegmentIds") @Nullable String sha256OfSortedSegmentIds
+      @JsonProperty("sha256OfSortedSegmentIds") @Nullable String sha256OfSortedSegmentIds,
+      @JsonProperty("dataSource") @Nullable String dataSource
   )
   {
     if (interval != null && interval.toDurationMillis() == 0) {
@@ -55,6 +58,7 @@ public class CompactionIntervalSpec implements CompactionInputSpec
     }
     this.interval = interval;
     this.sha256OfSortedSegmentIds = sha256OfSortedSegmentIds;
+    this.dataSource = dataSource;
   }
 
   @JsonProperty
@@ -68,6 +72,14 @@ public class CompactionIntervalSpec implements CompactionInputSpec
   public String getSha256OfSortedSegmentIds()
   {
     return sha256OfSortedSegmentIds;
+  }
+
+  @Override
+  @Nullable
+  @JsonProperty
+  public String getDataSource()
+  {
+    return dataSource;
   }
 
   @Override
@@ -97,21 +109,19 @@ public class CompactionIntervalSpec implements CompactionInputSpec
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) {
-      return true;
-    }
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
     CompactionIntervalSpec that = (CompactionIntervalSpec) o;
     return Objects.equals(interval, that.interval) &&
-           Objects.equals(sha256OfSortedSegmentIds, that.sha256OfSortedSegmentIds);
+           Objects.equals(sha256OfSortedSegmentIds, that.sha256OfSortedSegmentIds) &&
+           Objects.equals(dataSource, that.dataSource);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(interval, sha256OfSortedSegmentIds);
+    return Objects.hash(interval, sha256OfSortedSegmentIds, dataSource);
   }
 
   @Override
@@ -119,7 +129,8 @@ public class CompactionIntervalSpec implements CompactionInputSpec
   {
     return "CompactionIntervalSpec{" +
            "interval=" + interval +
-           ", sha256OfSegmentIds='" + sha256OfSortedSegmentIds + '\'' +
+           ", sha256OfSortedSegmentIds='" + sha256OfSortedSegmentIds + '\'' +
+           ", dataSource='" + dataSource + '\'' +
            '}';
   }
 }

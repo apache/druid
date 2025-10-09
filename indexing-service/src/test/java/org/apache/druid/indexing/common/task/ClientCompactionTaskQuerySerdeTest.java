@@ -341,7 +341,7 @@ public class ClientCompactionTaskQuerySerdeTest
         "datasource",
         new SegmentCacheManagerFactory(TestIndex.INDEX_IO, MAPPER)
     )
-        .inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"), true)
+        .inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds", null), true)
         .tuningConfig(
             TuningConfigBuilder
                 .forParallelIndexTask()

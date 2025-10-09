@@ -688,7 +688,7 @@ public class MSQCompactionRunnerTest
     context.putAll(contextParams);
 
     builder
-        .inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, null))
+        .inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, null, null))
         .tuningConfig(createTuningConfig(
             indexSpec,
             partitionsSpec == null ? new DynamicPartitionsSpec(100, null) : partitionsSpec
