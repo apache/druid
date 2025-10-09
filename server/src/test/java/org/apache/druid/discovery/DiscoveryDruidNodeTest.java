@@ -58,7 +58,7 @@ public class DiscoveryDruidNodeTest
   public void testEquals()
   {
     EqualsVerifier.forClass(DiscoveryDruidNode.class)
-                  .withNonnullFields("druidNode", "nodeRole", "services")
+                  .withNonnullFields("druidNode", "nodeRole", "services", "availableProcessors", "totalMemory")
                   .withIgnoredFields("startTime")
                   .usingGetClass()
                   .verify();
@@ -155,7 +155,9 @@ public class DiscoveryDruidNodeTest
                         + "      \"serverType\" : \"broker\",\n"
                         + "      \"priority\" : 0\n"
                         + "    }\n"
-                        + "  }\n"
+                        + "  },\n"
+                        + " \"availableProcessors\" : 3,\n"
+                        + " \"totalMemory\" : 1234\n"
                         + "}";
     Assert.assertEquals(
         new DiscoveryDruidNode(
@@ -173,7 +175,10 @@ public class DiscoveryDruidNodeTest
             ImmutableMap.of(
                 "dataNodeService",
                 new DataNodeService("_default_tier", 1000000000, ServerType.BROKER, 0)
-            )
+            ),
+            null,
+            3,
+            1234L
         ),
         mapper.readValue(json, DiscoveryDruidNode.class)
     );
@@ -204,7 +209,9 @@ public class DiscoveryDruidNodeTest
                         + "      \"serverType\" : \"broker\",\n"
                         + "      \"priority\" : 0\n"
                         + "    }\n"
-                        + "  }\n"
+                        + "  },\n"
+                        + " \"availableProcessors\" : 6,\n"
+                        + " \"totalMemory\" : 5432\n"
                         + "}";
     Assert.assertEquals(
         new DiscoveryDruidNode(
@@ -222,7 +229,10 @@ public class DiscoveryDruidNodeTest
             ImmutableMap.of(
                 "dataNodeService",
                 new DataNodeService("_default_tier", 1000000000, ServerType.BROKER, 0)
-            )
+            ),
+            null,
+            6,
+            5432L
         ),
         mapper.readValue(json, DiscoveryDruidNode.class)
     );
@@ -254,7 +264,9 @@ public class DiscoveryDruidNodeTest
                         + "      \"serverType\" : \"broker\",\n"
                         + "      \"priority\" : 0\n"
                         + "    }\n"
-                        + "  }\n"
+                        + "  },\n"
+                        + " \"availableProcessors\" : 4,\n"
+                        + " \"totalMemory\" : 246810\n"
                         + "}";
     Assert.assertEquals(
         new DiscoveryDruidNode(
@@ -269,7 +281,10 @@ public class DiscoveryDruidNodeTest
                 true
             ),
             NodeRole.BROKER,
-            ImmutableMap.of()
+            ImmutableMap.of(),
+            null,
+            4,
+            246810L
         ),
         mapper.readValue(json, DiscoveryDruidNode.class)
     );
