@@ -142,6 +142,12 @@ public class JvmUtils
     return jobURLs;
   }
 
+  /**
+   * Get the total memory of the machine it is running on. This function is container aware.
+   * If the machine is running in a container, the function will return the total memory of the container.
+   * If the machine is not running in a container, the function will return the total memory of the machine.
+   * @return the total memory of the machine it is running on in bytes.
+   */
   public static long getTotalMemory()
   {
     return OPERATING_SYSTEM_MX_BEAN.getTotalPhysicalMemorySize();
