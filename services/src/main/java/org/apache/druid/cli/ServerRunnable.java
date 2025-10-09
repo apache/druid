@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.utils.RuntimeInfo;
 
 import java.lang.annotation.Annotation;
 import java.util.Collections;
@@ -155,6 +156,7 @@ public abstract class ServerRunnable extends GuiceRunnable
     @Override
     public Child get()
     {
+      final RuntimeInfo runtimeInfo = injector.getInstance(RuntimeInfo.class);
       for (NodeRole nodeRole : nodeRoles) {
         ImmutableMap.Builder<String, DruidService> builder = new ImmutableMap.Builder<>();
         for (Class<? extends DruidService> clazz : serviceClasses.getOrDefault(nodeRole, Collections.emptySet())) {
@@ -168,7 +170,8 @@ public abstract class ServerRunnable extends GuiceRunnable
             );
           }
         }
-        DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(druidNode, nodeRole, builder.build());
+        DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(druidNode, nodeRole, builder.build(),
+            runtimeInfo);
 
         lifecycle.addHandler(
             new Lifecycle.Handler()
