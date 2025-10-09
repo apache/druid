@@ -20,7 +20,7 @@
 
 package org.apache.druid.segment.nested;
 
-import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ComplexColumn;
 
 import javax.annotation.Nullable;
@@ -40,10 +40,10 @@ public abstract class NestedDataComplexColumn implements
     NestedVectorColumnSelectorFactory
 {
   /**
-   * Get a {@link ColumnHolder} for a nested field column to retrieve metadata, the column itself, or indexes.
+   * Get a {@link BaseColumnHolder} for a nested field column to retrieve metadata, the column itself, or indexes.
    */
   @Nullable
-  public abstract ColumnHolder getColumnHolder(List<NestedPathPart> path);
+  public abstract BaseColumnHolder getColumnHolder(List<NestedPathPart> path);
 
   @Override
   public Class<?> getClazz()

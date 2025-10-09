@@ -17,30 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.segment.nested;
+package org.apache.druid.segment.data;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
-public enum ObjectStorageEncoding
+import java.util.concurrent.atomic.AtomicInteger;
+
+/**
+ * A {@link ReadableOffset} implementation that wraps an AtomicInteger.
+ */
+public class AtomicIntegerReadableOffset implements ReadableOffset
 {
-  NONE,
-  SMILE;
+  private final AtomicInteger offset;
 
-  @JsonValue
-  @Override
-  public String toString()
+  public AtomicIntegerReadableOffset(AtomicInteger offset)
   {
-    return StringUtils.toLowerCase(this.name());
+    this.offset = offset;
   }
 
-  @JsonCreator
-  public static ObjectStorageEncoding fromString(String name)
+  @Override
+  public int getOffset()
   {
-    if (name == null) {
-      return SMILE;
-    }
-    return valueOf(StringUtils.toUpperCase(name));
+    return offset.get();
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+
   }
 }
