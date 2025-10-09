@@ -195,33 +195,6 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
   public static final InputRowSchema JSON_AND_SCALAR_MIX = Mockito.mock(InputRowSchema.class);
 
-  public CalciteNestedDataQueryTest()
-  {
-    Mockito.when(ALL_JSON_COLUMNS.getTimestampSpec()).thenReturn(
-        new TimestampSpec("t", "iso", null));
-    Mockito.when(ALL_JSON_COLUMNS.getDimensionsSpec()).thenReturn(
-        DimensionsSpec.builder().setDimensions(
-            ImmutableList.<DimensionSchema>builder()
-                         .add(AutoTypeColumnSchema.of("string"))
-                         .add(AutoTypeColumnSchema.of("nest"))
-                         .add(AutoTypeColumnSchema.of("nester"))
-                         .add(AutoTypeColumnSchema.of("long"))
-                         .add(AutoTypeColumnSchema.of("string_sparse"))
-                         .build()
-        ).build());
-    Mockito.when(JSON_AND_SCALAR_MIX.getTimestampSpec()).thenReturn(new TimestampSpec("t", "iso", null));
-    Mockito.when(JSON_AND_SCALAR_MIX.getDimensionsSpec()).thenReturn(
-        DimensionsSpec.builder().setDimensions(
-            ImmutableList.<DimensionSchema>builder()
-                         .add(new StringDimensionSchema("string"))
-                         .add(AutoTypeColumnSchema.of("nest"))
-                         .add(AutoTypeColumnSchema.of("nester"))
-                         .add(new LongDimensionSchema("long"))
-                         .add(new StringDimensionSchema("string_sparse"))
-                         .build()
-        ).build());
-  }
-
   public static List<InputRow> constructInputRows(InputRowSchema inputRowSchema)
   {
     return RAW_ROWS.stream().map(raw -> TestDataBuilder.createRow(raw, inputRowSchema)).collect(Collectors.toList());
@@ -229,6 +202,32 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
   public static class NestedComponentSupplier extends StandardComponentSupplier
   {
+    static {
+      Mockito.when(ALL_JSON_COLUMNS.getTimestampSpec()).thenReturn(
+          new TimestampSpec("t", "iso", null));
+      Mockito.when(ALL_JSON_COLUMNS.getDimensionsSpec()).thenReturn(
+          DimensionsSpec.builder().setDimensions(
+              ImmutableList.<DimensionSchema>builder()
+                           .add(AutoTypeColumnSchema.of("string"))
+                           .add(AutoTypeColumnSchema.of("nest"))
+                           .add(AutoTypeColumnSchema.of("nester"))
+                           .add(AutoTypeColumnSchema.of("long"))
+                           .add(AutoTypeColumnSchema.of("string_sparse"))
+                           .build()
+          ).build());
+      Mockito.when(JSON_AND_SCALAR_MIX.getTimestampSpec()).thenReturn(new TimestampSpec("t", "iso", null));
+      Mockito.when(JSON_AND_SCALAR_MIX.getDimensionsSpec()).thenReturn(
+          DimensionsSpec.builder().setDimensions(
+              ImmutableList.<DimensionSchema>builder()
+                           .add(new StringDimensionSchema("string"))
+                           .add(AutoTypeColumnSchema.of("nest"))
+                           .add(AutoTypeColumnSchema.of("nester"))
+                           .add(new LongDimensionSchema("long"))
+                           .add(new StringDimensionSchema("string_sparse"))
+                           .build()
+          ).build());
+    }
+
     public NestedComponentSupplier(TempDirProducer tempFolderProducer)
     {
       super(tempFolderProducer);
@@ -6049,7 +6048,44 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       "cObjectArray",
                       "cnt"
                   )
-                  .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.LONG, ColumnType.DOUBLE, ColumnType.LONG, ColumnType.STRING, ColumnType.DOUBLE, ColumnType.ofComplex("json"), ColumnType.LONG_ARRAY, ColumnType.STRING_ARRAY, ColumnType.ofComplex("json"), ColumnType.ofComplex("json"), ColumnType.STRING_ARRAY, ColumnType.STRING_ARRAY, ColumnType.LONG_ARRAY, ColumnType.LONG_ARRAY, ColumnType.DOUBLE_ARRAY, ColumnType.DOUBLE_ARRAY, ColumnType.STRING_ARRAY, ColumnType.LONG_ARRAY, ColumnType.ofComplex("json"), ColumnType.ofComplex("json"), ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.DOUBLE, ColumnType.ofComplex("json"), ColumnType.STRING_ARRAY, ColumnType.LONG_ARRAY, ColumnType.DOUBLE_ARRAY, ColumnType.LONG_ARRAY, ColumnType.ofComplex("json"), ColumnType.LONG_ARRAY, ColumnType.ofComplex("json"), ColumnType.ofComplex("json"), ColumnType.LONG)
+                  .columnTypes(
+                      ColumnType.LONG,
+                      ColumnType.STRING,
+                      ColumnType.LONG,
+                      ColumnType.DOUBLE,
+                      ColumnType.LONG,
+                      ColumnType.STRING,
+                      ColumnType.DOUBLE,
+                      ColumnType.ofComplex("json"),
+                      ColumnType.LONG_ARRAY,
+                      ColumnType.STRING_ARRAY,
+                      ColumnType.ofComplex("json"),
+                      ColumnType.ofComplex("json"),
+                      ColumnType.STRING_ARRAY,
+                      ColumnType.STRING_ARRAY,
+                      ColumnType.LONG_ARRAY,
+                      ColumnType.LONG_ARRAY,
+                      ColumnType.DOUBLE_ARRAY,
+                      ColumnType.DOUBLE_ARRAY,
+                      ColumnType.STRING_ARRAY,
+                      ColumnType.LONG_ARRAY,
+                      ColumnType.ofComplex("json"),
+                      ColumnType.ofComplex("json"),
+                      ColumnType.STRING,
+                      ColumnType.STRING,
+                      ColumnType.LONG,
+                      ColumnType.DOUBLE,
+                      ColumnType.ofComplex("json"),
+                      ColumnType.STRING_ARRAY,
+                      ColumnType.LONG_ARRAY,
+                      ColumnType.DOUBLE_ARRAY,
+                      ColumnType.LONG_ARRAY,
+                      ColumnType.ofComplex("json"),
+                      ColumnType.LONG_ARRAY,
+                      ColumnType.ofComplex("json"),
+                      ColumnType.ofComplex("json"),
+                      ColumnType.LONG
+                  )
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
@@ -6431,20 +6467,25 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         .expectedQueries(
             ImmutableList.of(
                 Druids.newScanQueryBuilder()
-                    .dataSource(
-                        UnnestDataSource.create(
-                            new TableDataSource(DATA_SOURCE_ALL),
-                            new NestedFieldVirtualColumn("arrayNestedLong", "$[1]", "j0.unnest", ColumnType.LONG_ARRAY),
-                            null
-                        )
-                    )
-                    .virtualColumns(expressionVirtualColumn("v0", "nvl(\"j0.unnest\",\"long\")", ColumnType.LONG))
-                    .intervals(querySegmentSpec(Filtration.eternity()))
-                    .columns("j0.unnest", "long", "v0")
-                    .columnTypes(ColumnType.LONG, ColumnType.LONG, ColumnType.LONG)
-                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                    .context(QUERY_CONTEXT_DEFAULT)
-                    .build()
+                      .dataSource(
+                          UnnestDataSource.create(
+                              new TableDataSource(DATA_SOURCE_ALL),
+                              new NestedFieldVirtualColumn(
+                                  "arrayNestedLong",
+                                  "$[1]",
+                                  "j0.unnest",
+                                  ColumnType.LONG_ARRAY
+                              ),
+                              null
+                          )
+                      )
+                      .virtualColumns(expressionVirtualColumn("v0", "nvl(\"j0.unnest\",\"long\")", ColumnType.LONG))
+                      .intervals(querySegmentSpec(Filtration.eternity()))
+                      .columns("j0.unnest", "long", "v0")
+                      .columnTypes(ColumnType.LONG, ColumnType.LONG, ColumnType.LONG)
+                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                      .context(QUERY_CONTEXT_DEFAULT)
+                      .build()
             )
         )
         .expectedResults(
