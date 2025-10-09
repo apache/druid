@@ -298,6 +298,8 @@ ORDER BY
                 start_time: '1970:01:01T00:00:00Z',
                 is_leader: 0,
                 version: '',
+                available_processors: -1,
+                total_memory: -1,
               };
             },
           );
