@@ -77,16 +77,17 @@ public class JettyServerModuleTest
     PasswordProvider pp = Mockito.mock(PasswordProvider.class);
     Mockito.when(pp.getPassword()).thenReturn("druid123");
 
-    TLSServerConfig tlsServerConfig = Mockito.mock(TLSServerConfig.class);
-    Mockito.when(tlsServerConfig.getKeyStorePath()).thenReturn(keystorePath);
-    Mockito.when(tlsServerConfig.getKeyStoreType()).thenReturn("jks");
-    Mockito.when(tlsServerConfig.getKeyStorePasswordProvider()).thenReturn(pp);
-    Mockito.when(tlsServerConfig.getCertAlias()).thenReturn("druid");
-    Mockito.when(tlsServerConfig.getIncludeCipherSuites())
-           .thenReturn(Arrays.asList("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"));
-    Mockito.when(tlsServerConfig.getIncludeProtocols()).thenReturn(Arrays.asList("TLSv1.2", "TLSv1.3"));
-    Mockito.when(tlsServerConfig.isRequireClientCertificate()).thenReturn(false);
-    Mockito.when(tlsServerConfig.isRequestClientCertificate()).thenReturn(false);
+    TLSServerConfig tlsServerConfig = TLSServerConfig.builder()
+                                                     .keyStorePath(keystorePath)
+                                                     .keyStoreType("jks")
+                                                     .keyStorePasswordProvider(pp)
+                                                     .certAlias("druid")
+                                                     .includeCipherSuites(List.of(
+                                                         "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"))
+                                                     .includeProtocols(Arrays.asList("TLSv1.2", "TLSv1.3"))
+                                                     .requireClientCertificate(false)
+                                                     .requestClientCertificate(false)
+                                                     .build();
 
     DruidNode node = new DruidNode("test", "localhost", false, 8080, 8443, true, true);
     ServerConfig serverConfig = new ServerConfig();
@@ -108,13 +109,6 @@ public class JettyServerModuleTest
     );
 
     Assert.assertNotNull(server);
-
-    Mockito.verify(tlsServerConfig).getKeyStorePath();
-    Mockito.verify(tlsServerConfig).getKeyStoreType();
-    Mockito.verify(tlsServerConfig).getKeyStorePasswordProvider();
-    Mockito.verify(tlsServerConfig).getCertAlias();
-    Mockito.verify(tlsServerConfig, Mockito.times(2)).getIncludeCipherSuites(); // get-and-set
-    Mockito.verify(tlsServerConfig, Mockito.times(2)).getIncludeProtocols();  // get-and-set
   }
 
   @Test
@@ -125,16 +119,17 @@ public class JettyServerModuleTest
     PasswordProvider pp = Mockito.mock(PasswordProvider.class);
     Mockito.when(pp.getPassword()).thenReturn("druid123");
 
-    TLSServerConfig tlsServerConfig = Mockito.mock(TLSServerConfig.class);
-    Mockito.when(tlsServerConfig.getKeyStorePath()).thenReturn(keystorePath);
-    Mockito.when(tlsServerConfig.getKeyStoreType()).thenReturn("jks");
-    Mockito.when(tlsServerConfig.getKeyStorePasswordProvider()).thenReturn(pp);
-    Mockito.when(tlsServerConfig.getCertAlias()).thenReturn("druid");
-    Mockito.when(tlsServerConfig.getExcludeCipherSuites()).thenReturn(List.of("TLS_RSA_WITH_NULL_SHA256"));
-    Mockito.when(tlsServerConfig.getExcludeProtocols()).thenReturn(Arrays.asList("TLSv1", "TLSv1.1"));
-    Mockito.when(tlsServerConfig.isRequireClientCertificate()).thenReturn(false);
-    Mockito.when(tlsServerConfig.isRequestClientCertificate()).thenReturn(false);
-    Mockito.when(tlsServerConfig.isForceApplyConfig()).thenReturn(true); // Force config to be applied
+    TLSServerConfig tlsServerConfig = TLSServerConfig.builder()
+                                                     .keyStorePath(keystorePath)
+                                                     .keyStoreType("jks")
+                                                     .keyStorePasswordProvider(pp)
+                                                     .certAlias("druid")
+                                                     .excludeCipherSuites(List.of("TLS_RSA_WITH_NULL_SHA256"))
+                                                     .excludeProtocols(Arrays.asList("TLSv1", "TLSv1.1"))
+                                                     .requireClientCertificate(false)
+                                                     .requestClientCertificate(false)
+                                                     .forceApplyConfig(true) // Force config to be applied
+                                                     .build();
 
     DruidNode node = new DruidNode("test", "localhost", false, 8080, 8443, true, true);
     ServerConfig serverConfig = new ServerConfig();
@@ -188,16 +183,17 @@ public class JettyServerModuleTest
     PasswordProvider pp = Mockito.mock(PasswordProvider.class);
     Mockito.when(pp.getPassword()).thenReturn("druid123");
 
-    TLSServerConfig tlsServerConfig = Mockito.mock(TLSServerConfig.class);
-    Mockito.when(tlsServerConfig.getKeyStorePath()).thenReturn(keystorePath);
-    Mockito.when(tlsServerConfig.getKeyStoreType()).thenReturn("jks");
-    Mockito.when(tlsServerConfig.getKeyStorePasswordProvider()).thenReturn(pp);
-    Mockito.when(tlsServerConfig.getCertAlias()).thenReturn("druid");
-    Mockito.when(tlsServerConfig.getExcludeCipherSuites()).thenReturn(List.of("TLS_RSA_WITH_NULL_SHA256"));
-    Mockito.when(tlsServerConfig.getExcludeProtocols()).thenReturn(Arrays.asList("TLSv1", "TLSv1.1"));
-    Mockito.when(tlsServerConfig.isRequireClientCertificate()).thenReturn(false);
-    Mockito.when(tlsServerConfig.isRequestClientCertificate()).thenReturn(false);
-    Mockito.when(tlsServerConfig.isForceApplyConfig()).thenReturn(false);
+    TLSServerConfig tlsServerConfig = TLSServerConfig.builder()
+                                                     .keyStorePath(keystorePath)
+                                                     .keyStoreType("jks")
+                                                     .keyStorePasswordProvider(pp)
+                                                     .certAlias("druid")
+                                                     .excludeCipherSuites(List.of("TLS_RSA_WITH_NULL_SHA256"))
+                                                     .excludeProtocols(Arrays.asList("TLSv1", "TLSv1.1"))
+                                                     .requireClientCertificate(false)
+                                                     .requestClientCertificate(false)
+                                                     .forceApplyConfig(false)
+                                                     .build();
 
     DruidNode node = new DruidNode("test", "localhost", false, 8080, 8443, true, true);
     ServerConfig serverConfig = new ServerConfig();
