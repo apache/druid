@@ -134,7 +134,7 @@ public class JettyServerModuleTest
     Mockito.when(tlsServerConfig.getExcludeProtocols()).thenReturn(Arrays.asList("TLSv1", "TLSv1.1"));
     Mockito.when(tlsServerConfig.isRequireClientCertificate()).thenReturn(false);
     Mockito.when(tlsServerConfig.isRequestClientCertificate()).thenReturn(false);
-    Mockito.when(tlsServerConfig.getForceApplyConfig()).thenReturn(true); // Force config to be applied
+    Mockito.when(tlsServerConfig.isForceApplyConfig()).thenReturn(true); // Force config to be applied
 
     DruidNode node = new DruidNode("test", "localhost", false, 8080, 8443, true, true);
     ServerConfig serverConfig = new ServerConfig();
@@ -197,7 +197,7 @@ public class JettyServerModuleTest
     Mockito.when(tlsServerConfig.getExcludeProtocols()).thenReturn(Arrays.asList("TLSv1", "TLSv1.1"));
     Mockito.when(tlsServerConfig.isRequireClientCertificate()).thenReturn(false);
     Mockito.when(tlsServerConfig.isRequestClientCertificate()).thenReturn(false);
-    Mockito.when(tlsServerConfig.getForceApplyConfig()).thenReturn(false);
+    Mockito.when(tlsServerConfig.isForceApplyConfig()).thenReturn(false);
 
     DruidNode node = new DruidNode("test", "localhost", false, 8080, 8443, true, true);
     ServerConfig serverConfig = new ServerConfig();

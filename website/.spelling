@@ -238,7 +238,6 @@ Samza
 Splunk
 SqlParameter
 SslContextFactory
-SslContextFactory.Server
 StatsD
 SYSTEM_TABLE
 TaskRunner

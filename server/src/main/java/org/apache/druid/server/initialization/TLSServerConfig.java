@@ -21,6 +21,7 @@ package org.apache.druid.server.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.metadata.PasswordProvider;
+import org.apache.druid.server.initialization.jetty.JettyServerModule;
 
 import java.util.List;
 
@@ -189,7 +190,11 @@ public class TLSServerConfig
     return reloadSslContext;
   }
 
-  public boolean getForceApplyConfig()
+  /**
+   * Whether to apply TLS server configs even if an existing {@code SslContextFactory.Server} instance is bound.
+   * See {@link JettyServerModule#makeAndInitializeServer}.
+   */
+  public boolean isForceApplyConfig()
   {
     return forceApplyConfig;
   }
