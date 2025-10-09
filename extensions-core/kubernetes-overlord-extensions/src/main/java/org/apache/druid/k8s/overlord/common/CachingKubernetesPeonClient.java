@@ -201,7 +201,10 @@ public class CachingKubernetesPeonClient extends AbstractKubernetesPeonClient
    */
   private JobResponse determineJobResponse(Job job)
   {
-    if (job.getStatus().getSucceeded() != null || job.getStatus().getFailed() != null) {
+    if (job.getStatus() != null &&
+        (job.getStatus().getActive() == null ||  job.getStatus().getActive() == 0) &&
+        (job.getStatus().getFailed() != null || job.getStatus().getSucceeded() != null)) {
+
       if (job.getStatus().getSucceeded() != null && job.getStatus().getSucceeded() > 0) {
         log.info("K8s job[%s] completed successfully", job.getMetadata().getName());
         return new JobResponse(job, PeonPhase.SUCCEEDED);

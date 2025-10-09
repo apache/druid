@@ -46,7 +46,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class DirectKubernetesPeonClient extends AbstractKubernetesPeonClient
 {
-  protected static final EmittingLogger log = new EmittingLogger(CachingKubernetesPeonClient.class);
+  protected static final EmittingLogger log = new EmittingLogger(DirectKubernetesPeonClient.class);
 
   public DirectKubernetesPeonClient(
       KubernetesClientApi clientApi,
