@@ -248,7 +248,7 @@ public class JettyServerModule extends JerseyServletModule
                           : new IdentityCheckOverrideSslContextFactory(tlsServerConfig, certificateChecker);
 
       // Never trust all certificates by default
-      if (!hasBinding || tlsServerConfig.getForceConfig()) {
+      if (!hasBinding || tlsServerConfig.getForceApplyConfig()) {
         sslContextFactory.setKeyStorePath(tlsServerConfig.getKeyStorePath());
         sslContextFactory.setKeyStoreType(tlsServerConfig.getKeyStoreType());
         sslContextFactory.setKeyStorePassword(tlsServerConfig.getKeyStorePasswordProvider().getPassword());

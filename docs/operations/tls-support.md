@@ -51,7 +51,7 @@ values for the configs below, among others provided by Java implementation.
 |`druid.server.https.keyStorePassword`|The [Password Provider](../operations/password-provider.md) or String password for the Key Store.|none|yes|
 |`druid.server.https.reloadSslContext`| Should Druid server detect Key Store file change and reload.|false|no|
 |`druid.server.https.reloadSslContextSeconds`| How frequently should Druid server scan for Key Store file change.|60|yes|
-|`druid.server.https.forceApplyConfig`|Apply TLS server configs even if existing SSL server contexts are found.|false|no|
+|`druid.server.https.forceApplyConfig`|Apply TLS server configs even if an existing SslContextFactory.Server instance is bound.|false|no|
 
 The following table contains configuration options related to client certificate authentication.
 

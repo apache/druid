@@ -189,7 +189,7 @@ public class TLSServerConfig
     return reloadSslContext;
   }
 
-  public boolean getForceConfig()
+  public boolean getForceApplyConfig()
   {
     return forceApplyConfig;
   }
