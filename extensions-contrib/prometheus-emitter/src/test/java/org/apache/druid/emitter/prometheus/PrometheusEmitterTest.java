@@ -450,8 +450,10 @@ public class PrometheusEmitterTest
     DimensionsAndCollector testMetric = registeredMetrics.get("segment/loadQueue/count");
 
     Assert.assertNotNull("Test metric should be registered", testMetric);
-    Assert.assertFalse("Metric should not be expired initially",
-                       testMetric.isExpired());
+    Assert.assertFalse(
+        "Metric should not be expired initially",
+        testMetric.isExpired()
+    );
 
     // Wait for the metric to expire (ttl + 1 second buffer)
     try {
@@ -461,8 +463,10 @@ public class PrometheusEmitterTest
       Thread.currentThread().interrupt();
     }
 
-    Assert.assertTrue("Metric should be expired after TTL",
-                      testMetric.isExpired());
+    Assert.assertTrue(
+        "Metric should be expired after TTL",
+        testMetric.isExpired()
+    );
     emitter.close();
   }
 
