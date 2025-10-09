@@ -81,7 +81,9 @@ import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -91,7 +93,7 @@ import java.util.stream.Collectors;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 @SqlTestFrameworkConfig.ComponentSupplier(NestedComponentSupplier.class)
-public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
+public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 {
   public static final String DATA_SOURCE = "nested";
   public static final String DATA_SOURCE_MIXED = "nested_mix";
@@ -152,41 +154,78 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .build()
   );
 
-  private static final NestedCommonFormatColumnFormatSpec NONE_OBJECT_STORAGE =
-      NestedCommonFormatColumnFormatSpec.builder().setObjectStorageEncoding(ObjectStorageEncoding.NONE).build();
+  @Nested
+  public static class DefaultCalciteNestedDataQueryTest extends CalciteNestedDataQueryTest
+  {
+  }
 
-  public static final InputRowSchema ALL_JSON_COLUMNS = new InputRowSchema(
-      new TimestampSpec("t", "iso", null),
-      DimensionsSpec.builder().setDimensions(
-          ImmutableList.<DimensionSchema>builder()
-                       .add(new AutoTypeColumnSchema("string", null, NONE_OBJECT_STORAGE))
-                       .add(new AutoTypeColumnSchema("nest", null, NONE_OBJECT_STORAGE))
-                       .add(new AutoTypeColumnSchema("nester", null, NONE_OBJECT_STORAGE))
-                       .add(new AutoTypeColumnSchema("long", null, NONE_OBJECT_STORAGE))
-                       .add(new AutoTypeColumnSchema("string_sparse", null, NONE_OBJECT_STORAGE))
-                       .build()
-      ).build(),
-      null
-  );
+  @Nested
+  public static class NoneObjectStorageCalciteNestedDataQueryTest extends CalciteNestedDataQueryTest
+  {
+    public NoneObjectStorageCalciteNestedDataQueryTest()
+    {
+      super();
+      // Override with none object storage
+      NestedCommonFormatColumnFormatSpec noneObjectStorage =
+          NestedCommonFormatColumnFormatSpec.builder().setObjectStorageEncoding(ObjectStorageEncoding.NONE).build();
+      Mockito.when(ALL_JSON_COLUMNS.getDimensionsSpec()).thenReturn(
+          DimensionsSpec.builder().setDimensions(
+              ImmutableList.<DimensionSchema>builder()
+                           .add(new AutoTypeColumnSchema("string", null, noneObjectStorage))
+                           .add(new AutoTypeColumnSchema("nest", null, noneObjectStorage))
+                           .add(new AutoTypeColumnSchema("nester", null, noneObjectStorage))
+                           .add(new AutoTypeColumnSchema("long", null, noneObjectStorage))
+                           .add(new AutoTypeColumnSchema("string_sparse", null, noneObjectStorage))
+                           .build()
+          ).build());
+      Mockito.when(JSON_AND_SCALAR_MIX.getDimensionsSpec()).thenReturn(
+          DimensionsSpec.builder().setDimensions(
+              ImmutableList.<DimensionSchema>builder()
+                           .add(new StringDimensionSchema("string"))
+                           .add(new AutoTypeColumnSchema("nest", null, noneObjectStorage))
+                           .add(new AutoTypeColumnSchema("nester", null, noneObjectStorage))
+                           .add(new LongDimensionSchema("long"))
+                           .add(new StringDimensionSchema("string_sparse"))
+                           .build()
+          ).build());
+    }
+  }
 
-  public static final InputRowSchema JSON_AND_SCALAR_MIX = new InputRowSchema(
-      new TimestampSpec("t", "iso", null),
-      DimensionsSpec.builder().setDimensions(
-          ImmutableList.<DimensionSchema>builder()
-                       .add(new StringDimensionSchema("string"))
-                       .add(new AutoTypeColumnSchema("nest", null, NONE_OBJECT_STORAGE))
-                       .add(new AutoTypeColumnSchema("nester", null, NONE_OBJECT_STORAGE))
-                       .add(new LongDimensionSchema("long"))
-                       .add(new StringDimensionSchema("string_sparse"))
-                       .build()
-      ).build(),
-      null
-  );
-  public static final List<InputRow> ROWS =
-      RAW_ROWS.stream().map(raw -> TestDataBuilder.createRow(raw, ALL_JSON_COLUMNS)).collect(Collectors.toList());
+  public static final InputRowSchema ALL_JSON_COLUMNS = Mockito.mock(InputRowSchema.class);
 
-  public static final List<InputRow> ROWS_MIX =
-      RAW_ROWS.stream().map(raw -> TestDataBuilder.createRow(raw, JSON_AND_SCALAR_MIX)).collect(Collectors.toList());
+  public static final InputRowSchema JSON_AND_SCALAR_MIX = Mockito.mock(InputRowSchema.class);
+
+  public CalciteNestedDataQueryTest()
+  {
+    Mockito.when(ALL_JSON_COLUMNS.getTimestampSpec()).thenReturn(
+        new TimestampSpec("t", "iso", null));
+    Mockito.when(ALL_JSON_COLUMNS.getDimensionsSpec()).thenReturn(
+        DimensionsSpec.builder().setDimensions(
+            ImmutableList.<DimensionSchema>builder()
+                         .add(AutoTypeColumnSchema.of("string"))
+                         .add(AutoTypeColumnSchema.of("nest"))
+                         .add(AutoTypeColumnSchema.of("nester"))
+                         .add(AutoTypeColumnSchema.of("long"))
+                         .add(AutoTypeColumnSchema.of("string_sparse"))
+                         .build()
+        ).build());
+    Mockito.when(JSON_AND_SCALAR_MIX.getTimestampSpec()).thenReturn(new TimestampSpec("t", "iso", null));
+    Mockito.when(JSON_AND_SCALAR_MIX.getDimensionsSpec()).thenReturn(
+        DimensionsSpec.builder().setDimensions(
+            ImmutableList.<DimensionSchema>builder()
+                         .add(new StringDimensionSchema("string"))
+                         .add(AutoTypeColumnSchema.of("nest"))
+                         .add(AutoTypeColumnSchema.of("nester"))
+                         .add(new LongDimensionSchema("long"))
+                         .add(new StringDimensionSchema("string_sparse"))
+                         .build()
+        ).build());
+  }
+
+  public static List<InputRow> constructInputRows(InputRowSchema inputRowSchema)
+  {
+    return RAW_ROWS.stream().map(raw -> TestDataBuilder.createRow(raw, inputRowSchema)).collect(Collectors.toList());
+  }
 
   public static class NestedComponentSupplier extends StandardComponentSupplier
   {
@@ -212,7 +251,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                               .withRollup(false)
                               .build()
                       )
-                      .rows(ROWS)
+                      .rows(constructInputRows(ALL_JSON_COLUMNS))
                       .buildMMappedIndex();
 
       final QueryableIndex indexMix11 =
@@ -228,7 +267,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                               .withRollup(false)
                               .build()
                       )
-                      .rows(ROWS)
+                      .rows(constructInputRows(ALL_JSON_COLUMNS))
                       .buildMMappedIndex();
 
 
@@ -245,7 +284,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                               .withRollup(false)
                               .build()
                       )
-                      .rows(ROWS_MIX)
+                      .rows(constructInputRows(JSON_AND_SCALAR_MIX))
                       .buildMMappedIndex();
 
       final QueryableIndex indexMix21 =
@@ -261,7 +300,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                               .withRollup(false)
                               .build()
                       )
-                      .rows(ROWS_MIX)
+                      .rows(constructInputRows(JSON_AND_SCALAR_MIX))
                       .buildMMappedIndex();
 
       final QueryableIndex indexMix22 =
@@ -277,7 +316,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                               .withRollup(false)
                               .build()
                       )
-                      .rows(ROWS)
+                      .rows(constructInputRows(ALL_JSON_COLUMNS))
                       .buildMMappedIndex();
 
       final QueryableIndex indexArrays =
