@@ -24,9 +24,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.jackson.StringObjectPairList;
 import org.apache.druid.java.util.common.DateTimes;
@@ -70,6 +70,19 @@ public class DiscoveryDruidNode
    * @see DruidNodeDiscoveryProvider#SERVICE_TO_NODE_TYPES
    */
   private final Map<String, DruidService> services = new HashMap<>();
+
+   /**
+   * Constructor for tests. In production, the @Inject constructor is used instead.
+   */
+  @VisibleForTesting
+  public DiscoveryDruidNode(
+      DruidNode druidNode,
+      NodeRole nodeRole,
+      Map<String, DruidService> services
+  )
+  {
+    this(druidNode, nodeRole, services, DateTimes.nowUtc(), JvmUtils.getRuntimeInfo().getAvailableProcessors(), JvmUtils.getTotalMemory());
+  }
 
   @Inject
   public DiscoveryDruidNode(
@@ -263,13 +276,15 @@ public class DiscoveryDruidNode
     DiscoveryDruidNode that = (DiscoveryDruidNode) o;
     return Objects.equals(druidNode, that.druidNode) &&
            Objects.equals(nodeRole, that.nodeRole) &&
-           Objects.equals(services, that.services);
+           Objects.equals(services, that.services) &&
+           Objects.equals(availableProcessors, that.availableProcessors) &&
+           Objects.equals(totalMemory, that.totalMemory);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(druidNode, nodeRole, services);
+    return Objects.hash(druidNode, nodeRole, services, availableProcessors, totalMemory);
   }
 
   @Override
@@ -280,6 +295,8 @@ public class DiscoveryDruidNode
            ", nodeRole='" + nodeRole + '\'' +
            ", services=" + services + '\'' +
            ", startTime=" + startTime +
+           ", availableProcessors=" + availableProcessors +
+           ", totalMemory=" + totalMemory +
            '}';
   }
 }
