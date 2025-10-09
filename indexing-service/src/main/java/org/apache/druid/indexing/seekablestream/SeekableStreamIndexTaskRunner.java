@@ -445,8 +445,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         ImmutableMap.of(
             toolbox.getDataNodeService().getName(), toolbox.getDataNodeService(),
             lookupNodeService.getName(), lookupNodeService
-        ),
-        toolbox.getAdjustedRuntimeInfo()
+        )
     );
 
     Throwable caughtExceptionOuter = null;

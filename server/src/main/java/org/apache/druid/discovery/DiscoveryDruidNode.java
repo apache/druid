@@ -26,7 +26,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
-import com.google.inject.Inject;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.jackson.StringObjectPairList;
 import org.apache.druid.java.util.common.DateTimes;
@@ -35,7 +34,6 @@ import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.utils.JvmUtils;
-import org.apache.druid.utils.RuntimeInfo;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -71,10 +69,20 @@ public class DiscoveryDruidNode
    */
   private final Map<String, DruidService> services = new HashMap<>();
 
-   /**
+  /**
    * Constructor for tests. In production, the @Inject constructor is used instead.
    */
   @VisibleForTesting
+  public DiscoveryDruidNode(
+      DruidNode druidNode,
+      NodeRole nodeRole,
+      Map<String, DruidService> services,
+      DateTime startTime
+  )
+  {
+    this(druidNode, nodeRole, services, startTime, JvmUtils.getRuntimeInfo().getAvailableProcessors(), JvmUtils.getTotalMemory());
+  }
+
   public DiscoveryDruidNode(
       DruidNode druidNode,
       NodeRole nodeRole,
@@ -82,17 +90,6 @@ public class DiscoveryDruidNode
   )
   {
     this(druidNode, nodeRole, services, DateTimes.nowUtc(), JvmUtils.getRuntimeInfo().getAvailableProcessors(), JvmUtils.getTotalMemory());
-  }
-
-  @Inject
-  public DiscoveryDruidNode(
-      DruidNode druidNode,
-      NodeRole nodeRole,
-      Map<String, DruidService> services,
-      RuntimeInfo runtimeInfo
-  )
-  {
-    this(druidNode, nodeRole, services, DateTimes.nowUtc(), runtimeInfo.getAvailableProcessors(), JvmUtils.getTotalMemory());
   }
 
   public DiscoveryDruidNode(
