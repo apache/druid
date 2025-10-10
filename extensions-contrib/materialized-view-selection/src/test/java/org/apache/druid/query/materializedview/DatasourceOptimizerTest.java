@@ -34,6 +34,7 @@ import org.apache.druid.client.BrokerServerView;
 import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.MetadataSegmentView;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.curator.CuratorTestBase;
@@ -329,7 +330,8 @@ public class DatasourceOptimizerTest extends CuratorTestBase
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
         new NoopServiceEmitter(),
         new BrokerSegmentWatcherConfig(),
-        filter
+        filter,
+        EasyMock.createMock(MetadataSegmentView.class)
     );
     baseView.start();
   }
