@@ -251,11 +251,11 @@ public class KubernetesTaskRunnerConfig
         capacity,
         this.capacity
     );
-    this.enableKubernetesClientSharedInformers = ObjectUtils.defaultIfNull(
+    this.enableKubernetesClientSharedInformers = ObjectUtils.getIfNull(
         enableKubernetesClientSharedInformers,
         this.enableKubernetesClientSharedInformers
     );
-    this.kubernetesClientInformerResyncPeriod = ObjectUtils.defaultIfNull(
+    this.kubernetesClientInformerResyncPeriod = ObjectUtils.getIfNull(
         kubernetesClientInformerResyncPeriod,
         this.kubernetesClientInformerResyncPeriod
     );
