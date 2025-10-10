@@ -78,6 +78,12 @@ public class TestKubernetesClient implements KubernetesClientApi
   }
 
   @Override
+  public long getInformerResyncPeriodMillis()
+  {
+    return 0;
+  }
+
+  @Override
   public KubernetesResourceEventNotifier getEventNotifier()
   {
     return null;

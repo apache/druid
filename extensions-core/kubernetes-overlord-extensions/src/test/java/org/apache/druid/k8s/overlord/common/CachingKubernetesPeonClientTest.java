@@ -34,6 +34,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -466,6 +467,74 @@ public class CachingKubernetesPeonClientTest
     Assertions.assertNotNull(response.getJob());
   }
 
+  @Test
+  public void test_waitForPeonJobCompletion_jobGetsDeleted() throws Exception
+  {
+    // Create job in running state
+    K8sTaskId taskId = new K8sTaskId("", "deleted-task-id");
+    Job job = new JobBuilder()
+        .withNewMetadata()
+        .withName(taskId.getK8sJobName())
+        .withNamespace(NAMESPACE)
+        .addToLabels(DruidK8sConstants.LABEL_KEY, "true")
+        .endMetadata()
+        .withNewStatus()
+        .withActive(1)
+        .endStatus()
+        .build();
+
+    client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job).create();
+    clientApi.waitForSync();
+
+    // Start waiting in background
+    CompletableFuture<JobResponse> futureResponse = CompletableFuture.supplyAsync(() ->
+        peonClient.waitForPeonJobCompletion(taskId, 60, TimeUnit.SECONDS)
+    );
+
+    // Give it a moment to start waiting
+    Thread.sleep(500);
+
+    // Delete the job (simulates task cancellation/shutdown)
+    client.batch().v1().jobs().inNamespace(NAMESPACE).withName(taskId.getK8sJobName()).delete();
+
+    // Wait for response
+    JobResponse response = futureResponse.get(10, TimeUnit.SECONDS);
+
+    // Should detect deletion and return FAILED
+    Assertions.assertEquals(PeonPhase.FAILED, response.getPhase());
+    Assertions.assertNull(response.getJob());
+  }
+
+  @Test
+  @Timeout(value = 5, unit = TimeUnit.SECONDS)
+  public void test_waitForPeonJobCompletion_jobDeletedBeforeSeenInCache() throws Exception
+  {
+    // Create job
+    K8sTaskId taskId = new K8sTaskId("", "quick-delete-task-id");
+    Job job = new JobBuilder()
+        .withNewMetadata()
+        .withName(taskId.getK8sJobName())
+        .withNamespace(NAMESPACE)
+        .addToLabels(DruidK8sConstants.LABEL_KEY, "true")
+        .endMetadata()
+        .withNewStatus()
+        .withActive(1)
+        .endStatus()
+        .build();
+
+    client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job).create();
+
+    // Delete immediately before informer syncs
+    client.batch().v1().jobs().inNamespace(NAMESPACE).withName(taskId.getK8sJobName()).delete();
+
+    clientApi.waitForSync();
+
+    JobResponse response = peonClient.waitForPeonJobCompletion(taskId, 10, TimeUnit.SECONDS);
+
+    // Should timeout or detect job was never seen and return FAILED
+    Assertions.assertEquals(PeonPhase.FAILED, response.getPhase());
+  }
+
   /**
    * Test implementation of KubernetesClientApi that uses real informers with the mock server
    */
@@ -680,6 +749,12 @@ public class CachingKubernetesPeonClientTest
     public SharedIndexInformer<Job> getJobInformer()
     {
       return jobInformer;
+    }
+
+    @Override
+    public long getInformerResyncPeriodMillis()
+    {
+      return 1000L;
     }
 
     @Override

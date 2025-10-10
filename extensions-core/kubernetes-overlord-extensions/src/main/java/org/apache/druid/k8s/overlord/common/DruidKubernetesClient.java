@@ -245,4 +245,10 @@ public class DruidKubernetesClient implements KubernetesClientApi
       }
     }
   }
+
+  @Override
+  public long getInformerResyncPeriodMillis()
+  {
+    return informerResyncPeriodMillis;
+  }
 }

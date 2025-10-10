@@ -69,21 +69,38 @@ public class CachingKubernetesPeonClient extends AbstractKubernetesPeonClient
     long timeoutMs = unit.toMillis(howLong);
     long startTime = System.currentTimeMillis();
 
+    // Give the informer 2 resync periodd to see the job. if it isn't seen by then, we assume the job was canceled.
+    // This is to prevent us from waiting for entire max job runtime on a job that was canceled before it even started.
+    long jobSeenBy = startTime + (clientApi.getInformerResyncPeriodMillis() * 2);
+    boolean jobSeenInCache = false;
+
     CompletableFuture<Job> jobFuture = clientApi.getEventNotifier().waitForJobChange(taskId.getK8sJobName());
     do {
       try {
         Optional<Job> maybeJob = getPeonJob(taskId.getK8sJobName());
         if (maybeJob.isPresent()) {
+          jobSeenInCache = true;
           Job job = maybeJob.get();
           JobResponse currentResponse = determineJobResponse(job);
           if (currentResponse.getPhase() != PeonPhase.RUNNING) {
             return currentResponse;
           }
+        } else if (jobSeenInCache) {
+          // Job was in cache before, but now it's gone - it was deleted
+          log.warn("K8s Job[%s] was not found. It can happen if the task was canceled", taskId.getK8sJobName());
+          return new JobResponse(null, PeonPhase.FAILED);
         }
-        Job job = jobFuture.get(timeoutMs, TimeUnit.MILLISECONDS);
+        Job job;
+        if (jobSeenInCache) {
+          job = jobFuture.get(timeoutMs, TimeUnit.MILLISECONDS);
+        } else {
+          // We haven't seen the job in cache yet, wait a resync cycles instead of the full max runtime allowed
+          job = jobFuture.get(clientApi.getInformerResyncPeriodMillis(), TimeUnit.MILLISECONDS);
+        }
         // Immediately set up to watch for the next change in case we need to wait again
         jobFuture = clientApi.getEventNotifier().waitForJobChange(taskId.getK8sJobName());
         log.debug("Received job[%s] change notification", taskId.getK8sJobName());
+        jobSeenInCache = true;
         if (job == null) {
           log.warn("K8s job for the task[%s] was not found. It can happen if the task was canceled", taskId);
           return new JobResponse(null, PeonPhase.FAILED);
@@ -97,7 +114,7 @@ public class CachingKubernetesPeonClient extends AbstractKubernetesPeonClient
       catch (Throwable e) {
         log.warn("Exception[%s] waiting for job change notification for job[%s]. Error message[%s]", e.getClass().getName(), taskId.getK8sJobName(), e.getMessage());
       }
-    } while (System.currentTimeMillis() - startTime < timeoutMs);
+    } while ((System.currentTimeMillis() - startTime < timeoutMs) && (jobSeenInCache || System.currentTimeMillis() < jobSeenBy));
 
     log.warn("Timed out waiting for K8s job[%s] to complete", taskId.getK8sJobName());
     return new JobResponse(null, PeonPhase.FAILED);

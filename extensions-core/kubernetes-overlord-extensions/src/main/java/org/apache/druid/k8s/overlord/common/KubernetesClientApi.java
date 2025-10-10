@@ -42,5 +42,7 @@ public interface KubernetesClientApi
 
   SharedIndexInformer<Job> getJobInformer();
 
+  long getInformerResyncPeriodMillis();
+
   KubernetesResourceEventNotifier getEventNotifier();
 }
