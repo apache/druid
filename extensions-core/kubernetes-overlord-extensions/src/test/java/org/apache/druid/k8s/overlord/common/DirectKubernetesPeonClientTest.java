@@ -63,7 +63,7 @@ public class DirectKubernetesPeonClientTest
   @BeforeEach
   public void setup()
   {
-    clientApi = new TestKubernetesClient(this.client, null, null);
+    clientApi = new TestKubernetesClient(this.client, NAMESPACE);
     serviceEmitter = new StubServiceEmitter("service", "host");
     instance = new DirectKubernetesPeonClient(clientApi, NAMESPACE, false, serviceEmitter);
   }
@@ -236,7 +236,7 @@ public class DirectKubernetesPeonClientTest
   void test_deletePeonJob_withJob_withDebugJobsTrue_skipsDelete()
   {
     DirectKubernetesPeonClient instance = new DirectKubernetesPeonClient(
-        new TestKubernetesClient(this.client, null, null),
+        new TestKubernetesClient(this.client, NAMESPACE),
         NAMESPACE,
         true,
         serviceEmitter
@@ -261,7 +261,7 @@ public class DirectKubernetesPeonClientTest
   void test_deletePeonJob_withoutJob_withDebugJobsTrue_skipsDelete()
   {
     DirectKubernetesPeonClient instance = new DirectKubernetesPeonClient(
-        new TestKubernetesClient(this.client, null, null),
+        new TestKubernetesClient(this.client, NAMESPACE),
         NAMESPACE,
         true,
         serviceEmitter
@@ -823,15 +823,10 @@ public class DirectKubernetesPeonClientTest
         .endStatus()
         .build();
 
-    String podPath = "/api/v1/namespaces/" + NAMESPACE + "/pods/" + POD_NAME;
+    // Create the pod in the mock client without IP - it will remain unready
+    client.pods().inNamespace(NAMESPACE).resource(pod).create();
 
-    // Mock server to return the pod without IP, causing timeout
-    server.expect().get()
-          .withPath(podPath + "?watch=true")
-          .andReturn(HttpURLConnection.HTTP_INTERNAL_ERROR, "Internal server error")
-          .once();
-
-    // Should throw DruidException after failure
+    // Should throw DruidException after timeout due to pod never becoming ready
     DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> instance.waitForPodResultWithRetries(

@@ -22,7 +22,16 @@ package org.apache.druid.k8s.overlord.common;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
 import io.fabric8.kubernetes.client.informers.SharedIndexInformer;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 public class TestKubernetesClient implements KubernetesClientApi
 {
@@ -30,15 +39,194 @@ public class TestKubernetesClient implements KubernetesClientApi
   private final KubernetesClient client;
   private final SharedIndexInformer<Pod> podInformer;
   private final SharedIndexInformer<Job> jobInformer;
+  private final KubernetesResourceEventNotifier eventNotifier;
+  private final CountDownLatch syncLatch;
 
-  public TestKubernetesClient(KubernetesClient client,
-                              SharedIndexInformer<Pod> podInformer,
-                              SharedIndexInformer<Job> jobInformer
-  )
+  public TestKubernetesClient(KubernetesClient client, String namespace)
   {
     this.client = client;
-    this.podInformer = podInformer;
-    this.jobInformer = jobInformer;
+    this.eventNotifier = new KubernetesResourceEventNotifier();
+    this.syncLatch = new CountDownLatch(2); // Wait for both informers
+
+    // Set up pod informer with real event handlers
+    this.podInformer = client.pods()
+                             .inNamespace(namespace)
+                             .inform(
+                                 new ResourceEventHandler<Pod>()
+                                 {
+                                   @Override
+                                   public void onAdd(Pod pod)
+                                   {
+                                     notifyPodChange(pod);
+                                   }
+
+                                   @Override
+                                   public void onUpdate(Pod oldPod, Pod newPod)
+                                   {
+                                     notifyPodChange(newPod);
+                                   }
+
+                                   @Override
+                                   public void onDelete(Pod pod, boolean deletedFinalStateUnknown)
+                                   {
+                                     notifyPodChange(pod);
+                                   }
+                                 }, 1000L
+                             );
+
+    // Add pod indexer
+    Map<String, Function<Pod, List<String>>> podIndexers = new HashMap<>();
+    podIndexers.put(
+        "byJobName", pod -> {
+          if (pod.getMetadata() != null && pod.getMetadata().getLabels() != null) {
+            String jobName = pod.getMetadata().getLabels().get("job-name");
+            if (jobName != null) {
+              return Collections.singletonList(jobName);
+            }
+          }
+          return Collections.emptyList();
+        }
+    );
+    podInformer.addIndexers(podIndexers);
+
+    // Set up job informer with real event handlers
+    this.jobInformer = client.batch()
+                             .v1()
+                             .jobs()
+                             .inNamespace(namespace)
+                             .withLabel(DruidK8sConstants.LABEL_KEY)
+                             .inform(
+                                 new ResourceEventHandler<Job>()
+                                 {
+                                   @Override
+                                   public void onAdd(Job job)
+                                   {
+                                     eventNotifier.notifyJobChange(job.getMetadata().getName(), job);
+                                   }
+
+                                   @Override
+                                   public void onUpdate(Job oldJob, Job newJob)
+                                   {
+                                     eventNotifier.notifyJobChange(newJob.getMetadata().getName(), newJob);
+                                   }
+
+                                   @Override
+                                   public void onDelete(Job job, boolean deletedFinalStateUnknown)
+                                   {
+                                     eventNotifier.notifyJobChange(job.getMetadata().getName(), job);
+                                   }
+                                 }, 1000L
+                             );
+
+    // Add job indexers
+    Map<String, Function<Job, List<String>>> jobIndexers = new HashMap<>();
+    jobIndexers.put(
+        "byJobName", job -> {
+          if (job.getMetadata() != null && job.getMetadata().getName() != null) {
+            return Collections.singletonList(job.getMetadata().getName());
+          }
+          return Collections.emptyList();
+        }
+    );
+    jobIndexers.put(
+        "byOverlordNamespace", job -> {
+          if (job.getMetadata() != null && job.getMetadata().getLabels() != null) {
+            String overlordNamespace = job.getMetadata().getLabels().get(DruidK8sConstants.OVERLORD_NAMESPACE_KEY);
+            if (overlordNamespace != null) {
+              return Collections.singletonList(overlordNamespace);
+            }
+          }
+          return Collections.emptyList();
+        }
+    );
+    jobInformer.addIndexers(jobIndexers);
+  }
+
+  public void start()
+  {
+    // Add ready callbacks to count down latch
+    podInformer.addEventHandlerWithResyncPeriod(
+        new ResourceEventHandler<Pod>()
+        {
+          @Override
+          public void onAdd(Pod obj)
+          {
+
+          }
+
+          @Override
+          public void onUpdate(Pod oldObj, Pod newObj)
+          {
+
+          }
+
+          @Override
+          public void onDelete(Pod obj, boolean deletedFinalStateUnknown)
+          {
+
+          }
+        }, 1000L
+    );
+
+    jobInformer.addEventHandlerWithResyncPeriod(
+        new ResourceEventHandler<Job>()
+        {
+          @Override
+          public void onAdd(Job obj)
+          {
+
+          }
+
+          @Override
+          public void onUpdate(Job oldObj, Job newObj)
+          {
+
+          }
+
+          @Override
+          public void onDelete(Job obj, boolean deletedFinalStateUnknown)
+          {
+
+          }
+        }, 1000L
+    );
+
+    podInformer.run();
+    jobInformer.run();
+
+    // Count down after starting
+    syncLatch.countDown();
+    syncLatch.countDown();
+  }
+
+  public void stop()
+  {
+    if (podInformer != null) {
+      podInformer.stop();
+    }
+    if (jobInformer != null) {
+      jobInformer.stop();
+    }
+    if (eventNotifier != null) {
+      eventNotifier.cancelAll();
+    }
+  }
+
+  public void waitForSync() throws InterruptedException
+  {
+    syncLatch.await(5, TimeUnit.SECONDS);
+    // Give informers a bit more time to process
+    Thread.sleep(200);
+  }
+
+  private void notifyPodChange(Pod pod)
+  {
+    if (pod.getMetadata() != null && pod.getMetadata().getLabels() != null) {
+      String jobName = pod.getMetadata().getLabels().get("job-name");
+      if (jobName != null) {
+        eventNotifier.notifyPodChange(jobName, pod);
+      }
+    }
   }
 
   @Override
@@ -80,12 +268,12 @@ public class TestKubernetesClient implements KubernetesClientApi
   @Override
   public long getInformerResyncPeriodMillis()
   {
-    return 0;
+    return 1000L;
   }
 
   @Override
   public KubernetesResourceEventNotifier getEventNotifier()
   {
-    return null;
+    return eventNotifier;
   }
 }
