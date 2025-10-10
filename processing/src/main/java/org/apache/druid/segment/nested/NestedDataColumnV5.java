@@ -31,6 +31,7 @@ import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.List;
@@ -51,7 +52,7 @@ public class NestedDataColumnV5<TKeyDictionary extends Indexed<ByteBuffer>, TStr
       String columnName,
       ColumnType logicalType,
       ColumnConfig columnConfig,
-      CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
+      @Nullable CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
       ImmutableBitmap nullValues,
       Supplier<TKeyDictionary> fields,
       FieldTypeInfo fieldInfo,

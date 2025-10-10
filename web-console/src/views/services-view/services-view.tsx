@@ -41,6 +41,9 @@ import type { QueryWithContext } from '../../druid-models';
 import { getConsoleViewIcon } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
+  booleanCustomTableFilter,
+  combineModeAndNeedle,
+  parseFilterModeAndNeedle,
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
   suggestibleFilterInput,
@@ -53,6 +56,7 @@ import {
   filterMap,
   formatBytes,
   formatBytesCompact,
+  formatDate,
   formatDurationWithMsIfNeeded,
   getApiArray,
   hasOverlayOpen,
@@ -61,7 +65,6 @@ import {
   lookupBy,
   oneOf,
   pluralIfNeeded,
-  prettyFormatIsoDateWithMsIfNeeded,
   queryDruidSql,
   QueryManager,
   QueryState,
@@ -199,6 +202,11 @@ function aggregateLoadQueueInfos(loadQueueInfos: LoadQueueInfo[]): LoadQueueInfo
     segmentsToDropSize: sum(loadQueueInfos, s => Number(s.segmentsToDropSize) || 0),
     expectedLoadTimeMillis: max(loadQueueInfos, s => Number(s.expectedLoadTimeMillis) || 0) || 0,
   };
+}
+
+function defaultDisplayFn(value: any): string {
+  if (value === undefined || value === null) return '';
+  return String(value);
 }
 
 interface WorkerInfo {
@@ -385,7 +393,10 @@ ORDER BY
     this.serviceQueryManager.runQuery({ capabilities, visibleColumns });
   };
 
-  private renderFilterableCell(field: string) {
+  private renderFilterableCell(
+    field: string,
+    displayFn: (value: string) => string = defaultDisplayFn,
+  ) {
     const { filters, onFiltersChange } = this.props;
 
     return function FilterableCell(row: { value: any }) {
@@ -395,7 +406,10 @@ ORDER BY
           value={row.value}
           filters={filters}
           onFiltersChange={onFiltersChange}
-        />
+          displayValue={displayFn(row.value)}
+        >
+          {displayFn(row.value)}
+        </TableFilterableCell>
       );
     };
   }
@@ -439,6 +453,7 @@ ORDER BY
       workerInfoLookup: Record<string, WorkerInfo>,
     ): Column<ServiceResultRow>[] => {
       const { capabilities } = this.props;
+
       return [
         {
           Header: 'Service',
@@ -617,9 +632,21 @@ ORDER BY
           Header: 'Start time',
           show: visibleColumns.shown('Start time'),
           accessor: 'start_time',
-          width: 200,
-          Cell: this.renderFilterableCell('start_time'),
+          id: 'start_time',
+          width: 220,
+          Cell: this.renderFilterableCell('start_time', formatDate),
           Aggregated: () => '',
+          filterMethod: (filter: Filter, row: ServiceResultRow) => {
+            const modeAndNeedle = parseFilterModeAndNeedle(filter);
+            if (!modeAndNeedle) return true;
+            const parsedRowTime = formatDate(row.start_time);
+            if (modeAndNeedle.mode === '~') {
+              return booleanCustomTableFilter(filter, parsedRowTime);
+            }
+            const parsedFilterTime = formatDate(modeAndNeedle.needle);
+            filter.value = combineModeAndNeedle(modeAndNeedle.mode, parsedFilterTime);
+            return booleanCustomTableFilter(filter, parsedRowTime);
+          },
         },
         {
           Header: 'Version',
@@ -652,17 +679,11 @@ ORDER BY
                 const details: string[] = [];
                 if (workerInfo.lastCompletedTaskTime) {
                   details.push(
-                    `Last completed task: ${prettyFormatIsoDateWithMsIfNeeded(
-                      workerInfo.lastCompletedTaskTime,
-                    )}`,
+                    `Last completed task: ${formatDate(workerInfo.lastCompletedTaskTime)}`,
                   );
                 }
                 if (workerInfo.blacklistedUntil) {
-                  details.push(
-                    `Blacklisted until: ${prettyFormatIsoDateWithMsIfNeeded(
-                      workerInfo.blacklistedUntil,
-                    )}`,
-                  );
+                  details.push(`Blacklisted until: ${formatDate(workerInfo.blacklistedUntil)}`);
                 }
                 return details.join(' ') || null;
               }

@@ -142,7 +142,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
   private FixedIndexedWriter<Long> longDictionaryWriter;
   private FixedIndexedWriter<Double> doubleDictionaryWriter;
   private FrontCodedIntArrayIndexedWriter arrayDictionaryWriter;
-  private CompressedVariableSizedBlobColumnSerializer rawWriter;
+  @Nullable private CompressedVariableSizedBlobColumnSerializer rawWriter;
   private ByteBufferWriter<ImmutableBitmap> nullBitmapWriter;
   private MutableBitmap nullRowsBitmap;
   private Map<String, GlobalDictionaryEncodedFieldColumnWriter<?>> fieldWriters;
@@ -243,12 +243,19 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
   @Override
   public void open() throws IOException
   {
-    rawWriter = new CompressedVariableSizedBlobColumnSerializer(
-        ColumnSerializerUtils.getInternalFileName(name, RAW_FILE_NAME),
-        segmentWriteOutMedium,
-        columnFormatSpec.getObjectStorageCompression()
-    );
-    rawWriter.open();
+    if (ObjectStorageEncoding.NONE.equals(columnFormatSpec.getObjectStorageEncoding())) {
+      rawWriter = null;
+    } else if (ObjectStorageEncoding.SMILE.equals(columnFormatSpec.getObjectStorageEncoding())) {
+      rawWriter = new CompressedVariableSizedBlobColumnSerializer(
+          ColumnSerializerUtils.getInternalFileName(name, RAW_FILE_NAME),
+          segmentWriteOutMedium,
+          columnFormatSpec.getObjectStorageCompression()
+      );
+      rawWriter.open();
+    } else {
+      throw DruidException.defensive("Unknown object storage encoding [%s]", columnFormatSpec.getObjectStorageEncoding()
+      );
+    }
 
     nullBitmapWriter = new ByteBufferWriter<>(
         segmentWriteOutMedium,
@@ -339,7 +346,9 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
     if (data == null) {
       nullRowsBitmap.add(rowCount);
     }
-    rawWriter.addValue(NestedDataComplexTypeSerde.INSTANCE.toBytes(data));
+    if (rawWriter != null) {
+      rawWriter.addValue(NestedDataComplexTypeSerde.INSTANCE.toBytes(data));
+    }
     if (data != null) {
       fieldProcessor.processFields(data.getValue());
     }
@@ -410,7 +419,9 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
         writeInternal(fileBuilder, arrayDictionaryWriter, ColumnSerializerUtils.ARRAY_DICTIONARY_FILE_NAME);
       }
     }
-    writeInternal(fileBuilder, rawWriter, RAW_FILE_NAME);
+    if (rawWriter != null) {
+      writeInternal(fileBuilder, rawWriter, RAW_FILE_NAME);
+    }
     if (!nullRowsBitmap.isEmpty()) {
       writeInternal(fileBuilder, nullBitmapWriter, ColumnSerializerUtils.NULL_BITMAP_FILE_NAME);
     }
