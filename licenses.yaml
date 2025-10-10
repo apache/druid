@@ -5445,7 +5445,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Matt Zabriskie
-version: 1.8.4
+version: 1.12.2
 license_file_path: licenses/bin/axios.MIT
 
 ---
