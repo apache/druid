@@ -181,6 +181,8 @@ public class SystemSchema extends AbstractSchema
       .add("is_leader", ColumnType.LONG)
       .add("start_time", ColumnType.STRING)
       .add("version", ColumnType.STRING)
+      .add("available_processors", ColumnType.LONG)
+      .add("total_memory", ColumnType.LONG)
       .build();
 
   static final RowSignature SERVER_SEGMENTS_SIGNATURE = RowSignature
@@ -641,7 +643,9 @@ public class SystemSchema extends AbstractSchema
           UNKNOWN_SIZE,
           null,
           toStringOrNull(discoveryDruidNode.getStartTime()),
-          node.getVersion()
+          node.getVersion(),
+          (long) discoveryDruidNode.getAvailableProcessors(),
+          discoveryDruidNode.getTotalMemory()
       };
     }
 
@@ -665,7 +669,9 @@ public class SystemSchema extends AbstractSchema
           UNKNOWN_SIZE,
           isLeader ? 1L : 0L,
           toStringOrNull(discoveryDruidNode.getStartTime()),
-          node.getVersion()
+          node.getVersion(),
+          (long) discoveryDruidNode.getAvailableProcessors(),
+          discoveryDruidNode.getTotalMemory()
       };
     }
 
@@ -701,7 +707,9 @@ public class SystemSchema extends AbstractSchema
           druidServerToUse.getMaxSize(),
           null,
           toStringOrNull(discoveryDruidNode.getStartTime()),
-          node.getVersion()
+          node.getVersion(),
+          (long) discoveryDruidNode.getAvailableProcessors(),
+          discoveryDruidNode.getTotalMemory()
       };
     }
 

@@ -111,6 +111,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.utils.JvmUtils;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.joda.time.DateTime;
@@ -381,6 +382,8 @@ public class SystemSchemaTest extends CalciteTestBase
   final List<DataSegment> realtimeSegments = ImmutableList.of(segment2, segment4, segment5);
 
   private final DateTime startTime = DateTimes.nowUtc();
+  private final long availableProcessors = JvmUtils.getRuntimeInfo().getAvailableProcessors();
+  private final long totalMemory = JvmUtils.getTotalMemory();
 
   private final String version = GuavaUtils.firstNonNull(
           SystemSchemaTest.class.getPackage().getImplementationVersion(),
@@ -558,7 +561,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final SystemSchema.ServersTable serversTable = (SystemSchema.ServersTable) schema.getTableMap().get("servers");
     final RelDataType serverRowType = serversTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> serverFields = serverRowType.getFieldList();
-    Assert.assertEquals(11, serverFields.size());
+    Assert.assertEquals(13, serverFields.size());
     Assert.assertEquals("server", serverFields.get(0).getName());
     Assert.assertEquals(SqlTypeName.VARCHAR, serverFields.get(0).getType().getSqlTypeName());
   }
@@ -858,7 +861,9 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             nonLeader,
             startTimeStr,
-            version
+            version,
+            availableProcessors,
+            totalMemory
         )
     );
     expectedRows.add(
@@ -873,7 +878,9 @@ public class SystemSchemaTest extends CalciteTestBase
             1000L,
             nonLeader,
             startTimeStr,
-            version
+            version,
+            availableProcessors,
+            totalMemory
         )
     );
     expectedRows.add(
@@ -888,7 +895,9 @@ public class SystemSchemaTest extends CalciteTestBase
             1000L,
             nonLeader,
             startTimeStr,
-            version
+            version,
+            availableProcessors,
+            totalMemory
         )
     );
     expectedRows.add(
@@ -903,7 +912,9 @@ public class SystemSchemaTest extends CalciteTestBase
             1000L,
             nonLeader,
             startTimeStr,
-            version
+            version,
+            availableProcessors,
+            totalMemory
         )
     );
     expectedRows.add(
@@ -918,7 +929,9 @@ public class SystemSchemaTest extends CalciteTestBase
             1000L,
             nonLeader,
             startTimeStr,
-            version
+            version,
+            availableProcessors,
+            totalMemory
         )
     );
     expectedRows.add(createExpectedRow(
@@ -932,7 +945,9 @@ public class SystemSchemaTest extends CalciteTestBase
         1000L,
         nonLeader,
         startTimeStr,
-        version
+        version,
+        availableProcessors,
+        totalMemory
     ));
     expectedRows.add(
         createExpectedRow(
@@ -946,7 +961,9 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             1L,
             startTimeStr,
-            version
+            version,
+            availableProcessors,
+            totalMemory
         )
     );
     expectedRows.add(
@@ -961,7 +978,9 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             nonLeader,
             startTimeStr,
-            version
+            version,
+            availableProcessors,
+            totalMemory
         )
     );
     expectedRows.add(
@@ -976,7 +995,9 @@ public class SystemSchemaTest extends CalciteTestBase
             1000L,
             nonLeader,
             startTimeStr,
-            version
+            version,
+            availableProcessors,
+            totalMemory
         )
     );
     expectedRows.add(
@@ -991,7 +1012,9 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             1L,
             startTimeStr,
-            version
+            version,
+            availableProcessors,
+            totalMemory
         )
     );
     expectedRows.add(
@@ -1006,7 +1029,9 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             0L,
             startTimeStr,
-            version
+            version,
+            availableProcessors,
+            totalMemory
         )
     );
     expectedRows.add(
@@ -1021,7 +1046,9 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             0L,
             startTimeStr,
-            version
+            version,
+            availableProcessors,
+            totalMemory
         )
     );
     expectedRows.add(
@@ -1036,7 +1063,9 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             nonLeader,
             startTimeStr,
-            version
+            version,
+            availableProcessors,
+            totalMemory
         )
     );
     expectedRows.add(
@@ -1051,7 +1080,9 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             nonLeader,
             startTimeStr,
-            version
+            version,
+            availableProcessors,
+            totalMemory
         )
     );
     expectedRows.add(createExpectedRow(
@@ -1065,7 +1096,9 @@ public class SystemSchemaTest extends CalciteTestBase
         1000L,
         nonLeader,
         startTimeStr,
-        version
+        version,
+        availableProcessors,
+        totalMemory
     ));
     Assert.assertEquals(expectedRows.size(), rows.size());
     for (int i = 0; i < rows.size(); i++) {
@@ -1099,7 +1132,9 @@ public class SystemSchemaTest extends CalciteTestBase
       @Nullable Long maxSize,
       @Nullable Long isLeader,
       String startTime,
-      String version
+      String version,
+      long availableProcessors,
+      long totalMemory
   )
   {
     return new Object[]{
@@ -1113,7 +1148,9 @@ public class SystemSchemaTest extends CalciteTestBase
         maxSize,
         isLeader,
         startTime,
-        version
+        version,
+        availableProcessors,
+        totalMemory
     };
   }
 

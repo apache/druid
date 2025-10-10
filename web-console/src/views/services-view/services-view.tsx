@@ -88,6 +88,8 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Usage',
     'Start time',
     'Version',
+    'CPU processors',
+    'Total memory',
     'Detail',
   ],
   'no-sql': [
@@ -149,6 +151,8 @@ interface ServiceResultRow {
   readonly tls_port: number;
   readonly start_time: string;
   readonly version: string;
+  readonly available_processors: number;
+  readonly total_memory: number;
 }
 
 interface ServicesWithAuxiliaryInfo {
@@ -250,7 +254,9 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
   "max_size",
   "is_leader",
   "start_time",
-  "version"
+  "version",
+  "available_processors",
+  "total_memory"
 FROM sys.servers
 ORDER BY
   (
@@ -300,6 +306,8 @@ ORDER BY
                 start_time: '1970:01:01T00:00:00Z',
                 is_leader: 0,
                 version: '',
+                available_processors: -1,
+                total_memory: -1,
               };
             },
           );
@@ -655,6 +663,37 @@ ORDER BY
           width: 200,
           Cell: this.renderFilterableCell('version'),
           Aggregated: () => '',
+        },
+        {
+          Header: 'CPU processors',
+          show: visibleColumns.shown('CPU processors'),
+          accessor: 'available_processors',
+          className: 'padded',
+          filterable: false,
+          width: 120,
+          Cell: ({ value }) => value,
+          Aggregated: ({ subRows }) => {
+            const originalRows: ServiceResultRow[] = subRows.map(r => r._original);
+            const totalAvailableProcessors = sum(originalRows, s => s.available_processors);
+            return totalAvailableProcessors;
+          },
+        },
+        {
+          Header: 'Total memory',
+          show: visibleColumns.shown('Total memory'),
+          accessor: 'total_memory',
+          className: 'padded',
+          width: 120,
+          filterable: false,
+          Cell: ({ value }) => {
+            if (value === null) return '';
+            return formatBytes(value, true);
+          },
+          Aggregated: ({ subRows }) => {
+            const originalRows = subRows.map(r => r._original);
+            const totalMemory = sum(originalRows, s => s.total_memory);
+            return formatBytes(totalMemory, true);
+          },
         },
         {
           Header: 'Detail',
