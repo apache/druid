@@ -1009,7 +1009,7 @@
             <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm</artifactId>
-                <version>9.8</version>
+                <version>9.9</version>
             </dependency>
             <dependency>
                 <groupId>org.ow2.asm</groupId>
