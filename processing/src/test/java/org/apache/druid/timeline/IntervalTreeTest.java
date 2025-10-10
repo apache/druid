@@ -19,19 +19,14 @@
 
 package org.apache.druid.timeline;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 
 public class IntervalTreeTest
 {
@@ -159,8 +154,10 @@ public class IntervalTreeTest
   @Test
   public void testRebalance() throws JsonProcessingException
   {
-    IntervalTree<String> tree = setupBaseIntervalTree();
+    IntervalTree<String> tree = setupSparseOverlapTree(60);
+    System.out.println(tree.height());
     tree.rebalance();
+    System.out.println(tree.height());
     System.out.println(tree.print());
   }
 
@@ -187,7 +184,15 @@ public class IntervalTreeTest
 
   private IntervalTree<String> setupSparseOverlapTree()
   {
+    return setupSparseOverlapTree(null);
+  }
+
+  private IntervalTree<String> setupSparseOverlapTree(Integer imbalanceTolerance)
+  {
     IntervalTree<String> tree = new IntervalTree<>(Comparators.intervalsByStart(), Comparators.intervalsByEnd());
+    if (imbalanceTolerance != null) {
+      tree.setImbalanceTolerance(imbalanceTolerance);
+    }
     tree.add(Intervals.of("2025-01-01T00:00:00/P1D"), "v1");
     tree.add(Intervals.of("2025-02-01T00:00:00/P1D"), "v2");
     tree.add(Intervals.of("2025-01-12T00:00:00/P1D"), "v3");

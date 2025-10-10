@@ -42,7 +42,8 @@ import java.util.Map;
  * interval bounds of the entire subtree under a node, is stored on each node. This state helps speed up search for
  * matching intervals by skipping unsuitable subtrees that won't have a match.
  * <p>
- * TODO:- Add balancing
+ *
+ * Not thread safe
  */
 public class IntervalTree<T>
 {
@@ -51,6 +52,10 @@ public class IntervalTree<T>
 
   @VisibleForTesting
   Node<T> root;
+  int size;
+
+  // A tolerance from ideal depth on either side expressed as a percentage
+  int imbalanceTolerance = 50;
 
   public IntervalTree(Comparator<Interval> comparator)
   {
@@ -63,7 +68,17 @@ public class IntervalTree<T>
     this.highComparator = highComparator;
   }
 
-    /*
+  public int getImbalanceTolerance()
+  {
+    return imbalanceTolerance;
+  }
+
+  public void setImbalanceTolerance(int imbalanceTolerance)
+  {
+    this.imbalanceTolerance = imbalanceTolerance;
+  }
+
+  /*
     public static class Entry<T> {
         Interval interval;
         T value;
@@ -79,6 +94,8 @@ public class IntervalTree<T>
   {
     Interval interval;
     T value;
+    @VisibleForTesting
+    int height;
     // The min and max of the range for the subtree
     Interval min;
     Interval max;
@@ -118,6 +135,7 @@ public class IntervalTree<T>
   public void add(Interval interval, T value)
   {
     root = insert(root, interval, value);
+    checkRebalance();
   }
 
   private Node<T> insert(Node<T> node, Interval interval, T value)
@@ -126,9 +144,11 @@ public class IntervalTree<T>
     if (node == null) {
       node = new Node<>();
       node.interval = interval;
+      node.value = value;
+      node.height = 0;
       node.min = interval;
       node.max = interval;
-      node.value = value;
+      ++size;
       return node;
     }
 
@@ -137,6 +157,10 @@ public class IntervalTree<T>
     } else {
       node.right = insert(node.right, interval, value);
     }
+
+    int lheight = (node.left != null) ? node.left.height : -1;
+    int rheight = (node.right != null) ? node.right.height : -1;
+    node.height = Math.max(lheight, rheight) + 1;
 
     if (comparator.compare(interval, node.min) < 0) {
       node.min = interval;
@@ -212,6 +236,7 @@ public class IntervalTree<T>
   public void remove(Interval interval)
   {
     root = removeNode(root, interval);
+    checkRebalance();
   }
 
   private Node<T> removeNode(Node<T> node, Interval interval)
@@ -226,11 +251,14 @@ public class IntervalTree<T>
     }
 
     if (node.interval.equals(interval)) {
+      --size;
       if ((node.left != null) && (node.right != null)) {
         makeLeftChild(node.right, node.left);
         return node.right;
       } else if (node.left != null) {
         return node.left;
+      } else if (node.right != null) {
+        return node.right;
       }
       return null;
     }
@@ -240,6 +268,8 @@ public class IntervalTree<T>
     } else {
       node.right = removeNode(node.right, interval);
     }
+
+    recomputeState(node);
 
     return node;
   }
@@ -251,6 +281,7 @@ public class IntervalTree<T>
     } else {
       makeLeftChild(node.left, childNode);
     }
+    recomputeState(node);
   }
 
   public void rebalance()
@@ -280,19 +311,36 @@ public class IntervalTree<T>
     Node<T> node = nodes.get(mid);
     node.left = constructTree(nodes, start, mid);
     node.right = constructTree(nodes, mid + 1, end);
+    recomputeState(node);
+    return node;
+  }
+
+  private void recomputeState(Node<T> node)
+  {
+    int lheight = (node.left != null) ? node.left.height : -1;
+    int rheight = (node.right != null) ? node.right.height : -1;
+    node.height = Math.max(lheight, rheight) + 1;
     node.max = maxInterval(node.interval, node.left, node.right);
     node.min = minInterval(node.interval, node.left, node.right);
-    return node;
   }
 
   public void clear()
   {
     root = null;
+    size = 0;
   }
 
   public int size()
   {
-    return size(root);
+    //return size(root);
+    return size;
+  }
+
+  @VisibleForTesting
+  // returns the number of edges from root to leaf along the longest path
+  int height()
+  {
+    return (root != null) ? root.height : -1;
   }
 
   private int size(Node<T> node)
@@ -301,6 +349,18 @@ public class IntervalTree<T>
       return 0;
     }
     return 1 + size(node.left) + size(node.right);
+  }
+
+  private void checkRebalance()
+  {
+    if (root != null) {
+      int ideal = (int)Math.floor(Math.log10(size + 1)/Math.log10(2));
+      double tolerance = ideal * imbalanceTolerance/100.0;
+      int threshold = ideal + (int)tolerance;
+      if (root.height > threshold) {
+        rebalance();
+      }
+    }
   }
 
   public String print()
