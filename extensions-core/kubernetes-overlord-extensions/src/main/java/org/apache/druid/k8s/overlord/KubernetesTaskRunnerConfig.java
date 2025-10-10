@@ -81,6 +81,13 @@ public class KubernetesTaskRunnerConfig
   private boolean disableClientProxy;
 
   @JsonProperty
+  // enable using kubernetes informer cache for peon client operations
+  private boolean enableKubernetesClientSharedInformers = false;
+
+  @JsonProperty
+  private Period kubernetesClientInformerResyncPeriod = new Period("PT30S");
+
+  @JsonProperty
   @NotNull
   private Period maxTaskDuration = new Period("PT4H");
 
@@ -164,7 +171,9 @@ public class KubernetesTaskRunnerConfig
       Map<String, String> labels,
       Map<String, String> annotations,
       Integer capacity,
-      Period taskJoinTimeout
+      Period taskJoinTimeout,
+      boolean enableKubernetesClientSharedInformers,
+      Period kubernetesClientInformerResyncPeriod
   )
   {
     this.namespace = namespace;
@@ -241,6 +250,14 @@ public class KubernetesTaskRunnerConfig
     this.capacity = ObjectUtils.defaultIfNull(
         capacity,
         this.capacity
+    );
+    this.enableKubernetesClientSharedInformers = ObjectUtils.getIfNull(
+        enableKubernetesClientSharedInformers,
+        this.enableKubernetesClientSharedInformers
+    );
+    this.kubernetesClientInformerResyncPeriod = ObjectUtils.getIfNull(
+        kubernetesClientInformerResyncPeriod,
+        this.kubernetesClientInformerResyncPeriod
     );
   }
 
@@ -351,6 +368,16 @@ public class KubernetesTaskRunnerConfig
     return capacity;
   }
 
+  public boolean isEnableKubernetesClientSharedInformers()
+  {
+    return enableKubernetesClientSharedInformers;
+  }
+
+  public Period getKubernetesClientInformerResyncPeriod()
+  {
+    return kubernetesClientInformerResyncPeriod;
+  }
+
   public static Builder builder()
   {
     return new Builder();
@@ -379,6 +406,8 @@ public class KubernetesTaskRunnerConfig
     private Integer capacity;
     private Period taskJoinTimeout;
     private Period logSaveTimeout;
+    private boolean enableKubernetesClientCaching;
+    private Period kubernetesClientInformerResyncPeriod;
 
     public Builder()
     {
@@ -511,6 +540,18 @@ public class KubernetesTaskRunnerConfig
       return this;
     }
 
+    public Builder withEnablePeonClientCache(boolean enableKubernetesClientCaching)
+    {
+      this.enableKubernetesClientCaching = enableKubernetesClientCaching;
+      return this;
+    }
+
+    public Builder withKubernetesClientInformerResyncPeriod(Period kubernetesClientInformerResyncPeriod)
+    {
+      this.kubernetesClientInformerResyncPeriod = kubernetesClientInformerResyncPeriod;
+      return this;
+    }
+
     public KubernetesTaskRunnerConfig build()
     {
       return new KubernetesTaskRunnerConfig(
@@ -534,7 +575,9 @@ public class KubernetesTaskRunnerConfig
           this.labels,
           this.annotations,
           this.capacity,
-          this.taskJoinTimeout
+          this.taskJoinTimeout,
+          this.enableKubernetesClientCaching,
+          this.kubernetesClientInformerResyncPeriod
       );
     }
   }

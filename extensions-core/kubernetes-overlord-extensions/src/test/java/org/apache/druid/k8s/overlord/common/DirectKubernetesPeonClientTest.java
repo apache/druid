@@ -45,7 +45,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @EnableKubernetesMockClient(crud = true)
-public class KubernetesPeonClientTest
+public class DirectKubernetesPeonClientTest
 {
   private static final String ID = "id";
   private static final String TASK_NAME_PREFIX = "";
@@ -57,15 +57,15 @@ public class KubernetesPeonClientTest
   private KubernetesClient client;
   private KubernetesMockServer server;
   private KubernetesClientApi clientApi;
-  private KubernetesPeonClient instance;
+  private DirectKubernetesPeonClient instance;
   private StubServiceEmitter serviceEmitter;
 
   @BeforeEach
   public void setup()
   {
-    clientApi = new TestKubernetesClient(this.client);
+    clientApi = new TestKubernetesClient(this.client, NAMESPACE);
     serviceEmitter = new StubServiceEmitter("service", "host");
-    instance = new KubernetesPeonClient(clientApi, NAMESPACE, false, serviceEmitter);
+    instance = new DirectKubernetesPeonClient(clientApi, NAMESPACE, false, serviceEmitter);
   }
 
   @Test
@@ -105,16 +105,16 @@ public class KubernetesPeonClientTest
         .build();
 
     server.expect().get()
-        .withPath("/api/v1/namespaces/namespace/pods?labelSelector=job-name%3D" + KUBERNETES_JOB_NAME)
-        .andReturn(HttpURLConnection.HTTP_OK, new PodListBuilder()
-            .addNewItem()
-            .withNewMetadata()
-            .withName(POD_NAME)
-            .addToLabels("job-name", JOB_NAME)
-            .endMetadata()
-            .endItem()
-            .build()
-        ).once();
+          .withPath("/api/v1/namespaces/namespace/pods?labelSelector=job-name%3D" + KUBERNETES_JOB_NAME)
+          .andReturn(HttpURLConnection.HTTP_OK, new PodListBuilder()
+              .addNewItem()
+              .withNewMetadata()
+              .withName(POD_NAME)
+              .addToLabels("job-name", JOB_NAME)
+              .endMetadata()
+              .endItem()
+              .build()
+          ).once();
 
     Assertions.assertThrows(
         IllegalStateException.class,
@@ -148,7 +148,7 @@ public class KubernetesPeonClientTest
         () -> instance.launchPeonJobAndWaitForStart(job, NoopTask.create(), 1, TimeUnit.SECONDS)
     );
   }
-  
+
   @Test
   void test_waitForPeonJobCompletion_withSuccessfulJob_returnsJobResponseWithJobAndSucceededPeonPhase()
   {
@@ -235,8 +235,8 @@ public class KubernetesPeonClientTest
   @Test
   void test_deletePeonJob_withJob_withDebugJobsTrue_skipsDelete()
   {
-    KubernetesPeonClient instance = new KubernetesPeonClient(
-        new TestKubernetesClient(this.client),
+    DirectKubernetesPeonClient instance = new DirectKubernetesPeonClient(
+        new TestKubernetesClient(this.client, NAMESPACE),
         NAMESPACE,
         true,
         serviceEmitter
@@ -260,8 +260,8 @@ public class KubernetesPeonClientTest
   @Test
   void test_deletePeonJob_withoutJob_withDebugJobsTrue_skipsDelete()
   {
-    KubernetesPeonClient instance = new KubernetesPeonClient(
-        new TestKubernetesClient(this.client),
+    DirectKubernetesPeonClient instance = new DirectKubernetesPeonClient(
+        new TestKubernetesClient(this.client, NAMESPACE),
         NAMESPACE,
         true,
         serviceEmitter
@@ -274,48 +274,48 @@ public class KubernetesPeonClientTest
   void test_getPeonLogs_withJob_returnsInputStreamInOptional()
   {
     server.expect().get()
-        .withPath("/apis/batch/v1/namespaces/namespace/jobs/" + KUBERNETES_JOB_NAME)
-        .andReturn(HttpURLConnection.HTTP_OK, new JobBuilder()
-            .withNewMetadata()
-            .withName(KUBERNETES_JOB_NAME)
-            .withUid("uid")
-            .endMetadata()
-            .withNewSpec()
-            .withNewTemplate()
-            .withNewSpec()
-            .addNewContainer()
-            .withName("main")
-            .endContainer()
-            .endSpec()
-            .endTemplate()
-            .endSpec()
-            .build()
-        ).once();
+          .withPath("/apis/batch/v1/namespaces/namespace/jobs/" + KUBERNETES_JOB_NAME)
+          .andReturn(HttpURLConnection.HTTP_OK, new JobBuilder()
+              .withNewMetadata()
+              .withName(KUBERNETES_JOB_NAME)
+              .withUid("uid")
+              .endMetadata()
+              .withNewSpec()
+              .withNewTemplate()
+              .withNewSpec()
+              .addNewContainer()
+              .withName("main")
+              .endContainer()
+              .endSpec()
+              .endTemplate()
+              .endSpec()
+              .build()
+          ).once();
 
     server.expect().get()
-        .withPath("/api/v1/namespaces/namespace/pods?labelSelector=controller-uid%3Duid")
-        .andReturn(HttpURLConnection.HTTP_OK, new PodListBuilder()
-            .addNewItem()
-            .withNewMetadata()
-            .withName(POD_NAME)
-            .addNewOwnerReference()
-            .withUid("uid")
-            .withController(true)
-            .endOwnerReference()
-            .endMetadata()
-            .withNewSpec()
-            .addNewContainer()
-            .withName("main")
-            .endContainer()
-            .endSpec()
-            .endItem()
-            .build()
-        ).once();
+          .withPath("/api/v1/namespaces/namespace/pods?labelSelector=controller-uid%3Duid")
+          .andReturn(HttpURLConnection.HTTP_OK, new PodListBuilder()
+              .addNewItem()
+              .withNewMetadata()
+              .withName(POD_NAME)
+              .addNewOwnerReference()
+              .withUid("uid")
+              .withController(true)
+              .endOwnerReference()
+              .endMetadata()
+              .withNewSpec()
+              .addNewContainer()
+              .withName("main")
+              .endContainer()
+              .endSpec()
+              .endItem()
+              .build()
+          ).once();
 
     server.expect().get()
-        .withPath("/api/v1/namespaces/namespace/pods/id/log?pretty=false&container=main")
-        .andReturn(HttpURLConnection.HTTP_OK, "data")
-        .once();
+          .withPath("/api/v1/namespaces/namespace/pods/id/log?pretty=false&container=main")
+          .andReturn(HttpURLConnection.HTTP_OK, "data")
+          .once();
 
     Optional<InputStream> maybeInputStream = instance.getPeonLogs(new K8sTaskId(TASK_NAME_PREFIX, ID));
     Assertions.assertTrue(maybeInputStream.isPresent());
@@ -363,7 +363,7 @@ public class KubernetesPeonClientTest
   @Test
   void test_getPeonJobs_withJobInDifferentNamespace_returnsPodList()
   {
-    instance = new KubernetesPeonClient(clientApi, NAMESPACE, "ns", false, serviceEmitter);
+    instance = new DirectKubernetesPeonClient(clientApi, NAMESPACE, "ns", false, serviceEmitter);
 
     Job job = new JobBuilder()
         .withNewMetadata()
@@ -383,7 +383,7 @@ public class KubernetesPeonClientTest
   @Test
   void test_getPeonJobs_withJobInDifferentNamespaceButOverlordNamespaceNotSpecified_doesNotReturnPodList()
   {
-    instance = new KubernetesPeonClient(clientApi, NAMESPACE, "ns", false, serviceEmitter);
+    instance = new DirectKubernetesPeonClient(clientApi, NAMESPACE, "ns", false, serviceEmitter);
 
     Job job = new JobBuilder()
         .withNewMetadata()
@@ -403,7 +403,7 @@ public class KubernetesPeonClientTest
   @Test
   void test_getPeonJobs_withJobInSameNamespaceWithoutLabels_doesNotReturnPodList()
   {
-    instance = new KubernetesPeonClient(clientApi, NAMESPACE, NAMESPACE, false, serviceEmitter);
+    instance = new DirectKubernetesPeonClient(clientApi, NAMESPACE, NAMESPACE, false, serviceEmitter);
 
     Job job = new JobBuilder()
         .withNewMetadata()
@@ -567,23 +567,23 @@ public class KubernetesPeonClientTest
   void test_getPeonPodWithRetries_withPod_returnsPod()
   {
     server.expect().get()
-        .withPath("/api/v1/namespaces/namespace/pods?labelSelector=job-name%3D" + KUBERNETES_JOB_NAME)
-        .andReturn(HttpURLConnection.HTTP_OK, new PodListBuilder().build())
-        .once();
+          .withPath("/api/v1/namespaces/namespace/pods?labelSelector=job-name%3D" + KUBERNETES_JOB_NAME)
+          .andReturn(HttpURLConnection.HTTP_OK, new PodListBuilder().build())
+          .once();
 
     server.expect().get()
-        .withPath("/api/v1/namespaces/namespace/pods?labelSelector=job-name%3D" + KUBERNETES_JOB_NAME)
-        .andReturn(HttpURLConnection.HTTP_OK, new PodListBuilder()
-            .addNewItem()
-            .withNewMetadata()
-            .withName(POD_NAME)
-            .addToLabels("job-name", KUBERNETES_JOB_NAME)
-            .endMetadata()
-            .endItem()
-            .build()
-        ).once();
+          .withPath("/api/v1/namespaces/namespace/pods?labelSelector=job-name%3D" + KUBERNETES_JOB_NAME)
+          .andReturn(HttpURLConnection.HTTP_OK, new PodListBuilder()
+              .addNewItem()
+              .withNewMetadata()
+              .withName(POD_NAME)
+              .addToLabels("job-name", KUBERNETES_JOB_NAME)
+              .endMetadata()
+              .endItem()
+              .build()
+          ).once();
 
-    Pod pod = instance.getPeonPodWithRetries(new K8sTaskId(TASK_NAME_PREFIX, ID).getK8sJobName());
+    Pod pod = instance.getPeonPodWithRetries(clientApi.getClient(), new K8sTaskId(TASK_NAME_PREFIX, ID).getK8sJobName(), 0, 2);
 
     Assertions.assertNotNull(pod);
   }
@@ -608,10 +608,10 @@ public class KubernetesPeonClientTest
     String blacklistedMessage = DruidK8sConstants.BLACKLISTED_PEON_POD_ERROR_MESSAGES.get(0);
 
     final String eventsPath = "/api/v1/namespaces/namespace/events?fieldSelector=" +
-                        "involvedObject.name%3D" + k8sJobName +
-                        "%2CinvolvedObject.namespace%3D" + NAMESPACE +
-                        "%2CinvolvedObject.kind%3DJob" +
-                        "%2CinvolvedObject.apiVersion%3Dbatch%2Fv1";
+                              "involvedObject.name%3D" + k8sJobName +
+                              "%2CinvolvedObject.namespace%3D" + NAMESPACE +
+                              "%2CinvolvedObject.kind%3DJob" +
+                              "%2CinvolvedObject.apiVersion%3Dbatch%2Fv1";
 
     server.expect().get()
           .withPath(eventsPath)
@@ -643,48 +643,48 @@ public class KubernetesPeonClientTest
   void test_getPeonLogsWatcher_withJob_returnsWatchLogInOptional()
   {
     server.expect().get()
-        .withPath("/apis/batch/v1/namespaces/namespace/jobs/" + KUBERNETES_JOB_NAME)
-        .andReturn(HttpURLConnection.HTTP_OK, new JobBuilder()
-            .withNewMetadata()
-            .withName(KUBERNETES_JOB_NAME)
-            .withUid("uid")
-            .endMetadata()
-            .withNewSpec()
-            .withNewTemplate()
-            .withNewSpec()
-            .addNewContainer()
-            .withName("main")
-            .endContainer()
-            .endSpec()
-            .endTemplate()
-            .endSpec()
-            .build()
-        ).once();
+          .withPath("/apis/batch/v1/namespaces/namespace/jobs/" + KUBERNETES_JOB_NAME)
+          .andReturn(HttpURLConnection.HTTP_OK, new JobBuilder()
+              .withNewMetadata()
+              .withName(KUBERNETES_JOB_NAME)
+              .withUid("uid")
+              .endMetadata()
+              .withNewSpec()
+              .withNewTemplate()
+              .withNewSpec()
+              .addNewContainer()
+              .withName("main")
+              .endContainer()
+              .endSpec()
+              .endTemplate()
+              .endSpec()
+              .build()
+          ).once();
 
     server.expect().get()
-        .withPath("/api/v1/namespaces/namespace/pods?labelSelector=controller-uid%3Duid")
-        .andReturn(HttpURLConnection.HTTP_OK, new PodListBuilder()
-            .addNewItem()
-            .withNewMetadata()
-            .withName(POD_NAME)
-            .addNewOwnerReference()
-            .withUid("uid")
-            .withController(true)
-            .endOwnerReference()
-            .endMetadata()
-            .withNewSpec()
-            .addNewContainer()
-            .withName("main")
-            .endContainer()
-            .endSpec()
-            .endItem()
-            .build()
-        ).once();
+          .withPath("/api/v1/namespaces/namespace/pods?labelSelector=controller-uid%3Duid")
+          .andReturn(HttpURLConnection.HTTP_OK, new PodListBuilder()
+              .addNewItem()
+              .withNewMetadata()
+              .withName(POD_NAME)
+              .addNewOwnerReference()
+              .withUid("uid")
+              .withController(true)
+              .endOwnerReference()
+              .endMetadata()
+              .withNewSpec()
+              .addNewContainer()
+              .withName("main")
+              .endContainer()
+              .endSpec()
+              .endItem()
+              .build()
+          ).once();
 
     server.expect().get()
-        .withPath("/api/v1/namespaces/namespace/pods/id/log?pretty=false&container=main")
-        .andReturn(HttpURLConnection.HTTP_OK, "data")
-        .once();
+          .withPath("/api/v1/namespaces/namespace/pods/id/log?pretty=false&container=main")
+          .andReturn(HttpURLConnection.HTTP_OK, "data")
+          .once();
 
     Optional<LogWatch> maybeLogWatch = instance.getPeonLogWatcher(new K8sTaskId(TASK_NAME_PREFIX, ID));
     Assertions.assertTrue(maybeLogWatch.isPresent());
@@ -744,9 +744,9 @@ public class KubernetesPeonClientTest
 
     // Return 403 Forbidden - this is not a retryable exception
     server.expect().post()
-        .withPath(jobPath)
-        .andReturn(HttpURLConnection.HTTP_FORBIDDEN, "Forbidden: insufficient permissions")
-        .once();
+          .withPath(jobPath)
+          .andReturn(HttpURLConnection.HTTP_FORBIDDEN, "Forbidden: insufficient permissions")
+          .once();
 
     // Should fail immediately without retries
     DruidException e = Assertions.assertThrows(
@@ -771,9 +771,9 @@ public class KubernetesPeonClientTest
 
     // Return 409 Conflict - job already exists
     server.expect().post()
-        .withPath(jobPath)
-        .andReturn(HttpURLConnection.HTTP_CONFLICT, "Job already exists")
-        .once();
+          .withPath(jobPath)
+          .andReturn(HttpURLConnection.HTTP_CONFLICT, "Job already exists")
+          .once();
 
     // Should succeed gracefully without throwing exception
     Assertions.assertDoesNotThrow(
@@ -798,11 +798,11 @@ public class KubernetesPeonClientTest
 
     // Should return the pod successfully
     Pod result = instance.waitForPodResultWithRetries(
-        clientApi.getClient(), 
-        pod, 
-        1, 
-        TimeUnit.SECONDS, 
-        0, 
+        clientApi.getClient(),
+        pod,
+        1,
+        TimeUnit.SECONDS,
+        0,
         3
     );
 
@@ -823,23 +823,18 @@ public class KubernetesPeonClientTest
         .endStatus()
         .build();
 
-    String podPath = "/api/v1/namespaces/" + NAMESPACE + "/pods/" + POD_NAME;
+    // Create the pod in the mock client without IP - it will remain unready
+    client.pods().inNamespace(NAMESPACE).resource(pod).create();
 
-    // Mock server to return the pod without IP, causing timeout
-    server.expect().get()
-        .withPath(podPath + "?watch=true")
-        .andReturn(HttpURLConnection.HTTP_INTERNAL_ERROR, "Internal server error")
-        .once();
-
-    // Should throw DruidException after failure
+    // Should throw DruidException after timeout due to pod never becoming ready
     DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> instance.waitForPodResultWithRetries(
-            clientApi.getClient(), 
-            pod, 
-            1, 
+            clientApi.getClient(),
+            pod,
+            1,
             TimeUnit.MILLISECONDS, // Very short timeout to force failure
-            0, 
+            0,
             1
         )
     );
