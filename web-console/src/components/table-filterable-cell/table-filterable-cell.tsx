@@ -37,12 +37,14 @@ export interface TableFilterableCellProps {
   onFiltersChange(filters: Filter[]): void;
   enableComparisons?: boolean;
   children?: ReactNode;
+  displayValue?: string;
 }
 
 export const TableFilterableCell = React.memo(function TableFilterableCell(
   props: TableFilterableCellProps,
 ) {
-  const { field, value, children, filters, enableComparisons, onFiltersChange } = props;
+  const { field, value, children, filters, enableComparisons, onFiltersChange, displayValue } =
+    props;
 
   return (
     <Popover
@@ -56,7 +58,7 @@ export const TableFilterableCell = React.memo(function TableFilterableCell(
                 <MenuItem
                   key={i}
                   icon={filterModeToIcon(mode)}
-                  text={value}
+                  text={displayValue ?? value}
                   onClick={() =>
                     onFiltersChange(
                       addOrUpdateFilter(filters, {
