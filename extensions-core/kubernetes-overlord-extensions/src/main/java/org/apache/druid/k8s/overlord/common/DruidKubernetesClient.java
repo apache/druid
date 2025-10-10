@@ -124,6 +124,9 @@ public class DruidKubernetesClient implements KubernetesClientApi
   @Override
   public KubernetesResourceEventNotifier getEventNotifier()
   {
+    if (eventNotifier == null) {
+      throw DruidException.defensive("Event notifier is not initialized, caching is disabled");
+    }
     return eventNotifier;
   }
 
@@ -249,6 +252,9 @@ public class DruidKubernetesClient implements KubernetesClientApi
   @Override
   public long getInformerResyncPeriodMillis()
   {
+    if (jobInformer == null || podInformer == null) {
+      throw DruidException.defensive("Informers are not initialized, caching is disabled");
+    }
     return informerResyncPeriodMillis;
   }
 }
