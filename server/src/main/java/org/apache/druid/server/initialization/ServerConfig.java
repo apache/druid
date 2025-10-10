@@ -84,7 +84,8 @@ public class ServerConfig
       @NotNull ErrorResponseTransformStrategy errorResponseTransformStrategy,
       @Nullable String contentSecurityPolicy,
       boolean enableHSTS,
-      @Nullable UriCompliance uriCompliance
+      @Nullable UriCompliance uriCompliance,
+      boolean enforceStrictSNIHostChecking
   )
   {
     this.numThreads = numThreads;
@@ -109,6 +110,7 @@ public class ServerConfig
     this.contentSecurityPolicy = contentSecurityPolicy;
     this.enableHSTS = enableHSTS;
     this.uriCompliance = uriCompliance != null ? uriCompliance : UriCompliance.LEGACY;
+    this.enforceStrictSNIHostChecking = enforceStrictSNIHostChecking;
   }
 
   public ServerConfig()
@@ -211,6 +213,9 @@ public class ServerConfig
 
   @JsonProperty
   private boolean showDetailedJettyErrors = true;
+
+  @JsonProperty
+  private boolean enforceStrictSNIHostChecking = true;
 
   public int getNumThreads()
   {
@@ -328,6 +333,11 @@ public class ServerConfig
     return uriCompliance;
   }
 
+  public boolean isEnforceStrictSNIHostChecking()
+  {
+    return enforceStrictSNIHostChecking;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -360,7 +370,8 @@ public class ServerConfig
            Objects.equals(contentSecurityPolicy, that.getContentSecurityPolicy()) &&
            enableHSTS == that.enableHSTS &&
            enableQueryRequestsQueuing == that.enableQueryRequestsQueuing &&
-           Objects.equals(uriCompliance, that.uriCompliance);
+           Objects.equals(uriCompliance, that.uriCompliance) &&
+           enforceStrictSNIHostChecking == that.enforceStrictSNIHostChecking;
   }
 
   @Override
@@ -389,7 +400,8 @@ public class ServerConfig
         contentSecurityPolicy,
         enableHSTS,
         enableQueryRequestsQueuing,
-        uriCompliance
+        uriCompliance,
+        enforceStrictSNIHostChecking
     );
   }
 
@@ -420,6 +432,7 @@ public class ServerConfig
            ", enableHSTS=" + enableHSTS +
            ", enableQueryRequestsQueuing=" + enableQueryRequestsQueuing +
            ", uriCompliance=" + uriCompliance +
+           ", enforceStrictSNIHostChecking=" + enforceStrictSNIHostChecking +
            '}';
   }
 
