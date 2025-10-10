@@ -21,14 +21,13 @@
 /* eslint-disable no-undef */
 
 import fs from 'fs';
-import https from 'https';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const DOCS_BASE_URL = 'https://druid.apache.org/docs/latest';
 const SRC_DIR = path.join(__dirname, '../src');
+const DOCS_DIR = path.join(__dirname, '../../docs');
 
 // Regex to find ${getLink('DOCS')}/path patterns
 const DOC_LINK_REGEX = /\$\{getLink\(['"]DOCS['"]\)\}\/([^\s`'"}\]]+)/g;
@@ -63,32 +62,34 @@ function extractDocLinks(filePath) {
   DOC_LINK_REGEX.lastIndex = 0;
 
   while ((match = DOC_LINK_REGEX.exec(content)) !== null) {
+    const fullPath = match[1];
+    // Remove anchor if present
+    let pathWithoutAnchor = fullPath.split('#')[0];
+
+    // Remove trailing slash if present
+    pathWithoutAnchor = pathWithoutAnchor.replace(/\/$/, '');
+
+    // Try path.md first, fallback to path/index.md
+    let docFilePath = path.join(DOCS_DIR, `${pathWithoutAnchor}.md`);
+    if (!fs.existsSync(docFilePath)) {
+      docFilePath = path.join(DOCS_DIR, pathWithoutAnchor, 'index.md');
+    }
+
     links.push({
       file: path.relative(path.join(__dirname, '..'), filePath),
-      path: match[1],
-      fullUrl: `${DOCS_BASE_URL}/${match[1]}`
+      docPath: fullPath,
+      docFilePath: docFilePath
     });
   }
 
   return links;
 }
 
-function checkUrl(url) {
-  return new Promise((resolve) => {
-    https.get(url, { method: 'HEAD' }, (res) => {
-      resolve({
-        url,
-        status: res.statusCode,
-        exists: res.statusCode >= 200 && res.statusCode < 400
-      });
-    }).on('error', (err) => {
-      resolve({
-        url,
-        status: `ERROR: ${err.message}`,
-        exists: false
-      });
-    });
-  });
+function checkDocFile(docFilePath) {
+  return {
+    docFilePath,
+    exists: fs.existsSync(docFilePath)
+  };
 }
 
 async function main() {
@@ -110,22 +111,17 @@ async function main() {
     return;
   }
 
-  console.log('Checking if links exist...\n');
-
-  const results = await Promise.all(
-    allLinks.map(link => checkUrl(link.fullUrl))
-  );
+  console.log('Checking if doc files exist...\n');
 
   let hasErrors = false;
-  for (let i = 0; i < allLinks.length; i++) {
-    const link = allLinks[i];
-    const result = results[i];
+  for (const link of allLinks) {
+    const result = checkDocFile(link.docFilePath);
 
     if (!result.exists) {
       hasErrors = true;
       console.log(`❌ BROKEN: ${link.file}`);
-      console.log(`   URL: ${link.fullUrl}`);
-      console.log(`   Status: ${result.status}\n`);
+      console.log(`   Doc path: ${link.docPath}`);
+      console.log(`   Expected file: ${path.relative(path.join(__dirname, '../..'), link.docFilePath)}\n`);
     }
   }
 
