@@ -17,10 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded.msq;
+package org.apache.druid.testing.embedded.azure;
 
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.testing.embedded.indexer.AbstractAzureInputSourceParallelIndexTest;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded.indexer;
+package org.apache.druid.testing.embedded.azure;
 
 import org.apache.druid.java.util.common.Pair;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -25,15 +25,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
 
-/**
- * IMPORTANT:
- * To run this test, you must set the following env variables in the build environment -
- * DRUID_CLOUD_PATH - path inside the container where the test data files will be uploaded
- * <p>
- * The AZURE account, key and container should be set in AZURE_ACCOUNT, AZURE_KEY and AZURE_CONTAINER respectively.
- * <p>
- * <a href="https://druid.apache.org/docs/latest/development/extensions-core/azure.html">Azure Deep Storage setup in druid</a>
- */
 public class ITAzureToAzureParallelIndexTest extends AbstractAzureInputSourceParallelIndexTest
 {
   @ParameterizedTest

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded.indexer;
+package org.apache.druid.testing.embedded.azure;
 
 import org.apache.druid.java.util.common.Pair;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -25,12 +25,15 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
 
-public class ITS3ToS3ParallelIndexTest extends AbstractS3InputSourceParallelIndexTest
+public class ITAzureV2SQLBasedIngestionTest extends AbstractAzureInputSourceParallelIndexTest
 {
-  @ParameterizedTest
+  private static final String CLOUD_INGEST_SQL = "/multi-stage-query/wikipedia_cloud_index_msq.sql";
+  private static final String INDEX_QUERIES_FILE = "/multi-stage-query/wikipedia_index_queries.json";
+
+  @ParameterizedTest(name = "Test_{index} ({0})")
   @MethodSource("resources")
-  public void testS3IndexData(Pair<String, List<?>> s3InputSource) throws Exception
+  public void testSQLBasedBatchIngestion(Pair<String, List<?>> azureStorageInputSource)
   {
-    doTest(s3InputSource, new Pair<>(false, false), "s3");
+    doMSQTest(azureStorageInputSource, CLOUD_INGEST_SQL, INDEX_QUERIES_FILE, "azureStorage");
   }
 }

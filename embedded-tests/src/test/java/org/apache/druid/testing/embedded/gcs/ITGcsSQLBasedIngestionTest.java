@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded.indexer;
+package org.apache.druid.testing.embedded.gcs;
 
 import org.apache.druid.java.util.common.Pair;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -25,22 +25,15 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
 
-/**
- * IMPORTANT:
- * To run this test, you must set the following env variables in the build environment -
- * DRUID_CLOUD_PATH - path inside the container where the test data files will be uploaded
- * <p>
- * The AZURE account, key and container should be set in AZURE_ACCOUNT, AZURE_KEY and AZURE_CONTAINER respectively.
- * <p>
- * <a href="https://druid.apache.org/docs/latest/development/extensions-core/azure.html">Azure Deep Storage setup in druid</a>
- */
-public class ITAzureV2ParallelIndexTest extends AbstractAzureInputSourceParallelIndexTest
+public class ITGcsSQLBasedIngestionTest extends AbstractGcsInputSourceParallelIndexTest
 {
-  @ParameterizedTest
+  private static final String CLOUD_INGEST_SQL = "/multi-stage-query/wikipedia_cloud_index_msq.sql";
+  private static final String INDEX_QUERIES_FILE = "/multi-stage-query/wikipedia_index_queries.json";
+
+  @ParameterizedTest(name = "Test_{index} ({0})")
   @MethodSource("resources")
-  public void testAzureIndexData(Pair<String, List<?>> azureInputSource) throws Exception
+  public void testSQLBasedBatchIngestion(Pair<String, List<?>> GcsInputSource)
   {
-    String dataSource = doTest(azureInputSource, new Pair<>(false, false), "azureStorage");
-    validateAzureSegmentFilesDeleted("segments" + "/" + dataSource);
+    doMSQTest(GcsInputSource, CLOUD_INGEST_SQL, INDEX_QUERIES_FILE, "google");
   }
 }

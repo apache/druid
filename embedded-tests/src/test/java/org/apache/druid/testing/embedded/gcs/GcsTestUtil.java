@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded.indexer;
+package org.apache.druid.testing.embedded.gcs;
 
 import com.google.api.client.http.FileContent;
 import com.google.cloud.storage.BucketInfo;
@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.google.GoogleInputDataConfig;
 import org.apache.druid.storage.google.GoogleStorage;
 import org.apache.druid.storage.google.GoogleUtils;
-import org.apache.druid.testing.embedded.gcs.GoogleStorageTestModule;
 import org.apache.druid.testing.embedded.indexing.Resources;
 
 import java.io.File;

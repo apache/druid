@@ -17,13 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded.indexer;
+package org.apache.druid.testing.embedded.azure;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.azure.output.AzureStorageConnectorModule;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.embedded.azure.AzureStorageResource;
+import org.apache.druid.testing.embedded.indexer.AbstractCloudInputSourceParallelIndexTest;
 import org.junit.Assert;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
@@ -32,12 +32,6 @@ import org.junit.jupiter.api.BeforeAll;
 import java.net.URI;
 import java.util.List;
 
-/**
- * This class defines methods to upload and delete the data files used by the tests, which will inherit this class.
- * The files are uploaded based on the values set for following environment variables.
- * "AZURE_KEY", "AZURE_ACCOUNT", "AZURE_CONTAINER", "DRUID_CLOUD_PATH"
- * The test will fail if the above variables are not set.
- */
 public abstract class AbstractAzureInputSourceParallelIndexTest extends AbstractCloudInputSourceParallelIndexTest
 {
   private static final Logger LOG = new Logger(AbstractAzureInputSourceParallelIndexTest.class);

@@ -17,22 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded.indexer;
+package org.apache.druid.testing.embedded.gcs;
 
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.google.output.GoogleStorageConnectorModule;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.embedded.gcs.GoogleCloudStorageResource;
+import org.apache.druid.testing.embedded.indexer.AbstractCloudInputSourceParallelIndexTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 
-/**
- * This class defines methods to upload and delete the data files used by the tests, which will inherit this class.
- * The files are uploaded based on the values set for following environment variables.
- * "GOOGLE_BUCKET", "GOOGLE_PREFIX", "GOOGLE_APPLICATION_CREDENTIALS"
- * The test will fail if the above variables are not set.
- */
 public class AbstractGcsInputSourceParallelIndexTest extends AbstractCloudInputSourceParallelIndexTest
 {
   private static final Logger LOG = new Logger(AbstractGcsInputSourceParallelIndexTest.class);

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded.indexer;
+package org.apache.druid.testing.embedded.azure;
 
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
@@ -39,20 +39,20 @@ public class AzureTestUtil
 {
   public static final Logger LOG = new Logger(AzureTestUtil.class);
   private final CloudBlobClient azureStorageClient;
-  private final String container;
+  private final String containerName;
   private final String cloudPath;
 
-  public AzureTestUtil(CloudBlobClient storageClient, String container, String cloudPath)
+  public AzureTestUtil(CloudBlobClient storageClient, String containerName, String cloudPath)
   {
     this.azureStorageClient = storageClient;
-    this.container = container;
+    this.containerName = containerName;
     this.cloudPath = cloudPath;
   }
 
   public void createStorageContainer() throws URISyntaxException, StorageException
   {
-    LOG.info("Creating azure container " + container);
-    CloudBlobContainer container = azureStorageClient.getContainerReference(this.container);
+    LOG.info("Creating azure container[%s]", containerName);
+    CloudBlobContainer container = azureStorageClient.getContainerReference(containerName);
     // Create the container if it does not exist.
 
     // From the azure documentation -
@@ -67,16 +67,16 @@ public class AzureTestUtil
         true,
         10000,
         13,
-        "Create Azure container : " + this.container + " "
+        "Create Azure container : " + containerName + " "
     );
 
-    LOG.info("Azure container " + this.container + " created");
+    LOG.info("Azure container[%s] created", containerName);
   }
 
   public void deleteStorageContainer() throws URISyntaxException, StorageException
   {
     // Retrieve reference to a previously created container.
-    CloudBlobContainer container = azureStorageClient.getContainerReference(this.container);
+    CloudBlobContainer container = azureStorageClient.getContainerReference(containerName);
     // Delete the blob container.
     container.deleteIfExists();
   }
@@ -89,12 +89,12 @@ public class AzureTestUtil
   public void uploadFileToContainer(String filePath) throws IOException, URISyntaxException, StorageException
   {
     // Retrieve reference to a previously created container.
-    CloudBlobContainer container = azureStorageClient.getContainerReference(this.container);
+    CloudBlobContainer container = azureStorageClient.getContainerReference(containerName);
 
     // Create or overwrite the "myimage.jpg" blob with contents from a local file.
     File source = Resources.getFileForResource(filePath);
-    CloudBlockBlob blob = container.getBlockBlobReference(cloudPath + '/' + source.getName());
-    LOG.info("Uploading file " + cloudPath + '/' + source.getName() + " in azure container " + this.container);
+    CloudBlockBlob blob = container.getBlockBlobReference(getFullPath(source.getName()));
+    LOG.info("Uploading file[%s] in Azure container[%s]", getFullPath(source.getName()), containerName);
     blob.upload(Files.newInputStream(source.toPath()), source.length());
   }
 
@@ -106,11 +106,16 @@ public class AzureTestUtil
   public List<URI> listFiles(String filePath) throws URISyntaxException, StorageException
   {
     // Retrieve reference to a previously created container.
-    CloudBlobContainer container = azureStorageClient.getContainerReference(this.container);
+    CloudBlobContainer container = azureStorageClient.getContainerReference(containerName);
     List<URI> activeFiles = new ArrayList<>();
-    container.listBlobs(cloudPath + '/' + filePath).iterator().forEachRemaining(
+    container.listBlobs(getFullPath(filePath)).iterator().forEachRemaining(
         blob -> activeFiles.add(blob.getUri())
     );
     return activeFiles;
+  }
+
+  private String getFullPath(String fileName)
+  {
+    return cloudPath + '/' + fileName;
   }
 }

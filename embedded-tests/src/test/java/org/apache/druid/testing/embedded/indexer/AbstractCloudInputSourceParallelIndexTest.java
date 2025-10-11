@@ -123,7 +123,7 @@ public abstract class AbstractCloudInputSourceParallelIndexTest extends Abstract
    * @param inputSourceType     Input source type (eg : s3, gcs, azure)
    * @return                    The datasource used to test.
    */
-  String doTest(
+  protected String doTest(
       Pair<String, List<?>> inputSource,
       Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair,
       String inputSourceType

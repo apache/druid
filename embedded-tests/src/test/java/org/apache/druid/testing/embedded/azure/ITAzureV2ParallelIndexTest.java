@@ -17,24 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded.msq;
+package org.apache.druid.testing.embedded.azure;
 
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.testing.embedded.indexer.AbstractAzureInputSourceParallelIndexTest;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
 
-public class ITAzureV2SQLBasedIngestionTest extends AbstractAzureInputSourceParallelIndexTest
+public class ITAzureV2ParallelIndexTest extends AbstractAzureInputSourceParallelIndexTest
 {
-  private static final String CLOUD_INGEST_SQL = "/multi-stage-query/wikipedia_cloud_index_msq.sql";
-  private static final String INDEX_QUERIES_FILE = "/multi-stage-query/wikipedia_index_queries.json";
-
-  @ParameterizedTest(name = "Test_{index} ({0})")
+  @ParameterizedTest
   @MethodSource("resources")
-  public void testSQLBasedBatchIngestion(Pair<String, List<?>> azureStorageInputSource)
+  public void testAzureIndexData(Pair<String, List<?>> azureInputSource) throws Exception
   {
-    doMSQTest(azureStorageInputSource, CLOUD_INGEST_SQL, INDEX_QUERIES_FILE, "azureStorage");
+    String dataSource = doTest(azureInputSource, new Pair<>(false, false), "azureStorage");
+    validateAzureSegmentFilesDeleted("segments" + "/" + dataSource);
   }
 }

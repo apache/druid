@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded.msq;
+package org.apache.druid.testing.embedded.minio;
 
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.testing.embedded.indexer.AbstractS3InputSourceParallelIndexTest;
@@ -26,15 +26,12 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
 
-public class ITS3SQLBasedIngestionTest extends AbstractS3InputSourceParallelIndexTest
+public class ITS3ToS3ParallelIndexTest extends AbstractS3InputSourceParallelIndexTest
 {
-  private static final String CLOUD_INGEST_SQL = "/multi-stage-query/wikipedia_cloud_index_msq.sql";
-  private static final String INDEX_QUERIES_FILE = "/multi-stage-query/wikipedia_index_queries.json";
-
   @ParameterizedTest
   @MethodSource("resources")
-  public void testSQLBasedBatchIngestion(Pair<String, List<?>> s3InputSource)
+  public void testS3IndexData(Pair<String, List<?>> s3InputSource) throws Exception
   {
-    doMSQTest(s3InputSource, CLOUD_INGEST_SQL, INDEX_QUERIES_FILE, "s3");
+    doTest(s3InputSource, new Pair<>(false, false), "s3");
   }
 }
