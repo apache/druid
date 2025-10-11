@@ -25,6 +25,7 @@ import org.joda.time.Interval;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -54,7 +55,8 @@ public class IntervalTree<T>
   Node<T> root;
   int size;
 
-  // A tolerance from ideal depth on either side expressed as a percentage
+  // Deviation allowed from ideal height for the maximum height on either side of tree, expressed as a
+  // percentage of ideal height
   int imbalanceTolerance = 50;
 
   public IntervalTree(Comparator<Interval> comparator)
@@ -78,23 +80,32 @@ public class IntervalTree<T>
     this.imbalanceTolerance = imbalanceTolerance;
   }
 
-  /*
-    public static class Entry<T> {
-        Interval interval;
-        T value;
+  @VisibleForTesting
+  static class Entry<T>
+  {
+    Interval interval;
+    T value;
 
-        public Entry(Interval interval, T value) {
-            this.interval = interval;
-            this.value = value;
-        }
+    public Entry(Interval interval, T value)
+    {
+      this.interval = interval;
+      this.value = value;
     }
-    */
+
+    @Override
+    public String toString()
+    {
+      return "Entry{" +
+              "interval=" + interval +
+              ", value=" + value +
+              '}';
+    }
+  }
 
   static class Node<T>
   {
     Interval interval;
     T value;
-    @VisibleForTesting
     int height;
     // The min and max of the range for the subtree
     Interval min;
@@ -116,7 +127,8 @@ public class IntervalTree<T>
               '}';
     }
 
-    public String print(int level) {
+    public String print(int level)
+    {
       StringBuilder sb = new StringBuilder();
       String prefix = "\t".repeat(level);
       sb.append(prefix).append("{").append("\n");
@@ -152,7 +164,8 @@ public class IntervalTree<T>
       return node;
     }
 
-    if (comparator.compare(interval, node.interval) <= 0) {
+    // If start of interval matches with node sending to right to preserve stability during in order traversal retrieval
+    if (comparator.compare(interval, node.interval) < 0) {
       node.left = insert(node.left, interval, value);
     } else {
       node.right = insert(node.right, interval, value);
@@ -191,7 +204,6 @@ public class IntervalTree<T>
     }
 
         /*
-        // If interval falls outside the min to max range of the subtree don't follow the subtree
         if ((comparator.compare(interval, node.min) < 0)
                 || (highComparator.compare(node.max, interval) < 0)) {
             return;
@@ -206,24 +218,18 @@ public class IntervalTree<T>
     // Matches can be found on both left and right side as the given interval start needs to be just greater
     // than a node start and end less than the node end
 
-    // If there is a potential candidate on left search left
+    // Look for potential candidates in left and right subtrees
+    // If interval falls outside the min to max range of the subtree don't follow the subtree
+
+    // Search left
     if ((node.left != null) && isIntervalInBounds(node.left, interval)) {
       findEncompassing(node.left, interval, result);
     }
 
-    // If there is a potential candidate on right search right
+    // Search right
     if (node.right != null && isIntervalInBounds(node.right, interval)) {
       findEncompassing(node.right, interval, result);
     }
-
-        /*
-        int cmp = comparator.compare(interval, node.interval);
-        if (cmp <= 0) {
-            findEncompassing(node.left, interval, result);
-        } else {
-            findEncompassing(node.right, interval, result);
-        }
-        */
   }
 
   private boolean isIntervalInBounds(Node<T> node, Interval interval)
@@ -284,9 +290,17 @@ public class IntervalTree<T>
     recomputeState(node);
   }
 
+  @VisibleForTesting
+  Iterator<Entry<T>> inOrderTraverse()
+  {
+    List<Node<T>> nodes = new ArrayList<>();
+    inOrderTraverse(root, nodes);
+    return nodes.stream().map(node -> new Entry<T>(node.interval, node.value)).iterator();
+  }
+
   public void rebalance()
   {
-    // In order traversal followed by recursive binary segmentation
+    // In order traversal followed by repeated binary segmentation of the list
     List<Node<T>> nodes = new ArrayList<>();
     inOrderTraverse(root, nodes);
     root = constructTree(nodes, 0, nodes.size());
@@ -354,9 +368,9 @@ public class IntervalTree<T>
   private void checkRebalance()
   {
     if (root != null) {
-      int ideal = (int)Math.floor(Math.log10(size + 1)/Math.log10(2));
-      double tolerance = ideal * imbalanceTolerance/100.0;
-      int threshold = ideal + (int)tolerance;
+      int ideal = (int) Math.floor(Math.log10(size + 1) / Math.log10(2));
+      double tolerance = ideal * imbalanceTolerance / 100.0;
+      int threshold = ideal + (int) tolerance;
       if (root.height > threshold) {
         rebalance();
       }
