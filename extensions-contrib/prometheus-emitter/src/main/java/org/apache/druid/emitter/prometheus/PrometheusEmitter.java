@@ -69,16 +69,8 @@ public class PrometheusEmitter implements Emitter
   {
     this.config = config;
     this.strategy = config.getStrategy();
-    metrics = new Metrics(
-        config.getNamespace(),
-        config.getDimensionMapPath(),
-        config.isAddHostAsLabel(),
-        config.isAddServiceAsLabel(),
-        config.getExtraLabels(),
-        config.getFlushPeriod()
-    );
+    metrics = new Metrics(config);
   }
-
 
   @Override
   public void start()

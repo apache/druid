@@ -63,8 +63,15 @@ public class Metrics
     }
   }
 
-  public Metrics(String namespace, String path, boolean isAddHostAsLabel, boolean isAddServiceAsLabel, Map<String, String> extraLabels, Integer ttlSeconds)
+  public Metrics(PrometheusEmitterConfig config)
   {
+    String namespace = config.getNamespace();
+    String path = config.getDimensionMapPath();
+    boolean isAddHostAsLabel = config.isAddHostAsLabel();
+    boolean isAddServiceAsLabel = config.isAddServiceAsLabel();
+    Map<String, String> extraLabels = config.getExtraLabels();
+    Integer ttlSeconds = config.getFlushPeriod();
+
     Map<String, DimensionsAndCollector> parsedRegisteredMetrics = new HashMap<>();
     Map<String, Metric> metrics = readConfig(path);
 
