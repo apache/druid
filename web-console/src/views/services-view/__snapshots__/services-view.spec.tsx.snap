@@ -59,6 +59,7 @@ exports[`ServicesView renders data 1`] = `
           "Usage",
           "Start time",
           "Version",
+          "Labels",
           "Detail",
         ]
       }
@@ -89,7 +90,7 @@ exports[`ServicesView renders data 1`] = `
       TrComponent={[Function]}
       TrGroupComponent={[Function]}
       aggregatedKey="_aggregated"
-      className=""
+      className="centered-table -striped -highlight padded-header"
       collapseOnDataChange={true}
       collapseOnPageChange={true}
       collapseOnSortingChange={true}
@@ -216,6 +217,16 @@ exports[`ServicesView renders data 1`] = `
             "Cell": [Function],
             "Header": "Version",
             "accessor": "version",
+            "show": true,
+            "width": 200,
+          },
+          {
+            "Aggregated": [Function],
+            "Cell": [Function],
+            "Header": "Labels",
+            "accessor": "labels",
+            "className": "padded",
+            "filterable": false,
             "show": true,
             "width": 200,
           },
