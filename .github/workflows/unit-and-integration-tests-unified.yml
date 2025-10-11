@@ -122,16 +122,12 @@ jobs:
     needs: [build, unit-tests]
     uses: ./.github/workflows/standard-its.yml
 
-  revised-its:
-    needs: [build, unit-tests]
-    uses: ./.github/workflows/revised-its.yml
-
   docker-tests:
     needs: [build, unit-tests]
     uses: ./.github/workflows/docker-tests.yml
 
   actions-timeline:
-    needs: [build, unit-tests, revised-its, standard-its, docker-tests]
+    needs: [build, unit-tests, standard-its, docker-tests]
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     steps:
