@@ -21,12 +21,14 @@ package org.apache.druid.emitter.prometheus;
 
 import io.prometheus.client.SimpleCollector;
 import org.apache.druid.java.util.common.Stopwatch;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 
 public class DimensionsAndCollector
 {
+  private static final Logger log = new Logger(DimensionsAndCollector.class);
   private final String[] dimensions;
   private final SimpleCollector collector;
   private final double conversionFactor;
@@ -76,6 +78,10 @@ public class DimensionsAndCollector
 
   public boolean isExpired()
   {
+    if (ttlSeconds == null) {
+      log.error("Invalid usage of isExpired(), TTL has not been set");
+      return false;
+    }
     return updateTimer.hasElapsed(ttlSeconds);
   }
 }
