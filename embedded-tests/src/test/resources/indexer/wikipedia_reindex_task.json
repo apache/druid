@@ -45,10 +45,7 @@
             }
         },
         "tuningConfig": {
-            "type": "index",
-            "logParseExceptions": true,
-            "maxParseExceptions": 2147483647,
-            "maxSavedParseExceptions": 100
+            "type": "index"
         }
     }
 }

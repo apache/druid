@@ -286,11 +286,17 @@ public class EmbeddedClusterApis implements EmbeddedResource
    */
   public void waitForAllSegmentsToBeAvailable(String dataSource, EmbeddedCoordinator coordinator, EmbeddedBroker broker)
   {
-    final int numSegments = coordinator
+    final int numSegments = (int) coordinator
         .bindings()
         .segmentsMetadataStorage()
         .retrieveAllUsedSegments(dataSource, Segments.INCLUDING_OVERSHADOWED)
-        .size();
+        .stream()
+        .filter(segment -> !segment.isTombstone())
+        .count();
+
+    if (numSegments == 0) {
+      return;
+    }
 
     broker.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("segment/schemaCache/refresh/count")
