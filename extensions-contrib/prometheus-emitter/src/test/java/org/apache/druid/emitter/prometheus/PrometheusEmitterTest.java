@@ -33,6 +33,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.anyString;
@@ -429,5 +430,92 @@ public class PrometheusEmitterTest
     emitter.close();
 
     EasyMock.verify(mockPushGateway);
+  }
+
+  @Test
+  public void testMetricTtlExpiration()
+  {
+    int flushPeriod = 3;
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "test", null, 0, null, false, true, flushPeriod, null, false, null);
+    PrometheusEmitter emitter = new PrometheusEmitter(config);
+    emitter.start();
+
+    ServiceMetricEvent event = ServiceMetricEvent.builder()
+                                                 .setMetric("segment/loadQueue/count", 10)
+                                                 .build(ImmutableMap.of("service", "historical", "host", "druid.test.cn"));
+    emitter.emit(event);
+
+    // Get the metrics and check that it's not expired initially
+    Map<String, DimensionsAndCollector> registeredMetrics = emitter.getMetrics().getRegisteredMetrics();
+    DimensionsAndCollector testMetric = registeredMetrics.get("segment/loadQueue/count");
+
+    Assert.assertNotNull("Test metric should be registered", testMetric);
+    Assert.assertFalse(
+        "Metric should not be expired initially",
+        testMetric.isExpired()
+    );
+
+    // Wait for the metric to expire (ttl + 1 second buffer)
+    try {
+      Thread.sleep(TimeUnit.SECONDS.toMillis(flushPeriod) + 1000);
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+
+    Assert.assertTrue(
+        "Metric should be expired after TTL",
+        testMetric.isExpired()
+    );
+    emitter.close();
+  }
+
+  @Test
+  public void testMetricTtlUpdate()
+  {
+    int flushPeriod = 3;
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "test", null, 0, null, false, true, flushPeriod, null, false, null);
+    PrometheusEmitter emitter = new PrometheusEmitter(config);
+    emitter.start();
+
+    ServiceMetricEvent event = ServiceMetricEvent.builder()
+                                                 .setMetric("segment/loadQueue/count", 10)
+                                                 .build(ImmutableMap.of("service", "historical", "host", "druid.test.cn"));
+    emitter.emit(event);
+
+    // Get the metrics and check that it's not expired initially
+    Map<String, DimensionsAndCollector> registeredMetrics = emitter.getMetrics().getRegisteredMetrics();
+    DimensionsAndCollector testMetric = registeredMetrics.get("segment/loadQueue/count");
+
+    Assert.assertNotNull(
+        "Test metric should be registered",
+        testMetric
+    );
+    Assert.assertFalse(
+        "Metric should not be expired initially",
+        testMetric.isExpired()
+    );
+
+    // Wait for a little, but not long enough for the metric to expire
+    long waitTime = TimeUnit.SECONDS.toMillis(flushPeriod) / 5;
+    try {
+      Thread.sleep(waitTime);
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+
+    Assert.assertFalse(
+        "Metric should not be expired",
+        testMetric.isExpired()
+    );
+    emitter.emit(event);
+
+    long timeSinceLastUpdate = testMetric.getMillisSinceLastUpdate();
+    Assert.assertTrue(
+        "Update time should have been refreshed",
+        timeSinceLastUpdate < waitTime
+    );
+    emitter.close();
   }
 }

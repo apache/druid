@@ -20,6 +20,8 @@
 package org.apache.druid.emitter.prometheus;
 
 import io.prometheus.client.SimpleCollector;
+import org.apache.druid.java.util.common.Stopwatch;
+import org.joda.time.Duration;
 
 public class DimensionsAndCollector
 {
@@ -27,13 +29,17 @@ public class DimensionsAndCollector
   private final SimpleCollector collector;
   private final double conversionFactor;
   private final double[] histogramBuckets;
+  private final Stopwatch updateTimer;
+  private final Integer ttlSeconds;
 
-  DimensionsAndCollector(String[] dimensions, SimpleCollector collector, double conversionFactor, double[] histogramBuckets)
+  DimensionsAndCollector(String[] dimensions, SimpleCollector collector, double conversionFactor, double[] histogramBuckets, Integer ttlSeconds)
   {
     this.dimensions = dimensions;
     this.collector = collector;
     this.conversionFactor = conversionFactor;
     this.histogramBuckets = histogramBuckets;
+    this.updateTimer = Stopwatch.createStarted();
+    this.ttlSeconds = ttlSeconds;
   }
 
   public String[] getDimensions()
@@ -54,5 +60,20 @@ public class DimensionsAndCollector
   public double[] getHistogramBuckets()
   {
     return histogramBuckets;
+  }
+
+  public void resetLastUpdateTime()
+  {
+    updateTimer.restart();
+  }
+
+  public long getMillisSinceLastUpdate()
+  {
+    return updateTimer.millisElapsed();
+  }
+
+  public boolean isExpired()
+  {
+    return updateTimer.hasElapsed(Duration.standardSeconds(ttlSeconds));
   }
 }
