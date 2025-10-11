@@ -165,6 +165,14 @@ public class EmbeddedServiceClient
     return getResult(brokerApi.apply(createBrokerClient()));
   }
 
+  public <T> T onAnyBroker(
+      Function<ObjectMapper, RequestBuilder> request,
+      TypeReference<T> resultType
+  )
+  {
+    return makeRequest(request, resultType, brokerServiceClient, getMapper(EmbeddedBroker.class));
+  }
+
   @Nullable
   private <T> T makeRequest(
       Function<ObjectMapper, RequestBuilder> request,

@@ -77,7 +77,7 @@ public class PostgreSQLMetadataResource extends TestcontainerResource<PostgreSQL
     return connectURI;
   }
 
-  private String createConnectURI(EmbeddedDruidCluster cluster)
+  public String createConnectURI(EmbeddedDruidCluster cluster)
   {
     ensureRunning();
     return StringUtils.format(

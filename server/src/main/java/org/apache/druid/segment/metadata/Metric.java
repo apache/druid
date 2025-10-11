@@ -49,6 +49,7 @@ public class Metric
   // Schema refresh metrics
   public static final String STARTUP_DURATION_MILLIS = "metadatacache/init/time";
   public static final String REFRESHED_SEGMENTS = PREFIX + "refresh/count";
+  public static final String REFRESH_SKIPPED_TOMBSTONES = PREFIX + "refresh/tombstone/count";
   public static final String REFRESH_DURATION_MILLIS = PREFIX + "refresh/time";
   public static final String DATASOURCE_REMOVED = PREFIX + "dataSource/removed";
 

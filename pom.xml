@@ -267,8 +267,6 @@
         <module>distribution</module>
         <!-- Revised integration tests -->
         <module>integration-tests-ex/tools</module>
-        <module>integration-tests-ex/image</module>
-        <module>integration-tests-ex/cases</module>
         <module>quidem-ut</module>
         <module>embedded-tests</module>
     </modules>

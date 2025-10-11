@@ -105,6 +105,11 @@ public class GoogleStorageDruidModule implements DruidModule
   @LazySingleton
   public Storage getGcpStorage()
   {
+    return createStorage();
+  }
+
+  public Storage createStorage()
+  {
     return StorageOptions.getDefaultInstance().getService();
   }
 

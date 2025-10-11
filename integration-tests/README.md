@@ -80,10 +80,10 @@ Parameters:
 the test group for a given test as an annotation in the respective test class. A list of test groups can be found at
 `integration-tests/src/test/java/org/apache/druid/tests/TestNGGroup.java`. The annotation uses a string
 constant defined in `TestNGGroup.java`, be sure to use the constant value, not name. For example,
-if your test has the annotation: `@Test(groups = TestNGGroup.BATCH_INDEX)` then use the argument
-`-Dgroups=batch-index`.
+if your test has the annotation: `@Test(groups = TestNGGroup.QUERY)` then use the argument
+`-Dgroups=query`.
 
-* Test Name: Use the fully-qualified class name. For example, `org.apache.druid.tests.indexer.ITOverwriteBatchIndexTest`.
+* Test Name: Use the fully-qualified class name. For example, `org.apache.druid.tests.query.ITSqlQueryTest`.
 
 * Add `-pl :druid-integration-tests` when running integration tests for the second time or later without changing
 the code of core modules in between to skip up-to-date checks for the whole module dependency tree.
@@ -196,7 +196,7 @@ The values shown above are for the default docker compose cluster. For other clu
   ```bash
   docker compose -f docker-compose.yml up
   # DRUID_INTEGRATION_TEST_GROUP - an environment variable that specifies the integration test group to run.
-  DRUID_INTEGRATION_TEST_GROUP=batch-index docker compose -f docker-compose.yml up
+  DRUID_INTEGRATION_TEST_GROUP=query docker compose -f docker-compose.yml up
   ```
 
   You can change the default configuration using a custom configuration file. The settings in the file will override
