@@ -1726,7 +1726,7 @@ public class StreamAppenderator implements Appenderator
     }
     // These calculations are approximated from actual heap dumps.
     // Memory footprint includes count integer in FireHydrant, shorts in ReferenceCountingSegment,
-    // Objects in SimpleQueryableIndex (such as SmooshedFileMapper, each ColumnHolder in column map, etc.)
+    // Objects in SimpleQueryableIndex (such as SegmentFileMapper, each ColumnHolder in column map, etc.)
     int total = Integer.BYTES + (4 * Short.BYTES) + ROUGH_OVERHEAD_PER_HYDRANT +
                 (hydrant.getSegmentNumDimensionColumns() * ROUGH_OVERHEAD_PER_DIMENSION_COLUMN_HOLDER) +
                 (hydrant.getSegmentNumMetricColumns() * ROUGH_OVERHEAD_PER_METRIC_COLUMN_HOLDER) +

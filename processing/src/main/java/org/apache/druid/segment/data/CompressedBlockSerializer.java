@@ -21,8 +21,8 @@ package org.apache.druid.segment.data;
 
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.CompressedPools;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
@@ -130,7 +130,7 @@ public class CompressedBlockSerializer implements Serializer
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     writeEndBuffer();
     META_SERDE_HELPER.writeTo(channel, this);

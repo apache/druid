@@ -22,7 +22,6 @@ package org.apache.druid.segment.serde;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -34,6 +33,7 @@ import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.nested.NestedCommonFormatColumn;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.nested.NestedDataColumnSupplier;
@@ -68,7 +68,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
   }
 
   public static ByteBuffer loadInternalFile(
-      SmooshedFileMapper fileMapper,
+      SegmentFileMapper fileMapper,
       String fileNameBase,
       String internalFileName
   ) throws IOException

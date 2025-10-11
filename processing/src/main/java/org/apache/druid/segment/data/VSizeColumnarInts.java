@@ -23,8 +23,8 @@ import com.google.common.primitives.Ints;
 import org.apache.druid.common.utils.ByteUtils;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.HeapByteBufferWriteOutBytes;
 
@@ -162,7 +162,7 @@ public class VSizeColumnarInts implements ColumnarInts, Comparable<VSizeColumnar
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     META_SERDE_HELPER.writeTo(channel, this);
     Channels.writeFully(channel, buffer.asReadOnlyBuffer());

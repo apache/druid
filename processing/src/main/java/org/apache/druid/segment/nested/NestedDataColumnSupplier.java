@@ -23,7 +23,6 @@ import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -35,6 +34,7 @@ import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.VByte;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
@@ -64,7 +64,7 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
 
     if (version == NestedCommonFormatColumnSerializer.V0) {
       try {
-        final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
+        final SegmentFileMapper mapper = columnBuilder.getFileMapper();
         final Supplier<? extends Indexed<ByteBuffer>> fieldsSupplier;
         final FieldTypeInfo fieldInfo;
         final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
@@ -194,7 +194,7 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
   private final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
   private final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
   private final ColumnConfig columnConfig;
-  private final SmooshedFileMapper fileMapper;
+  private final SegmentFileMapper fileMapper;
   private final BitmapSerdeFactory bitmapSerdeFactory;
   private final ByteOrder byteOrder;
 
@@ -212,7 +212,7 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
       Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
       ColumnConfig columnConfig,
-      SmooshedFileMapper fileMapper,
+      SegmentFileMapper fileMapper,
       BitmapSerdeFactory bitmapSerdeFactory,
       ByteOrder byteOrder,
       @Nullable ColumnType simpleType

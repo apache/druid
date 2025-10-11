@@ -22,7 +22,6 @@ package org.apache.druid.segment.serde;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.IndexMerger;
@@ -30,6 +29,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.ByteBufferWriter;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSerializer;
 import org.apache.druid.segment.data.ObjectStrategy;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.ByteArrayOutputStream;
@@ -119,7 +119,7 @@ public class CompressedComplexColumnSerializer<T> implements GenericColumnSerial
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     Preconditions.checkState(closedForWrite, "Not closed yet!");
 
@@ -127,10 +127,10 @@ public class CompressedComplexColumnSerializer<T> implements GenericColumnSerial
     channel.write(ByteBuffer.wrap(new byte[]{V0}));
     channel.write(ByteBuffer.wrap(metadataBytes));
 
-    ColumnSerializerUtils.writeInternal(smoosher, writer, name, FILE_NAME);
+    ColumnSerializerUtils.writeInternal(fileBuilder, writer, name, FILE_NAME);
     if (!nullRowsBitmap.isEmpty()) {
       ColumnSerializerUtils.writeInternal(
-          smoosher,
+          fileBuilder,
           nullBitmapWriter,
           name,
           ColumnSerializerUtils.NULL_BITMAP_FILE_NAME

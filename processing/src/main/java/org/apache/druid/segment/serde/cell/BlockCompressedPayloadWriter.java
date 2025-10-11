@@ -20,8 +20,8 @@
 package org.apache.druid.segment.serde.cell;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
@@ -64,10 +64,10 @@ public class BlockCompressedPayloadWriter implements Serializer, Closeable
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, @Nullable FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, @Nullable SegmentFileBuilder fileBuilder) throws IOException
   {
     Preconditions.checkState(state == State.CLOSED);
-    serializer.writeTo(channel, smoosher);
+    serializer.writeTo(channel, fileBuilder);
   }
 
   @Override

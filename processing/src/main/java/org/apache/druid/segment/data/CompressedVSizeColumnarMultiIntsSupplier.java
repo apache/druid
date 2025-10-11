@@ -25,9 +25,9 @@ import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.file.SegmentFileMapper;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -72,17 +72,17 @@ public class CompressedVSizeColumnarMultiIntsSupplier implements WritableSupplie
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     Channels.writeFully(channel, ByteBuffer.wrap(new byte[]{VERSION}));
-    offsetSupplier.writeTo(channel, smoosher);
-    valueSupplier.writeTo(channel, smoosher);
+    offsetSupplier.writeTo(channel, fileBuilder);
+    valueSupplier.writeTo(channel, fileBuilder);
   }
 
   public static CompressedVSizeColumnarMultiIntsSupplier fromByteBuffer(
       ByteBuffer buffer,
       ByteOrder order,
-      SmooshedFileMapper smooshMapper
+      SegmentFileMapper fileMapper
   )
   {
     byte versionFromBuffer = buffer.get();
@@ -91,12 +91,12 @@ public class CompressedVSizeColumnarMultiIntsSupplier implements WritableSupplie
       CompressedVSizeColumnarIntsSupplier offsetSupplier = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
           buffer,
           order,
-          smooshMapper
+          fileMapper
       );
       CompressedVSizeColumnarIntsSupplier valueSupplier = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
           buffer,
           order,
-          smooshMapper
+          fileMapper
       );
       return new CompressedVSizeColumnarMultiIntsSupplier(offsetSupplier, valueSupplier);
     }

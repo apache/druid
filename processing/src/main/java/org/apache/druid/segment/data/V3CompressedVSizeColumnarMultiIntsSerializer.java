@@ -20,8 +20,8 @@
 package org.apache.druid.segment.data;
 
 import org.apache.druid.io.Channels;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.IOException;
@@ -131,12 +131,12 @@ public class V3CompressedVSizeColumnarMultiIntsSerializer extends ColumnarMultiI
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     writeLastOffset();
     Channels.writeFully(channel, ByteBuffer.wrap(new byte[]{VERSION}));
-    offsetWriter.writeTo(channel, smoosher);
-    valueWriter.writeTo(channel, smoosher);
+    offsetWriter.writeTo(channel, fileBuilder);
+    valueWriter.writeTo(channel, fileBuilder);
   }
 
   private void writeLastOffset() throws IOException

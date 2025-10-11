@@ -21,7 +21,6 @@ package org.apache.druid.compressedbigdecimal.serde;
 
 import org.apache.druid.compressedbigdecimal.CompressedBigDecimal;
 import org.apache.druid.compressedbigdecimal.CompressedBigDecimalColumnPartSupplier;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.data.ArrayBasedIndexedInts;
@@ -29,6 +28,7 @@ import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSerializer;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSerializer;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.IOException;
@@ -122,10 +122,10 @@ public class CompressedBigDecimalLongColumnSerializer implements GenericColumnSe
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     channel.write(ByteBuffer.wrap(new byte[] {VERSION}));
-    scaleWriter.writeTo(channel, smoosher);
-    magnitudeWriter.writeTo(channel, smoosher);
+    scaleWriter.writeTo(channel, fileBuilder);
+    magnitudeWriter.writeTo(channel, fileBuilder);
   }
 }

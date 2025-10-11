@@ -34,7 +34,6 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.BitmapResultFactory;
@@ -56,6 +55,7 @@ import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.VByte;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.DictionaryRangeScanningBitmapIndex;
@@ -103,7 +103,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     if (version == NestedCommonFormatColumnSerializer.V0) {
       try {
 
-        final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
+        final SegmentFileMapper mapper = columnBuilder.getFileMapper();
 
         final ByteBuffer doublesValueColumn = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,

@@ -25,7 +25,7 @@ import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
@@ -310,7 +310,7 @@ public class CompressionFactory
 
   /**
    * Reads a column from a {@link ByteBuffer}, possibly using additional secondary files from a
-   * {@link SmooshedFileMapper}.
+   * {@link SegmentFileMapper}.
    *
    * @param totalSize      number of rows in the column
    * @param sizePer        number of values per compression buffer, for compressed columns
@@ -318,7 +318,7 @@ public class CompressionFactory
    * @param order          byte order
    * @param encodingFormat encoding of each long value
    * @param strategy       compression strategy, for compressed columns
-   * @param smooshMapper   required for reading version 2 (multi-file) indexed. May be null if you know you are reading
+   * @param fileMapper     required for reading version 2 (multi-file) indexed. May be null if you know you are reading
    *                       a single-file column. Generally, this should only be null in tests, not production code.
    */
   public static Supplier<ColumnarLongs> getLongSupplier(
@@ -328,7 +328,7 @@ public class CompressionFactory
       ByteOrder order,
       LongEncodingFormat encodingFormat,
       CompressionStrategy strategy,
-      @Nullable SmooshedFileMapper smooshMapper
+      @Nullable SegmentFileMapper fileMapper
   )
   {
     if (strategy == CompressionStrategy.NONE) {
@@ -341,7 +341,7 @@ public class CompressionFactory
           order,
           encodingFormat.getReader(fromBuffer, order),
           strategy,
-          smooshMapper
+          fileMapper
       );
     }
   }
@@ -393,15 +393,15 @@ public class CompressionFactory
 
   /**
    * Reads a column from a {@link ByteBuffer}, possibly using additional secondary files from a
-   * {@link SmooshedFileMapper}.
+   * {@link SegmentFileMapper}.
    *
-   * @param totalSize    number of rows in the column
-   * @param sizePer      number of values per compression buffer, for compressed columns
-   * @param fromBuffer   primary buffer to read from
-   * @param order        byte order
-   * @param strategy     compression strategy, for compressed columns
-   * @param smooshMapper required for reading version 2 (multi-file) indexed. May be null if you know you are reading
-   *                     a single-file column. Generally, this should only be null in tests, not production code.
+   * @param totalSize  number of rows in the column
+   * @param sizePer    number of values per compression buffer, for compressed columns
+   * @param fromBuffer primary buffer to read from
+   * @param order      byte order
+   * @param strategy   compression strategy, for compressed columns
+   * @param fileMapper required for reading version 2 (multi-file) indexed. May be null if you know you are reading
+   *                   a single-file column. Generally, this should only be null in tests, not production code.
    */
   public static Supplier<ColumnarFloats> getFloatSupplier(
       int totalSize,
@@ -409,13 +409,13 @@ public class CompressionFactory
       ByteBuffer fromBuffer,
       ByteOrder order,
       CompressionStrategy strategy,
-      @Nullable SmooshedFileMapper smooshMapper
+      @Nullable SegmentFileMapper fileMapper
   )
   {
     if (strategy == CompressionStrategy.NONE) {
       return new EntireLayoutColumnarFloatsSupplier(totalSize, fromBuffer, order);
     } else {
-      return new BlockLayoutColumnarFloatsSupplier(totalSize, sizePer, fromBuffer, order, strategy, smooshMapper);
+      return new BlockLayoutColumnarFloatsSupplier(totalSize, sizePer, fromBuffer, order, strategy, fileMapper);
     }
   }
 
@@ -445,15 +445,15 @@ public class CompressionFactory
 
   /**
    * Reads a column from a {@link ByteBuffer}, possibly using additional secondary files from a
-   * {@link SmooshedFileMapper}.
+   * {@link SegmentFileMapper}.
    *
-   * @param totalSize    number of rows in the column
-   * @param sizePer      number of values per compression buffer, for compressed columns
-   * @param fromBuffer   primary buffer to read from
-   * @param byteOrder    byte order
-   * @param strategy     compression strategy, for compressed columns
-   * @param smooshMapper required for reading version 2 (multi-file) indexed. May be null if you know you are reading
-   *                     a single-file column. Generally, this should only be null in tests, not production code.
+   * @param totalSize  number of rows in the column
+   * @param sizePer    number of values per compression buffer, for compressed columns
+   * @param fromBuffer primary buffer to read from
+   * @param byteOrder  byte order
+   * @param strategy   compression strategy, for compressed columns
+   * @param fileMapper required for reading version 2 (multi-file) indexed. May be null if you know you are reading
+   *                   a single-file column. Generally, this should only be null in tests, not production code.
    */
   public static Supplier<ColumnarDoubles> getDoubleSupplier(
       int totalSize,
@@ -461,7 +461,7 @@ public class CompressionFactory
       ByteBuffer fromBuffer,
       ByteOrder byteOrder,
       CompressionStrategy strategy,
-      SmooshedFileMapper smooshMapper
+      SegmentFileMapper fileMapper
   )
   {
     if (strategy == CompressionStrategy.NONE) {
@@ -473,7 +473,7 @@ public class CompressionFactory
           fromBuffer,
           byteOrder,
           strategy,
-          smooshMapper
+          fileMapper
       );
     }
   }

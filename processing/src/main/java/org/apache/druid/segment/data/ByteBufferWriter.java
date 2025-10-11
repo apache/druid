@@ -21,7 +21,7 @@ package org.apache.druid.segment.data;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
@@ -69,7 +69,7 @@ public class ByteBufferWriter<T> implements Serializer
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     final long numBytesWritten = headerOut.size() + valueOut.size();
     Preconditions.checkState(

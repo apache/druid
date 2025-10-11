@@ -26,7 +26,6 @@ import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSerializer;
@@ -35,6 +34,7 @@ import org.apache.druid.segment.data.DictionaryWriter;
 import org.apache.druid.segment.data.FixedIndexedIntWriter;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.SingleValueColumnarIntsSerializer;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
@@ -91,12 +91,12 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
   protected abstract void openValueColumnSerializer() throws IOException;
 
   /**
-   * Called during {@link #writeTo(WritableByteChannel, FileSmoosher)} to allow any type specific value column
-   * serializers to use the {@link FileSmoosher} to write stuff to places.
+   * Called during {@link org.apache.druid.segment.serde.Serializer#writeTo(WritableByteChannel, SegmentFileBuilder)}
+   * to allow any type specific value column serializers to use the {@link SegmentFileBuilder} to write stuff to places.
    */
-  protected abstract void writeValueColumn(FileSmoosher smoosher) throws IOException;
+  protected abstract void writeValueColumn(SegmentFileBuilder fileBuilder) throws IOException;
 
-  protected abstract void writeDictionaryFile(FileSmoosher smoosher) throws IOException;
+  protected abstract void writeDictionaryFile(SegmentFileBuilder fileBuilder) throws IOException;
 
   public abstract int getCardinality();
 
@@ -172,7 +172,7 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
   @Override
   public void writeTo(
       WritableByteChannel channel,
-      FileSmoosher smoosher
+      SegmentFileBuilder fileBuilder
   ) throws IOException
   {
     Preconditions.checkState(closedForWrite, "Not closed yet!");
@@ -239,11 +239,11 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
 
     writeV0Header(channel, columnNameBytes);
     if (writeDictionary) {
-      writeDictionaryFile(smoosher);
+      writeDictionaryFile(fileBuilder);
     }
-    writeInternal(smoosher, encodedValueSerializer, ColumnSerializerUtils.ENCODED_VALUE_COLUMN_FILE_NAME);
-    writeValueColumn(smoosher);
-    writeInternal(smoosher, bitmapIndexWriter, ColumnSerializerUtils.BITMAP_INDEX_FILE_NAME);
+    writeInternal(fileBuilder, encodedValueSerializer, ColumnSerializerUtils.ENCODED_VALUE_COLUMN_FILE_NAME);
+    writeValueColumn(fileBuilder);
+    writeInternal(fileBuilder, bitmapIndexWriter, ColumnSerializerUtils.BITMAP_INDEX_FILE_NAME);
 
     log.info("Column [%s] serialized successfully.", name);
   }

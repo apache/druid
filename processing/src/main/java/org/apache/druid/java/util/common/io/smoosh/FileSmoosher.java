@@ -31,10 +31,10 @@ import org.apache.druid.java.util.common.MappedByteBufferHandler;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.serde.Serializer;
+import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.file.SegmentFileChannel;
 
 import java.io.BufferedWriter;
-import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -47,7 +47,6 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,7 +70,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * copied on to the main smoosh file and underlying temporary file will be
  * cleaned up.
  */
-public class FileSmoosher implements Closeable
+public class FileSmoosher implements SegmentFileBuilder
 {
   private static final String FILE_EXTENSION = "smoosh";
   private static final Joiner JOINER = Joiner.on(",");
@@ -123,11 +122,7 @@ public class FileSmoosher implements Closeable
     return new File(baseDir, StringUtils.format("%05d.%s", i, FILE_EXTENSION));
   }
 
-  public void add(File fileToAdd) throws IOException
-  {
-    add(fileToAdd.getName(), fileToAdd);
-  }
-
+  @Override
   public void add(String name, File fileToAdd) throws IOException
   {
     try (MappedByteBufferHandler fileMappingHandler = FileUtils.map(fileToAdd)) {
@@ -135,12 +130,8 @@ public class FileSmoosher implements Closeable
     }
   }
 
+  @Override
   public void add(String name, ByteBuffer bufferToAdd) throws IOException
-  {
-    add(name, Collections.singletonList(bufferToAdd));
-  }
-
-  public void add(String name, List<ByteBuffer> bufferToAdd) throws IOException
   {
     if (name.contains(",")) {
       throw new IAE("Cannot have a comma in the name of a file, got[%s].", name);
@@ -151,27 +142,21 @@ public class FileSmoosher implements Closeable
     }
 
     long size = 0;
-    for (ByteBuffer buffer : bufferToAdd) {
-      size += buffer.remaining();
-    }
+    size += bufferToAdd.remaining();
 
-    try (SmooshedWriter out = addWithSmooshedWriter(name, size)) {
-      for (ByteBuffer buffer : bufferToAdd) {
-        out.write(buffer);
-      }
+    try (SegmentFileChannel out = addWithChannel(name, size)) {
+      out.write(bufferToAdd);
     }
   }
 
-  public void serializeAs(String name, Serializer serializer) throws IOException
+  @Override
+  public SegmentFileChannel addWithChannel(final String name, final long size) throws IOException
   {
-    try (SmooshedWriter smooshChannel = addWithSmooshedWriter(name, serializer.getSerializedSize())) {
-      serializer.writeTo(smooshChannel, this);
-    }
+    return addWithSmooshedWriter(name, size);
   }
 
   public SmooshedWriter addWithSmooshedWriter(final String name, final long size) throws IOException
   {
-
     if (size > maxChunkSize) {
       throw new IAE("Asked to add buffers[%,d] larger than configured max[%,d]", size, maxChunkSize);
     }
@@ -358,9 +343,7 @@ public class FileSmoosher implements Closeable
       {
         return channel.isOpen();
       }
-
     };
-
   }
 
   private String getDelegateFileName(String name)
