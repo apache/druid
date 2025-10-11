@@ -148,7 +148,7 @@ public class Initializer
           .in(LazySingleton.class);
 
       // Dummy DruidNode instance to make Guice happy. This instance is unused.
-      DruidNode dummy = new DruidNode("integration-tests", "localhost", false, 9191, null, null, true, false);
+      DruidNode dummy = new DruidNode("integration-tests", "localhost", false, 9191, null, null, true, false, null);
       binder
           .bind(DruidNode.class)
           .annotatedWith(Self.class)
