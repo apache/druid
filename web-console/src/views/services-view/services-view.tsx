@@ -43,6 +43,7 @@ import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
   booleanCustomTableFilter,
   combineModeAndNeedle,
+  DEFAULT_TABLE_CLASS_NAME,
   parseFilterModeAndNeedle,
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
@@ -88,6 +89,7 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Usage',
     'Start time',
     'Version',
+    'Labels',
     'Detail',
   ],
   'no-sql': [
@@ -149,6 +151,7 @@ interface ServiceResultRow {
   readonly tls_port: number;
   readonly start_time: string;
   readonly version: string;
+  readonly labels: string | null;
 }
 
 interface ServicesWithAuxiliaryInfo {
@@ -250,7 +253,8 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
   "max_size",
   "is_leader",
   "start_time",
-  "version"
+  "version",
+  "labels"
 FROM sys.servers
 ORDER BY
   (
@@ -300,6 +304,7 @@ ORDER BY
                 start_time: '1970:01:01T00:00:00Z',
                 is_leader: 0,
                 version: '',
+                labels: null,
               };
             },
           );
@@ -434,6 +439,7 @@ ORDER BY
           }
           filterable
           filtered={filters}
+          className={`centered-table ${DEFAULT_TABLE_CLASS_NAME}`}
           onFilteredChange={onFiltersChange}
           pivotBy={groupServicesBy ? [groupServicesBy] : []}
           defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
@@ -654,6 +660,29 @@ ORDER BY
           accessor: 'version',
           width: 200,
           Cell: this.renderFilterableCell('version'),
+          Aggregated: () => '',
+        },
+        {
+          Header: 'Labels',
+          show: visibleColumns.shown('Labels'),
+          accessor: 'labels',
+          className: 'padded',
+          filterable: false,
+          width: 200,
+          Cell: ({ value }: { value: string | null }) => {
+            if (!value) return '';
+            return (
+              <ul className="labels-list">
+                {Object.entries(JSON.parse(value)).map(([key, val]) => {
+                  return (
+                    <li key={key}>
+                      {key}: {String(val)}
+                    </li>
+                  );
+                })}
+              </ul>
+            );
+          },
           Aggregated: () => '',
         },
         {
