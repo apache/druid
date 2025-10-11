@@ -100,7 +100,7 @@ jobs:
       group: ${{ matrix.testing_group }}
 
   security_vulnerabilities:
-    if: github.repository == 'apache/druid'
+    # if: github.repository == 'apache/druid'
     name: security vulnerabilities
     runs-on: ubuntu-latest
     steps:
@@ -115,11 +115,13 @@ jobs:
           cache: maven
 
       - name: maven build # needed to rebuild in case of maven snapshot resolution fails
-        run: mvn clean install -P dist -P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -Dcyclonedx.skip=true -Dweb.console.skip=true
+        run: mvn clean install -P dist -P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -Dcyclonedx.skip=true -Dweb.console.skip=true -ntp
 
       - name: security vulnerabilities check
+        env:
+          NIST_NVD_API_KEY: ${{ secrets.NIST_NVD_API_KEY }}
         run: |
-          mvn dependency-check:purge dependency-check:check || { echo "
+          mvn -ntp dependency-check:purge dependency-check:check --fail-at-end || { echo "
           The OWASP dependency check has found security vulnerabilities. Please use a newer version
           of the dependency that does not have vulnerabilities. To see a report run
           `mvn dependency-check:check`
