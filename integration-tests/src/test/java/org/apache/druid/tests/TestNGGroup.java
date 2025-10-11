@@ -120,8 +120,8 @@ public class TestNGGroup
    * No tests should belong exclusively to this group. It is only meant to be a helper group to run tests against
    * a local quickstart deployment.
    *
-   * As you run tests in your environment, mark the tests as quickstart compatible (see
-   * {@link org.apache.druid.tests.indexer.ITIndexerTest}) and add any additional instructions that were needed to
+   * As you run tests in your environment, mark the tests as quickstart compatible
+   * and add any additional instructions that were needed to
    * get the tests to work to this project's README.
    */
   public static final String QUICKSTART_COMPATIBLE = "quickstart-compatible";
