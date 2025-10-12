@@ -20,6 +20,7 @@
 package org.apache.druid.emitter.prometheus;
 
 import io.prometheus.client.Histogram;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.junit.Assert;
 import org.junit.Test;
@@ -32,7 +33,8 @@ public class MetricsTest
   @Test
   public void testMetricsConfiguration()
   {
-    Metrics metrics = new Metrics("test", null, true, true, null);
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(null, "test", null, null, null, true, true, null, null, null, null);
+    Metrics metrics = new Metrics(config);
     DimensionsAndCollector dimensionsAndCollector = metrics.getByName("query/time", "historical");
     Assert.assertNotNull(dimensionsAndCollector);
     String[] dimensions = dimensionsAndCollector.getDimensions();
@@ -59,7 +61,8 @@ public class MetricsTest
     Map<String, String> extraLabels = new HashMap<>();
     extraLabels.put("extra_label", "value");
 
-    Metrics metrics = new Metrics("test_2", null, true, true, extraLabels);
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(null, "test_2", null, null, null, true, true, null, extraLabels, null, null);
+    Metrics metrics = new Metrics(config);
     DimensionsAndCollector dimensionsAndCollector = metrics.getByName("query/time", "historical");
     Assert.assertNotNull(dimensionsAndCollector);
     String[] dimensions = dimensionsAndCollector.getDimensions();
@@ -89,11 +92,11 @@ public class MetricsTest
     extraLabels.put("extra label", "value");
 
     // Expect an exception thrown by Prometheus code due to invalid metric label
-    Exception exception = Assert.assertThrows(IllegalArgumentException.class, () -> {
-      new Metrics("test_3", null, true, true, extraLabels);
+    Exception exception = Assert.assertThrows(DruidException.class, () -> {
+      new Metrics(new PrometheusEmitterConfig(null, "test_3", null, null, null, true, true, null, extraLabels, null, null));
     });
 
-    String expectedMessage = "Invalid metric label name: extra label";
+    String expectedMessage = "Invalid metric label name [extra label]. Label names must conform to the pattern [[a-zA-Z_:][a-zA-Z0-9_:]*].";
     String actualMessage = exception.getMessage();
 
     Assert.assertTrue(actualMessage.contains(expectedMessage));
@@ -102,7 +105,8 @@ public class MetricsTest
   @Test
   public void testMetricsConfigurationWithNonExistentMetric()
   {
-    Metrics metrics = new Metrics("test_4", null, true, true, null);
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(null, "test_4", null, null, null, true, true, null, null, null, null);
+    Metrics metrics = new Metrics(config);
     DimensionsAndCollector nonExistentDimsCollector = metrics.getByName("non/existent", "historical");
     Assert.assertNull(nonExistentDimsCollector);
   }
@@ -110,8 +114,9 @@ public class MetricsTest
   @Test
   public void testMetricsConfigurationWithUnSupportedType()
   {
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(null, "test_5", "src/test/resources/defaultInvalidMetricsTest.json", null, null, true, true, null, null, null, null);
     ISE iseException = Assert.assertThrows(ISE.class, () -> {
-      new Metrics("test_5", "src/test/resources/defaultInvalidMetricsTest.json", true, true, null);
+      new Metrics(config);
     });
     Assert.assertEquals("Failed to parse metric configuration", iseException.getMessage());
   }
@@ -119,7 +124,8 @@ public class MetricsTest
   @Test
   public void testMetricsConfigurationWithTimerHistogramBuckets()
   {
-    Metrics metrics = new Metrics("test_6", "src/test/resources/defaultMetricsTest.json", true, true, null);
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(null, "test_6", "src/test/resources/defaultMetricsTest.json", null, null, true, true, null, null, null, null);
+    Metrics metrics = new Metrics(config);
     DimensionsAndCollector dimensionsAndCollector = metrics.getByName("query/time", "historical");
     Assert.assertNotNull(dimensionsAndCollector);
     String[] dimensions = dimensionsAndCollector.getDimensions();
