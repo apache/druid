@@ -36,7 +36,7 @@ curl -s "https://get.sdkman.io" | bash
 # at the end of installation either open a new terminal; or follow the instructions at the end
 
 # install java&maven
-sdk install java 11.0.23-zulu
+sdk install java 17.0.12-zulu
 sdk install maven
 
 # run mvn to see if it works
