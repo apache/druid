@@ -32,16 +32,21 @@ import java.util.Map;
 
 /**
  * A variation of Interval Trees (https://en.wikipedia.org/wiki/Interval_tree)
- * Custom implementation for faster search and specific joda Interval comparator arithmetic used in project
+ * Custom optimizations for faster interval search and additional support for specific joda Interval comparator
+ * arithmetic used in the project
  * <p>
  * <p>
- * Multiple intervals are added to the tree and a value can also be associated with each interval. These are stored in
- * nodes in the tree along with additional state. The tree can then be searched for intervals matching a given interval.
- * A match is any interval in the tree that fully encompasses the given interval. There can be multiple results.
+ * Multiple intervals can be added to the tree. The tree can then be searched for intervals matching a given interval.
+ * A match is any interval that fully encompasses or exactly matches the given interval, leading for the search to
+ * return multiple results. Using the tree, reduces the search time from O(N) iterating through all the intervals to
+ * find all the matches, to roughly O(log2(N)). Furthermore, a value can be associated with each interval, which is also
+ * returned during the search.
+ *
  * <p>
- * The tree is a binary search tree sorted by interval start time. Additional state containing the minimum and maximum
- * interval bounds of the entire subtree under a node, is stored on each node. This state helps speed up search for
- * matching intervals by skipping unsuitable subtrees that won't have a match.
+ * The tree is a binary search tree sorted by interval start time. The intervals are stored as nodes in the tree.
+ * Additional state containing the minimum and maximum interval bounds of the entire subtree under a node, is also tored
+ * in each node. This helps speed up the search for matching intervals by skipping unsuitable subtrees that will not
+ * contain a matching candidate interval.
  * <p>
  *
  * Not thread safe
@@ -203,12 +208,12 @@ public class IntervalTree<T>
       return;
     }
 
-        /*
-        if ((comparator.compare(interval, node.min) < 0)
-                || (highComparator.compare(node.max, interval) < 0)) {
-            return;
-        }
-        */
+    /*
+    if ((comparator.compare(interval, node.min) < 0)
+            || (highComparator.compare(node.max, interval) < 0)) {
+        return;
+    }
+    */
 
     if (node.interval.contains(interval)) {
       //result.add(new Entry<>(node.interval, node.value));
@@ -247,11 +252,6 @@ public class IntervalTree<T>
 
   private Node<T> removeNode(Node<T> node, Interval interval)
   {
-        /*
-        if ((node == null) || comparator.compare(node.interval, interval) == 0) {
-            return null;
-        }
-        */
     if (node == null) {
       return null;
     }
