@@ -40,6 +40,11 @@
     position: relative;
     height: calc(100% - 40px);
 
+    .special-instructions {
+      padding: 20px;
+      text-align: center;
+    }
+
     textarea {
       height: 100%;
       width: 100%;
