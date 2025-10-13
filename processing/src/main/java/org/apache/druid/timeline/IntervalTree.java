@@ -37,24 +37,30 @@ import java.util.Map;
  * <p>
  * <p>
  * Multiple intervals can be added to the tree. The tree can then be searched for intervals matching a given interval.
- * A match is any interval that fully encompasses or exactly matches the given interval, leading for the search to
- * return multiple results. Using the tree, reduces the search time from O(N) iterating through all the intervals to
- * find all the matches, to roughly O(log2(N)). Furthermore, a value can be associated with each interval, which is also
- * returned during the search.
+ * A match is any interval that fully encompasses or exactly matches the given interval, leading the search to
+ * potentially return multiple results. Using the tree, reduces the search time from O(N) from iterating through all the
+ * intervals, to roughly O(log2(N)). Furthermore, a value can be associated with each interval, which is also returned
+ * during the search.
  *
  * <p>
  * The tree is a binary search tree sorted by interval start time. The intervals are stored as nodes in the tree.
- * Additional state containing the minimum and maximum interval bounds of the entire subtree under a node, is also tored
- * in each node. This helps speed up the search for matching intervals by skipping unsuitable subtrees that will not
- * contain a matching candidate interval.
+ * Additional state containing the minimum and maximum interval bounds of the entire subtree under a node, is also
+ * stored in each node. This helps speed up the search for matching intervals by skipping unsuitable subtrees that will
+ * not contain a matching candidate interval.
+ *
+ * To optimize the balancing cost w.r.t the operation time, the tree is not balanced on every modification operation.
+ * Rather a configurable imbalance tolerance from the theoretical ideal height of log2(N) is allowed, breaching which
+ * triggers the rebalance.
  * <p>
  *
  * Not thread safe
  */
 public class IntervalTree<T>
 {
+  // The compartor for comparing the interval start timnes
   Comparator<Interval> comparator;
-  Comparator<Interval> highComparator;
+  // The comparator for comparing interval end times
+  Comparator<Interval> endComparator;
 
   @VisibleForTesting
   Node<T> root;
@@ -64,15 +70,10 @@ public class IntervalTree<T>
   // percentage of ideal height
   int imbalanceTolerance = 50;
 
-  public IntervalTree(Comparator<Interval> comparator)
-  {
-    this(comparator, comparator);
-  }
-
-  public IntervalTree(Comparator<Interval> comparator, Comparator<Interval> highComparator)
+  public IntervalTree(Comparator<Interval> comparator, Comparator<Interval> endComparator)
   {
     this.comparator = comparator;
-    this.highComparator = highComparator;
+    this.endComparator = endComparator;
   }
 
   public int getImbalanceTolerance()
@@ -184,7 +185,7 @@ public class IntervalTree<T>
       node.min = interval;
     }
 
-    if (highComparator.compare(node.max, interval) < 0) {
+    if (endComparator.compare(node.max, interval) < 0) {
       node.max = interval;
     }
 
@@ -220,8 +221,10 @@ public class IntervalTree<T>
       result.put(node.interval, node.value);
     }
 
-    // Matches can be found on both left and right side as the given interval start needs to be just greater
-    // than a node start and end less than the node end
+    // If given interval start is greater than or equal to current interval start, matches can still be found on both
+    // left and right as the given interval only needs to be encompassed.
+    // If the given interval start is less than current, then we don't need to search the right
+    // To keep it uniform searching on both sides as we will quickly elimate unsuitable subtrees with the bounds check
 
     // Look for potential candidates in left and right subtrees
     // If interval falls outside the min to max range of the subtree don't follow the subtree
@@ -240,7 +243,7 @@ public class IntervalTree<T>
   private boolean isIntervalInBounds(Node<T> node, Interval interval)
   {
     return (comparator.compare(node.min, interval) <= 0)
-            && (highComparator.compare(node.max, interval) >= 0);
+            && (endComparator.compare(node.max, interval) >= 0);
   }
 
 
@@ -388,7 +391,7 @@ public class IntervalTree<T>
     Interval max = interval;
     for (Node<T> node : nodes) {
       if (node != null) {
-        if (highComparator.compare(node.max, max) > 0) {
+        if (endComparator.compare(node.max, max) > 0) {
           max = node.max;
         }
       }
