@@ -24,6 +24,7 @@ import com.google.common.collect.Maps;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -124,6 +125,64 @@ public class WorkerSelectUtils
         String preferredCategory = categoryAffinity.get(task.getDataSource());
         // If there is no preferred category for the datasource, then using the defaultCategory. However, the defaultCategory
         // may be null too, so we need to do one more null check (see below).
+        preferredCategory = preferredCategory == null ? defaultCategory : preferredCategory;
+
+        if (preferredCategory != null) {
+          // select worker from preferred category
+          final ImmutableMap<String, ImmutableWorkerInfo> categoryWorkers = getCategoryWorkers(preferredCategory, runnableWorkers);
+          final ImmutableWorkerInfo selected = workerSelector.apply(categoryWorkers);
+
+          if (selected != null) {
+            return selected;
+          } else if (workerCategorySpec.isStrong()) {
+            return null;
+          }
+        }
+      }
+    }
+
+    // select worker from all runnable workers by default
+    return workerSelector.apply(ImmutableMap.copyOf(runnableWorkers));
+  }
+
+  /**
+   * Helper for {@link WorkerSelectStrategy} implementations.
+   *
+   * @param allWorkers     map of all workers, in the style provided to {@link WorkerSelectStrategy}
+   * @param workerCategorySpec worker category spec, or null
+   * @param workerSelector function that receives a list of eligible workers: version is high enough, worker can run
+   *                       the task, and worker satisfies the worker category spec. may return null.
+   *
+   * @return selected worker from "allWorkers", or null.
+   */
+  @Nullable
+  public static ImmutableWorkerInfo selectWorkerBySupervisorCategorySpec(
+      final Task task,
+      final Map<String, ImmutableWorkerInfo> allWorkers,
+      final WorkerTaskRunnerConfig workerTaskRunnerConfig,
+      @Nullable final WorkerCategorySpec workerCategorySpec,
+      final Function<ImmutableMap<String, ImmutableWorkerInfo>, ImmutableWorkerInfo> workerSelector,
+      final TaskLimits taskLimits
+  )
+  {
+    final Map<String, ImmutableWorkerInfo> runnableWorkers = getRunnableWorkers(task, allWorkers, workerTaskRunnerConfig, taskLimits);
+
+    // select worker according to worker category spec, keyed by supervisorId
+    if (workerCategorySpec != null) {
+      final WorkerCategorySpec.CategoryConfig categoryConfig = workerCategorySpec.getCategoryMap().get(task.getType());
+
+      if (categoryConfig != null) {
+        final String defaultCategory = categoryConfig.getDefaultCategory();
+        final Map<String, String> categoryAffinity = categoryConfig.getCategoryAffinity();
+
+        String keyForAffinity;
+        if (task instanceof SeekableStreamIndexTask) {
+          keyForAffinity = ((SeekableStreamIndexTask<?, ?, ?>) task).getSupervisorId();
+        } else {
+          // fall back to datasource affinity if no supervisorId
+          keyForAffinity = task.getDataSource();
+        }
+        String preferredCategory = categoryAffinity.get(keyForAffinity);
         preferredCategory = preferredCategory == null ? defaultCategory : preferredCategory;
 
         if (preferredCategory != null) {
