@@ -27,6 +27,8 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.FilterBundle;
 
+import javax.annotation.Nullable;
+
 /**
  * This class is implemented with delegation to another QueryMetrics for compatibility, see "Making subinterfaces of
  * QueryMetrics for emitting custom dimensions and/or metrics for specific query types" section in {@link QueryMetrics}
@@ -143,6 +145,12 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   public void success(boolean success)
   {
     delegateQueryMetrics.success(success);
+  }
+
+  @Override
+  public void code(@Nullable Throwable error)
+  {
+    delegateQueryMetrics.code(error);
   }
 
   @Override
