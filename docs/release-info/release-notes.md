@@ -219,7 +219,7 @@ The `druid.auth.authenticator.kerberos.cookieSignatureSecret` config is now mand
 
 #### Other data management improvements
 
-- Storing segments in S3 now supports not using zip compression, like local storage [#18544](https://github.com/apache/druid/pull/18544)
+- Improved S3 storage to support storing segments in S3 without zip compression [#18544](https://github.com/apache/druid/pull/18544)
 
 ### Metrics and monitoring
 
