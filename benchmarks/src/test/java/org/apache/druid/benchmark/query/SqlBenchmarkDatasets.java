@@ -37,6 +37,7 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
+import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.DataSegment;
@@ -405,31 +406,33 @@ public class SqlBenchmarkDatasets
       return projections;
     }
 
-    public BenchmarkSchema asAutoDimensions()
+    public BenchmarkSchema asAutoDimensions(NestedCommonFormatColumnFormatSpec columnFormatSpec)
     {
       return new SqlBenchmarkDatasets.BenchmarkSchema(
           dataSegments,
           generatorSchemaInfo,
           transformSpec,
           dimensionsSpec.withDimensions(
-                    dimensionsSpec.getDimensions()
-                                  .stream()
-                                  .map(dim -> AutoTypeColumnSchema.of(dim.getName()))
-                                  .collect(Collectors.toList())
+              dimensionsSpec.getDimensions()
+                            .stream()
+                            .map(dim -> new AutoTypeColumnSchema(dim.getName(), null, columnFormatSpec))
+                            .collect(Collectors.toList())
           ),
           aggregators,
-          projections.stream()
-                     .map(
-                         projection ->
-                             AggregateProjectionSpec.builder(projection)
-                                                    .groupingColumns(
-                                                        projection.getGroupingColumns()
-                                                                  .stream()
-                                                                  .map(dim -> AutoTypeColumnSchema.of(dim.getName()))
-                                                                  .collect(Collectors.toList())
-                                                    )
-                                                    .build()
-                     ).collect(Collectors.toList()),
+          projections
+              .stream()
+              .map(
+                  projection ->
+                      AggregateProjectionSpec
+                          .builder(projection)
+                          .groupingColumns(
+                              projection.getGroupingColumns()
+                                        .stream()
+                                        .map(dim -> new AutoTypeColumnSchema(dim.getName(), null, columnFormatSpec))
+                                        .collect(Collectors.toList())
+                          )
+                          .build()
+              ).collect(Collectors.toList()),
           queryGranularity
       );
     }

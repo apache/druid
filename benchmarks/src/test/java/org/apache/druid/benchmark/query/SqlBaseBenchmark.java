@@ -74,6 +74,8 @@ import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
+import org.apache.druid.segment.nested.ObjectStorageEncoding;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AuthConfig;
@@ -100,6 +102,7 @@ import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.testoperator.CalciteTestOperatorModule;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
@@ -179,9 +182,10 @@ public class SqlBaseBenchmark
 
   @Param({
       "explicit",
-      "auto"
+      "auto:none",
+      "auto:smile"
   })
-  protected String schemaType;
+  protected String schemaAndEncoding;
 
   // Can be STORAGE_MMAP, STORAGE_INCREMENTAL, STORAGE_FRAME_ROW, or STORAGE_FRAME_COLUMNAR
   @Param({
@@ -240,8 +244,15 @@ public class SqlBaseBenchmark
     Map<DataSegment, QueryableIndex> segments = new HashMap<>();
     for (String dataSource : getDatasources()) {
       final SqlBenchmarkDatasets.BenchmarkSchema schema;
-      if ("auto".equals(schemaType)) {
-        schema = SqlBenchmarkDatasets.getSchema(dataSource).asAutoDimensions();
+      if (schemaAndEncoding.startsWith("auto")) {
+        ObjectStorageEncoding objectStorageEncoding = ObjectStorageEncoding.fromString(
+            StringUtils.toUpperCase(schemaAndEncoding.split(":")[1]));
+        schema = SqlBenchmarkDatasets.getSchema(dataSource)
+                                     .asAutoDimensions(
+                                         NestedCommonFormatColumnFormatSpec
+                                             .builder()
+                                             .setObjectStorageEncoding(objectStorageEncoding)
+                                             .build());
       } else {
         schema = SqlBenchmarkDatasets.getSchema(dataSource);
       }
@@ -479,6 +490,12 @@ public class SqlBaseBenchmark
               FrameReader.create(cursorFactory.getRowSignature())
           )
           {
+            @Override
+            public SegmentId getId()
+            {
+              return descriptor.getId();
+            }
+
             @Nullable
             @Override
             public <T> T as(@Nonnull Class<T> clazz)
@@ -500,6 +517,12 @@ public class SqlBaseBenchmark
               FrameReader.create(cursorFactory.getRowSignature())
           )
           {
+            @Override
+            public SegmentId getId()
+            {
+              return descriptor.getId();
+            }
+
             @Nullable
             @Override
             public <T> T as(@Nonnull Class<T> clazz)
