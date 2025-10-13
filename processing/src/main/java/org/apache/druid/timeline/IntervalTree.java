@@ -119,7 +119,6 @@ public class IntervalTree<T>
     Node<T> left;
     Node<T> right;
 
-
     @Override
     public String toString()
     {
@@ -147,7 +146,6 @@ public class IntervalTree<T>
       sb.append(prefix).append("}");
       return sb.toString();
     }
-
   }
 
   public void add(Interval interval, T value)
@@ -167,6 +165,12 @@ public class IntervalTree<T>
       node.min = interval;
       node.max = interval;
       ++size;
+      return node;
+    }
+
+    // If exact interval already exists, just replace the value
+    if (doesMatch(node, interval)) {
+      node.value = value;
       return node;
     }
 
@@ -238,6 +242,11 @@ public class IntervalTree<T>
     if (node.right != null && isIntervalInBounds(node.right, interval)) {
       findEncompassing(node.right, interval, result);
     }
+  }
+
+  private boolean doesMatch(Node<T> node, Interval interval)
+  {
+    return (comparator.compare(node.interval, interval) == 0) && (endComparator.compare(node.interval, interval) == 0);
   }
 
   private boolean isIntervalInBounds(Node<T> node, Interval interval)
