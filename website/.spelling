@@ -227,6 +227,7 @@ S3
 SAS
 SDK
 SIGAR
+SNI
 SPNEGO
 Splunk
 SqlInputSource
@@ -2457,3 +2458,6 @@ PropertyKeyName
 PropertyValueType
 tableSpec
 TableSpec
+
+- ../docs/development/extensions-contrib/prometheus.md
+TTL
