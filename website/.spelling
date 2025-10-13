@@ -227,6 +227,7 @@ S3
 SAS
 SDK
 SIGAR
+SNI
 SPNEGO
 Splunk
 SqlInputSource
@@ -1482,6 +1483,7 @@ httpAuthenticationPassword
 accessKeyId
 secretAccessKey
 accessKeyId
+sessionToken
 httpAuthenticationPassword
 countryName
 appendToExisting
@@ -2457,3 +2459,6 @@ PropertyKeyName
 PropertyValueType
 tableSpec
 TableSpec
+
+- ../docs/development/extensions-contrib/prometheus.md
+TTL

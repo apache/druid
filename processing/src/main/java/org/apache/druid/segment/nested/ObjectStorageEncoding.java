@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.StringUtils;
 
 public enum ObjectStorageEncoding
 {
+  NONE,
   SMILE;
 
   @JsonValue

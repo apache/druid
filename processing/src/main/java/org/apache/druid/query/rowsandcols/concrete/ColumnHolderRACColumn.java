@@ -19,14 +19,13 @@
 
 package org.apache.druid.query.rowsandcols.concrete;
 
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.data.ReadableOffset;
+import org.apache.druid.segment.data.AtomicIntegerReadableOffset;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -160,27 +159,5 @@ public class ColumnHolderRACColumn implements Column, Closeable
       baseColumn = holder.getColumn();
     }
     return baseColumn;
-  }
-
-  private static class AtomicIntegerReadableOffset implements ReadableOffset
-  {
-    private final AtomicInteger offset;
-
-    public AtomicIntegerReadableOffset(AtomicInteger offset)
-    {
-      this.offset = offset;
-    }
-
-    @Override
-    public int getOffset()
-    {
-      return offset.get();
-    }
-
-    @Override
-    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-    {
-
-    }
   }
 }

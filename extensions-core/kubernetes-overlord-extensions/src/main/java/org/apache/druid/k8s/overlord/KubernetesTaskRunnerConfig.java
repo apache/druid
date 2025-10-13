@@ -177,77 +177,77 @@ public class KubernetesTaskRunnerConfig
   )
   {
     this.namespace = namespace;
-    this.overlordNamespace = ObjectUtils.defaultIfNull(
+    this.overlordNamespace = ObjectUtils.getIfNull(
         overlordNamespace,
         this.overlordNamespace
     );
     this.k8sTaskPodNamePrefix = k8sTaskPodNamePrefix;
-    this.debugJobs = ObjectUtils.defaultIfNull(
+    this.debugJobs = ObjectUtils.getIfNull(
         debugJobs,
         this.debugJobs
     );
-    this.sidecarSupport = ObjectUtils.defaultIfNull(
+    this.sidecarSupport = ObjectUtils.getIfNull(
         sidecarSupport,
         this.sidecarSupport
     );
-    this.primaryContainerName = ObjectUtils.defaultIfNull(
+    this.primaryContainerName = ObjectUtils.getIfNull(
         primaryContainerName,
         this.primaryContainerName
     );
-    this.kubexitImage = ObjectUtils.defaultIfNull(
+    this.kubexitImage = ObjectUtils.getIfNull(
         kubexitImage,
         this.kubexitImage
     );
-    this.graceTerminationPeriodSeconds = ObjectUtils.defaultIfNull(
+    this.graceTerminationPeriodSeconds = ObjectUtils.getIfNull(
         graceTerminationPeriodSeconds,
         this.graceTerminationPeriodSeconds
     );
     this.disableClientProxy = disableClientProxy;
-    this.maxTaskDuration = ObjectUtils.defaultIfNull(
+    this.maxTaskDuration = ObjectUtils.getIfNull(
         maxTaskDuration,
         this.maxTaskDuration
     );
-    this.taskCleanupDelay = ObjectUtils.defaultIfNull(
+    this.taskCleanupDelay = ObjectUtils.getIfNull(
         taskCleanupDelay,
         this.taskCleanupDelay
     );
-    this.taskCleanupInterval = ObjectUtils.defaultIfNull(
+    this.taskCleanupInterval = ObjectUtils.getIfNull(
         taskCleanupInterval,
         this.taskCleanupInterval
     );
-    this.k8sjobLaunchTimeout = ObjectUtils.defaultIfNull(
+    this.k8sjobLaunchTimeout = ObjectUtils.getIfNull(
         k8sjobLaunchTimeout,
         this.k8sjobLaunchTimeout
     );
-    this.taskJoinTimeout = ObjectUtils.defaultIfNull(
+    this.taskJoinTimeout = ObjectUtils.getIfNull(
         taskJoinTimeout,
         this.taskJoinTimeout
     );
-    this.logSaveTimeout = ObjectUtils.defaultIfNull(
+    this.logSaveTimeout = ObjectUtils.getIfNull(
         logSaveTimeout,
         this.logSaveTimeout
     );
-    this.peonMonitors = ObjectUtils.defaultIfNull(
+    this.peonMonitors = ObjectUtils.getIfNull(
         peonMonitors,
         this.peonMonitors
     );
-    this.javaOptsArray = ObjectUtils.defaultIfNull(
+    this.javaOptsArray = ObjectUtils.getIfNull(
         javaOptsArray,
         this.javaOptsArray
     );
-    this.cpuCoreInMicro = ObjectUtils.defaultIfNull(
+    this.cpuCoreInMicro = ObjectUtils.getIfNull(
         cpuCoreInMicro,
         this.cpuCoreInMicro
     );
-    this.labels = ObjectUtils.defaultIfNull(
+    this.labels = ObjectUtils.getIfNull(
         labels,
         this.labels
     );
-    this.annotations = ObjectUtils.defaultIfNull(
+    this.annotations = ObjectUtils.getIfNull(
         annotations,
         this.annotations
     );
-    this.capacity = ObjectUtils.defaultIfNull(
+    this.capacity = ObjectUtils.getIfNull(
         capacity,
         this.capacity
     );
