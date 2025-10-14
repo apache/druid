@@ -368,8 +368,9 @@ public class SqlBaseBenchmark
 
   private void checkIncompatibleParameters()
   {
-    // we only support nested column format with auto schema
-    if (ObjectStorageEncoding.NONE.equals(objectStorageEncoding) && !"auto".equals(schemaType)) {
+    // we only support NONE object storage encoding for auto schema with mmap segments
+    if (ObjectStorageEncoding.NONE.equals(objectStorageEncoding) && !("auto".equals(schemaType)
+                                                                      && BenchmarkStorage.MMAP.equals(storageType))) {
       System.exit(0);
     }
     // if running as fork 0, maybe don't use these combinations since it will kill everything
