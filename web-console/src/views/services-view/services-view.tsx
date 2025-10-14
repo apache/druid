@@ -644,7 +644,7 @@ ORDER BY
           className: 'padded',
           filterable: false,
           width: 120,
-          Cell: ({ value }) => value,
+          Cell: ({ value }) => (value === null ? '' : value),
           Aggregated: ({ subRows }) => {
             const originalRows: ServiceResultRow[] = subRows.map(r => r._original);
             const totalAvailableProcessors = sum(originalRows, s => s.available_processors);
@@ -663,7 +663,7 @@ ORDER BY
             return formatBytes(value, true);
           },
           Aggregated: ({ subRows }) => {
-            const originalRows = subRows.map(r => r._original);
+            const originalRows: ServiceResultRow[] = subRows.map(r => r._original);
             const totalMemory = sum(originalRows, s => s.total_memory);
             return formatBytes(totalMemory, true);
           },

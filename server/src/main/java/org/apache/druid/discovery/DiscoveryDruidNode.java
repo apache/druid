@@ -53,6 +53,8 @@ public class DiscoveryDruidNode
 {
   private static final Logger LOG = new Logger(DiscoveryDruidNode.class);
 
+  private final Integer UNKNOWN_VALUE = -1;
+
   private final DruidNode druidNode;
   private final NodeRole nodeRole;
   private final DateTime startTime;
@@ -110,8 +112,8 @@ public class DiscoveryDruidNode
     this.startTime = startTime;
 
     // Happens if service is running older version of Druid
-    this.availableProcessors = availableProcessors != null ? availableProcessors : -1;
-    this.totalMemory = totalMemory != null ? totalMemory : -1;
+    this.availableProcessors = availableProcessors != null ? availableProcessors : UNKNOWN_VALUE;
+    this.totalMemory = totalMemory != null ? totalMemory : UNKNOWN_VALUE;
   }
 
   @JsonCreator
