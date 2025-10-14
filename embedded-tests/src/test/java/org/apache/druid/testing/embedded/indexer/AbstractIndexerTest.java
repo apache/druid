@@ -47,6 +47,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * The tests that extend this class have been converted from old style integration
+ * tests. As such, they do not make the most effective use of the embedded test
+ * framework. These tests should be refactored later to rely more on constructs
+ * such as {@code LatchableEmitter}, {@code TaskBuilder}, {@code EmbeddedClusterApis}
+ * and less on {@code ITRetryUtil} and the string replacement of {@code %%args%%}
+ * to construct task and query payloads.
+ */
 public abstract class AbstractIndexerTest extends EmbeddedClusterTestBase
 {
   protected static class PlaceHolders
@@ -124,7 +132,7 @@ public abstract class AbstractIndexerTest extends EmbeddedClusterTestBase
   {
     // Wait for any existing kill tasks to complete before submitting new index task otherwise
     // kill tasks can fail with interval lock revoked.
-    final Set<String> taskIds = getTaskIdsForState(dataSource);
+    final Set<String> taskIds = getRunningTaskIdsForDatasource(dataSource);
     for (String taskId : taskIds) {
       cluster.callApi().waitForTaskToSucceed(taskId, overlord);
     }
@@ -142,7 +150,7 @@ public abstract class AbstractIndexerTest extends EmbeddedClusterTestBase
     return AbstractIndexerTest.class.getResourceAsStream(resource);
   }
 
-  private Set<String> getTaskIdsForState(String dataSource)
+  private Set<String> getRunningTaskIdsForDatasource(String dataSource)
   {
     return ImmutableList.copyOf(
         (CloseableIterator<TaskStatusPlus>) cluster.callApi().onLeaderOverlord(o -> o.taskStatuses(null, dataSource, 0))
