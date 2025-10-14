@@ -92,7 +92,7 @@ public class DruidMetrics
   }
 
   /**
-   * Computes the HTTP status code for a query/operation based on the error (if any).
+   * Computes the HTTP status code based on the query error (if any) for tagged metric emission.
    * <ul>
    *   <li>If error is null: returns 200 (success)</li>
    *   <li>If error is a DruidException: returns the category's expected HTTP status</li>
@@ -110,7 +110,7 @@ public class DruidMetrics
     if (error instanceof DruidException) {
       return ((DruidException) error).getCategory().getExpectedStatus();
     }
-    // Unclassified errors default to 500 (DEFENSIVE category)
+    // Unclassified errors default to 500 (defensive)
     return DruidException.Category.DEFENSIVE.getExpectedStatus();
   }
 }

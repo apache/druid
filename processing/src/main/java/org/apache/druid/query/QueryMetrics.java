@@ -244,7 +244,7 @@ public interface QueryMetrics<QueryType extends Query<?>>
 
   /**
    * Translates the given query exception into the appropriate failure status code.
-   * If {@param error} is null, 200 (success) is emitted.
+   * See {@link DruidMetrics#computeStatusCode}.
    */
   void code(@Nullable Throwable error);
 
