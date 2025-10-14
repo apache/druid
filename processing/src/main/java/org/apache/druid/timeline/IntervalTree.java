@@ -19,6 +19,7 @@
 
 package org.apache.druid.timeline;
 
+import org.apache.druid.java.util.common.StringUtils;
 import org.jetbrains.annotations.VisibleForTesting;
 import org.joda.time.Interval;
 
@@ -28,7 +29,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
 
 /**
  * A variation of Interval Trees (https://en.wikipedia.org/wiki/Interval_tree)
@@ -58,7 +58,7 @@ import java.util.Map;
 public class IntervalTree<T>
 {
   // The compartor for comparing the interval start timnes
-  Comparator<Interval> comparator;
+  Comparator<Interval> startComparator;
   // The comparator for comparing interval end times
   Comparator<Interval> endComparator;
 
@@ -70,9 +70,9 @@ public class IntervalTree<T>
   // percentage of ideal height
   int imbalanceTolerance = 50;
 
-  public IntervalTree(Comparator<Interval> comparator, Comparator<Interval> endComparator)
+  public IntervalTree(Comparator<Interval> startComparator, Comparator<Interval> endComparator)
   {
-    this.comparator = comparator;
+    this.startComparator = startComparator;
     this.endComparator = endComparator;
   }
 
@@ -119,21 +119,28 @@ public class IntervalTree<T>
     Node<T> left;
     Node<T> right;
 
-    @Override
-    public String toString()
-    {
-      return "Node{" +
-              "interval=" + interval +
-              ", value=" + value +
-              ", min=" + min +
-              ", max=" + max +
-              ", left=" + left +
-              ", right=" + right +
-              '}';
-    }
+    private static final String PRINT_FORMAT = "{\n"
+                                                + "%sinterval = %s\n"
+                                                + "%svalue = %s\n"
+                                                + "%sheight = %d\n"
+                                                + "%smin = %s\n"
+                                                + "%smax = %s\n"
+                                                + "%sleft = %s\n"
+                                                + "%sright = %s\n"
+                                                + "%s}";
 
     public String print(int level)
     {
+      String prefix = "\t".repeat(level);
+      String eprefix = "\t".repeat(level - 1);
+      return StringUtils.format(PRINT_FORMAT,
+                              prefix, interval, prefix, value, prefix, height,
+                              prefix, min, prefix, max,
+                              prefix, (left != null) ? left.print(level + 1) : null,
+                              prefix, (right != null) ? right.print(level + 1) : null,
+                              eprefix
+                          );
+      /*
       StringBuilder sb = new StringBuilder();
       String prefix = "\t".repeat(level);
       sb.append(prefix).append("{").append("\n");
@@ -145,6 +152,7 @@ public class IntervalTree<T>
       sb.append(prefix).append("right = ").append((right != null) ? right.print(level + 1) : null).append("\n");
       sb.append(prefix).append("}");
       return sb.toString();
+      */
     }
   }
 
@@ -175,7 +183,7 @@ public class IntervalTree<T>
     }
 
     // If start of interval matches with node sending to right to preserve stability during in order traversal retrieval
-    if (comparator.compare(interval, node.interval) < 0) {
+    if (startComparator.compare(interval, node.interval) < 0) {
       node.left = insert(node.left, interval, value);
     } else {
       node.right = insert(node.right, interval, value);
@@ -185,7 +193,7 @@ public class IntervalTree<T>
     int rheight = (node.right != null) ? node.right.height : -1;
     node.height = Math.max(lheight, rheight) + 1;
 
-    if (comparator.compare(interval, node.min) < 0) {
+    if (startComparator.compare(interval, node.min) < 0) {
       node.min = interval;
     }
 
@@ -196,16 +204,13 @@ public class IntervalTree<T>
     return node;
   }
 
-  //public List<Entry<T>> findEncompassing(Interval interval)
   public Map<Interval, T> findEncompassing(Interval interval)
   {
-    //List<Entry<T>> result = new ArrayList<>();
     Map<Interval, T> result = new HashMap<>();
     findEncompassing(root, interval, result);
     return result;
   }
 
-  //private void findEncompassing(Node<T> node, Interval interval, List<Entry<T>> result)
   private void findEncompassing(Node<T> node, Interval interval, Map<Interval, T> result)
   {
 
@@ -228,10 +233,8 @@ public class IntervalTree<T>
     // If given interval start is greater than or equal to current interval start, matches can still be found on both
     // left and right as the given interval only needs to be encompassed.
     // If the given interval start is less than current, then we don't need to search the right
-    // To keep it uniform searching on both sides as we will quickly elimate unsuitable subtrees with the bounds check
-
-    // Look for potential candidates in left and right subtrees
-    // If interval falls outside the min to max range of the subtree don't follow the subtree
+    // To keep it uniform looking for potential candidates in both left and right subtrees
+    // If interval falls outside the min to max range of a subtree we quickly eliminate it and not follow it
 
     // Search left
     if ((node.left != null) && isIntervalInBounds(node.left, interval)) {
@@ -246,12 +249,12 @@ public class IntervalTree<T>
 
   private boolean doesMatch(Node<T> node, Interval interval)
   {
-    return (comparator.compare(node.interval, interval) == 0) && (endComparator.compare(node.interval, interval) == 0);
+    return (startComparator.compare(node.interval, interval) == 0) && (endComparator.compare(node.interval, interval) == 0);
   }
 
   private boolean isIntervalInBounds(Node<T> node, Interval interval)
   {
-    return (comparator.compare(node.min, interval) <= 0)
+    return (startComparator.compare(node.min, interval) <= 0)
             && (endComparator.compare(node.max, interval) >= 0);
   }
 
@@ -271,8 +274,15 @@ public class IntervalTree<T>
     if (node.interval.equals(interval)) {
       --size;
       if ((node.left != null) && (node.right != null)) {
-        makeLeftChild(node.right, node.left);
-        return node.right;
+        // Make the right most child of the left node the new node at current level
+        Node<T> newNode = unlinkRightLeaf(node.left);
+        // If left node did not have any right children, it is the matching candidate
+        if (node.left != newNode) {
+          newNode.left = node.left;
+        }
+        newNode.right = node.right;
+        recomputeState(newNode);
+        return newNode;
       } else if (node.left != null) {
         return node.left;
       } else if (node.right != null) {
@@ -281,7 +291,7 @@ public class IntervalTree<T>
       return null;
     }
 
-    if (comparator.compare(interval, node.interval) <= 0) {
+    if (startComparator.compare(interval, node.interval) < 0) {
       node.left = removeNode(node.left, interval);
     } else {
       node.right = removeNode(node.right, interval);
@@ -290,6 +300,22 @@ public class IntervalTree<T>
     recomputeState(node);
 
     return node;
+  }
+
+  private Node<T> unlinkRightLeaf(Node<T> node)
+  {
+    if (node.right == null) {
+      return node;
+    } else {
+      Node<T> rnode = unlinkRightLeaf(node.right);
+      // If the right node has a left child, make it new right child
+      if (rnode == node.right) {
+        node.right = rnode.left;
+        rnode.left = null;
+      }
+      recomputeState(node);
+      return rnode;
+    }
   }
 
   private void makeLeftChild(Node<T> node, Node<T> childNode)
@@ -305,7 +331,7 @@ public class IntervalTree<T>
   @VisibleForTesting
   Iterator<Entry<T>> inOrderTraverse()
   {
-    List<Node<T>> nodes = new ArrayList<>();
+    List<Node<T>> nodes = new ArrayList<>(size);
     inOrderTraverse(root, nodes);
     return nodes.stream().map(node -> new Entry<T>(node.interval, node.value)).iterator();
   }
@@ -313,7 +339,7 @@ public class IntervalTree<T>
   public void rebalance()
   {
     // In order traversal followed by repeated binary segmentation of the list
-    List<Node<T>> nodes = new ArrayList<>();
+    List<Node<T>> nodes = new ArrayList<>(size);
     inOrderTraverse(root, nodes);
     root = constructTree(nodes, 0, nodes.size());
   }
@@ -414,7 +440,7 @@ public class IntervalTree<T>
     Interval min = interval;
     for (Node<T> node : nodes) {
       if (node != null) {
-        if (comparator.compare(node.min, min) <= 0) {
+        if (startComparator.compare(node.min, min) <= 0) {
           min = node.min;
         }
       }
