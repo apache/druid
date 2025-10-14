@@ -21,8 +21,8 @@ package org.apache.druid.segment.data;
 
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.segment.CompressedPools;
+import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.junit.Assert;
@@ -76,7 +76,7 @@ public class CompressedVariableSizeBlobColumnTest
       numWritten++;
     }
 
-    SmooshedWriter writer = smoosher.addWithSmooshedWriter(fileNameBase, serializer.getSerializedSize());
+    SegmentFileChannel writer = smoosher.addWithChannel(fileNameBase, serializer.getSerializedSize());
     serializer.writeTo(writer, smoosher);
     writer.close();
     smoosher.close();
@@ -140,7 +140,7 @@ public class CompressedVariableSizeBlobColumnTest
       numWritten++;
     }
 
-    SmooshedWriter writer = smoosher.addWithSmooshedWriter(fileNameBase, serializer.getSerializedSize());
+    SegmentFileChannel writer = smoosher.addWithChannel(fileNameBase, serializer.getSerializedSize());
     serializer.writeTo(writer, smoosher);
     writer.close();
     smoosher.close();
@@ -206,7 +206,7 @@ public class CompressedVariableSizeBlobColumnTest
       numWritten++;
     }
 
-    SmooshedWriter writer = smoosher.addWithSmooshedWriter(fileNameBase, serializer.getSerializedSize());
+    SegmentFileChannel writer = smoosher.addWithChannel(fileNameBase, serializer.getSerializedSize());
     serializer.writeTo(writer, smoosher);
     writer.close();
     smoosher.close();
@@ -265,7 +265,7 @@ public class CompressedVariableSizeBlobColumnTest
       numWritten++;
     }
 
-    SmooshedWriter writer = smoosher.addWithSmooshedWriter(fileNameBase, serializer.getSerializedSize());
+    SegmentFileChannel writer = smoosher.addWithChannel(fileNameBase, serializer.getSerializedSize());
     serializer.writeTo(writer, smoosher);
     writer.close();
     smoosher.close();
