@@ -51,9 +51,9 @@ The core idea is to use two `SharedInformers`, one for jobs and one for pods, to
 
 **Key Differences:**
 
-- **DirectKubernetesPeonClient** (Default): Every read operation makes a direct HTTP call to the K8s API server. With 100 concurrent tasks, this results in 100+ active API connections with continuous polling.
+- `DirectKubernetesPeonClient` (Default): Every read operation makes a direct HTTP call to the K8s API server. With 100 concurrent tasks, this results in 100+ active API connections with continuous polling.
 
-- **CachingKubernetesPeonClient** (Experimental): All read operations query an in-memory cache maintained by SharedInformers. With 100 concurrent tasks, only 2 persistent watch connections are used (one for Jobs, one for Pods), achieving a large reduction in API calls.
+- `CachingKubernetesPeonClient` (Experimental): All read operations query an in-memory cache maintained by `SharedInformers`. With 100 concurrent tasks, only 2 persistent watch connections are used (one for Jobs, one for Pods), achieving a large reduction in API calls.
 
 **Shared Operations**: 
 
