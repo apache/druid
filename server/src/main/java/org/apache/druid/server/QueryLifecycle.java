@@ -418,6 +418,7 @@ public class QueryLifecycle
       statsMap.put("query/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs));
       statsMap.put("query/bytes", bytesWritten);
       statsMap.put("success", success);
+      statsMap.put(DruidMetrics.CODE, DruidMetrics.computeStatusCode(e));
 
       if (authenticationResult != null) {
         statsMap.put("identity", authenticationResult.getIdentity());
