@@ -403,7 +403,7 @@ Retrieve a list of table names in the schema.
 
 ##### URL
 
-`GET` `/druid/coordinator/v1/catalog/schemas/{schema}/table`
+`GET` `/druid/coordinator/v1/catalog/schemas/{schema}/tables`
 
 ##### Responses
 
