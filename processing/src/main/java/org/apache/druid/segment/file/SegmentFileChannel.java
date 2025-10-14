@@ -17,12 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.common.io.smoosh;
+package org.apache.druid.segment.file;
 
-import org.apache.druid.segment.file.SegmentFileChannel;
+import java.io.Closeable;
+import java.nio.channels.GatheringByteChannel;
 
 /**
+ * A {@link GatheringByteChannel} that is {@link Closeable} for a writing to a segment file
+ *
+ * @see SegmentFileBuilder#addWithChannel(String, long)
  */
-public interface SmooshedWriter extends SegmentFileChannel
+public interface SegmentFileChannel extends Closeable, GatheringByteChannel
 {
 }
