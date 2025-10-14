@@ -97,6 +97,8 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
   // Set this to true if the client needs to skip tombstones upon lookup (like the broker)
   private final boolean skipObjectsWithNoData;
 
+  private static boolean useTreeIntervalMatch = (System.getProperty("experimental.timeline.useTreeIntervalMatch") != null);
+
   public VersionedIntervalTimeline(Comparator<? super VersionType> versionComparator)
   {
     this(versionComparator, false);
@@ -211,7 +213,9 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
           TreeMap<VersionType, TimelineEntry> versionEntry = new TreeMap<>(versionComparator);
           versionEntry.put(version, entry);
           allTimelineEntries.put(interval, versionEntry);
-          allTimeIntervals.add(interval, versionEntry);
+          if (useTreeIntervalMatch) {
+            allTimeIntervals.add(interval, versionEntry);
+          }
           numObjects.incrementAndGet();
         } else {
           entry = exists.get(version);
@@ -271,7 +275,9 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
         versionEntries.remove(version);
         if (versionEntries.isEmpty()) {
           allTimelineEntries.remove(interval);
-          allTimeIntervals.remove(interval);
+          if (useTreeIntervalMatch) {
+            allTimeIntervals.remove(interval);
+          }
         }
 
         remove(incompletePartitionsTimeline, interval, entry, true);
@@ -302,16 +308,30 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
         }
       }
 
-      // If an exact interval match is not found look for a matching range
-      Map<Interval, TreeMap<VersionType, TimelineEntry>> possibleMatches = allTimeIntervals.findEncompassing(interval);
-      for (Entry<Interval, TreeMap<VersionType, TimelineEntry>> entry : possibleMatches.entrySet()) {
-        Interval eninterval = entry.getKey();
-        if (eninterval.contains(interval)) {
-          TimelineEntry foundEntry = entry.getValue().get(version);
-          if (foundEntry != null) {
-            return foundEntry.getPartitionHolder().getChunk(partitionNum);
+      // If an exact interval match is not found search for an encapsulating interval
+
+      // If tree search is enabled use it else revert to checking all intervals
+      if (useTreeIntervalMatch) {
+        Map<Interval, TreeMap<VersionType, TimelineEntry>> possibleMatches = allTimeIntervals.findEncompassing(interval);
+        for (Entry<Interval, TreeMap<VersionType, TimelineEntry>> entry : possibleMatches.entrySet()) {
+          Interval eninterval = entry.getKey();
+          if (eninterval.contains(interval)) {
+            TimelineEntry foundEntry = entry.getValue().get(version);
+            if (foundEntry != null) {
+              return foundEntry.getPartitionHolder().getChunk(partitionNum);
+            }
           }
         }
+      } else {
+        for (Entry<Interval, TreeMap<VersionType, TimelineEntry>> entry : allTimelineEntries.entrySet()) {
+          if (entry.getKey().contains(interval)) {
+            TimelineEntry foundEntry = entry.getValue().get(version);
+            if (foundEntry != null) {
+              return foundEntry.getPartitionHolder().getChunk(partitionNum);
+            }
+          }
+        }
+
       }
 
       return null;
