@@ -20,20 +20,30 @@
 package org.apache.druid.emitter.prometheus;
 
 import io.prometheus.client.SimpleCollector;
+import org.apache.druid.java.util.common.Stopwatch;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.joda.time.Duration;
+
+import javax.annotation.Nullable;
 
 public class DimensionsAndCollector
 {
+  private static final Logger log = new Logger(DimensionsAndCollector.class);
   private final String[] dimensions;
   private final SimpleCollector collector;
   private final double conversionFactor;
   private final double[] histogramBuckets;
+  private final Stopwatch updateTimer;
+  private final Duration ttlSeconds;
 
-  DimensionsAndCollector(String[] dimensions, SimpleCollector collector, double conversionFactor, double[] histogramBuckets)
+  DimensionsAndCollector(String[] dimensions, SimpleCollector collector, double conversionFactor, double[] histogramBuckets, @Nullable Integer ttlSeconds)
   {
     this.dimensions = dimensions;
     this.collector = collector;
     this.conversionFactor = conversionFactor;
     this.histogramBuckets = histogramBuckets;
+    this.updateTimer = Stopwatch.createStarted();
+    this.ttlSeconds = ttlSeconds != null ? Duration.standardSeconds(ttlSeconds) : null;
   }
 
   public String[] getDimensions()
@@ -54,5 +64,24 @@ public class DimensionsAndCollector
   public double[] getHistogramBuckets()
   {
     return histogramBuckets;
+  }
+
+  public void resetLastUpdateTime()
+  {
+    updateTimer.restart();
+  }
+
+  public long getMillisSinceLastUpdate()
+  {
+    return updateTimer.millisElapsed();
+  }
+
+  public boolean isExpired()
+  {
+    if (ttlSeconds == null) {
+      log.error("Invalid usage of isExpired(), TTL has not been set");
+      return false;
+    }
+    return updateTimer.hasElapsed(ttlSeconds);
   }
 }

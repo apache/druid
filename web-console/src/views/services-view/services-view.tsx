@@ -41,6 +41,10 @@ import type { QueryWithContext } from '../../druid-models';
 import { getConsoleViewIcon } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
+  booleanCustomTableFilter,
+  combineModeAndNeedle,
+  DEFAULT_TABLE_CLASS_NAME,
+  parseFilterModeAndNeedle,
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
   suggestibleFilterInput,
@@ -53,6 +57,7 @@ import {
   filterMap,
   formatBytes,
   formatBytesCompact,
+  formatDate,
   formatDurationWithMsIfNeeded,
   getApiArray,
   hasOverlayOpen,
@@ -61,7 +66,6 @@ import {
   lookupBy,
   oneOf,
   pluralIfNeeded,
-  prettyFormatIsoDateWithMsIfNeeded,
   queryDruidSql,
   QueryManager,
   QueryState,
@@ -87,6 +91,7 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Version',
     'CPU processors',
     'Total memory',
+    'Labels',
     'Detail',
   ],
   'no-sql': [
@@ -148,6 +153,7 @@ interface ServiceResultRow {
   readonly tls_port: number;
   readonly start_time: string;
   readonly version: string;
+  readonly labels: string | null;
   readonly available_processors: number;
   readonly total_memory: number;
 }
@@ -205,6 +211,11 @@ function aggregateLoadQueueInfos(loadQueueInfos: LoadQueueInfo[]): LoadQueueInfo
   };
 }
 
+function defaultDisplayFn(value: any): string {
+  if (value === undefined || value === null) return '';
+  return String(value);
+}
+
 interface WorkerInfo {
   readonly availabilityGroups: string[];
   readonly blacklistedUntil: string | null;
@@ -247,6 +258,7 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
   "is_leader",
   "start_time",
   "version",
+  "labels",
   "available_processors",
   "total_memory"
 FROM sys.servers
@@ -298,6 +310,7 @@ ORDER BY
                 start_time: '1970:01:01T00:00:00Z',
                 is_leader: 0,
                 version: '',
+                labels: null,
                 available_processors: -1,
                 total_memory: -1,
               };
@@ -393,7 +406,10 @@ ORDER BY
     this.serviceQueryManager.runQuery({ capabilities, visibleColumns });
   };
 
-  private renderFilterableCell(field: string) {
+  private renderFilterableCell(
+    field: string,
+    displayFn: (value: string) => string = defaultDisplayFn,
+  ) {
     const { filters, onFiltersChange } = this.props;
 
     return function FilterableCell(row: { value: any }) {
@@ -403,7 +419,10 @@ ORDER BY
           value={row.value}
           filters={filters}
           onFiltersChange={onFiltersChange}
-        />
+          displayValue={displayFn(row.value)}
+        >
+          {displayFn(row.value)}
+        </TableFilterableCell>
       );
     };
   }
@@ -428,6 +447,7 @@ ORDER BY
           }
           filterable
           filtered={filters}
+          className={`centered-table ${DEFAULT_TABLE_CLASS_NAME}`}
           onFilteredChange={onFiltersChange}
           pivotBy={groupServicesBy ? [groupServicesBy] : []}
           defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
@@ -447,6 +467,7 @@ ORDER BY
       workerInfoLookup: Record<string, WorkerInfo>,
     ): Column<ServiceResultRow>[] => {
       const { capabilities } = this.props;
+
       return [
         {
           Header: 'Service',
@@ -625,9 +646,21 @@ ORDER BY
           Header: 'Start time',
           show: visibleColumns.shown('Start time'),
           accessor: 'start_time',
-          width: 200,
-          Cell: this.renderFilterableCell('start_time'),
+          id: 'start_time',
+          width: 220,
+          Cell: this.renderFilterableCell('start_time', formatDate),
           Aggregated: () => '',
+          filterMethod: (filter: Filter, row: ServiceResultRow) => {
+            const modeAndNeedle = parseFilterModeAndNeedle(filter);
+            if (!modeAndNeedle) return true;
+            const parsedRowTime = formatDate(row.start_time);
+            if (modeAndNeedle.mode === '~') {
+              return booleanCustomTableFilter(filter, parsedRowTime);
+            }
+            const parsedFilterTime = formatDate(modeAndNeedle.needle);
+            filter.value = combineModeAndNeedle(modeAndNeedle.mode, parsedFilterTime);
+            return booleanCustomTableFilter(filter, parsedRowTime);
+          },
         },
         {
           Header: 'Version',
@@ -669,6 +702,29 @@ ORDER BY
           },
         },
         {
+          Header: 'Labels',
+          show: visibleColumns.shown('Labels'),
+          accessor: 'labels',
+          className: 'padded',
+          filterable: false,
+          width: 200,
+          Cell: ({ value }: { value: string | null }) => {
+            if (!value) return '';
+            return (
+              <ul className="labels-list">
+                {Object.entries(JSON.parse(value)).map(([key, val]) => {
+                  return (
+                    <li key={key}>
+                      {key}: {String(val)}
+                    </li>
+                  );
+                })}
+              </ul>
+            );
+          },
+          Aggregated: () => '',
+        },
+        {
           Header: 'Detail',
           show: visibleColumns.shown('Detail'),
           id: 'queue',
@@ -691,17 +747,11 @@ ORDER BY
                 const details: string[] = [];
                 if (workerInfo.lastCompletedTaskTime) {
                   details.push(
-                    `Last completed task: ${prettyFormatIsoDateWithMsIfNeeded(
-                      workerInfo.lastCompletedTaskTime,
-                    )}`,
+                    `Last completed task: ${formatDate(workerInfo.lastCompletedTaskTime)}`,
                   );
                 }
                 if (workerInfo.blacklistedUntil) {
-                  details.push(
-                    `Blacklisted until: ${prettyFormatIsoDateWithMsIfNeeded(
-                      workerInfo.blacklistedUntil,
-                    )}`,
-                  );
+                  details.push(`Blacklisted until: ${formatDate(workerInfo.blacklistedUntil)}`);
                 }
                 return details.join(' ') || null;
               }

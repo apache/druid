@@ -41,6 +41,7 @@ import {
   DoctorDialog,
   OverlordDynamicConfigDialog,
 } from '../../dialogs';
+import { WebConsoleConfigDialog } from '../../dialogs/web-console-config-dialog/web-console-config-dialog';
 import type { ConsoleViewId } from '../../druid-models';
 import { getConsoleViewIcon } from '../../druid-models';
 import { Capabilities } from '../../helpers';
@@ -76,6 +77,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
     useState(false);
   const [overlordDynamicConfigDialogOpen, setOverlordDynamicConfigDialogOpen] = useState(false);
   const [compactionDynamicConfigDialogOpen, setCompactionDynamicConfigDialogOpen] = useState(false);
+  const [webConsoleConfigDialogOpen, setWebConsoleConfigDialogOpen] = useState(false);
 
   const showSplitDataLoaderMenu = capabilities.hasMultiStageQueryTask();
 
@@ -193,6 +195,11 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         text="Compaction dynamic config"
         onClick={() => setCompactionDynamicConfigDialogOpen(true)}
         disabled={!capabilities.hasCoordinatorAccess()}
+      />
+      <MenuItem
+        icon={IconNames.CONSOLE}
+        text="Web console config"
+        onClick={() => setWebConsoleConfigDialogOpen(true)}
       />
       <MenuDivider />
       <MenuItem
@@ -400,6 +407,9 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         <CompactionDynamicConfigDialog
           onClose={() => setCompactionDynamicConfigDialogOpen(false)}
         />
+      )}
+      {webConsoleConfigDialogOpen && (
+        <WebConsoleConfigDialog onClose={() => setWebConsoleConfigDialogOpen(false)} />
       )}
     </Navbar>
   );

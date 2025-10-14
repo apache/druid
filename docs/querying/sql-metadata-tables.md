@@ -237,6 +237,7 @@ Servers table lists all discovered servers in the cluster.
 |is_leader|BIGINT|1 if the server is currently the 'leader' (for services which have the concept of leadership), otherwise 0 if the server is not the leader, or null if the server type does not have the concept of leadership|
 |start_time|STRING|Timestamp in ISO8601 format when the server was announced in the cluster|
 |version|VARCHAR|Druid version running on the server|
+|labels|VARCHAR|Labels for the server configured using the property [`druid.labels`](../configuration/index.md)|
 |available_processors|BIGINT|Total number of CPU processors available to the server|
 |total_memory|BIGINT|Total memory in bytes available to the server|
 

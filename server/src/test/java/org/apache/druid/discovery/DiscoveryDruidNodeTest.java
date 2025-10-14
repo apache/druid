@@ -112,7 +112,8 @@ public class DiscoveryDruidNodeTest
             -1,
             8282,
             true,
-            true
+            true,
+            null
         ),
         NodeRole.BROKER,
         ImmutableMap.of(
@@ -169,7 +170,8 @@ public class DiscoveryDruidNodeTest
                 -1,
                 8282,
                 true,
-                true
+                true,
+                null
             ),
             NodeRole.BROKER,
             ImmutableMap.of(
@@ -223,7 +225,8 @@ public class DiscoveryDruidNodeTest
                 -1,
                 8282,
                 true,
-                true
+                true,
+                null
             ),
             NodeRole.BROKER,
             ImmutableMap.of(
@@ -278,7 +281,8 @@ public class DiscoveryDruidNodeTest
                 -1,
                 8282,
                 true,
-                true
+                true,
+                null
             ),
             NodeRole.BROKER,
             ImmutableMap.of(),

@@ -405,7 +405,7 @@ public class SystemSchemaTest extends CalciteTestBase
   );
 
   private final DiscoveryDruidNode overlord = new DiscoveryDruidNode(
-      new DruidNode("s2", "localhost", false, 8090, null, true, false),
+      new DruidNode("s2", "localhost", false, 8090, null, null, true, false, ImmutableMap.of("overlordKey", "overlordValue")),
       NodeRole.OVERLORD,
       ImmutableMap.of(),
       startTime
@@ -419,7 +419,7 @@ public class SystemSchemaTest extends CalciteTestBase
   );
 
   private final DiscoveryDruidNode broker1 = new DiscoveryDruidNode(
-      new DruidNode("s3", "localhost", false, 8082, null, true, false),
+      new DruidNode("s3", "localhost", false, 8082, null, null, true, false, ImmutableMap.of("brokerKey", "brokerValue", "brokerKey2", "brokerValue2")),
       NodeRole.BROKER,
       ImmutableMap.of(),
       startTime
@@ -561,7 +561,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final SystemSchema.ServersTable serversTable = (SystemSchema.ServersTable) schema.getTableMap().get("servers");
     final RelDataType serverRowType = serversTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> serverFields = serverRowType.getFieldList();
-    Assert.assertEquals(13, serverFields.size());
+    Assert.assertEquals(14, serverFields.size());
     Assert.assertEquals("server", serverFields.get(0).getName());
     Assert.assertEquals(SqlTypeName.VARCHAR, serverFields.get(0).getType().getSqlTypeName());
   }
@@ -764,7 +764,8 @@ public class SystemSchemaTest extends CalciteTestBase
                                                          serverInventoryView,
                                                          authMapper,
                                                          overlordClient,
-                                                         coordinatorClient
+                                                         coordinatorClient,
+                                                         MAPPER
                                                      )
                                                      .createMock();
     EasyMock.replay(serversTable);
@@ -862,6 +863,7 @@ public class SystemSchemaTest extends CalciteTestBase
             nonLeader,
             startTimeStr,
             version,
+            null,
             availableProcessors,
             totalMemory
         )
@@ -879,6 +881,7 @@ public class SystemSchemaTest extends CalciteTestBase
             nonLeader,
             startTimeStr,
             version,
+            null,
             availableProcessors,
             totalMemory
         )
@@ -896,6 +899,7 @@ public class SystemSchemaTest extends CalciteTestBase
             nonLeader,
             startTimeStr,
             version,
+            null,
             availableProcessors,
             totalMemory
         )
@@ -913,6 +917,7 @@ public class SystemSchemaTest extends CalciteTestBase
             nonLeader,
             startTimeStr,
             version,
+            null,
             availableProcessors,
             totalMemory
         )
@@ -930,6 +935,7 @@ public class SystemSchemaTest extends CalciteTestBase
             nonLeader,
             startTimeStr,
             version,
+            null,
             availableProcessors,
             totalMemory
         )
@@ -946,6 +952,7 @@ public class SystemSchemaTest extends CalciteTestBase
         nonLeader,
         startTimeStr,
         version,
+        null,
         availableProcessors,
         totalMemory
     ));
@@ -962,6 +969,7 @@ public class SystemSchemaTest extends CalciteTestBase
             1L,
             startTimeStr,
             version,
+            null,
             availableProcessors,
             totalMemory
         )
@@ -979,6 +987,7 @@ public class SystemSchemaTest extends CalciteTestBase
             nonLeader,
             startTimeStr,
             version,
+            "{\"brokerKey\":\"brokerValue\",\"brokerKey2\":\"brokerValue2\"}",
             availableProcessors,
             totalMemory
         )
@@ -996,6 +1005,7 @@ public class SystemSchemaTest extends CalciteTestBase
             nonLeader,
             startTimeStr,
             version,
+            null,
             availableProcessors,
             totalMemory
         )
@@ -1013,6 +1023,7 @@ public class SystemSchemaTest extends CalciteTestBase
             1L,
             startTimeStr,
             version,
+            "{\"overlordKey\":\"overlordValue\"}",
             availableProcessors,
             totalMemory
         )
@@ -1030,6 +1041,7 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             startTimeStr,
             version,
+            null,
             availableProcessors,
             totalMemory
         )
@@ -1047,6 +1059,7 @@ public class SystemSchemaTest extends CalciteTestBase
             0L,
             startTimeStr,
             version,
+            null,
             availableProcessors,
             totalMemory
         )
@@ -1064,6 +1077,7 @@ public class SystemSchemaTest extends CalciteTestBase
             nonLeader,
             startTimeStr,
             version,
+            null,
             availableProcessors,
             totalMemory
         )
@@ -1081,6 +1095,7 @@ public class SystemSchemaTest extends CalciteTestBase
             nonLeader,
             startTimeStr,
             version,
+            null,
             availableProcessors,
             totalMemory
         )
@@ -1097,6 +1112,7 @@ public class SystemSchemaTest extends CalciteTestBase
         nonLeader,
         startTimeStr,
         version,
+        null,
         availableProcessors,
         totalMemory
     ));
@@ -1133,6 +1149,7 @@ public class SystemSchemaTest extends CalciteTestBase
       @Nullable Long isLeader,
       String startTime,
       String version,
+      String labels,
       long availableProcessors,
       long totalMemory
   )
@@ -1149,6 +1166,7 @@ public class SystemSchemaTest extends CalciteTestBase
         isLeader,
         startTime,
         version,
+        labels,
         availableProcessors,
         totalMemory
     };
