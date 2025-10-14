@@ -181,11 +181,16 @@ public class SqlBaseBenchmark
   protected String complexCompression;
 
   @Param({
-      "explicit",
-      "auto:none",
-      "auto:smile"
+      "NONE",
+      "SMILE"
   })
-  protected String schemaAndEncoding;
+  protected ObjectStorageEncoding objectStorageEncoding;
+
+  @Param({
+      "explicit",
+      "auto"
+  })
+  protected String schemaType;
 
   // Can be STORAGE_MMAP, STORAGE_INCREMENTAL, STORAGE_FRAME_ROW, or STORAGE_FRAME_COLUMNAR
   @Param({
@@ -244,15 +249,12 @@ public class SqlBaseBenchmark
     Map<DataSegment, QueryableIndex> segments = new HashMap<>();
     for (String dataSource : getDatasources()) {
       final SqlBenchmarkDatasets.BenchmarkSchema schema;
-      if (schemaAndEncoding.startsWith("auto")) {
-        ObjectStorageEncoding objectStorageEncoding = ObjectStorageEncoding.fromString(
-            StringUtils.toUpperCase(schemaAndEncoding.split(":")[1]));
-        schema = SqlBenchmarkDatasets.getSchema(dataSource)
-                                     .asAutoDimensions(
-                                         NestedCommonFormatColumnFormatSpec
-                                             .builder()
-                                             .setObjectStorageEncoding(objectStorageEncoding)
-                                             .build());
+      if ("auto".equals(schemaType)) {
+        schema = SqlBenchmarkDatasets
+            .getSchema(dataSource)
+            .asAutoDimensions(NestedCommonFormatColumnFormatSpec.builder()
+                                                                .setObjectStorageEncoding(objectStorageEncoding)
+                                                                .build());
       } else {
         schema = SqlBenchmarkDatasets.getSchema(dataSource);
       }
@@ -366,6 +368,10 @@ public class SqlBaseBenchmark
 
   private void checkIncompatibleParameters()
   {
+    // we only support nested column format with auto schema
+    if (ObjectStorageEncoding.NONE.equals(objectStorageEncoding) && !"auto".equals(schemaType)) {
+      System.exit(0);
+    }
     // if running as fork 0, maybe don't use these combinations since it will kill everything
     if (stringEncoding != BenchmarkStringEncodingStrategy.UTF8 && storageType != BenchmarkStorage.MMAP) {
       System.exit(0);
@@ -375,7 +381,8 @@ public class SqlBaseBenchmark
       System.exit(0);
     }
     // vectorize only works for mmap and frame column segments, bail out if
-    if (vectorizeContext.shouldVectorize(true) && !(storageType == BenchmarkStorage.MMAP || storageType == BenchmarkStorage.FRAME_COLUMNAR)) {
+    if (vectorizeContext.shouldVectorize(true) && !(storageType == BenchmarkStorage.MMAP
+                                                    || storageType == BenchmarkStorage.FRAME_COLUMNAR)) {
       System.exit(0);
     }
   }
