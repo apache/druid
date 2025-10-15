@@ -231,7 +231,7 @@ public class UnusedSegmentsKillerTest
     );
   }
 
-  @Test(timeout = 30_000L)
+  @Test(timeout = 20_000L)
   public void test_maxIntervalsKilledInADatasource_is_10k()
   {
     leaderSelector.becomeLeader();
