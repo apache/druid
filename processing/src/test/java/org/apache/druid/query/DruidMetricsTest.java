@@ -44,5 +44,70 @@ public class DruidMetricsTest
       );
     }
   }
+
+  @Test
+  public void testComputeStatusCode_queryExceptionCategories()
+  {
+    Assert.assertEquals(
+        500,
+        DruidMetrics.computeStatusCode(new QueryException(
+            null,
+            QueryException.QUERY_CANCELED_ERROR_CODE,
+            null,
+            null,
+            null
+        ))
+    );
+    Assert.assertEquals(
+        504,
+        DruidMetrics.computeStatusCode(new QueryException(
+            null,
+            QueryException.QUERY_TIMEOUT_ERROR_CODE,
+            null,
+            null,
+            null
+        ))
+    );
+    Assert.assertEquals(
+        429,
+        DruidMetrics.computeStatusCode(new QueryException(
+            null,
+            QueryException.QUERY_CAPACITY_EXCEEDED_ERROR_CODE,
+            null,
+            null,
+            null
+        ))
+    );
+    Assert.assertEquals(
+        401,
+        DruidMetrics.computeStatusCode(new QueryException(
+            null,
+            QueryException.UNAUTHORIZED_ERROR_CODE,
+            null,
+            null,
+            null
+        ))
+    );
+    Assert.assertEquals(
+        400,
+        DruidMetrics.computeStatusCode(new QueryException(
+            null,
+            QueryException.BAD_QUERY_CONTEXT_ERROR_CODE,
+            null,
+            null,
+            null
+        ))
+    );
+    Assert.assertEquals(
+        501,
+        DruidMetrics.computeStatusCode(new QueryException(
+            null,
+            QueryException.QUERY_UNSUPPORTED_ERROR_CODE,
+            null,
+            null,
+            null
+        ))
+    );
+  }
 }
 

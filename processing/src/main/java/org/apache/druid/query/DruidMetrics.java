@@ -37,7 +37,7 @@ public class DruidMetrics
   public static final String INTERVAL = "interval";
   public static final String ID = "id";
   public static final String SUBQUERY_ID = "subQueryId";
-  public static final String CODE = "code";
+  public static final String CODE = "statusCode";
   public static final String STATUS = "status";
   public static final String ENGINE = "engine";
   public static final String DURATION = "duration";
@@ -95,7 +95,7 @@ public class DruidMetrics
    * Computes the HTTP status code based on the query error (if any) for tagged metric emission.
    * <ul>
    *   <li>If error is null: returns 200 (success)</li>
-   *   <li>If error is a DruidException: returns the category's expected HTTP status</li>
+   *   <li>If error is a {@link DruidException} or {@link QueryException}: returns the corresponding status code</li>
    *   <li>Otherwise (unclassified error): returns 500 (internal server error)</li>
    * </ul>
    *
@@ -109,6 +109,8 @@ public class DruidMetrics
     }
     if (error instanceof DruidException) {
       return ((DruidException) error).getCategory().getExpectedStatus();
+    } else if (error instanceof QueryException) {
+      return ((QueryException) error).getFailType().getExpectedStatus();
     }
     // Unclassified errors default to 500 (defensive)
     return DruidException.Category.DEFENSIVE.getExpectedStatus();
