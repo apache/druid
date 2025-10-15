@@ -37,7 +37,7 @@ public class DruidMetrics
   public static final String INTERVAL = "interval";
   public static final String ID = "id";
   public static final String SUBQUERY_ID = "subQueryId";
-  public static final String CODE = "code";
+  public static final String CODE = "statusCode";
   public static final String STATUS = "status";
   public static final String ENGINE = "engine";
   public static final String DURATION = "duration";
