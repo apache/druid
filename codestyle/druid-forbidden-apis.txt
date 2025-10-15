@@ -36,6 +36,7 @@ java.lang.Character#<init>(char) @ Use Character.valueOf(char) instead.
 java.lang.Class#getCanonicalName() @ Class.getCanonicalName can return null for anonymous types, use Class.getName instead.
 java.lang.Double#<init>(double) @ Use primitive double, or Double.valueOf(double) instead.
 java.lang.Double#<init>(java.lang.String) @ Use parseDouble(String) to convert a string to a double primitive, or use valueOf(String) to convert a string to a Double object.
+java.lang.Float#<init>(double) @ Use primitive float, or Float.valueOf(float) instead.
 java.lang.Float#<init>(float) @ Use primitive float, or Float.valueOf(float) instead.
 java.lang.Float#<init>(java.lang.String) @ Use parseFloat(String) to convert a string to a float primitive, or use valueOf(String) to convert a string to a Float object.
 java.lang.Integer#<init>(int) @ Use primitive int, or Integer.valueOf(int) instead.
