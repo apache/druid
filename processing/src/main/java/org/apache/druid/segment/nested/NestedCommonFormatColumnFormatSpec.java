@@ -40,11 +40,11 @@ import java.util.Objects;
  */
 public class NestedCommonFormatColumnFormatSpec
 {
-  private static final NestedCommonFormatColumnFormatSpec DEFAULT =
-      NestedCommonFormatColumnFormatSpec.builder()
-                                        .setObjectFieldsDictionaryEncoding(StringEncodingStrategy.UTF8_STRATEGY)
-                                        .setObjectStorageEncoding(ObjectStorageEncoding.SMILE)
-                                        .build();
+  private static final NestedCommonFormatColumnFormatSpec OPERATOR_DEFAULT = builder().build();
+  private static final NestedCommonFormatColumnFormatSpec SYSTEM_DEFAULT =
+      builder().setObjectFieldsDictionaryEncoding(StringEncodingStrategy.UTF8_STRATEGY)
+               .setObjectStorageEncoding(ObjectStorageEncoding.SMILE)
+               .build();
 
   public static Builder builder()
   {
@@ -61,7 +61,7 @@ public class NestedCommonFormatColumnFormatSpec
       IndexSpec indexSpec
   )
   {
-    return Objects.requireNonNullElse(columnFormatSpec, DEFAULT).getEffectiveSpec(indexSpec);
+    return Objects.requireNonNullElse(columnFormatSpec, OPERATOR_DEFAULT).getEffectiveSpec(indexSpec);
   }
 
   @Nullable
@@ -158,7 +158,7 @@ public class NestedCommonFormatColumnFormatSpec
     if (indexSpec.getAutoColumnFormatSpec() != null) {
       defaultSpec = indexSpec.getAutoColumnFormatSpec();
     } else {
-      defaultSpec = DEFAULT;
+      defaultSpec = SYSTEM_DEFAULT;
     }
 
     if (objectFieldsDictionaryEncoding == null) {
