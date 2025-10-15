@@ -28,6 +28,23 @@ com.google.common.io.Files#createTempDir() @ Use org.apache.druid.java.util.comm
 com.google.common.io.Files#write(java.lang.CharSequence, java.io.File, java.nio.charset.Charset) @ Use com.google.common.io.Files.asCharSink(to, charset).write(from) instead.
 java.io.File#mkdirs() @ Use org.apache.druid.java.util.common.FileUtils.mkdirp instead
 java.io.File#toURL() @ Use java.io.File#toURI() and java.net.URI#toURL() instead
+java.lang.Boolean#Boolean(boolean) @ Use Boolean.valueOf(boolean) instead.
+java.lang.Boolean#Boolean(java.lang.String) @ Use parseBoolean(String) to convert a string to a boolean primitive, or use valueOf(String) to convert a string to a Boolean object.
+java.lang.Byte#Byte(byte) @ Use Byte.valueOf(byte) instead.
+java.lang.Byte#Byte(java.lang.String) @ Use parseByte(String) to convert a string to a byte primitive, or use valueOf(String) to convert a string to a Byte object.
+java.lang.Character#Character(char) @ Use Character.valueOf(char) instead.
+java.lang.Class#getCanonicalName() @ Class.getCanonicalName can return null for anonymous types, use Class.getName instead.
+java.lang.Double#Double(double) @ Use Double.valueOf(double) instead.
+java.lang.Double#Double(java.lang.String) @ Use parseDouble(String) to convert a string to a double primitive, or use valueOf(String) to convert a string to a Double object.
+java.lang.Float#Float(double) @ Use Float.valueOf((float) value) instead.
+java.lang.Float#Float(float) @ Use Float.valueOf(float) instead.
+java.lang.Float#Float(java.lang.String) @ Use parseFloat(String) to convert a string to a float primitive, or use valueOf(String) to convert a string to a Float object.
+java.lang.Integer#Integer(int) @ Use Integer.valueOf(int) instead
+java.lang.Integer#Integer(java.lang.String) @ Use parseInt(String) to convert a string to a int primitive, or use valueOf(String) to convert a string to an Integer object.
+java.lang.Long#Long(java.lang.String) @ Use parseLong(String) to convert a string to a long primitive, or use valueOf(String) to convert a string to a Long object.
+java.lang.Long#Long(long) @ Use Long.valueOf(long) instead
+java.lang.Short#Short(java.lang.String) @ Use parseShort(String) to convert a string to a short primitive, or use valueOf(String) to convert a string to a Short object.
+java.lang.Short#Short(short) @ Use Short.valueOf(short) instead
 java.lang.String#matches(java.lang.String) @ Use startsWith(), endsWith(), contains(), or compile and cache a Pattern explicitly
 java.lang.String#replace(java.lang.CharSequence,java.lang.CharSequence) @ Use one of the appropriate methods in StringUtils instead
 java.lang.String#replaceAll(java.lang.String,java.lang.String) @ Use one of the appropriate methods in StringUtils instead, or compile and cache a Pattern explicitly
@@ -63,7 +80,6 @@ org.apache.datasketches.memory.Memory#wrap(byte[], int, int, java.nio.ByteOrder)
 org.apache.druid.testing.simulate.EmbeddedMiddleManager#<init>() @ Middle Managers should be used for local embedded tests only and not pushed as they are slower and launch tasks as child processes. Use EmbeddedIndexer instead.
 org.apache.hadoop.fs.FileSystem#isDirectory(org.apache.hadoop.fs.Path) @ Use fileSystem.getFileStatus(path)#isDirectory() instead.
 org.apache.hadoop.fs.FileSystem#isFile(org.apache.hadoop.fs.Path) @ Use fileSystem.getFileStatus(path)#isPath instead.
-java.lang.Class#getCanonicalName() @ Class.getCanonicalName can return null for anonymous types, use Class.getName instead.
 java.util.concurrent.Executors#newFixedThreadPool(int) @ Executor is non-daemon and can prevent JVM shutdown, use org.apache.druid.java.util.common.concurrent.Execs#multiThreaded(int, java.lang.String) instead.
 
 @defaultMessage Use Locale.ENGLISH
