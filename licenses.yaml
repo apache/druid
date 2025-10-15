@@ -886,6 +886,8 @@ libraries:
   - io.fabric8: kubernetes-model-scheduling
   - io.fabric8: kubernetes-model-storageclass
   - io.fabric8: kubernetes-httpclient-vertx
+  - io.fabric8: kubernetes-httpclient-jdk
+  - io.fabric8: kubernetes-httpclient-okhttp
 ---
 
 name: vertx
