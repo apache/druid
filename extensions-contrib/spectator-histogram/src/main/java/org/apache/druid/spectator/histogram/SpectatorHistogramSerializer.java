@@ -20,11 +20,11 @@
 package org.apache.druid.spectator.histogram;
 
 import com.google.common.primitives.Ints;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.data.ColumnCapacityExceededException;
 import org.apache.druid.segment.data.ObjectStrategy;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
@@ -103,7 +103,7 @@ public class SpectatorHistogramSerializer implements GenericColumnSerializer<Obj
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     META_SERDE_HELPER.writeTo(channel, this);
     offsetsHeader.writeTo(channel, null);

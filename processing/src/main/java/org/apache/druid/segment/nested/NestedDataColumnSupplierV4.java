@@ -24,7 +24,6 @@ import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -38,6 +37,7 @@ import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.serde.ComplexColumnMetadata;
 
@@ -79,7 +79,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
     // v5 was never actually released, but it existed for a short time in the master branch, and doesn't hurt to be here
     if (version == 0x03 || version == 0x04 || version == 0x05) {
       try {
-        final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
+        final SegmentFileMapper mapper = columnBuilder.getFileMapper();
         final ComplexColumnMetadata metadata;
         final GenericIndexed<ByteBuffer> fields;
         final FieldTypeInfo fieldInfo;
@@ -217,7 +217,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
   private final Supplier<FixedIndexed<Long>> longDictionarySupplier;
   private final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
   private final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
-  private final SmooshedFileMapper fileMapper;
+  private final SegmentFileMapper fileMapper;
 
   @Nullable
   private final ColumnType simpleType;
@@ -237,7 +237,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
       Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
-      SmooshedFileMapper fileMapper,
+      SegmentFileMapper fileMapper,
       BitmapSerdeFactory bitmapSerdeFactory,
       ByteOrder byteOrder,
       @Nullable ColumnType simpleType
@@ -338,7 +338,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
   }
 
   private static ByteBuffer loadInternalFile(
-      SmooshedFileMapper fileMapper,
+      SegmentFileMapper fileMapper,
       ComplexColumnMetadata metadata,
       String internalFileName
   ) throws IOException

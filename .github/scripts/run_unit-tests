@@ -18,7 +18,7 @@
 set -e
 set -x
 
-OPTS+="-pl !integration-tests,!:druid-it-image,!:druid-it-cases"
+OPTS+="-pl !integration-tests"
 OPTS+=" -Dsurefire.failIfNoSpecifiedTests=false -P skip-static-checks -Dweb.console.skip=true"
 OPTS+=" -Djacoco.destFile=target/jacoco-${HASH}.exec"
 

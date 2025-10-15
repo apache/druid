@@ -21,9 +21,9 @@ package org.apache.druid.segment.nested;
 
 import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.data.ColumnarLongsSerializer;
 import org.apache.druid.segment.data.CompressionFactory;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
@@ -84,11 +84,11 @@ public final class ScalarLongFieldColumnWriter extends GlobalDictionaryEncodedFi
   }
 
   @Override
-  void writeColumnTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  void writeColumnTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     writeLongAndDoubleColumnLength(channel, Ints.checkedCast(longsSerializer.getSerializedSize()), 0);
-    longsSerializer.writeTo(channel, smoosher);
-    encodedValueSerializer.writeTo(channel, smoosher);
+    longsSerializer.writeTo(channel, fileBuilder);
+    encodedValueSerializer.writeTo(channel, fileBuilder);
   }
 
   @Override

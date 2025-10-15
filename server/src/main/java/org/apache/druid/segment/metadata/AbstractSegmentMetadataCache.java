@@ -514,6 +514,10 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
                           .build();
                       if (segment.isTombstone()) {
                         log.debug("Skipping refresh for tombstone segment.");
+                        final ServiceMetricEvent.Builder builder = new ServiceMetricEvent
+                            .Builder()
+                            .setDimension(DruidMetrics.DATASOURCE, segment.getDataSource());
+                        emitMetric(Metric.REFRESH_SKIPPED_TOMBSTONES, 1L, builder);
                       } else {
                         markSegmentAsNeedRefresh(segment.getId());
                       }

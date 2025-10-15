@@ -24,6 +24,7 @@ import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
+import org.apache.druid.k8s.overlord.common.httpclient.DruidKubernetesHttpClientFactory;
 import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
 import io.fabric8.kubernetes.client.informers.SharedIndexInformer;
 import org.apache.druid.error.DruidException;
@@ -49,13 +50,10 @@ public class DruidKubernetesClient implements KubernetesClientApi
   private final KubernetesResourceEventNotifier eventNotifier;
   private final long informerResyncPeriodMillis;
 
-  public DruidKubernetesClient(
-      DruidKubernetesHttpClientConfig httpClientConfig,
-      Config kubernetesClientConfig
-  )
+  public DruidKubernetesClient(DruidKubernetesHttpClientFactory httpClientFactory, Config kubernetesClientConfig)
   {
     this.kubernetesClient = new KubernetesClientBuilder()
-        .withHttpClientFactory(new DruidKubernetesHttpClientFactory(httpClientConfig))
+        .withHttpClientFactory(httpClientFactory)
         .withConfig(kubernetesClientConfig)
         .build();
 
