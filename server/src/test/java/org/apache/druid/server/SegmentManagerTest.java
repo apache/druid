@@ -24,10 +24,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
@@ -43,7 +41,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
-import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -367,9 +364,9 @@ public class SegmentManagerTest
     final Set<String> expectedDataSourceNames = expectedExistingSegments.stream()
                                                                         .map(DataSegment::getDataSource)
                                                                         .collect(Collectors.toSet());
-    final Map<String, VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>> expectedTimelines = new HashMap<>();
+    final Map<String, VersionedIntervalTimeline<String, DataSegment>> expectedTimelines = new HashMap<>();
     for (DataSegment segment : expectedExistingSegments) {
-      final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> expectedTimeline =
+      final VersionedIntervalTimeline<String, DataSegment> expectedTimeline =
           expectedTimelines.computeIfAbsent(
               segment.getDataSource(),
               k -> new VersionedIntervalTimeline<>(Ordering.natural())
@@ -377,15 +374,7 @@ public class SegmentManagerTest
       expectedTimeline.add(
           segment.getInterval(),
           segment.getVersion(),
-          segment.getShardSpec().createChunk(
-              ReferenceCountedSegmentProvider.wrapSegment(
-                      new TestSegmentUtils.SegmentForTesting(
-                          segment.getDataSource(),
-                          (Interval) segment.getLoadSpec().get("interval"),
-                          MapUtils.getString(segment.getLoadSpec(), "version")
-                  ), segment.getShardSpec())
-              
-          )
+          segment.getShardSpec().createChunk(segment)
       );
     }
 

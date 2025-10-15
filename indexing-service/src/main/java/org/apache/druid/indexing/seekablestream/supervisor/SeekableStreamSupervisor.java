@@ -472,6 +472,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                     supervisorId,
                     dataSource
           );
+          final Integer desiredTaskCount = computeDesiredTaskCount.call();
+          ServiceMetricEvent.Builder event = ServiceMetricEvent.builder()
+                                                               .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
+                                                               .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                                                               .setDimension(DruidMetrics.STREAM, getIoConfig().getStream());
           for (CopyOnWriteArrayList<TaskGroup> list : pendingCompletionTaskGroups.values()) {
             if (!list.isEmpty()) {
               log.info(
@@ -480,14 +485,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   dataSource,
                   list
               );
+              if (desiredTaskCount > 0) {
+                emitter.emit(event.setDimension(
+                                      AUTOSCALER_SKIP_REASON_DIMENSION,
+                                      "There are tasks pending completion"
+                                  )
+                                  .setMetric(AUTOSCALER_REQUIRED_TASKS_METRIC, desiredTaskCount));
+              }
               return;
             }
           }
-          final Integer desiredTaskCount = computeDesiredTaskCount.call();
-          ServiceMetricEvent.Builder event = ServiceMetricEvent.builder()
-                                                               .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
-                                                               .setDimension(DruidMetrics.DATASOURCE, dataSource)
-              .setDimension(DruidMetrics.STREAM, getIoConfig().getStream());
           if (nowTime - dynamicTriggerLastRunTime < autoScalerConfig.getMinTriggerScaleActionFrequencyMillis()) {
             log.info(
                 "DynamicAllocationTasksNotice submitted again in [%d] millis, minTriggerDynamicFrequency is [%s] for supervisor[%s] for dataSource[%s], skipping it! desired task count is [%s], active task count is [%s]",
@@ -1758,7 +1765,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     catch (Exception e) {
       stateManager.recordThrowableEvent(e);
-      log.makeAlert(e, "Exception in supervisor run loop for supervisor[%s] for dataSource[%s]", supervisorId, dataSource).emit();
+      if (e instanceof StreamException) {
+        // When a StreamException is thrown, the error message is more useful than the stack trace in telling what's wrong.
+        log.makeAlert("Exception in supervisor run loop for supervisor[%s] for dataSource[%s]: [%s]",
+            supervisorId, dataSource, e.getMessage()).emit();
+      } else {
+        log.makeAlert(e, "Exception in supervisor run loop for supervisor[%s] for dataSource[%s]", supervisorId, dataSource).emit();
+      }
     }
     finally {
       stateManager.markRunFinished();
@@ -3923,7 +3936,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     if (createdTask && firstRunTime.isBeforeNow()) {
       // Schedule a run event after a short delay to update our internal data structures with the new tasks that were
       // just created. This is mainly for the benefit of the status API in situations where the run period is lengthy.
-      scheduledExec.schedule(buildRunTask(), 5000, TimeUnit.MILLISECONDS);
+      scheduledExec.schedule(buildRunTask(), ioConfig.getStartDelay().getMillis(), TimeUnit.MILLISECONDS);
     }
   }
 

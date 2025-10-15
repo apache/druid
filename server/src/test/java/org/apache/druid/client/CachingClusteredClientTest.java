@@ -3099,6 +3099,56 @@ public class CachingClusteredClientTest
     Assert.assertNotEquals(etag1, etag2);
   }
 
+  @Test
+  public void testRealtimeSegmentsQueryContext()
+  {
+    final Interval interval = Intervals.of("2016-01-01/2016-01-02");
+    final Interval queryInterval = Intervals.of("2016-01-01T14:00:00/2016-01-02T14:00:00");
+    final DataSegment dataSegment = new DataSegment(
+            "dataSource",
+            interval,
+            "ver",
+            ImmutableMap.of(
+                    "type", "hdfs",
+                    "path", "/tmp"
+            ),
+            ImmutableList.of("product"),
+            ImmutableList.of("visited_sum"),
+            NoneShardSpec.instance(),
+            9,
+            12334
+    );
+    final ServerSelector selector = new ServerSelector(
+            dataSegment,
+            new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+            HistoricalFilter.IDENTITY_FILTER
+    );
+    selector.addServerAndUpdateSegment(new QueryableDruidServer(servers[0], null), dataSegment);
+    timeline.add(interval, "ver", new SingleElementPartitionChunk<>(selector));
+
+    final TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder()
+            .dataSource(DATA_SOURCE)
+            .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(queryInterval)))
+            .context(ImmutableMap.of("realtimeSegmentsOnly", false))
+            .randomQueryId()
+            .build();
+
+    final TimeBoundaryQuery query2 = Druids.newTimeBoundaryQueryBuilder()
+            .dataSource(DATA_SOURCE)
+            .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(queryInterval)))
+            .context(ImmutableMap.of("realtimeSegmentsOnly", true))
+            .randomQueryId()
+            .build();
+
+    final ResponseContext responseContext = initializeResponseContext();
+
+    getDefaultQueryRunner().run(QueryPlus.wrap(query), responseContext);
+    getDefaultQueryRunner().run(QueryPlus.wrap(query2), responseContext);
+    final Map<String, Integer> remainingResponseMap = (Map<String, Integer>) responseContext.get(ResponseContext.Keys.REMAINING_RESPONSES_FROM_QUERY_SERVERS);
+    Assert.assertEquals(1, remainingResponseMap.get(query.getId()).intValue());
+    Assert.assertEquals(0, remainingResponseMap.get(query2.getId()).intValue());
+  }
+
   @SuppressWarnings("unchecked")
   private QueryRunner getDefaultQueryRunner()
   {

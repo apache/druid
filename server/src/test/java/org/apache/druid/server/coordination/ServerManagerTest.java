@@ -52,7 +52,6 @@ import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.java.util.common.guava.YieldingSequenceBase;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.query.ConcatQueryRunner;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
@@ -90,6 +89,7 @@ import org.apache.druid.segment.TestSegmentUtils;
 import org.apache.druid.segment.TestSegmentUtils.SegmentForTesting;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.ServerManager;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.test.utils.TestSegmentCacheManager;
@@ -558,20 +558,20 @@ public class ServerManagerTest
   {
     final Interval interval = Intervals.of("P1d/2011-04-01");
     final SearchQuery query = searchQuery("test", interval, Granularities.ALL);
-    final Optional<VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider>> maybeTimeline = segmentManager
+    final Optional<VersionedIntervalTimeline<String, DataSegment>> maybeTimeline = segmentManager
         .getTimeline(ExecutionVertex.of(query).getBaseTableDataSource());
     Assume.assumeTrue(maybeTimeline.isPresent());
     // close all segments in interval
-    final List<TimelineObjectHolder<String, ReferenceCountedSegmentProvider>> holders = maybeTimeline.get().lookup(interval);
+    final List<TimelineObjectHolder<String, DataSegment>> holders = maybeTimeline.get().lookup(interval);
     final List<SegmentDescriptor> closedSegments = new ArrayList<>();
-    for (TimelineObjectHolder<String, ReferenceCountedSegmentProvider> holder : holders) {
-      for (PartitionChunk<ReferenceCountedSegmentProvider> chunk : holder.getObject()) {
-        final ReferenceCountedSegmentProvider segment = chunk.getObject();
-        Assert.assertNotNull(segment.getBaseSegment().getId());
+    for (TimelineObjectHolder<String, DataSegment> holder : holders) {
+      for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
+        final DataSegment segment = chunk.getObject();
+        Assert.assertNotNull(segment.getId());
         closedSegments.add(
-            new SegmentDescriptor(segment.getBaseSegment().getDataInterval(), segment.getVersion(), segment.getBaseSegment().getId().getPartitionNum())
+            new SegmentDescriptor(segment.getInterval(), segment.getVersion(), segment.getId().getPartitionNum())
         );
-        segment.close();
+        segmentManager.dropSegment(segment);
       }
     }
     final ResponseContext responseContext = DefaultResponseContext.createEmpty();
@@ -789,7 +789,12 @@ public class ServerManagerTest
         Iterable<QueryRunner<Result<SearchResultValue>>> queryRunners
     )
     {
-      return new ConcatQueryRunner<>(Sequences.simple(queryRunners));
+      return (queryPlus, responseContext) -> Sequences.concat(
+          Sequences.map(
+              Sequences.simple(queryRunners),
+              runner -> runner.run(queryPlus, responseContext)
+          )
+      );
     }
 
     @Override

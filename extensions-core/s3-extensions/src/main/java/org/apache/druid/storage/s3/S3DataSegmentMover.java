@@ -43,6 +43,7 @@ import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.Map;
 
 public class S3DataSegmentMover implements DataSegmentMover
@@ -80,39 +81,63 @@ public class S3DataSegmentMover implements DataSegmentMover
 
       final String targetS3Bucket = MapUtils.getString(targetLoadSpec, "bucket");
       final String targetS3BaseKey = MapUtils.getString(targetLoadSpec, "baseKey");
+      final String targetS3Path;
 
-      final String targetS3Path = S3Utils.constructSegmentPath(
-          targetS3BaseKey,
-          DataSegmentPusher.getDefaultStorageDir(segment, false)
-      );
+      if (s3Path.endsWith("/")) {
+        // segment is not compressed, list objects and move them all
+        final ListObjectsV2Result list = s3ClientSupplier.get().listObjectsV2(
+            new ListObjectsV2Request().withBucketName(s3Bucket)
+                                      .withPrefix(s3Path + "/")
+        );
+        targetS3Path = S3Utils.constructSegmentBasePath(
+            targetS3BaseKey,
+            DataSegmentPusher.getDefaultStorageDir(segment, false)
+        );
+        for (S3ObjectSummary objectSummary : list.getObjectSummaries()) {
+          final String fileName = Paths.get(objectSummary.getKey()).getFileName().toString();
+          if (targetS3Bucket.isEmpty()) {
+            throw new SegmentLoadingException("Target S3 bucket is not specified");
+          }
+          if (targetS3Path.isEmpty()) {
+            throw new SegmentLoadingException("Target S3 baseKey is not specified");
+          }
 
-      if (targetS3Bucket.isEmpty()) {
-        throw new SegmentLoadingException("Target S3 bucket is not specified");
+          safeMove(s3Bucket, s3Path, targetS3Bucket, targetS3Path + "/" + fileName);
+        }
+      } else {
+        targetS3Path = S3Utils.constructSegmentPath(
+            targetS3BaseKey,
+            DataSegmentPusher.getDefaultStorageDir(segment, false)
+        );
+
+        if (targetS3Bucket.isEmpty()) {
+          throw new SegmentLoadingException("Target S3 bucket is not specified");
+        }
+        if (targetS3Path.isEmpty()) {
+          throw new SegmentLoadingException("Target S3 baseKey is not specified");
+        }
+
+        safeMove(s3Bucket, s3Path, targetS3Bucket, targetS3Path);
       }
-      if (targetS3Path.isEmpty()) {
-        throw new SegmentLoadingException("Target S3 baseKey is not specified");
-      }
-
-      safeMove(s3Bucket, s3Path, targetS3Bucket, targetS3Path);
 
       return segment.withLoadSpec(
           ImmutableMap.<String, Object>builder()
-              .putAll(
-                  Maps.filterKeys(
-                      loadSpec,
-                      new Predicate<>()
-                      {
-                        @Override
-                        public boolean apply(String input)
-                        {
-                          return !("bucket".equals(input) || "key".equals(input));
-                        }
-                      }
-                  )
-              )
-              .put("bucket", targetS3Bucket)
-              .put("key", targetS3Path)
-              .build()
+                      .putAll(
+                          Maps.filterKeys(
+                              loadSpec,
+                              new Predicate<>()
+                              {
+                                @Override
+                                public boolean apply(String input)
+                                {
+                                  return !("bucket".equals(input) || "key".equals(input));
+                                }
+                              }
+                          )
+                      )
+                      .put("bucket", targetS3Bucket)
+                      .put("key", targetS3Path)
+                      .build()
       );
     }
     catch (AmazonServiceException e) {

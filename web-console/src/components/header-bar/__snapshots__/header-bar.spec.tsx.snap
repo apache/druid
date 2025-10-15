@@ -274,6 +274,16 @@ exports[`HeaderBar matches snapshot 1`] = `
             shouldDismissPopover={true}
             text="Compaction dynamic config"
           />
+          <Blueprint5.MenuItem
+            active={false}
+            disabled={false}
+            icon="console"
+            multiline={false}
+            onClick={[Function]}
+            popoverProps={{}}
+            shouldDismissPopover={true}
+            text="Web console config"
+          />
           <Blueprint5.MenuDivider />
           <Blueprint5.MenuItem
             active={false}

@@ -41,6 +41,7 @@ import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -48,6 +49,7 @@ import org.junit.runner.RunWith;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutionException;
@@ -59,6 +61,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 {
   private static final String ID = "id";
   private static final TaskStatus SUCCESS = TaskStatus.success(ID);
+  private static final Period LOG_SAVE_TIMEOUT = new Period("PT300S");
+  private static final Period SHORT_LOG_SAVE_TIMEOUT = new Period("PT1S");
 
   @Mock KubernetesPeonClient kubernetesClient;
   @Mock TaskLogs taskLogs;
@@ -88,7 +92,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     )
     {
       @Override
@@ -134,7 +139,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     )
     {
       @Override
@@ -179,7 +185,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     )
     {
       @Override
@@ -229,7 +236,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     )
     {
       @Override
@@ -274,7 +282,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     )
     {
       @Override
@@ -322,7 +331,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
 
     EasyMock.expect(kubernetesClient.waitForPeonJobCompletion(
@@ -361,7 +371,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
 
     Assert.assertFalse(peonLifecycle.getTaskStartedSuccessfullyFuture().isDone());
@@ -415,7 +426,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
 
     Job job = new JobBuilder()
@@ -476,7 +488,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
 
     Job job = new JobBuilder()
@@ -524,7 +537,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
 
     Job job = new JobBuilder()
@@ -575,7 +589,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
 
     Job job = new JobBuilder()
@@ -626,7 +641,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
 
     EasyMock.expect(kubernetesClient.waitForPeonJobCompletion(
@@ -666,7 +682,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
     peonLifecycle.shutdown();
   }
@@ -680,7 +697,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
     setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.PENDING);
 
@@ -702,7 +720,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
     setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.RUNNING);
 
@@ -724,7 +743,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
     setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.STOPPED);
 
@@ -740,7 +760,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
     setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.NOT_STARTED);
 
@@ -756,7 +777,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
     setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.PENDING);
 
@@ -772,7 +794,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
     setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.RUNNING);
 
@@ -796,7 +819,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
     setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.STOPPED);
 
@@ -813,7 +837,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
     setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.NOT_STARTED);
 
@@ -830,7 +855,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
     setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.PENDING);
 
@@ -847,7 +873,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
     setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.RUNNING);
 
@@ -870,7 +897,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
     setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.RUNNING);
 
@@ -899,7 +927,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
     setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.RUNNING);
 
@@ -936,7 +965,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
     setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.RUNNING);
 
@@ -973,7 +1003,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
     setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.RUNNING);
 
@@ -1011,7 +1042,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         kubernetesClient,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
     setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.STOPPED);
     EasyMock.expect(kubernetesClient.getPeonPod(k8sTaskId.getK8sJobName())).andReturn(Optional.absent()).once();
@@ -1019,6 +1051,78 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     replayAll();
     Assert.assertEquals(TaskLocation.unknown(), peonLifecycle.getTaskLocation());
     verifyAll();
+  }
+
+  @Test
+  public void test_startWatchingLogs_logWatchInitialize_timeout()
+  {
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
+        task,
+        k8sTaskId,
+        kubernetesClient,
+        taskLogs,
+        mapper,
+        stateListener,
+        SHORT_LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
+    );
+    EasyMock.expect(kubernetesClient.getPeonLogWatcher(k8sTaskId))
+            .andAnswer(() -> {
+              Thread.sleep(5000); // Exceeds 1 second timeout
+              return Optional.of(logWatch);
+            });
+
+    replayAll();
+    long startTime = System.currentTimeMillis();
+    peonLifecycle.startWatchingLogs();
+    long duration = System.currentTimeMillis() - startTime;
+    // Anything less than 5 seconds means the Executor timeed  out correctly, because the mock sleeps for 5 seconds
+    Assert.assertTrue("Test should complete quickly due to timeout", duration < 2500);
+    verifyAll();
+  }
+
+  @Test
+  public void test_saveLogs_streamLogs_timeout() throws IOException
+  {
+    EasyMock.reset(logWatch);
+
+    InputStream slowInputStream = new InputStream() {
+      @Override
+      public int read() throws IOException
+      {
+        try {
+          Thread.sleep(5000);
+        }
+        catch (InterruptedException e) {
+          throw new IOException(e);
+        }
+        return -1;
+      }
+    };
+
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
+        task,
+        k8sTaskId,
+        kubernetesClient,
+        taskLogs,
+        mapper,
+        stateListener,
+        SHORT_LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
+    );
+    EasyMock.expect(kubernetesClient.getPeonLogWatcher(k8sTaskId)).andReturn(Optional.of(logWatch)).once();
+    EasyMock.expect(logWatch.getOutput()).andReturn(slowInputStream);
+    logWatch.close();
+    EasyMock.expectLastCall();
+    taskLogs.pushTaskLog(EasyMock.eq(ID), EasyMock.anyObject(File.class));
+    EasyMock.expectLastCall();
+
+    replayAll();
+    long startTime = System.currentTimeMillis();
+    peonLifecycle.saveLogs();
+    long duration = System.currentTimeMillis() - startTime;
+    // Anything less than 5 seconds means the Executor timeed  out correctly, because the mock sleeps for 5 seconds
+    Assert.assertTrue("Test should complete quickly due to timeout", duration < 2500);
+    verifyAll();
+
   }
 
   private void setPeonLifecycleState(KubernetesPeonLifecycle peonLifecycle, KubernetesPeonLifecycle.State state)

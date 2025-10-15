@@ -196,9 +196,9 @@ and `druid.tlsPort` properties on each service. Please see `Configuration` secti
 
 Druid uses Jetty as an embedded web server. To learn more about TLS/SSL, certificates, and related concepts in Jetty, including explanations of the configuration settings below, see "Configuring SSL/TLS KeyStores" in the [Jetty Operations Guide](https://www.eclipse.org/jetty/documentation.php).
 
-For information about TLS/SSL support in Java in general, see the [Java Secure Socket Extension (JSSE) Reference Guide](https://docs.oracle.com/en/java/javase/11/security/java-secure-socket-extension-jsse-reference-guide.html).
+For information about TLS/SSL support in Java in general, see the [Java Secure Socket Extension (JSSE) Reference Guide](https://docs.oracle.com/en/java/javase/17/security/java-secure-socket-extension-jsse-reference-guide.html).
 The [Java Cryptography Architecture
-Standard Algorithm Name Documentation for JDK 11](https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html) lists all possible
+Standard Algorithm Name Documentation for JDK 17](https://docs.oracle.com/en/java/javase/17/docs/specs/security/standard-names.html) lists all possible
 values for the following properties, among others provided by the Java implementation.
 
 |Property|Description|Default|Required|
@@ -231,7 +231,7 @@ These properties apply to the SSLContext that will be provided to the internal H
 |`druid.client.https.trustStoreAlgorithm`|Algorithm to be used by TrustManager to validate certificate chains|`javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm()`|no|
 |`druid.client.https.trustStorePassword`|The [Password Provider](../operations/password-provider.md) or String password for the Trust Store.|none|yes|
 
-This [document](https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html) lists all the possible
+This [document](https://docs.oracle.com/en/java/javase/17/docs/specs/security/standard-names.html) lists all the possible
 values for the above mentioned configs among others provided by Java implementation.
 
 ### Authentication and authorization
@@ -394,6 +394,7 @@ These properties specify the JDBC connection and other configuration around the 
 |`druid.metadata.storage.tables.taskLock`|Used by the indexing service to store task locks.|`druid_tasklocks`|
 |`druid.metadata.storage.tables.supervisors`|Used by the indexing service to store supervisor configurations.|`druid_supervisors`|
 |`druid.metadata.storage.tables.audit`|The table to use for audit history of configuration changes, such as Coordinator rules.|`druid_audit`|
+|`druid.metadata.storage.tables.useShortIndexNames`|Whether to use SHA-based unique index names to ensure all indices are created.|`false`|
 
 ### Deep storage
 
@@ -627,6 +628,12 @@ On the other hand, if `druid.server.http.errorResponseTransform.allowedRegex` is
 {"error":"Plan validation failed","errorMessage":"org.apache.calcite.runtime.CalciteContextException: From line 1, column 15 to line 1, column 38: Object 'nonexistent-datasource' not found","errorClass":null,"host":null}
 ```
 
+##### Persona based error response transform strategy
+
+In this mode, Druid transforms any exceptions which are targeted at non-users personas. Instead of returning such exception directly, the strategy logs the exception against a random id and returns the id along with a generic error message to the user.
+
+To enable this strategy, set `druid.server.http.errorResponseTransform.strategy` to `persona`.
+
 ### Overlord discovery
 
 This config is used to find the [Overlord](../design/overlord.md) using Curator service discovery. Only required if you are actually running an Overlord.
@@ -702,7 +709,7 @@ All Druid components can communicate with each other over HTTP.
 |`druid.global.http.compressionCodec`|Compression codec to communicate with others. May be "gzip" or "identity".|`gzip`|
 |`druid.global.http.readTimeout`|The timeout for data reads.|`PT15M`|
 |`druid.global.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.global.http.readTimeout`. Set this timeout = ~90% of `druid.global.http.readTimeout`|`PT4M`|
-|`druid.global.http.numMaxThreads`|Maximum number of I/O worker threads|`max(10, ((number of cores * 17) / 16 + 2) + 30)`|
+|`druid.global.http.numMaxThreads`|Maximum number of I/O worker threads|`(number of cores) * 3 / 2 + 1`|
 |`druid.global.http.clientConnectTimeout`|The timeout (in milliseconds) for establishing client connections.|500|
 
 ### Common endpoints configuration
@@ -734,6 +741,7 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8081|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative integer.|8281|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services.|`druid/coordinator`|
+|`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
 
 ##### Coordinator operation
 
@@ -977,6 +985,7 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`.|8090|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8290|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services.|`druid/overlord`|
+|`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
 
 ##### Overlord operations
 
@@ -1328,6 +1337,7 @@ These Middle Manager and Peon configurations can be defined in the `middleManage
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8091|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8291|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/middlemanager`|
+|`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
 
 #### Middle Manager configuration
 
@@ -1364,6 +1374,7 @@ Processing properties set on the Middle Manager are passed through to Peons.
 |`druid.processing.formatString`|Realtime and Historical processes use this format string to name their processing threads.|processing-%s|
 |`druid.processing.numMergeBuffers`|The number of direct memory buffers available for merging query results. The buffers are sized by `druid.processing.buffer.sizeBytes`. This property is effectively a concurrency limit for queries that require merging buffers. If you are using any queries that require merge buffers (currently, just groupBy) then you should have at least two of these.|`max(2, druid.processing.numThreads / 4)`|
 |`druid.processing.numThreads`|The number of processing threads to have available for parallel processing of segments. Our rule of thumb is `num_cores - 1`, which means that even under heavy load there will still be one core available to do background tasks like talking with ZooKeeper and pulling down segments. If only one core is available, this property defaults to the value `1`.|Number of cores - 1 (or 1)|
+|`druid.processing.numTimeoutThreads`|The number of processing threads to have available for handling per-segment query timeouts. Setting this value to `0` removes the ability to service per-segment timeouts, irrespective of `perSegmentTimeout` query context parameter. As these threads are just servicing timers, it's recommended to set this value to some small percent (e.g. 5%) of the total query processing cores available to the peon.|0|
 |`druid.processing.fifo`|Enables the processing queue to treat tasks of equal priority in a FIFO manner.|`true`|
 |`druid.processing.tmpDir`|Path where temporary files created while processing a query should be stored. If specified, this configuration takes priority over the default `java.io.tmpdir` path.|path represented by `java.io.tmpdir`|
 |`druid.processing.intermediaryData.storage.type`|Storage type for intermediary segments of data shuffle between native parallel index tasks. <br />Set to `local` to store segment files in the local storage of the Middle Manager or Indexer. <br />Set to `deepstore` to use configured deep storage for better fault tolerance during rolling updates. When the storage type is `deepstore`, Druid stores the data in the `shuffle-data` directory under the configured deep storage path. Druid does not support automated cleanup for the `shuffle-data` directory. You can set up cloud storage lifecycle rules for automated cleanup of data at the `shuffle-data` prefix location.|`local`|
@@ -1385,7 +1396,7 @@ You can optionally configure caching to be enabled on the peons by setting cachi
 |--------|---------------|-----------|-------|
 |`druid.realtime.cache.useCache`|true, false|Enable the cache on the realtime.|false|
 |`druid.realtime.cache.populateCache`|true, false|Populate the cache on the realtime.|false|
-|`druid.realtime.cache.unCacheable`|All druid query types|All query types to not cache.|`[]`|
+|`druid.realtime.cache.unCacheable`|All druid query types|All query types to not cache.|`[scan]`|
 |`druid.realtime.cache.maxEntrySize`|positive integer|Maximum cache entry size in bytes.|1_000_000|
 
 See [cache configuration](#cache-configuration) for how to configure cache settings.
@@ -1455,6 +1466,7 @@ For most types of tasks, `SegmentWriteOutMediumFactory` can be configured per-ta
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8091|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8283|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/indexer`|
+|`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
 
 #### Indexer general configuration
 
@@ -1496,6 +1508,8 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.server.http.enableForwardedRequestCustomizer`|If enabled, adds Jetty ForwardedRequestCustomizer which reads X-Forwarded-* request headers to manipulate servlet request object when Druid is used behind a proxy.|false|
 |`druid.server.http.allowedHttpMethods`|List of HTTP methods that should be allowed in addition to the ones required by Druid APIs. Druid APIs require GET, PUT, POST, and DELETE, which are always allowed. This option is not useful unless you have installed an extension that needs these additional HTTP methods or that adds functionality related to CORS. None of Druid's bundled extensions require these methods.|`[]`|
 |`druid.server.http.contentSecurityPolicy`|Content-Security-Policy header value to set on each non-POST response. Setting this property to an empty string, or omitting it, both result in the default `frame-ancestors: none` being set.|`frame-ancestors 'none'`|
+|`druid.server.http.uriCompliance`|Jetty `UriCompliance` mode for Druid's embedded Jetty servers. To modify, override this config with the string representation of any `UriCompliance` mode that [Jetty supports](https://javadoc.jetty.org/jetty-12/org/eclipse/jetty/http/UriCompliance.html).|LEGACY|
+|`druid.server.http.enforceStrictSNIHostChecking`| If enabled, the Jetty server will enforce strict SNI host checking. This means that if a client connects to the server using TLS but does not provide an SNI hostname, or provides an SNI hostname that does not match the server's configured hostname, a request will get a 400 response. Setting this to false is not recommended in production.|true|
 
 #### Indexer processing resources
 
@@ -1506,6 +1520,7 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.processing.formatString`|Indexer processes use this format string to name their processing threads.|processing-%s|
 |`druid.processing.numMergeBuffers`|The number of direct memory buffers available for merging query results. The buffers are sized by `druid.processing.buffer.sizeBytes`. This property is effectively a concurrency limit for queries that require merging buffers. If you are using any queries that require merge buffers (currently, just groupBy) then you should have at least two of these.|`max(2, druid.processing.numThreads / 4)`|
 |`druid.processing.numThreads`|The number of processing threads to have available for parallel processing of segments. Our rule of thumb is `num_cores - 1`, which means that even under heavy load there will still be one core available to do background tasks like talking with ZooKeeper and pulling down segments. If only one core is available, this property defaults to the value `1`.|Number of cores - 1 (or 1)|
+|`druid.processing.numTimeoutThreads`|The number of processing threads to have available for handling per-segment query timeouts. Setting this value to `0` removes the ability to service per-segment timeouts, irrespective of `perSegmentTimeout` query context parameter. As these threads are just servicing timers, it's recommended to set this value to some small percent (e.g. 5%) of the total query processing cores available to the indexer.|0|
 |`druid.processing.fifo`|If the processing queue should treat tasks of equal priority in a FIFO manner|`true`|
 |`druid.processing.tmpDir`|Path where temporary files created while processing a query should be stored. If specified, this configuration takes priority over the default `java.io.tmpdir` path.|path represented by `java.io.tmpdir`|
 
@@ -1526,7 +1541,7 @@ You can optionally configure caching to be enabled on the Indexer by setting cac
 |--------|---------------|-----------|-------|
 |`druid.realtime.cache.useCache`|true, false|Enable the cache on the realtime.|false|
 |`druid.realtime.cache.populateCache`|true, false|Populate the cache on the realtime.|false|
-|`druid.realtime.cache.unCacheable`|All druid query types|All query types to not cache.|`[]`|
+|`druid.realtime.cache.unCacheable`|All druid query types|All query types to not cache.|`[scan]`|
 |`druid.realtime.cache.maxEntrySize`|positive integer|Maximum cache entry size in bytes.|1_000_000|
 
 See [cache configuration](#cache-configuration) for how to configure cache settings.
@@ -1548,6 +1563,7 @@ These Historical configurations can be defined in the `historical/runtime.proper
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8083|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8283|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/historical`|
+|`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
 
 #### Historical general configuration
 
@@ -1614,6 +1630,7 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.processing.formatString`|Realtime and Historical processes use this format string to name their processing threads.|processing-%s|
 |`druid.processing.numMergeBuffers`|The number of direct memory buffers available for merging query results. The buffers are sized by `druid.processing.buffer.sizeBytes`. This property is effectively a concurrency limit for queries that require merging buffers. If you are using any queries that require merge buffers (currently, just groupBy) then you should have at least two of these.|`max(2, druid.processing.numThreads / 4)`|
 |`druid.processing.numThreads`|The number of processing threads to have available for parallel processing of segments. Our rule of thumb is `num_cores - 1`, which means that even under heavy load there will still be one core available to do background tasks like talking with ZooKeeper and pulling down segments. If only one core is available, this property defaults to the value `1`.|Number of cores - 1 (or 1)|
+|`druid.processing.numTimeoutThreads`|The number of processing threads to have available for handling per-segment query timeouts. Setting this value to `0` removes the ability to service per-segment timeouts, irrespective of `perSegmentTimeout` query context parameter. As these threads are just servicing timers, it's recommended to set this value to some small percent (e.g. 5%) of the total query processing cores available to the historical.|0|
 |`druid.processing.fifo`|If the processing queue should treat tasks of equal priority in a FIFO manner|`true`|
 |`druid.processing.tmpDir`|Path where temporary files created while processing a query should be stored. If specified, this configuration takes priority over the default `java.io.tmpdir` path.|path represented by `java.io.tmpdir`|
 
@@ -1634,7 +1651,7 @@ You can optionally only configure caching to be enabled on the Historical by set
 |--------|---------------|-----------|-------|
 |`druid.historical.cache.useCache`|true, false|Enable the cache on the Historical.|false|
 |`druid.historical.cache.populateCache`|true, false|Populate the cache on the Historical.|false|
-|`druid.historical.cache.unCacheable`|All druid query types|All query types to not cache.|`[]`|
+|`druid.historical.cache.unCacheable`|All druid query types|All query types to not cache.|`[scan]`|
 |`druid.historical.cache.maxEntrySize`|positive integer|Maximum cache entry size in bytes.|1_000_000|
 
 See [cache configuration](#cache-configuration) for how to configure cache settings.
@@ -1660,6 +1677,7 @@ These Broker configurations can be defined in the `broker/runtime.properties` fi
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8082|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8282|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/broker`|
+|`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
 
 #### Query configuration
 
@@ -1788,7 +1806,7 @@ client has the following configuration options.
 |`druid.broker.http.readTimeout`|The timeout for data reads from Historical servers and real-time tasks.|`PT15M`|
 |`druid.broker.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.broker.http.readTimeout`. Set this timeout = ~90% of `druid.broker.http.readTimeout`|`PT4M`|
 |`druid.broker.http.maxQueuedBytes`|Maximum number of bytes queued per query before exerting [backpressure](../operations/basic-cluster-tuning.md#broker-backpressure) on channels to the data servers.<br /><br />Similar to `druid.server.http.maxScatterGatherBytes`, except that `maxQueuedBytes` triggers [backpressure](../operations/basic-cluster-tuning.md#broker-backpressure) instead of query failure. Set to zero to disable. You can override this setting by using the [`maxQueuedBytes` query context parameter](../querying/query-context-reference.md). Druid supports [human-readable](human-readable-byte.md) format. |25 MB or 2% of maximum Broker heap size, whichever is greater.|
-|`druid.broker.http.numMaxThreads`|`Maximum number of I/O worker threads|max(10, ((number of cores * 17) / 16 + 2) + 30)`|
+|`druid.broker.http.numMaxThreads`|`Maximum number of I/O worker threads|(number of cores) * 3 / 2 + 1`|
 |`druid.broker.http.clientConnectTimeout`|The timeout (in milliseconds) for establishing client connections.|500|
 
 
@@ -1890,7 +1908,7 @@ You can optionally only configure caching to be enabled on the Broker by setting
 |`druid.broker.cache.useResultLevelCache`|true, false|Enable result level caching on the Broker.|false|
 |`druid.broker.cache.populateResultLevelCache`|true, false|Populate the result level cache on the Broker.|false|
 |`druid.broker.cache.resultLevelCacheLimit`|positive integer|Maximum size of query response that can be cached.|`Integer.MAX_VALUE`|
-|`druid.broker.cache.unCacheable`|All druid query types|All query types to not cache.|`[]`|
+|`druid.broker.cache.unCacheable`|All druid query types|All query types to not cache.|`[scan]`|
 |`druid.broker.cache.cacheBulkMergeLimit`|positive integer or 0|Queries with more segments than this number will not attempt to fetch from cache at the broker level, leaving potential caching fetches (and cache result merging) to the Historicals|`Integer.MAX_VALUE`|
 |`druid.broker.cache.maxEntrySize`|positive integer|Maximum cache entry size in bytes.|1_000_000|
 
@@ -2279,6 +2297,7 @@ Supported query contexts:
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8888|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|9088|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/router`|
+|`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
 
 #### Runtime configuration
 
@@ -2295,7 +2314,7 @@ Supported query contexts:
 |`druid.router.http.numConnections`|Size of connection pool for the Router to connect to Broker processes. If there are more queries than this number that all need to speak to the same process, then they will queue up.|`20`|
 |`druid.router.http.eagerInitialization`|Indicates that http connections from Router to Broker should be eagerly initialized. If set to true, `numConnections` connections are created upon initialization|`true`|
 |`druid.router.http.readTimeout`|The timeout for data reads from Broker processes.|`PT15M`|
-|`druid.router.http.numMaxThreads`|Maximum number of worker threads to handle HTTP requests and responses|`max(10, ((number of cores * 17) / 16 + 2) + 30)`|
+|`druid.router.http.numMaxThreads`|Maximum number of worker threads to handle HTTP requests and responses|`(number of cores) * 3 / 2 + 1`|
 |`druid.router.http.numRequestsQueued`|Maximum number of requests that may be queued to a destination|`1024`|
 |`druid.router.http.requestBuffersize`|Size of the content buffer for receiving requests. These buffers are only used for active connections that have requests with bodies that will not fit within the header buffer|`8 * 1024`|
 |`druid.router.http.clientConnectTimeout`|The timeout (in milliseconds) for establishing client connections.|500|

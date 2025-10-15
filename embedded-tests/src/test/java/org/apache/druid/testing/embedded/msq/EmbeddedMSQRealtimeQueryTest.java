@@ -22,15 +22,6 @@ package org.apache.druid.testing.embedded.msq;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.msq.dart.guice.DartControllerMemoryManagementModule;
-import org.apache.druid.msq.dart.guice.DartControllerModule;
-import org.apache.druid.msq.dart.guice.DartWorkerMemoryManagementModule;
-import org.apache.druid.msq.dart.guice.DartWorkerModule;
-import org.apache.druid.msq.guice.IndexerMemoryManagementModule;
-import org.apache.druid.msq.guice.MSQDurableStorageModule;
-import org.apache.druid.msq.guice.MSQIndexingModule;
-import org.apache.druid.msq.guice.MSQSqlModule;
-import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.SqlTaskStatus;
@@ -49,7 +40,6 @@ import org.hamcrest.MatcherAssert;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -100,9 +90,6 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
 
     coordinator.addProperty("druid.manager.segments.useIncrementalCache", "always");
 
-    overlord.addProperty("druid.manager.segments.useIncrementalCache", "always")
-            .addProperty("druid.manager.segments.pollDuration", "PT0.1s");
-
     broker.addProperty("druid.msq.dart.controller.heapFraction", "0.9")
           .addProperty("druid.query.default.context.maxConcurrentStages", "1");
 
@@ -119,17 +106,6 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
            .addProperty("druid.lookup.enableLookupSyncOnStartup", "true");
 
     return clusterWithKafka
-        .addExtensions(
-            DartControllerModule.class,
-            DartWorkerModule.class,
-            DartControllerMemoryManagementModule.class,
-            DartWorkerMemoryManagementModule.class,
-            IndexerMemoryManagementModule.class,
-            MSQDurableStorageModule.class,
-            MSQIndexingModule.class,
-            MSQSqlModule.class,
-            SqlTaskModule.class
-        )
         .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
         .addCommonProperty("druid.msq.dart.enabled", "true")
         .useLatchableEmitter()
@@ -161,11 +137,7 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
     broker.start();
     indexer.start();
     historical.start();
-  }
 
-  @BeforeEach
-  void setUpEach()
-  {
     msqApis = new EmbeddedMSQApis(cluster, overlord);
     submitSupervisor();
     publishToKafka(TestIndex.getMMappedWikipediaIndex());

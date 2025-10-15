@@ -27,6 +27,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterBundle;
 import org.apache.druid.query.search.SearchQueryMetricsFactory;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -240,6 +241,12 @@ public interface QueryMetrics<QueryType extends Query<?>>
   void status(String status);
 
   void success(boolean success);
+
+  /**
+   * Translates the given query exception into the appropriate failure status code.
+   * See {@link DruidMetrics#computeStatusCode}.
+   */
+  void code(@Nullable Throwable error);
 
   void segment(String segmentIdentifier);
 

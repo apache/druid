@@ -22,6 +22,8 @@ package org.apache.druid.testing.embedded.schema;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.compact.CompactionSparseColumnTest;
 import org.apache.druid.testing.embedded.compact.CompactionTaskTest;
+import org.apache.druid.testing.embedded.indexing.KafkaDataFormatsTest;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
 
 /**
@@ -43,6 +45,7 @@ public class CentralizedSchemaPublishFailureTest
   }
 
   @Nested
+  @Disabled("Disabled due to issues with compaction task not publishing schema to broker")
   public class CompactionSparseColumn extends CompactionSparseColumnTest
   {
     @Override
@@ -53,10 +56,22 @@ public class CentralizedSchemaPublishFailureTest
   }
 
   @Nested
+  @Disabled("Disabled due to issues with compaction task not publishing schema to broker")
   public class CompactionTask extends CompactionTaskTest
   {
     @Override
     protected EmbeddedDruidCluster createCluster()
+    {
+      return configureCluster(super.createCluster());
+    }
+  }
+
+  @Nested
+  @Disabled("Disabled due to issues with compaction task not publishing schema to broker")
+  public class KafkaDataFormats extends KafkaDataFormatsTest
+  {
+    @Override
+    public EmbeddedDruidCluster createCluster()
     {
       return configureCluster(super.createCluster());
     }

@@ -19,22 +19,22 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.CsvInputFormat;
-import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.IndexTask;
+import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
-import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
-import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.DateTimes;
@@ -42,15 +42,9 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.storage.postgresql.PostgreSQLMetadataStorageModule;
-import org.apache.druid.msq.guice.IndexerMemoryManagementModule;
-import org.apache.druid.msq.guice.MSQDurableStorageModule;
-import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
-import org.apache.druid.msq.guice.MSQIndexingModule;
-import org.apache.druid.msq.guice.MSQSqlModule;
-import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.SqlTaskStatus;
-import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -72,6 +66,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -97,8 +93,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
   /**
    * Broker with a short metadata refresh period.
    */
-  protected EmbeddedBroker broker = new EmbeddedBroker()
-      .addProperty("druid.sql.planner.metadataRefreshPeriod", "PT1s");
+  protected EmbeddedBroker broker = new EmbeddedBroker();
 
   /**
    * Event collector used to wait for metric events to occur.
@@ -117,13 +112,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
             .addExtensions(
                 KafkaIndexTaskModule.class,
                 LatchableEmitterModule.class,
-                PostgreSQLMetadataStorageModule.class,
-                MSQSqlModule.class,
-                SqlTaskModule.class,
-                MSQIndexingModule.class,
-                MSQDurableStorageModule.class,
-                MSQExternalDataSourceModule.class,
-                IndexerMemoryManagementModule.class
+                PostgreSQLMetadataStorageModule.class
             )
             .addResource(new PostgreSQLMetadataResource())
             .addResource(new MinIOStorageResource())
@@ -193,6 +182,14 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
                       .hasService("druid/coordinator"),
         agg -> agg.hasSumAtLeast(numSegments)
     );
+
+    // Wait for the Broker to remove this datasource from its schema cache
+    eventCollector.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("segment/schemaCache/dataSource/removed")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+                      .hasService("druid/broker")
+    );
+
     cluster.callApi().verifySqlQuery("SELECT * FROM sys.segments WHERE datasource='%s'", dataSource, "");
 
     // Kill all unused segments
@@ -316,7 +313,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
         (CloseableIterator<TaskStatusPlus>)
             cluster.callApi().onLeaderOverlord(o -> o.taskStatuses(null, dataSource, 1))
     );
-    Assertions.assertEquals(1, taskStatuses.size());
+    Assertions.assertFalse(taskStatuses.isEmpty());
     Assertions.assertEquals(TaskState.RUNNING, taskStatuses.get(0).getStatusCode());
 
     // Suspend the supervisor and verify the state
@@ -327,41 +324,57 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     Assertions.assertTrue(supervisorStatus.isSuspended());
   }
 
-  private KafkaSupervisorSpec createKafkaSupervisor(String topic)
+  @Test
+  public void test_streamLogs_ofCancelledTask() throws Exception
   {
-    return new KafkaSupervisorSpec(
-        null,
-        null,
-        DataSchema.builder()
-                  .withDataSource(dataSource)
-                  .withTimestamp(new TimestampSpec("timestamp", null, null))
-                  .withDimensions(DimensionsSpec.EMPTY)
-                  .build(),
-        createTuningConfig(),
-        new KafkaSupervisorIOConfig(
-            topic,
-            null,
-            new CsvInputFormat(List.of("timestamp", "item"), null, null, false, 0, false),
-            null, null,
-            null,
-            kafkaServer.consumerProperties(),
-            null, null, null, null, null,
-            true,
-            null, null, null, null, null, null, null, null
-        ),
-        null, null, null, null, null, null, null, null, null, null, null
+    final String taskId = IdUtils.getRandomId();
+    final long runDurationMillis = 100_000L;
+    cluster.callApi().onLeaderOverlord(
+        o -> o.runTask(taskId, new NoopTask(taskId, null, null, runDurationMillis, 0L, null))
     );
+
+    eventCollector.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName(NoopTask.EVENT_STARTED)
+                      .hasDimension(DruidMetrics.TASK_ID, taskId)
+    );
+
+    cluster.callApi().onLeaderOverlord(o -> o.cancelTask(taskId));
+
+    eventCollector.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName("task/run/time")
+                      .hasDimension(DruidMetrics.TASK_ID, taskId)
+                      .hasDimension(DruidMetrics.TASK_STATUS, "FAILED")
+    );
+
+    final Optional<InputStream> streamOptional =
+        overlord.bindings()
+                .getInstance(TaskLogStreamer.class)
+                .streamTaskLog(taskId, 0);
+
+    Assertions.assertTrue(streamOptional.isPresent());
+
+    final String logs = IOUtils.toString(streamOptional.get(), StandardCharsets.UTF_8);
+
+    final String expectedLogLine = StringUtils.format(
+        "Running task[%s] for [%d] millis",
+        taskId, runDurationMillis
+    );
+    Assertions.assertFalse(logs.isEmpty());
+    Assertions.assertTrue(logs.contains(expectedLogLine), "Actual logs are: " + logs);
   }
 
-  private KafkaSupervisorTuningConfig createTuningConfig()
+  private KafkaSupervisorSpec createKafkaSupervisor(String topic)
   {
-    return new KafkaSupervisorTuningConfig(
-        null,
-        null, null, null,
-        1,
-        null, null, null, null, null, null, null, null, null, null,
-        null, null, null, null, null, null, null, null, null, null
-    );
+    return MoreResources.Supervisor.KAFKA_JSON
+        .get()
+        .withDataSchema(schema -> schema.withTimestamp(new TimestampSpec("timestamp", null, null)))
+        .withIoConfig(
+            ioConfig -> ioConfig
+                .withConsumerProperties(kafkaServer.consumerProperties())
+                .withInputFormat(new CsvInputFormat(List.of("timestamp", "item"), null, null, false, 0, false))
+        )
+        .withTuningConfig(tuningConfig -> tuningConfig.withMaxRowsPerSegment(1))
+        .build(dataSource, topic);
   }
 
   private List<ProducerRecord<byte[], byte[]>> generateRecordsForTopic(

@@ -175,6 +175,7 @@ Kerberos
 KeyStores
 Kinesis
 Kubernetes
+KubernetesClient
 Lakehouse
 LDAPS
 LRU
@@ -227,6 +228,7 @@ S3
 SAS
 SDK
 SIGAR
+SNI
 SPNEGO
 Splunk
 SqlInputSource
@@ -286,6 +288,7 @@ backfills
 backfilled
 backpressure
 base64
+baseTime
 big-endian
 bigint
 blkio
@@ -341,6 +344,7 @@ endpointConfig
 enum
 expectedType
 expr
+fabric8
 failover
 failovers
 featureSpec
@@ -409,7 +413,10 @@ localhost
 log4j
 log4j2
 log4j2.xml
+lookahead
+lookaheadDuration
 lookback
+lookbackDuration
 lookups
 mapreduce
 masse
@@ -450,6 +457,7 @@ numerics
 numShards
 parameterize
 objectGlob
+okhttp
 parameterized
 parse_json
 parseable
@@ -619,6 +627,7 @@ vectorizeVirtualColumns
 versioned
 versioning
 virtualColumns
+vert.x
 w.r.t.
 walkthrough
 whitelist
@@ -1348,6 +1357,7 @@ listDelimiter
 lowerOpen
 timestamp
 timestampColumnName
+TimestampType
 timestampSpec
 upperOpen
 urls
@@ -1476,6 +1486,7 @@ httpAuthenticationPassword
 accessKeyId
 secretAccessKey
 accessKeyId
+sessionToken
 httpAuthenticationPassword
 countryName
 appendToExisting
@@ -2451,3 +2462,6 @@ PropertyKeyName
 PropertyValueType
 tableSpec
 TableSpec
+
+- ../docs/development/extensions-contrib/prometheus.md
+TTL

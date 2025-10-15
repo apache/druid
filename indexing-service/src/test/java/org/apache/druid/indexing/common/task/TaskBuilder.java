@@ -61,13 +61,19 @@ import java.util.stream.Stream;
  * The builder does not use any defaults and all required fields must be set
  * explicitly.
  *
- * @param <T> Type of task created by this builder.
+ * @param <Self> Type of this builder itself
  * @param <C> Type of tuning config used by this builder.
+ * @param <T> Type of task created by this builder.
+ * @param <CB> Type of tuning config builder
  * @see #ofTypeIndex()
  * @see #tuningConfig(Consumer) to specify the {@code tuningConfig}.
  */
 @SuppressWarnings("unchecked")
-public abstract class TaskBuilder<B extends TaskBuilder<B, C, T>, C, T extends Task>
+public abstract class TaskBuilder<
+    T extends Task,
+    C,
+    CB extends TuningConfigBuilder<CB, C>,
+    Self extends TaskBuilder<T, C, CB, Self>>
 {
   // Fields are package-protected to allow access by subclasses like Index, Compact
   InputSource inputSource = null;
@@ -77,7 +83,7 @@ public abstract class TaskBuilder<B extends TaskBuilder<B, C, T>, C, T extends T
 
   Boolean appendToExisting = null;
 
-  final TuningConfigBuilder<C> tuningConfig;
+  final TuningConfigBuilder<CB, C> tuningConfig;
 
   private TaskBuilder()
   {
@@ -90,9 +96,9 @@ public abstract class TaskBuilder<B extends TaskBuilder<B, C, T>, C, T extends T
    */
   public abstract T withId(String taskId);
 
-  public abstract B dataSource(String dataSource);
+  public abstract Self dataSource(String dataSource);
 
-  protected abstract TuningConfigBuilder<C> tuningConfigBuilder();
+  protected abstract TuningConfigBuilder<CB, C> tuningConfigBuilder();
 
   /**
    * Initializes builder for a new {@link IndexTask}.
@@ -115,18 +121,18 @@ public abstract class TaskBuilder<B extends TaskBuilder<B, C, T>, C, T extends T
     return new Compact();
   }
 
-  public B inputSource(InputSource inputSource)
+  public Self inputSource(InputSource inputSource)
   {
     this.inputSource = inputSource;
-    return (B) this;
+    return (Self) this;
   }
 
-  public B inlineInputSourceWithData(String data)
+  public Self inlineInputSourceWithData(String data)
   {
     return inputSource(new InlineInputSource(data));
   }
 
-  public B druidInputSource(String dataSource, Interval interval)
+  public Self druidInputSource(String dataSource, Interval interval)
   {
     return inputSource(
         new DruidInputSource(
@@ -153,94 +159,98 @@ public abstract class TaskBuilder<B extends TaskBuilder<B, C, T>, C, T extends T
    * }
    * </pre>
    */
-  public B localInputSourceWithFiles(File... files)
+  public Self localInputSourceWithFiles(File... files)
   {
     return inputSource(
         new LocalInputSource(null, null, List.of(files), null)
     );
   }
 
-  public B inputFormat(InputFormat inputFormat)
+  public Self inputFormat(InputFormat inputFormat)
   {
     this.inputFormat = inputFormat;
-    return (B) this;
+    return (Self) this;
   }
 
-  public B jsonInputFormat()
+  public Self jsonInputFormat()
   {
     return inputFormat(
         new JsonInputFormat(null, null, null, null, null)
     );
   }
 
-  public B csvInputFormatWithColumns(String... columns)
+  public Self csvInputFormatWithColumns(String... columns)
   {
     return inputFormat(
         new CsvInputFormat(List.of(columns), null, null, false, 0, null)
     );
   }
 
-  public B appendToExisting(boolean append)
+  public Self appendToExisting(boolean append)
   {
     this.appendToExisting = append;
-    return (B) this;
+    return (Self) this;
   }
 
-  public B dynamicPartitionWithMaxRows(int maxRowsPerSegment)
+  public Self dynamicPartitionWithMaxRows(int maxRowsPerSegment)
   {
     tuningConfig.withPartitionsSpec(new DynamicPartitionsSpec(maxRowsPerSegment, null));
-    return (B) this;
+    return (Self) this;
   }
 
-  public B tuningConfig(Consumer<TuningConfigBuilder<C>> updateTuningConfig)
+  public Self tuningConfig(Consumer<TuningConfigBuilder<CB, C>> updateTuningConfig)
   {
     updateTuningConfig.accept(tuningConfig);
-    return (B) this;
+    return (Self) this;
   }
 
-  public B context(String key, Object value)
+  public Self context(String key, Object value)
   {
     this.context.put(key, value);
-    return (B) this;
+    return (Self) this;
   }
 
-  public abstract static class IndexCommon<B extends TaskBuilder<B, C, T>, C, T extends Task>
-      extends TaskBuilder<B, C, T>
+  public abstract static class IndexCommon<
+      T extends Task,
+      C,
+      CB extends TuningConfigBuilder<CB, C>,
+      Self extends TaskBuilder<T, C, CB, Self>>
+      extends TaskBuilder<T, C, CB, Self>
   {
     final DataSchema.Builder dataSchema = DataSchema.builder();
 
     @Override
-    public B dataSource(String dataSource)
+    public Self dataSource(String dataSource)
     {
       dataSchema.withDataSource(dataSource);
-      return (B) this;
+      return (Self) this;
     }
 
-    public B dataSchema(Consumer<DataSchema.Builder> updateDataSchema)
+    public Self dataSchema(Consumer<DataSchema.Builder> updateDataSchema)
     {
       updateDataSchema.accept(dataSchema);
-      return (B) this;
+      return (Self) this;
     }
 
-    public B isoTimestampColumn(String timestampColumn)
+    public Self isoTimestampColumn(String timestampColumn)
     {
       dataSchema.withTimestamp(new TimestampSpec(timestampColumn, "iso", null));
-      return (B) this;
+      return (Self) this;
     }
 
-    public B timestampColumn(String timestampColumn)
+    public Self timestampColumn(String timestampColumn)
     {
       dataSchema.withTimestamp(new TimestampSpec(timestampColumn, null, null));
-      return (B) this;
+      return (Self) this;
     }
 
-    public B granularitySpec(GranularitySpec granularitySpec)
+    public Self granularitySpec(GranularitySpec granularitySpec)
     {
       dataSchema.withGranularity(granularitySpec);
-      return (B) this;
+      return (Self) this;
     }
 
-    public B granularitySpec(String segmentGranularity, String queryGranularity, Boolean rollup)
+    public Self granularitySpec(String segmentGranularity, String queryGranularity, Boolean rollup)
     {
       dataSchema.withGranularity(
           new UniformGranularitySpec(
@@ -250,13 +260,13 @@ public abstract class TaskBuilder<B extends TaskBuilder<B, C, T>, C, T extends T
               null
           )
       );
-      return (B) this;
+      return (Self) this;
     }
 
     /**
      * Sets {@code "granularitySpec": {"segmentGranularity": <arg>}}.
      */
-    public B segmentGranularity(String granularity)
+    public Self segmentGranularity(String granularity)
     {
       return granularitySpec(granularity, null, null);
     }
@@ -266,30 +276,34 @@ public abstract class TaskBuilder<B extends TaskBuilder<B, C, T>, C, T extends T
      *
      * @see #dataSchema(Consumer) for more options
      */
-    public B dimensions(String... dimensions)
+    public Self dimensions(String... dimensions)
     {
       dataSchema.withDimensions(
           Stream.of(dimensions)
                 .map(StringDimensionSchema::new)
                 .collect(Collectors.toList())
       );
-      return (B) this;
+      return (Self) this;
     }
 
-    public B metricAggregates(AggregatorFactory... aggregators)
+    public Self metricAggregates(AggregatorFactory... aggregators)
     {
       dataSchema.withAggregators(aggregators);
-      return (B) this;
+      return (Self) this;
     }
   }
 
   /**
    * Builder for {@link IndexTask} that uses a {@link IndexTask.IndexTuningConfig}.
    */
-  public static class Index extends IndexCommon<Index, IndexTask.IndexTuningConfig, IndexTask>
+  public static class Index extends IndexCommon<
+      IndexTask,
+      IndexTask.IndexTuningConfig,
+      TuningConfigBuilder.Index,
+      Index>
   {
     @Override
-    public TuningConfigBuilder<IndexTask.IndexTuningConfig> tuningConfigBuilder()
+    public TuningConfigBuilder.Index tuningConfigBuilder()
     {
       return TuningConfigBuilder.forIndexTask();
     }
@@ -320,7 +334,11 @@ public abstract class TaskBuilder<B extends TaskBuilder<B, C, T>, C, T extends T
   /**
    * Builder for {@link ParallelIndexSupervisorTask} which uses a {@link ParallelIndexTuningConfig}.
    */
-  public static class IndexParallel extends IndexCommon<IndexParallel, ParallelIndexTuningConfig, ParallelIndexSupervisorTask>
+  public static class IndexParallel extends IndexCommon<
+      ParallelIndexSupervisorTask,
+      ParallelIndexTuningConfig,
+      TuningConfigBuilder.ParallelIndex,
+      IndexParallel>
   {
     @Override
     public ParallelIndexSupervisorTask withId(String taskId)
@@ -345,7 +363,7 @@ public abstract class TaskBuilder<B extends TaskBuilder<B, C, T>, C, T extends T
     }
 
     @Override
-    public TuningConfigBuilder<ParallelIndexTuningConfig> tuningConfigBuilder()
+    public TuningConfigBuilder.ParallelIndex tuningConfigBuilder()
     {
       return TuningConfigBuilder.forParallelIndexTask();
     }
@@ -354,7 +372,11 @@ public abstract class TaskBuilder<B extends TaskBuilder<B, C, T>, C, T extends T
   /**
    * Builder for a {@link CompactionTask} which uses a {@link CompactionTask.CompactionTuningConfig}.
    */
-  public static class Compact extends TaskBuilder<Compact, CompactionTask.CompactionTuningConfig, CompactionTask>
+  public static class Compact extends TaskBuilder<
+      CompactionTask,
+      CompactionTask.CompactionTuningConfig,
+      TuningConfigBuilder.Compact,
+      Compact>
   {
     private String dataSource;
     private Interval interval;
@@ -429,7 +451,7 @@ public abstract class TaskBuilder<B extends TaskBuilder<B, C, T>, C, T extends T
     }
 
     @Override
-    public TuningConfigBuilder<CompactionTask.CompactionTuningConfig> tuningConfigBuilder()
+    public TuningConfigBuilder.Compact tuningConfigBuilder()
     {
       return TuningConfigBuilder.forCompactionTask();
     }

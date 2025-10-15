@@ -31,7 +31,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>35.0.0-SNAPSHOT</version>
+        <version>36.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -51,6 +51,12 @@
         <dependency>
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-sql</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-multi-stage-query</artifactId>
             <version>${project.parent.version}</version>
             <scope>provided</scope>
         </dependency>

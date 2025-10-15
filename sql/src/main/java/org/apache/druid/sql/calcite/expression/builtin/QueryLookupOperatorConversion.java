@@ -86,7 +86,7 @@ public class QueryLookupOperatorConversion implements SqlOperatorConversion
           // Add the lookup name to the set of lookups to selectively load.
           plannerContext.addLookupToLoad(lookupExtractorFactoryContainerProvider.getCanonicalLookupName(lookupName));
 
-          if (arg.isSimpleExtraction() && lookupNameExpr.isLiteral()) {
+          if (arg.isSimpleExtraction() && lookupNameExpr.isLiteral() && plannerContext.isUseExtractionFns()) {
             return arg.getSimpleExtraction().cascade(
                 new RegisteredLookupExtractionFn(
                     lookupExtractorFactoryContainerProvider,

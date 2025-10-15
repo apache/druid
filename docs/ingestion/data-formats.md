@@ -168,6 +168,28 @@ For example:
 }
 ```
 
+### Lines
+
+Configure the Lines `inputFormat` to load line-oriented data where each line is treated as a single field:
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| type | String | Set value to `lines`. | yes |
+
+The Lines input format reads each line from the input as UTF-8 text, and creates a single column named `line` containing the entire line as a string.
+This is useful for reading line-oriented data in a simple form for later processing.
+
+For example:
+
+```json
+"ioConfig": {
+  "inputFormat": {
+    "type": "lines"
+  },
+  ...
+}
+```
+
 ### ORC
 
 To use the ORC input format, load the Druid Orc extension ( [`druid-orc-extensions`](../development/extensions-core/orc.md)).
@@ -964,11 +986,10 @@ Each line can be further parsed using [`parseSpec`](#parsespec).
 
 :::caution[Deprecated]
 
-Hadoop-based ingestion is deprecated. We recommend one of Druid's other supported ingestion methods, such as [SQL-based ingestion](../multi-stage-query/index.md) or [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md)
-
-You must now explicitly opt-in to using the deprecated `index_hadoop` task type. To opt-in, set `druid.indexer.task.allowHadoopTaskExecution` to `true` in your `common.runtime.properties` file. For more information, see [#18239](https://github.com/apache/druid/pull/18239)
+Hadoop-based ingestion is deprecated. For more information, see the [upgrade notes](../release-info/upgrade-notes.md#hadoop-based-ingestion).
 
 :::
+
 
 :::info
 You need to include [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Hadoop Parser.
@@ -1030,6 +1051,14 @@ For example, using Avro Hadoop parser with custom reader's schema file:
 ```
 
 ### ORC Hadoop Parser
+
+:::caution[Deprecated]
+
+Hadoop-based ingestion is deprecated. For more information, see the [upgrade notes](../release-info/upgrade-notes.md#hadoop-based-ingestion).
+
+
+:::
+
 
 :::info
  You need to include the [`druid-orc-extensions`](../development/extensions-core/orc.md) as an extension to use the ORC Hadoop Parser.
@@ -1276,6 +1305,13 @@ setting `"mapreduce.job.user.classpath.first": "true"`, then this will not be an
 
 ### Parquet Hadoop Parser
 
+:::caution[Deprecated]
+
+Hadoop-based ingestion is deprecated. For more information, see the [upgrade notes](../release-info/upgrade-notes.md#hadoop-based-ingestion).
+
+:::
+
+
 :::info
  You need to include the [`druid-parquet-extensions`](../development/extensions-core/parquet.md) as an extension to use the Parquet Hadoop Parser.
 :::
@@ -1419,6 +1455,13 @@ However, the Parquet Avro Hadoop Parser was the original basis for supporting th
 ```
 
 ### Parquet Avro Hadoop Parser
+
+:::caution[Deprecated]
+
+Hadoop-based ingestion is deprecated. For more information, see the [upgrade notes](../release-info/upgrade-notes.md#hadoop-based-ingestion).
+
+:::
+
 
 :::info
  Consider using the [Parquet Hadoop Parser](#parquet-hadoop-parser) over this parser to ingest

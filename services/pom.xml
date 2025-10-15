@@ -27,7 +27,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>35.0.0-SNAPSHOT</version>
+        <version>36.0.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -69,6 +69,11 @@
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-multi-stage-query</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.github.rvesse</groupId>
             <artifactId>airline</artifactId>
         </dependency>
@@ -94,8 +99,8 @@
             <artifactId>jetty-http</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>jetty-proxy</artifactId>
+            <groupId>org.eclipse.jetty.ee8</groupId>
+            <artifactId>jetty-ee8-proxy</artifactId>
         </dependency>
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
@@ -150,8 +155,8 @@
             <artifactId>jsr311-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>jetty-servlet</artifactId>
+            <groupId>org.eclipse.jetty.ee8</groupId>
+            <artifactId>jetty-ee8-servlet</artifactId>
         </dependency>
         <dependency>
             <groupId>org.eclipse.jetty</groupId>

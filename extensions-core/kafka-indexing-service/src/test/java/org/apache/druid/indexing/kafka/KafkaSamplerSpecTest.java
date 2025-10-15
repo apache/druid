@@ -34,10 +34,9 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.data.input.kafkainput.KafkaInputFormat;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
-import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
+import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpecBuilder;
 import org.apache.druid.indexing.kafka.test.TestBroker;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
@@ -65,12 +64,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
@@ -80,9 +79,10 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
 
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
   private static final String TOPIC = "sampling";
-  private static final DataSchema DATA_SCHEMA =
-      DataSchema.builder()
-                .withDataSource("test_ds")
+  private static final String DATASOURCE = "test_ds";
+  private static final Consumer<DataSchema.Builder> DATA_SCHEMA =
+      schema ->
+          schema.withDataSource(DATASOURCE)
                 .withTimestamp(new TimestampSpec("timestamp", "iso", null))
                 .withDimensions(
                     new StringDimensionSchema("dim1"),
@@ -97,13 +97,13 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
                 )
                 .withGranularity(
                     new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null)
-                )
-                .build();
+                );
 
-  private static final DataSchema DATA_SCHEMA_KAFKA_TIMESTAMP =
-      DataSchema.builder(DATA_SCHEMA)
-                .withTimestamp(new TimestampSpec("kafka.timestamp", "iso", null))
-                .build();
+  private static final Consumer<DataSchema.Builder> DATA_SCHEMA_KAFKA_TIMESTAMP =
+      schema -> {
+        DATA_SCHEMA.accept(schema);
+        schema.withTimestamp(new TimestampSpec("kafka.timestamp", "iso", null));
+      };
 
   private static TestingCluster zkServer;
   private static TestBroker kafkaServer;
@@ -142,46 +142,15 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
   {
     insertData(generateRecords(TOPIC));
 
-    KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
-        null,
-        null,
-        DATA_SCHEMA,
-        null,
-        new KafkaSupervisorIOConfig(
-            TOPIC,
-            null,
-            new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
-            null,
-            null,
-            null,
-            kafkaServer.consumerProperties(),
-            null,
-            null,
-            null,
-            null,
-            null,
-            true,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false
-        ),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpecBuilder()
+        .withDataSchema(DATA_SCHEMA)
+        .withIoConfig(
+            ioConfig -> ioConfig
+                .withJsonInputFormat()
+                .withConsumerProperties(kafkaServer.consumerProperties())
+                .withUseEarliestSequenceNumber(true)
+        )
+        .build(DATASOURCE, TOPIC);
 
     KafkaSamplerSpec samplerSpec = new KafkaSamplerSpec(
         supervisorSpec,
@@ -198,46 +167,15 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
   {
     insertData(generateRecords(TOPIC));
 
-    KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
-        null,
-        null,
-        DATA_SCHEMA,
-        null,
-        new KafkaSupervisorIOConfig(
-            null,
-            Pattern.quote(TOPIC),
-            new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
-            null,
-            null,
-            null,
-            kafkaServer.consumerProperties(),
-            null,
-            null,
-            null,
-            null,
-            null,
-            true,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false
-        ),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpecBuilder()
+        .withDataSchema(DATA_SCHEMA)
+        .withIoConfig(
+            ioConfig -> ioConfig
+                .withJsonInputFormat()
+                .withConsumerProperties(kafkaServer.consumerProperties())
+                .withUseEarliestSequenceNumber(true)
+        )
+        .buildWithTopicPattern(DATASOURCE, Pattern.quote(TOPIC));
 
     KafkaSamplerSpec samplerSpec = new KafkaSamplerSpec(
         supervisorSpec,
@@ -254,55 +192,15 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
   {
     insertData(generateRecords(TOPIC));
 
-    KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
-        null,
-        null,
-        DATA_SCHEMA_KAFKA_TIMESTAMP,
-        null,
-        new KafkaSupervisorIOConfig(
-            TOPIC,
-            null,
-            new KafkaInputFormat(
-                null,
-                null,
-                new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
-                null,
-                null,
-                null,
-                null
-            ),
-
-            null,
-            null,
-            null,
-            kafkaServer.consumerProperties(),
-            null,
-            null,
-            null,
-            null,
-            null,
-            true,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false
-        ),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpecBuilder()
+        .withDataSchema(DATA_SCHEMA_KAFKA_TIMESTAMP)
+        .withIoConfig(
+            ioConfig -> ioConfig
+                .withKafkaInputFormat(new JsonInputFormat(null, null, null, null, null))
+                .withConsumerProperties(kafkaServer.consumerProperties())
+                .withUseEarliestSequenceNumber(true)
+        )
+        .build(DATASOURCE, TOPIC);
 
     KafkaSamplerSpec samplerSpec = new KafkaSamplerSpec(
         supervisorSpec,
@@ -340,7 +238,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testWithInputRowParser() throws IOException
+  public void testWithInputRowParser()
   {
     insertData(generateRecords(TOPIC));
 
@@ -357,59 +255,24 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
     );
     InputRowParser parser = new StringInputRowParser(new JSONParseSpec(timestampSpec, dimensionsSpec, JSONPathSpec.DEFAULT, null, null), "UTF8");
 
-    DataSchema dataSchema = DataSchema.builder()
-                                      .withDataSource("test_ds")
-                                      .withParserMap(
-                                          objectMapper.readValue(objectMapper.writeValueAsBytes(parser), Map.class)
-                                      )
-                                      .withAggregators(
-                                          new DoubleSumAggregatorFactory("met1sum", "met1"),
-                                          new CountAggregatorFactory("rows")
-                                      )
-                                      .withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null))
-                                      .withObjectMapper(objectMapper)
-                                      .build();
+    Consumer<DataSchema.Builder> dataSchema =
+        builder -> builder.withDataSource("test_ds")
+                          .withParserMap(objectMapper.convertValue(parser, Map.class))
+                          .withAggregators(
+                              new DoubleSumAggregatorFactory("met1sum", "met1"),
+                              new CountAggregatorFactory("rows")
+                          )
+                          .withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null))
+                          .withObjectMapper(objectMapper);
 
-    KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
-        null,
-        null,
-        dataSchema,
-        null,
-        new KafkaSupervisorIOConfig(
-            TOPIC,
-            null,
-            null,
-            null,
-            null,
-            null,
-            kafkaServer.consumerProperties(),
-            null,
-            null,
-            null,
-            null,
-            null,
-            true,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false
-        ),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpecBuilder()
+        .withDataSchema(dataSchema)
+        .withIoConfig(
+            ioConfig -> ioConfig
+                .withConsumerProperties(kafkaServer.consumerProperties())
+                .withUseEarliestSequenceNumber(true)
+        )
+        .build(DATASOURCE, TOPIC);
 
     KafkaSamplerSpec samplerSpec = new KafkaSamplerSpec(
         supervisorSpec,
@@ -554,49 +417,14 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
   @Test
   public void testInvalidKafkaConfig()
   {
-    KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
-        null,
-        null,
-        DATA_SCHEMA,
-        null,
-        new KafkaSupervisorIOConfig(
-            TOPIC,
-            null,
-            new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
-            null,
-            null,
-            null,
-
-            // invalid bootstrap server
-            ImmutableMap.of("bootstrap.servers", "127.0.0.1"),
-
-            null,
-            null,
-            null,
-            null,
-            null,
-            true,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false
-        ),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpecBuilder()
+        .withIoConfig(
+            ioConfig -> ioConfig
+                .withJsonInputFormat()
+                .withConsumerProperties(Map.of("bootstrap.servers", "invalid"))
+                .withUseEarliestSequenceNumber(true)
+        )
+        .build(DATASOURCE, TOPIC);
 
     KafkaSamplerSpec samplerSpec = new KafkaSamplerSpec(
         supervisorSpec,
@@ -613,49 +441,14 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
   @Test
   public void testGetInputSourceResources()
   {
-    KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
-        null,
-        null,
-        DATA_SCHEMA,
-        null,
-        new KafkaSupervisorIOConfig(
-            TOPIC,
-            null,
-            new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
-            null,
-            null,
-            null,
-
-            // invalid bootstrap server
-            ImmutableMap.of("bootstrap.servers", "127.0.0.1"),
-
-            null,
-            null,
-            null,
-            null,
-            null,
-            true,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false
-        ),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpecBuilder()
+        .withIoConfig(
+            ioConfig -> ioConfig
+                .withJsonInputFormat()
+                .withConsumerProperties(Map.of("bootstrap.servers", "invalid"))
+                .withUseEarliestSequenceNumber(true)
+        )
+        .build(DATASOURCE, TOPIC);
 
     KafkaSamplerSpec samplerSpec = new KafkaSamplerSpec(
         supervisorSpec,

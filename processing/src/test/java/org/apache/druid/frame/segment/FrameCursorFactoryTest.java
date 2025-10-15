@@ -349,7 +349,7 @@ public class FrameCursorFactoryTest
     }
 
     @Test
-    public void test_expr_cannotVectorize()
+    public void test_virtualColumn_cannotVectorize()
     {
       final CursorBuildSpec cursorSpec =
           CursorBuildSpec.builder()
@@ -358,7 +358,7 @@ public class FrameCursorFactoryTest
                              VirtualColumns.create(
                                  new ExpressionVirtualColumn(
                                      "expr",
-                                     "substring(quality, 1, 2)",
+                                     "if(isnull(quality),'yes',0)", // Cannot vectorize due to mixed return types
                                      ColumnType.STRING,
                                      ExprMacroTable.nil()
                                  )

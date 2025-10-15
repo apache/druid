@@ -216,7 +216,7 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
 
     Throwable t = Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> virtualColumns.makeColumnValueSelector("bar", baseColumnSelectorFactory)
+        () -> virtualColumns.makeColumnValueSelector("bar", baseColumnSelectorFactory, null, null)
     );
     Assert.assertEquals("No such virtual column[bar]", t.getMessage());
   }
@@ -229,23 +229,33 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     final VirtualColumns virtualColumns = makeVirtualColumns();
     final BaseObjectColumnValueSelector objectSelector = virtualColumns.makeColumnValueSelector(
         "expr",
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
     final DimensionSelector dimensionSelector = virtualColumns.makeDimensionSelector(
         new DefaultDimensionSpec("expr", "x"),
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
     final DimensionSelector extractionDimensionSelector = virtualColumns.makeDimensionSelector(
         new ExtractionDimensionSpec("expr", "x", new BucketExtractionFn(1.0, 0.5)),
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
     final BaseFloatColumnValueSelector floatSelector = virtualColumns.makeColumnValueSelector(
         "expr",
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
     final BaseLongColumnValueSelector longSelector = virtualColumns.makeColumnValueSelector(
         "expr",
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
 
     Assert.assertEquals(1L, objectSelector.getObject());
@@ -261,19 +271,27 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     final VirtualColumns virtualColumns = makeVirtualColumns();
     final BaseObjectColumnValueSelector objectSelector = virtualColumns.makeColumnValueSelector(
         "foo.5",
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
     final DimensionSelector dimensionSelector = virtualColumns.makeDimensionSelector(
         new DefaultDimensionSpec("foo.5", "x"),
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
     final BaseFloatColumnValueSelector floatSelector = virtualColumns.makeColumnValueSelector(
         "foo.5",
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
     final BaseLongColumnValueSelector longSelector = virtualColumns.makeColumnValueSelector(
         "foo.5",
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
 
     Assert.assertEquals(5L, objectSelector.getObject());
@@ -288,19 +306,27 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     final VirtualColumns virtualColumns = makeVirtualColumns();
     final BaseObjectColumnValueSelector objectSelector = virtualColumns.makeColumnValueSelector(
         "foo",
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
     final DimensionSelector dimensionSelector = virtualColumns.makeDimensionSelector(
         new DefaultDimensionSpec("foo", "x"),
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
     final BaseFloatColumnValueSelector floatSelector = virtualColumns.makeColumnValueSelector(
         "foo",
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
     final BaseLongColumnValueSelector longSelector = virtualColumns.makeColumnValueSelector(
         "foo",
-        baseColumnSelectorFactory
+        baseColumnSelectorFactory,
+        null,
+        null
     );
 
     Assert.assertEquals(-1L, objectSelector.getObject());
@@ -353,6 +379,9 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
   @Test
   public void testCycleDetection()
   {
+    // expr depends on expr2
+    // expr2 depends on expr
+
     final ExpressionVirtualColumn expr = new ExpressionVirtualColumn(
         "expr",
         "x + expr2",
@@ -372,6 +401,38 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
         () -> VirtualColumns.create(ImmutableList.of(expr, expr2))
     );
     Assert.assertEquals("Self-referential column[expr]", t.getMessage());
+  }
+
+  @Test
+  public void testNotACycle()
+  {
+    // Not a cycle, although at one point our cycle detection code believed it was.
+    // expr3 depends on expr, expr2
+    // expr2 depends on expr
+    // expr depends on physical columns x, y
+    final ExpressionVirtualColumn expr = new ExpressionVirtualColumn(
+        "expr",
+        "x + y",
+        ColumnType.FLOAT,
+        TestExprMacroTable.INSTANCE
+    );
+
+    final ExpressionVirtualColumn expr2 = new ExpressionVirtualColumn(
+        "expr2",
+        "expr",
+        ColumnType.FLOAT,
+        TestExprMacroTable.INSTANCE
+    );
+
+    final ExpressionVirtualColumn expr3 = new ExpressionVirtualColumn(
+        "expr3",
+        "expr + expr2",
+        ColumnType.FLOAT,
+        TestExprMacroTable.INSTANCE
+    );
+
+    final VirtualColumns virtualColumns = VirtualColumns.create(ImmutableList.of(expr, expr2, expr3));
+    Assert.assertEquals(3, virtualColumns.getColumnNames().size());
   }
 
   @Test

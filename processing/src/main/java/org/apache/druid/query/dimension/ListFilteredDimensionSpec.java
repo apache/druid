@@ -22,14 +22,12 @@ package org.apache.druid.query.dimension;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.filter.DimFilterUtils;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.IdMapping;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.Set;
 
@@ -52,10 +50,10 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
   {
     super(delegate);
 
-    Preconditions.checkArgument(values != null && values.size() > 0, "values list must be non-empty");
+    Preconditions.checkArgument(values != null && !values.isEmpty(), "values list must be non-empty");
     this.values = values;
 
-    this.isWhitelist = isWhitelist == null ? true : isWhitelist.booleanValue();
+    this.isWhitelist = isWhitelist == null || isWhitelist;
   }
 
   @JsonProperty
@@ -157,27 +155,11 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
   @Override
   public byte[] getCacheKey()
   {
-    byte[] delegateCacheKey = delegate.getCacheKey();
-
-    byte[][] valuesBytes = new byte[values.size()][];
-    int valuesBytesSize = 0;
-    int index = 0;
-    for (String value : values) {
-      valuesBytes[index] = StringUtils.toUtf8(value);
-      valuesBytesSize += valuesBytes[index].length + 1;
-      ++index;
-    }
-
-    ByteBuffer filterCacheKey = ByteBuffer.allocate(3 + delegateCacheKey.length + valuesBytesSize)
-                                          .put(CACHE_TYPE_ID)
-                                          .put(delegateCacheKey)
-                                          .put((byte) (isWhitelist ? 1 : 0))
-                                          .put(DimFilterUtils.STRING_SEPARATOR);
-    for (byte[] bytes : valuesBytes) {
-      filterCacheKey.put(bytes)
-                    .put(DimFilterUtils.STRING_SEPARATOR);
-    }
-    return filterCacheKey.array();
+    CacheKeyBuilder builder = new CacheKeyBuilder(CACHE_TYPE_ID)
+        .appendBoolean(isWhitelist)
+        .appendCacheable(delegate)
+        .appendStringsIgnoringOrder(values);
+    return builder.build();
   }
 
   @Override

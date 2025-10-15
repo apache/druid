@@ -42,7 +42,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -558,7 +557,7 @@ public class S3InputSourceDefnTest
   @Test
   public void testFullTableSpecHappyPath()
   {
-    S3InputSourceConfig config = new S3InputSourceConfig(null, null, "foo", null);
+    S3InputSourceConfig config = new S3InputSourceConfig(null, null, "foo", null, null);
     S3InputSource s3InputSource = s3InputSource(
         Arrays.asList("s3://foo/bar/", "s3://mumble/"), null, null, "*.csv", config);
     TableMetadata table = TableBuilder.external("foo")

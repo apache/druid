@@ -34,7 +34,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>35.0.0-SNAPSHOT</version>
+    <version>36.0.0-SNAPSHOT</version>
   </parent>
 
   <dependencies>
@@ -60,8 +60,13 @@
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.druid.extensions</groupId>
+      <groupId>org.apache.druid</groupId>
       <artifactId>druid-multi-stage-query</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-catalog</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
@@ -73,6 +78,12 @@
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-sql</artifactId>
       <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.integration-tests</groupId>
+      <artifactId>druid-it-tools</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.druid.extensions</groupId>
@@ -94,6 +105,18 @@
     </dependency>
     <dependency>
       <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-protobuf-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-avro-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
       <artifactId>druid-testcontainers</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
@@ -105,6 +128,12 @@
     <dependency>
       <groupId>org.apache.druid.extensions</groupId>
       <artifactId>druid-basic-security</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions.contrib</groupId>
+      <artifactId>druid-exact-count-bitmap</artifactId>
       <version>${project.parent.version}</version>
       <scope>test</scope>
     </dependency>
@@ -125,6 +154,10 @@
       <artifactId>httpclient</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+    </dependency>
+    <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty</artifactId>
     </dependency>
@@ -132,6 +165,48 @@
       <groupId>org.jdbi</groupId>
       <artifactId>jdbi</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-storage</artifactId>
+      <version>2.29.1</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-core</artifactId>
+      <version>2.27.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.http-client</groupId>
+      <artifactId>google-http-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.microsoft.azure</groupId>
+      <artifactId>azure-storage</artifactId>
+      <version>8.6.0</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.commons</groupId>
+          <artifactId>commons-lang3</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
 
     <!-- Test dependencies -->
     <dependency>
@@ -195,6 +270,37 @@
       <version>${project.parent.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.druid</groupId>
+      <artifactId>druid-gcp-common</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-google-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-azure-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-parquet-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-orc-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+
     <!-- Some embedded tests use the router and the web-console for debugging -->
     <dependency>
       <groupId>org.apache.druid</groupId>
@@ -275,8 +381,18 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-annotations</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>it.unimi.dsi</groupId>
       <artifactId>fastutil-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -310,6 +426,12 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>k3s</artifactId>
+      <version>${testcontainers.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.mariadb.jdbc</groupId>
       <artifactId>mariadb-java-client</artifactId>
       <version>${mariadb.version}</version>
@@ -319,6 +441,57 @@
       <groupId>org.testcontainers</groupId>
       <artifactId>minio</artifactId>
       <version>${testcontainers.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>redpanda</artifactId>
+      <version>${testcontainers.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>azure</artifactId>
+      <version>${testcontainers.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.aiven</groupId>
+      <artifactId>testcontainers-fake-gcs-server</artifactId>
+      <version>0.1.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.fabric8</groupId>
+      <artifactId>kubernetes-model-core</artifactId>
+      <version>${fabric8.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.fabric8</groupId>
+      <artifactId>kubernetes-client-api</artifactId>
+      <version>${fabric8.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.fabric8</groupId>
+      <artifactId>kubernetes-client</artifactId>
+      <version>${fabric8.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.github.docker-java</groupId>
+      <artifactId>docker-java-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.github.docker-java</groupId>
+      <artifactId>docker-java-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.github.docker-java</groupId>
+      <artifactId>docker-java-transport-httpclient5</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -336,6 +509,24 @@
       <artifactId>aws-java-sdk-core</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>io.confluent</groupId>
+      <artifactId>kafka-protobuf-provider</artifactId>
+      <version>6.2.12</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-compress</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.kubernetes</groupId>
+      <artifactId>client-java-api</artifactId>
+      <version>19.0.0</version>
+      <scope>test</scope>
+    </dependency>
+
   </dependencies>
 
   <build>

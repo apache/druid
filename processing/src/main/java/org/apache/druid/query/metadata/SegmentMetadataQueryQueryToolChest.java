@@ -197,7 +197,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     return new CacheStrategy<>()
     {
       @Override
-      public boolean isCacheable(SegmentMetadataQuery query, boolean willMergeRunners, boolean bySegment)
+      public boolean isCacheable(SegmentMetadataQuery query, boolean willMergeRunners, boolean segmentLevel)
       {
         return true;
       }

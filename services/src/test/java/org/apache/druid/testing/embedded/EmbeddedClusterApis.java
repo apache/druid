@@ -282,17 +282,52 @@ public class EmbeddedClusterApis implements EmbeddedResource
 
   /**
    * Waits for all used segments (including overshadowed) of the given datasource
-   * to be loaded on historicals.
+   * to be queryable by Brokers.
    */
-  public void waitForAllSegmentsToBeAvailable(String dataSource, EmbeddedCoordinator coordinator)
+  public void waitForAllSegmentsToBeAvailable(String dataSource, EmbeddedCoordinator coordinator, EmbeddedBroker broker)
+  {
+    final Set<DataSegment> segments = coordinator
+        .bindings()
+        .segmentsMetadataStorage()
+        .retrieveAllUsedSegments(dataSource, Segments.INCLUDING_OVERSHADOWED);
+
+    final int numTombstones = (int) segments.stream().filter(DataSegment::isTombstone).count();
+    final int numSegments = segments.size() - numTombstones;
+
+    if (numSegments > 0) {
+      broker.latchableEmitter().waitForEventAggregate(
+          event -> event.hasMetricName("segment/schemaCache/refresh/count")
+                        .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+          agg -> agg.hasSumAtLeast(numSegments)
+      );
+    }
+    if (numTombstones > 0) {
+      broker.latchableEmitter().waitForEventAggregate(
+          event -> event.hasMetricName("segment/schemaCache/refresh/tombstone/count")
+                        .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+          agg -> agg.hasSumAtLeast(numTombstones)
+      );
+    }
+  }
+
+  /**
+   * Waits for all used segments (including overshadowed) of the given datasource
+   * to be queryable by Brokers when centralized schema is enabled.
+   */
+  public void waitForAllSegmentsToBeAvailableWithCentralizedSchema(
+      String dataSource,
+      EmbeddedCoordinator coordinator,
+      EmbeddedBroker broker
+  )
   {
     final int numSegments = coordinator
         .bindings()
         .segmentsMetadataStorage()
         .retrieveAllUsedSegments(dataSource, Segments.INCLUDING_OVERSHADOWED)
         .size();
-    coordinator.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("segment/loadQueue/success")
+
+    broker.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("segment/schemaCache/refreshSkipped/count")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(numSegments)
     );
