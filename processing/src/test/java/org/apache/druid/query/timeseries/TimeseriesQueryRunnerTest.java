@@ -1496,8 +1496,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
             new TimeseriesResultValue(
                 ImmutableMap.of(
                     "rows", 1L,
-                    "index", new Float(135.885094).doubleValue(),
-                    "addRowsIndexConstant", new Float(137.885094).doubleValue(),
+                    "index", 135.885094F,
+                    "addRowsIndexConstant", 137.885094F,
                     "uniques", QueryRunnerTestHelper.UNIQUES_1
                 )
             )
@@ -1507,8 +1507,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
             new TimeseriesResultValue(
                 ImmutableMap.of(
                     "rows", 1L,
-                    "index", new Float(147.425935).doubleValue(),
-                    "addRowsIndexConstant", new Float(149.425935).doubleValue(),
+                    "index", 147.425935F,
+                    "addRowsIndexConstant", 149.425935F,
                     "uniques", QueryRunnerTestHelper.UNIQUES_1
                 )
             )
@@ -1543,8 +1543,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
             new TimeseriesResultValue(
                 ImmutableMap.of(
                     "rows", 1L,
-                    "index", new Float(118.570340).doubleValue(),
-                    "addRowsIndexConstant", new Float(120.570340).doubleValue(),
+                    "index", 118.570340F,
+                    "addRowsIndexConstant", 120.570340F,
                     "uniques", QueryRunnerTestHelper.UNIQUES_1
                 )
             )
@@ -1554,8 +1554,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
             new TimeseriesResultValue(
                 ImmutableMap.of(
                     "rows", 1L,
-                    "index", new Float(112.987027).doubleValue(),
-                    "addRowsIndexConstant", new Float(114.987027).doubleValue(),
+                    "index", 112.987027F,
+                    "addRowsIndexConstant", 114.987027F,
                     "uniques", QueryRunnerTestHelper.UNIQUES_1
                 )
             )
@@ -2046,8 +2046,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
             DateTimes.of("2011-01-01"),
             new TimeseriesResultValue(
                 ImmutableMap.of(
-                    "first", new Float(100.000000).doubleValue(),
-                    "last", new Float(943.497198).doubleValue()
+                    "first", 100.000000F,
+                    "last", 943.497198F
                 )
             )
         ),
@@ -2055,8 +2055,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
             DateTimes.of("2011-02-01"),
             new TimeseriesResultValue(
                 ImmutableMap.of(
-                    "first", new Float(132.123776).doubleValue(),
-                    "last", new Float(1101.918270).doubleValue()
+                    "first", 132.123776F,
+                    "last", 1101.918270F
                 )
             )
         ),
@@ -2064,8 +2064,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
             DateTimes.of("2011-03-01"),
             new TimeseriesResultValue(
                 ImmutableMap.of(
-                    "first", new Float(153.059937).doubleValue(),
-                    "last", new Float(1063.201156).doubleValue()
+                    "first", 153.059937F,
+                    "last", 1063.201156F
                 )
             )
         ),
@@ -2073,8 +2073,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.of(
-                    "first", new Float(135.885094).doubleValue(),
-                    "last", new Float(780.271977).doubleValue()
+                    "first", 135.885094F,
+                    "last", 780.271977F
                 )
             )
         )
@@ -2085,8 +2085,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.of(
-                    "first", new Float(1234.247546).doubleValue(),
-                    "last", new Float(106.793700).doubleValue()
+                    "first", 1234.247546F,
+                    "last", 106.793700F
                 )
             )
         ),
@@ -2094,8 +2094,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
             DateTimes.of("2011-03-01"),
             new TimeseriesResultValue(
                 ImmutableMap.of(
-                    "first", new Float(1004.940887).doubleValue(),
-                    "last", new Float(151.752485).doubleValue()
+                    "first", 1004.940887F,
+                    "last", 151.752485F
                 )
             )
         ),
@@ -2103,8 +2103,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
             DateTimes.of("2011-02-01"),
             new TimeseriesResultValue(
                 ImmutableMap.of(
-                    "first", new Float(913.561076).doubleValue(),
-                    "last", new Float(122.258195).doubleValue()
+                    "first", 913.561076F,
+                    "last", 122.258195F
                 )
             )
         ),
@@ -2112,8 +2112,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
             DateTimes.of("2011-01-01"),
             new TimeseriesResultValue(
                 ImmutableMap.of(
-                    "first", new Float(800.000000).doubleValue(),
-                    "last", new Float(133.740047).doubleValue()
+                    "first", 800.000000F,
+                    "last", 133.740047F
                 )
             )
         )
