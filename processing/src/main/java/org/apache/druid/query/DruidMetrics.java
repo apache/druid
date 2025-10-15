@@ -95,7 +95,7 @@ public class DruidMetrics
    * Computes the HTTP status code based on the query error (if any) for tagged metric emission.
    * <ul>
    *   <li>If error is null: returns 200 (success)</li>
-   *   <li>If error is a DruidException: returns the category's expected HTTP status</li>
+   *   <li>If error is a {@link DruidException} or {@link QueryException}: returns the corresponding status code</li>
    *   <li>Otherwise (unclassified error): returns 500 (internal server error)</li>
    * </ul>
    *
