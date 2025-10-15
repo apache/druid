@@ -1,6 +1,6 @@
 {
   "name": "web-console",
-  "version": "35.0.0",
+  "version": "36.0.0",
   "description": "A web console for Apache Druid",
   "author": "Apache Druid Developers <dev@druid.apache.org>",
   "license": "Apache-2.0",
@@ -72,6 +72,7 @@
     "d3-shape": "^3.2.0",
     "d3-time-format": "^4.1.0",
     "date-fns": "^2.28.0",
+    "dayjs": "^1.11.15",
     "druid-query-toolkit": "^1.2.0",
     "echarts": "^5.5.1",
     "file-saver": "^2.0.5",

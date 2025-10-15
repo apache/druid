@@ -27,8 +27,9 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.segment.data.VByte;
+import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.file.SegmentFileChannel;
 
 import java.io.File;
 import java.io.IOException;
@@ -61,10 +62,17 @@ public class ColumnSerializerUtils
     SMILE_MAPPER = mapper;
   }
 
-  public static void writeInternal(FileSmoosher smoosher, Serializer serializer, String columnName, String fileName)
-      throws IOException
+  public static void writeInternal(
+      SegmentFileBuilder fileBuilder,
+      Serializer serializer,
+      String columnName,
+      String fileName
+  ) throws IOException
   {
-    smoosher.serializeAs(getInternalFileName(columnName, fileName), serializer);
+    final String name = getInternalFileName(columnName, fileName);
+    try (SegmentFileChannel channel = fileBuilder.addWithChannel(name, serializer.getSerializedSize())) {
+      serializer.writeTo(channel, fileBuilder);
+    }
   }
 
   public static String getInternalFileName(String fileNameBase, String field)
@@ -96,7 +104,7 @@ public class ColumnSerializerUtils
   {
     try (
         final FileSmoosher smoosher = new FileSmoosher(smooshFile);
-        final SmooshedWriter smooshedWriter = smoosher.addWithSmooshedWriter(
+        final SegmentFileChannel smooshedWriter = smoosher.addWithChannel(
             name,
             writer.getSerializedSize()
         )

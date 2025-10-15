@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>35.0.0-SNAPSHOT</version>
+    <version>36.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -267,8 +267,6 @@
         <module>distribution</module>
         <!-- Revised integration tests -->
         <module>integration-tests-ex/tools</module>
-        <module>integration-tests-ex/image</module>
-        <module>integration-tests-ex/cases</module>
         <module>quidem-ut</module>
         <module>embedded-tests</module>
     </modules>
@@ -1960,7 +1958,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-shade-plugin</artifactId>
-                    <version>3.5.0</version>
+                    <version>3.6.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.scala-tools</groupId>

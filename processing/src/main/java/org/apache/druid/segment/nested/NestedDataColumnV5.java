@@ -21,7 +21,6 @@ package org.apache.druid.segment.nested;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -29,8 +28,10 @@ import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.List;
@@ -51,7 +52,7 @@ public class NestedDataColumnV5<TKeyDictionary extends Indexed<ByteBuffer>, TStr
       String columnName,
       ColumnType logicalType,
       ColumnConfig columnConfig,
-      CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
+      @Nullable CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
       ImmutableBitmap nullValues,
       Supplier<TKeyDictionary> fields,
       FieldTypeInfo fieldInfo,
@@ -59,7 +60,7 @@ public class NestedDataColumnV5<TKeyDictionary extends Indexed<ByteBuffer>, TStr
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
       Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
-      SmooshedFileMapper fileMapper,
+      SegmentFileMapper fileMapper,
       BitmapSerdeFactory bitmapSerdeFactory,
       ByteOrder byteOrder
   )

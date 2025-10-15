@@ -256,8 +256,5 @@
   "sys/tcpv4/in/errs" : { "dimensions" : [], "type" : "gauge", "help": "Errors while reading segments"},
   "sys/tcpv4/out/segs" : { "dimensions" : [], "type" : "gauge", "help": "Total segments sent"},
   "sys/tcpv4/out/rsts" : { "dimensions" : [], "type" : "gauge", "help": "Total out reset packets sent to reset the connection"},
-  "sys/tcpv4/retrans/segs" : { "dimensions" : [], "type" : "gauge", "help": "Total segments re-transmitted"},
-
-  "coordinator_segment/count" : { "dimensions" : ["dataSource"], "type" : "gauge", "help": "Number of served segments."},
-  "historical_segment/count" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge", "help": "Number of served segments."}
+  "sys/tcpv4/retrans/segs" : { "dimensions" : [], "type" : "gauge", "help": "Total segments re-transmitted"}
 }

@@ -1182,7 +1182,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         </p>
         <p>
           For more information please refer to the{' '}
-          <ExternalLink href={`${getLink('DOCS')}/operations/including-extensions`}>
+          <ExternalLink href={`${getLink('DOCS')}/configuration/extensions#loading-extensions`}>
             documentation on loading extensions
           </ExternalLink>
           .
