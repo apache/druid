@@ -51,6 +51,7 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
@@ -719,10 +720,14 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     }
     catch (NullPointerException ignored) {
     }
-    // Assert.assertEquals("query/time", stubServiceEmitter.getEvents().get(0).toMap().get("metric"));
     stubServiceEmitter.verifyEmitted("query/time", 1);
     if (!isJDBCSql) {
       Assert.assertEquals("dummy", stubServiceEmitter.getEvents().get(0).toMap().get("id"));
+    }
+    if (isFailure) {
+      Assert.assertEquals(500, stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.CODE));
+    } else {
+      Assert.assertEquals(200, stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.CODE));
     }
 
     // This test is mostly about verifying that the servlet calls the right methods the right number of times.

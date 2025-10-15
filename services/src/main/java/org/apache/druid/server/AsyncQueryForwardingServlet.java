@@ -766,7 +766,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       } else {
         failedQueryCount.incrementAndGet();
       }
-      emitQueryTime(requestTimeNs, success, sqlQueryId, queryId);
+      emitQueryTime(requestTimeNs, success, sqlQueryId, queryId, result.getFailure());
 
       AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
@@ -853,7 +853,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       }
 
       failedQueryCount.incrementAndGet();
-      emitQueryTime(requestTimeNs, false, sqlQueryId, queryId);
+      emitQueryTime(requestTimeNs, false, sqlQueryId, queryId, failure);
       AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
       //noinspection VariableNotUsedInsideIf
@@ -929,7 +929,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         long requestTimeNs,
         boolean success,
         @Nullable String sqlQueryId,
-        @Nullable String queryId
+        @Nullable String queryId,
+        Throwable queryException
     )
     {
       QueryMetrics queryMetrics;
@@ -950,6 +951,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         );
       }
       queryMetrics.success(success);
+      queryMetrics.code(queryException);
       queryMetrics.reportQueryTime(requestTimeNs).emit(emitter);
     }
   }
