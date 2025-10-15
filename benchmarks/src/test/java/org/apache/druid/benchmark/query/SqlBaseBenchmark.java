@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.multibindings.MapBinder;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameSegment;
@@ -61,6 +62,7 @@ import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchEsti
 import org.apache.druid.query.aggregation.datasketches.tuple.ArrayOfDoublesSketchModule;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.PhysicalSegmentInspector;
@@ -112,6 +114,7 @@ import org.openjdk.jmh.annotations.TearDown;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -184,7 +187,7 @@ public class SqlBaseBenchmark
       "NONE",
       "SMILE"
   })
-  protected ObjectStorageEncoding objectStorageEncoding;
+  protected ObjectStorageEncoding jsonObjectStorageEncoding;
 
   @Param({
       "explicit",
@@ -247,17 +250,14 @@ public class SqlBaseBenchmark
 
     Map<DataSegment, IncrementalIndex> realtimeSegments = new HashMap<>();
     Map<DataSegment, QueryableIndex> segments = new HashMap<>();
+    NestedCommonFormatColumnFormatSpec columnFormatSpec = NestedCommonFormatColumnFormatSpec
+        .builder()
+        .setObjectStorageEncoding(jsonObjectStorageEncoding)
+        .build();
     for (String dataSource : getDatasources()) {
-      final SqlBenchmarkDatasets.BenchmarkSchema schema;
-      if ("auto".equals(schemaType)) {
-        schema = SqlBenchmarkDatasets
-            .getSchema(dataSource)
-            .asAutoDimensions(NestedCommonFormatColumnFormatSpec.builder()
-                                                                .setObjectStorageEncoding(objectStorageEncoding)
-                                                                .build());
-      } else {
-        schema = SqlBenchmarkDatasets.getSchema(dataSource);
-      }
+      final SqlBenchmarkDatasets.BenchmarkSchema schema =
+          SqlBenchmarkDatasets.getSchema(dataSource)
+                              .convertDimensions("auto".equals(schemaType), columnFormatSpec);
 
       for (DataSegment dataSegment : schema.getDataSegments()) {
         final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
@@ -368,10 +368,17 @@ public class SqlBaseBenchmark
 
   private void checkIncompatibleParameters()
   {
-    // we only support NONE object storage encoding for auto schema with mmap segments
-    if (ObjectStorageEncoding.NONE.equals(objectStorageEncoding) && !("auto".equals(schemaType)
-                                                                      && BenchmarkStorage.MMAP.equals(storageType))) {
-      System.exit(0);
+    // we only support NONE object storage encoding for auto column with mmap segments
+    if (ObjectStorageEncoding.NONE.equals(jsonObjectStorageEncoding)) {
+      boolean hasAutoColumn = "auto".equals(schemaType) || getDatasources().stream()
+                                                                           .map(SqlBenchmarkDatasets::getSchema)
+                                                                           .map(SqlBenchmarkDatasets.BenchmarkSchema::getDimensionsSpec)
+                                                                           .map(DimensionsSpec::getDimensions)
+                                                                           .flatMap(Collection::stream)
+                                                                           .anyMatch(x -> x instanceof AutoTypeColumnSchema);
+      if (!hasAutoColumn || !BenchmarkStorage.MMAP.equals(storageType)) {
+        System.exit(0);
+      }
     }
     // if running as fork 0, maybe don't use these combinations since it will kill everything
     if (stringEncoding != BenchmarkStringEncodingStrategy.UTF8 && storageType != BenchmarkStorage.MMAP) {

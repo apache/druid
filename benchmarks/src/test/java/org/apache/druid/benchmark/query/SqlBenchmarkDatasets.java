@@ -22,6 +22,7 @@ package org.apache.druid.benchmark.query;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -406,7 +407,7 @@ public class SqlBenchmarkDatasets
       return projections;
     }
 
-    public BenchmarkSchema asAutoDimensions(NestedCommonFormatColumnFormatSpec columnFormatSpec)
+    public BenchmarkSchema convertDimensions(boolean convertToAuto, NestedCommonFormatColumnFormatSpec columnFormatSpec)
     {
       return new SqlBenchmarkDatasets.BenchmarkSchema(
           dataSegments,
@@ -415,7 +416,7 @@ public class SqlBenchmarkDatasets
           dimensionsSpec.withDimensions(
               dimensionsSpec.getDimensions()
                             .stream()
-                            .map(dim -> new AutoTypeColumnSchema(dim.getName(), null, columnFormatSpec))
+                            .map(dim -> asDimensionSchema(dim, convertToAuto, columnFormatSpec))
                             .collect(Collectors.toList())
           ),
           aggregators,
@@ -428,13 +429,21 @@ public class SqlBenchmarkDatasets
                           .groupingColumns(
                               projection.getGroupingColumns()
                                         .stream()
-                                        .map(dim -> new AutoTypeColumnSchema(dim.getName(), null, columnFormatSpec))
+                                        .map(dim -> asDimensionSchema(dim, convertToAuto, columnFormatSpec))
                                         .collect(Collectors.toList())
                           )
                           .build()
               ).collect(Collectors.toList()),
           queryGranularity
       );
+    }
+
+    private static DimensionSchema asDimensionSchema(DimensionSchema dim, boolean convertToAuto, NestedCommonFormatColumnFormatSpec columnFormatSpec)
+    {
+      if (convertToAuto || dim instanceof AutoTypeColumnSchema) {
+        return new AutoTypeColumnSchema(dim.getName(), null, columnFormatSpec);
+      }
+      return dim;
     }
   }
 }
