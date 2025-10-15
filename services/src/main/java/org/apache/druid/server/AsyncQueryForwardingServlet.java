@@ -760,13 +760,17 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         return;
       }
 
-      boolean success = result.isSucceeded();
+      final int statusCode = result.getResponse().getStatus();
+      boolean success = result.isSucceeded() && statusCode == Status.OK.getStatusCode();
       if (success) {
         successfulQueryCount.incrementAndGet();
       } else {
         failedQueryCount.incrementAndGet();
       }
-      emitQueryTime(requestTimeNs, success, sqlQueryId, queryId, result.getFailure());
+
+      // As router is simply a proxy, we don't make an effort to construct the error code from the exception ourselves.
+      // We rely on broker to set this for us if the error occurs downstream.
+      emitQueryTime(requestTimeNs, success, sqlQueryId, queryId, statusCode);
 
       AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
@@ -786,8 +790,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                             "query/time",
                             TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
                             "success",
-                            success
-                            && result.getResponse().getStatus() == Status.OK.getStatusCode(),
+                            success,
                             "identity",
                             authenticationResult.getIdentity()
                         )
@@ -853,7 +856,10 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       }
 
       failedQueryCount.incrementAndGet();
-      emitQueryTime(requestTimeNs, false, sqlQueryId, queryId, failure);
+
+      // As router is simply a proxy, we don't make an effort to construct the error code from the exception ourselves.
+      // We rely on broker to set this for us if the error occurs downstream.
+      emitQueryTime(requestTimeNs, false, sqlQueryId, queryId, response.getStatus());
       AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
       //noinspection VariableNotUsedInsideIf
@@ -930,7 +936,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         boolean success,
         @Nullable String sqlQueryId,
         @Nullable String queryId,
-        Throwable queryException
+        int statusCode
     )
     {
       QueryMetrics queryMetrics;
@@ -951,7 +957,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         );
       }
       queryMetrics.success(success);
-      queryMetrics.code(queryException);
+      queryMetrics.statusCode(statusCode);
       queryMetrics.reportQueryTime(requestTimeNs).emit(emitter);
     }
   }

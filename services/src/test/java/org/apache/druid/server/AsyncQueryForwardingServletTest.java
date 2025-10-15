@@ -646,7 +646,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       @Override
       public int getStatus()
       {
-        return 0;
+        return isFailure ? 500 : 200;
       }
 
       @Override
@@ -725,9 +725,9 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       Assert.assertEquals("dummy", stubServiceEmitter.getEvents().get(0).toMap().get("id"));
     }
     if (isFailure) {
-      Assert.assertEquals(500, stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.CODE));
+      Assert.assertEquals(500, stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
     } else {
-      Assert.assertEquals(200, stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.CODE));
+      Assert.assertEquals(200, stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
     }
 
     // This test is mostly about verifying that the servlet calls the right methods the right number of times.
