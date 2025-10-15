@@ -267,7 +267,8 @@
                 <configuration>
                     <usedDependencies>
                         <!-- These are needed for scope: compile -->
-                        <dependency>org.apache.ranger:ranger-plugins-audit</dependency>
+                        <dependency>org.apache.ranger:ranger-audit-dest-es</dependency>
+                        <dependency>org.apache.ranger:ranger-audit-dest-hdfs</dependency>
                     </usedDependencies>
                     <!-- this is due to replacement of aws-bundle-sdk with aws-logs-sdk  -->
                     <ignoredDependencies>
