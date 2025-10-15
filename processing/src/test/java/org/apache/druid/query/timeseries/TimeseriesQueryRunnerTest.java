@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.primitives.Doubles;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
@@ -261,20 +260,19 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
       if (!QueryRunnerTestHelper.SKIPPED_DAY.equals(current)) {
         Assert.assertEquals(
             result.toString(),
-            Doubles.tryParse(expectedIndex[count]).doubleValue(),
-            value.getDoubleMetric("index").doubleValue(),
-            value.getDoubleMetric("index").doubleValue() * 1e-6
+            Double.parseDouble(expectedIndex[count]),
+            value.getDoubleMetric("index"),
+            value.getDoubleMetric("index") * 1e-6
         );
         Assert.assertEquals(
             result.toString(),
-            Double.parseDouble(expectedIndex[count]) +
-            13L + 1L,
+            Double.parseDouble(expectedIndex[count]) + 13L + 1L,
             value.getDoubleMetric("addRowsIndexConstant"),
             value.getDoubleMetric("addRowsIndexConstant") * 1e-6
         );
         Assert.assertEquals(
-            value.getDoubleMetric("uniques"),
             9.0d,
+            value.getDoubleMetric("uniques"),
             0.02
         );
       } else {
@@ -287,8 +285,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
             value.getDoubleMetric("addRowsIndexConstant")
         );
         Assert.assertEquals(
-            value.getDoubleMetric("uniques"),
             0.0d,
+            value.getDoubleMetric("uniques"),
             0.02
         );
       }
@@ -1003,7 +1001,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
     final Iterable<Interval> iterable = Granularities.HOUR.getIterable(
         new Interval(DateTimes.of("2011-04-14T01"), DateTimes.of("2011-04-15"))
     );
-    Map noRowsResult = new HashMap<>();
+    Map<String, Object> noRowsResult = new HashMap<>();
     noRowsResult.put("rows", 0L);
     noRowsResult.put("idx", null);
     for (Interval interval : iterable) {
@@ -2763,13 +2761,13 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
 
       if (QueryRunnerTestHelper.SKIPPED_DAY.getMillis() != current) {
         Assert.assertEquals(
-            Doubles.tryParse(expectedIndexToUse[count]).doubleValue(),
+            Double.parseDouble(expectedIndexToUse[count]),
             (Double) result[3],
             (Double) result[3] * 1e-6
         );
         Assert.assertEquals(
-            (Double) result[4],
             9.0d,
+            (Double) result[4],
             0.02
         );
         Assert.assertEquals(
@@ -2782,8 +2780,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
             result[3]
         );
         Assert.assertEquals(
-            (Double) result[4],
             0.0,
+            (Double) result[4],
             0.02
         );
         Assert.assertNull(
@@ -2863,9 +2861,9 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
       if (!QueryRunnerTestHelper.SKIPPED_DAY.equals(current)) {
         Assert.assertEquals(
             result.toString(),
-            Doubles.tryParse(expectedIndexToUse[count]).doubleValue(),
-            value.getDoubleMetric("index").doubleValue(),
-            value.getDoubleMetric("index").doubleValue() * 1e-6
+            Double.parseDouble(expectedIndexToUse[count]),
+            value.getDoubleMetric("index"),
+            value.getDoubleMetric("index") * 1e-6
         );
         Assert.assertEquals(
             result.toString(),
@@ -2875,8 +2873,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
             value.getDoubleMetric("addRowsIndexConstant") * 1e-6
         );
         Assert.assertEquals(
-            value.getDoubleMetric("uniques"),
             9.0d,
+            value.getDoubleMetric("uniques"),
             0.02
         );
       } else {
@@ -2889,8 +2887,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
             value.getDoubleMetric("addRowsIndexConstant")
         );
         Assert.assertEquals(
-            value.getDoubleMetric("uniques"),
             0.0d,
+            value.getDoubleMetric("uniques"),
             0.02
         );
       }
