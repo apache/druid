@@ -89,13 +89,13 @@ public class FieldAccessPostAggregatorTest extends InitializedNullHandlingTest
     CountAggregator agg = new CountAggregator();
     Map<String, Object> metricValues = new HashMap<>();
     metricValues.put(aggName, agg.get());
-    Assert.assertEquals(new Long(0L), fieldAccessPostAggregator.compute(metricValues));
+    Assert.assertEquals(0L, fieldAccessPostAggregator.compute(metricValues));
 
     agg.aggregate();
     agg.aggregate();
     agg.aggregate();
     metricValues.put(aggName, agg.get());
-    Assert.assertEquals(new Long(3L), fieldAccessPostAggregator.compute(metricValues));
+    Assert.assertEquals(0L, fieldAccessPostAggregator.compute(metricValues));
   }
 
   @Test

@@ -267,7 +267,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
         );
         Assert.assertEquals(
             result.toString(),
-            new Double(expectedIndex[count]) +
+            Double.parseDouble(expectedIndex[count]) +
             13L + 1L,
             value.getDoubleMetric("addRowsIndexConstant"),
             value.getDoubleMetric("addRowsIndexConstant") * 1e-6
@@ -2773,7 +2773,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
             0.02
         );
         Assert.assertEquals(
-            new Double(expectedIndexToUse[count]) + 13L + 1L,
+            Double.parseDouble(expectedIndexToUse[count]) + 13L + 1L,
             (Double) result[5],
             (Double) result[5] * 1e-6
         );
@@ -2869,7 +2869,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
         );
         Assert.assertEquals(
             result.toString(),
-            new Double(expectedIndexToUse[count]) +
+            Double.parseDouble(expectedIndexToUse[count]) +
             13L + 1L,
             value.getDoubleMetric("addRowsIndexConstant"),
             value.getDoubleMetric("addRowsIndexConstant") * 1e-6
