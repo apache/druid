@@ -98,7 +98,7 @@ class TaskDataSegmentProviderTest extends InitializedNullHandlingTest
   public static void setupStatic(@TempDir Path tempDir) throws IOException
   {
     File segDir = tempDir.resolve("segment").toFile();
-    File segmentFile = TestIndex.persist(TestIndex.getIncrementalTestIndex(), IndexSpec.DEFAULT, segDir);
+    File segmentFile = TestIndex.persist(TestIndex.getIncrementalTestIndex(), IndexSpec.getDefault(), segDir);
     File zipPath = tempDir.resolve("zip").toFile();
     FileUtils.mkdirp(zipPath);
     SEGMENT_ZIP_FILE = new File(zipPath, "index.zip");

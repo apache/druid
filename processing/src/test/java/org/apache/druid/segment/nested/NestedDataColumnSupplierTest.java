@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.filter.SelectorPredicateFactory;
 import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
@@ -53,8 +52,13 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
+import org.apache.druid.segment.data.CompressionFactory;
+import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
@@ -74,6 +78,8 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -92,19 +98,14 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
+@RunWith(Parameterized.class)
 public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
 
   private static final String NO_MATCH = "no";
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
-
-  BitmapSerdeFactory bitmapSerdeFactory = RoaringBitmapSerdeFactory.getInstance();
-  DefaultBitmapResultFactory resultFactory = new DefaultBitmapResultFactory(bitmapSerdeFactory.getBitmapFactory());
-
-  List<Map<String, Object>> data = ImmutableList.of(
+  private static final List<Map<String, Object>> DATA = ImmutableList.of(
       TestHelper.makeMap("x", 1L, "y", 1.0, "z", "a", "v", "100", "nullish", "notnull"),
       TestHelper.makeMap("y", 3.0, "z", "d", "v", 1000L, "nullish", null),
       TestHelper.makeMap("x", 5L, "y", 5.0, "z", "b", "nullish", ""),
@@ -113,7 +114,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
       TestHelper.makeMap("x", 4L, "y", 2.0, "z", "e", "v", 11111L, "nullish", null)
   );
 
-  List<Map<String, Object>> arrayTestData = ImmutableList.of(
+  private static final List<Map<String, Object>> ARRAY_TEST_DATA = ImmutableList.of(
       TestHelper.makeMap("s", new Object[]{"a", "b", "c"}, "l", new Object[]{1L, 2L, 3L}, "d", new Object[]{1.1, 2.2}),
       TestHelper.makeMap(
           "s",
@@ -136,6 +137,56 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
       TestHelper.makeMap("l", new Object[]{1L, 2L, 3L}, "d", new Object[]{3.1, 2.2, 1.9})
   );
 
+  @BeforeClass
+  public static void staticSetup()
+  {
+    BuiltInTypesModule.registerHandlersAndSerde();
+  }
+
+  @Parameterized.Parameters(name = "data = {0}")
+  public static Collection<?> constructorFeeder()
+  {
+
+    NestedCommonFormatColumnFormatSpec defaultSpec = NestedCommonFormatColumnFormatSpec.builder().build();
+
+    NestedCommonFormatColumnFormatSpec frontCodedKeysAndDicts =
+        NestedCommonFormatColumnFormatSpec.builder()
+                                          .setObjectFieldsDictionaryEncoding(
+                                              new StringEncodingStrategy.FrontCoded(16, FrontCodedIndexed.V1)
+                                          )
+                                          .setStringDictionaryEncoding(
+                                              new StringEncodingStrategy.FrontCoded(16, FrontCodedIndexed.V1)
+                                          )
+                                          .build();
+
+    NestedCommonFormatColumnFormatSpec zstdRaw =
+        NestedCommonFormatColumnFormatSpec.builder()
+                                          .setObjectStorageCompression(CompressionStrategy.ZSTD)
+                                          .build();
+    NestedCommonFormatColumnFormatSpec lzf =
+        NestedCommonFormatColumnFormatSpec.builder()
+                                          .setDictionaryEncodedColumnCompression(CompressionStrategy.LZF)
+                                          .setLongColumnEncoding(CompressionFactory.LongEncodingStrategy.LONGS)
+                                          .setLongColumnCompression(CompressionStrategy.LZF)
+                                          .setDoubleColumnCompression(CompressionStrategy.LZF)
+                                          .build();
+
+    NestedCommonFormatColumnFormatSpec noRawStorage =
+        NestedCommonFormatColumnFormatSpec.builder().setObjectStorageEncoding(ObjectStorageEncoding.NONE).build();
+    final List<Object[]> constructors = ImmutableList.of(
+        new Object[]{defaultSpec},
+        new Object[]{frontCodedKeysAndDicts},
+        new Object[]{zstdRaw},
+        new Object[]{lzf},
+        new Object[]{noRawStorage}
+    );
+
+    return constructors;
+  }
+
+  @Rule
+  public final TemporaryFolder tempFolder = new TemporaryFolder();
+
   Closer closer = Closer.create();
 
   SmooshedFileMapper fileMapper;
@@ -146,10 +197,20 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
 
   ByteBuffer arrayBaseBuffer;
 
-  @BeforeClass
-  public static void staticSetup()
+  private final NestedCommonFormatColumnFormatSpec columnFormatSpec;
+  private final BitmapSerdeFactory bitmapSerdeFactory;
+  private final DefaultBitmapResultFactory resultFactory;
+
+  public NestedDataColumnSupplierTest(
+      NestedCommonFormatColumnFormatSpec columnFormatSpec
+  )
   {
-    BuiltInTypesModule.registerHandlersAndSerde();
+    this.columnFormatSpec = NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(
+        columnFormatSpec,
+        IndexSpec.getDefault().getEffectiveSpec()
+    );
+    this.bitmapSerdeFactory = this.columnFormatSpec.getBitmapEncoding();
+    this.resultFactory = new DefaultBitmapResultFactory(bitmapSerdeFactory.getBitmapFactory());
   }
 
   @Before
@@ -157,9 +218,9 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
   {
     final String fileNameBase = "test/column";
     final String arrayFileNameBase = "array";
-    fileMapper = smooshify(fileNameBase, tempFolder.newFolder(), data);
+    fileMapper = smooshify(fileNameBase, tempFolder.newFolder(), DATA);
     baseBuffer = fileMapper.mapFile(fileNameBase);
-    arrayFileMapper = smooshify(arrayFileNameBase, tempFolder.newFolder(), arrayTestData);
+    arrayFileMapper = smooshify(arrayFileNameBase, tempFolder.newFolder(), ARRAY_TEST_DATA);
     arrayBaseBuffer = arrayFileMapper.mapFile(arrayFileNameBase);
   }
 
@@ -174,12 +235,12 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     try (final FileSmoosher smoosher = new FileSmoosher(tmpFile)) {
       NestedDataColumnSerializer serializer = new NestedDataColumnSerializer(
           fileNameBase,
-          IndexSpec.DEFAULT,
+          columnFormatSpec,
           writeOutMediumFactory.makeSegmentWriteOutMedium(tempFolder.newFolder()),
           closer
       );
 
-      AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
+      AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null, null);
       for (Object o : data) {
         indexer.processRowValsToUnsortedEncodedKeyComponent(o, false);
       }
@@ -216,7 +277,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
         serializer.serialize(valueSelector);
       }
 
-      try (SmooshedWriter writer = smoosher.addWithSmooshedWriter(fileNameBase, serializer.getSerializedSize())) {
+      try (SegmentFileChannel writer = smoosher.addWithChannel(fileNameBase, serializer.getSerializedSize())) {
         serializer.writeTo(writer, smoosher);
       }
       smoosher.close();
@@ -240,7 +301,8 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
         false,
         false,
         ByteOrder.nativeOrder(),
-        RoaringBitmapSerdeFactory.getInstance()
+        RoaringBitmapSerdeFactory.getInstance(),
+        NestedCommonFormatColumnPartSerde.FormatSpec.forSerde(columnFormatSpec)
     );
     bob.setFileMapper(fileMapper);
     ColumnPartSerde.Deserializer deserializer = partSerde.getDeserializer();
@@ -264,7 +326,8 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
         false,
         false,
         ByteOrder.nativeOrder(),
-        RoaringBitmapSerdeFactory.getInstance()
+        RoaringBitmapSerdeFactory.getInstance(),
+        NestedCommonFormatColumnPartSerde.FormatSpec.forSerde(columnFormatSpec)
     );
     bob.setFileMapper(arrayFileMapper);
     ColumnPartSerde.Deserializer deserializer = partSerde.getDeserializer();
@@ -332,7 +395,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
 
   private void smokeTest(NestedDataComplexColumn column) throws IOException
   {
-    SimpleAscendingOffset offset = new SimpleAscendingOffset(data.size());
+    SimpleAscendingOffset offset = new SimpleAscendingOffset(DATA.size());
     ColumnValueSelector<?> rawSelector = column.makeColumnValueSelector(offset);
 
     final List<NestedPathPart> xPath = NestedPathFinder.parseJsonPath("$.x");
@@ -395,11 +458,22 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(ImmutableList.of(nullishPath, vPath, xPath, yPath, zPath), column.getNestedFields());
 
-    for (int i = 0; i < data.size(); i++) {
-      Map row = data.get(i);
+    for (int i = 0; i < DATA.size(); i++) {
+      final Map<String, Object> row;
+      if (ObjectStorageEncoding.NONE.equals(columnFormatSpec.getObjectStorageEncoding())) {
+        // if raw object is not stored, the derived object will have sorted key and no nulls
+        row = new TreeMap<>(DATA.get(i));
+        row.entrySet().removeIf(entry -> entry.getValue() == null);
+      } else {
+        row = DATA.get(i);
+      }
       Assert.assertEquals(
           JSON_MAPPER.writeValueAsString(row),
           JSON_MAPPER.writeValueAsString(StructuredData.unwrap(rawSelector.getObject()))
+      );
+      Assert.assertEquals(
+          JSON_MAPPER.writeValueAsString(row),
+          JSON_MAPPER.writeValueAsString(StructuredData.unwrap(column.getRowValue(i)))
       );
 
       testPath(row, i, "v", vSelector, vDimSelector, vValueIndex, vPredicateIndex, vNulls, null);
@@ -424,10 +498,10 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
 
   private void smokeTestArrays(NestedDataComplexColumn column) throws IOException
   {
-    SimpleAscendingOffset offset = new SimpleAscendingOffset(arrayTestData.size());
-    NoFilterVectorOffset vectorOffset = new NoFilterVectorOffset(4, 0, arrayTestData.size());
+    SimpleAscendingOffset offset = new SimpleAscendingOffset(ARRAY_TEST_DATA.size());
+    NoFilterVectorOffset vectorOffset = new NoFilterVectorOffset(4, 0, ARRAY_TEST_DATA.size());
     WrappedRoaringBitmap bitmap = new WrappedRoaringBitmap();
-    for (int i = 0; i < arrayTestData.size(); i++) {
+    for (int i = 0; i < ARRAY_TEST_DATA.size(); i++) {
       if (i % 2 == 0) {
         bitmap.add(i);
       }
@@ -436,7 +510,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
         4,
         bitmap.toImmutableBitmap(),
         0,
-        arrayTestData.size()
+        ARRAY_TEST_DATA.size()
     );
 
     ColumnValueSelector<?> rawSelector = column.makeColumnValueSelector(offset);
@@ -535,10 +609,21 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
 
     int rowCounter = 0;
     while (offset.withinBounds()) {
-      Map row = arrayTestData.get(rowCounter);
+      final Map<String, Object> row;
+      if (ObjectStorageEncoding.NONE.equals(columnFormatSpec.getObjectStorageEncoding())) {
+        // if raw object is not stored, the derived object will have sorted key and no nulls
+        row = new TreeMap<>(ARRAY_TEST_DATA.get(rowCounter));
+        row.entrySet().removeIf(entry -> entry.getValue() == null);
+      } else {
+        row = ARRAY_TEST_DATA.get(rowCounter);
+      }
       Assert.assertEquals(
           JSON_MAPPER.writeValueAsString(row),
           JSON_MAPPER.writeValueAsString(StructuredData.unwrap(rawSelector.getObject()))
+      );
+      Assert.assertEquals(
+          JSON_MAPPER.writeValueAsString(row),
+          JSON_MAPPER.writeValueAsString(StructuredData.unwrap(column.getRowValue(rowCounter)))
       );
 
       Object[] s = (Object[]) row.get("s");
@@ -591,7 +676,14 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
 
       for (int i = 0; i < vectorOffset.getCurrentVectorSize(); i++, rowCounter++) {
 
-        Map row = arrayTestData.get(rowCounter);
+        final Map<String, Object> row;
+        if (ObjectStorageEncoding.NONE.equals(columnFormatSpec.getObjectStorageEncoding())) {
+          // if raw object is not stored, the derived object will have sorted key and no nulls
+          row = new TreeMap<>(ARRAY_TEST_DATA.get(rowCounter));
+          row.entrySet().removeIf(entry -> entry.getValue() == null);
+        } else {
+          row = ARRAY_TEST_DATA.get(rowCounter);
+        }
         Assert.assertEquals(
             JSON_MAPPER.writeValueAsString(row),
             JSON_MAPPER.writeValueAsString(StructuredData.unwrap(rawVector[i]))
@@ -640,7 +732,14 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
       final boolean[] dElementNulls = dElementFilteredVectorSelector.getNullVector();
 
       for (int i = 0; i < bitmapVectorOffset.getCurrentVectorSize(); i++, rowCounter += 2) {
-        Map row = arrayTestData.get(rowCounter);
+        final Map<String, Object> row;
+        if (ObjectStorageEncoding.NONE.equals(columnFormatSpec.getObjectStorageEncoding())) {
+          // if raw object is not stored, the derived object will have sorted key and no nulls
+          row = new TreeMap<>(ARRAY_TEST_DATA.get(rowCounter));
+          row.entrySet().removeIf(entry -> entry.getValue() == null);
+        } else {
+          row = ARRAY_TEST_DATA.get(rowCounter);
+        }
         Assert.assertEquals(
             JSON_MAPPER.writeValueAsString(row),
             JSON_MAPPER.writeValueAsString(StructuredData.unwrap(rawVector[i]))

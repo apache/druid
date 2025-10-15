@@ -86,7 +86,7 @@ public class PrometheusEmitterConfig
       @JsonProperty("pushGatewayAddress") @Nullable String pushGatewayAddress,
       @JsonProperty("addHostAsLabel") boolean addHostAsLabel,
       @JsonProperty("addServiceAsLabel") boolean addServiceAsLabel,
-      @JsonProperty("flushPeriod") Integer flushPeriod,
+      @JsonProperty("flushPeriod") @Nullable Integer flushPeriod,
       @JsonProperty("extraLabels") @Nullable Map<String, String> extraLabels,
       @JsonProperty("deletePushGatewayMetricsOnShutdown") @Nullable Boolean deletePushGatewayMetricsOnShutdown,
       @JsonProperty("waitForShutdownDelay") @Nullable Long waitForShutdownDelay
@@ -99,11 +99,20 @@ public class PrometheusEmitterConfig
       Preconditions.checkArgument(port != null, "For `exporter` strategy, port must be specified.");
     } else if (this.strategy == Strategy.pushgateway) {
       Preconditions.checkArgument(pushGatewayAddress != null, "For `pushgateway` strategy, pushGatewayAddress must be specified.");
-      if (Objects.nonNull(flushPeriod)) {
-        Preconditions.checkArgument(flushPeriod > 0, "flushPeriod must be greater than 0.");
-      } else {
-        flushPeriod = 15;
+    }
+    if (Objects.nonNull(flushPeriod)) {
+      if (flushPeriod <= 0) {
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build(
+                                StringUtils.format(
+                                    "Invalid value for flushPeriod[%s] specified, flushPeriod must be > 0.",
+                                    flushPeriod
+                                )
+                            );
       }
+    } else if (this.strategy == Strategy.pushgateway) {
+      flushPeriod = 15;
     }
     this.dimensionMapPath = dimensionMapPath;
     this.port = port;

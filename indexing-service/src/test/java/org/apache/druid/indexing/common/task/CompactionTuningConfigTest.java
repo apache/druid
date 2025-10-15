@@ -93,7 +93,7 @@ public class CompactionTuningConfigTest
     EqualsVerifier.forClass(CompactionTask.CompactionTuningConfig.class)
                   .withPrefabValues(
                       IndexSpec.class,
-                      IndexSpec.DEFAULT,
+                      IndexSpec.getDefault(),
                       IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build()
                   )
                   .usingGetClass()
