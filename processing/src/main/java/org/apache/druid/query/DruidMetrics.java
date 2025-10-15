@@ -109,6 +109,8 @@ public class DruidMetrics
     }
     if (error instanceof DruidException) {
       return ((DruidException) error).getCategory().getExpectedStatus();
+    } else if (error instanceof QueryException) {
+      return ((QueryException) error).getFailType().getExpectedStatus();
     }
     // Unclassified errors default to 500 (defensive)
     return DruidException.Category.DEFENSIVE.getExpectedStatus();
