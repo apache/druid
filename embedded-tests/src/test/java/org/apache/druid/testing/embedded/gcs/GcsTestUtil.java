@@ -55,7 +55,7 @@ public class GcsTestUtil
 
   public void uploadFileToGcs(String filePath, String contentType) throws IOException
   {
-    LOG.info("Uploading file %s at path %s in bucket %s", filePath, pathPrefix, bucket);
+    LOG.info("Uploading file[%s] at path[%s] in bucket[%s].", filePath, pathPrefix, bucket);
     File file = Resources.getFileForResource(filePath);
     googleStorageClient.insert(
         bucket,
@@ -67,13 +67,13 @@ public class GcsTestUtil
 
   public void deleteFileFromGcs(String gcsObjectName)
   {
-    LOG.info("Deleting object %s at path %s in bucket %s", gcsObjectName, pathPrefix, bucket);
+    LOG.info("Deleting object[%s] at path[%s] in bucket[%s].", gcsObjectName, pathPrefix, bucket);
     googleStorageClient.delete(bucket, pathPrefix + "/" + gcsObjectName);
   }
 
   public void deletePrefixFolderFromGcs(String datasource) throws Exception
   {
-    LOG.info("Deleting path %s in bucket %s", pathPrefix, bucket);
+    LOG.info("Deleting path[%s] in bucket[%s].", pathPrefix, bucket);
     GoogleUtils.deleteObjectsInPath(
         googleStorageClient,
         new GoogleInputDataConfig(),

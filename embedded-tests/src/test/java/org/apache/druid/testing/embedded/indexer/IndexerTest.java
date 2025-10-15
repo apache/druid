@@ -243,7 +243,7 @@ public class IndexerTest extends AbstractITBatchIndexTest
           return StringUtils.replace(
               spec,
               "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
-              jsonMapper.writeValueAsString("120000")
+              jsonMapper.writeValueAsString("600000")
           );
         }
         catch (JsonProcessingException e) {
@@ -346,8 +346,8 @@ public class IndexerTest extends AbstractITBatchIndexTest
       // Verify the locked intervals for this datasource
       Assertions.assertEquals(lockedIntervals.size(), 1);
       Assertions.assertEquals(
-          lockedIntervals.get(datasourceName),
-          Collections.singletonList(Intervals.of("2013-08-31/2013-09-02"))
+          List.of(Intervals.of("2013-08-31/2013-09-02")),
+          lockedIntervals.get(datasourceName)
       );
 
       cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);

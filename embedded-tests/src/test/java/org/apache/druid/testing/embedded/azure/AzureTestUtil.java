@@ -63,7 +63,7 @@ public class AzureTestUtil
     // All other operations, including operations on any blobs under the container,
     // fail with status code 404 (Not Found) while the container is being deleted.
     ITRetryUtil.retryUntil(
-        () -> container.createIfNotExists(),
+        container::createIfNotExists,
         true,
         10000,
         13,
