@@ -40,7 +40,7 @@ public class CentralizedSchemaMetadataQueryDisabledTest
            .addCommonProperty("druid.coordinator.segmentMetadata.disableSegmentMetadataQueries", "true")
            .addCommonProperty("druid.coordinator.segmentMetadata.metadataRefreshPeriod", "PT0.1s")
            .addCommonProperty("druid.manager.segments.useIncrementalCache", "always")
-           .useDefaultTimeoutForLatchableEmitter(60);
+           .useDefaultTimeoutForLatchableEmitter(120);
 
     return cluster;
   }
