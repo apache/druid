@@ -81,7 +81,7 @@ public class DiscoveryDruidNode
       DateTime startTime
   )
   {
-    this(druidNode, nodeRole, services, startTime, JvmUtils.getRuntimeInfo().getAvailableProcessors(), JvmUtils.getTotalMemory());
+    this(druidNode, nodeRole, services, startTime, Runtime.getRuntime().availableProcessors(), JvmUtils.getTotalMemory());
   }
 
   public DiscoveryDruidNode(
@@ -90,7 +90,7 @@ public class DiscoveryDruidNode
       Map<String, DruidService> services
   )
   {
-    this(druidNode, nodeRole, services, DateTimes.nowUtc(), JvmUtils.getRuntimeInfo().getAvailableProcessors(), JvmUtils.getTotalMemory());
+    this(druidNode, nodeRole, services, DateTimes.nowUtc(), Runtime.getRuntime().availableProcessors(), JvmUtils.getTotalMemory());
   }
 
   public DiscoveryDruidNode(

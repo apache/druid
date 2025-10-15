@@ -382,7 +382,7 @@ public class SystemSchemaTest extends CalciteTestBase
   final List<DataSegment> realtimeSegments = ImmutableList.of(segment2, segment4, segment5);
 
   private final DateTime startTime = DateTimes.nowUtc();
-  private final long availableProcessors = JvmUtils.getRuntimeInfo().getAvailableProcessors();
+  private final long availableProcessors = Runtime.getRuntime().availableProcessors();
   private final long totalMemory = JvmUtils.getTotalMemory();
 
   private final String version = GuavaUtils.firstNonNull(
