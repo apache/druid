@@ -260,6 +260,7 @@
     <cve>CVE-2022-41881</cve>
     <cve>CVE-2023-34462</cve>	<!-- Suppressed since netty requests in Druid are internal, and not user-facing -->
     <cve>CVE-2025-55163</cve> <!-- Netty 3.x not affected; HTTP/2 issues only in 4.x -->
+    <cve>CVE-2025-58056</cve>
     <cve>CVE-2025-58057</cve> <!-- Netty 3.x not affected; compression issue only in 4.x -->
   </suppress>
 
