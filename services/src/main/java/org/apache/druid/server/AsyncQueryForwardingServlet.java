@@ -817,8 +817,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                         "query/time",
                         TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
                         "success",
-                        success
-                        && result.getResponse().getStatus() == Status.OK.getStatusCode(),
+                        success,
                         "identity",
                         authenticationResult.getIdentity()
                     )
