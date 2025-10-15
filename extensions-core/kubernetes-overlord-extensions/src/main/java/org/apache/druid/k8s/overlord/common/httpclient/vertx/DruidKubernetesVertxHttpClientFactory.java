@@ -17,30 +17,31 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord.common;
+package org.apache.druid.k8s.overlord.common.httpclient.vertx;
 
-import io.fabric8.kubernetes.client.http.HttpClient;
 import io.fabric8.kubernetes.client.vertx.VertxHttpClientBuilder;
 import io.fabric8.kubernetes.client.vertx.VertxHttpClientFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.file.FileSystemOptions;
 import io.vertx.core.spi.resolver.ResolverProvider;
+import org.apache.druid.k8s.overlord.common.httpclient.DruidKubernetesHttpClientFactory;
 
 /**
  * Similar to {@link VertxHttpClientFactory} but allows us to override thread pool configurations.
  */
-public class DruidKubernetesHttpClientFactory implements HttpClient.Factory
+public class DruidKubernetesVertxHttpClientFactory implements DruidKubernetesHttpClientFactory
 {
+  public static final String TYPE_NAME = "vertx";
   private final Vertx vertx;
 
-  public DruidKubernetesHttpClientFactory(final DruidKubernetesHttpClientConfig httpClientConfig)
+  public DruidKubernetesVertxHttpClientFactory(final DruidKubernetesVertxHttpClientConfig httpClientConfig)
   {
     this.vertx = createVertxInstance(httpClientConfig);
   }
 
   @Override
-  public VertxHttpClientBuilder<DruidKubernetesHttpClientFactory> newBuilder()
+  public VertxHttpClientBuilder<DruidKubernetesVertxHttpClientFactory> newBuilder()
   {
     return new VertxHttpClientBuilder<>(this, vertx);
   }
@@ -49,7 +50,7 @@ public class DruidKubernetesHttpClientFactory implements HttpClient.Factory
    * Adapted from fabric8 kubernetes-client 7.1.0. We bring this here so we can customize thread pool sizes
    * and force usage of daemon threads.
    */
-  private static Vertx createVertxInstance(final DruidKubernetesHttpClientConfig httpClientConfig)
+  private static Vertx createVertxInstance(final DruidKubernetesVertxHttpClientConfig httpClientConfig)
   {
     // fabric8 disables the async DNS resolver while creating Vertx.
     // I'm not sure if we really need to do this, but I'm keeping it to align behavior with upstream.
