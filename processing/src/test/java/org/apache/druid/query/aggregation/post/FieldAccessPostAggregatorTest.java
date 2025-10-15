@@ -95,7 +95,7 @@ public class FieldAccessPostAggregatorTest extends InitializedNullHandlingTest
     agg.aggregate();
     agg.aggregate();
     metricValues.put(aggName, agg.get());
-    Assert.assertEquals(0L, fieldAccessPostAggregator.compute(metricValues));
+    Assert.assertEquals(3L, fieldAccessPostAggregator.compute(metricValues));
   }
 
   @Test
