@@ -75,7 +75,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     metricValues.put(aggName, agg.get());
 
     FinalizingFieldAccessPostAggregator postAgg = new FinalizingFieldAccessPostAggregator("final_rows", aggName);
-    Assert.assertEquals(new Long(3L), postAgg.compute(metricValues));
+    Assert.assertEquals(3L, postAgg.compute(metricValues));
   }
 
   @Test
@@ -98,7 +98,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     Map<String, Object> metricValues = new HashMap<>();
     metricValues.put(aggName, "test");
 
-    Assert.assertEquals(new Long(3L), postAgg.compute(metricValues));
+    Assert.assertEquals(3L, postAgg.compute(metricValues));
     EasyMock.verify(aggFactory);
   }
 
@@ -124,7 +124,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
 
     ArithmeticPostAggregator arithmeticPostAggregator = new ArithmeticPostAggregator("add", "+", postAggsList);
 
-    Assert.assertEquals(new Double(9.0f), arithmeticPostAggregator.compute(metricValues));
+    Assert.assertEquals(9.0, arithmeticPostAggregator.compute(metricValues));
     EasyMock.verify();
   }
 
@@ -134,13 +134,13 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     String aggName = "billy";
     AggregatorFactory aggFactory = EasyMock.createMock(AggregatorFactory.class);
     EasyMock.expect(aggFactory.finalizeComputation("test_val1"))
-            .andReturn(new Long(10L))
+            .andReturn(10L)
             .times(1);
     EasyMock.expect(aggFactory.finalizeComputation("test_val2"))
-            .andReturn(new Long(21))
+            .andReturn(21L)
             .times(1);
     EasyMock.expect(aggFactory.finalizeComputation("test_val3"))
-            .andReturn(new Long(3))
+            .andReturn(3L)
             .times(1);
     EasyMock.expect(aggFactory.finalizeComputation("test_val4"))
             .andReturn(null)
