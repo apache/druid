@@ -466,7 +466,7 @@ public class Lifecycle
           }
         }
         if (doStop) {
-          log.debug("Stopping lifecyle [%s#%s].", o.getClass().getSimpleName(), method.getName());
+          log.info("Stopping lifecyle [%s#%s].", o.getClass().getSimpleName(), method.getName());
           try {
             method.invoke(o);
           }
