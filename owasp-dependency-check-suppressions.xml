@@ -232,15 +232,6 @@
   </suppress>
 
   <suppress>
-    <!-- TODO: Fix by updating curator-x-discovery to > 4.2.0 and updating hadoop -->
-    <notes><![CDATA[
-   file name: jackson-mapper-asl-1.9.13.jar
-   ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.codehaus\.jackson/jackson\-mapper\-asl@1.9.13$</packageUrl>
-    <cvssBelow>10</cvssBelow>  <!-- suppress all CVEs for jackson-mapper-asl:1.9.13 ince it is via curator-x-discovery -->
-  </suppress>
-
-  <suppress>
     <!-- TODO: Fix by updating org.apache.druid.java.util.http.client.NettyHttpClient to use netty 4 -->
     <notes><![CDATA[
    file name: netty-3.10.6.Final.jar
