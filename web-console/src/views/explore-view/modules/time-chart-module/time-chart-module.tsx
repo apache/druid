@@ -128,14 +128,16 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
             filterSpan = getTimeSpanInExpression(where, timeColumnName);
           }
         }
+        if (typeof filterSpan !== 'number') {
+          // If we have no span apply a default span
+          filterSpan = new Duration('P1M').getCanonicalLength();
+        }
         return [
           'auto',
-          ...(typeof filterSpan === 'number'
-            ? FINE_GRANULARITY_OPTIONS.filter(g => {
-                const len = new Duration(g).getCanonicalLength();
-                return filterSpan < len * 1000 && len <= filterSpan;
-              })
-            : FINE_GRANULARITY_OPTIONS),
+          ...FINE_GRANULARITY_OPTIONS.filter(g => {
+            const len = new Duration(g).getCanonicalLength();
+            return filterSpan < len * 1000 && len <= filterSpan;
+          }),
         ];
       },
       defaultValue: 'auto',
