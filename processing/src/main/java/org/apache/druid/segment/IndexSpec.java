@@ -267,9 +267,13 @@ public class IndexSpec
     }
 
     if (autoColumnFormatSpec != null) {
-      bob.withAutoColumnFormatSpec(autoColumnFormatSpec.getEffectiveSpec(this));
+      bob.withAutoColumnFormatSpec(
+          NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(autoColumnFormatSpec, this)
+      );
     } else if (defaultSpec.autoColumnFormatSpec != null) {
-      bob.withAutoColumnFormatSpec(defaultSpec.autoColumnFormatSpec.getEffectiveSpec(this));
+      bob.withAutoColumnFormatSpec(
+          NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(defaultSpec.autoColumnFormatSpec, this)
+      );
     }
 
     return bob.build();
