@@ -52,6 +52,7 @@ import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
@@ -75,6 +76,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.CalciteNestedDataQueryTest.NestedComponentSupplier;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
@@ -645,7 +647,7 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   public void testGroupByOnNestedColumnWithOrderBy()
   {
     testQuery(
-        "SELECT nester, SUM(\"long\") FROM druid.nested GROUP BY 1",
+        "SELECT nester, SUM(\"long\") FROM druid.nested GROUP BY 1 ORDER BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(DATA_SOURCE)
@@ -653,6 +655,20 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setDimensions(dimensions(new DefaultDimensionSpec("nester", "d0", ColumnType.NESTED_DATA)))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "long")))
+                        .setLimitSpec(
+                            queryFramework().engine().featureAvailable(EngineFeature.GROUPBY_IMPLICITLY_SORTS)
+                            ? NoopLimitSpec.instance()
+                            : new DefaultLimitSpec(
+                                ImmutableList.of(
+                                    new OrderByColumnSpec(
+                                        "d0",
+                                        OrderByColumnSpec.Direction.ASCENDING,
+                                        StringComparators.NATURAL
+                                    )
+                                ),
+                                Integer.MAX_VALUE
+                            )
+                        )
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
