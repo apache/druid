@@ -84,7 +84,7 @@ public class BrokerProcessingModule implements Module
       DruidProcessingConfig config
   )
   {
-    return new ForwardingQueryProcessingPool(Execs.dummy());
+    return new ForwardingQueryProcessingPool(Execs.dummy(), null);
   }
 
   @Provides

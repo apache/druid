@@ -18,6 +18,7 @@
 
 import { Button, ButtonGroup, Intent, Label, MenuItem, Switch, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import dayjs from 'dayjs';
 import { C, L, SqlComparison, SqlExpression } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import type { ReactNode } from 'react';
@@ -50,6 +51,7 @@ import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
   booleanCustomTableFilter,
   BooleanFilterInput,
+  combineModeAndNeedle,
   parseFilterModeAndNeedle,
   sqlQueryCustomTableFilter,
   STANDARD_TABLE_PAGE_SIZE,
@@ -65,6 +67,7 @@ import {
   filterMap,
   findMap,
   formatBytes,
+  formatDate,
   formatInteger,
   getApiArray,
   hasOverlayOpen,
@@ -158,6 +161,20 @@ function formatRangeDimensionValue(dimension: any, value: any): string {
 function segmentFiltersToExpression(filters: Filter[]): SqlExpression {
   return SqlExpression.and(
     ...filterMap(filters, filter => {
+      if (filter.id === 'start' || filter.id === 'end') {
+        // Dates need to be converted to ISO string for the SQL query
+        const modeAndNeedle = parseFilterModeAndNeedle(filter);
+        if (!modeAndNeedle) return;
+        if (modeAndNeedle.mode === '~') {
+          return sqlQueryCustomTableFilter(filter);
+        }
+        const internalFilter = { ...filter };
+        const formattedDate = formatDate(modeAndNeedle.needle);
+        const filterDate = dayjs(formattedDate).toISOString();
+        filter.value = combineModeAndNeedle(modeAndNeedle.mode, formattedDate);
+        internalFilter.value = combineModeAndNeedle(modeAndNeedle.mode, filterDate);
+        return sqlQueryCustomTableFilter(internalFilter);
+      }
       if (filter.id === 'shard_type') {
         // Special handling for shard_type that needs to be searched for in the shard_spec
         // Creates filters like `shard_spec LIKE '%"type":"numbered"%'`
@@ -299,7 +316,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
     this.segmentsQueryManager = new QueryManager({
       debounceIdle: 500,
-      processQuery: async (query: SegmentsQuery, cancelToken, setIntermediateQuery) => {
+      processQuery: async (query: SegmentsQuery, signal, setIntermediateQuery) => {
         const { page, pageSize, filtered, sorted, visibleColumns, capabilities, groupByInterval } =
           query;
 
@@ -373,10 +390,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           }
           const sqlQuery = queryParts.join('\n');
           setIntermediateQuery(sqlQuery);
-          let result = await queryDruidSql(
-            { query: sqlQuery, context: sqlQueryContext },
-            cancelToken,
-          );
+          let result = await queryDruidSql({ query: sqlQuery, context: sqlQueryContext }, signal);
 
           if (visibleColumns.shown('Shard type', 'Shard spec')) {
             result = result.map(sr => ({
@@ -387,7 +401,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
           segments = result as SegmentQueryResultRow[];
 
-          auxiliaryQueries.push(async (segmentsWithAuxiliaryInfo, cancelToken) => {
+          auxiliaryQueries.push(async (segmentsWithAuxiliaryInfo, signal) => {
             const sqlQuery = assemble(
               'SELECT COUNT(*) AS "cnt"',
               'FROM "sys"."segments"',
@@ -398,7 +412,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 {
                   query: sqlQuery,
                 },
-                cancelToken,
+                signal,
               )
             )[0].cnt;
             return {
@@ -411,7 +425,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           const datasourceFilter = filtered.find(({ id }) => id === 'datasource');
           if (datasourceFilter) {
             datasourceList = (
-              await getApiArray('/druid/coordinator/v1/metadata/datasources', cancelToken)
+              await getApiArray('/druid/coordinator/v1/metadata/datasources', signal)
             ).filter((datasource: string) =>
               booleanCustomTableFilter(datasourceFilter, datasource),
             );
@@ -422,7 +436,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               `/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments${datasourceList
                 .map(d => `&datasources=${Api.encodePath(d)}`)
                 .join('')}`,
-              cancelToken,
+              signal,
             )
           ).map((segment: any) => {
             const [start, end] = segment.interval.split('/');
@@ -573,7 +587,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   private renderFilterableCell(
     field: string,
     enableComparisons = false,
-    valueFn: (value: string) => ReactNode = String,
+    displayFn: (value: string) => ReactNode = String,
+    filterDisplayFn: (value: string) => string = String,
   ) {
     const { filters } = this.props;
     const { handleFilterChange } = this;
@@ -586,8 +601,9 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           filters={filters}
           onFiltersChange={handleFilterChange}
           enableComparisons={enableComparisons}
+          displayValue={filterDisplayFn(row.value)}
         >
-          {valueFn(row.value)}
+          {displayFn(row.value)}
         </TableFilterableCell>
       );
     };
@@ -698,20 +714,20 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             show: visibleColumns.shown('Start'),
             accessor: 'start',
             headerClassName: 'enable-comparisons',
-            width: 180,
+            width: 220,
             defaultSortDesc: true,
             filterable: allowGeneralFilter,
-            Cell: this.renderFilterableCell('start', true),
+            Cell: this.renderFilterableCell('start', true, formatDate, formatDate),
           },
           {
             Header: 'End',
             show: visibleColumns.shown('End'),
             accessor: 'end',
             headerClassName: 'enable-comparisons',
-            width: 180,
+            width: 220,
             defaultSortDesc: true,
             filterable: allowGeneralFilter,
-            Cell: this.renderFilterableCell('end', true),
+            Cell: this.renderFilterableCell('end', true, formatDate, formatDate),
           },
           {
             Header: 'Version',
@@ -727,7 +743,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             show: visibleColumns.shown('Time span'),
             id: 'time_span',
             className: 'padded',
-            accessor: ({ start, end }) => computeSegmentTimeSpan(start, end),
+            accessor: ({ start, end }) =>
+              computeSegmentTimeSpan(dayjs(start).toISOString(), dayjs(end).toISOString()),
             width: 100,
             sortable: false,
             filterable: false,

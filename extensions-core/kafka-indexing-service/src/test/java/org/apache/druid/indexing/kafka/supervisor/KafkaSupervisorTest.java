@@ -128,6 +128,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -632,7 +633,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.runInternal();
     verifyAll();
 
-    KafkaIndexTask task1 = captured.getValues().get(0);
+    List<KafkaIndexTask> tasks = captured.getValues();
+    tasks.sort(Comparator.comparing(KafkaIndexTask::getId));
+    KafkaIndexTask task1 = tasks.get(0);
     Assert.assertEquals(2, task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().size());
     Assert.assertEquals(2, task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().size());
     Assert.assertEquals(
@@ -668,7 +671,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
              .longValue()
     );
 
-    KafkaIndexTask task2 = captured.getValues().get(1);
+    KafkaIndexTask task2 = tasks.get(1);
     Assert.assertEquals(1, task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().size());
     Assert.assertEquals(1, task2.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().size());
     Assert.assertEquals(
@@ -2460,8 +2463,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, payload.getDetailedState());
     Assert.assertEquals(0, payload.getRecentErrors().size());
 
-    TaskReportData id1TaskReport = payload.getActiveTasks().get(0);
-    TaskReportData id2TaskReport = payload.getActiveTasks().get(1);
+    List<? extends TaskReportData> reportData = payload.getActiveTasks();
+    reportData.sort(Comparator.comparing(TaskReportData::getId));
+
+    TaskReportData id1TaskReport = reportData.get(0);
+    TaskReportData id2TaskReport = reportData.get(1);
 
     Assert.assertEquals("id2", id2TaskReport.getId());
     Assert.assertEquals(singlePartitionMap(topic, 1, 0L), id2TaskReport.getStartingOffsets());

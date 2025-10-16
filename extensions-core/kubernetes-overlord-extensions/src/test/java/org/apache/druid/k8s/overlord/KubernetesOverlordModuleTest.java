@@ -39,6 +39,11 @@ import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
+import org.apache.druid.k8s.overlord.common.httpclient.DruidKubernetesHttpClientFactory;
+import org.apache.druid.k8s.overlord.common.httpclient.jdk.DruidKubernetesJdkHttpClientFactory;
+import org.apache.druid.k8s.overlord.common.httpclient.okhttp.DruidKubernetesOkHttpHttpClientFactory;
+import org.apache.druid.k8s.overlord.common.httpclient.vertx.DruidKubernetesVertxHttpClientFactory;
 import org.apache.druid.k8s.overlord.taskadapter.MultiContainerTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.PodTemplateTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.SingleContainerTaskAdapter;
@@ -198,6 +203,91 @@ public class KubernetesOverlordModuleTest
 
     Assert.assertNotNull(adapter);
     Assert.assertTrue(adapter instanceof PodTemplateTaskAdapter);
+  }
+
+  @Test
+  public void test_httpClientFactory_defaultsToVertx()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
+    // Don't set httpClientType - should default to vertx
+
+    injector = makeInjectorWithProperties(props, false, true);
+    DruidKubernetesHttpClientFactory factory = injector.getInstance(DruidKubernetesHttpClientFactory.class);
+
+    Assert.assertNotNull(factory);
+    Assert.assertTrue("Should default to Vertx HTTP client",
+                     factory instanceof DruidKubernetesVertxHttpClientFactory);
+  }
+
+  @Test
+  public void test_httpClientFactory_okhttpSelection()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
+    props.setProperty("druid.indexer.runner.k8sAndWorker.http.httpClientType", "okhttp");
+
+    injector = makeInjectorWithProperties(props, false, true);
+    DruidKubernetesHttpClientFactory factory = injector.getInstance(DruidKubernetesHttpClientFactory.class);
+
+    Assert.assertNotNull(factory);
+    Assert.assertTrue("Should select OkHttp HTTP client",
+                     factory instanceof DruidKubernetesOkHttpHttpClientFactory);
+  }
+
+  @Test
+  public void test_httpClientFactory_vertxExplicitSelection()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
+    props.setProperty("druid.indexer.runner.k8sAndWorker.http.httpClientType", "vertx");
+
+    injector = makeInjectorWithProperties(props, false, true);
+    DruidKubernetesHttpClientFactory factory = injector.getInstance(DruidKubernetesHttpClientFactory.class);
+
+    Assert.assertNotNull(factory);
+    Assert.assertTrue("Should explicitly select Vertx HTTP client",
+                     factory instanceof DruidKubernetesVertxHttpClientFactory);
+  }
+
+  @Test
+  public void test_httpClientFactory_jdkSelection()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
+    props.setProperty("druid.indexer.runner.k8sAndWorker.http.httpClientType", "javaStandardHttp");
+
+    injector = makeInjectorWithProperties(props, false, true);
+    DruidKubernetesHttpClientFactory factory = injector.getInstance(DruidKubernetesHttpClientFactory.class);
+
+    Assert.assertNotNull(factory);
+    Assert.assertTrue("Should select JDK HTTP client",
+                     factory instanceof DruidKubernetesJdkHttpClientFactory);
+  }
+
+  @Test(expected = ProvisionException.class)
+  public void test_httpClientFactory_invalidTypeThrowsException()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
+    props.setProperty("druid.indexer.runner.k8sAndWorker.http.httpClientType", "invalid");
+
+    injector = makeInjectorWithProperties(props, false, true);
+    injector.getInstance(DruidKubernetesHttpClientFactory.class);
+  }
+
+  @Test
+  public void test_druidKubernetesClient_createdWithVertxClient()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
+    // Don't set httpClientType - should default to vertx
+
+    injector = makeInjectorWithProperties(props, false, true);
+    DruidKubernetesClient client = injector.getInstance(DruidKubernetesClient.class);
+
+    Assert.assertNotNull("DruidKubernetesClient should be created successfully", client);
+    Assert.assertNotNull("Underlying Kubernetes client should be created", client.getClient());
   }
 
   private Injector makeInjectorWithProperties(

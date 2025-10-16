@@ -34,7 +34,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>35.0.0-SNAPSHOT</version>
+    <version>36.0.0-SNAPSHOT</version>
   </parent>
 
   <dependencies>
@@ -165,6 +165,48 @@
       <groupId>org.jdbi</groupId>
       <artifactId>jdbi</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-storage</artifactId>
+      <version>2.29.1</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-core</artifactId>
+      <version>2.27.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.http-client</groupId>
+      <artifactId>google-http-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.microsoft.azure</groupId>
+      <artifactId>azure-storage</artifactId>
+      <version>8.6.0</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.commons</groupId>
+          <artifactId>commons-lang3</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
 
     <!-- Test dependencies -->
     <dependency>
@@ -228,6 +270,37 @@
       <version>${project.parent.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.druid</groupId>
+      <artifactId>druid-gcp-common</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-google-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-azure-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-parquet-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-orc-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+
     <!-- Some embedded tests use the router and the web-console for debugging -->
     <dependency>
       <groupId>org.apache.druid</groupId>
@@ -318,6 +391,11 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.kafka</groupId>
       <artifactId>kafka-clients</artifactId>
       <version>${apache.kafka.version}</version>
@@ -372,21 +450,33 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>azure</artifactId>
+      <version>${testcontainers.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.aiven</groupId>
+      <artifactId>testcontainers-fake-gcs-server</artifactId>
+      <version>0.1.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>kubernetes-model-core</artifactId>
-      <version>7.2.0</version>
+      <version>${fabric8.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>kubernetes-client-api</artifactId>
-      <version>7.2.0</version>
+      <version>${fabric8.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>kubernetes-client</artifactId>
-      <version>7.2.0</version>
+      <version>${fabric8.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>

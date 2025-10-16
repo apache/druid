@@ -111,7 +111,7 @@ public abstract class CatalogIngestAndQueryTest extends CatalogTestBase
     // Submit the task and wait for the datasource to get loaded
     SqlTaskStatus sqlTaskStatus = msqApis.submitTaskSql(queryInline);
     cluster.callApi().waitForTaskToSucceed(sqlTaskStatus.getTaskId(), overlord);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     cluster.callApi().verifySqlQuery(
         "SELECT * FROM %s",
@@ -181,7 +181,7 @@ public abstract class CatalogIngestAndQueryTest extends CatalogTestBase
     // Submit the task and wait for the datasource to get loaded
     SqlTaskStatus sqlTaskStatus = msqApis.submitTaskSql(queryInline);
     cluster.callApi().waitForTaskToSucceed(sqlTaskStatus.getTaskId(), overlord);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     cluster.callApi().verifySqlQuery(
         "SELECT * FROM %s",
@@ -248,7 +248,7 @@ public abstract class CatalogIngestAndQueryTest extends CatalogTestBase
     // Submit the task and wait for the datasource to get loaded
     SqlTaskStatus sqlTaskStatus = msqApis.submitTaskSql(queryInline);
     cluster.callApi().waitForTaskToSucceed(sqlTaskStatus.getTaskId(), overlord);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     cluster.callApi().verifySqlQuery(
         "SELECT * FROM %s",
@@ -327,7 +327,7 @@ public abstract class CatalogIngestAndQueryTest extends CatalogTestBase
     // Submit the task and wait for the datasource to get loaded
     SqlTaskStatus sqlTaskStatus = msqApis.submitTaskSql(queryInline);
     cluster.callApi().waitForTaskToSucceed(sqlTaskStatus.getTaskId(), overlord);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     cluster.callApi().verifySqlQuery(
         "SELECT * FROM %s",
@@ -403,7 +403,7 @@ public abstract class CatalogIngestAndQueryTest extends CatalogTestBase
     // Submit the task and wait for the datasource to get loaded
     SqlTaskStatus sqlTaskStatus = msqApis.submitTaskSql(queryInline);
     cluster.callApi().waitForTaskToSucceed(sqlTaskStatus.getTaskId(), overlord);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     cluster.callApi().verifySqlQuery(
         "SELECT * FROM %s",
@@ -462,7 +462,7 @@ public abstract class CatalogIngestAndQueryTest extends CatalogTestBase
     SqlTaskStatus sqlTaskStatus = cluster.callApi().onAnyBroker(b -> b.submitSqlTask(sqlQuery));
 
     cluster.callApi().waitForTaskToSucceed(sqlTaskStatus.getTaskId(), overlord);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     cluster.callApi().verifySqlQuery("SELECT * FROM %s", dataSource, "2022-12-26T12:34:56.000Z,foo");
   }
@@ -540,7 +540,7 @@ public abstract class CatalogIngestAndQueryTest extends CatalogTestBase
     SqlTaskStatus sqlTaskStatus = cluster.callApi().onAnyBroker(b -> b.submitSqlTask(sqlQuery));
 
     cluster.callApi().waitForTaskToSucceed(sqlTaskStatus.getTaskId(), overlord);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     cluster.callApi().verifySqlQuery("SELECT * FROM %s", dataSource, "2022-12-26T12:34:56.000Z,");
   }

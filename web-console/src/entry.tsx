@@ -101,8 +101,8 @@ if (consoleConfig.localStorageNamespace) {
   setLocalStorageNamespace(consoleConfig.localStorageNamespace);
 }
 
-QueryRunner.defaultQueryExecutor = (payload, isSql, cancelToken) => {
-  return Api.instance.post(`/druid/v2${isSql ? '/sql' : ''}`, payload, { cancelToken });
+QueryRunner.defaultQueryExecutor = ({ payload, isSql, signal }) => {
+  return Api.instance.post(`/druid/v2${isSql ? '/sql' : ''}`, payload, { signal });
 };
 
 createRoot(container).render(

@@ -423,6 +423,10 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY,
           SinglePhaseParallelIndexTaskRunner.DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION
       );
+      task.addToContextIfAbsent(
+          PartialDimensionDistributionTask.CTX_BLOOM_FILTER_EXPECTED_INSERTIONS,
+          1_000
+      );
       final ListenableFuture<TaskStatus> statusFuture = service.submit(
           () -> {
             try {
@@ -686,7 +690,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .jsonMapper(objectMapper)
         .taskWorkDir(temporaryFolder.newFolder(task.getId()))
         .indexIO(getIndexIO())
-        .indexMergerV9(getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
+        .indexMerger(getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
         .intermediaryDataManager(intermediaryDataManager)
         .taskReportFileWriter(new SingleFileTaskReportFileWriter(reportsFile))
         .policyEnforcer(NoopPolicyEnforcer.instance())

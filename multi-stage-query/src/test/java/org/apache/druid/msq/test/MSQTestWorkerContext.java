@@ -46,6 +46,7 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -190,12 +191,6 @@ public class MSQTestWorkerContext implements WorkerContext
   }
 
   @Override
-  public DataServerQueryHandlerFactory dataServerQueryHandlerFactory()
-  {
-    return injector.getInstance(DataServerQueryHandlerFactory.class);
-  }
-
-  @Override
   public boolean includeAllCounters()
   {
     return true;
@@ -284,7 +279,7 @@ public class MSQTestWorkerContext implements WorkerContext
     }
 
     @Override
-    public IndexMergerV9 indexMerger()
+    public IndexMerger indexMerger()
     {
       return new IndexMergerV9(
           mapper,

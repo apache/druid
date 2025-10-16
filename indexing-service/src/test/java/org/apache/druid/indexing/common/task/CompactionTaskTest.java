@@ -108,6 +108,7 @@ import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.SimpleQueryableIndex;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.BaseColumn;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -1961,7 +1962,7 @@ public class CompactionTaskTest
         .taskActionClient(taskActionClient)
         .joinableFactory(NoopJoinableFactory.INSTANCE)
         .indexIO(indexIO)
-        .indexMergerV9(new IndexMergerV9(
+        .indexMerger(new IndexMergerV9(
             OBJECT_MAPPER,
             indexIO,
             OffHeapMemorySegmentWriteOutMediumFactory.instance(),
@@ -2019,22 +2020,22 @@ public class CompactionTaskTest
         columnNames.add(ColumnHolder.TIME_COLUMN_NAME);
         columnNames.addAll(segment.getDimensions());
         columnNames.addAll(segment.getMetrics());
-        final Map<String, Supplier<ColumnHolder>> columnMap = Maps.newHashMapWithExpectedSize(columnNames.size());
+        final Map<String, Supplier<BaseColumnHolder>> columnMap = Maps.newHashMapWithExpectedSize(columnNames.size());
         final List<AggregatorFactory> aggregatorFactories = new ArrayList<>(segment.getMetrics().size());
 
         for (String columnName : columnNames) {
           if (MIXED_TYPE_COLUMN.equals(columnName)) {
-            ColumnHolder columnHolder = createColumn(MIXED_TYPE_COLUMN_MAP.get(segment.getInterval()));
+            BaseColumnHolder columnHolder = createColumn(MIXED_TYPE_COLUMN_MAP.get(segment.getInterval()));
             columnMap.put(columnName, () -> columnHolder);
           } else if (DIMENSIONS.containsKey(columnName)) {
-            ColumnHolder columnHolder = createColumn(DIMENSIONS.get(columnName));
+            BaseColumnHolder columnHolder = createColumn(DIMENSIONS.get(columnName));
             columnMap.put(columnName, () -> columnHolder);
           } else {
             final Optional<AggregatorFactory> maybeMetric = AGGREGATORS.stream()
                                                                        .filter(agg -> agg.getName().equals(columnName))
                                                                        .findAny();
             if (maybeMetric.isPresent()) {
-              ColumnHolder columnHolder = createColumn(maybeMetric.get());
+              BaseColumnHolder columnHolder = createColumn(maybeMetric.get());
               columnMap.put(columnName, () -> columnHolder);
               aggregatorFactories.add(maybeMetric.get());
             }
@@ -2104,17 +2105,17 @@ public class CompactionTaskTest
     }
   }
 
-  private static ColumnHolder createColumn(DimensionSchema dimensionSchema)
+  private static BaseColumnHolder createColumn(DimensionSchema dimensionSchema)
   {
     return new TestColumn(dimensionSchema.getColumnType());
   }
 
-  private static ColumnHolder createColumn(AggregatorFactory aggregatorFactory)
+  private static BaseColumnHolder createColumn(AggregatorFactory aggregatorFactory)
   {
     return new TestColumn(aggregatorFactory.getIntermediateType());
   }
 
-  private static class TestColumn implements ColumnHolder
+  private static class TestColumn implements BaseColumnHolder
   {
     private final ColumnCapabilities columnCapabilities;
 

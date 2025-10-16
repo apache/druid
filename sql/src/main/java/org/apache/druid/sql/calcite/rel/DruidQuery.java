@@ -19,10 +19,10 @@
 
 package org.apache.druid.sql.calcite.rel;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -88,7 +88,6 @@ import org.apache.druid.query.topn.TopNMetricSpec;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -126,14 +125,6 @@ import java.util.stream.Collectors;
  */
 public class DruidQuery
 {
-  /**
-   * Native query context key that is set when {@link EngineFeature#SCAN_NEEDS_SIGNATURE}.
-   *
-   * {@link Deprecated} Instead of the context value {@link ScanQuery#getRowSignature()} can be used.
-   */
-  @Deprecated
-  public static final String CTX_SCAN_SIGNATURE = "scanSignature";
-
   /**
    * Maximum number of time-granular buckets that we allow for non-Druid tables.
    * <p>
@@ -733,35 +724,15 @@ public class DruidQuery
     }
   }
 
-  VirtualColumns getVirtualColumns(final boolean includeDimensions)
+  /**
+   * Returns the virtual columns required for a query. Does not necessarily return all virtual columns from
+   * {@link #sourceRowSignature}, only the ones actually referenced  (and any that they depend on).
+   *
+   * @param includeDimensions whether to include virtual columns refered by {@link Grouping#getDimensions()}
+   */
+  VirtualColumns computeVirtualColumns(final boolean includeDimensions)
   {
-    // 'sourceRowSignature' could provide a list of all defined virtual columns while constructing a query, but we
-    // still want to collect the set of VirtualColumns this way to ensure we only add what is still being used after
-    // the various transforms and optimizations
-    Set<VirtualColumn> virtualColumns = new HashSet<>();
-
-
-    // rewrite any "specialized" virtual column expressions as top level virtual columns so that their native
-    // implementation can be used instead of being composed as part of some expression tree in an expresson virtual
-    // column
-    Set<String> specialized = new HashSet<>();
-    final boolean forceExpressionVirtualColumns =
-        plannerContext.getPlannerConfig().isForceExpressionVirtualColumns();
-    virtualColumnRegistry.visitAllSubExpressions((expression) -> {
-      if (!forceExpressionVirtualColumns && expression.getType() == DruidExpression.NodeType.SPECIALIZED) {
-        // add the expression to the top level of the registry as a standalone virtual column
-        final String name = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-            expression,
-            expression.getDruidType()
-        );
-        specialized.add(name);
-        // replace with an identifier expression of the new virtual column name
-        return DruidExpression.ofColumn(expression.getDruidType(), name);
-      } else {
-        // do nothing
-        return expression;
-      }
-    });
+    final Set<VirtualColumn> virtualColumns = new HashSet<>();
 
     // we always want to add any virtual columns used by the query level DimFilter
     if (filter != null) {
@@ -812,9 +783,23 @@ public class DruidQuery
       }
     }
 
-    for (String columnName : specialized) {
-      if (virtualColumnRegistry.isVirtualColumnDefined(columnName)) {
-        virtualColumns.add(virtualColumnRegistry.getVirtualColumn(columnName));
+    // Include any specialized virtual columns that we need for the top-level virtualColumns.
+    final Set<VirtualColumn> checkVirtualColumns = new HashSet<>(virtualColumns);
+    while (!checkVirtualColumns.isEmpty()) {
+      final ImmutableSet<VirtualColumn> checkVirtualColumnsCopy = ImmutableSet.copyOf(checkVirtualColumns);
+      checkVirtualColumns.clear();
+
+      // Check all virtual columns that were in checkVirtualColumns to ensure we have their dependencies.
+      // If other virtual columns are encountered, add them to checkVirtualColumns so we check them recursively.
+      for (final VirtualColumn virtualColumn : checkVirtualColumnsCopy) {
+        for (final String requiredColumnName : virtualColumn.requiredColumns()) {
+          if (virtualColumnRegistry.isVirtualColumnDefined(requiredColumnName)) {
+            final VirtualColumn requiredVirtualColumn = virtualColumnRegistry.getVirtualColumn(requiredColumnName);
+            if (virtualColumns.add(requiredVirtualColumn)) {
+              checkVirtualColumns.add(requiredVirtualColumn);
+            }
+          }
+        }
       }
     }
 
@@ -1120,7 +1105,7 @@ public class DruidQuery
           plannerContext.getJoinableFactoryWrapper()
       );
 
-      if (!getVirtualColumns(true).isEmpty()) {
+      if (!computeVirtualColumns(true).isEmpty()) {
         // timeBoundary query does not support virtual columns.
         return null;
       }
@@ -1236,6 +1221,7 @@ public class DruidQuery
     }
     theContext.putAll(plannerContext.queryContextMap());
 
+    final VirtualColumns virtualColumns = computeVirtualColumns(false);
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
         filter,
@@ -1258,7 +1244,7 @@ public class DruidQuery
         newDataSource,
         filtration.getQuerySegmentSpec(),
         descending,
-        getVirtualColumns(false),
+        virtualColumns,
         filtration.getDimFilter(),
         queryGranularity,
         grouping.getAggregatorFactories(),
@@ -1341,6 +1327,7 @@ public class DruidQuery
       return null;
     }
 
+    final VirtualColumns virtualColumns = computeVirtualColumns(true);
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
         filter,
@@ -1357,7 +1344,7 @@ public class DruidQuery
 
     return new TopNQuery(
         newDataSource,
-        getVirtualColumns(true),
+        virtualColumns,
         dimensionSpec,
         topNMetricSpec,
         Ints.checkedCast(sorting.getOffsetLimit().getLimit()),
@@ -1387,6 +1374,7 @@ public class DruidQuery
       return null;
     }
 
+    final VirtualColumns virtualColumns = computeVirtualColumns(true);
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
         filter,
@@ -1415,7 +1403,7 @@ public class DruidQuery
     GroupByQuery query = new GroupByQuery(
         newDataSource,
         filtration.getQuerySegmentSpec(),
-        getVirtualColumns(true),
+        virtualColumns,
         filtration.getDimFilter(),
         Granularities.ALL,
         grouping.getDimensionSpecs(),
@@ -1665,6 +1653,7 @@ public class DruidQuery
       return null;
     }
 
+    final VirtualColumns virtualColumns = computeVirtualColumns(true);
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
         filter,
@@ -1726,7 +1715,6 @@ public class DruidQuery
     final Set<String> scanColumns = new LinkedHashSet<>(outputRowSignature.getColumnNames());
     orderByColumns.forEach(column -> scanColumns.add(column.getColumnName()));
 
-    final VirtualColumns virtualColumns = getVirtualColumns(true);
     final ImmutableList<String> scanColumnsList = ImmutableList.copyOf(scanColumns);
 
     return new ScanQuery(
@@ -1741,62 +1729,9 @@ public class DruidQuery
         orderByColumns,
         filtration.getDimFilter(),
         scanColumnsList,
-        withScanSignatureIfNeeded(
-            virtualColumns,
-            scanColumnsList,
-            plannerContext.queryContextMap()
-        ),
+        plannerContext.queryContextMap(),
         outputRowSignature.buildSafeSignature(scanColumnsList).getColumnTypes()
     );
-  }
-
-  /**
-   * Returns a copy of "queryContext" with {@link #CTX_SCAN_SIGNATURE} added if the execution context has the
-   * {@link EngineFeature#SCAN_NEEDS_SIGNATURE} feature.
-   *
-   * {@link Deprecated} Instead of the context value {@link ScanQuery#getRowSignature()} can be used.
-   */
-  @Deprecated
-  private Map<String, Object> withScanSignatureIfNeeded(
-      final VirtualColumns virtualColumns,
-      final List<String> scanColumns,
-      final Map<String, Object> queryContext
-  )
-  {
-    if (!plannerContext.featureAvailable(EngineFeature.SCAN_NEEDS_SIGNATURE)) {
-      return queryContext;
-    }
-    final RowSignature signature = buildRowSignature(virtualColumns, scanColumns);
-
-    try {
-      Map<String, Object> revised = new HashMap<>(queryContext);
-      revised.put(
-          CTX_SCAN_SIGNATURE,
-          plannerContext.getJsonMapper().writeValueAsString(signature)
-      );
-      return revised;
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  private RowSignature buildRowSignature(final VirtualColumns virtualColumns, final List<String> columns)
-  {
-    // Compute the signature of the columns that we are selecting.
-    final RowSignature.Builder builder = RowSignature.builder();
-
-    for (final String columnName : columns) {
-      final ColumnCapabilities capabilities =
-          virtualColumns.getColumnCapabilitiesWithFallback(sourceRowSignature, columnName);
-
-      if (capabilities == null) {
-        // No type for this column. This is a planner bug.
-        throw new ISE("No type for column [%s]", columnName);
-      }
-      builder.add(columnName, capabilities.toColumnType());
-    }
-    return builder.build();
   }
 
   public DimFilter getFilter()

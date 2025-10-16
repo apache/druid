@@ -21,9 +21,9 @@ package org.apache.druid.query.aggregation;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.GenericColumnSerializer;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.serde.cell.ByteBufferProvider;
 import org.apache.druid.segment.serde.cell.StagedSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
@@ -87,12 +87,12 @@ public abstract class AbstractSerializablePairLongObjectColumnSerializer<T exten
   @Override
   public void writeTo(
       WritableByteChannel channel,
-      FileSmoosher smoosher
+      SegmentFileBuilder fileBuilder
   ) throws IOException
   {
     Preconditions.checkState(state != State.START, "writeTo called in invalid state %s", state);
     transferToRowWriterIfNecessary();
-    transferredBuffer.writeTo(channel, smoosher);
+    transferredBuffer.writeTo(channel, fileBuilder);
   }
 
   private void transferToRowWriterIfNecessary() throws IOException

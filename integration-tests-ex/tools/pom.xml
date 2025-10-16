@@ -31,7 +31,7 @@
 	<parent>
 		<groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-		<version>35.0.0-SNAPSHOT</version>
+		<version>36.0.0-SNAPSHOT</version>
 		<relativePath>../../pom.xml</relativePath>
 	</parent>
 
@@ -161,8 +161,8 @@
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.eclipse.jetty</groupId>
-			<artifactId>jetty-servlet</artifactId>
+			<groupId>org.eclipse.jetty.ee8</groupId>
+			<artifactId>jetty-ee8-servlet</artifactId>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>

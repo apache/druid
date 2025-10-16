@@ -121,7 +121,7 @@ public class ExpressionVectorSelectorBenchmark
     );
 
     Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
-    outputType = parsed.getOutputType(new ColumnCache(index, closer));
+    outputType = parsed.getOutputType(new ColumnCache(index, VirtualColumns.EMPTY, closer));
     checkSanity();
   }
 
@@ -204,6 +204,6 @@ public class ExpressionVectorSelectorBenchmark
 
   private void checkSanity()
   {
-    ExpressionVectorSelectorsTest.sanityTestVectorizedExpressionSelectors(expression, outputType, index, closer, rowsPerSegment);
+    ExpressionVectorSelectorsTest.sanityTestVectorizedExpressionSelectors(expression, outputType, index, rowsPerSegment);
   }
 }

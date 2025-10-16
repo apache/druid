@@ -18,7 +18,7 @@
 
 import React, { useState } from 'react';
 
-import { ShowJson, ShowLog } from '../../components';
+import { ShowJson, ShowJsonOrStages, ShowLog } from '../../components';
 import { Api } from '../../singletons';
 import { deepGet } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
@@ -83,7 +83,7 @@ export const TaskTableActionDialog = React.memo(function TaskTableActionDialog(
         />
       )}
       {activeTab === 'report' && (
-        <ShowJson
+        <ShowJsonOrStages
           endpoint={`${taskEndpointBase}/reports`}
           transform={x => deepGet(x, 'ingestionStatsAndErrors.payload') || x}
           downloadFilename={`task-reports-${taskId}.json`}

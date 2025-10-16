@@ -38,7 +38,6 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.ColumnDescriptor;
@@ -47,6 +46,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.GenericIndexed;
+import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAdapter;
 import org.apache.druid.segment.loading.MMappedQueryableSegmentizerFactory;
@@ -607,7 +607,7 @@ public class IndexMergerV9 implements IndexMerger
                           + 16
                           + SERIALIZER_UTILS.getSerializedStringByteSize(bitmapSerdeFactoryType);
 
-    try (final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes)) {
+    try (final SegmentFileChannel writer = v9Smoosher.addWithChannel("index.drd", numBytes)) {
       nonNullCols.writeTo(writer, v9Smoosher);
       nonNullDims.writeTo(writer, v9Smoosher);
 
@@ -773,7 +773,7 @@ public class IndexMergerV9 implements IndexMerger
   {
     ZeroCopyByteArrayOutputStream specBytes = new ZeroCopyByteArrayOutputStream();
     SERIALIZER_UTILS.writeString(specBytes, mapper.writeValueAsString(serdeficator));
-    try (SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
+    try (SegmentFileChannel channel = v9Smoosher.addWithChannel(
         columnName,
         specBytes.size() + serdeficator.getSerializedSize()
     )) {
@@ -1052,6 +1052,10 @@ public class IndexMergerV9 implements IndexMerger
       throw new IAE("Trying to persist an empty index!");
     }
 
+    // need to call this here even though multiphaseMerge also calls this because we need to ensure the bitmap factory
+    // is populated when creating the IncrementalIndexAdapter
+    indexSpec = indexSpec.getEffectiveSpec();
+
     final DateTime firstTimestamp = index.getMinTime();
     final DateTime lastTimestamp = index.getMaxTime();
     if (!(dataInterval.contains(firstTimestamp) && dataInterval.contains(lastTimestamp))) {
@@ -1163,6 +1167,10 @@ public class IndexMergerV9 implements IndexMerger
     FileUtils.mkdirp(outDir);
 
     List<File> tempDirs = new ArrayList<>();
+
+    indexSpec = indexSpec.getEffectiveSpec();
+    indexSpecForIntermediatePersists = indexSpecForIntermediatePersists.getEffectiveSpec();
+    log.info("Building segment with IndexSpec[%s]", indexSpec);
 
     if (maxColumnsToMerge == IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE) {
       return merge(

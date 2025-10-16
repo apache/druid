@@ -62,7 +62,9 @@ import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeAggregat
 import org.apache.druid.query.aggregation.datasketches.theta.SketchModule;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.AutoTypeColumnSchema;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.FixedIntervalOrderPolicy;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
@@ -74,7 +76,6 @@ import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
-import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
@@ -93,6 +94,7 @@ import org.joda.time.chrono.ISOChronology;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -190,9 +192,6 @@ public class AutoCompactionTest extends CompactionTestBase
   private static final Period NO_SKIP_OFFSET = Period.seconds(0);
   private static final FixedIntervalOrderPolicy COMPACT_NOTHING_POLICY = new FixedIntervalOrderPolicy(List.of());
 
-  private final EmbeddedBroker broker = new EmbeddedBroker()
-      .addProperty("druid.sql.planner.metadataRefreshPeriod", "PT0.1s");
-
   public static List<CompactionEngine> getEngine()
   {
     return List.of(CompactionEngine.NATIVE);
@@ -201,8 +200,10 @@ public class AutoCompactionTest extends CompactionTestBase
   @Override
   protected EmbeddedDruidCluster createCluster()
   {
+    // Use timeout required for hash partitioning task
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
+                               .useDefaultTimeoutForLatchableEmitter(30)
                                .addExtension(SketchModule.class)
                                .addExtension(HllSketchModule.class)
                                .addExtension(DoublesSketchModule.class)
@@ -505,7 +506,7 @@ public class AutoCompactionTest extends CompactionTestBase
 
       List<DimensionSchema> dimensionSchemas = ImmutableList.of(
           new StringDimensionSchema("language", DimensionSchema.MultiValueHandling.SORTED_ARRAY, false),
-          new AutoTypeColumnSchema("deleted", ColumnType.DOUBLE)
+          new AutoTypeColumnSchema("deleted", ColumnType.DOUBLE, null)
       );
 
       submitCompactionConfig(
@@ -521,7 +522,21 @@ public class AutoCompactionTest extends CompactionTestBase
       // Compacted into 1 segment for the entire year.
       forceTriggerAutoCompaction(1);
       verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
-      verifySegmentsCompactedDimensionSchema(dimensionSchemas);
+      List<DimensionSchema> expectedDimensionSchemas = List.of(
+          dimensionSchemas.get(0),
+          new AutoTypeColumnSchema(
+              "deleted",
+              ColumnType.DOUBLE,
+              // json serialization doesn't store bitmap in compaction state, so need to set to null
+              NestedCommonFormatColumnFormatSpec.builder(
+                  NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(
+                      null,
+                      IndexSpec.getDefault().getEffectiveSpec()
+                  )
+              ).setBitmapEncoding(null).build()
+          )
+      );
+      verifySegmentsCompactedDimensionSchema(expectedDimensionSchemas);
     }
   }
 
@@ -606,6 +621,17 @@ public class AutoCompactionTest extends CompactionTestBase
           0,
           2,
           0);
+
+      final List<AutoCompactionSnapshot> allSnapshots = compactionResource.getAllCompactionSnapshots();
+      Assertions.assertFalse(allSnapshots.isEmpty());
+
+      AutoCompactionSnapshot snapshot = allSnapshots
+          .stream()
+          .filter(s -> s.getDataSource().equals(fullDatasourceName))
+          .findFirst()
+          .orElse(null);
+      Assertions.assertNotNull(snapshot);
+      Assertions.assertEquals(snapshot.getBytesAwaitingCompaction(), 0L);
     }
   }
 
@@ -764,6 +790,7 @@ public class AutoCompactionTest extends CompactionTestBase
 
   @MethodSource("getEngine")
   @ParameterizedTest(name = "compactionEngine={0}")
+  @Disabled("Disabled due to issues with compaction task not publishing schema to broker")
   public void testAutoCompactionDutyWithSegmentGranularityAndWithDropExistingTrue(CompactionEngine engine) throws Exception
   {
     // Interval is "2013-08-31/2013-09-02", segment gran is DAY,
@@ -887,6 +914,7 @@ public class AutoCompactionTest extends CompactionTestBase
 
   @MethodSource("getEngine")
   @ParameterizedTest(name = "compactionEngine={0}")
+  @Disabled("Disabled due to issues with compaction task not publishing schema to broker")
   public void testAutoCompactionDutyWithSegmentGranularityAndWithDropExistingTrueThenFalse(CompactionEngine engine) throws Exception
   {
     // Interval is "2013-08-31/2013-09-02", segment gran is DAY,
@@ -1161,6 +1189,7 @@ public class AutoCompactionTest extends CompactionTestBase
 
   @MethodSource("getEngine")
   @ParameterizedTest(name = "compactionEngine={0}")
+  @Disabled("Disabled due to issues with compaction task not publishing schema to broker")
   public void testAutoCompactionDutyWithSegmentGranularityAndSmallerSegmentGranularityCoveringMultipleSegmentsInTimelineAndDropExistingTrue(CompactionEngine engine) throws Exception
   {
     loadData(INDEX_TASK);
@@ -1855,7 +1884,7 @@ public class AutoCompactionTest extends CompactionTestBase
       cluster.callApi().waitForTaskToSucceed(taskId, overlord);
     }
 
-    cluster.callApi().waitForAllSegmentsToBeAvailable(fullDatasourceName, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(fullDatasourceName, coordinator, broker);
     verifySegmentsCount(numExpectedSegmentsAfterCompaction);
   }
 

@@ -22,6 +22,9 @@ package org.apache.druid.query.scan;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
+import junitparams.naming.TestCaseName;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.Intervals;
@@ -46,6 +49,8 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
+import org.apache.druid.segment.nested.ObjectStorageEncoding;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -54,11 +59,13 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
+@RunWith(JUnitParamsRunner.class)
 public class NestedDataScanQueryTest extends InitializedNullHandlingTest
 {
   private static final Logger LOG = new Logger(NestedDataScanQueryTest.class);
@@ -68,6 +75,18 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
 
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
+
+  public static Object[] getNestedColumnFormatSpec()
+  {
+    return new Object[]{
+        new Object[]{"default", null},
+        new Object[]{
+            "noneObjectStorageEncoding",
+            NestedCommonFormatColumnFormatSpec.builder()
+                                              .setObjectStorageEncoding(ObjectStorageEncoding.NONE).build()
+        }
+    };
+  }
 
   @After
   public void teardown() throws IOException
@@ -141,7 +160,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
             NestedDataTestUtils.COUNT,
             Granularities.YEAR,
             true,
-            IndexSpec.DEFAULT
+            IndexSpec.getDefault()
         )
     ).build();
 
@@ -267,7 +286,9 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testIngestAndScanSegmentsTsvV4() throws Exception
+  @Parameters(method = "getNestedColumnFormatSpec")
+  @TestCaseName("{0}")
+  public void testIngestAndScanSegmentsTsvV4(String name, NestedCommonFormatColumnFormatSpec spec) throws Exception
   {
     Query<ScanResultValue> scanQuery = Druids.newScanQueryBuilder()
                                              .dataSource("test_datasource")
@@ -285,7 +306,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                              .limit(100)
                                              .context(ImmutableMap.of())
                                              .build();
-    List<Segment> segs = NestedDataTestUtils.createSimpleSegmentsTsvNested(tempFolder, closer);
+    List<Segment> segs = NestedDataTestUtils.createSimpleSegmentsTsvNested(tempFolder, spec, closer);
 
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 
@@ -295,9 +316,10 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     logResults(results);
   }
 
-
   @Test
-  public void testIngestAndScanSegmentsTsv() throws Exception
+  @Parameters(method = "getNestedColumnFormatSpec")
+  @TestCaseName("{0}")
+  public void testIngestAndScanSegmentsTsv(String name, NestedCommonFormatColumnFormatSpec spec) throws Exception
   {
     Query<ScanResultValue> scanQuery = Druids.newScanQueryBuilder()
                                              .dataSource("test_datasource")
@@ -315,7 +337,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                              .limit(100)
                                              .context(ImmutableMap.of())
                                              .build();
-    List<Segment> segs = NestedDataTestUtils.createSimpleSegmentsTsv(tempFolder, closer);
+    List<Segment> segs = NestedDataTestUtils.createSimpleSegmentsTsv(tempFolder, spec, closer);
 
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 
@@ -345,7 +367,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.SIMPLE_DATA_FILE,
         Granularities.HOUR,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 
@@ -529,7 +551,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.COUNT,
         Granularities.DAY,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
 
@@ -551,9 +573,9 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     DimensionsSpec spec = DimensionsSpec.builder()
                                         .setDimensions(
                                             ImmutableList.of(
-                                                new AutoTypeColumnSchema("str", ColumnType.STRING),
-                                                new AutoTypeColumnSchema("long", ColumnType.LONG),
-                                                new AutoTypeColumnSchema("double", ColumnType.FLOAT)
+                                                new AutoTypeColumnSchema("str", ColumnType.STRING, null),
+                                                new AutoTypeColumnSchema("long", ColumnType.LONG, null),
+                                                new AutoTypeColumnSchema("double", ColumnType.FLOAT, null)
                                             )
                                         )
                                         .build();
@@ -592,7 +614,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.COUNT,
         Granularities.DAY,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
 
@@ -648,7 +670,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         aggs,
         Granularities.NONE,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
 
@@ -703,7 +725,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         aggs,
         Granularities.NONE,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
 
@@ -766,7 +788,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         aggs,
         Granularities.NONE,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
 
@@ -820,7 +842,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE,
         Granularities.HOUR,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
     List<Segment> realtimeSegs = ImmutableList.of(
@@ -878,7 +900,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE,
         Granularities.HOUR,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
     List<Segment> realtimeSegs = ImmutableList.of(
@@ -943,7 +965,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         aggs,
         Granularities.NONE,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
 

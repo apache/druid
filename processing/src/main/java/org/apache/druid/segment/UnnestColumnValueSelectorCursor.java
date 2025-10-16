@@ -77,7 +77,9 @@ public class UnnestColumnValueSelectorCursor implements Cursor
     this.baseColumnSelectorFactory = baseColumnSelectorFactory;
     this.columnValueSelector = unnestColumn.makeColumnValueSelector(
         unnestColumn.getOutputName(),
-        this.baseColumnSelectorFactory
+        this.baseColumnSelectorFactory,
+        null,
+        null
     );
     this.unnestColumn = unnestColumn;
     this.outputName = unnestColumn.getOutputName();
