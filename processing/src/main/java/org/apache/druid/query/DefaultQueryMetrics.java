@@ -27,7 +27,6 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -195,9 +194,9 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
-  public void code(@Nullable Throwable error)
+  public void statusCode(int code)
   {
-    setDimension(DruidMetrics.CODE, DruidMetrics.computeStatusCode(error));
+    setDimension(DruidMetrics.STATUS_CODE, code);
   }
 
   @Override

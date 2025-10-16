@@ -401,7 +401,9 @@ public class QueryLifecycle
           StringUtils.nullToEmptyNonDruidDataString(remoteAddress)
       );
       queryMetrics.success(success);
-      queryMetrics.code(e);
+
+      final int statusCode = DruidMetrics.computeStatusCode(e);
+      queryMetrics.statusCode(statusCode);
       queryMetrics.reportQueryTime(queryTimeNs);
 
       if (bytesWritten >= 0) {
@@ -418,7 +420,7 @@ public class QueryLifecycle
       statsMap.put("query/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs));
       statsMap.put("query/bytes", bytesWritten);
       statsMap.put("success", success);
-      statsMap.put(DruidMetrics.CODE, DruidMetrics.computeStatusCode(e));
+      statsMap.put(DruidMetrics.STATUS_CODE, statusCode);
 
       if (authenticationResult != null) {
         statsMap.put("identity", authenticationResult.getIdentity());
