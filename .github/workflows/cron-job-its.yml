@@ -103,6 +103,8 @@ jobs:
     if: github.repository == 'apache/druid'
     name: security vulnerabilities
     runs-on: ubuntu-latest
+    env:
+      NIST_NVD_API_KEY: ${{ secrets.NIST_NVD_API_KEY }}
     steps:
       - name: Checkout branch
         uses: actions/checkout@v4
