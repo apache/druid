@@ -22,7 +22,6 @@ package org.apache.druid.k8s.overlord.common;
 import com.google.common.base.Optional;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
-import io.fabric8.kubernetes.client.utils.PodStatusUtil;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
