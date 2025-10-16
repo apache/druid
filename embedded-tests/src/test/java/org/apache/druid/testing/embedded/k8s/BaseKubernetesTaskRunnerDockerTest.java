@@ -51,7 +51,7 @@ abstract class BaseKubernetesTaskRunnerDockerTest extends IngestionSmokeTest imp
         .addProperty("druid.indexer.runner.namespace", "druid")
         .addProperty("druid.indexer.runner.capacity", "4")
         .addProperty("druid.indexer.runner.enableKubernetesClientSharedInformers", String.valueOf(useSharedInformers()))
-        .addProperty("druid.indexer.runner.kubernetesClientInformerResyncPeriod", "PT1S")
+        .addProperty("druid.indexer.runner.kubernetesClientInformerResyncPeriod", "PT1s")
         .usingPort(30090);
 
     final K3sClusterResource k3sCluster = new K3sClusterWithOperatorResource()

@@ -85,7 +85,7 @@ public class KubernetesTaskRunnerConfig
   private boolean enableKubernetesClientSharedInformers = false;
 
   @JsonProperty
-  private Period kubernetesClientInformerResyncPeriod = new Period("PT30S");
+  private Period kubernetesClientInformerResyncPeriod = new Period("PT90s");
 
   @JsonProperty
   @NotNull

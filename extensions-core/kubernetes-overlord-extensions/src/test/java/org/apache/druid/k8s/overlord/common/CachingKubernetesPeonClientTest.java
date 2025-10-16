@@ -329,6 +329,7 @@ public class CachingKubernetesPeonClientTest
         .addToLabels("job-name", JOB_NAME)
         .endMetadata()
         .withNewStatus()
+        .withPhase("Running")
         .withPodIP("10.0.0.1")
         .endStatus()
         .build();

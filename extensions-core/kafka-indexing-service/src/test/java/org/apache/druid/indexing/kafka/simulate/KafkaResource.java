@@ -40,7 +40,8 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class KafkaResource extends TestcontainerResource<KafkaContainer>
 {
-  private static final String KAFKA_IMAGE = "apache/kafka:4.0.0";
+  // Offering an opportunity to override can help some local devs whose system struggles to run apache/kafka. Overriding with apache/kafka-native can help.
+  private static final String KAFKA_IMAGE = System.getProperty("druid.kafka.test.image", "apache/kafka:4.0.0");
 
   private EmbeddedDruidCluster cluster;
 
