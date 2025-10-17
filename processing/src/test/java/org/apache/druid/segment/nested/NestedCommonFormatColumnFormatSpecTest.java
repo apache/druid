@@ -104,7 +104,6 @@ public class NestedCommonFormatColumnFormatSpecTest
                  .withAutoColumnFormatSpec(
                      NestedCommonFormatColumnFormatSpec.builder()
                                                        .setObjectFieldsDictionaryEncoding(frontcoded)
-                                                       .setObjectStorageEncoding(ObjectStorageEncoding.NONE)
                                                        .build()
                  )
                  .withMetricCompression(CompressionStrategy.LZF)
@@ -115,10 +114,6 @@ public class NestedCommonFormatColumnFormatSpecTest
     Assert.assertEquals(
         frontcoded,
         defaults.getObjectFieldsDictionaryEncoding()
-    );
-    Assert.assertEquals(
-        ObjectStorageEncoding.NONE,
-        defaults.getObjectStorageEncoding()
     );
     Assert.assertEquals(
         CompressionStrategy.LZ4,
