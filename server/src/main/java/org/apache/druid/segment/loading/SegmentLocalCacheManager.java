@@ -639,9 +639,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         if (cacheEntry.checkExists(location.getPath())) {
           if (location.isReserved(cacheEntry.id) || location.reserve(cacheEntry)) {
             final SegmentCacheEntry entry = location.getCacheEntry(cacheEntry.id);
-            entry.lazyLoadCallback = segmentLoadFailCallback;
-            entry.mount(location);
-            return entry;
+            if (entry != null) {
+              entry.lazyLoadCallback = segmentLoadFailCallback;
+              entry.mount(location);
+              return entry;
+            }
           } else {
             // entry is not reserved, clean it up
             deleteCacheEntryDirectory(cacheEntry.toPotentialLocation(location.getPath()));
@@ -658,9 +660,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       if (location.reserve(cacheEntry)) {
         try {
           final SegmentCacheEntry entry = location.getCacheEntry(cacheEntry.id);
-          entry.lazyLoadCallback = segmentLoadFailCallback;
-          entry.mount(location);
-          return entry;
+          if (entry != null) {
+            entry.lazyLoadCallback = segmentLoadFailCallback;
+            entry.mount(location);
+            return entry;
+          }
         }
         catch (SegmentLoadingException e) {
           log.warn(e, "Failed to load segment[%s] in location[%s], trying next location", cacheEntry.id, location.getPath());
@@ -831,7 +835,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           }
           final SegmentizerFactory factory = getSegmentFactory(storageDir);
 
-          final Segment segment = factory.factorize(dataSegment, storageDir, false, lazyLoadCallback);
+          @SuppressWarnings("ObjectEquality")
+          final boolean lazy = config.isLazyLoadOnStart() && lazyLoadCallback != SegmentLazyLoadFailCallback.NOOP;
+          final Segment segment = factory.factorize(dataSegment, storageDir, lazy, lazyLoadCallback);
           // wipe load callback after calling
           lazyLoadCallback = SegmentLazyLoadFailCallback.NOOP;
           referenceProvider = ReferenceCountedSegmentProvider.of(segment);
