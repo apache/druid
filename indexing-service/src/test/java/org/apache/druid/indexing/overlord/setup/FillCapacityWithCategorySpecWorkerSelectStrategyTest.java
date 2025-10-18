@@ -80,7 +80,8 @@ public class FillCapacityWithCategorySpecWorkerSelectStrategyTest
             "noop",
             new WorkerCategorySpec.CategoryConfig(
                 "c1",
-                ImmutableMap.of("ds1", "c1")
+                ImmutableMap.of("ds1", "c1"),
+                null
             )
         ),
         false
@@ -95,7 +96,8 @@ public class FillCapacityWithCategorySpecWorkerSelectStrategyTest
             "noop",
             new WorkerCategorySpec.CategoryConfig(
                 null,
-                ImmutableMap.of("ds1", "c1")
+                ImmutableMap.of("ds1", "c1"),
+                null
             )
         ),
         false
@@ -110,6 +112,7 @@ public class FillCapacityWithCategorySpecWorkerSelectStrategyTest
             "noop",
             new WorkerCategorySpec.CategoryConfig(
                 "c1",
+                null,
                 null
             )
         ),
@@ -127,6 +130,7 @@ public class FillCapacityWithCategorySpecWorkerSelectStrategyTest
         ImmutableMap.of(
             "noop",
             new WorkerCategorySpec.CategoryConfig(
+                null,
                 null,
                 null
             )
@@ -146,7 +150,8 @@ public class FillCapacityWithCategorySpecWorkerSelectStrategyTest
             "noop",
             new WorkerCategorySpec.CategoryConfig(
                 "c1",
-                ImmutableMap.of("ds1", "c3")
+                ImmutableMap.of("ds1", "c3"),
+                null
             )
         ),
         false
@@ -164,7 +169,8 @@ public class FillCapacityWithCategorySpecWorkerSelectStrategyTest
             "noop",
             new WorkerCategorySpec.CategoryConfig(
                 "c1",
-                ImmutableMap.of("ds1", "c3")
+                ImmutableMap.of("ds1", "c3"),
+                null
             )
         ),
         true

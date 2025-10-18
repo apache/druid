@@ -88,15 +88,19 @@ public class WorkerCategorySpec
     private final String defaultCategory;
     // key: datasource, value: category
     private final Map<String, String> categoryAffinity;
+    // key: supervisorId, value: category
+    private final Map<String, String> supervisorIdCategoryAffinity;
 
     @JsonCreator
     public CategoryConfig(
         @JsonProperty("defaultCategory") String defaultCategory,
-        @JsonProperty("categoryAffinity") Map<String, String> categoryAffinity
+        @JsonProperty("categoryAffinity") Map<String, String> categoryAffinity,
+        @JsonProperty("supervisorIdCategoryAffinity") Map<String, String> supervisorIdCategoryAffinity
     )
     {
       this.defaultCategory = defaultCategory;
       this.categoryAffinity = categoryAffinity == null ? Collections.emptyMap() : categoryAffinity;
+      this.supervisorIdCategoryAffinity = supervisorIdCategoryAffinity == null ? Collections.emptyMap() : supervisorIdCategoryAffinity;
     }
 
     @JsonProperty
@@ -111,6 +115,12 @@ public class WorkerCategorySpec
       return categoryAffinity;
     }
 
+    @JsonProperty
+    public Map<String, String> getSupervisorIdCategoryAffinity()
+    {
+      return supervisorIdCategoryAffinity;
+    }
+
     @Override
     public boolean equals(final Object o)
     {
@@ -122,13 +132,14 @@ public class WorkerCategorySpec
       }
       final CategoryConfig that = (CategoryConfig) o;
       return Objects.equals(defaultCategory, that.defaultCategory) &&
-             Objects.equals(categoryAffinity, that.categoryAffinity);
+             Objects.equals(categoryAffinity, that.categoryAffinity) &&
+             Objects.equals(supervisorIdCategoryAffinity, that.supervisorIdCategoryAffinity);
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(defaultCategory, categoryAffinity);
+      return Objects.hash(defaultCategory, categoryAffinity, supervisorIdCategoryAffinity);
     }
 
     @Override
@@ -137,6 +148,7 @@ public class WorkerCategorySpec
       return "CategoryConfig{" +
              "defaultCategory=" + defaultCategory +
              ", categoryAffinity=" + categoryAffinity +
+             ", supervisorIdCategoryAffinity=" + supervisorIdCategoryAffinity +
              '}';
     }
   }

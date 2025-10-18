@@ -20,15 +20,33 @@
 package org.apache.druid.indexing.overlord.setup;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.impl.ByteEntity;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
+import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.NoopTask;
+import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
+import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.granularity.AllGranularity;
+import org.apache.druid.segment.indexing.DataSchema;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 
+import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.Map;
 
 public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
 {
@@ -80,7 +98,8 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
             "noop",
             new WorkerCategorySpec.CategoryConfig(
                 "c2",
-                ImmutableMap.of("ds1", "c2")
+                ImmutableMap.of("ds1", "c2"),
+                null
             )
         ),
         false
@@ -95,7 +114,8 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
             "noop",
             new WorkerCategorySpec.CategoryConfig(
                 null,
-                ImmutableMap.of("ds1", "c2")
+                ImmutableMap.of("ds1", "c2"),
+                null
             )
         ),
         false
@@ -110,6 +130,7 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
             "noop",
             new WorkerCategorySpec.CategoryConfig(
                 "c2",
+                null,
                 null
             )
         ),
@@ -127,6 +148,7 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
         ImmutableMap.of(
             "noop",
             new WorkerCategorySpec.CategoryConfig(
+                null,
                 null,
                 null
             )
@@ -146,7 +168,8 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
             "noop",
             new WorkerCategorySpec.CategoryConfig(
                 "c1",
-                ImmutableMap.of("ds1", "c3")
+                ImmutableMap.of("ds1", "c3"),
+                null
             )
         ),
         false
@@ -164,7 +187,8 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
             "noop",
             new WorkerCategorySpec.CategoryConfig(
                 "c1",
-                ImmutableMap.of("ds1", "c3")
+                ImmutableMap.of("ds1", "c3"),
+                null
             )
         ),
         true
@@ -172,6 +196,108 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
 
     ImmutableWorkerInfo worker = selectWorker(workerCategorySpec);
     Assert.assertNull(worker);
+  }
+
+  @Test
+  public void testSupervisorIdCategoryAffinity()
+  {
+    // Test that supervisor ID affinity takes precedence over datasource affinity
+    final WorkerCategorySpec workerCategorySpec = new WorkerCategorySpec(
+        ImmutableMap.of(
+            "test_seekable_stream",
+            new WorkerCategorySpec.CategoryConfig(
+                "c1",  // default category
+                ImmutableMap.of("ds1", "c1"),  // datasource affinity
+                ImmutableMap.of("supervisor1", "c2")  // supervisor ID affinity
+            )
+        ),
+        false
+    );
+
+    // Create a test task with supervisor ID "supervisor1"
+    final Task taskWithSupervisor = new TestSeekableStreamIndexTask("task1", "supervisor1", "ds1");
+    
+    final EqualDistributionWithCategorySpecWorkerSelectStrategy strategy =
+        new EqualDistributionWithCategorySpecWorkerSelectStrategy(workerCategorySpec, null);
+
+    ImmutableWorkerInfo worker = strategy.findWorkerForTask(
+        new RemoteTaskRunnerConfig(),
+        WORKERS_FOR_TIER_TESTS,
+        taskWithSupervisor
+    );
+
+    // Should select c2 worker (localhost3) because supervisor ID affinity takes precedence
+    Assert.assertNotNull(worker);
+    Assert.assertEquals("c2", worker.getWorker().getCategory());
+    Assert.assertEquals("localhost3", worker.getWorker().getHost());
+  }
+
+  @Test
+  public void testSupervisorIdCategoryAffinityFallbackToDatasource()
+  {
+    // Test that it falls back to datasource affinity when supervisor ID affinity is not found
+    final WorkerCategorySpec workerCategorySpec = new WorkerCategorySpec(
+        ImmutableMap.of(
+            "test_seekable_stream",
+            new WorkerCategorySpec.CategoryConfig(
+                "c2",  // default category
+                ImmutableMap.of("ds1", "c1"),  // datasource affinity
+                ImmutableMap.of("supervisor2", "c2")  // supervisor ID affinity (different supervisor)
+            )
+        ),
+        false
+    );
+
+    // Create a test task with supervisor ID "supervisor1" (not in supervisorIdCategoryAffinity map)
+    final Task taskWithSupervisor = new TestSeekableStreamIndexTask("task1", "supervisor1", "ds1");
+    
+    final EqualDistributionWithCategorySpecWorkerSelectStrategy strategy =
+        new EqualDistributionWithCategorySpecWorkerSelectStrategy(workerCategorySpec, null);
+
+    ImmutableWorkerInfo worker = strategy.findWorkerForTask(
+        new RemoteTaskRunnerConfig(),
+        WORKERS_FOR_TIER_TESTS,
+        taskWithSupervisor
+    );
+
+    // Should fall back to datasource affinity and select c1 worker
+    Assert.assertNotNull(worker);
+    Assert.assertEquals("c1", worker.getWorker().getCategory());
+    Assert.assertEquals("localhost1", worker.getWorker().getHost());
+  }
+
+  @Test
+  public void testSupervisorIdCategoryAffinityFallbackToDefault()
+  {
+    // Test that it falls back to default category when neither supervisor ID nor datasource affinity is found
+    final WorkerCategorySpec workerCategorySpec = new WorkerCategorySpec(
+        ImmutableMap.of(
+            "test_seekable_stream",
+            new WorkerCategorySpec.CategoryConfig(
+                "c2",  // default category
+                ImmutableMap.of("ds2", "c1"),  // datasource affinity (different datasource)
+                ImmutableMap.of("supervisor2", "c1")  // supervisor ID affinity (different supervisor)
+            )
+        ),
+        false
+    );
+
+    // Create a test task with supervisor ID "supervisor1" and datasource "ds1"
+    final Task taskWithSupervisor = new TestSeekableStreamIndexTask("task1", "supervisor1", "ds1");
+    
+    final EqualDistributionWithCategorySpecWorkerSelectStrategy strategy =
+        new EqualDistributionWithCategorySpecWorkerSelectStrategy(workerCategorySpec, null);
+
+    ImmutableWorkerInfo worker = strategy.findWorkerForTask(
+        new RemoteTaskRunnerConfig(),
+        WORKERS_FOR_TIER_TESTS,
+        taskWithSupervisor
+    );
+
+    // Should fall back to default category c2
+    Assert.assertNotNull(worker);
+    Assert.assertEquals("c2", worker.getWorker().getCategory());
+    Assert.assertEquals("localhost3", worker.getWorker().getHost());
   }
 
   private ImmutableWorkerInfo selectWorker(WorkerCategorySpec workerCategorySpec)
@@ -186,5 +312,66 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
     );
 
     return worker;
+  }
+
+  /**
+   * Test implementation of SeekableStreamIndexTask for testing supervisor ID affinity
+   */
+  private static class TestSeekableStreamIndexTask extends SeekableStreamIndexTask<String, String, ByteEntity>
+  {
+    TestSeekableStreamIndexTask(
+            String id,
+            @Nullable String supervisorId,
+            String datasource
+    )
+    {
+      this(
+              id,
+              supervisorId,
+              null,
+              DataSchema.builder()
+                      .withDataSource(datasource)
+                      .withTimestamp(new TimestampSpec(null, null, null))
+                      .withDimensions(new DimensionsSpec(Collections.emptyList()))
+                      .withGranularity(new ArbitraryGranularitySpec(new AllGranularity(), Collections.emptyList()))
+                      .build(),
+              Mockito.mock(SeekableStreamIndexTaskTuningConfig.class),
+              Mockito.mock(SeekableStreamIndexTaskIOConfig.class),
+              null,
+              null
+      );
+    }
+
+    private TestSeekableStreamIndexTask(
+            String id,
+            @Nullable String supervisorId,
+            @Nullable TaskResource taskResource,
+            DataSchema dataSchema,
+            SeekableStreamIndexTaskTuningConfig tuningConfig,
+            SeekableStreamIndexTaskIOConfig<String, String> ioConfig,
+            @Nullable Map context,
+            @Nullable String groupId
+    )
+    {
+      super(id, supervisorId, taskResource, dataSchema, tuningConfig, ioConfig, context, groupId);
+    }
+
+    @Override
+    protected SeekableStreamIndexTaskRunner<String, String, ByteEntity> createTaskRunner()
+    {
+      return null;
+    }
+
+    @Override
+    protected RecordSupplier<String, String, ByteEntity> newTaskRecordSupplier(final TaskToolbox toolbox)
+    {
+      return null;
+    }
+
+    @Override
+    public String getType()
+    {
+      return "test_seekable_stream";
+    }
   }
 }
