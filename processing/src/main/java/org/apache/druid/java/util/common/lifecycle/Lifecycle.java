@@ -371,7 +371,7 @@ public class Lifecycle
             handler.stop();
           }
           catch (Exception e) {
-            log.warn(e, "Lifecycle [%s] encountered exception while stopping [%s]", name, handler);
+            log.warn(e, "Lifecycle [%s] encountered exception while stopping handler [%s]", name, handler);
             if (thrown == null) {
               thrown = e;
             } else {
