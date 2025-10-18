@@ -246,6 +246,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     );
 
     stats.add(Stats.Compaction.MAX_SLOTS, compactionTaskCapacity);
+    stats.add(Stats.Compaction.BUSY_SLOTS, busyCompactionTaskSlots);
     stats.add(Stats.Compaction.AVAILABLE_SLOTS, availableCompactionTaskSlots);
     stats.add(Stats.Compaction.SUBMITTED_TASKS, numSubmittedCompactionTasks);
     updateCompactionSnapshotStats(currentRunAutoCompactionSnapshotBuilders, iterator, stats);
