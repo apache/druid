@@ -36,9 +36,9 @@ import java.util.Map;
  * arithmetic used in the project
  * <p>
  * <p>
- * Multiple intervals can be added to the tree. The tree can then be searched for intervals matching a given interval.
- * A match is any interval that fully encompasses or exactly matches the given interval, leading the search to
- * potentially return multiple results. Using the tree, reduces the search time from O(N) from iterating through all the
+ * Multiple intervals can be added to the tree, and an interval can be searched to find all matching intervals in the
+ * tree. A match is any interval that fully encompasses or exactly matches the given interval, leading the search to
+ * potentially return multiple results. Using the tree, reduces the search time from O(N) iterating through all the
  * intervals, to roughly O(log2(N)). Furthermore, a value can be associated with each interval, which is also returned
  * during the search.
  *
@@ -51,6 +51,8 @@ import java.util.Map;
  * To optimize the balancing cost w.r.t the operation time, the tree is not balanced on every modification operation.
  * Rather a configurable imbalance tolerance from the theoretical ideal height of log2(N) is allowed, breaching which
  * triggers the rebalance.
+ *
+ * Not thread safe.
  * <p>
  *
  * Not thread safe
@@ -114,8 +116,10 @@ public class IntervalTree<T>
     T value;
     int height;
     // The min and max of the range for the subtree
-    Interval min;
-    Interval max;
+    //Interval min;
+    //Interval max;
+    // The full interval range of the subtree formed by this Node
+    Interval range;
     Node<T> left;
     Node<T> right;
 
@@ -123,8 +127,9 @@ public class IntervalTree<T>
                                                 + "%sinterval = %s\n"
                                                 + "%svalue = %s\n"
                                                 + "%sheight = %d\n"
-                                                + "%smin = %s\n"
-                                                + "%smax = %s\n"
+                                                //+ "%smin = %s\n"
+                                                //+ "%smax = %s\n"
+                                                + "%srange = %s\n"
                                                 + "%sleft = %s\n"
                                                 + "%sright = %s\n"
                                                 + "%s}";
@@ -135,24 +140,11 @@ public class IntervalTree<T>
       String eprefix = "\t".repeat(level - 1);
       return StringUtils.format(PRINT_FORMAT,
                               prefix, interval, prefix, value, prefix, height,
-                              prefix, min, prefix, max,
+                              prefix, range, //min, prefix, max,
                               prefix, (left != null) ? left.print(level + 1) : null,
                               prefix, (right != null) ? right.print(level + 1) : null,
                               eprefix
                           );
-      /*
-      StringBuilder sb = new StringBuilder();
-      String prefix = "\t".repeat(level);
-      sb.append(prefix).append("{").append("\n");
-      sb.append(prefix).append("interval = ").append(interval).append("\n");
-      sb.append(prefix).append("value = ").append(value).append("\n");
-      sb.append(prefix).append("min = ").append(min).append("\n");
-      sb.append(prefix).append("max = ").append(max).append("\n");
-      sb.append(prefix).append("left = ").append((left != null) ? left.print(level + 1) : null).append("\n");
-      sb.append(prefix).append("right = ").append((right != null) ? right.print(level + 1) : null).append("\n");
-      sb.append(prefix).append("}");
-      return sb.toString();
-      */
     }
   }
 
@@ -170,8 +162,11 @@ public class IntervalTree<T>
       node.interval = interval;
       node.value = value;
       node.height = 0;
+      /*
       node.min = interval;
       node.max = interval;
+      */
+      node.range = interval;
       ++size;
       return node;
     }
@@ -193,12 +188,23 @@ public class IntervalTree<T>
     int rheight = (node.right != null) ? node.right.height : -1;
     node.height = Math.max(lheight, rheight) + 1;
 
+    /*
     if (startComparator.compare(interval, node.min) < 0) {
       node.min = interval;
     }
+    */
 
+    if (startComparator.compare(interval, node.range) < 0) {
+      node.range = node.range.withStart(interval.getStart());
+    }
+
+    /*
     if (endComparator.compare(node.max, interval) < 0) {
       node.max = interval;
+    }
+    */
+    if (endComparator.compare(node.range, interval) < 0) {
+      node.range = node.range.withEnd(interval.getEnd());
     }
 
     return node;
@@ -254,8 +260,11 @@ public class IntervalTree<T>
 
   private boolean isIntervalInBounds(Node<T> node, Interval interval)
   {
+    return node.range.contains(interval);
+    /*
     return (startComparator.compare(node.min, interval) <= 0)
             && (endComparator.compare(node.max, interval) >= 0);
+     */
   }
 
 
@@ -372,8 +381,11 @@ public class IntervalTree<T>
     int lheight = (node.left != null) ? node.left.height : -1;
     int rheight = (node.right != null) ? node.right.height : -1;
     node.height = Math.max(lheight, rheight) + 1;
+    node.range = computeRange(node.interval, node.left, node.right);
+    /*
     node.max = maxInterval(node.interval, node.left, node.right);
     node.min = minInterval(node.interval, node.left, node.right);
+    */
   }
 
   public void clear()
@@ -420,6 +432,7 @@ public class IntervalTree<T>
     return (root != null) ? root.print(1) : null;
   }
 
+  /*
   @SafeVarargs
   private Interval maxInterval(Interval interval, Node<T>... nodes)
   {
@@ -446,6 +459,27 @@ public class IntervalTree<T>
       }
     }
     return min;
+  }
+  */
+
+  @SafeVarargs
+  private Interval computeRange(Interval interval, Node<T>... nodes)
+  {
+    // Find the intervals that have the minimum start and the maximum end
+    Interval min = interval;
+    Interval max = interval;
+    for (Node<T> node : nodes) {
+      if (node != null) {
+        if (startComparator.compare(node.range, min) <= 0) {
+          min = node.range;
+        }
+        if (endComparator.compare(node.range, max) > 0) {
+          max = node.range;
+        }
+      }
+    }
+    // Return an interval with the min and max
+    return interval.withStart(min.getStart()).withEnd(max.getEnd());
   }
 
 }
