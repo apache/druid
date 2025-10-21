@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.taskadapter.PodTemplateWithName;
 
@@ -37,6 +38,8 @@ import java.util.Objects;
  */
 public class SelectorBasedPodTemplateSelectStrategy implements PodTemplateSelectStrategy
 {
+  private static final Logger log = new Logger(SelectorBasedPodTemplateSelectStrategy.class);
+  
   private final List<Selector> selectors;
 
   @JsonCreator
@@ -57,15 +60,53 @@ public class SelectorBasedPodTemplateSelectStrategy implements PodTemplateSelect
   @Override
   public PodTemplateWithName getPodTemplateForTask(Task task, Map<String, PodTemplate> templates)
   {
+    log.info(
+        "🎯 [STRATEGY] SelectorBasedPodTemplateSelectStrategy starting for task [%s]",
+        task.getId()
+    );
+    log.info(
+        "🎯 [STRATEGY] Available templates: %s",
+        templates.keySet()
+    );
+    log.info(
+        "🎯 [STRATEGY] Number of selectors to evaluate: %d",
+        selectors.size()
+    );
+    
     String templateKey = selectors.stream()
-                                  .filter(selector -> selector.evaluate(task))
+                                  .filter(selector -> {
+                                    boolean matches = selector.evaluate(task);
+                                    log.info(
+                                        "🎯 [STRATEGY] Selector [%s] evaluation result: %s",
+                                        selector.getSelectionKey(),
+                                        matches ? "MATCHED ✅" : "NOT MATCHED ❌"
+                                    );
+                                    return matches;
+                                  })
                                   .findFirst()
                                   .map(Selector::getSelectionKey)
                                   .orElse(DruidK8sConstants.BASE_TEMPLATE_NAME);
 
+    log.info(
+        "🎯 [STRATEGY] Selected template key: %s",
+        templateKey
+    );
+
     if (!templates.containsKey(templateKey)) {
+      log.warn(
+          "⚠️  [STRATEGY] Template [%s] not found in available templates! Falling back to base template [%s]",
+          templateKey,
+          DruidK8sConstants.BASE_TEMPLATE_NAME
+      );
       templateKey = DruidK8sConstants.BASE_TEMPLATE_NAME;
     }
+    
+    log.info(
+        "✅ [STRATEGY] Final template selected: %s for task [%s]",
+        templateKey,
+        task.getId()
+    );
+    
     return new PodTemplateWithName(templateKey, templates.get(templateKey));
   }
 

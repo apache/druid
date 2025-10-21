@@ -22,6 +22,7 @@ package org.apache.druid.k8s.overlord.execution;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.utils.CollectionUtils;
 
@@ -35,6 +36,8 @@ import java.util.Set;
  */
 public class Selector
 {
+  private static final Logger log = new Logger(Selector.class);
+  
   private final String selectionKey;
   private final Map<String, Set<String>> cxtTagsConditions;
   private final Set<String> taskTypeCondition;
@@ -70,30 +73,120 @@ public class Selector
    */
   public boolean evaluate(Task task)
   {
+    log.info(
+        "🔍 [SELECTOR] Evaluating selector [%s] for task [%s] (type=%s, dataSource=%s)",
+        selectionKey,
+        task.getId(),
+        task.getType(),
+        task.getDataSource()
+    );
+    
     boolean isMatch = true;
 
+    // Evaluate context.tags conditions
     if (cxtTagsConditions != null) {
+      log.info(
+          "🔍 [SELECTOR] Checking context.tags conditions for selector [%s]: expected=%s",
+          selectionKey,
+          cxtTagsConditions
+      );
+      
+      // Get ALL context for debugging
+      Map<String, Object> fullContext = task.getContext();
+      log.info(
+          "🔍 [SELECTOR] Full task context keys: %s",
+          fullContext != null ? fullContext.keySet() : "null"
+      );
+      
+      // Get the "tags" from context
+      Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
+      log.info(
+          "🔍 [SELECTOR] Task context.tags (key='%s'): %s",
+          DruidMetrics.TAGS,
+          tags
+      );
+      
+      if (tags == null || tags.isEmpty()) {
+        log.info(
+            "❌ [SELECTOR] Selector [%s] FAILED: Task has no context.tags or tags are empty",
+            selectionKey
+        );
+        return false;
+      }
+      
       isMatch = cxtTagsConditions.entrySet().stream().allMatch(entry -> {
         String tagKey = entry.getKey();
-        Set<String> tagValues = entry.getValue();
-        Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
-        if (tags == null || tags.isEmpty()) {
-          return false;
-        }
-        Object tagValue = tags.get(tagKey);
-
-        return tagValue != null && tagValues.contains((String) tagValue);
+        Set<String> expectedTagValues = entry.getValue();
+        Object actualTagValue = tags.get(tagKey);
+        
+        boolean tagMatches = actualTagValue != null && expectedTagValues.contains((String) actualTagValue);
+        
+        log.info(
+            "🔍 [SELECTOR] Checking tag [%s]: expected=%s, actual=%s, matches=%s",
+            tagKey,
+            expectedTagValues,
+            actualTagValue,
+            tagMatches
+        );
+        
+        return tagMatches;
       });
+      
+      if (!isMatch) {
+        log.info(
+            "❌ [SELECTOR] Selector [%s] FAILED: context.tags did not match",
+            selectionKey
+        );
+        return false;
+      }
     }
 
+    // Evaluate task type condition
     if (isMatch && !CollectionUtils.isNullOrEmpty(taskTypeCondition)) {
-      isMatch = taskTypeCondition.contains(task.getType());
+      boolean taskTypeMatches = taskTypeCondition.contains(task.getType());
+      log.info(
+          "🔍 [SELECTOR] Checking taskType: expected=%s, actual=%s, matches=%s",
+          taskTypeCondition,
+          task.getType(),
+          taskTypeMatches
+      );
+      isMatch = taskTypeMatches;
+      
+      if (!isMatch) {
+        log.info(
+            "❌ [SELECTOR] Selector [%s] FAILED: taskType did not match",
+            selectionKey
+        );
+        return false;
+      }
     }
 
+    // Evaluate dataSource condition
     if (isMatch && !CollectionUtils.isNullOrEmpty(dataSourceCondition)) {
-      isMatch = dataSourceCondition.contains(task.getDataSource());
+      boolean dataSourceMatches = dataSourceCondition.contains(task.getDataSource());
+      log.info(
+          "🔍 [SELECTOR] Checking dataSource: expected=%s, actual=%s, matches=%s",
+          dataSourceCondition,
+          task.getDataSource(),
+          dataSourceMatches
+      );
+      isMatch = dataSourceMatches;
+      
+      if (!isMatch) {
+        log.info(
+            "❌ [SELECTOR] Selector [%s] FAILED: dataSource did not match",
+            selectionKey
+        );
+        return false;
+      }
     }
 
+    log.info(
+        "✅ [SELECTOR] Selector [%s] MATCHED for task [%s]",
+        selectionKey,
+        task.getId()
+    );
+    
     return isMatch;
   }
 

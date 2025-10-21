@@ -130,15 +130,45 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   @Override
   public Job fromTask(Task task) throws IOException
   {
+    log.info(
+        "📝 [ADAPTER] Creating Job from Task [%s] (type=%s, dataSource=%s)",
+        task.getId(),
+        task.getType(),
+        task.getDataSource()
+    );
+    
     PodTemplateSelectStrategy podTemplateSelectStrategy;
     KubernetesTaskRunnerDynamicConfig dynamicConfig = dynamicConfigRef.get();
+    
+    log.info(
+        "📝 [ADAPTER] Dynamic config present: %s",
+        dynamicConfig != null
+    );
+    
     if (dynamicConfig == null || dynamicConfig.getPodTemplateSelectStrategy() == null) {
+      log.info(
+          "📝 [ADAPTER] Using DEFAULT strategy (TaskTypePodTemplateSelectStrategy)"
+      );
       podTemplateSelectStrategy = KubernetesTaskRunnerDynamicConfig.DEFAULT_STRATEGY;
     } else {
+      log.info(
+          "📝 [ADAPTER] Using dynamic config strategy: %s",
+          dynamicConfig.getPodTemplateSelectStrategy().getClass().getSimpleName()
+      );
       podTemplateSelectStrategy = dynamicConfig.getPodTemplateSelectStrategy();
     }
+    
+    log.info(
+        "📝 [ADAPTER] Available templates in adapter: %s",
+        templates.keySet()
+    );
 
     PodTemplateWithName podTemplateWithName = podTemplateSelectStrategy.getPodTemplateForTask(task, templates);
+    
+    log.info(
+        "📝 [ADAPTER] Template selected by strategy: %s",
+        podTemplateWithName.getName()
+    );
 
     return new JobBuilder()
         .withNewMetadata()
