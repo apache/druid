@@ -95,6 +95,49 @@ public class NestedCommonFormatColumnFormatSpecTest
   }
 
   @Test
+  public void testEffectiveSpecIndexSpecOverrides()
+  {
+    StringEncodingStrategy frontcoded = new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V1);
+    NestedCommonFormatColumnFormatSpec defaults = NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(
+        null,
+        IndexSpec.builder()
+                 .withAutoColumnFormatSpec(
+                     NestedCommonFormatColumnFormatSpec.builder()
+                                                       .setObjectFieldsDictionaryEncoding(frontcoded)
+                                                       .build()
+                 )
+                 .withMetricCompression(CompressionStrategy.LZF)
+                 .build()
+                 .getEffectiveSpec()
+    );
+
+    Assert.assertEquals(
+        frontcoded,
+        defaults.getObjectFieldsDictionaryEncoding()
+    );
+    Assert.assertEquals(
+        CompressionStrategy.LZ4,
+        defaults.getObjectStorageCompression()
+    );
+    Assert.assertEquals(
+        IndexSpec.getDefault().getEffectiveSpec().getDimensionCompression(),
+        defaults.getDictionaryEncodedColumnCompression()
+    );
+    Assert.assertEquals(
+        IndexSpec.getDefault().getEffectiveSpec().getStringDictionaryEncoding(),
+        defaults.getStringDictionaryEncoding()
+    );
+    Assert.assertEquals(
+        CompressionStrategy.LZF,
+        defaults.getLongColumnCompression()
+    );
+    Assert.assertEquals(
+        CompressionStrategy.LZF,
+        defaults.getDoubleColumnCompression()
+    );
+  }
+
+  @Test
   public void testGetEffectiveSpecMerge()
   {
     NestedCommonFormatColumnFormatSpec merged = NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(
