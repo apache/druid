@@ -146,7 +146,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     this.currentCapacity = config.getCapacity();
     this.tpe = new ThreadPoolExecutor(currentCapacity, currentCapacity, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(), Execs.makeThreadFactory("k8s-task-runner-%d", null));
     this.exec = MoreExecutors.listeningDecorator(this.tpe);
-    configManager.addListener(KubernetesTaskRunnerDynamicConfig.CONFIG_KEY, String.format(OBSERVER_KEY, Thread.currentThread().getId()), this::syncCapacityWithDynamicConfig);
+    configManager.addListener(KubernetesTaskRunnerDynamicConfig.CONFIG_KEY, StringUtils.format(OBSERVER_KEY, Thread.currentThread().getId()), this::syncCapacityWithDynamicConfig);
   }
 
   @Override
