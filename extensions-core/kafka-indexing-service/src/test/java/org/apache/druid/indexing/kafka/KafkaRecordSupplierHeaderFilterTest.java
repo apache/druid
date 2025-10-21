@@ -21,7 +21,7 @@ package org.apache.druid.indexing.kafka;
 
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
-import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedInclusionConfig;
+import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedFilteringConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.filter.InDimFilter;
@@ -97,7 +97,7 @@ public class KafkaRecordSupplierHeaderFilterTest
   {
     // Test filtering with in filter (single value)
     InDimFilter filter = new InDimFilter("environment", Collections.singletonList("production"), null);
-    KafkaHeaderBasedInclusionConfig headerFilter = new KafkaHeaderBasedInclusionConfig(filter, null, null);
+    KafkaHeaderBasedFilteringConfig headerFilter = new KafkaHeaderBasedFilteringConfig(filter, null, null);
 
     recordSupplier = new KafkaRecordSupplier(mockConsumer, false, headerFilter);
 
@@ -138,7 +138,7 @@ public class KafkaRecordSupplierHeaderFilterTest
   {
     // Test that filtered records are properly marked with filtered flag
     InDimFilter filter = new InDimFilter("environment", Collections.singletonList("production"), null);
-    KafkaHeaderBasedInclusionConfig headerFilter = new KafkaHeaderBasedInclusionConfig(filter, null, null);
+    KafkaHeaderBasedFilteringConfig headerFilter = new KafkaHeaderBasedFilteringConfig(filter, null, null);
 
     recordSupplier = new KafkaRecordSupplier(mockConsumer, false, headerFilter);
 
@@ -173,7 +173,7 @@ public class KafkaRecordSupplierHeaderFilterTest
   {
     // Test filtering with in filter (multiple values)
     InDimFilter filter = new InDimFilter("service", Arrays.asList("user-service", "payment-service"), null);
-    KafkaHeaderBasedInclusionConfig headerFilter = new KafkaHeaderBasedInclusionConfig(filter, null, null);
+    KafkaHeaderBasedFilteringConfig headerFilter = new KafkaHeaderBasedFilteringConfig(filter, null, null);
 
     recordSupplier = new KafkaRecordSupplier(mockConsumer, false, headerFilter);
 
@@ -214,7 +214,7 @@ public class KafkaRecordSupplierHeaderFilterTest
   {
     // Test InDimFilter with multiple possible values
     InDimFilter serviceFilter = new InDimFilter("service", Arrays.asList("user-service", "payment-service"), null);
-    KafkaHeaderBasedInclusionConfig headerFilter = new KafkaHeaderBasedInclusionConfig(serviceFilter, null, null);
+    KafkaHeaderBasedFilteringConfig headerFilter = new KafkaHeaderBasedFilteringConfig(serviceFilter, null, null);
 
     recordSupplier = new KafkaRecordSupplier(mockConsumer, false, headerFilter);
 
@@ -255,7 +255,7 @@ public class KafkaRecordSupplierHeaderFilterTest
   {
     // Test that statistics accumulate across multiple polls
     InDimFilter filter = new InDimFilter("environment", Collections.singletonList("production"), null);
-    KafkaHeaderBasedInclusionConfig headerFilter = new KafkaHeaderBasedInclusionConfig(filter, null, null);
+    KafkaHeaderBasedFilteringConfig headerFilter = new KafkaHeaderBasedFilteringConfig(filter, null, null);
 
     recordSupplier = new KafkaRecordSupplier(mockConsumer, false, headerFilter);
 
@@ -300,7 +300,7 @@ public class KafkaRecordSupplierHeaderFilterTest
   {
     // Test that empty polls don't affect statistics
     InDimFilter filter = new InDimFilter("environment", Collections.singletonList("production"), null);
-    KafkaHeaderBasedInclusionConfig headerFilter = new KafkaHeaderBasedInclusionConfig(filter, null, null);
+    KafkaHeaderBasedFilteringConfig headerFilter = new KafkaHeaderBasedFilteringConfig(filter, null, null);
 
     recordSupplier = new KafkaRecordSupplier(mockConsumer, false, headerFilter);
 
@@ -321,7 +321,7 @@ public class KafkaRecordSupplierHeaderFilterTest
     // CRITICAL TEST: Verify that when ALL records are filtered out, we still return
     // filtered record markers to prevent infinite loop
     InDimFilter filter = new InDimFilter("environment", Collections.singletonList("production"), null);
-    KafkaHeaderBasedInclusionConfig headerFilter = new KafkaHeaderBasedInclusionConfig(filter, null, null);
+    KafkaHeaderBasedFilteringConfig headerFilter = new KafkaHeaderBasedFilteringConfig(filter, null, null);
 
     recordSupplier = new KafkaRecordSupplier(mockConsumer, false, headerFilter);
 
@@ -362,7 +362,7 @@ public class KafkaRecordSupplierHeaderFilterTest
   {
     // Test that mix of filtered and accepted records works correctly
     InDimFilter filter = new InDimFilter("environment", Collections.singletonList("production"), null);
-    KafkaHeaderBasedInclusionConfig headerFilter = new KafkaHeaderBasedInclusionConfig(filter, null, null);
+    KafkaHeaderBasedFilteringConfig headerFilter = new KafkaHeaderBasedFilteringConfig(filter, null, null);
 
     recordSupplier = new KafkaRecordSupplier(mockConsumer, false, headerFilter);
 
@@ -402,7 +402,7 @@ public class KafkaRecordSupplierHeaderFilterTest
   {
     // Test header filtering with multi-topic configuration
     InDimFilter filter = new InDimFilter("environment", Collections.singletonList("production"), null);
-    KafkaHeaderBasedInclusionConfig headerFilter = new KafkaHeaderBasedInclusionConfig(filter, null, null);
+    KafkaHeaderBasedFilteringConfig headerFilter = new KafkaHeaderBasedFilteringConfig(filter, null, null);
 
     recordSupplier = new KafkaRecordSupplier(mockConsumer, true, headerFilter); // multiTopic = true
 
