@@ -19,6 +19,7 @@
 
 package org.apache.druid.timeline;
 
+import com.google.common.base.Predicate;
 import org.apache.druid.java.util.common.StringUtils;
 import org.jetbrains.annotations.VisibleForTesting;
 import org.joda.time.Interval;
@@ -36,26 +37,25 @@ import java.util.Map;
  * arithmetic used in the project
  * <p>
  * <p>
- * Multiple intervals can be added to the tree, and an interval can be searched to find all matching intervals in the
- * tree. A match is any interval that fully encompasses or exactly matches the given interval, leading the search to
- * potentially return multiple results. Using the tree, reduces the search time from O(N) iterating through all the
- * intervals, to roughly O(log2(N)). Furthermore, a value can be associated with each interval, which is also returned
- * during the search.
+ * Multiple different intervals can be added to the tree. It can then be searched to find all intervals matching a given
+ * interval. The user specifies the match condition, such as encompassing the given interval, overlapping etc. The
+ * search can return multiple results as multiple intervals in the tree could match the criteria.
+ *
+ * Using the tree, reduces the search time from O(N) iterating through all the intervals, to roughly O(log2(N)).
+ * Furthermore, a value can be associated with each interval, which is also returned in the search result.
  *
  * <p>
  * The tree is a binary search tree sorted by interval start time. The intervals are stored as nodes in the tree.
- * Additional state containing the minimum and maximum interval bounds of the entire subtree under a node, is also
+ * Additional state containing the minimum and maximum interval bounds of the entire subtree under a node is also
  * stored in each node. This helps speed up the search for matching intervals by skipping unsuitable subtrees that will
  * not contain a matching candidate interval.
  *
  * To optimize the balancing cost w.r.t the operation time, the tree is not balanced on every modification operation.
- * Rather a configurable imbalance tolerance from the theoretical ideal height of log2(N) is allowed, breaching which
+ * Rather, a configurable imbalance tolerance from the theoretical ideal height of log2(N) is allowed, breaching which
  * triggers the rebalance.
  *
  * Not thread safe.
  * <p>
- *
- * Not thread safe
  */
 public class IntervalTree<T>
 {
@@ -172,7 +172,8 @@ public class IntervalTree<T>
     }
 
     // If exact interval already exists, just replace the value
-    if (doesMatch(node, interval)) {
+    //if (doesMatch(node, interval)) {
+    if (node.interval.equals(interval)) {
       node.value = value;
       return node;
     }
@@ -212,12 +213,17 @@ public class IntervalTree<T>
 
   public Map<Interval, T> findEncompassing(Interval interval)
   {
+    // If given interval start is greater than or equal to current interval start, matches can still be found on both
+    // left and right as the given interval only needs to be encompassed.
+    // If the given interval start is less than current, then we don't need to search the right
+    // To keep it uniform looking for potential candidates in both left and right subtrees
+    // If interval falls outside the min to max range of a subtree we quickly eliminate it and not follow it
     Map<Interval, T> result = new HashMap<>();
-    findEncompassing(root, interval, result);
+    findMatching(root, result, i -> i.contains(interval));
     return result;
   }
 
-  private void findEncompassing(Node<T> node, Interval interval, Map<Interval, T> result)
+  private void findMatching(Node<T> node, Map<Interval, T> result, Predicate<Interval> condition)
   {
 
     if (node == null) {
@@ -231,32 +237,35 @@ public class IntervalTree<T>
     }
     */
 
-    if (node.interval.contains(interval)) {
+    if (condition.apply(node.interval)) {
       //result.add(new Entry<>(node.interval, node.value));
       result.put(node.interval, node.value);
     }
 
-    // If given interval start is greater than or equal to current interval start, matches can still be found on both
-    // left and right as the given interval only needs to be encompassed.
-    // If the given interval start is less than current, then we don't need to search the right
-    // To keep it uniform looking for potential candidates in both left and right subtrees
-    // If interval falls outside the min to max range of a subtree we quickly eliminate it and not follow it
-
     // Search left
-    if ((node.left != null) && isIntervalInBounds(node.left, interval)) {
-      findEncompassing(node.left, interval, result);
+    if ((node.left != null) && condition.apply(node.left.range)) {
+      findMatching(node.left, result, condition);
     }
 
     // Search right
-    if (node.right != null && isIntervalInBounds(node.right, interval)) {
-      findEncompassing(node.right, interval, result);
+    if (node.right != null && condition.apply(node.right.range)) {
+      findMatching(node.right, result, condition);
     }
   }
 
+  public Map<Interval, T> findOverlapping(Interval interval)
+  {
+    Map<Interval, T> result = new HashMap<>();
+    findMatching(root, result, i -> i.overlaps(interval));
+    return result;
+  }
+
+  /*
   private boolean doesMatch(Node<T> node, Interval interval)
   {
     return (startComparator.compare(node.interval, interval) == 0) && (endComparator.compare(node.interval, interval) == 0);
   }
+  */
 
   private boolean isIntervalInBounds(Node<T> node, Interval interval)
   {
@@ -327,6 +336,7 @@ public class IntervalTree<T>
     }
   }
 
+  /*
   private void makeLeftChild(Node<T> node, Node<T> childNode)
   {
     if (node.left == null) {
@@ -336,6 +346,7 @@ public class IntervalTree<T>
     }
     recomputeState(node);
   }
+  */
 
   @VisibleForTesting
   Iterator<Entry<T>> inOrderTraverse()
