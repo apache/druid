@@ -19,12 +19,14 @@
 
 package org.apache.druid.query.groupby.epinephelinae.vector;
 
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import org.apache.datasketches.memory.WritableMemory;
-import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.DictionaryBuildingUtils;
-import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
+import org.apache.druid.query.groupby.epinephelinae.column.DictionaryBuildingGroupByColumnSelectorStrategy;
+import org.apache.druid.query.groupby.epinephelinae.column.DimensionIdCodec;
+import org.apache.druid.query.groupby.epinephelinae.column.MemoryFootprint;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import java.util.ArrayList;
@@ -34,85 +36,65 @@ import java.util.List;
  * A {@link GroupByVectorColumnSelector} that builds an internal String<->Integer dictionary, used for grouping
  * single-valued STRING columns which are not natively dictionary encoded, e.g. expression virtual columns.
  *
- * This is effectively the {@link VectorGroupByEngine} analog of
- * {@link org.apache.druid.query.groupby.epinephelinae.column.DictionaryBuildingGroupByColumnSelectorStrategy} for
- * String columns
+ * @see DictionaryBuildingComplexGroupByVectorColumnSelector similar selector for complex columns
+ * @see DictionaryBuildingGroupByColumnSelectorStrategy#forType(ColumnType) which creates the nonvectorized version
  */
-public class DictionaryBuildingSingleValueStringGroupByVectorColumnSelector implements GroupByVectorColumnSelector
+public class DictionaryBuildingSingleValueStringGroupByVectorColumnSelector
+    extends DictionaryBuildingGroupByVectorColumnSelector<String>
 {
-  private static final int GROUP_BY_MISSING_VALUE = -1;
-
-  private final VectorObjectSelector selector;
-
-  private final List<String> dictionary = new ArrayList<>();
-  private final Object2IntOpenHashMap<String> reverseDictionary = new Object2IntOpenHashMap<>();
-
-  public DictionaryBuildingSingleValueStringGroupByVectorColumnSelector(VectorObjectSelector selector)
+  public DictionaryBuildingSingleValueStringGroupByVectorColumnSelector(final VectorObjectSelector selector)
   {
-    this.selector = selector;
-    this.reverseDictionary.defaultReturnValue(-1);
+    super(selector, new StringDimensionIdCodec());
   }
 
   @Override
-  public int getGroupingKeySize()
+  protected String convertValue(final Object rawValue)
   {
-    return Integer.BYTES;
+    return DimensionHandlerUtils.convertObjectToString(rawValue);
   }
 
-  @Override
-  public int writeKeys(
-      final WritableMemory keySpace,
-      final int keySize,
-      final int keyOffset,
-      final int startRow,
-      final int endRow
-  )
+  private static class StringDimensionIdCodec implements DimensionIdCodec<String>
   {
-    final Object[] vector = selector.getObjectVector();
-    int stateFootprintIncrease = 0;
+    private final List<String> dictionary = new ArrayList<>();
+    private final Object2IntMap<String> reverseDictionary = new Object2IntOpenHashMap<>();
 
-    for (int i = startRow, j = keyOffset; i < endRow; i++, j += keySize) {
-      final String value = DimensionHandlerUtils.convertObjectToString(vector[i]);
-      final int dictId = reverseDictionary.getInt(value);
+    StringDimensionIdCodec()
+    {
+      reverseDictionary.defaultReturnValue(-1);
+    }
+
+    @Override
+    public MemoryFootprint<Integer> lookupId(final String value)
+    {
+      int dictId = reverseDictionary.getInt(value);
+      int footprintIncrease = 0;
       if (dictId < 0) {
-        final int nextId = dictionary.size();
+        dictId = dictionary.size();
         dictionary.add(value);
-        reverseDictionary.put(value, nextId);
-        keySpace.putInt(j, nextId);
-
-        // Use same ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY as the nonvectorized version; dictionary structure is the same.
-        stateFootprintIncrease +=
-            DictionaryBuildingUtils.estimateEntryFootprint((value == null ? 0 : value.length()) * Character.BYTES);
-      } else {
-        keySpace.putInt(j, dictId);
+        reverseDictionary.put(value, dictId);
+        footprintIncrease =
+            DictionaryBuildingUtils.estimateEntryFootprint(value == null ? 0 : value.length() * Character.BYTES);
       }
+      return new MemoryFootprint<>(dictId, footprintIncrease);
     }
 
-    return stateFootprintIncrease;
-  }
-
-  @Override
-  public void writeKeyToResultRow(
-      final MemoryPointer keyMemory,
-      final int keyOffset,
-      final ResultRow resultRow,
-      final int resultRowPosition
-  )
-  {
-    final int id = keyMemory.memory().getInt(keyMemory.position() + keyOffset);
-    // GROUP_BY_MISSING_VALUE is used to indicate empty rows, which are omitted from the result map.
-    if (id != GROUP_BY_MISSING_VALUE) {
-      final String value = dictionary.get(id);
-      resultRow.set(resultRowPosition, value);
-    } else {
-      resultRow.set(resultRowPosition, null);
+    @Override
+    public String idToKey(final int id)
+    {
+      return dictionary.get(id);
     }
-  }
 
-  @Override
-  public void reset()
-  {
-    dictionary.clear();
-    reverseDictionary.clear();
+    @Override
+    public boolean canCompareIds()
+    {
+      return false;
+    }
+
+    @Override
+    public void reset()
+    {
+      dictionary.clear();
+      reverseDictionary.clear();
+    }
   }
 }
