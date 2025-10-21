@@ -33,6 +33,7 @@ import org.apache.druid.java.util.metrics.AbstractMonitor;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler;
+import org.apache.druid.server.coordination.startup.LoadAllLazilyStrategy;
 
 import java.util.Map;
 
@@ -63,7 +64,7 @@ public class SegmentStatsMonitor extends AbstractMonitor
       SegmentLoaderConfig segmentLoaderConfig
   )
   {
-    if (segmentLoaderConfig.isLazyLoadOnStart()) {
+    if (segmentLoaderConfig.getStartupCacheLoadStrategy().equals(LoadAllLazilyStrategy.STRATEGY_NAME)) {
       // log message ensures there is an error displayed at startup if this fails as the exception isn't logged.
       log.error("Monitor doesn't support working with lazy loading on start");
       // throw this exception it kill the process at startup

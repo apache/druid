@@ -28,6 +28,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler;
+import org.apache.druid.server.coordination.startup.LoadAllLazilyStrategy;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -73,9 +74,7 @@ public class SegmentStatsMonitorTest
   public void testLazyLoadOnStartThrowsException()
   {
     SegmentLoaderConfig segmentLoaderConfig = Mockito.mock(SegmentLoaderConfig.class);
-    Mockito.when(segmentLoaderConfig.isLazyLoadOnStart()).thenReturn(true);
-
-    //should throw an exception here
+    Mockito.when(segmentLoaderConfig.getStartupCacheLoadStrategy()).thenReturn(LoadAllLazilyStrategy.STRATEGY_NAME);
     new SegmentStatsMonitor(druidServerConfig, segmentLoadDropMgr, segmentLoaderConfig);
   }
 

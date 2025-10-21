@@ -22,7 +22,10 @@ package org.apache.druid.segment.loading;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
+import org.apache.druid.server.coordination.startup.LoadAllEagerlyStrategy;
+import org.apache.druid.server.coordination.startup.LoadAllLazilyStrategy;
 import org.apache.druid.utils.RuntimeInfo;
+import org.joda.time.Period;
 
 import java.io.File;
 import java.util.Collections;
@@ -41,8 +44,15 @@ public class SegmentLoaderConfig
   @JsonProperty
   private List<StorageLocationConfig> locations = Collections.emptyList();
 
+  @Deprecated
   @JsonProperty("lazyLoadOnStart")
   private boolean lazyLoadOnStart = false;
+
+  @JsonProperty("startupLoadStrategy")
+  private String startupLoadStrategy = null;
+
+  @JsonProperty("startupLoadPeriod")
+  private Period startupLoadPeriod = new Period("P7D");
 
   @JsonProperty("deleteOnRemove")
   private boolean deleteOnRemove = true;
@@ -87,6 +97,19 @@ public class SegmentLoaderConfig
   public boolean isLazyLoadOnStart()
   {
     return lazyLoadOnStart;
+  }
+
+  public String getStartupCacheLoadStrategy()
+  {
+    return startupLoadStrategy == null
+           ? isLazyLoadOnStart()
+             ? LoadAllLazilyStrategy.STRATEGY_NAME
+             : LoadAllEagerlyStrategy.STRATEGY_NAME
+           : startupLoadStrategy;
+  }
+
+  public Period getStartupLoadPeriod() {
+    return startupLoadPeriod;
   }
 
   public boolean isDeleteOnRemove()
