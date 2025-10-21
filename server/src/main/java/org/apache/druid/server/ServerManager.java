@@ -308,21 +308,27 @@ public class ServerManager implements QuerySegmentWalker
         final ListenableFuture<ReferenceCountedObjectProvider<Segment>> future = futures.get(i);
         final ReferenceCountedObjectProvider<Segment> referenceProvider =
             future.get(timeoutAt - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
-        final Optional<Segment> segment = referenceProvider.acquireReference();
-        try {
-          final Optional<Segment> mappedSegment = segmentMapFunction.apply(segment).map(safetyNet::register);
+        if (referenceProvider == null) {
           segmentReferences.add(
-              new SegmentReference(
-                  segmentAndDescriptor.getDescriptor(),
-                  mappedSegment,
-                  action
-              )
+              new SegmentReference(segmentAndDescriptor.getDescriptor(), Optional.empty(), action)
           );
-        }
-        catch (Throwable t) {
-          // if applying the mapFn failed, attach the base segment to the closer and rethrow
-          segment.ifPresent(safetyNet::register);
-          throw t;
+        } else {
+          final Optional<Segment> segment = referenceProvider.acquireReference();
+          try {
+            final Optional<Segment> mappedSegment = segmentMapFunction.apply(segment).map(safetyNet::register);
+            segmentReferences.add(
+                new SegmentReference(
+                    segmentAndDescriptor.getDescriptor(),
+                    mappedSegment,
+                    action
+                )
+            );
+          }
+          catch (Throwable t) {
+            // if applying the mapFn failed, attach the base segment to the closer and rethrow
+            segment.ifPresent(safetyNet::register);
+            throw t;
+          }
         }
       }
       catch (Throwable t) {
