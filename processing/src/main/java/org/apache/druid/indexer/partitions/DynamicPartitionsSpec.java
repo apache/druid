@@ -50,10 +50,13 @@ public class DynamicPartitionsSpec implements PartitionsSpec
       @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows
   )
   {
-    this.maxRowsPerSegment = PartitionsSpec.isEffectivelyNull(maxRowsPerSegment)
+
+    this.maxRowsPerSegment = PartitionsSpec.isEffectivelyNull(maxRowsPerSegment) || maxRowsPerSegment <= 0
                              ? DEFAULT_MAX_ROWS_PER_SEGMENT
                              : maxRowsPerSegment;
-    this.maxTotalRows = maxTotalRows;
+    this.maxTotalRows = PartitionsSpec.isEffectivelyNull(maxTotalRows) || maxTotalRows <= 0 
+                        ? null 
+                        : maxTotalRows;
   }
 
   @Override
