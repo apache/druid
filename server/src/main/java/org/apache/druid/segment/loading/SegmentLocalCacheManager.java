@@ -336,6 +336,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         if (retryAcquireExisting != null) {
           return retryAcquireExisting;
         }
+
+        if (!config.isVirtualStorage()) {
+          return AcquireSegmentAction.missingSegment();
+        }
+
         final Iterator<StorageLocation> iterator = strategy.getLocations();
         while (iterator.hasNext()) {
           final StorageLocation location = iterator.next();
