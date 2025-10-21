@@ -1011,6 +1011,31 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testGetSegmentAfterDroppedWithNoVirtualStorageEnabled() throws Exception
+  {
+    SegmentLocalCacheManager manager = makeDefaultManager(jsonMapper);
+
+    final DataSegment segmentToLoad = makeTestDataSegment(segmentDeepStorageDir);
+    createSegmentZipInLocation(segmentDeepStorageDir, TEST_DATA_RELATIVE_PATH);
+
+    manager.load(segmentToLoad);
+    Assert.assertNotNull(manager.getSegmentFiles(segmentToLoad));
+    manager.drop(segmentToLoad);
+    Assert.assertNull(manager.getSegmentFiles(segmentToLoad));
+
+    // ensure that if virtual storage is not enabled, we do not download the segment (callers might have a DataSegment
+    // reference which was originally cached and then dropped before attempting to acquire a segment. if virtual storage
+    // is not enabled, this should return a missing segment instead of downloading
+    AcquireSegmentAction segmentAction = manager.acquireSegment(segmentToLoad);
+    ReferenceCountedObjectProvider<Segment> referenceProvider = segmentAction.getSegmentFuture().get();
+    Optional<Segment> theSegment = referenceProvider.acquireReference();
+    Assert.assertFalse(theSegment.isPresent());
+    segmentAction.close();
+
+    Assert.assertNull(manager.getSegmentFiles(segmentToLoad));
+  }
+
+  @Test
   public void testIfTombstoneIsLoaded() throws IOException, SegmentLoadingException
   {
     final DataSegment tombstone = DataSegment.builder()
