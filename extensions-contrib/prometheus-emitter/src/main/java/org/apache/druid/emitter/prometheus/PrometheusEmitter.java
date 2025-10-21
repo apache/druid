@@ -36,6 +36,8 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -171,14 +173,14 @@ public class PrometheusEmitter implements Emitter
 
       if (metric.getCollector() instanceof Counter) {
         ((Counter) metric.getCollector()).labels(labelValues).inc(value.doubleValue());
-        metric.resetLastUpdateTime();
+        metric.resetLastUpdateTime(Arrays.asList(labelValues));
       } else if (metric.getCollector() instanceof Gauge) {
         ((Gauge) metric.getCollector()).labels(labelValues).set(value.doubleValue());
-        metric.resetLastUpdateTime();
+        metric.resetLastUpdateTime(Arrays.asList(labelValues));
       } else if (metric.getCollector() instanceof Histogram) {
         ((Histogram) metric.getCollector()).labels(labelValues)
                                            .observe(value.doubleValue() / metric.getConversionFactor());
-        metric.resetLastUpdateTime();
+        metric.resetLastUpdateTime(Arrays.asList(labelValues));
       } else {
         log.error("Unrecognized metric type [%s]", metric.getCollector().getClass());
       }
@@ -286,13 +288,16 @@ public class PrometheusEmitter implements Emitter
     Map<String, DimensionsAndCollector> map = metrics.getRegisteredMetrics();
     for (Map.Entry<String, DimensionsAndCollector> entry : map.entrySet()) {
       DimensionsAndCollector metric = entry.getValue();
-      if (metric.isExpired()) {
-        log.debug(
-            "Metric [%s] has expired (last updated [%d] ms ago)",
-            entry.getKey(),
-            metric.getMillisSinceLastUpdate()
-        );
-        metric.getCollector().clear();
+      for (List<String> labelValues : metric.getLabelValuesToStopwatch().keySet()) {
+        if (metric.isExpired(labelValues)) {
+          log.debug(
+              "Metric [%s] has expired (last updated [%d] ms ago)",
+              entry.getKey(),
+              metric.getMillisSinceLastUpdate(labelValues)
+          );
+          metric.getCollector().remove(labelValues.toArray(new String[0]));
+          metric.getLabelValuesToStopwatch().remove(labelValues);
+        }
       }
     }
   }

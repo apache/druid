@@ -25,6 +25,9 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public class DimensionsAndCollector
 {
@@ -33,7 +36,7 @@ public class DimensionsAndCollector
   private final SimpleCollector collector;
   private final double conversionFactor;
   private final double[] histogramBuckets;
-  private final Stopwatch updateTimer;
+  private final ConcurrentMap<List<String>, Stopwatch> labelValuesToStopwatch;
   private final Duration ttlSeconds;
 
   DimensionsAndCollector(String[] dimensions, SimpleCollector collector, double conversionFactor, double[] histogramBuckets, @Nullable Integer ttlSeconds)
@@ -42,7 +45,7 @@ public class DimensionsAndCollector
     this.collector = collector;
     this.conversionFactor = conversionFactor;
     this.histogramBuckets = histogramBuckets;
-    this.updateTimer = Stopwatch.createStarted();
+    this.labelValuesToStopwatch = new ConcurrentHashMap<>();
     this.ttlSeconds = ttlSeconds != null ? Duration.standardSeconds(ttlSeconds) : null;
   }
 
@@ -66,22 +69,31 @@ public class DimensionsAndCollector
     return histogramBuckets;
   }
 
-  public void resetLastUpdateTime()
+  public void resetLastUpdateTime(List<String> labelValues)
   {
-    updateTimer.restart();
+    if (labelValuesToStopwatch.containsKey(labelValues)) {
+      labelValuesToStopwatch.get(labelValues).restart();
+    } else {
+      labelValuesToStopwatch.put(labelValues, Stopwatch.createStarted());
+    }
   }
 
-  public long getMillisSinceLastUpdate()
+  public long getMillisSinceLastUpdate(List<String> labelValues)
   {
-    return updateTimer.millisElapsed();
+    return labelValuesToStopwatch.get(labelValues).millisElapsed();
   }
 
-  public boolean isExpired()
+  public ConcurrentMap<List<String>, Stopwatch> getLabelValuesToStopwatch()
+  {
+    return labelValuesToStopwatch;
+  }
+
+  public boolean isExpired(List<String> labelValues)
   {
     if (ttlSeconds == null) {
       log.error("Invalid usage of isExpired(), TTL has not been set");
       return false;
     }
-    return updateTimer.hasElapsed(ttlSeconds);
+    return labelValuesToStopwatch.get(labelValues).hasElapsed(ttlSeconds);
   }
 }
