@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.SettableFuture;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -81,6 +82,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   @Mock private KubernetesPeonLifecycle kubernetesPeonLifecycle;
   @Mock private ServiceEmitter emitter;
   @Mock private ListenableFuture<TaskStatus> statusFuture;
+  @Mock private ConfigManager configManager;
 
   private KubernetesTaskRunnerStaticConfig staticConfig;
   private KubernetesTaskRunnerEffectiveConfig config;
@@ -106,7 +108,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         peonClient,
         httpClient,
         new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
-        emitter
+        emitter,
+        configManager
     );
   }
 
@@ -121,7 +124,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         peonClient,
         httpClient,
         new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
-        emitter
+        emitter,
+        configManager
     )
     {
       @Override
@@ -171,7 +175,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         peonClient,
         httpClient,
         new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
-        emitter
+        emitter,
+        configManager
     )
     {
       @Override
@@ -227,7 +232,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         peonClient,
         httpClient,
         new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
-        emitter
+        emitter,
+        configManager
     )
     {
       @Override
@@ -779,7 +785,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         peonClient,
         httpClient,
         new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
-        emitter
+        emitter,
+        configManager
     );
     kubernetesTaskRunner.stop();
     Assert.assertThrows(RejectedExecutionException.class, () -> kubernetesTaskRunner.run(task));

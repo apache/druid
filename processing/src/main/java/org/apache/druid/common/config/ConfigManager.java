@@ -41,6 +41,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 /**
  */
@@ -219,6 +220,26 @@ public class ConfigManager
     }
   }
 
+  public <T> boolean addListener(String configKey, String listenerKey, Consumer<T> listener)
+  {
+    ConfigHolder holder = watchedConfigs.get(configKey);
+    if (holder == null) {
+      log.warn("ConfigHolder not found for configKey[%s]", configKey);
+      return false;
+    }
+    return holder.addListener(listenerKey, listener);
+  }
+
+  public <T> boolean removeListener(String configKey, String listenerKey, Consumer<T> listener)
+  {
+    ConfigHolder holder = watchedConfigs.get(configKey);
+    if (holder == null) {
+      log.warn("ConfigHolder not found for configKey[%s]", configKey);
+      return false;
+    }
+    return holder.removeListener(listenerKey, listener);
+  }
+
   @Nonnull
   private MetadataCASUpdate createMetadataCASUpdate(
       String keyValue,
@@ -285,6 +306,7 @@ public class ConfigManager
     private final AtomicReference<byte[]> rawBytes;
     private final ConfigSerde<T> serde;
     private final AtomicReference<T> reference;
+    private final ConcurrentMap<String, Consumer<T>> listeners;
 
     ConfigHolder(
         byte[] rawBytes,
@@ -294,6 +316,7 @@ public class ConfigManager
       this.rawBytes = new AtomicReference<>(rawBytes);
       this.serde = serde;
       this.reference = new AtomicReference<>(serde.deserialize(rawBytes));
+      this.listeners = new ConcurrentHashMap<>();
     }
 
     public AtomicReference<T> getReference()
@@ -306,9 +329,30 @@ public class ConfigManager
       if (!Arrays.equals(newBytes, rawBytes.get())) {
         reference.set(serde.deserialize(newBytes));
         rawBytes.set(newBytes);
+        listeners.forEach((_key, listener) -> listener.accept(reference.get()));
         return true;
       }
       return false;
+    }
+
+    public boolean addListener(String key, Consumer<T> listener)
+    {
+      if (listeners.containsKey(key)) {
+        log.warn("listener key[%s] already exists", key);
+        return false;
+      }
+      listeners.put(key, listener);
+      return true;
+    }
+
+    public boolean removeListener(String key, Consumer<T> listener)
+    {
+      if (!listeners.containsKey(key)) {
+        log.warn("listener key[%s] not found", key);
+        return false;
+      }
+      listeners.remove(key, listener);
+      return true;
     }
   }
 
