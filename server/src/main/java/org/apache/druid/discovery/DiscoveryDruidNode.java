@@ -52,7 +52,7 @@ import java.util.Objects;
 public class DiscoveryDruidNode
 {
   private static final Logger LOG = new Logger(DiscoveryDruidNode.class);
-  private static final Integer UNKNOWN_VALUE = -1;
+  private static final int UNKNOWN_VALUE = -1;
 
   private final DruidNode druidNode;
   private final NodeRole nodeRole;
