@@ -44,6 +44,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.TestSegmentUtils;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.server.coordination.startup.LoadAllLazilyStrategy;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
@@ -847,9 +848,9 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
     {
       @Override
-      public boolean isLazyLoadOnStart()
+      public String getStartupCacheLoadStrategy()
       {
-        return true;
+        return LoadAllLazilyStrategy.STRATEGY_NAME;
       }
 
       @Override

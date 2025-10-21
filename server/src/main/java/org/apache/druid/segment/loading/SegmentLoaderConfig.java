@@ -94,21 +94,17 @@ public class SegmentLoaderConfig
     return locations;
   }
 
-  public boolean isLazyLoadOnStart()
-  {
-    return lazyLoadOnStart;
-  }
-
   public String getStartupCacheLoadStrategy()
   {
     return startupLoadStrategy == null
-           ? isLazyLoadOnStart()
+           ? lazyLoadOnStart
              ? LoadAllLazilyStrategy.STRATEGY_NAME
              : LoadAllEagerlyStrategy.STRATEGY_NAME
            : startupLoadStrategy;
   }
 
-  public Period getStartupLoadPeriod() {
+  public Period getStartupLoadPeriod()
+  {
     return startupLoadPeriod;
   }
 
