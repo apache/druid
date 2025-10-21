@@ -57,11 +57,17 @@ For tips about how to write a good release note, see [Release notes](https://git
 
 This section contains important information about new and existing features.
 
-### Java 11 support removed
+### Jetty
 
-Upgrade to Java 17 or 21. Note that some versions of Java 21 encountered issues during test, specifically Java 21.05-21.07. If possible, avoid these versions.
+Druid 35 uses Jetty 12. This change may impact your deployment. For more information,see [the upgrade note for Jetty 12](#jetty-12)
 
-[#18424](https://github.com/apache/druid/pull/18424)
+### Java support
+
+Druid now supports Java 21. Note that some versions of Java 21 encountered issues during test, specifically Java 21.05-21.07. If possible, avoid these versions.
+
+Additionally, support for Java 11 has been removed. Upgrade to Java 17 or 21. 
+
+[#18424](https://github.com/apache/druid/pull/18424) [#18624](https://github.com/apache/druid/pull/18624)
 
 ### Projections (beta)
 
@@ -113,6 +119,12 @@ This section contains detailed release notes separated by areas.
 
 ### Web console
 
+#### Time zones
+
+You can now configure whether the web console displays local time or UTC. This setting is stored locally in your browser and doesn't impact other users. 
+
+Note that 
+
 #### Other web console improvements
 
 - Added better support for MSQ task engine-based compaction tasks. They now use the stages pane to render the compaction report instead of showing the JSON [#18545](https://github.com/apache/druid/pull/18545)
@@ -122,6 +134,15 @@ This section contains detailed release notes separated by areas.
 
 ### Ingestion
 
+#### Dimension schemas
+
+At ingestion time, dimension schemas in `dimensionsSpec` are now strictly validated against allowed types. Previously an invalid type would fall back to string dimension. Now, such values are rejected. Users must specify a type that's one of the allowed types. Omitting type still defaults to string, preserving backward compatibility.
+
+[#18565](https://github.com/apache/druid/pull/18565)
+
+#### Other ingestion improvements
+
+- Added support for session tokens (`sessionToken`) to the S3 input source [#18609](https://github.com/apache/druid/pull/18609)
 - Improved task performance. Druid now polls from memory before fetching task information from the metadata database [#18448](https://github.com/apache/druid/pull/18448)
 - Improved task execution so that they can successfully complete even if there are problems pushing logs and reports to deep storage [#18210](https://github.com/apache/druid/pull/18210)
 
@@ -192,6 +213,20 @@ You can now  write exceptions that Druid encounters as a row and then verify whe
 
 ### Cluster management
 
+#### Labels for the metadata table
+
+You can now configure labels for Druid services. Use the `druid.labels` field in the configuration options for the service and provide a JSON object of key-value pairs, such as `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`.
+
+One way to view these labels is on the **Services** tab in the web console.
+
+[#18547](https://github.com/apache/druid/pull/18547)
+
+#### TLS server configs
+
+Add a druid.server.https.forceApplyConfig config flag to indicate that the TLSServerConfig values should be applied irrespective of whether a preexisting SslContextFactory.Server binding exists.
+
+[#18610](https://github.com/apache/druid/pull/18610)
+
 #### Error message strategy
 
 You can now configure Druid to log an error message and return an error ID for non-user targeted messages. This can be configured by setting `druid.server.http.errorResponseTransform.strategy` to `persona`.
@@ -217,14 +252,31 @@ The `druid.auth.authenticator.kerberos.cookieSignatureSecret` config is now mand
 
 ### Data management
 
+#### Segment timeout
+
+You can now configure timeout for a query's segment processing.
+
+To set a timeout, set `druid.processing.numTimeoutThreads` to a low number, such as 3, on all data nodes where you want this feature enabled.
+
+Then, include the `perSegmentTimeout` query context parameter in your query and set it to a value in milliseconds.
+
 #### Other data management improvements
 
 - Improved S3 storage to support storing segments in S3 without zip compression [#18544](https://github.com/apache/druid/pull/18544)
 
 ### Metrics and monitoring
 
+#### Improved Prometheus emitter 
+
+You can now specify the TTL for a metric. If a metric value has not been updated within the TTL period then the value will stop being emitted.
+
+Set `flushPeriod` to the `exporter` strategy in the `prometheus-emitter`. 
+
+[#18598](https://github.com/apache/druid/pull/18598)
+
 #### Other metrics and monitoring improvements
 
+- Added a `statusCode` dimension to `query/time` and `sqlQuery/time` metrics containing the query result status code [#18633](https://github.com/apache/druid/pull/18633) [#18631](https://github.com/apache/druid/pull/18631)
 - Added `segment/schemaCache/refreshSkipped/count` metric that shows the number of segments that skipped schema refresh [#18561](https://github.com/apache/druid/pull/18561)
 - Added a metric for when auto-scaling /gets skipped when the pubishing task set is not empty [#18536](https://github.com/apache/druid/pull/18536)
 - Added Kafka consumer metrics for indexing tasks in the `prometheus-emitter` default metrics config [#18458](https://github.com/apache/druid/pull/18458)
@@ -243,6 +295,20 @@ You can now filter Iceberg data based on a configurable time window.
 [#18531](https://github.com/apache/druid/pull/18531)
 
 #### Kubernetes
+
+#### HTTP client
+
+You can now configure what HTTP client library the `Fabric8` `KubernetesClient` uses under the hood to communicate with the k8s server tasks run on. The default remains the same client and config that Druid 34 uses. The additional options that are now available are `okhttp` and a native JDK HttpClient. The default client and config should suffice for most use cases.
+
+Set the `druid.indexer.runner.k8sAndWorker.http.httpClientType` config to `vertx` (default), `okhttp`, or `jdk`.
+
+[#18540](https://github.com/apache/druid/pull/18540)
+
+#### Pod logs
+
+You can now set a timeout for asynchronous operations that interact with k8s pod logs: `druid.indexer.runner.podLogOperationTimeout`.
+
+[#18587](https://github.com/apache/druid/pull/18587)
 
 ##### Task logs
 
@@ -290,9 +356,13 @@ Upgrade to Java 17 or 21. Note that some versions of Java 21 encountered issues 
 
 #### Jetty 12 
 
+Druid now uses Jetty 12. Your deployment may be impacted depending, specifically with regards to URI compliance and SNI host checks.
+
 A new server configuration option has been added: `druid.server.http.uriCompliance`. Jetty 12 by default has strict enforcement of RFC3986 URI format. This is a change from Jetty 9. To retain compatibility with legacy Druid, this config defaults to `LEGACY`, which uses the more permissive URI format enforcement that Jetty 9 used. If the cluster you operate does not require legacy compatibility, we recommend you use the upstream Jetty default of `RFC3986` in your Druid deployment. See the jetty documentation for more info.
 
-[#18424](https://github.com/apache/druid/pull/18424)
+Jetty 12 servers  do strict SNI host0 checks when TLS is enabled. If the host your client is connecting to the server with does not match what is in the keystore, even if there is only one certificate in that keystore, it will return a 400 response. This could impact some use cases, such as folks connecting over `localhost` for whatever reason. If this change will break your deployment, you can opt-out of the change by setting `druid.server.http.enforceStrictSNIHostChecking` to false in the runtime.properties for some or all of your Druid services. It is recommended that you modify your client behavior to accommodate this change in `jetty` instead of overriding the config whenever possible.
+
+[#18424](https://github.com/apache/druid/pull/18424) [#18623](https://github.com/apache/druid/pull/18623)
 
 #### Kerberos authentication
 
@@ -314,23 +384,11 @@ Druid 35.0.0 will ignore the extension if it's in the load list. Future versions
 
 Due to the upgrade from `pac4j` 4.x to 5.x, session serialization has changed from `pac4j`’s JavaSerializer to standard Java serialization. As a result, clients of clusters using the `pac4j` extension may be logged out during rolling upgrades and need to re‑authenticate.
 
-#### Front-coded dictionaries
-
-<!--Carry this forward until 32. Then move it to incompatible changes -->
-
-In Druid 32.0.0, the front coded dictionaries feature will be turned on by default. Front-coded dictionaries reduce storage and improve performance by optimizing for strings where the front part looks similar.
-
-Once this feature is on, you cannot easily downgrade to an earlier version that does not support the feature. 
-
-For more information, see [Migration guide: front-coded dictionaries](./migr-front-coded-dict.md).
-
-If you're already using this feature, you don't need to take any action. 
-
-
 ### Incompatible changes
 
 
 ### Developer notes
+
 
 #### Specialized virtual columns for JSON
 
