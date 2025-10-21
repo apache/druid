@@ -204,8 +204,9 @@ Properties Object:
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|---------|
-|accessKeyId|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 input source access key|None|yes if secretAccessKey is given|
-|secretAccessKey|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 input source secret key|None|yes if accessKeyId is given|
+|accessKeyId|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 input source access key|None|Yes, if `secretAccessKey` or `sessionToken` is given.|
+|secretAccessKey|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 input source secret key|None|Yes, if `accessKeyId` or `sessionToken` is given.|
+|sessionToken|The [Password Provider](../operations/password-provider.md) or plain text string of this S3 input source session token|None|no|
 |assumeRoleArn|AWS ARN of the role to assume [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html). **assumeRoleArn** can be used either with the ingestion spec AWS credentials or with the default S3 credentials|None|no|
 |assumeRoleExternalId|A unique identifier that might be required when you assume a role in another account [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html)|None|no|
 
@@ -1189,12 +1190,12 @@ To use the Delta Lake input source, load the extension [`druid-deltalake-extensi
 You can use the Delta input source to read data stored in a Delta Lake table. For a given table, the input source scans
 the latest snapshot from the configured table. Druid ingests the underlying delta files from the table.
 
-| Property|Description| Default|Required |
-|---------|-----------|-----------------|
-|type|Set this value to `delta`.| None|yes|
-|tablePath|The location of the Delta table.|None|yes|
-|filter|The JSON Object that filters data files within a snapshot.|None|no|
-|snapshotVersion|The snapshot version to read from the Delta table. An integer value must be specified.|Latest|no|
+| Property | Description | Default | Required |
+|----------|-------------|---------|----------|
+| type | Set this value to `delta`. | None | yes |
+| tablePath | The location of the Delta table. | None | yes |
+| filter | The JSON Object that filters data files within a snapshot. | None | no |
+| snapshotVersion | The snapshot version to read from the Delta table. An integer value must be specified. | Latest | no |
 
 ### Delta filter object
 

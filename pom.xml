@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>35.0.0-SNAPSHOT</version>
+    <version>36.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -78,10 +78,10 @@
         <apache.kafka.version>3.9.1</apache.kafka.version>
         <!-- when updating apache ranger, verify the usage of aws-bundle-sdk vs aws-logs-sdk
         and update as needed in extensions-core/druid-ranger-security/pm.xml  -->
-        <apache.ranger.version>2.4.0</apache.ranger.version>
+        <apache.ranger.version>2.7.0</apache.ranger.version>
         <gson.version>2.12.0</gson.version>
         <scala.library.version>2.13.14</scala.library.version>
-        <avatica.version>1.26.0</avatica.version>
+        <avatica.version>1.27.0</avatica.version>
         <avro.version>1.11.4</avro.version>
         <!--
             The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
@@ -107,7 +107,7 @@
         <mysql.version>8.2.0</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
-        <netty4.version>4.1.122.Final</netty4.version>
+        <netty4.version>4.2.6.Final</netty4.version>
         <postgresql.version>42.7.2</postgresql.version>
         <protobuf.version>3.25.8</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
@@ -267,8 +267,6 @@
         <module>distribution</module>
         <!-- Revised integration tests -->
         <module>integration-tests-ex/tools</module>
-        <module>integration-tests-ex/image</module>
-        <module>integration-tests-ex/cases</module>
         <module>quidem-ut</module>
         <module>embedded-tests</module>
     </modules>
@@ -595,7 +593,7 @@
             <dependency>
                 <groupId>com.ibm.icu</groupId>
                 <artifactId>icu4j</artifactId>
-                <version>73.2</version>
+                <version>77.1</version>
             </dependency>
             <dependency>
                 <groupId>org.mozilla</groupId>
@@ -1846,8 +1844,10 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>7.4.4</version>
+                <version>12.1.0</version>
                 <configuration>
+                    <nvdApiKey>${nvdApiKey}</nvdApiKey>
+                    <ossIndexServerId>ossindex-credentials</ossIndexServerId>
                     <failBuildOnCVSS>7</failBuildOnCVSS>
                     <skipProvidedScope>true</skipProvidedScope>
                     <skipSystemScope>true</skipSystemScope>  <!-- avoid error when processing jdk.tools:jdk.tools:jar:1.8:system -->
@@ -1958,7 +1958,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-shade-plugin</artifactId>
-                    <version>3.5.0</version>
+                    <version>3.6.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.scala-tools</groupId>

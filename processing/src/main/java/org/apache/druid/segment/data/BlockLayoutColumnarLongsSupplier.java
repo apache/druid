@@ -22,7 +22,7 @@ package org.apache.druid.segment.data;
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.semantic.SemanticUtils;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.file.SegmentFileMapper;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -53,14 +53,14 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
       ByteOrder order,
       CompressionFactory.LongEncodingReader reader,
       CompressionStrategy strategy,
-      SmooshedFileMapper smooshMapper
+      SegmentFileMapper fileMapper
   )
   {
     this.strategy = strategy;
     this.baseLongBuffers = GenericIndexed.read(
         fromBuffer,
         DecompressingByteBufferObjectStrategy.of(order, strategy),
-        smooshMapper
+        fileMapper
     );
     this.totalSize = totalSize;
     this.sizePer = sizePer;

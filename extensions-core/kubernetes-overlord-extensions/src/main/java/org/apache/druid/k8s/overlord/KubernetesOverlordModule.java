@@ -54,7 +54,13 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
-import org.apache.druid.k8s.overlord.common.DruidKubernetesHttpClientConfig;
+import org.apache.druid.k8s.overlord.common.httpclient.DruidKubernetesHttpClientFactory;
+import org.apache.druid.k8s.overlord.common.httpclient.jdk.DruidKubernetesJdkHttpClientConfig;
+import org.apache.druid.k8s.overlord.common.httpclient.jdk.DruidKubernetesJdkHttpClientFactory;
+import org.apache.druid.k8s.overlord.common.httpclient.okhttp.DruidKubernetesOkHttpHttpClientConfig;
+import org.apache.druid.k8s.overlord.common.httpclient.okhttp.DruidKubernetesOkHttpHttpClientFactory;
+import org.apache.druid.k8s.overlord.common.httpclient.vertx.DruidKubernetesVertxHttpClientConfig;
+import org.apache.druid.k8s.overlord.common.httpclient.vertx.DruidKubernetesVertxHttpClientFactory;
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskExecutionConfigResource;
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.runnerstrategy.RunnerStrategy;
@@ -79,7 +85,11 @@ public class KubernetesOverlordModule implements DruidModule
                                                                + ".k8sAndWorker";
   private static final String RUNNERSTRATEGY_PROPERTIES_FORMAT_STRING = K8SANDWORKER_PROPERTIES_PREFIX
                                                                         + ".runnerStrategy.%s";
-  private static final String HTTPCLIENT_PROPERITES_PREFIX = K8SANDWORKER_PROPERTIES_PREFIX + ".http";
+  private static final String K8SANDWORKER_HTTPCLIENT_PROPERTIES_PREFIX = K8SANDWORKER_PROPERTIES_PREFIX + ".http";
+  private static final String HTTPCLIENT_TYPE_PROPERTY = K8SANDWORKER_HTTPCLIENT_PROPERTIES_PREFIX + ".httpClientType";
+  private static final String VERTX_HTTPCLIENT_PROPERITES_PREFIX = K8SANDWORKER_HTTPCLIENT_PROPERTIES_PREFIX + "." + DruidKubernetesVertxHttpClientFactory.TYPE_NAME;
+  private static final String OKHTTP_HTTPCLIENT_PROPERITES_PREFIX = K8SANDWORKER_HTTPCLIENT_PROPERTIES_PREFIX + "." + DruidKubernetesOkHttpHttpClientFactory.TYPE_NAME;
+  public static final String JDK_HTTPCLIENT_PROPERITES_PREFIX = K8SANDWORKER_HTTPCLIENT_PROPERTIES_PREFIX + "." + DruidKubernetesJdkHttpClientFactory.TYPE_NAME;
 
   @Override
   public void configure(Binder binder)
@@ -114,7 +124,30 @@ public class KubernetesOverlordModule implements DruidModule
 
     Jerseys.addResource(binder, KubernetesTaskExecutionConfigResource.class);
 
-    JsonConfigProvider.bind(binder, HTTPCLIENT_PROPERITES_PREFIX, DruidKubernetesHttpClientConfig.class);
+    PolyBind.createChoiceWithDefault(
+        binder,
+        HTTPCLIENT_TYPE_PROPERTY,
+        Key.get(DruidKubernetesHttpClientFactory.class),
+        DruidKubernetesVertxHttpClientFactory.TYPE_NAME
+    );
+
+    final MapBinder<String, DruidKubernetesHttpClientFactory> factoryBinder =
+        PolyBind.optionBinder(binder, Key.get(DruidKubernetesHttpClientFactory.class));
+
+    factoryBinder.addBinding(DruidKubernetesVertxHttpClientFactory.TYPE_NAME)
+                 .toProvider(VertxHttpClientFactoryProvider.class)
+                 .in(LazySingleton.class);
+
+    factoryBinder.addBinding(DruidKubernetesOkHttpHttpClientFactory.TYPE_NAME)
+                 .toProvider(OkHttpHttpClientFactoryProvider.class)
+                 .in(LazySingleton.class);
+    factoryBinder.addBinding(DruidKubernetesJdkHttpClientFactory.TYPE_NAME)
+                 .toProvider(JdkHttpClientFactoryProvider.class)
+                 .in(LazySingleton.class);
+
+    JsonConfigProvider.bind(binder, VERTX_HTTPCLIENT_PROPERITES_PREFIX, DruidKubernetesVertxHttpClientConfig.class);
+    JsonConfigProvider.bind(binder, OKHTTP_HTTPCLIENT_PROPERITES_PREFIX, DruidKubernetesOkHttpHttpClientConfig.class);
+    JsonConfigProvider.bind(binder, JDK_HTTPCLIENT_PROPERITES_PREFIX, DruidKubernetesJdkHttpClientConfig.class);
   }
 
   @Provides
@@ -131,7 +164,7 @@ public class KubernetesOverlordModule implements DruidModule
   @LazySingleton
   public DruidKubernetesClient makeKubernetesClient(
       KubernetesTaskRunnerStaticConfig kubernetesTaskRunnerConfig,
-      DruidKubernetesHttpClientConfig httpClientConfig,
+      DruidKubernetesHttpClientFactory httpClientFactory,
       Lifecycle lifecycle
   )
   {
@@ -143,7 +176,7 @@ public class KubernetesOverlordModule implements DruidModule
       config.setHttpProxy(null);
     }
 
-    client = new DruidKubernetesClient(httpClientConfig, config);
+    client = new DruidKubernetesClient(httpClientFactory, config);
 
     lifecycle.addHandler(
         new Lifecycle.Handler()
@@ -288,6 +321,57 @@ public class KubernetesOverlordModule implements DruidModule
       provider.inject(props, configurator);
 
       return provider.get();
+    }
+  }
+
+  private static class VertxHttpClientFactoryProvider implements Provider<DruidKubernetesHttpClientFactory>
+  {
+    private DruidKubernetesVertxHttpClientConfig config;
+
+    @Inject
+    public void inject(DruidKubernetesVertxHttpClientConfig config)
+    {
+      this.config = config;  // Guice injects the Vertx-specific config
+    }
+
+    @Override
+    public DruidKubernetesHttpClientFactory get()
+    {
+      return new DruidKubernetesVertxHttpClientFactory(config);
+    }
+  }
+
+  private static class OkHttpHttpClientFactoryProvider implements Provider<DruidKubernetesHttpClientFactory>
+  {
+    private DruidKubernetesOkHttpHttpClientConfig config;
+
+    @Inject
+    public void inject(DruidKubernetesOkHttpHttpClientConfig config)
+    {
+      this.config = config;  // Guice injects the OkHttp-specific config
+    }
+
+    @Override
+    public DruidKubernetesHttpClientFactory get()
+    {
+      return new DruidKubernetesOkHttpHttpClientFactory(config);
+    }
+  }
+
+  private static class JdkHttpClientFactoryProvider implements Provider<DruidKubernetesHttpClientFactory>
+  {
+    private DruidKubernetesJdkHttpClientConfig config;
+
+    @Inject
+    public void inject(DruidKubernetesJdkHttpClientConfig config)
+    {
+      this.config = config;
+    }
+
+    @Override
+    public DruidKubernetesHttpClientFactory get()
+    {
+      return new DruidKubernetesJdkHttpClientFactory(config);
     }
   }
 }

@@ -839,6 +839,43 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     Assert.assertEquals(dataSegment.getInterval(), actualBootstrapSegment.getDataInterval());
   }
 
+
+  @Test
+  public void testGetBootstrapSegmentLazy() throws SegmentLoadingException
+  {
+    final StorageLocationConfig locationConfig = new StorageLocationConfig(localSegmentCacheDir, 10000L, null);
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public boolean isLazyLoadOnStart()
+      {
+        return true;
+      }
+
+      @Override
+      public List<StorageLocationConfig> getLocations()
+      {
+        return List.of(locationConfig);
+      }
+    };
+    final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
+    SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
+        storageLocations,
+        loaderConfig,
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
+        TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
+        jsonMapper
+    );
+
+    final DataSegment dataSegment = TestSegmentUtils.makeSegment("foo", "v1", Intervals.of("2020/2021"));
+
+    manager.bootstrap(dataSegment, () -> {});
+    Segment actualBootstrapSegment = manager.acquireCachedSegment(dataSegment).orElse(null);
+    Assert.assertNotNull(actualBootstrapSegment);
+    Assert.assertEquals(dataSegment.getId(), actualBootstrapSegment.getId());
+    Assert.assertEquals(dataSegment.getInterval(), actualBootstrapSegment.getDataInterval());
+  }
+
   @Test
   public void testGetSegmentVirtualStorage() throws Exception
   {

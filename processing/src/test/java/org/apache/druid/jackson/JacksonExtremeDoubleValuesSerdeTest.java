@@ -33,7 +33,7 @@ public class JacksonExtremeDoubleValuesSerdeTest
     ObjectMapper objectMapper = new ObjectMapper();
     for (double value : new double[] {Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY}) {
       String serialized = objectMapper.writeValueAsString(value);
-      Assert.assertEquals(new Double(value), objectMapper.readValue(serialized, Double.class));
+      Assert.assertEquals(Double.valueOf(value), objectMapper.readValue(serialized, Double.class));
     }
     String negativeInfinityString = objectMapper.writeValueAsString(Double.NaN);
     Assert.assertTrue(objectMapper.readValue(negativeInfinityString, Double.class).isNaN());

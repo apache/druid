@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.rel;
 
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -35,6 +36,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -56,8 +58,8 @@ public class VirtualColumnRegistry
   private final Map<ExpressionAndTypeHint, String> virtualColumnsByExpression;
   private final Map<String, ExpressionAndTypeHint> virtualColumnsByName;
   private final String virtualColumnPrefix;
+  private final boolean forceExpressionVirtualColumns;
   private int virtualColumnCounter;
-  private boolean forceExpressionVirtualColumns;
 
   private VirtualColumnRegistry(
       RowSignature baseRowSignature,
@@ -116,18 +118,13 @@ public class VirtualColumnRegistry
     final ExpressionAndTypeHint candidate = wrap(expression, typeHint);
     if (!virtualColumnsByExpression.containsKey(candidate)) {
       final String virtualColumnName = virtualColumnPrefix + virtualColumnCounter++;
-
-      virtualColumnsByExpression.put(
-          candidate,
-          virtualColumnName
-      );
-      virtualColumnsByName.put(
-          virtualColumnName,
-          candidate
-      );
+      virtualColumnsByExpression.put(candidate, virtualColumnName);
+      virtualColumnsByName.put(virtualColumnName, candidate);
+      specialize(virtualColumnName, candidate);
+      return virtualColumnName;
+    } else {
+      return virtualColumnsByExpression.get(candidate);
     }
-
-    return virtualColumnsByExpression.get(candidate);
   }
 
   /**
@@ -212,21 +209,6 @@ public class VirtualColumnRegistry
                      .filter(this::isVirtualColumnDefined)
                      .map(name -> virtualColumnsByName.get(name).getExpression())
                      .collect(Collectors.toList());
-  }
-
-  public void visitAllSubExpressions(DruidExpression.DruidExpressionShuttle shuttle)
-  {
-    final Queue<Map.Entry<String, ExpressionAndTypeHint>> toVisit = new ArrayDeque<>(virtualColumnsByName.entrySet());
-    while (!toVisit.isEmpty()) {
-      final Map.Entry<String, ExpressionAndTypeHint> entry = toVisit.poll();
-      final String key = entry.getKey();
-      final ExpressionAndTypeHint wrapped = entry.getValue();
-      final List<DruidExpression> newArgs = shuttle.visitAll(wrapped.getExpression().getArguments());
-      final ExpressionAndTypeHint newWrapped = wrap(wrapped.getExpression().withArguments(newArgs), wrapped.getTypeHint());
-      virtualColumnsByName.put(key, newWrapped);
-      virtualColumnsByExpression.remove(wrapped);
-      virtualColumnsByExpression.put(newWrapped, key);
-    }
   }
 
   public Collection<? extends VirtualColumn> getAllVirtualColumns(List<String> requiredColumns)
@@ -326,5 +308,63 @@ public class VirtualColumnRegistry
     }
     columns.sort(Comparator.comparing(VirtualColumn::getOutputName));
     return VirtualColumns.create(columns);
+  }
+
+  /**
+   * Called to specialize subexpressions of a new virtual column immediately after adding it. Specialization is
+   * recursive: this function may create chains of virtual columns that call into each other.
+   */
+  private void specialize(final String name, final ExpressionAndTypeHint expressionAndTypeHint)
+  {
+    if (forceExpressionVirtualColumns) {
+      return;
+    }
+
+    final Queue<NonnullPair<String, ExpressionAndTypeHint>> toVisit =
+        new ArrayDeque<>(Collections.singletonList(new NonnullPair<>(name, expressionAndTypeHint)));
+    final SpecializationShuttle shuttle = new SpecializationShuttle();
+
+    while (!toVisit.isEmpty()) {
+      final NonnullPair<String, ExpressionAndTypeHint> entry = toVisit.poll();
+      final String virtualColumnName = entry.lhs;
+      final ExpressionAndTypeHint expression = entry.rhs;
+      final List<DruidExpression> newArgs = shuttle.visitAll(expression.getExpression().getArguments());
+      ExpressionAndTypeHint newExpression = wrap(
+          shuttle.visit(expression.getExpression().withArguments(newArgs)),
+          expression.getTypeHint()
+      );
+
+      // If the expression becomes a direct access of another virtual column after rewriting, then map this
+      // virtual column name to the expression for the referenced virtual column.
+      if (newExpression.getExpression().isDirectColumnAccess()
+          && virtualColumnsByName.containsKey(newExpression.getExpression().getDirectColumn())) {
+        newExpression = virtualColumnsByName.get(newExpression.getExpression().getDirectColumn());
+      }
+
+      // Map both the old and new expression to the same virtual column name.
+      virtualColumnsByName.put(virtualColumnName, newExpression);
+      virtualColumnsByExpression.put(expression, virtualColumnName);
+      virtualColumnsByExpression.putIfAbsent(newExpression, virtualColumnName);
+    }
+  }
+
+  /**
+   * Shuttle used by {@link #specialize(String, ExpressionAndTypeHint)}.
+   */
+  private class SpecializationShuttle implements DruidExpression.DruidExpressionShuttle
+  {
+    @Override
+    public DruidExpression visit(DruidExpression expression)
+    {
+      if (expression.getType() == DruidExpression.NodeType.SPECIALIZED) {
+        // add the expression to the top level of the registry as a standalone virtual column
+        final String name = getOrCreateVirtualColumnForExpression(expression, expression.getDruidType());
+        // replace with an identifier expression of the new virtual column name
+        return DruidExpression.ofColumn(expression.getDruidType(), name);
+      } else {
+        // do nothing
+        return expression;
+      }
+    }
   }
 }
