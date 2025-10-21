@@ -213,18 +213,17 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
             record.timestamp(),
             true // Mark as filtered
         ));
-        continue;
+      } else {
+        // Create record for accepted records
+        polledRecords.add(new OrderedPartitionableRecord<>(
+            record.topic(),
+            kafkaPartition,
+            record.offset(),
+            record.value() == null ? null : ImmutableList.of(new KafkaRecordEntity(record)),
+            record.timestamp(),
+            false
+        ));
       }
-
-      // Create record for accepted records
-      polledRecords.add(new OrderedPartitionableRecord<>(
-          record.topic(),
-          kafkaPartition,
-          record.offset(),
-          record.value() == null ? null : ImmutableList.of(new KafkaRecordEntity(record)),
-          record.timestamp(),
-          false
-      ));
     }
 
     return polledRecords;
