@@ -34,7 +34,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.Collections;
 
-public class KafkaHeaderBasedFilteringConfigTest
+public class KafkaHeaderBasedFilterConfigTest
 {
   private final ObjectMapper objectMapper = new DefaultObjectMapper();
 
@@ -48,7 +48,7 @@ public class KafkaHeaderBasedFilteringConfigTest
   public void testInFilterSingleValue()
   {
     InDimFilter dimFilter = new InDimFilter("environment", Collections.singletonList("production"), null);
-    KafkaHeaderBasedFilteringConfig filter = new KafkaHeaderBasedFilteringConfig(dimFilter, null, null);
+    KafkaHeaderBasedFilterConfig filter = new KafkaHeaderBasedFilterConfig(dimFilter, null, null);
 
     Assert.assertEquals(dimFilter, filter.getFilter());
     Assert.assertEquals("UTF-8", filter.getEncoding());
@@ -59,7 +59,7 @@ public class KafkaHeaderBasedFilteringConfigTest
   public void testInFilterMultipleValues()
   {
     InDimFilter dimFilter = new InDimFilter("service", Arrays.asList("user-service", "payment-service"), null);
-    KafkaHeaderBasedFilteringConfig filter = new KafkaHeaderBasedFilteringConfig(dimFilter, "ISO-8859-1", null);
+    KafkaHeaderBasedFilterConfig filter = new KafkaHeaderBasedFilterConfig(dimFilter, "ISO-8859-1", null);
 
     Assert.assertEquals(dimFilter, filter.getFilter());
     Assert.assertEquals("ISO-8859-1", filter.getEncoding());
@@ -70,7 +70,7 @@ public class KafkaHeaderBasedFilteringConfigTest
   public void testInFilterWithCustomCacheSize()
   {
     InDimFilter dimFilter = new InDimFilter("environment", Collections.singletonList("production"), null);
-    KafkaHeaderBasedFilteringConfig filter = new KafkaHeaderBasedFilteringConfig(dimFilter, null, 50_000);
+    KafkaHeaderBasedFilterConfig filter = new KafkaHeaderBasedFilterConfig(dimFilter, null, 50_000);
 
     Assert.assertEquals(dimFilter, filter.getFilter());
     Assert.assertEquals("UTF-8", filter.getEncoding());
@@ -82,7 +82,7 @@ public class KafkaHeaderBasedFilteringConfigTest
   {
     SelectorDimFilter dimFilter = new SelectorDimFilter("environment", "production", null);
     try {
-      new KafkaHeaderBasedFilteringConfig(dimFilter, null, null);
+      new KafkaHeaderBasedFilterConfig(dimFilter, null, null);
       Assert.fail("Expected DruidException for SelectorDimFilter");
     }
     catch (DruidException e) {
@@ -98,7 +98,7 @@ public class KafkaHeaderBasedFilteringConfigTest
     SelectorDimFilter serviceFilter = new SelectorDimFilter("service", "user-service", null);
     AndDimFilter andFilter = new AndDimFilter(Arrays.asList(envFilter, serviceFilter));
     try {
-      new KafkaHeaderBasedFilteringConfig(andFilter, null, null);
+      new KafkaHeaderBasedFilterConfig(andFilter, null, null);
       Assert.fail("Expected DruidException for AndDimFilter");
     }
     catch (DruidException e) {
@@ -113,7 +113,7 @@ public class KafkaHeaderBasedFilteringConfigTest
     SelectorDimFilter debugFilter = new SelectorDimFilter("debug-mode", "true", null);
     NotDimFilter notFilter = new NotDimFilter(debugFilter);
     try {
-      new KafkaHeaderBasedFilteringConfig(notFilter, null, null);
+      new KafkaHeaderBasedFilterConfig(notFilter, null, null);
       Assert.fail("Expected DruidException for NotDimFilter");
     }
     catch (DruidException e) {
@@ -125,27 +125,27 @@ public class KafkaHeaderBasedFilteringConfigTest
   @Test(expected = NullPointerException.class)
   public void testNullFilter()
   {
-    new KafkaHeaderBasedFilteringConfig(null, null, null);
+    new KafkaHeaderBasedFilterConfig(null, null, null);
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void testInvalidEncoding()
   {
     InDimFilter dimFilter = new InDimFilter("environment", Collections.singletonList("production"), null);
-    new KafkaHeaderBasedFilteringConfig(dimFilter, "INVALID-ENCODING", null);
+    new KafkaHeaderBasedFilterConfig(dimFilter, "INVALID-ENCODING", null);
   }
 
   @Test
   public void testSerialization() throws Exception
   {
     InDimFilter dimFilter = new InDimFilter("environment", Collections.singletonList("production"), null);
-    KafkaHeaderBasedFilteringConfig originalFilter = new KafkaHeaderBasedFilteringConfig(dimFilter, "UTF-16", null);
+    KafkaHeaderBasedFilterConfig originalFilter = new KafkaHeaderBasedFilterConfig(dimFilter, "UTF-16", null);
 
     // Serialize to JSON
     String json = objectMapper.writeValueAsString(originalFilter);
 
     // Deserialize back
-    KafkaHeaderBasedFilteringConfig deserializedFilter = objectMapper.readValue(json, KafkaHeaderBasedFilteringConfig.class);
+    KafkaHeaderBasedFilterConfig deserializedFilter = objectMapper.readValue(json, KafkaHeaderBasedFilterConfig.class);
 
     Assert.assertEquals(originalFilter.getFilter(), deserializedFilter.getFilter());
     Assert.assertEquals(originalFilter.getEncoding(), deserializedFilter.getEncoding());
@@ -159,11 +159,11 @@ public class KafkaHeaderBasedFilteringConfigTest
     InDimFilter dimFilter2 = new InDimFilter("environment", Collections.singletonList("production"), null);
     InDimFilter dimFilter3 = new InDimFilter("environment", Collections.singletonList("staging"), null);
 
-    KafkaHeaderBasedFilteringConfig filter1 = new KafkaHeaderBasedFilteringConfig(dimFilter1, "UTF-8", null);
-    KafkaHeaderBasedFilteringConfig filter2 = new KafkaHeaderBasedFilteringConfig(dimFilter2, "UTF-8", null);
-    KafkaHeaderBasedFilteringConfig filter3 = new KafkaHeaderBasedFilteringConfig(dimFilter3, "UTF-8", null);
-    KafkaHeaderBasedFilteringConfig filter4 = new KafkaHeaderBasedFilteringConfig(dimFilter1, "UTF-16", null);
-    KafkaHeaderBasedFilteringConfig filter5 = new KafkaHeaderBasedFilteringConfig(dimFilter1, "UTF-8", 5000);
+    KafkaHeaderBasedFilterConfig filter1 = new KafkaHeaderBasedFilterConfig(dimFilter1, "UTF-8", null);
+    KafkaHeaderBasedFilterConfig filter2 = new KafkaHeaderBasedFilterConfig(dimFilter2, "UTF-8", null);
+    KafkaHeaderBasedFilterConfig filter3 = new KafkaHeaderBasedFilterConfig(dimFilter3, "UTF-8", null);
+    KafkaHeaderBasedFilterConfig filter4 = new KafkaHeaderBasedFilterConfig(dimFilter1, "UTF-16", null);
+    KafkaHeaderBasedFilterConfig filter5 = new KafkaHeaderBasedFilterConfig(dimFilter1, "UTF-8", 5000);
 
     Assert.assertEquals(filter1, filter2);
     Assert.assertNotEquals(filter1, filter3);
@@ -177,10 +177,10 @@ public class KafkaHeaderBasedFilteringConfigTest
   public void testToString()
   {
     InDimFilter dimFilter = new InDimFilter("environment", Collections.singletonList("production"), null);
-    KafkaHeaderBasedFilteringConfig filter = new KafkaHeaderBasedFilteringConfig(dimFilter, "UTF-8", null);
+    KafkaHeaderBasedFilterConfig filter = new KafkaHeaderBasedFilterConfig(dimFilter, "UTF-8", null);
 
     String toString = filter.toString();
-    Assert.assertTrue(toString.contains("KafkaHeaderBasedFilteringConfig"));
+    Assert.assertTrue(toString.contains("KafkaheaderBasedFilterConfig"));
     Assert.assertTrue(toString.contains("filter="));
     Assert.assertTrue(toString.contains("encoding='UTF-8'"));
     Assert.assertTrue(toString.contains("stringDecodingCacheSize=10000"));

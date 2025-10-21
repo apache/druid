@@ -28,7 +28,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
-import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedFilteringConfig;
+import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedFilterConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpecBuilder;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
@@ -174,11 +174,16 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertTrue(supervisorStatus.isHealthy());
     Assertions.assertEquals("RUNNING", supervisorStatus.getState());
 
+    // Suspend the supervisor and wait for segment handoff
+    cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
+    indexer.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("ingest/handoff/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, List.of(dataSource)),
+        agg -> agg.hasSumAtLeast(expectedRecords)
+    );
+
     // Verify only filtered records were ingested
     Assertions.assertEquals(String.valueOf(expectedRecords), cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
-
-    // Clean up
-    cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
   }
 
   private KafkaSupervisorSpec createKafkaSupervisor(String supervisorId, String topic)
@@ -207,7 +212,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
   private KafkaSupervisorSpec createKafkaSupervisorWithHeaderFilter(String supervisorId, String topic)
   {
     InDimFilter filter = new InDimFilter("environment", ImmutableSet.of("production"));
-    KafkaHeaderBasedFilteringConfig headerFilterConfig = new KafkaHeaderBasedFilteringConfig(filter, "UTF-8", 1000);
+    KafkaHeaderBasedFilterConfig headerFilterConfig = new KafkaHeaderBasedFilterConfig(filter, "UTF-8", 1000);
 
     return new KafkaSupervisorSpecBuilder()
         .withDataSchema(
@@ -225,7 +230,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
                 .withInputFormat(new CsvInputFormat(List.of("timestamp", "item"), null, null, false, 0, false))
                 .withConsumerProperties(kafkaServer.consumerProperties())
                 .withUseEarliestSequenceNumber(true)
-                .withHeaderBasedFilteringConfig(headerFilterConfig)
+                .withHeaderBasedFilterConfig(headerFilterConfig)
         )
         .withId(supervisorId)
         .build(dataSource, topic);
