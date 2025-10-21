@@ -93,6 +93,8 @@ public class DimensionsAndCollector
     if (ttlSeconds == null) {
       log.error("Invalid usage of isExpired(), TTL has not been set");
       return false;
+    } else if (!labelValuesToStopwatch.containsKey(labelValues)) {
+      return true;
     }
     return labelValuesToStopwatch.get(labelValues).hasElapsed(ttlSeconds);
   }
