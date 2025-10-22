@@ -102,6 +102,9 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     task = K8sTestUtils.createTask(ID, 0);
 
+    configManager = EasyMock.createNiceMock(ConfigManager.class);
+    EasyMock.replay(configManager);
+
     runner = new KubernetesTaskRunner(
         taskAdapter,
         config,
