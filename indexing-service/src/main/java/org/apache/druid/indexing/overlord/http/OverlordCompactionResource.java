@@ -158,7 +158,21 @@ public class OverlordCompactionResource
         );
       });
     } else {
-      return buildResponse(coordinatorClient.getCompactionSnapshots(null));
+      return ServletResourceUtils.buildReadResponse(() -> {
+        final CompactionStatusResponse response = FutureUtils.getUnchecked(
+            coordinatorClient.getCompactionSnapshots(null),
+            true
+        );
+
+        return new CompactionStatusResponse(
+            AuthorizationUtils.filterByAuthorizedDatasources(
+                request,
+                response.getLatestStatus(),
+                AutoCompactionSnapshot::getDataSource,
+                authorizerMapper
+            )
+        );
+      });
     }
   }
 

@@ -3282,8 +3282,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       // Ignore return value; but kill tasks that failed to return anything at all.
       if (results.get(i).isError()) {
         String taskId = futureTaskIds.get(i);
-        log.noStackTrace().warn(results.get(i).error(), "Task [%s] failed to return start time, killing task", taskId);
-        killTask(taskId, "Task [%s] failed to return start time, killing task", taskId);
+        log.noStackTrace().warn(results.get(i).error(), "Killing task[%s] as it failed to return start time.", taskId);
+        killTask(taskId, "Failed to return start time: %s", results.get(i).error().getMessage());
       }
     }
   }

@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
 public class MSQTaskQueryMakerUtils
 {
 
-  public static final Set<String> SENSISTIVE_JSON_KEYS = ImmutableSet.of("accessKeyId", "secretAccessKey");
+  public static final Set<String> SENSISTIVE_JSON_KEYS = ImmutableSet.of("accessKeyId", "secretAccessKey", "sessionToken");
   public static final Set<Pattern> SENSITIVE_KEYS_REGEX_PATTERNS = SENSISTIVE_JSON_KEYS.stream()
                                                                                        .map(sensitiveKey ->
                                                                                                  Pattern.compile(

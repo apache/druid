@@ -25,7 +25,7 @@ import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
@@ -66,7 +66,7 @@ public interface FrameContext extends Closeable
 
   DataSegmentPusher segmentPusher();
 
-  IndexMergerV9 indexMerger();
+  IndexMerger indexMerger();
 
   ProcessingBuffers processingBuffers();
 
