@@ -115,9 +115,6 @@ public class IntervalTree<T>
     Interval interval;
     T value;
     int height;
-    // The min and max of the range for the subtree
-    //Interval min;
-    //Interval max;
     // The full interval range of the subtree formed by this Node
     Interval range;
     Node<T> left;
@@ -127,8 +124,6 @@ public class IntervalTree<T>
                                                 + "%sinterval = %s\n"
                                                 + "%svalue = %s\n"
                                                 + "%sheight = %d\n"
-                                                //+ "%smin = %s\n"
-                                                //+ "%smax = %s\n"
                                                 + "%srange = %s\n"
                                                 + "%sleft = %s\n"
                                                 + "%sright = %s\n"
@@ -140,7 +135,7 @@ public class IntervalTree<T>
       String eprefix = "\t".repeat(level - 1);
       return StringUtils.format(PRINT_FORMAT,
                               prefix, interval, prefix, value, prefix, height,
-                              prefix, range, //min, prefix, max,
+                              prefix, range,
                               prefix, (left != null) ? left.print(level + 1) : null,
                               prefix, (right != null) ? right.print(level + 1) : null,
                               eprefix
@@ -162,10 +157,6 @@ public class IntervalTree<T>
       node.interval = interval;
       node.value = value;
       node.height = 0;
-      /*
-      node.min = interval;
-      node.max = interval;
-      */
       node.range = interval;
       ++size;
       return node;
@@ -189,21 +180,10 @@ public class IntervalTree<T>
     int rheight = (node.right != null) ? node.right.height : -1;
     node.height = Math.max(lheight, rheight) + 1;
 
-    /*
-    if (startComparator.compare(interval, node.min) < 0) {
-      node.min = interval;
-    }
-    */
-
     if (startComparator.compare(interval, node.range) < 0) {
       node.range = node.range.withStart(interval.getStart());
     }
 
-    /*
-    if (endComparator.compare(node.max, interval) < 0) {
-      node.max = interval;
-    }
-    */
     if (endComparator.compare(node.range, interval) < 0) {
       node.range = node.range.withEnd(interval.getEnd());
     }
@@ -213,11 +193,6 @@ public class IntervalTree<T>
 
   public Map<Interval, T> findEncompassing(Interval interval)
   {
-    // If given interval start is greater than or equal to current interval start, matches can still be found on both
-    // left and right as the given interval only needs to be encompassed.
-    // If the given interval start is less than current, then we don't need to search the right
-    // To keep it uniform looking for potential candidates in both left and right subtrees
-    // If interval falls outside the min to max range of a subtree we quickly eliminate it and not follow it
     Map<Interval, T> result = new HashMap<>();
     findMatching(root, result, i -> i.contains(interval));
     return result;
@@ -229,13 +204,6 @@ public class IntervalTree<T>
     if (node == null) {
       return;
     }
-
-    /*
-    if ((comparator.compare(interval, node.min) < 0)
-            || (highComparator.compare(node.max, interval) < 0)) {
-        return;
-    }
-    */
 
     if (condition.apply(node.interval)) {
       //result.add(new Entry<>(node.interval, node.value));
@@ -260,23 +228,6 @@ public class IntervalTree<T>
     return result;
   }
 
-  /*
-  private boolean doesMatch(Node<T> node, Interval interval)
-  {
-    return (startComparator.compare(node.interval, interval) == 0) && (endComparator.compare(node.interval, interval) == 0);
-  }
-  */
-
-  private boolean isIntervalInBounds(Node<T> node, Interval interval)
-  {
-    return node.range.contains(interval);
-    /*
-    return (startComparator.compare(node.min, interval) <= 0)
-            && (endComparator.compare(node.max, interval) >= 0);
-     */
-  }
-
-
   public void remove(Interval interval)
   {
     root = removeNode(root, interval);
@@ -290,6 +241,7 @@ public class IntervalTree<T>
     }
 
     if (node.interval.equals(interval)) {
+      // This is the node to delete
       --size;
       if ((node.left != null) && (node.right != null)) {
         // Make the right most child of the left node the new node at current level
@@ -302,19 +254,23 @@ public class IntervalTree<T>
         recomputeState(newNode);
         return newNode;
       } else if (node.left != null) {
+        // Right nodde is null, make the left node the new node at current level
         return node.left;
       } else if (node.right != null) {
+        // Left nodde is null, make the right node the new node at current level
         return node.right;
       }
       return null;
     }
 
+    // Current node didn't match, search children
     if (startComparator.compare(interval, node.interval) < 0) {
       node.left = removeNode(node.left, interval);
     } else {
       node.right = removeNode(node.right, interval);
     }
 
+    // Update our state as a modification may have happened somewhere in our subtree
     recomputeState(node);
 
     return node;
@@ -335,18 +291,6 @@ public class IntervalTree<T>
       return rnode;
     }
   }
-
-  /*
-  private void makeLeftChild(Node<T> node, Node<T> childNode)
-  {
-    if (node.left == null) {
-      node.left = childNode;
-    } else {
-      makeLeftChild(node.left, childNode);
-    }
-    recomputeState(node);
-  }
-  */
 
   @VisibleForTesting
   Iterator<Entry<T>> inOrderTraverse()
@@ -393,10 +337,6 @@ public class IntervalTree<T>
     int rheight = (node.right != null) ? node.right.height : -1;
     node.height = Math.max(lheight, rheight) + 1;
     node.range = computeRange(node.interval, node.left, node.right);
-    /*
-    node.max = maxInterval(node.interval, node.left, node.right);
-    node.min = minInterval(node.interval, node.left, node.right);
-    */
   }
 
   public void clear()
@@ -407,7 +347,6 @@ public class IntervalTree<T>
 
   public int size()
   {
-    //return size(root);
     return size;
   }
 
@@ -416,14 +355,6 @@ public class IntervalTree<T>
   int height()
   {
     return (root != null) ? root.height : -1;
-  }
-
-  private int size(Node<T> node)
-  {
-    if (node == null) {
-      return 0;
-    }
-    return 1 + size(node.left) + size(node.right);
   }
 
   private void checkRebalance()
@@ -442,36 +373,6 @@ public class IntervalTree<T>
   {
     return (root != null) ? root.print(1) : null;
   }
-
-  /*
-  @SafeVarargs
-  private Interval maxInterval(Interval interval, Node<T>... nodes)
-  {
-    Interval max = interval;
-    for (Node<T> node : nodes) {
-      if (node != null) {
-        if (endComparator.compare(node.max, max) > 0) {
-          max = node.max;
-        }
-      }
-    }
-    return max;
-  }
-
-  @SafeVarargs
-  private Interval minInterval(Interval interval, Node<T>... nodes)
-  {
-    Interval min = interval;
-    for (Node<T> node : nodes) {
-      if (node != null) {
-        if (startComparator.compare(node.min, min) <= 0) {
-          min = node.min;
-        }
-      }
-    }
-    return min;
-  }
-  */
 
   @SafeVarargs
   private Interval computeRange(Interval interval, Node<T>... nodes)

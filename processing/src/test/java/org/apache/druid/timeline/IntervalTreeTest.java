@@ -25,9 +25,11 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -202,7 +204,7 @@ public class IntervalTreeTest
     compareData(expectedData, tree);
   }
 
-  /*
+  @Ignore
   @Test
   public void testPerf()
   {
@@ -248,7 +250,6 @@ public class IntervalTreeTest
     }
     System.out.println("Tree find time " + (System.currentTimeMillis() - start));
   }
-  */
 
   @Test
   public void testAutoRebalance() throws JsonProcessingException
