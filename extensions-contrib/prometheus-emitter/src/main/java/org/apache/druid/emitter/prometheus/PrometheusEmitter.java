@@ -291,8 +291,9 @@ public class PrometheusEmitter implements Emitter
       for (List<String> labelValues : metric.getLabelValuesToStopwatch().keySet()) {
         if (metric.isExpired(labelValues)) {
           log.debug(
-              "Metric [%s] has expired (last updated [%d] ms ago)",
+              "Metric [%s] with labels [%s] has expired (last updated [%d] ms ago)",
               entry.getKey(),
+              labelValues,
               metric.getMillisSinceLastUpdate(labelValues)
           );
           metric.getCollector().remove(labelValues.toArray(new String[0]));
