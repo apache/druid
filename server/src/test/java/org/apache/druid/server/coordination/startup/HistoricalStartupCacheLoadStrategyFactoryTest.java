@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordination.startup;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 
 import org.joda.time.Period;
@@ -102,5 +103,24 @@ public class HistoricalStartupCacheLoadStrategyFactoryTest
 
     HistoricalStartupCacheLoadStrategy strategy = HistoricalStartupCacheLoadStrategyFactory.factorize(config);
     Assert.assertEquals(LoadAllEagerlyStrategy.class, strategy.getClass());
+  }
+
+  @Test
+  public void testConstructionOfInvalidConfig() {
+    String unknownStrategy = "some unknown strategy";
+    final SegmentLoaderConfig config = new SegmentLoaderConfig()
+    {
+      @Override
+      public String getStartupCacheLoadStrategy()
+      {
+        return unknownStrategy;
+      }
+    };
+
+    Assert.assertThrows(
+        "Unknown configured Historical Startup Loading Strategy[" + unknownStrategy + "]",
+        DruidException.class,
+        () -> HistoricalStartupCacheLoadStrategyFactory.factorize(config)
+    );
   }
 }
