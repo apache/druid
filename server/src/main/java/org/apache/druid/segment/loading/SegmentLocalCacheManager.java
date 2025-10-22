@@ -198,14 +198,10 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     AtomicInteger ignoredFilesCounter = new AtomicInteger(0);
     CountDownLatch latch = new CountDownLatch(segmentsToLoad.length);
 
-    boolean hasCreatedNewExecutorServiceForCachingSegments = false;
-    ExecutorService executorService;
-    if (loadOnBootstrapExec != null) {
-      executorService = loadOnBootstrapExec;
-    } else {
-      executorService = MoreExecutors.newDirectExecutorService();
-      hasCreatedNewExecutorServiceForCachingSegments = true;
-    }
+    boolean createdNewExecutorServiceToLoadSegmentCache = loadOnBootstrapExec == null;
+    ExecutorService executorService = createdNewExecutorServiceToLoadSegmentCache
+                                      ? MoreExecutors.newDirectExecutorService()
+                                      : loadOnBootstrapExec;
 
     Stopwatch stopwatch = Stopwatch.createStarted();
     log.info("Retrieving [%d] cached segment metadata files to cache.", segmentsToLoad.length);
@@ -236,7 +232,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     stopwatch.stop();
     log.info("Retrieved [%d,%d] cached segments in [%d]ms.", cachedSegments.size(), segmentsToLoad.length, stopwatch.millisElapsed());
 
-    if (hasCreatedNewExecutorServiceForCachingSegments) {
+    if (createdNewExecutorServiceToLoadSegmentCache) {
       executorService.shutdown();
     }
 
