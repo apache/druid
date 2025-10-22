@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordination.startup;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
@@ -30,6 +31,7 @@ public class LoadEagerlyBeforePeriod implements HistoricalStartupCacheLoadStrate
 {
   private static final Logger log = new Logger(LoadEagerlyBeforePeriod.class);
   public static final String STRATEGY_NAME = "loadEagerlyBeforePeriod";
+
   private final Interval eagerLoadingWindow;
 
   public LoadEagerlyBeforePeriod(Period eagerLoadingPeriod)
@@ -38,6 +40,12 @@ public class LoadEagerlyBeforePeriod implements HistoricalStartupCacheLoadStrate
     this.eagerLoadingWindow = new Interval(now.minus(eagerLoadingPeriod), now);
 
     log.info("Using [%s] strategy with Interval[%s]", STRATEGY_NAME, eagerLoadingWindow);
+  }
+
+  @VisibleForTesting
+  public Interval getEagerLoadingWindow()
+  {
+    return this.eagerLoadingWindow;
   }
 
   @Override
