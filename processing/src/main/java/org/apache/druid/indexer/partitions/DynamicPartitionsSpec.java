@@ -21,6 +21,7 @@ package org.apache.druid.indexer.partitions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.error.InvalidInput;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -51,12 +52,18 @@ public class DynamicPartitionsSpec implements PartitionsSpec
   )
   {
 
-    this.maxRowsPerSegment = PartitionsSpec.isEffectivelyNull(maxRowsPerSegment) || maxRowsPerSegment <= 0
+    if (!PartitionsSpec.isEffectivelyNull(maxRowsPerSegment) && maxRowsPerSegment <= 0) {
+      throw InvalidInput.exception("maxRowsPerSegment must be greater than 0");
+    }
+
+    if (!PartitionsSpec.isEffectivelyNull(maxTotalRows) && maxTotalRows <= 0) {
+      throw InvalidInput.exception("maxTotalRows must be greater than 0");
+    }
+
+    this.maxRowsPerSegment = PartitionsSpec.isEffectivelyNull(maxRowsPerSegment)
                              ? DEFAULT_MAX_ROWS_PER_SEGMENT
                              : maxRowsPerSegment;
-    this.maxTotalRows = PartitionsSpec.isEffectivelyNull(maxTotalRows) || maxTotalRows <= 0 
-                        ? null 
-                        : maxTotalRows;
+    this.maxTotalRows = maxTotalRows;
   }
 
   @Override
