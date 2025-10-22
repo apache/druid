@@ -2183,8 +2183,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
       EasyMock.expect(taskClient.getStatusAsync(task.getId()))
               .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.NOT_STARTED));
       EasyMock.expect(taskClient.getStartTimeAsync(task.getId()))
-              .andReturn(Futures.immediateFailedFuture(new RuntimeException()));
-      taskQueue.shutdown(task.getId(), "Task [%s] failed to return start time, killing task", task.getId());
+              .andReturn(Futures.immediateFailedFuture(new RuntimeException("killed")));
+      taskQueue.shutdown(task.getId(), "Failed to return start time: %s", "killed");
     }
     EasyMock.replay(taskStorage, taskClient, taskQueue);
 
