@@ -164,13 +164,22 @@ public abstract class AbstractKubernetesPeonClient
 
   public Optional<LogWatch> getPeonLogWatcher(K8sTaskId taskId)
   {
+    // First, get the pod and if it exists set up log watching
+    Optional<Pod> maybePod = getPeonPod(taskId.getK8sJobName());
+    if (!maybePod.isPresent()) {
+      log.debug("Pod for job[%s] not found in cache, cannot watch logs", taskId.getK8sJobName());
+      return Optional.absent();
+    }
+
+    Pod pod = maybePod.get();
+    String podName = pod.getMetadata().getName();
+
     KubernetesClient k8sClient = clientApi.getClient();
     try {
-      LogWatch logWatch = k8sClient.batch()
-                                   .v1()
-                                   .jobs()
+      // Use resource() to pass the pod object directly, avoiding any lookups
+      LogWatch logWatch = k8sClient.pods()
                                    .inNamespace(namespace)
-                                   .withName(taskId.getK8sJobName())
+                                   .resource(pod)
                                    .inContainer("main")
                                    .watchLog();
       if (logWatch == null) {
@@ -179,20 +188,29 @@ public abstract class AbstractKubernetesPeonClient
       return Optional.of(logWatch);
     }
     catch (Exception e) {
-      log.error(e, "Error watching logs from task: %s", taskId);
+      log.error(e, "Error watching logs from task: %s, pod: %s", taskId, podName);
       return Optional.absent();
     }
   }
 
   public Optional<InputStream> getPeonLogs(K8sTaskId taskId)
   {
+    // First, get the pod from cache to avoid unnecessary API calls to look up the job and pod
+    Optional<Pod> maybePod = getPeonPod(taskId.getK8sJobName());
+    if (!maybePod.isPresent()) {
+      log.debug("Pod for job[%s] not found in cache, cannot stream logs", taskId.getK8sJobName());
+      return Optional.absent();
+    }
+
+    Pod pod = maybePod.get();
+    String podName = pod.getMetadata().getName();
+
     KubernetesClient k8sClient = clientApi.getClient();
     try {
-      InputStream logStream = k8sClient.batch()
-                                       .v1()
-                                       .jobs()
+      // Use resource() to pass the pod object directly, avoiding any lookups
+      InputStream logStream = k8sClient.pods()
                                        .inNamespace(namespace)
-                                       .withName(taskId.getK8sJobName())
+                                       .resource(pod)
                                        .inContainer("main")
                                        .getLogInputStream();
       if (logStream == null) {
@@ -201,7 +219,7 @@ public abstract class AbstractKubernetesPeonClient
       return Optional.of(logStream);
     }
     catch (Exception e) {
-      log.error(e, "Error streaming logs from task: %s", taskId);
+      log.error(e, "Error streaming logs from task: %s, pod: %s", taskId, podName);
       return Optional.absent();
     }
   }

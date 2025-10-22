@@ -42,7 +42,7 @@ public class DruidKubernetesClient implements KubernetesClientApi
 
   public static final String ENABLE_INFORMERS_KEY = "druid.k8s.informers.enabled";
   public static final String INFORMER_RESYNC_PERIOD_MS_KEY = "druid.k8s.informers.resyncPeriodMs";
-  private static final long DEFAULT_INFORMER_RESYNC_PERIOD_MS = 3000L;
+  private static final long DEFAULT_INFORMER_RESYNC_PERIOD_MS = 300000L; // 5 minutes
 
   private final KubernetesClient kubernetesClient;
   private final SharedIndexInformer<Pod> podInformer;
@@ -133,6 +133,7 @@ public class DruidKubernetesClient implements KubernetesClientApi
     SharedIndexInformer<Pod> podInformer =
         kubernetesClient.pods()
                         .inNamespace(namespace)
+                        .withLabel(DruidK8sConstants.LABEL_KEY)
                         .inform(
                             new ResourceEventHandler<>()
                             {
