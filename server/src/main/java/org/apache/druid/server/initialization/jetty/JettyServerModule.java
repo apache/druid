@@ -242,10 +242,13 @@ public class JettyServerModule extends JerseyServletModule
 
     if (node.isEnableTlsPort()) {
       log.info("Creating https connector with port [%d]", node.getTlsPort());
-      if (sslContextFactoryBinding == null) {
-        // Never trust all certificates by default
-        sslContextFactory = new IdentityCheckOverrideSslContextFactory(tlsServerConfig, certificateChecker);
+      boolean hasBinding = sslContextFactoryBinding != null;
+      sslContextFactory = hasBinding
+                          ? sslContextFactoryBinding.getProvider().get()
+                          : new IdentityCheckOverrideSslContextFactory(tlsServerConfig, certificateChecker);
 
+      // Never trust all certificates by default
+      if (!hasBinding || tlsServerConfig.isForceApplyConfig()) {
         sslContextFactory.setKeyStorePath(tlsServerConfig.getKeyStorePath());
         sslContextFactory.setKeyStoreType(tlsServerConfig.getKeyStoreType());
         sslContextFactory.setKeyStorePassword(tlsServerConfig.getKeyStorePasswordProvider().getPassword());
@@ -303,8 +306,6 @@ public class JettyServerModule extends JerseyServletModule
             );
           }
         }
-      } else {
-        sslContextFactory = sslContextFactoryBinding.getProvider().get();
       }
 
       final HttpConfiguration httpsConfiguration = new HttpConfiguration();
@@ -314,7 +315,13 @@ public class JettyServerModule extends JerseyServletModule
       }
       httpsConfiguration.setSecureScheme("https");
       httpsConfiguration.setSecurePort(node.getTlsPort());
-      httpsConfiguration.addCustomizer(new SecureRequestCustomizer());
+
+      // see https://github.com/jetty/jetty.project/pull/5398
+      // This new strict enforcement can break some clients. Allow turning it off via config if necessary
+      final SecureRequestCustomizer secureRequestCustomizer = new SecureRequestCustomizer();
+      secureRequestCustomizer.setSniHostCheck(config.isEnforceStrictSNIHostChecking());
+
+      httpsConfiguration.addCustomizer(secureRequestCustomizer);
       httpsConfiguration.setRequestHeaderSize(config.getMaxRequestHeaderSize());
       httpsConfiguration.setSendServerVersion(false);
       final ServerConnector connector = new ServerConnector(

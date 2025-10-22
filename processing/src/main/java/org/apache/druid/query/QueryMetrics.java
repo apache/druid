@@ -241,6 +241,12 @@ public interface QueryMetrics<QueryType extends Query<?>>
 
   void success(boolean success);
 
+  /**
+   * Sets the query status code
+   * See {@link DruidMetrics#computeStatusCode}.
+   */
+  void statusCode(int code);
+
   void segment(String segmentIdentifier);
 
   /**

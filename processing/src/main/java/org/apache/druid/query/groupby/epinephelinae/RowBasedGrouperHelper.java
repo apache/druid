@@ -78,6 +78,7 @@ import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.TypeStrategies;
@@ -158,13 +159,13 @@ public class RowBasedGrouperHelper
   /**
    * Create a {@link Grouper} that groups according to the dimensions and aggregators in "query", along with
    * an {@link Accumulator} that accepts ResultRows and forwards them to the grouper.
-   *
+   * <p>
    * The pair will operate in one of two modes:
-   *
+   * <p>
    * 1) Combining mode (used if "subquery" is null). In this mode, filters from the "query" are ignored, and
    * its aggregators are converted into combining form. The input ResultRows are assumed to be partially-grouped
    * results originating from the provided "query".
-   *
+   * <p>
    * 2) Subquery mode (used if "subquery" is nonnull). In this mode, filters from the "query" (both intervals
    * and dim filters) are respected, and its aggregators are used in standard (not combining) form. The input
    * ResultRows are assumed to be results originating from the provided "subquery".
@@ -758,7 +759,10 @@ public class RowBasedGrouperHelper
         case COMPLEX:
           return (InputRawSupplierColumnSelectorStrategy<ColumnValueSelector>)
               columnSelector ->
-                  () -> DimensionHandlerUtils.convertObjectToType(columnSelector.getObject(), capabilities.toColumnType());
+                  () -> DimensionHandlerUtils.convertObjectToType(
+                      columnSelector.getObject(),
+                      capabilities.toColumnType()
+                  );
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
       }
@@ -1402,7 +1406,11 @@ public class RowBasedGrouperHelper
                 jp.currentToken() != JsonToken.END_ARRAY,
                 "Unexpected end of array when deserializing timestamp from the spilled files"
             );
-            objects[dimsReadSoFar] = JacksonUtils.readObjectUsingDeserializationContext(jp, deserializationContext, Long.class);
+            objects[dimsReadSoFar] = JacksonUtils.readObjectUsingDeserializationContext(
+                jp,
+                deserializationContext,
+                Long.class
+            );
 
             ++dimsReadSoFar;
             jp.nextToken();
@@ -1519,6 +1527,7 @@ public class RowBasedGrouperHelper
             case STRING:
               return new ArrayStringRowBasedKeySerdeHelper(
                   keyBufferPosition,
+                  valueType.getNullableStrategy(),
                   stringComparator
               );
             case LONG:
@@ -1601,10 +1610,15 @@ public class RowBasedGrouperHelper
     private abstract class DictionaryBuildingSingleValuedRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
     {
       private final int keyBufferPosition;
+      private final NullableTypeStrategy nullableTypeStrategy;
 
-      public DictionaryBuildingSingleValuedRowBasedKeySerdeHelper(final int keyBufferPosition)
+      public DictionaryBuildingSingleValuedRowBasedKeySerdeHelper(
+          final int keyBufferPosition,
+          final NullableTypeStrategy nullableTypeStrategy
+      )
       {
         this.keyBufferPosition = keyBufferPosition;
+        this.nullableTypeStrategy = nullableTypeStrategy;
       }
 
       @Override
@@ -1619,6 +1633,11 @@ public class RowBasedGrouperHelper
         final Object obj = key.getKey()[idx];
         int id = getReverseDictionary().getInt(obj);
         if (id == DimensionDictionary.ABSENT_VALUE_ID) {
+          int size = nullableTypeStrategy.estimateSizeBytes(obj);
+          if (currentEstimatedSize + size > maxDictionarySize) {
+            return false;
+          }
+          currentEstimatedSize += size;
           id = getDictionary().size();
           getReverseDictionary().put(obj, id);
           getDictionary().add(obj);
@@ -1660,7 +1679,7 @@ public class RowBasedGrouperHelper
           ColumnType columnType
       )
       {
-        super(keyBufferPosition);
+        super(keyBufferPosition, columnType.getNullableStrategy());
         validateColumnType(columnType);
         this.columnTypeName = columnType.asTypeString();
         this.dictionary = genericDictionaries.computeIfAbsent(
@@ -1730,7 +1749,7 @@ public class RowBasedGrouperHelper
           ColumnType arrayType
       )
       {
-        super(keyBufferPosition);
+        super(keyBufferPosition, arrayType.getNullableStrategy());
         final TypeSignature<ValueType> elementType = arrayType.getElementType();
         this.dictionary = getDictionaryForType(elementType);
         this.reverseDictionary = getReverseDictionaryForType(elementType);
@@ -1812,10 +1831,11 @@ public class RowBasedGrouperHelper
 
       ArrayStringRowBasedKeySerdeHelper(
           int keyBufferPosition,
+          NullableTypeStrategy nullableTypeStrategy,
           @Nullable StringComparator stringComparator
       )
       {
-        super(keyBufferPosition);
+        super(keyBufferPosition, nullableTypeStrategy);
         final Comparator<Object[]> comparator;
         if (useNaturalStringArrayComparator(stringComparator)) {
           comparator = ColumnType.STRING_ARRAY.getNullableStrategy();
@@ -1936,7 +1956,6 @@ public class RowBasedGrouperHelper
        * this returns -1.
        *
        * @param s a string
-       *
        * @return id for this string, or -1
        */
       private int addToDictionary(final String s)

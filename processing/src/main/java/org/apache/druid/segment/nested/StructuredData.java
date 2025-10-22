@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
 import net.jpountz.xxhash.XXHash64;
 import net.jpountz.xxhash.XXHashFactory;
@@ -45,17 +46,16 @@ public class StructuredData implements Comparable<StructuredData>
 
   public static final Comparator<StructuredData> COMPARATOR = Comparators.naturalNullsFirst();
 
-  /** SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS is required so that hash computations for JSON objects that
-   *  have different key orders but are otherwise equivalent will be consistent. See
-   *  {@link StructuredDataTest#testCompareToWithDifferentJSONOrder()} for an example
+  /**
+   * SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS is required so that hash computations for JSON objects that
+   * have different key orders but are otherwise equivalent will be consistent.
    */
   private static final ObjectWriter WRITER = ColumnSerializerUtils.SMILE_MAPPER.writer(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS);
 
-  private static long computeHash(StructuredData data)
+  private static byte[] serialized(StructuredData data)
   {
     try {
-      final byte[] bytes = WRITER.writeValueAsBytes(data.value);
-      return HASH_FUNCTION.hash(bytes, 0, bytes.length, SEED);
+      return WRITER.writeValueAsBytes(data.value);
     }
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);
@@ -86,13 +86,17 @@ public class StructuredData implements Comparable<StructuredData>
     return new StructuredData(value);
   }
 
-
   private final Object value;
   private volatile boolean hashInitialized = false;
   private volatile long hashValue;
+  private volatile int sizeEstimate = -1;
   private final LongSupplier hash = () -> {
     if (!hashInitialized) {
-      hashValue = computeHash(this);
+      final byte[] bytes = serialized(this);
+      // compute the size estimate, note it's not an accurate representation of the heap size
+      sizeEstimate = bytes.length + Integer.BYTES; // add 4 bytes for the length prefix
+      // compute the hash, we might use it for comparison later
+      hashValue = HASH_FUNCTION.hash(bytes, 0, bytes.length, SEED);
       hashInitialized = true;
     }
     return hashValue;
@@ -133,12 +137,23 @@ public class StructuredData implements Comparable<StructuredData>
     return (Number) value;
   }
 
+  @SuppressWarnings("ReturnValueIgnored")
+  public int getSizeEstimate()
+  {
+    if (sizeEstimate < 0) {
+      hash.getAsLong(); // trigger hash computation which also sets sizeEstimate
+    }
+    Preconditions.checkState(sizeEstimate >= 0, "sizeEstimate not initialized");
+    return sizeEstimate;
+  }
+
   @Override
   public int compareTo(StructuredData o)
   {
     if (this.equals(o)) {
       return 0;
     }
+
     if (isNull()) {
       return -1;
     }
@@ -191,12 +206,6 @@ public class StructuredData implements Comparable<StructuredData>
 
   @Override
   public int hashCode()
-  {
-    return Objects.hash(value);
-  }
-
-  // hashCode that relies on the object equality. Translates the hashcode to an integer as well
-  public int equalityHash()
   {
     return Longs.hashCode(hash.getAsLong());
   }

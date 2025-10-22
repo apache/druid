@@ -389,11 +389,11 @@ public class MultiValueStringOperatorConversions
             Calcites.getColumnTypeForRelDataType(rexNode.getType()),
             builder,
             druidExpressions,
-            (name, outputType, expression, macroTable) -> new ListFilteredVirtualColumn(
+            (name, outputType, parser, self) -> new ListFilteredVirtualColumn(
                 name,
-                druidExpressions.get(0)
-                                .getSimpleExtraction()
-                                .toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
+                self.getArguments().get(0)
+                    .getSimpleExtraction()
+                    .toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
                 literals,
                 isAllowList()
             )
@@ -470,11 +470,11 @@ public class MultiValueStringOperatorConversions
             Calcites.getColumnTypeForRelDataType(rexNode.getType()),
             builder,
             druidExpressions,
-            (name, outputType, expression, macroTable) -> new RegexFilteredVirtualColumn(
+            (name, outputType, parser, self) -> new RegexFilteredVirtualColumn(
                 name,
-                druidExpressions.get(0)
-                                .getSimpleExtraction()
-                                .toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
+                self.getArguments().get(0)
+                    .getSimpleExtraction()
+                    .toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
                 pattern
             )
         );
@@ -555,11 +555,11 @@ public class MultiValueStringOperatorConversions
             Calcites.getColumnTypeForRelDataType(rexNode.getType()),
             builder,
             druidExpressions,
-            (name, outputType, expression, macroTable) -> new PrefixFilteredVirtualColumn(
+            (name, outputType, parser, self) -> new PrefixFilteredVirtualColumn(
                 name,
-                druidExpressions.get(0)
-                                .getSimpleExtraction()
-                                .toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
+                self.getArguments().get(0)
+                    .getSimpleExtraction()
+                    .toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
                 prefix
             )
         );

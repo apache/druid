@@ -839,6 +839,43 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     Assert.assertEquals(dataSegment.getInterval(), actualBootstrapSegment.getDataInterval());
   }
 
+
+  @Test
+  public void testGetBootstrapSegmentLazy() throws SegmentLoadingException
+  {
+    final StorageLocationConfig locationConfig = new StorageLocationConfig(localSegmentCacheDir, 10000L, null);
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public boolean isLazyLoadOnStart()
+      {
+        return true;
+      }
+
+      @Override
+      public List<StorageLocationConfig> getLocations()
+      {
+        return List.of(locationConfig);
+      }
+    };
+    final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
+    SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
+        storageLocations,
+        loaderConfig,
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
+        TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
+        jsonMapper
+    );
+
+    final DataSegment dataSegment = TestSegmentUtils.makeSegment("foo", "v1", Intervals.of("2020/2021"));
+
+    manager.bootstrap(dataSegment, () -> {});
+    Segment actualBootstrapSegment = manager.acquireCachedSegment(dataSegment).orElse(null);
+    Assert.assertNotNull(actualBootstrapSegment);
+    Assert.assertEquals(dataSegment.getId(), actualBootstrapSegment.getId());
+    Assert.assertEquals(dataSegment.getInterval(), actualBootstrapSegment.getDataInterval());
+  }
+
   @Test
   public void testGetSegmentVirtualStorage() throws Exception
   {
@@ -1011,6 +1048,31 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testGetSegmentAfterDroppedWithNoVirtualStorageEnabled() throws Exception
+  {
+    SegmentLocalCacheManager manager = makeDefaultManager(jsonMapper);
+
+    final DataSegment segmentToLoad = makeTestDataSegment(segmentDeepStorageDir);
+    createSegmentZipInLocation(segmentDeepStorageDir, TEST_DATA_RELATIVE_PATH);
+
+    manager.load(segmentToLoad);
+    Assert.assertNotNull(manager.getSegmentFiles(segmentToLoad));
+    manager.drop(segmentToLoad);
+    Assert.assertNull(manager.getSegmentFiles(segmentToLoad));
+
+    // ensure that if virtual storage is not enabled, we do not download the segment (callers might have a DataSegment
+    // reference which was originally cached and then dropped before attempting to acquire a segment. if virtual storage
+    // is not enabled, this should return a missing segment instead of downloading
+    AcquireSegmentAction segmentAction = manager.acquireSegment(segmentToLoad);
+    ReferenceCountedObjectProvider<Segment> referenceProvider = segmentAction.getSegmentFuture().get();
+    Optional<Segment> theSegment = referenceProvider.acquireReference();
+    Assert.assertFalse(theSegment.isPresent());
+    segmentAction.close();
+
+    Assert.assertNull(manager.getSegmentFiles(segmentToLoad));
+  }
+
+  @Test
   public void testIfTombstoneIsLoaded() throws IOException, SegmentLoadingException
   {
     final DataSegment tombstone = DataSegment.builder()
@@ -1171,7 +1233,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
 
   static File makeSegmentZip(File segmentFiles, File zipOutFile) throws IOException
   {
-    TestIndex.persist(TestIndex.getIncrementalTestIndex(), IndexSpec.DEFAULT, segmentFiles);
+    TestIndex.persist(TestIndex.getIncrementalTestIndex(), IndexSpec.getDefault(), segmentFiles);
     FileUtils.mkdirp(zipOutFile.getParentFile());
     CompressionUtils.zip(segmentFiles, zipOutFile);
     return zipOutFile;

@@ -146,6 +146,12 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
+  public void statusCode(int code)
+  {
+    delegateQueryMetrics.statusCode(code);
+  }
+
+  @Override
   public void segment(String segmentIdentifier)
   {
     delegateQueryMetrics.segment(segmentIdentifier);

@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.nested.NestedCommonFormatColumn;
+import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnSerializer;
 import org.apache.druid.segment.nested.NestedDataColumnSerializer;
 import org.apache.druid.segment.nested.ScalarDoubleColumnSerializer;
@@ -64,15 +65,24 @@ import java.util.Objects;
  */
 public class AutoTypeColumnSchema extends DimensionSchema
 {
+  public static AutoTypeColumnSchema of(String name)
+  {
+    return new AutoTypeColumnSchema(name, null, null);
+  }
+
   public static final String TYPE = "auto";
 
   @Nullable
   private final ColumnType castToType;
 
+  @Nullable
+  private final NestedCommonFormatColumnFormatSpec columnFormatSpec;
+
   @JsonCreator
   public AutoTypeColumnSchema(
       @JsonProperty("name") String name,
-      @JsonProperty("castToType") @Nullable ColumnType castToType
+      @JsonProperty("castToType") @Nullable ColumnType castToType,
+      @JsonProperty("columnFormatSpec") @Nullable NestedCommonFormatColumnFormatSpec columnFormatSpec
   )
   {
     super(name, null, true);
@@ -84,6 +94,7 @@ public class AutoTypeColumnSchema extends DimensionSchema
     } else {
       this.castToType = castToType;
     }
+    this.columnFormatSpec = columnFormatSpec;
   }
 
   @Override
@@ -106,10 +117,28 @@ public class AutoTypeColumnSchema extends DimensionSchema
     return castToType;
   }
 
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public NestedCommonFormatColumnFormatSpec getColumnFormatSpec()
+  {
+    return columnFormatSpec;
+  }
+
   @Override
   public DimensionHandler<StructuredData, StructuredData, StructuredData> getDimensionHandler()
   {
-    return new NestedCommonFormatColumnHandler(getName(), castToType);
+    return new NestedCommonFormatColumnHandler(getName(), castToType, columnFormatSpec);
+  }
+
+  @Override
+  public DimensionSchema getEffectiveSchema(IndexSpec indexSpec)
+  {
+    return new AutoTypeColumnSchema(
+        getName(),
+        castToType,
+        NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(columnFormatSpec, indexSpec)
+    );
   }
 
   @Override
@@ -125,13 +154,13 @@ public class AutoTypeColumnSchema extends DimensionSchema
       return false;
     }
     AutoTypeColumnSchema that = (AutoTypeColumnSchema) o;
-    return Objects.equals(castToType, that.castToType);
+    return Objects.equals(castToType, that.castToType) && Objects.equals(columnFormatSpec, that.columnFormatSpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), castToType);
+    return Objects.hash(super.hashCode(), castToType, columnFormatSpec);
   }
 
   @Override
@@ -144,6 +173,7 @@ public class AutoTypeColumnSchema extends DimensionSchema
            ", multiValueHandling=" + getMultiValueHandling() +
            ", createBitmapIndex=" + hasBitmapIndex() +
            ", castToType=" + castToType +
+           ", columnFormatSpec=" + columnFormatSpec +
            '}';
   }
 }

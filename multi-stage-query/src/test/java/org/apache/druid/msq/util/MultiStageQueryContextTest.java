@@ -285,8 +285,8 @@ public class MultiStageQueryContextTest
   {
     Assert.assertNull(decodeIndexSpec(null));
 
-    Assert.assertEquals(IndexSpec.DEFAULT, decodeIndexSpec("{}"));
-    Assert.assertEquals(IndexSpec.DEFAULT, decodeIndexSpec(Collections.emptyMap()));
+    Assert.assertEquals(IndexSpec.getDefault(), decodeIndexSpec("{}"));
+    Assert.assertEquals(IndexSpec.getDefault(), decodeIndexSpec(Collections.emptyMap()));
 
     Assert.assertEquals(
         IndexSpec.builder()

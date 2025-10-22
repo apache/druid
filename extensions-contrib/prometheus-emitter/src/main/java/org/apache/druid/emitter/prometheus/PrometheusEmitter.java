@@ -69,15 +69,8 @@ public class PrometheusEmitter implements Emitter
   {
     this.config = config;
     this.strategy = config.getStrategy();
-    metrics = new Metrics(
-        config.getNamespace(),
-        config.getDimensionMapPath(),
-        config.isAddHostAsLabel(),
-        config.isAddServiceAsLabel(),
-        config.getExtraLabels()
-    );
+    metrics = new Metrics(config);
   }
-
 
   @Override
   public void start()
@@ -92,6 +85,17 @@ public class PrometheusEmitter implements Emitter
         }
       } else {
         log.error("HTTPServer is already started");
+      }
+      // Start TTL scheduler if TTL is configured
+      if (config.getFlushPeriod() != null) {
+        exec = ScheduledExecutors.fixed(1, "PrometheusTTLExecutor-%s");
+        exec.scheduleAtFixedRate(
+            this::cleanUpStaleMetrics,
+            config.getFlushPeriod(),
+            config.getFlushPeriod(),
+            TimeUnit.SECONDS
+        );
+        log.info("Started TTL scheduler with TTL of [%d] seconds.", config.getFlushPeriod());
       }
     } else if (strategy.equals(PrometheusEmitterConfig.Strategy.pushgateway)) {
       String address = config.getPushGatewayAddress();
@@ -167,11 +171,14 @@ public class PrometheusEmitter implements Emitter
 
       if (metric.getCollector() instanceof Counter) {
         ((Counter) metric.getCollector()).labels(labelValues).inc(value.doubleValue());
+        metric.resetLastUpdateTime();
       } else if (metric.getCollector() instanceof Gauge) {
         ((Gauge) metric.getCollector()).labels(labelValues).set(value.doubleValue());
+        metric.resetLastUpdateTime();
       } else if (metric.getCollector() instanceof Histogram) {
         ((Histogram) metric.getCollector()).labels(labelValues)
                                            .observe(value.doubleValue() / metric.getConversionFactor());
+        metric.resetLastUpdateTime();
       } else {
         log.error("Unrecognized metric type [%s]", metric.getCollector().getClass());
       }
@@ -208,6 +215,9 @@ public class PrometheusEmitter implements Emitter
   public void close()
   {
     if (strategy.equals(PrometheusEmitterConfig.Strategy.exporter)) {
+      if (exec != null) {
+        exec.shutdownNow();
+      }
       if (server != null) {
         server.close();
       }
@@ -247,6 +257,11 @@ public class PrometheusEmitter implements Emitter
     return server;
   }
 
+  public Metrics getMetrics()
+  {
+    return metrics;
+  }
+
   public PushGateway getPushGateway()
   {
     return pushGateway;
@@ -255,5 +270,30 @@ public class PrometheusEmitter implements Emitter
   public void setPushGateway(PushGateway pushGateway)
   {
     this.pushGateway = pushGateway;
+  }
+
+  /**
+   * Cleans up stale metrics that have not been updated within the configured TTL.
+   * This method is called periodically by the TTL scheduler when using the 'exporter' strategy with
+   * a configured flushPeriod.
+   */
+  private void cleanUpStaleMetrics()
+  {
+    if (config.getFlushPeriod() == null) {
+      return;
+    }
+
+    Map<String, DimensionsAndCollector> map = metrics.getRegisteredMetrics();
+    for (Map.Entry<String, DimensionsAndCollector> entry : map.entrySet()) {
+      DimensionsAndCollector metric = entry.getValue();
+      if (metric.isExpired()) {
+        log.debug(
+            "Metric [%s] has expired (last updated [%d] ms ago)",
+            entry.getKey(),
+            metric.getMillisSinceLastUpdate()
+        );
+        metric.getCollector().clear();
+      }
+    }
   }
 }

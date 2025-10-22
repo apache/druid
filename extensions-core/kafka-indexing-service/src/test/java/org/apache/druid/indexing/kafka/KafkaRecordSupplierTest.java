@@ -722,7 +722,7 @@ public class KafkaRecordSupplierTest
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
-    Assert.assertEquals(new Long(0), recordSupplier.getLatestSequenceNumber(streamPartition));
+    Assert.assertEquals(Long.valueOf(0), recordSupplier.getLatestSequenceNumber(streamPartition));
   }
 
   @Test
@@ -734,7 +734,7 @@ public class KafkaRecordSupplierTest
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
-    Assert.assertEquals(new Long(0), recordSupplier.getEarliestSequenceNumber(streamPartition));
+    Assert.assertEquals(Long.valueOf(0), recordSupplier.getEarliestSequenceNumber(streamPartition));
   }
 
   @Test
@@ -746,7 +746,7 @@ public class KafkaRecordSupplierTest
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
     recordSupplier.seekToLatest(partitions);
-    Assert.assertEquals(new Long(0), recordSupplier.getLatestSequenceNumber(streamPartition));
+    Assert.assertEquals(Long.valueOf(0), recordSupplier.getLatestSequenceNumber(streamPartition));
   }
 
   @Test
@@ -758,7 +758,7 @@ public class KafkaRecordSupplierTest
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
     recordSupplier.seekToLatest(partitions);
-    Assert.assertEquals(new Long(0), recordSupplier.getEarliestSequenceNumber(streamPartition));
+    Assert.assertEquals(Long.valueOf(0), recordSupplier.getEarliestSequenceNumber(streamPartition));
   }
 
   @Test

@@ -52,7 +52,6 @@ import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.java.util.common.guava.YieldingSequenceBase;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.query.ConcatQueryRunner;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
@@ -790,7 +789,12 @@ public class ServerManagerTest
         Iterable<QueryRunner<Result<SearchResultValue>>> queryRunners
     )
     {
-      return new ConcatQueryRunner<>(Sequences.simple(queryRunners));
+      return (queryPlus, responseContext) -> Sequences.concat(
+          Sequences.map(
+              Sequences.simple(queryRunners),
+              runner -> runner.run(queryPlus, responseContext)
+          )
+      );
     }
 
     @Override

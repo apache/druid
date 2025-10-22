@@ -21,10 +21,9 @@ package org.apache.druid.segment.nested;
 
 import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.ColumnarDoublesSerializer;
 import org.apache.druid.segment.data.CompressionFactory;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
@@ -45,11 +44,11 @@ public final class ScalarDoubleFieldColumnWriter extends GlobalDictionaryEncoded
       String columnName,
       String fieldName,
       SegmentWriteOutMedium segmentWriteOutMedium,
-      IndexSpec indexSpec,
+      NestedCommonFormatColumnFormatSpec columnFormatSpec,
       DictionaryIdLookup globalDictionaryIdLookup
   )
   {
-    super(columnName, fieldName, segmentWriteOutMedium, indexSpec, globalDictionaryIdLookup);
+    super(columnName, fieldName, segmentWriteOutMedium, columnFormatSpec, globalDictionaryIdLookup);
   }
 
   @Override
@@ -77,18 +76,18 @@ public final class ScalarDoubleFieldColumnWriter extends GlobalDictionaryEncoded
         medium,
         StringUtils.format("%s.double_column", fieldName),
         ByteOrder.nativeOrder(),
-        indexSpec.getDimensionCompression(),
+        columnFormatSpec.getDoubleColumnCompression(),
         fieldResourceCloser
     );
     doublesSerializer.open();
   }
 
   @Override
-  void writeColumnTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  void writeColumnTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     writeLongAndDoubleColumnLength(channel, 0, Ints.checkedCast(doublesSerializer.getSerializedSize()));
-    doublesSerializer.writeTo(channel, smoosher);
-    encodedValueSerializer.writeTo(channel, smoosher);
+    doublesSerializer.writeTo(channel, fileBuilder);
+    encodedValueSerializer.writeTo(channel, fileBuilder);
   }
 
   @Override

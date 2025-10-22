@@ -62,7 +62,7 @@ public class Larry extends MapBasedTestDataset
                     )
                 )
                 .add(new LongDimensionSchema("l1"))
-                .add(new AutoTypeColumnSchema("l_arr", null))
+                .add(new AutoTypeColumnSchema("l_arr", null, null))
                 .build()
         ),
         null

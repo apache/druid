@@ -29,12 +29,12 @@ import com.google.common.collect.Interners;
 import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import org.apache.druid.collections.bitmap.BitmapFactory;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.projections.QueryableProjection;
 import org.joda.time.Interval;
@@ -63,7 +63,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
   private final Map<String, AggregateProjectionMetadata> projectionsMap;
   private final SortedSet<AggregateProjectionMetadata> projections;
   private final Map<String, Map<String, Supplier<BaseColumnHolder>>> projectionColumns;
-  private final SmooshedFileMapper fileMapper;
+  private final SegmentFileMapper fileMapper;
   private final Supplier<Map<String, DimensionHandler>> dimensionHandlers;
 
   public SimpleQueryableIndex(
@@ -71,7 +71,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
       Indexed<String> dimNames,
       BitmapFactory bitmapFactory,
       Map<String, Supplier<BaseColumnHolder>> columns,
-      SmooshedFileMapper fileMapper
+      SegmentFileMapper fileMapper
   )
   {
     this(dataInterval, dimNames, bitmapFactory, columns, fileMapper, null, null);
@@ -82,7 +82,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
       Indexed<String> dimNames,
       BitmapFactory bitmapFactory,
       Map<String, Supplier<BaseColumnHolder>> columns,
-      SmooshedFileMapper fileMapper,
+      SegmentFileMapper fileMapper,
       @Nullable Metadata metadata,
       @Nullable Map<String, Map<String, Supplier<BaseColumnHolder>>> projectionColumns
   )
@@ -185,7 +185,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
   }
 
   @VisibleForTesting
-  public SmooshedFileMapper getFileMapper()
+  public SegmentFileMapper getFileMapper()
   {
     return fileMapper;
   }

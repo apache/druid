@@ -106,6 +106,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -603,7 +604,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisor.runInternal();
     verifyAll();
 
-    KinesisIndexTask task1 = captured.getValues().get(0);
+    List<KinesisIndexTask> tasks = captured.getValues();
+    tasks.sort(Comparator.comparing(KinesisIndexTask::getId));
+    KinesisIndexTask task1 = tasks.get(0);
     Assert.assertEquals(1, task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().size());
     Assert.assertEquals(1, task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().size());
     Assert.assertEquals(
@@ -615,7 +618,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID1)
     );
 
-    KinesisIndexTask task2 = captured.getValues().get(1);
+    KinesisIndexTask task2 = tasks.get(1);
     Assert.assertEquals(1, task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().size());
     Assert.assertEquals(1, task2.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().size());
     Assert.assertEquals(
@@ -4421,6 +4424,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             .times(1);
 
     List<Task> postSplitTasks = postSplitCaptured.getValues();
+    postSplitTasks.sort(Comparator.comparing(Task::getId));
     EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(toMap(postSplitTasks)).anyTimes();
     for (Task task : postSplitTasks) {
       EasyMock.expect(taskStorage.getStatus(task.getId()))
@@ -4608,6 +4612,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             .times(1);
 
     List<Task> postSplitTasks = postSplitCaptured.getValues();
+    postSplitTasks.sort(Comparator.comparing(Task::getId));
     EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(toMap(postSplitTasks)).anyTimes();
     for (Task task : postSplitTasks) {
       EasyMock.expect(taskStorage.getStatus(task.getId()))
