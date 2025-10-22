@@ -219,7 +219,7 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
   }
 
   @Override
-  public RabbitStreamIndexTaskTuningConfig convertToTaskTuningConfig()
+  public RabbitStreamIndexTaskTuningConfig convertToTaskTuningConfig(Boolean usePerpetuallyRunningTasks)
   {
     return new RabbitStreamIndexTaskTuningConfig(
         getAppendableIndexSpec(),

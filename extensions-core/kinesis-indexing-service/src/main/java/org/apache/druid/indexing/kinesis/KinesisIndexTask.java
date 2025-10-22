@@ -33,6 +33,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -83,7 +84,9 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, Ki
         tuningConfig,
         ioConfig,
         context,
-        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE)
+        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE),
+        null,
+        null
     );
     this.useListShards = useListShards;
     this.awsCredentialsConfig = awsCredentialsConfig;
@@ -150,6 +153,22 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, Ki
         maxBytesPerPoll,
         false,
         useListShards
+    );
+  }
+
+  @Override
+  public SeekableStreamIndexTask<String, String, ?> withNewIoConfig(SeekableStreamIndexTaskIOConfig<String, String> newIoConfig)
+  {
+    return new KinesisIndexTask(
+        getId(),
+        getSupervisorId(),
+        getTaskResource(),
+        getDataSchema(),
+        getTuningConfig(),
+        (KinesisIndexTaskIOConfig) newIoConfig,
+        getContext(),
+        useListShards,
+        awsCredentialsConfig
     );
   }
 

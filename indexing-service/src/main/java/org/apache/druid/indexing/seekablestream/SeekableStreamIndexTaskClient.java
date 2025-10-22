@@ -91,6 +91,8 @@ public interface SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetTy
    */
   ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> pauseAsync(String id);
 
+  ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> pauseAndCheckpointAsync(String id);
+
   /**
    * Set end offsets for a task. Retries on failure.
    *
@@ -167,6 +169,20 @@ public interface SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetTy
       String taskId,
       PendingSegmentRecord pendingSegmentRecord
   );
+
+  /**
+   * Update the configuration of a running task.
+   *
+   * Task-side is {@link SeekableStreamIndexTaskRunner#updateConfig}.
+   */
+  ListenableFuture<Boolean> updateConfigAsync(String taskId, TaskConfigUpdateRequest<PartitionIdType, SequenceOffsetType> updateRequest);
+
+  /**
+   * Gets the current configuration of a running task.
+   *
+   * Task-side is {@link SeekableStreamIndexTaskRunner#getConfigHTTP}.
+   */
+  ListenableFuture<TaskConfigResponse<PartitionIdType, SequenceOffsetType>> getTaskConfigAsync(String taskId);
 
   Class<PartitionIdType> getPartitionType();
 

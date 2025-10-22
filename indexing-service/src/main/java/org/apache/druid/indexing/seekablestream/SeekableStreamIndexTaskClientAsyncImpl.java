@@ -211,6 +211,45 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   }
 
   @Override
+  public ListenableFuture<Boolean> updateConfigAsync(
+      String taskId,
+      TaskConfigUpdateRequest<PartitionIdType, SequenceOffsetType> updateRequest
+  )
+  {
+    final RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.POST, "/config")
+        .jsonContent(jsonMapper, updateRequest);
+    return makeRequest(taskId, requestBuilder)
+        .handler(IgnoreHttpResponseHandler.INSTANCE)
+        .onSuccess(r -> {
+          log.info("Successfully updated config for task [%s]", taskId);
+          return true;
+        })
+        .onHttpError(e -> {
+          log.warn("Task [%s] config update failed due to http request failure [%s].", taskId, e.getMessage());
+          return Either.value(false);
+        })
+        .onNotAvailable(e -> {
+          log.warn("Task [%s] config update failed because task is not available.", taskId);
+          return Either.value(false);
+        })
+        .onClosed(e -> {
+          log.warn("Task [%s] config update failed because task is no longer running.", taskId);
+          return Either.value(false);
+        })
+        .go();
+  }
+
+  @Override
+  public ListenableFuture<TaskConfigResponse<PartitionIdType, SequenceOffsetType>> getTaskConfigAsync(String taskId)
+  {
+    return makeRequest(taskId, new RequestBuilder(HttpMethod.GET, "/config"))
+        .handler(new BytesFullResponseHandler())
+        .onSuccess(r -> (TaskConfigResponse<PartitionIdType, SequenceOffsetType>) JacksonUtils.readValue(jsonMapper, r.getContent(), TaskConfigResponse.class))
+        .onNotAvailable(e -> Either.value(null))
+        .go();
+  }
+
+  @Override
   public ListenableFuture<Boolean> setEndOffsetsAsync(
       final String id,
       final Map<PartitionIdType, SequenceOffsetType> endOffsets,
@@ -300,6 +339,50 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
         }
     );
   }
+
+  @Override
+  public ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> pauseAndCheckpointAsync(String id)
+  {
+    final ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> pauseFuture =
+        makeRequest(id, new RequestBuilder(HttpMethod.POST, "/pauseAndCheckpoint"))
+            .handler(new BytesFullResponseHandler())
+            .onSuccess(r -> {
+              if (r.getStatus().equals(HttpResponseStatus.OK)) {
+                log.info("Task [%s] paused successfully & Checkpoint requested successffully", id);
+                return deserializeOffsetsMap(r.getContent());
+              } else if (r.getStatus().equals(HttpResponseStatus.ACCEPTED)) {
+                return null;
+              } else {
+                throw new ISE(
+                    "Pause & Checkpoint request for task [%s] failed with response [%s]",
+                    id,
+                    r.getStatus()
+                );
+              }
+            })
+            .onNotAvailable(e -> Either.value(Collections.emptyMap()))
+            .go();
+
+    return FutureUtils.transformAsync(
+        pauseFuture,
+        result -> {
+          if (result != null) {
+            return Futures.immediateFuture(result);
+          } else {
+            return getOffsetsWhenPaused(
+                id,
+                new RetryPolicyFactory(
+                    new RetryPolicyConfig()
+                        .setMinWait(Period.seconds(MIN_RETRY_WAIT_SECONDS))
+                        .setMaxWait(Period.seconds(MAX_RETRY_WAIT_SECONDS))
+                        .setMaxRetryCount(httpRetries)
+                ).makeRetryPolicy()
+            );
+          }
+        }
+    );
+  }
+
 
   @Override
   public ListenableFuture<Map<String, Object>> getMovingAveragesAsync(String id)

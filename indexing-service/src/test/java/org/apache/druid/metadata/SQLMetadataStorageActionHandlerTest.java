@@ -556,4 +556,30 @@ public class SQLMetadataStorageActionHandlerTest
   {
     Assert.assertEquals(expected, actual);
   }
+
+  @Test
+  public void testUpdateTask()
+  {
+    Task originalTask = NoopTask.create();
+    TaskStatus status = TaskStatus.running(originalTask.getId());
+    final String entryId = originalTask.getId();
+
+    handler.insert(entryId, DateTimes.of("2014-01-01T00:00:00.123"), "testDataSource", originalTask, true, status, "type", "group");
+
+    Assert.assertEquals(Optional.of(originalTask), handler.getEntry(entryId));
+    Assert.assertEquals("none", handler.getEntry(entryId).get().getDataSource());
+
+    Task updatedTask = new NoopTask(entryId, "updatedGroup", "updatedDataSource", 5000L, 0L,
+        ImmutableMap.of("testKey", "testValue"));
+
+    handler.update(entryId, updatedTask);
+
+    Optional<Task> retrievedTask = handler.getEntry(entryId);
+    Assert.assertTrue(retrievedTask.isPresent());
+    Assert.assertEquals(entryId, retrievedTask.get().getId());
+    Assert.assertEquals("updatedDataSource", retrievedTask.get().getDataSource());
+    Assert.assertEquals("updatedGroup", retrievedTask.get().getGroupId());
+    Assert.assertEquals("testValue", retrievedTask.get().getContextValue("testKey"));
+    Assert.assertEquals(5000L, ((NoopTask) retrievedTask.get()).getRunTime());
+  }
 }

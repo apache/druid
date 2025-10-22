@@ -32,6 +32,7 @@ import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -69,6 +70,8 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
       @JsonProperty("tuningConfig") KafkaIndexTaskTuningConfig tuningConfig,
       @JsonProperty("ioConfig") KafkaIndexTaskIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("isPerpetuallyRunning") @Nullable Boolean isPerpetuallyRunning,
+      @JsonProperty("supervisorSpecVersion") @Nullable String supervisorSpecVersion,
       @JacksonInject ObjectMapper configMapper
   )
   {
@@ -80,7 +83,9 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
         tuningConfig,
         ioConfig,
         context,
-        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE)
+        getFormattedGroupId(Configs.valueOrDefault(supervisorId, dataSchema.getDataSource()), TYPE),
+        isPerpetuallyRunning,
+        supervisorSpecVersion
     );
     this.configMapper = configMapper;
 
@@ -130,6 +135,23 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);
     }
+  }
+
+  @Override
+  public SeekableStreamIndexTask<KafkaTopicPartition, Long, ?> withNewIoConfig(SeekableStreamIndexTaskIOConfig<KafkaTopicPartition, Long> newIoConfig)
+  {
+    return new KafkaIndexTask(
+        getId(),
+        getSupervisorId(),
+        getTaskResource(),
+        getDataSchema(),
+        getTuningConfig(),
+        (KafkaIndexTaskIOConfig) newIoConfig,
+        getContext(),
+        isPerpetuallyRunning(),
+        getSupervisorSpecVersion(),
+        configMapper
+    );
   }
 
   @Override

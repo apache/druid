@@ -266,7 +266,7 @@ public class CliPeonTest
     )
     {
 
-      super(id, supervisorId, taskResource, dataSchema, tuningConfig, ioConfig, context, groupId);
+      super(id, supervisorId, taskResource, dataSchema, tuningConfig, ioConfig, context, groupId, null, "v1");
     }
 
     @Override
@@ -279,6 +279,12 @@ public class CliPeonTest
     protected RecordSupplier<String, String, ByteEntity> newTaskRecordSupplier(final TaskToolbox toolbox)
     {
       return null;
+    }
+
+    @Override
+    public SeekableStreamIndexTask<String, String, ?> withNewIoConfig(SeekableStreamIndexTaskIOConfig<String, String> newIoConfig)
+    {
+      return this;
     }
 
     @Override

@@ -70,6 +70,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedHistorical historical = new EmbeddedHistorical();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
+
   private KafkaResource kafkaServer;
 
   @Override
@@ -98,8 +99,10 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     };
 
     indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
+           .addProperty("druid.server.http.numThreads", "30")
            .addProperty("druid.worker.capacity", "10");
     overlord.addProperty("druid.indexer.task.default.context", "{\"useConcurrentLocks\": true}")
+            .addProperty("druid.server.http.numThreads", "50")
             .addProperty("druid.manager.segments.useIncrementalCache", "ifSynced")
             .addProperty("druid.manager.segments.pollDuration", "PT0.1s")
             .addProperty("druid.manager.segments.killUnused.enabled", "true")
@@ -392,7 +395,10 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
     return MoreResources.Supervisor.KAFKA_JSON
         .get()
         .withDataSchema(schema -> schema.withTimestamp(new TimestampSpec("timestamp", "iso", null)))
-        .withTuningConfig(tuningConfig -> tuningConfig.withMaxRowsPerSegment(maxRowsPerSegment))
+        .withTuningConfig(tuningConfig -> tuningConfig
+            .withMaxRowsPerSegment(maxRowsPerSegment)
+            .withWorkerThreads(10)
+            .withReleaseLocksOnHandoff(true))
         .withIoConfig(
             ioConfig -> ioConfig
                 .withConsumerProperties(kafkaServer.consumerProperties())
