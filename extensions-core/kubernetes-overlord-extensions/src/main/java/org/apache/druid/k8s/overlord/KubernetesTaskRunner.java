@@ -90,13 +90,13 @@ import java.util.stream.Collectors;
  * The KubernetesTaskRunner runs tasks by transforming the task spec into a K8s Job spec based
  * on the TaskAdapter it is configured with. The KubernetesTaskRunner has a pool of threads
  * (configurable with the capacity configuration) to track the jobs (1 thread tracks 1 job).
- * <p>
+ *
  * Each thread calls down to the KubernetesPeonLifecycle class to submit the Job to K8s and then
  * waits for the lifecycle class to report back with the Job's status (success/failure).
- * <p>
+ *
  * If there are not enough threads in the thread pool to execute and wait for a job, then the
  * task is put in a queue and left in WAITING state until another task completes.
- * <p>
+ *
  * When the KubernetesTaskRunner comes up it attempts to restore its internal mapping of tasks
  * from Kubernetes by listing running jobs and calling join on each job, which spawns a thread to
  * wait for the fabric8 client library to report back, similar to what happens when a new
