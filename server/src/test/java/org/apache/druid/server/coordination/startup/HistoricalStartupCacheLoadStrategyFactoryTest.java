@@ -21,7 +21,6 @@ package org.apache.druid.server.coordination.startup;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
-
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
