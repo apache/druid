@@ -329,7 +329,14 @@ public class ConfigManager
       if (!Arrays.equals(newBytes, rawBytes.get())) {
         reference.set(serde.deserialize(newBytes));
         rawBytes.set(newBytes);
-        listeners.forEach((_key, listener) -> listener.accept(reference.get()));
+        listeners.forEach((key, listener) -> {
+          try {
+            listener.accept(reference.get());
+          }
+          catch (Exception e) {
+            log.warn(e, "Exception when calling listener for key[%s]", key);
+          }
+        });
         return true;
       }
       return false;
@@ -337,21 +344,21 @@ public class ConfigManager
 
     public boolean addListener(String key, Consumer<T> listener)
     {
-      if (listeners.containsKey(key)) {
-        log.warn("listener key[%s] already exists", key);
+      Consumer<T> val = listeners.putIfAbsent(key, listener);
+      if (val != null) {
+        log.warn("Listener key[%s] already exists", key);
         return false;
       }
-      listeners.put(key, listener);
       return true;
     }
 
     public boolean removeListener(String key, Consumer<T> listener)
     {
-      if (!listeners.containsKey(key)) {
-        log.warn("listener key[%s] not found", key);
+      boolean isRemoved = listeners.remove(key, listener);
+      if (!isRemoved) {
+        log.warn("Listener key[%s] not found", key);
         return false;
       }
-      listeners.remove(key, listener);
       return true;
     }
   }
