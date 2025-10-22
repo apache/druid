@@ -216,8 +216,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
              .addData("file", file)
              .emit();
         }
-
-        latch.countDown();
+        finally {
+          latch.countDown();
+        }
       });
     }
 
@@ -226,7 +227,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      log.makeAlert(e, "Interrupted when trying to retrieve cached segment metadata files");
+      log.error(e, "Interrupted when trying to retrieve cached segment metadata files");
     }
 
     stopwatch.stop();
