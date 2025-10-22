@@ -29,7 +29,8 @@ import org.junit.Test;
 public class HistoricalStartupCacheLoadStrategyFactoryTest
 {
   @Test
-  public void testConstructionOfEagerLoadingBeforePeriodFromConfig() {
+  public void testConstructionOfEagerLoadingBeforePeriodFromConfig()
+  {
     final SegmentLoaderConfig config = new SegmentLoaderConfig()
     {
       @Override
@@ -54,7 +55,8 @@ public class HistoricalStartupCacheLoadStrategyFactoryTest
   }
 
   @Test
-  public void testConstructionOfLazyLoadingFromConfig() {
+  public void testConstructionOfLazyLoadingFromConfig()
+  {
     final SegmentLoaderConfig config = new SegmentLoaderConfig()
     {
       @Override
@@ -76,7 +78,8 @@ public class HistoricalStartupCacheLoadStrategyFactoryTest
   }
 
   @Test
-  public void testConstructionOfEagerLoadingFromConfig() {
+  public void testConstructionOfEagerLoadingFromConfig()
+  {
     final SegmentLoaderConfig config = new SegmentLoaderConfig()
     {
       @Override
@@ -98,15 +101,17 @@ public class HistoricalStartupCacheLoadStrategyFactoryTest
   }
 
   @Test
-  public void testDefaultConstruction() {
-    final SegmentLoaderConfig config = new SegmentLoaderConfig() {};
+  public void testDefaultConstruction()
+  {
+    final SegmentLoaderConfig config = new SegmentLoaderConfig();
 
     HistoricalStartupCacheLoadStrategy strategy = HistoricalStartupCacheLoadStrategyFactory.factorize(config);
     Assert.assertEquals(LoadAllEagerlyStrategy.class, strategy.getClass());
   }
 
   @Test
-  public void testConstructionOfInvalidConfig() {
+  public void testConstructionOfInvalidConfig()
+  {
     String unknownStrategy = "some unknown strategy";
     final SegmentLoaderConfig config = new SegmentLoaderConfig()
     {

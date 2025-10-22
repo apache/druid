@@ -28,7 +28,8 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class LoadEagerlyBeforePeriodTest {
+public class LoadEagerlyBeforePeriodTest
+{
   @Test
   public void testLoadEagerlyForSegments()
   {
