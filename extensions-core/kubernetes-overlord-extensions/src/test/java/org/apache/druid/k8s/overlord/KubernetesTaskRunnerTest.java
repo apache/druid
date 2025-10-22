@@ -55,6 +55,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -65,6 +67,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -793,5 +796,70 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     );
     kubernetesTaskRunner.stop();
     Assert.assertThrows(RejectedExecutionException.class, () -> kubernetesTaskRunner.run(task));
+  }
+
+  @Test
+  public void test_syncCapacityWithDynamicConfig_increase_updatesExecutorAndCapacity() throws Exception
+  {
+    Method method = KubernetesTaskRunner.class.getDeclaredMethod(
+        "syncCapacityWithDynamicConfig",
+        KubernetesTaskRunnerDynamicConfig.class
+    );
+    method.setAccessible(true);
+
+    // increase from 1 -> 3
+    method.invoke(runner, new DefaultKubernetesTaskRunnerDynamicConfig(null, 3));
+
+    Field tpeField = KubernetesTaskRunner.class.getDeclaredField("tpe");
+    tpeField.setAccessible(true);
+    ThreadPoolExecutor executor = (ThreadPoolExecutor) tpeField.get(runner);
+
+    Assert.assertEquals(3, executor.getCorePoolSize());
+    Assert.assertEquals(3, executor.getMaximumPoolSize());
+    Assert.assertEquals(3, runner.getTotalCapacity());
+  }
+
+  @Test
+  public void test_syncCapacityWithDynamicConfig_decrease_updatesExecutorAndCapacity() throws Exception
+  {
+    Method method = KubernetesTaskRunner.class.getDeclaredMethod(
+        "syncCapacityWithDynamicConfig",
+        KubernetesTaskRunnerDynamicConfig.class
+    );
+    method.setAccessible(true);
+
+    // first increase to 4 to ensure we can decrease after
+    method.invoke(runner, new DefaultKubernetesTaskRunnerDynamicConfig(null, 4));
+    // then decrease 4 -> 2
+    method.invoke(runner, new DefaultKubernetesTaskRunnerDynamicConfig(null, 2));
+
+    Field tpeField = KubernetesTaskRunner.class.getDeclaredField("tpe");
+    tpeField.setAccessible(true);
+    ThreadPoolExecutor executor = (ThreadPoolExecutor) tpeField.get(runner);
+
+    Assert.assertEquals(2, executor.getCorePoolSize());
+    Assert.assertEquals(2, executor.getMaximumPoolSize());
+    Assert.assertEquals(2, runner.getTotalCapacity());
+  }
+
+  @Test
+  public void test_syncCapacityWithDynamicConfig_sameCapacity_noChangeAndNoError() throws Exception
+  {
+    Method method = KubernetesTaskRunner.class.getDeclaredMethod(
+        "syncCapacityWithDynamicConfig",
+        KubernetesTaskRunnerDynamicConfig.class
+    );
+    method.setAccessible(true);
+
+    // initial capacity is 1 in setup; calling with 1 should be a no-op
+    method.invoke(runner, new DefaultKubernetesTaskRunnerDynamicConfig(null, 1));
+
+    Field tpeField = KubernetesTaskRunner.class.getDeclaredField("tpe");
+    tpeField.setAccessible(true);
+    ThreadPoolExecutor executor = (ThreadPoolExecutor) tpeField.get(runner);
+
+    Assert.assertEquals(1, executor.getCorePoolSize());
+    Assert.assertEquals(1, executor.getMaximumPoolSize());
+    Assert.assertEquals(1, runner.getTotalCapacity());
   }
 }
