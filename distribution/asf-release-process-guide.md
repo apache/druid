@@ -19,6 +19,45 @@
 
 ## Getting Started
 
+### 🚀 Release Checklist
+
+- [ ] [Announce intention to release](#Announce-intention-to-release)
+- [ ] [Create a release branch](#Create-a-release-branch)
+  - [ ] [Preparing the release branch](#Preparing-the-release-branch)
+  - [ ] [Preparing the master branch for the next version after branching](#Preparing-the-master-branch-for-the-next-version-after-branching)
+  - [ ] [Backport PRs tagged with release milestone](#Backport-PRs-tagged-with-release-milestone)
+  - [ ] [Release branch hygiene](#Release-branch-hygiene)
+- [ ] [Initial setup to create a release candidate](#Initial-setup-to-create-a-release-candidate)
+  - [ ] [SVN access](#SVN-access)
+  - [ ] [GPG key](#GPG-key)
+  - [ ] [Key propagation](#Key-propagation)
+  - [ ] [Maven credentials](#Maven-credentials)
+- [ ] [LICENSE and NOTICE handling](#LICENSE-and-NOTICE-handling)
+- [ ] [Release notes](#Release-notes)
+- [ ] [Building a release candidate](#Building-a-release-candidate)
+  - [ ] [Update the release branch to have all commits needed](#Update-the-release-branch-to-have-all-commits-needed)
+  - [ ] [Set version and make a tag](#Set-version-and-make-a-tag)
+  - [ ] [Do a clean clone (so the source distribution does not pick up extra files)](#Do-a-clean-clone-so-the-source-distribution-does-not-pick-up-extra-files)
+  - [ ] [Switch to tag](#Switch-to-tag)
+  - [ ] [Build Artifacts](#Build-Artifacts)
+  - [ ] [Verify checksums](#Verify-checksums)
+  - [ ] [Verify GPG signatures](#Verify-GPG-signatures)
+  - [ ] [Commit artifacts to SVN repo](#Commit-artifacts-to-SVN-repo)
+  - [ ] [Update druid.staged.apache.org](#Update-druidstagedapacheorg)
+  - [ ] [Create staged Maven repo](#Create-staged-Maven-repo)
+  - [ ] [Release candidates and voting](#Release-candidates-and-voting)
+    - [ ] [Druid PMC vote result](#Druid-PMC-vote-result)
+- [Final Release](#Final-Release)
+  - [ ] [Create git tag](#Create-git-tag)
+  - [ ] [Publish release artifacts to SVN](#Publish-release-artifacts-to-SVN)
+  - [ ] [Publish the staged Maven repo](#Publish-the-staged-Maven-repo)
+  - [ ] [Wait 24 hours then update druid.apache.org](#Wait-24-hours-then-update-druidapacheorg)
+  - [ ] [Draft a release on github](#draft-a-release-on-github)
+  - [ ] [Announce the release](#Announce-the-release)
+  - [ ] [Update Wikipedia](#Update-Wikipedia)
+  - [ ] [Remove old releases which are not 'active'](#remove-old-releases-which-are-not-active)
+
+
 ### Announce intention to release
 
 First up in performing an official release of Apache Druid is to announce in the dev mailing list, dev@druid.apache.org, that it is about time for the next (approximately) quarterly release, or, that there is a critical bug that warrants doing a bug fix release, whatever the reason happens to be. Check for any critical bugs that are still open, or issues or PRs tagged with the release milestone, and give the community a bit of heads up to try and wrap up anything that _needs_ to be in the next release.
@@ -120,10 +159,8 @@ The sample [`docker-compose.yml`](https://github.com/apache/druid/blob/master/di
 
 Once this is completed, open a PR to the master branch. Also, be sure to confirm that these versions are all correct in the release branch, otherwise fix them and open a backport PR to the release branch.
 
-#### Updating redirect links in the docs
-
-For docs, please make sure to add any relevant redirects in `website/redirects.json`. This has to be done before building the new website. 
-
+### Backport PRs tagged with release milestone
+If a PR is merged into the master branch after the release branch is created and tagged with the release version, then the commit must be backported to the release branch. 
 
 ### Release branch hygiene
 
@@ -134,7 +171,7 @@ To check the CI status on a release branch, you can go to the commits page e.g. 
 a green &#10004; in the commit description. If the commit has a failed build, please click on red &#10005; icon in the commit description to go to travis build job and investigate. 
 You can restart a failed build via travis if it is flaky. 
 
-The release manager should also keep an eye-out for `Cron Job Unit Tests` failures: https://github.com/apache/druid/actions/workflows/cron-job-unit-tests.yml. If there are failures, we need to fix them before creating an RC.
+The release manager should also keep an eye-out for `Cron Job ITS` failures: https://github.com/apache/druid/actions/workflows/cron-job-its.yml. If there are failures, we need to fix them before creating an RC.
 
 Once all issues and PRs that are still tagged with the release milestone have been merged, closed, or removed from the milestone and CI on branch is green, the next step is to put together a release candidate.
 
@@ -626,14 +663,11 @@ Returning to the staged repo you created for the Druid PMC vote ( https://reposi
 https://central.sonatype.org/pages/releasing-the-deployment.html#close-and-drop-or-release-your-staging-repository
 
 
-### Wait 24 hours
+### Wait 24 hours then update druid.apache.org
 
 Apache policy requires projects to wait at least 24 hours after uploading artifacts before announcing a release, to allow time for the release artifacts to propagate across mirrors.
 
 http://www.apache.org/legal/release-policy.html#release-announcements
-
-
-### Update druid.apache.org
 
 > Before you start, you need the following: Python 3.11 (or later) and Node 16.14 (or later).
 

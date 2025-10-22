@@ -53,8 +53,15 @@ for sha in all_commits.splitlines():
         continue
       if pr['milestone'] is None:
         print("Tagging Pull Request {} with milestone {}".format(pr_number, milestone))
-        url = "https://api.github.com/repos/apache/druid/issues/{}".format(pr_number)
-        requests.patch(url, json=milestone_json, auth=(github_username, os.environ["GIT_TOKEN"]))
+        if os.environ.get("DRY_RUN", "true").lower() == "false":
+          url = "https://api.github.com/repos/apache/druid/issues/{}".format(pr_number)
+          response = requests.patch(url, json=milestone_json, auth=(github_username, os.environ["GIT_TOKEN"]))
+          if response.status_code == 200:
+            print("✅ Tagged Pull Request {}".format(pr['html_url']))
+          else:
+            print("❌ Response: {}".format(response.json()))
+        else:
+          print("💤 Dry run mode, not tagging Pull Request {}".format(pr['html_url']))
       else:
         print("Skipping Pull Request {} since it's already tagged with milestone {}".format(pr_number, pr['milestone']['number']))
 
