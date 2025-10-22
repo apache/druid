@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordination.startup;
 
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.TestSegmentUtils;
 import org.apache.druid.timeline.DataSegment;
@@ -33,7 +34,7 @@ public class LoadEagerlyBeforePeriodTest
   @Test
   public void testLoadEagerlyForSegments()
   {
-    DateTime now = DateTime.now();
+    DateTime now = DateTimes.nowUtc();
     LoadEagerlyBeforePeriod strategy = new LoadEagerlyBeforePeriod(Period.days(7));
 
     final DataSegment withinRange = TestSegmentUtils.makeSegment("foo2", "v1", new Interval(now.minusDays(2), now.minusDays(1)));
@@ -49,7 +50,7 @@ public class LoadEagerlyBeforePeriodTest
   public void testLoadLazilyForSegments()
   {
     LoadEagerlyBeforePeriod strategy = new LoadEagerlyBeforePeriod(Period.days(1));
-    DateTime now = DateTime.now();
+    DateTime now = DateTimes.nowUtc();
     final DataSegment laterThanEnd = TestSegmentUtils.makeSegment("foo2", "v1", new Interval(now.plusDays(1), now.plusDays(2)));
     final DataSegment earlierThanStart = TestSegmentUtils.makeSegment("foo3", "v1", new Interval(now.minusDays(8), now.minusDays(7)));
 
