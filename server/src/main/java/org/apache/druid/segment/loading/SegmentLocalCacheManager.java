@@ -252,53 +252,51 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   private void loadToCachedSegmentsFromFile(
       ConcurrentLinkedQueue<DataSegment> cachedSegments,
       File file,
-      AtomicInteger ignoredFilesCounter
+      AtomicInteger ignored
   ) throws IOException
   {
     final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
-
+    boolean removeInfo = false;
     if (!segment.getId().toString().equals(file.getName())) {
       log.warn("Ignoring cache file[%s] for segment[%s].", file.getPath(), segment.getId());
-      ignoredFilesCounter.incrementAndGet();
-      return;
-    }
-
-    boolean removeInfo = true;
-    final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
-
-    for (StorageLocation location : locations) {
-      // check for migrate from old nested local storage path format
-      final File legacyPath = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
-      if (legacyPath.exists()) {
-        final File destination = cacheEntry.toPotentialLocation(location.getPath());
-        FileUtils.mkdirp(destination);
-        final File[] oldFiles = legacyPath.listFiles();
-        final File[] newFiles = destination.listFiles();
-        // make sure old files exist and new files do not exist
-        if (oldFiles != null && oldFiles.length > 0 && newFiles != null && newFiles.length == 0) {
-          Files.move(legacyPath.toPath(), destination.toPath(), StandardCopyOption.ATOMIC_MOVE);
+      ignored.incrementAndGet();
+    } else {
+      removeInfo = true;
+      final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
+      for (StorageLocation location : locations) {
+        // check for migrate from old nested local storage path format
+        final File legacyPath = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
+        if (legacyPath.exists()) {
+          final File destination = cacheEntry.toPotentialLocation(location.getPath());
+          FileUtils.mkdirp(destination);
+          final File[] oldFiles = legacyPath.listFiles();
+          final File[] newFiles = destination.listFiles();
+          // make sure old files exist and new files do not exist
+          if (oldFiles != null && oldFiles.length > 0 && newFiles != null && newFiles.length == 0) {
+            Files.move(legacyPath.toPath(), destination.toPath(), StandardCopyOption.ATOMIC_MOVE);
+          }
+          cleanupLegacyCacheLocation(location.getPath(), legacyPath);
         }
-        cleanupLegacyCacheLocation(location.getPath(), legacyPath);
-      }
 
-      if (cacheEntry.checkExists(location.getPath())) {
-        removeInfo = false;
-        final boolean reserveResult;
-        if (config.isVirtualStorage()) {
-          reserveResult = location.reserveWeak(cacheEntry);
-        } else {
-          reserveResult = location.reserve(cacheEntry);
+        if (cacheEntry.checkExists(location.getPath())) {
+          removeInfo = false;
+          final boolean reserveResult;
+          if (config.isVirtualStorage()) {
+            reserveResult = location.reserveWeak(cacheEntry);
+          } else {
+            reserveResult = location.reserve(cacheEntry);
+          }
+          if (!reserveResult) {
+            log.makeAlert(
+                "storage[%s:%,d] has more segments than it is allowed. Currently loading Segment[%s:%,d]. Please increase druid.segmentCache.locations maxSize param",
+                location.getPath(),
+                location.availableSizeBytes(),
+                segment.getId(),
+                segment.getSize()
+            ).emit();
+          }
+          cachedSegments.add(segment);
         }
-        if (!reserveResult) {
-          log.makeAlert(
-              "storage[%s:%,d] has more segments than it is allowed. Currently loading Segment[%s:%,d]. Please increase druid.segmentCache.locations maxSize param",
-              location.getPath(),
-              location.availableSizeBytes(),
-              segment.getId(),
-              segment.getSize()
-          ).emit();
-        }
-        cachedSegments.add(segment);
       }
     }
 
