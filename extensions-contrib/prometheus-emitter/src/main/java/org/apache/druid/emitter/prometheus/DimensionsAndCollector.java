@@ -20,6 +20,7 @@
 package org.apache.druid.emitter.prometheus;
 
 import io.prometheus.client.SimpleCollector;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.joda.time.Duration;
@@ -91,8 +92,7 @@ public class DimensionsAndCollector
   public boolean isExpired(List<String> labelValues)
   {
     if (ttlSeconds == null) {
-      log.error("Invalid usage of isExpired(), TTL has not been set");
-      return false;
+      throw DruidException.defensive("Invalid usage of isExpired, flushPeriod has not been set");
     } else if (!labelValuesToStopwatch.containsKey(labelValues)) {
       return true;
     }
