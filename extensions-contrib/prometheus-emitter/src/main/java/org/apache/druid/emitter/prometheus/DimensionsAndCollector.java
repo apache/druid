@@ -70,6 +70,10 @@ public class DimensionsAndCollector
     return histogramBuckets;
   }
 
+  /**
+   * For each unique set of labelValues, keeps track of the amount of time that has elapsed since its metric
+   * value has been updated.
+   */
   public void resetLastUpdateTime(List<String> labelValues)
   {
     labelValuesToStopwatch.compute(labelValues, (k, v) -> {
@@ -87,6 +91,10 @@ public class DimensionsAndCollector
     return labelValuesToStopwatch;
   }
 
+  /**
+   * For the given labelValues, checks if the metric value has been updated within the configured flushPeriod.
+   * Returns true and removes the entry from the map if it has expired, otherwise returns false.
+   */
   public boolean removeIfExpired(List<String> labelValues)
   {
     if (ttlSeconds == null) {
