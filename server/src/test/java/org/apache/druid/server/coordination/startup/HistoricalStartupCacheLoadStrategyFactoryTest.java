@@ -108,6 +108,26 @@ public class HistoricalStartupCacheLoadStrategyFactoryTest
     Assert.assertEquals(LoadAllEagerlyStrategy.class, strategy.getClass());
   }
 
+  /**
+   * Test to be removed when {@link SegmentLoaderConfig#isLazyLoadOnStart()} is removed.
+   */
+  @Test
+  @SuppressWarnings("deprecation")
+  public void testConfigWhenLazyLoadSetToTrue()
+  {
+    final SegmentLoaderConfig config = new SegmentLoaderConfig()
+    {
+      @Override
+      public boolean isLazyLoadOnStart()
+      {
+        return true;
+      }
+    };
+
+    HistoricalStartupCacheLoadStrategy strategy = HistoricalStartupCacheLoadStrategyFactory.factorize(config);
+    Assert.assertEquals(LoadAllLazilyStrategy.class, strategy.getClass());
+  }
+
   @Test
   public void testConstructionOfInvalidConfig()
   {

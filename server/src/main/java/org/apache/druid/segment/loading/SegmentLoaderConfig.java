@@ -44,6 +44,9 @@ public class SegmentLoaderConfig
   @JsonProperty
   private List<StorageLocationConfig> locations = Collections.emptyList();
 
+  /**
+   * @deprecated Use {@link #startupLoadStrategy} instead.
+   */
   @Deprecated
   @JsonProperty("lazyLoadOnStart")
   private boolean lazyLoadOnStart = false;
@@ -94,10 +97,21 @@ public class SegmentLoaderConfig
     return locations;
   }
 
+  /**
+   * @deprecated Use {@link #getStartupCacheLoadStrategy()} instead.
+   * Removal of this method in the future will requires a change in {@link #getStartupCacheLoadStrategy()}
+   * to default to {@link LoadAllEagerlyStrategy#STRATEGY_NAME} when {@link #startupLoadStrategy} is null.
+   */
+  @Deprecated
+  public boolean isLazyLoadOnStart()
+  {
+    return lazyLoadOnStart;
+  }
+
   public String getStartupCacheLoadStrategy()
   {
     return startupLoadStrategy == null
-           ? lazyLoadOnStart
+           ? isLazyLoadOnStart()
              ? LoadAllLazilyStrategy.STRATEGY_NAME
              : LoadAllEagerlyStrategy.STRATEGY_NAME
            : startupLoadStrategy;

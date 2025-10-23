@@ -51,10 +51,10 @@ public class LoadEagerlyBeforePeriodTest
   {
     LoadEagerlyBeforePeriod strategy = new LoadEagerlyBeforePeriod(Period.days(1));
     DateTime now = DateTimes.nowUtc();
-    final DataSegment laterThanEnd = TestSegmentUtils.makeSegment("foo2", "v1", new Interval(now.plusDays(1), now.plusDays(2)));
-    final DataSegment earlierThanStart = TestSegmentUtils.makeSegment("foo3", "v1", new Interval(now.minusDays(8), now.minusDays(7)));
+    final DataSegment segmentInFuture = TestSegmentUtils.makeSegment("foo2", "v1", new Interval(now.plusDays(1), now.plusDays(2)));
+    final DataSegment segmentTooLate = TestSegmentUtils.makeSegment("foo3", "v1", new Interval(now.minusDays(8), now.minusDays(7)));
 
-    Assert.assertTrue(strategy.shouldLoadLazily(laterThanEnd));
-    Assert.assertTrue(strategy.shouldLoadLazily(earlierThanStart));
+    Assert.assertTrue(strategy.shouldLoadLazily(segmentInFuture));
+    Assert.assertTrue(strategy.shouldLoadLazily(segmentTooLate));
   }
 }
