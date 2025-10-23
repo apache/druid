@@ -30,6 +30,7 @@ import {
   FINE_GRANULARITY_OPTIONS,
   getAutoGranularity,
   getTimeSpanInExpression,
+  smartTimeFloor,
 } from '../../../../utils';
 import { Issue } from '../../components';
 import type { ExpressionMeta } from '../../models';
@@ -298,11 +299,14 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
           .applyIf(facetExpression && detectedFacets && !facetsToQuery, q =>
             q.addWhere(facetExpression!.cast('VARCHAR').in(detectedFacets!)),
           )
-          .addSelect(F.timeFloor(C(timeColumnName), L(timeGranularity)).as(TIME_NAME), {
-            addToGroupBy: 'end',
-            addToOrderBy: 'end',
-            direction: 'DESC',
-          })
+          .addSelect(
+            smartTimeFloor(C(timeColumnName), timeGranularity, timezone.isUTC()).as(TIME_NAME),
+            {
+              addToGroupBy: 'end',
+              addToOrderBy: 'end',
+              direction: 'DESC',
+            },
+          )
           .applyIf(facetExpression, q => {
             if (!facetExpression) return q; // Should never get here, doing this to make peace between eslint and TS
             return q.addSelect(
