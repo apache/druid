@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.security.basic.BasicSecurityResourceFilter;
@@ -32,6 +33,7 @@ import org.apache.druid.server.security.AuthValidator;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.ResourceAction;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -610,6 +612,24 @@ public class BasicAuthorizerResource
     return resourceHandler.getCachedGroupMappingMaps(authorizerName);
   }
 
+  @GET
+  @Path("/db/{authorizerName}/history")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response getAuthorizerUpdateHistory(
+      @PathParam("authorizerName") String authorizerName,
+      @QueryParam("limit") @Nullable Integer limit
+  )
+  {
+    authValidator.validateAuthorizerName(authorizerName);
+    return Response.ok(
+        auditManager.fetchAuditHistory(
+            authorizerName,
+            "basic.authorizer",
+            Configs.valueOrDefault(limit, 100)
+        )
+    ).build();
+  }
 
   /**
    * Listen for update notifications for the user auth storage
@@ -630,10 +650,7 @@ public class BasicAuthorizerResource
   {
     authValidator.validateAuthorizerName(authorizerName);
 
-    final Response response = resourceHandler.authorizerUserUpdateListener(authorizerName, serializedUserAndRoleMap);
-    performAuditIfSuccess(authorizerName, req, response, "Update user authorization for authorizer[%s]", authorizerName);
-
-    return response;
+    return resourceHandler.authorizerUserUpdateListener(authorizerName, serializedUserAndRoleMap);
   }
 
   /**
@@ -652,10 +669,7 @@ public class BasicAuthorizerResource
   {
     authValidator.validateAuthorizerName(authorizerName);
 
-    final Response response = resourceHandler.authorizerUserUpdateListener(authorizerName, serializedUserAndRoleMap);
-    performAuditIfSuccess(authorizerName, req, response, "Update authorization for authorizer[%s]", authorizerName);
-
-    return response;
+    return resourceHandler.authorizerUserUpdateListener(authorizerName, serializedUserAndRoleMap);
   }
 
   /**
@@ -674,10 +688,7 @@ public class BasicAuthorizerResource
   {
     authValidator.validateAuthorizerName(authorizerName);
 
-    final Response response = resourceHandler.authorizerGroupMappingUpdateListener(authorizerName, serializedGroupMappingAndRoleMap);
-    performAuditIfSuccess(authorizerName, req, response, "Update group mappings for authorizer[%s]", authorizerName);
-
-    return response;
+    return resourceHandler.authorizerGroupMappingUpdateListener(authorizerName, serializedGroupMappingAndRoleMap);
   }
 
   private boolean isSuccess(Response response)
