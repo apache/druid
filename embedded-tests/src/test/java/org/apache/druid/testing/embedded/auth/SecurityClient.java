@@ -19,9 +19,7 @@
 
 package org.apache.druid.testing.embedded.auth;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.server.security.ResourceAction;
@@ -164,18 +162,6 @@ public class SecurityClient
         )
     );
     sendRequest(mapper -> request.jsonContent(mapper, permissions));
-  }
-
-  public List<AuditEntry> getUpdateHistory()
-  {
-    final RequestBuilder request = new RequestBuilder(
-        HttpMethod.GET,
-        StringUtils.format(
-            "%s/history",
-            AUTHORIZER_URL
-        )
-    );
-    return clients.onLeaderCoordinator(mapper -> request, new TypeReference<>() {});
   }
 
   private void sendRequest(Function<ObjectMapper, RequestBuilder> request)

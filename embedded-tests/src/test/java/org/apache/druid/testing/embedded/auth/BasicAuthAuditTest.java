@@ -20,6 +20,7 @@
 package org.apache.druid.testing.embedded.auth;
 
 import org.apache.druid.audit.AuditEntry;
+import org.apache.druid.audit.AuditManager;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -78,7 +79,11 @@ public class BasicAuthAuditTest extends EmbeddedClusterTestBase
     // Wait for all services to be synced
     Thread.sleep(100L);
 
-    final List<AuditEntry> entries = securityClient.getUpdateHistory();
+    final List<AuditEntry> entries = coordinator.bindings().getInstance(AuditManager.class).fetchAuditHistory(
+        "basic",
+        "basic.authorizer",
+        100
+    );
     Assertions.assertEquals(1, entries.size());
     Assertions.assertEquals(
         StringUtils.format("\"Create role[%s]\"", dataSource),

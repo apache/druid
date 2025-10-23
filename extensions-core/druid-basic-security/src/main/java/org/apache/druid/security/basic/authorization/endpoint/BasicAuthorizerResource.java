@@ -24,7 +24,6 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
-import org.apache.druid.common.config.Configs;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.security.basic.BasicSecurityResourceFilter;
@@ -33,7 +32,6 @@ import org.apache.druid.server.security.AuthValidator;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.ResourceAction;
 
-import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -610,25 +608,6 @@ public class BasicAuthorizerResource
   {
     authValidator.validateAuthorizerName(authorizerName);
     return resourceHandler.getCachedGroupMappingMaps(authorizerName);
-  }
-
-  @GET
-  @Path("/db/{authorizerName}/history")
-  @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
-  public Response getAuthorizerUpdateHistory(
-      @PathParam("authorizerName") String authorizerName,
-      @QueryParam("limit") @Nullable Integer limit
-  )
-  {
-    authValidator.validateAuthorizerName(authorizerName);
-    return Response.ok(
-        auditManager.fetchAuditHistory(
-            authorizerName,
-            "basic.authorizer",
-            Configs.valueOrDefault(limit, 100)
-        )
-    ).build();
   }
 
   /**
