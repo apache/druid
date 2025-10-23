@@ -37,8 +37,10 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -288,16 +290,15 @@ public class PrometheusEmitter implements Emitter
     Map<String, DimensionsAndCollector> map = metrics.getRegisteredMetrics();
     for (Map.Entry<String, DimensionsAndCollector> entry : map.entrySet()) {
       DimensionsAndCollector metric = entry.getValue();
-      for (List<String> labelValues : metric.getLabelValuesToStopwatch().keySet()) {
-        if (metric.isExpired(labelValues)) {
+      Set<List<String>> labelValuesCopy = new HashSet<>(metric.getLabelValuesToStopwatch().keySet());
+      for (List<String> labelValues : labelValuesCopy) {
+        if (metric.removeIfExpired(labelValues)) {
           log.debug(
-              "Metric [%s] with labels [%s] has expired (last updated [%d] ms ago)",
+              "Metric [%s] with labels [%s] has expired",
               entry.getKey(),
-              labelValues,
-              metric.getMillisSinceLastUpdate(labelValues)
+              labelValues
           );
           metric.getCollector().remove(labelValues.toArray(new String[0]));
-          metric.getLabelValuesToStopwatch().remove(labelValues);
         }
       }
     }

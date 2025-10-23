@@ -37,7 +37,7 @@ public class DimensionsAndCollector
   private final SimpleCollector collector;
   private final double conversionFactor;
   private final double[] histogramBuckets;
-  private final ConcurrentMap<List<String>, Stopwatch> labelValuesToStopwatch;
+  private final ConcurrentHashMap<List<String>, Stopwatch> labelValuesToStopwatch;
   private final Duration ttlSeconds;
 
   DimensionsAndCollector(String[] dimensions, SimpleCollector collector, double conversionFactor, double[] histogramBuckets, @Nullable Integer ttlSeconds)
@@ -72,16 +72,14 @@ public class DimensionsAndCollector
 
   public void resetLastUpdateTime(List<String> labelValues)
   {
-    if (labelValuesToStopwatch.containsKey(labelValues)) {
-      labelValuesToStopwatch.get(labelValues).restart();
-    } else {
-      labelValuesToStopwatch.put(labelValues, Stopwatch.createStarted());
-    }
-  }
-
-  public long getMillisSinceLastUpdate(List<String> labelValues)
-  {
-    return labelValuesToStopwatch.get(labelValues).millisElapsed();
+    labelValuesToStopwatch.compute(labelValues, (k, v) -> {
+      if (v != null) {
+        v.restart();
+        return v;
+      } else {
+        return Stopwatch.createStarted();
+      }
+    });
   }
 
   public ConcurrentMap<List<String>, Stopwatch> getLabelValuesToStopwatch()
@@ -89,13 +87,16 @@ public class DimensionsAndCollector
     return labelValuesToStopwatch;
   }
 
-  public boolean isExpired(List<String> labelValues)
+  public boolean removeIfExpired(List<String> labelValues)
   {
     if (ttlSeconds == null) {
       throw DruidException.defensive("Invalid usage of isExpired, flushPeriod has not been set");
-    } else if (!labelValuesToStopwatch.containsKey(labelValues)) {
-      return true;
     }
-    return labelValuesToStopwatch.get(labelValues).hasElapsed(ttlSeconds);
+    return labelValuesToStopwatch.computeIfPresent(labelValues, (k, v) -> {
+      if (v.hasElapsed(ttlSeconds)) {
+        return null;
+      }
+      return v;
+    }) == null;
   }
 }
