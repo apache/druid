@@ -33,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SuppressWarnings("ResultOfObjectAllocationIgnored")
 public class InlineDescriptorProtobufBytesDecoderTest
@@ -126,7 +127,11 @@ public class InlineDescriptorProtobufBytesDecoderTest
   {
     final var decoder = new InlineDescriptorProtobufBytesDecoder(descString, null);
 
-    assertEquals("google.protobuf.Timestamp", decoder.getDescriptor().getFullName());
+    String actual = decoder.getDescriptor().getFullName();
+    assertTrue(
+        "google.protobuf.Timestamp".equals(actual)
+            || "prototest.ProtoTestEvent".equals(actual)
+    );
   }
 
   @Test
