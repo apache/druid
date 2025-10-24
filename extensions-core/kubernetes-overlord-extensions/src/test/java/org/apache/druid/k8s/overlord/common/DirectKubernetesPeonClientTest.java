@@ -105,16 +105,16 @@ public class DirectKubernetesPeonClientTest
         .build();
 
     server.expect().get()
-          .withPath("/api/v1/namespaces/namespace/pods?labelSelector=job-name%3D" + KUBERNETES_JOB_NAME)
-          .andReturn(HttpURLConnection.HTTP_OK, new PodListBuilder()
-              .addNewItem()
-              .withNewMetadata()
-              .withName(POD_NAME)
-              .addToLabels("job-name", JOB_NAME)
-              .endMetadata()
-              .endItem()
-              .build()
-          ).once();
+        .withPath("/api/v1/namespaces/namespace/pods?labelSelector=job-name%3D" + KUBERNETES_JOB_NAME)
+        .andReturn(HttpURLConnection.HTTP_OK, new PodListBuilder()
+            .addNewItem()
+            .withNewMetadata()
+            .withName(POD_NAME)
+            .addToLabels("job-name", JOB_NAME)
+            .endMetadata()
+            .endItem()
+            .build()
+        ).once();
 
     Assertions.assertThrows(
         IllegalStateException.class,
@@ -283,9 +283,9 @@ public class DirectKubernetesPeonClientTest
     client.pods().inNamespace(NAMESPACE).resource(pod).create();
 
     server.expect().get()
-          .withPath("/api/v1/namespaces/namespace/pods/id/log?pretty=false&container=main")
-          .andReturn(HttpURLConnection.HTTP_OK, "data")
-          .once();
+        .withPath("/api/v1/namespaces/namespace/pods/id/log?pretty=false&container=main")
+        .andReturn(HttpURLConnection.HTTP_OK, "data")
+        .once();
 
     Optional<InputStream> maybeInputStream = instance.getPeonLogs(new K8sTaskId(TASK_NAME_PREFIX, ID));
     Assertions.assertTrue(maybeInputStream.isPresent());
@@ -537,21 +537,21 @@ public class DirectKubernetesPeonClientTest
   void test_getPeonPodWithRetries_withPod_returnsPod()
   {
     server.expect().get()
-          .withPath("/api/v1/namespaces/namespace/pods?labelSelector=job-name%3D" + KUBERNETES_JOB_NAME)
-          .andReturn(HttpURLConnection.HTTP_OK, new PodListBuilder().build())
-          .once();
+        .withPath("/api/v1/namespaces/namespace/pods?labelSelector=job-name%3D" + KUBERNETES_JOB_NAME)
+        .andReturn(HttpURLConnection.HTTP_OK, new PodListBuilder().build())
+        .once();
 
     server.expect().get()
-          .withPath("/api/v1/namespaces/namespace/pods?labelSelector=job-name%3D" + KUBERNETES_JOB_NAME)
-          .andReturn(HttpURLConnection.HTTP_OK, new PodListBuilder()
-              .addNewItem()
-              .withNewMetadata()
-              .withName(POD_NAME)
-              .addToLabels("job-name", KUBERNETES_JOB_NAME)
-              .endMetadata()
-              .endItem()
-              .build()
-          ).once();
+        .withPath("/api/v1/namespaces/namespace/pods?labelSelector=job-name%3D" + KUBERNETES_JOB_NAME)
+        .andReturn(HttpURLConnection.HTTP_OK, new PodListBuilder()
+            .addNewItem()
+            .withNewMetadata()
+            .withName(POD_NAME)
+            .addToLabels("job-name", KUBERNETES_JOB_NAME)
+            .endMetadata()
+            .endItem()
+            .build()
+        ).once();
 
     Pod pod = instance.getPeonPodWithRetries(clientApi.getClient(), new K8sTaskId(TASK_NAME_PREFIX, ID).getK8sJobName(), 0, 2);
 
@@ -578,10 +578,10 @@ public class DirectKubernetesPeonClientTest
     String blacklistedMessage = DruidK8sConstants.BLACKLISTED_PEON_POD_ERROR_MESSAGES.get(0);
 
     final String eventsPath = "/api/v1/namespaces/namespace/events?fieldSelector=" +
-                              "involvedObject.name%3D" + k8sJobName +
-                              "%2CinvolvedObject.namespace%3D" + NAMESPACE +
-                              "%2CinvolvedObject.kind%3DJob" +
-                              "%2CinvolvedObject.apiVersion%3Dbatch%2Fv1";
+                        "involvedObject.name%3D" + k8sJobName +
+                        "%2CinvolvedObject.namespace%3D" + NAMESPACE +
+                        "%2CinvolvedObject.kind%3DJob" +
+                        "%2CinvolvedObject.apiVersion%3Dbatch%2Fv1";
 
     server.expect().get()
           .withPath(eventsPath)
@@ -622,9 +622,9 @@ public class DirectKubernetesPeonClientTest
     client.pods().inNamespace(NAMESPACE).resource(pod).create();
 
     server.expect().get()
-          .withPath("/api/v1/namespaces/namespace/pods/id/log?pretty=false&container=main")
-          .andReturn(HttpURLConnection.HTTP_OK, "data")
-          .once();
+         .withPath("/api/v1/namespaces/namespace/pods/id/log?pretty=false&container=main")
+         .andReturn(HttpURLConnection.HTTP_OK, "data")
+         .once();
 
     Optional<LogWatch> maybeLogWatch = instance.getPeonLogWatcher(new K8sTaskId(TASK_NAME_PREFIX, ID));
     Assertions.assertTrue(maybeLogWatch.isPresent());
@@ -684,9 +684,9 @@ public class DirectKubernetesPeonClientTest
 
     // Return 403 Forbidden - this is not a retryable exception
     server.expect().post()
-          .withPath(jobPath)
-          .andReturn(HttpURLConnection.HTTP_FORBIDDEN, "Forbidden: insufficient permissions")
-          .once();
+         .withPath(jobPath)
+         .andReturn(HttpURLConnection.HTTP_FORBIDDEN, "Forbidden: insufficient permissions")
+         .once();
 
     // Should fail immediately without retries
     DruidException e = Assertions.assertThrows(
@@ -711,9 +711,9 @@ public class DirectKubernetesPeonClientTest
 
     // Return 409 Conflict - job already exists
     server.expect().post()
-          .withPath(jobPath)
-          .andReturn(HttpURLConnection.HTTP_CONFLICT, "Job already exists")
-          .once();
+         .withPath(jobPath)
+         .andReturn(HttpURLConnection.HTTP_CONFLICT, "Job already exists")
+         .once();
 
     // Should succeed gracefully without throwing exception
     Assertions.assertDoesNotThrow(

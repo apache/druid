@@ -112,8 +112,8 @@ public class DruidPeonClientIntegrationTest
 
     Task task = K8sTestUtils.getTask();
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-                                                                  .withNamespace("default")
-                                                                  .build();
+        .withNamespace("default")
+        .build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         k8sClient,
         config,
