@@ -20,21 +20,14 @@
 package org.apache.druid.indexing.overlord.setup;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
-import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
-import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.TestSeekableStreamIndexTask;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
@@ -46,7 +39,6 @@ import org.mockito.Mockito;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Map;
 
 public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
 {
@@ -215,7 +207,7 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
     );
 
     // Create a test task with supervisor ID "supervisor1"
-    final Task taskWithSupervisor = new TestSeekableStreamIndexTask("task1", "supervisor1", "ds1");
+    final Task taskWithSupervisor = createTestTask("task1", "supervisor1", "ds1");
     
     final EqualDistributionWithCategorySpecWorkerSelectStrategy strategy =
         new EqualDistributionWithCategorySpecWorkerSelectStrategy(workerCategorySpec, null);
@@ -249,7 +241,7 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
     );
 
     // Create a test task with supervisor ID "supervisor1" (not in supervisorIdCategoryAffinity map)
-    final Task taskWithSupervisor = new TestSeekableStreamIndexTask("task1", "supervisor1", "ds1");
+    final Task taskWithSupervisor = createTestTask("task1", "supervisor1", "ds1");
     
     final EqualDistributionWithCategorySpecWorkerSelectStrategy strategy =
         new EqualDistributionWithCategorySpecWorkerSelectStrategy(workerCategorySpec, null);
@@ -283,7 +275,7 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
     );
 
     // Create a test task with supervisor ID "supervisor1" and datasource "ds1"
-    final Task taskWithSupervisor = new TestSeekableStreamIndexTask("task1", "supervisor1", "ds1");
+    final Task taskWithSupervisor = createTestTask("task1", "supervisor1", "ds1");
     
     final EqualDistributionWithCategorySpecWorkerSelectStrategy strategy =
         new EqualDistributionWithCategorySpecWorkerSelectStrategy(workerCategorySpec, null);
@@ -315,63 +307,28 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
   }
 
   /**
-   * Test implementation of SeekableStreamIndexTask for testing supervisor ID affinity
+   * Helper method to create a test task with supervisor ID for testing
    */
-  private static class TestSeekableStreamIndexTask extends SeekableStreamIndexTask<String, String, ByteEntity>
+  @SuppressWarnings("unchecked")
+  private static Task createTestTask(String id, @Nullable String supervisorId, String datasource)
   {
-    TestSeekableStreamIndexTask(
-            String id,
-            @Nullable String supervisorId,
-            String datasource
-    )
-    {
-      this(
-              id,
-              supervisorId,
-              null,
-              DataSchema.builder()
-                      .withDataSource(datasource)
-                      .withTimestamp(new TimestampSpec(null, null, null))
-                      .withDimensions(new DimensionsSpec(Collections.emptyList()))
-                      .withGranularity(new ArbitraryGranularitySpec(new AllGranularity(), Collections.emptyList()))
-                      .build(),
-              Mockito.mock(SeekableStreamIndexTaskTuningConfig.class),
-              Mockito.mock(SeekableStreamIndexTaskIOConfig.class),
-              null,
-              null
-      );
-    }
-
-    private TestSeekableStreamIndexTask(
-            String id,
-            @Nullable String supervisorId,
-            @Nullable TaskResource taskResource,
-            DataSchema dataSchema,
-            SeekableStreamIndexTaskTuningConfig tuningConfig,
-            SeekableStreamIndexTaskIOConfig<String, String> ioConfig,
-            @Nullable Map context,
-            @Nullable String groupId
-    )
-    {
-      super(id, supervisorId, taskResource, dataSchema, tuningConfig, ioConfig, context, groupId);
-    }
-
-    @Override
-    protected SeekableStreamIndexTaskRunner<String, String, ByteEntity> createTaskRunner()
-    {
-      return null;
-    }
-
-    @Override
-    protected RecordSupplier<String, String, ByteEntity> newTaskRecordSupplier(final TaskToolbox toolbox)
-    {
-      return null;
-    }
-
-    @Override
-    public String getType()
-    {
-      return "test_seekable_stream";
-    }
+    return new TestSeekableStreamIndexTask(
+        id,
+        supervisorId,
+        null,
+        DataSchema.builder()
+            .withDataSource(datasource)
+            .withTimestamp(new TimestampSpec(null, null, null))
+            .withDimensions(new DimensionsSpec(Collections.emptyList()))
+            .withGranularity(new ArbitraryGranularitySpec(new AllGranularity(), Collections.emptyList()))
+            .build(),
+        Mockito.mock(org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig.class),
+        Mockito.mock(org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig.class),
+        null,
+        null,
+        null,
+        null,
+        "test_seekable_stream"
+    );
   }
 }
