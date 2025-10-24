@@ -163,7 +163,6 @@ public class IntervalTree<T>
     }
 
     // If exact interval already exists, just replace the value
-    //if (doesMatch(node, interval)) {
     if (node.interval.equals(interval)) {
       node.value = value;
       return node;
