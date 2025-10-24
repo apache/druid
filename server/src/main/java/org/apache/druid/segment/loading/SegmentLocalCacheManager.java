@@ -977,14 +977,15 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             storageDir = null;
             location = null;
           }
+
+          final Runnable onUnmountRunnable = onUnmount.get();
+          if (onUnmountRunnable != null) {
+            onUnmountRunnable.run();
+          }
         }
       }
       finally {
         lock.unlock();
-      }
-      final Runnable onUnmountRunnable = onUnmount.get();
-      if (onUnmountRunnable != null) {
-        onUnmountRunnable.run();
       }
     }
 
