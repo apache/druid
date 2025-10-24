@@ -206,7 +206,6 @@ public class IntervalTree<T>
     }
 
     if (condition.apply(node.interval)) {
-      //result.add(new Entry<>(node.interval, node.value));
       result.put(node.interval, node.value);
     }
 
