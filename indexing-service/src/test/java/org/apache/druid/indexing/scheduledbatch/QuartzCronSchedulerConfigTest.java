@@ -112,6 +112,7 @@ public class QuartzCronSchedulerConfigTest
             DruidException.class,
             () -> new QuartzCronSchedulerConfig("0 15 10 * *")
         ),
+        // Expected parts order varies due to non-deterministic Set iteration.
         Matchers.anyOf(
             DruidExceptionMatcher.invalidInput().expectMessageIs(
                 "Quartz schedule[0 15 10 * *] is invalid: [Cron expression contains 5 parts but we expect one of [6, 7]]"

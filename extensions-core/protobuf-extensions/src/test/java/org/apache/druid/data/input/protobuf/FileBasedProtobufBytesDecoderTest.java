@@ -133,6 +133,7 @@ public class FileBasedProtobufBytesDecoderTest
   {
     final var decoder = new FileBasedProtobufBytesDecoder("proto_test_event.desc", null);
 
+    // Descriptor order may return Timestamp or ProtoTestEvent.
     String actual = decoder.getDescriptor().getFullName();
     assertTrue(
         "google.protobuf.Timestamp".equals(actual)

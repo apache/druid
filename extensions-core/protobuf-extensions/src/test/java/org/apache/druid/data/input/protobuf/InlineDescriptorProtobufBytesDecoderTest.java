@@ -127,6 +127,7 @@ public class InlineDescriptorProtobufBytesDecoderTest
   {
     final var decoder = new InlineDescriptorProtobufBytesDecoder(descString, null);
 
+    // Descriptor order may return Timestamp or ProtoTestEvent.
     String actual = decoder.getDescriptor().getFullName();
     assertTrue(
         "google.protobuf.Timestamp".equals(actual)
