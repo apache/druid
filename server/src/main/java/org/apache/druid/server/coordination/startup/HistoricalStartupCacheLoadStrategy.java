@@ -19,14 +19,21 @@
 
 package org.apache.druid.server.coordination.startup;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.timeline.DataSegment;
 
 /**
  * Strategy for determining whether segments should be loaded lazily or eagerly during
- * Historical process startup. A lazily loaded segment defers the loading of the segment 
- * until it is first accessed, which can help to lower Historical startup time, but 
- * it can also impact query latency due to the time it takes to first access a segment.
+ * Historical process startup. Lazy loading can help to lower Historical startup time at the
+ * expense of query latency, by deferring the loading process to the first access of that segment.
  */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = LoadAllEagerlyStrategy.STRATEGY_NAME, value = LoadAllEagerlyStrategy.class)
+    @JsonSubTypes.Type(name = LoadAllLazilyStrategy.STRATEGY_NAME, value = LoadAllLazilyStrategy.class)
+    @JsonSubTypes.Type(name = LoadEagerlyBeforePeriod.STRATEGY_NAME, value = LoadEagerlyBeforePeriod.class)
+})
 public interface HistoricalStartupCacheLoadStrategy
 {
   /**
