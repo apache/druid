@@ -98,7 +98,7 @@ public class DimensionsAndCollector
   public boolean removeIfExpired(List<String> labelValues)
   {
     if (ttlSeconds == null) {
-      throw DruidException.defensive("Invalid usage of isExpired, flushPeriod has not been set");
+      throw DruidException.defensive("Invalid usage of removeIfExpired, flushPeriod has not been set");
     }
     return labelValuesToStopwatch.computeIfPresent(labelValues, (k, v) -> {
       if (v.hasElapsed(ttlSeconds)) {
