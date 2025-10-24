@@ -283,9 +283,9 @@ public class DirectKubernetesPeonClientTest
     client.pods().inNamespace(NAMESPACE).resource(pod).create();
 
     server.expect().get()
-        .withPath("/api/v1/namespaces/namespace/pods/id/log?pretty=false&container=main")
-        .andReturn(HttpURLConnection.HTTP_OK, "data")
-        .once();
+       .withPath("/api/v1/namespaces/namespace/pods/id/log?pretty=false&container=main")
+       .andReturn(HttpURLConnection.HTTP_OK, "data")
+       .once();
 
     Optional<InputStream> maybeInputStream = instance.getPeonLogs(new K8sTaskId(TASK_NAME_PREFIX, ID));
     Assertions.assertTrue(maybeInputStream.isPresent());
@@ -622,9 +622,9 @@ public class DirectKubernetesPeonClientTest
     client.pods().inNamespace(NAMESPACE).resource(pod).create();
 
     server.expect().get()
-         .withPath("/api/v1/namespaces/namespace/pods/id/log?pretty=false&container=main")
-         .andReturn(HttpURLConnection.HTTP_OK, "data")
-         .once();
+        .withPath("/api/v1/namespaces/namespace/pods/id/log?pretty=false&container=main")
+        .andReturn(HttpURLConnection.HTTP_OK, "data")
+        .once();
 
     Optional<LogWatch> maybeLogWatch = instance.getPeonLogWatcher(new K8sTaskId(TASK_NAME_PREFIX, ID));
     Assertions.assertTrue(maybeLogWatch.isPresent());
@@ -711,9 +711,9 @@ public class DirectKubernetesPeonClientTest
 
     // Return 409 Conflict - job already exists
     server.expect().post()
-         .withPath(jobPath)
-         .andReturn(HttpURLConnection.HTTP_CONFLICT, "Job already exists")
-         .once();
+        .withPath(jobPath)
+        .andReturn(HttpURLConnection.HTTP_CONFLICT, "Job already exists")
+        .once();
 
     // Should succeed gracefully without throwing exception
     Assertions.assertDoesNotThrow(
