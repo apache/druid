@@ -283,9 +283,9 @@ public class DirectKubernetesPeonClientTest
     client.pods().inNamespace(NAMESPACE).resource(pod).create();
 
     server.expect().get()
-       .withPath("/api/v1/namespaces/namespace/pods/id/log?pretty=false&container=main")
-       .andReturn(HttpURLConnection.HTTP_OK, "data")
-       .once();
+        .withPath("/api/v1/namespaces/namespace/pods/id/log?pretty=false&container=main")
+        .andReturn(HttpURLConnection.HTTP_OK, "data")
+        .once();
 
     Optional<InputStream> maybeInputStream = instance.getPeonLogs(new K8sTaskId(TASK_NAME_PREFIX, ID));
     Assertions.assertTrue(maybeInputStream.isPresent());
@@ -684,9 +684,9 @@ public class DirectKubernetesPeonClientTest
 
     // Return 403 Forbidden - this is not a retryable exception
     server.expect().post()
-         .withPath(jobPath)
-         .andReturn(HttpURLConnection.HTTP_FORBIDDEN, "Forbidden: insufficient permissions")
-         .once();
+        .withPath(jobPath)
+        .andReturn(HttpURLConnection.HTTP_FORBIDDEN, "Forbidden: insufficient permissions")
+        .once();
 
     // Should fail immediately without retries
     DruidException e = Assertions.assertThrows(
@@ -766,7 +766,7 @@ public class DirectKubernetesPeonClientTest
     // Create the pod in the mock client without IP - it will remain unready
     client.pods().inNamespace(NAMESPACE).resource(pod).create();
 
-    // Should throw DruidException after timeout due to pod never becoming ready
+    // Should throw DruidException after failure
     DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> instance.waitForPodResultWithRetries(
