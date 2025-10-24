@@ -49,7 +49,7 @@ public class LoadEagerlyBeforePeriod implements HistoricalStartupCacheLoadStrate
   }
 
   @VisibleForTesting
-  public Interval getEagerLoadingWindow()
+  public Interval getEagerLoadingInterval()
   {
     return this.eagerLoadingInterval;
   }

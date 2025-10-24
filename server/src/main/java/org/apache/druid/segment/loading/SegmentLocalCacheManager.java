@@ -43,7 +43,6 @@ import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.server.coordination.startup.HistoricalStartupCacheLoadStrategy;
-import org.apache.druid.server.coordination.startup.HistoricalStartupCacheLoadStrategyFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
@@ -130,8 +129,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     this.locations = locations;
     this.strategy = strategy;
     this.indexIO = indexIO;
-
-    this.loadStrategy = HistoricalStartupCacheLoadStrategyFactory.factorize(config);
+    this.loadStrategy = config.getStartupCacheLoadStrategy();
 
     log.info("Using storage location strategy[%s].", this.strategy.getClass().getSimpleName());
 

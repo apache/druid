@@ -21,6 +21,7 @@ package org.apache.druid.server.coordination.startup;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.segment.TestHelper;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -32,26 +33,28 @@ public class HistoricalStartupCacheLoadStrategyTest
   public void testDeserializeLoadAllEagerly() throws Exception
   {
     final String json = "{\"type\":\"" + LoadAllEagerlyStrategy.STRATEGY_NAME + "\"}";
-    final HistoricalStartupCacheLoadStrategy obj =
+    final HistoricalStartupCacheLoadStrategy historicalStartupLoadingStrategy =
         mapper.readValue(json, HistoricalStartupCacheLoadStrategy.class);
-    Assert.assertTrue(obj instanceof LoadAllEagerlyStrategy);
+    Assert.assertTrue(historicalStartupLoadingStrategy instanceof LoadAllEagerlyStrategy);
   }
 
   @Test
   public void testDeserializeLoadAllLazily() throws Exception
   {
     final String json = "{\"type\":\"" + LoadAllLazilyStrategy.STRATEGY_NAME + "\"}";
-    final HistoricalStartupCacheLoadStrategy obj =
+    final HistoricalStartupCacheLoadStrategy historicalStartupLoadingStrategy =
         mapper.readValue(json, HistoricalStartupCacheLoadStrategy.class);
-    Assert.assertTrue(obj instanceof LoadAllLazilyStrategy);
+    Assert.assertTrue(historicalStartupLoadingStrategy instanceof LoadAllLazilyStrategy);
   }
 
   @Test
   public void testDeserializeLoadEagerlyBeforePeriod() throws Exception
   {
     final String json = "{\"type\":\"" + LoadEagerlyBeforePeriod.STRATEGY_NAME + "\",\"period\":\"P3D\"}";
-    final HistoricalStartupCacheLoadStrategy obj =
+    final HistoricalStartupCacheLoadStrategy historicalStartupLoadingStrategy =
         mapper.readValue(json, HistoricalStartupCacheLoadStrategy.class);
-    Assert.assertTrue(obj instanceof LoadEagerlyBeforePeriod);
+    Assert.assertTrue(historicalStartupLoadingStrategy instanceof LoadEagerlyBeforePeriod);
+    LoadEagerlyBeforePeriod loadEagerlyBeforePeriodStrategy = (LoadEagerlyBeforePeriod) historicalStartupLoadingStrategy;
+    Assert.assertEquals(Period.days(3).toStandardDuration(), loadEagerlyBeforePeriodStrategy.getEagerLoadingInterval().toDuration());
   }
 }
