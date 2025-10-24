@@ -237,7 +237,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
         event -> event.hasMetricName("task/run/time")
                       .hasDimension(DruidMetrics.TASK_TYPE, "compact")
                       .hasDimension(DruidMetrics.TASK_STATUS, "SUCCESS"),
-        agg -> agg.hasCountAtLeast(2)
+        agg -> agg.hasCountAtLeast(10)
     );
 
     // Verify that some segments have been upgraded due to Concurrent Append and Replace
