@@ -5470,7 +5470,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Matt Zabriskie
-version: 1.8.4
+version: 1.12.2
 license_file_path: licenses/bin/axios.MIT
 
 ---
@@ -5781,6 +5781,16 @@ license_name: MIT License
 copyright: Sasha Koss and Lesha Koss https://kossnocorp.mit-license.org
 version: 2.30.0
 license_file_path: licenses/bin/date-fns.MIT
+
+---
+
+name: "dayjs"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: iamkun
+version: 1.11.15
+license_file_path: licenses/bin/dayjs.MIT
 
 ---
 
