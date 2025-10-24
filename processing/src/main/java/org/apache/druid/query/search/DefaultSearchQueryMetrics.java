@@ -338,6 +338,12 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
+  public QueryMetrics reportUnavailableSegmentCount(long count)
+  {
+    return delegateQueryMetrics.reportUnavailableSegmentCount(count);
+  }
+
+  @Override
   public void emit(ServiceEmitter emitter)
   {
     delegateQueryMetrics.emit(emitter);

@@ -74,11 +74,11 @@ public class SegmentStatusInClusterTest
                                          .binaryVersion(TEST_VERSION)
                                          .size(1)
                                          .build();
-    return new SegmentStatusInCluster(dataSegment, OVERSHADOWED, REPLICATION_FACTOR, NUM_ROWS, REALTIME);
+    return new SegmentStatusInCluster(dataSegment, OVERSHADOWED, REPLICATION_FACTOR, NUM_ROWS, REALTIME, false);
   }
 
   @Test
-  public void testUnwrappedSegmentWithOvershadowedStatusDeserialization() throws Exception
+  public void testUnwrappedSegmentStatusInClusterDeserialization() throws Exception
   {
     final Map<String, Object> objectMap = MAPPER.readValue(
         MAPPER.writeValueAsString(SEGMENT),
@@ -214,6 +214,6 @@ class TestSegment extends DataSegment
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), overshadowed, replicationFactor);
+    return Objects.hash(super.hashCode(), overshadowed, replicationFactor, false);
   }
 }
