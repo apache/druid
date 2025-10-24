@@ -32,25 +32,25 @@ public class LoadEagerlyBeforePeriod implements HistoricalStartupCacheLoadStrate
   private static final Logger log = new Logger(LoadEagerlyBeforePeriod.class);
   public static final String STRATEGY_NAME = "loadEagerlyBeforePeriod";
 
-  private final Interval eagerLoadingWindow;
+  private final Interval eagerLoadingInterval;
 
   public LoadEagerlyBeforePeriod(Period eagerLoadingPeriod)
   {
     DateTime now = DateTimes.nowUtc();
-    this.eagerLoadingWindow = new Interval(now.minus(eagerLoadingPeriod), now);
+    this.eagerLoadingInterval = new Interval(now.minus(eagerLoadingPeriod), now);
 
-    log.info("Using [%s] strategy with Interval[%s]", STRATEGY_NAME, eagerLoadingWindow);
+    log.info("Using [%s] strategy with Interval[%s]", STRATEGY_NAME, eagerLoadingInterval);
   }
 
   @VisibleForTesting
   public Interval getEagerLoadingWindow()
   {
-    return this.eagerLoadingWindow;
+    return this.eagerLoadingInterval;
   }
 
   @Override
   public boolean shouldLoadLazily(DataSegment segment)
   {
-    return !segment.getInterval().overlaps(eagerLoadingWindow);
+    return !segment.getInterval().overlaps(eagerLoadingInterval);
   }
 }
