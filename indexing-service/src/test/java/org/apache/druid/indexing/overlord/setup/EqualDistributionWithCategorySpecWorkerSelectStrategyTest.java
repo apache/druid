@@ -27,6 +27,8 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.TestSeekableStreamIndexTask;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.java.util.common.DateTimes;
@@ -322,13 +324,10 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
             .withDimensions(new DimensionsSpec(Collections.emptyList()))
             .withGranularity(new ArbitraryGranularitySpec(new AllGranularity(), Collections.emptyList()))
             .build(),
-        Mockito.mock(org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig.class),
-        Mockito.mock(org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig.class),
+        Mockito.mock(SeekableStreamIndexTaskTuningConfig.class),
+        Mockito.mock(SeekableStreamIndexTaskIOConfig.class),
         null,
-        null,
-        null,
-        null,
-        "test_seekable_stream"
+        null
     );
   }
 }

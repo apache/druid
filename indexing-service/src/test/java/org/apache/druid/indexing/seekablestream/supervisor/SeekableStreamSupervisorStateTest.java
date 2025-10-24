@@ -39,10 +39,8 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
-import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
@@ -63,9 +61,9 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFac
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
-import org.apache.druid.indexing.seekablestream.TestSeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.TestSeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
@@ -1154,8 +1152,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             context,
             "0",
             null,
-            recordSupplier,
-            "test"
+            recordSupplier
     );
 
     TestSeekableStreamIndexTask id2 = new TestSeekableStreamIndexTask(
@@ -1168,8 +1165,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             context,
             "0",
             null,
-            recordSupplier,
-            "test"
+            recordSupplier
     );
 
     TestSeekableStreamIndexTask id3 = new TestSeekableStreamIndexTask(
@@ -1182,8 +1178,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         context,
         "0",
         null,
-        recordSupplier,
-        "test"
+        recordSupplier
     );
 
     final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
@@ -1376,8 +1371,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         context,
         "0",
         null,
-        recordSupplier,
-        "test"
+        recordSupplier
     );
 
     TestSeekableStreamIndexTask id2 = new TestSeekableStreamIndexTask(
@@ -1399,8 +1393,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         context,
         "1",
         null,
-        recordSupplier,
-        "test"
+        recordSupplier
     );
 
     TestSeekableStreamIndexTask id3 = new TestSeekableStreamIndexTask(
@@ -1422,8 +1415,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         context,
         "2",
         null,
-        recordSupplier,
-        "test"
+        recordSupplier
     );
 
     final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
@@ -1616,8 +1608,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         context,
         "0",
         streamingTaskRunner,
-        recordSupplier,
-        "test"
+        recordSupplier
     );
 
     final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
@@ -3020,8 +3011,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           null,
           null,
           null,
-          recordSupplier,
-          "test"
+          recordSupplier
       ));
     }
 

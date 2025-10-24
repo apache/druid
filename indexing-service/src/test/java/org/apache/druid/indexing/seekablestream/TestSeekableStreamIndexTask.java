@@ -35,7 +35,6 @@ public class TestSeekableStreamIndexTask extends SeekableStreamIndexTask<String,
 {
   private final SeekableStreamIndexTaskRunner<String, String, ByteEntity> streamingTaskRunner;
   private final RecordSupplier<String, String, ByteEntity> recordSupplier;
-  private final String taskType;
 
   public TestSeekableStreamIndexTask(
       String id,
@@ -48,7 +47,7 @@ public class TestSeekableStreamIndexTask extends SeekableStreamIndexTask<String,
       @Nullable String groupId
   )
   {
-    this(id, supervisorId, taskResource, dataSchema, tuningConfig, ioConfig, context, groupId, null, null, "test");
+    this(id, supervisorId, taskResource, dataSchema, tuningConfig, ioConfig, context, groupId, null, null);
   }
 
   public TestSeekableStreamIndexTask(
@@ -61,14 +60,12 @@ public class TestSeekableStreamIndexTask extends SeekableStreamIndexTask<String,
       @Nullable Map<String, Object> context,
       @Nullable String groupId,
       @Nullable SeekableStreamIndexTaskRunner<String, String, ByteEntity> streamingTaskRunner,
-      @Nullable RecordSupplier<String, String, ByteEntity> recordSupplier,
-      String taskType
+      @Nullable RecordSupplier<String, String, ByteEntity> recordSupplier
   )
   {
     super(id, supervisorId, taskResource, dataSchema, tuningConfig, ioConfig, context, groupId);
     this.streamingTaskRunner = streamingTaskRunner;
     this.recordSupplier = recordSupplier;
-    this.taskType = taskType;
   }
 
   @Nullable
@@ -87,7 +84,7 @@ public class TestSeekableStreamIndexTask extends SeekableStreamIndexTask<String,
   @Override
   public String getType()
   {
-    return taskType;
+    return "test_seekable_stream";
   }
 }
 
