@@ -285,7 +285,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   {
     final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
     if (!segmentInfoCacheFile.exists()) {
-      jsonMapper.writeValue(segmentInfoCacheFile, segment);
       FileUtils.writeAtomically(
           segmentInfoCacheFile,
           out -> {
@@ -392,7 +391,10 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               // write the segment info file if it doesn't exist. this can happen if we are loading after a drop
               final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), dataSegment.getId().toString());
               if (!segmentInfoCacheFile.exists()) {
-                jsonMapper.writeValue(segmentInfoCacheFile, dataSegment);
+                FileUtils.writeAtomically(segmentInfoCacheFile, out -> {
+                  jsonMapper.writeValue(out, dataSegment);
+                  return null;
+                });
                 hold.getEntry().setOnUnmount(() -> deleteSegmentInfoFile(dataSegment));
               }
 
