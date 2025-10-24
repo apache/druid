@@ -66,6 +66,6 @@ for sha in all_commits.splitlines():
         print("Skipping Pull Request {} since it's already tagged with milestone {}".format(pr_number, pr['milestone']['number']))
 
   except Exception as e:
-    print("Got exception for commit: {}  ex: {}".format(sha, e))
+    print("❌ Got exception for commit: {}  ex: {}".format(sha, e))
     continue
 

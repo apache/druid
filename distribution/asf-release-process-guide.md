@@ -17,21 +17,19 @@
   ~ under the License.
   -->
 
-## Getting Started
+## 🚀 Release Checklist
 
-### 🚀 Release Checklist
-
+- [ ] [Prior to starting, initial setup for release access](#prior-to-starting-initial-setup-for-release-access)
+  - [ ] [SVN access](#SVN-access)
+  - [ ] [GPG key](#GPG-key)
+  - [ ] [Key propagation](#Key-propagation)
+  - [ ] [Maven credentials](#Maven-credentials)
 - [ ] [Announce intention to release](#Announce-intention-to-release)
 - [ ] [Create a release branch](#Create-a-release-branch)
   - [ ] [Preparing the release branch](#Preparing-the-release-branch)
   - [ ] [Preparing the master branch for the next version after branching](#Preparing-the-master-branch-for-the-next-version-after-branching)
   - [ ] [Backport PRs tagged with release milestone](#Backport-PRs-tagged-with-release-milestone)
   - [ ] [Release branch hygiene](#Release-branch-hygiene)
-- [ ] [Initial setup to create a release candidate](#Initial-setup-to-create-a-release-candidate)
-  - [ ] [SVN access](#SVN-access)
-  - [ ] [GPG key](#GPG-key)
-  - [ ] [Key propagation](#Key-propagation)
-  - [ ] [Maven credentials](#Maven-credentials)
 - [ ] [LICENSE and NOTICE handling](#LICENSE-and-NOTICE-handling)
 - [ ] [Release notes](#Release-notes)
 - [ ] [Building a release candidate](#Building-a-release-candidate)
@@ -58,124 +56,7 @@
   - [ ] [Remove old releases which are not 'active'](#remove-old-releases-which-are-not-active)
 
 
-### Announce intention to release
-
-First up in performing an official release of Apache Druid is to announce in the dev mailing list, dev@druid.apache.org, that it is about time for the next (approximately) quarterly release, or, that there is a critical bug that warrants doing a bug fix release, whatever the reason happens to be. Check for any critical bugs that are still open, or issues or PRs tagged with the release milestone, and give the community a bit of heads up to try and wrap up anything that _needs_ to be in the next release.
-
-### Create a release branch
-
-Next up is creating the release branch off of master (or the previous release branch for a bug fix release). Be sure to do this from the apache git repo, _not your fork_. Name the branch for the release version that is being created, omitting the `druid` prefix that will appear on the release candidate and release tags:
-
-```bash
-$ git checkout origin/0.17.0
-...
-$ git checkout -b 0.17.1
-```
-
-```bash
-$ git checkout origin/master
-...
-$ git checkout -b 0.17.0
-```
-
-#### Preparing the release branch
-Ensure that the web console and docker-compose file are in the correct state in the release branch.
-
-[package.json](../web-console/package.json) and [package-lock.json](../web-console/package-lock.json) should match the release version. If they do not, run:
-
-```bash
-npm version 0.17.0
-```
-
-[unified-console.html](../web-console/unified-console.html), Javascript script tag must match the package.json version:
-
-```html
-<script src="public/web-console-0.17.0.js"></script>
-```
-
-[`links.ts`](../web-console/src/links.ts) needs to be adjusted from `'latest'` to the release version:
-```
-const DRUID_DOCS_VERSION = '0.17.0';
-```
-
-After this is done, run:
-
-```
-npm i && npm run jest -- -u
-```
-to ensure that any web console tests that include documentation links are updated correctly to ensure that CI will pass on the release branch.
-
-Note:
-If there are any test failures here, it may be indicating that the webconsole needs to be rebuilt. Run the following command first:
-```
-npm run compile
-```
-
-
-The sample [`docker-compose.yml`](https://github.com/apache/druid/blob/master/distribution/docker/docker-compose.yml) used in the Docker quickstart documentation should match the release version:
-
-```yaml
-...
-  coordinator:
-    image: apache/druid:0.17.0
-    container_name: coordinator
-...
-```
-
-Once everything is ready, then push the branch to `origin`. 
-
-#### Preparing the master branch for the next version after branching
-If doing a quarterly release, it will also be necessary to prepare master for the release _after_ the release you are working on, by setting the version to the next release snapshot:
-
-```bash
-$ mvn versions:set -DnewVersion=0.18.0-SNAPSHOT
-```
-
-You should also prepare the web-console for the next release, by bumping the [package.json](../web-console/package.json) and [package-lock.json](../web-console/package-lock.json) version:
-
-```bash
-npm version 0.18.0
-```
-
-which will update `package.json` and `package-lock.json`.
-
-You will also need to manually update the top level html file, [unified-console.html](../web-console/unified-console.html), to ensure that the Javascript script tag is set to match the package.json version:
-
-```html
-<script src="public/web-console-0.18.0.js"></script>
-```
-
-[`DRUID_DOCS_VERSION` in `links.ts`](../web-console/src/links.ts) should already be set to `'latest'` in the master branch, and so should not have to be adjusted.
-
-The sample [`docker-compose.yml`](https://github.com/apache/druid/blob/master/distribution/docker/docker-compose.yml) used in the Docker quickstart documentation should be updated to reflect the version for the next release:
-
-```yaml
-...
-  coordinator:
-    image: apache/druid:0.18.0
-    container_name: coordinator
-...
-```
-
-Once this is completed, open a PR to the master branch. Also, be sure to confirm that these versions are all correct in the release branch, otherwise fix them and open a backport PR to the release branch.
-
-### Backport PRs tagged with release milestone
-If a PR is merged into the master branch after the release branch is created and tagged with the release version, then the commit must be backported to the release branch. 
-
-### Release branch hygiene
-
-The only additions to the release branch after branching should be bug fixes, which should be back-ported from the master branch, via a second PR or a cherry-pick, not with a direct PR to the release branch.  
-
-Release manager must also ensure that CI is passing successfully on the release branch. Since CI on branch can contain additional tests such as ITs for different JVM flavours. (Note that CI is sometimes flaky for older branches).
-To check the CI status on a release branch, you can go to the commits page e.g. https://github.com/apache/druid/commits/24.0.0. On this page, latest commmit should show
-a green &#10004; in the commit description. If the commit has a failed build, please click on red &#10005; icon in the commit description to go to travis build job and investigate. 
-You can restart a failed build via travis if it is flaky. 
-
-The release manager should also keep an eye-out for `Cron Job ITS` failures: https://github.com/apache/druid/actions/workflows/cron-job-its.yml. If there are failures, we need to fix them before creating an RC.
-
-Once all issues and PRs that are still tagged with the release milestone have been merged, closed, or removed from the milestone and CI on branch is green, the next step is to put together a release candidate.
-
-## Initial setup to create a release candidate
+## Prior to starting, initial setup for release access
 
 ### SVN access
 
@@ -241,15 +122,134 @@ You'll need to configure Maven with your Apache credentials by adding the follow
 </settings>
 ```
 
+## Announce intention to release
+
+First up in performing an official release of Apache Druid is to announce in the dev mailing list, dev@druid.apache.org, that it is about time for the next (approximately) quarterly release, or, that there is a critical bug that warrants doing a bug fix release, whatever the reason happens to be. Check for any critical bugs that are still open, or issues or PRs tagged with the release milestone, and give the community a bit of heads up to try and wrap up anything that _needs_ to be in the next release.
+
+## Create a release branch
+
+Next up is creating the release branch off of master (or the previous release branch for a bug fix release). Be sure to do this from the apache git repo, _not your fork_. Name the branch for the release version that is being created, omitting the `druid` prefix that will appear on the release candidate and release tags:
+
+```bash
+$ git checkout origin/0.17.0
+...
+$ git checkout -b 0.17.1
+```
+
+```bash
+$ git checkout origin/master
+...
+$ git checkout -b 0.17.0
+```
+
+### Preparing the release branch
+Ensure that the web console and docker-compose file are in the correct state in the release branch.
+
+[package.json](../web-console/package.json) and [package-lock.json](../web-console/package-lock.json) should match the release version. If they do not, run:
+
+```bash
+npm version 0.17.0
+```
+
+[unified-console.html](../web-console/unified-console.html), Javascript script tag must match the package.json version:
+
+```html
+<script src="public/web-console-0.17.0.js"></script>
+```
+
+[`links.ts`](../web-console/src/links.ts) needs to be adjusted from `'latest'` to the release version:
+```
+const DRUID_DOCS_VERSION = '0.17.0';
+```
+
+After this is done, run:
+
+```
+npm i && npm run jest -- -u
+```
+to ensure that any web console tests that include documentation links are updated correctly to ensure that CI will pass on the release branch.
+
+Note:
+If there are any test failures here, it may be indicating that the webconsole needs to be rebuilt. Run the following command first:
+```
+npm run compile
+```
+
+
+The sample [`docker-compose.yml`](https://github.com/apache/druid/blob/master/distribution/docker/docker-compose.yml) used in the Docker quickstart documentation should match the release version:
+
+```yaml
+...
+  coordinator:
+    image: apache/druid:0.17.0
+    container_name: coordinator
+...
+```
+
+Once everything is ready, then push the branch to `origin`. 
+
+### Preparing the master branch for the next version after branching
+If doing a quarterly release, it will also be necessary to prepare master for the release _after_ the release you are working on, by setting the version to the next release snapshot:
+
+```bash
+$ mvn versions:set -DnewVersion=0.18.0-SNAPSHOT
+```
+
+You should also prepare the web-console for the next release, by bumping the [package.json](../web-console/package.json) and [package-lock.json](../web-console/package-lock.json) version:
+
+```bash
+npm version 0.18.0
+```
+
+which will update `package.json` and `package-lock.json`.
+
+You will also need to manually update the top level html file, [unified-console.html](../web-console/unified-console.html), to ensure that the Javascript script tag is set to match the package.json version:
+
+```html
+<script src="public/web-console-0.18.0.js"></script>
+```
+
+[`DRUID_DOCS_VERSION` in `links.ts`](../web-console/src/links.ts) should already be set to `'latest'` in the master branch, and so should not have to be adjusted.
+
+The sample [`docker-compose.yml`](https://github.com/apache/druid/blob/master/distribution/docker/docker-compose.yml) used in the Docker quickstart documentation should be updated to reflect the version for the next release:
+
+```yaml
+...
+  coordinator:
+    image: apache/druid:0.18.0
+    container_name: coordinator
+...
+```
+
+Once this is completed, open a PR to the master branch. Also, be sure to confirm that these versions are all correct in the release branch, otherwise fix them and open a backport PR to the release branch.
+
+### Backport PRs tagged with release milestone
+If a PR is merged into the master branch after the release branch is created and tagged with the release version, then the commit must be backported to the release branch. Following tools can be helpful:
+- [tag-missing-milestones](bin/tag-missing-milestones.py)
+- [find-missing-backports](bin/find-missing-backports.py)
+
+### Release branch hygiene
+
+The only additions to the release branch after branching should be bug fixes, which should be back-ported from the master branch, via a second PR or a cherry-pick, not with a direct PR to the release branch.  
+
+Release manager must also ensure that CI is passing successfully on the release branch. Since CI on branch can contain additional tests such as ITs for different JVM flavours. (Note that CI is sometimes flaky for older branches).
+To check the CI status on a release branch, you can go to the commits page e.g. https://github.com/apache/druid/commits/24.0.0. On this page, latest commmit should show
+a green &#10004; in the commit description. If the commit has a failed build, please click on red &#10005; icon in the commit description to go to travis build job and investigate. 
+You can restart a failed build via travis if it is flaky. 
+
+The release manager should also keep an eye-out for `Cron Job ITS` failures: https://github.com/apache/druid/actions/workflows/cron-job-its.yml. If there are failures, we need to fix them before creating an RC.
+
+Once all issues and PRs that are still tagged with the release milestone have been merged, closed, or removed from the milestone and CI on branch is green, the next step is to put together a release candidate.
+
 ## LICENSE and NOTICE handling
 
-Before cutting a release candidate, the release manager should ensure that the contents of our `LICENSE` and `NOTICE` files are up-to-date. You should specifically check that copyright YEAR is updated in the `NOTICE` file. 
+The license check has been handle by CI. This section is for informational purposes only in most cases. However, if this is the first release of the year, you should ensure that copyright `YEAR` in the `NOTICE` file has been updated. 
 
 The following links are helpful for understanding Apache's third-party licensing policies:
 
-http://www.apache.org/dev/licensing-howto.html
-http://www.apache.org/legal/src-headers.html
-http://www.apache.org/legal/resolved.html
+- http://www.apache.org/dev/licensing-howto.html
+- http://www.apache.org/legal/src-headers.html
+- http://www.apache.org/legal/resolved.html
 
 
 There are in effect 2 versions of the `LICENSE` and `NOTICE` file needed to perform a release, one set for the official ASF source release which are the actual `LICENSE` and `NOTICE` file in the root directory, and second for the convenience binary release which includes all of Druid's dependencies which we synthesize using some tools we have developed over the initial set of releases.
