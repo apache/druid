@@ -26,7 +26,6 @@ import org.apache.druid.server.coordination.startup.HistoricalStartupCacheLoadSt
 import org.apache.druid.server.coordination.startup.LoadAllEagerlyStrategy;
 import org.apache.druid.server.coordination.startup.LoadAllLazilyStrategy;
 import org.apache.druid.utils.RuntimeInfo;
-import org.joda.time.Period;
 
 import java.io.File;
 import java.util.Collections;
@@ -54,9 +53,6 @@ public class SegmentLoaderConfig
 
   @JsonProperty("startupLoadStrategy")
   private HistoricalStartupCacheLoadStrategy startupLoadStrategy = null;
-
-  @JsonProperty("startupLoadPeriod")
-  private Period startupLoadPeriod = new Period("P7D");
 
   @JsonProperty("deleteOnRemove")
   private boolean deleteOnRemove = true;
@@ -114,11 +110,6 @@ public class SegmentLoaderConfig
     return startupLoadStrategy == null
            ? isLazyLoadOnStart() ? new LoadAllLazilyStrategy() : new LoadAllEagerlyStrategy()
            : startupLoadStrategy;
-  }
-
-  public Period getStartupLoadPeriod()
-  {
-    return startupLoadPeriod;
   }
 
   public boolean isDeleteOnRemove()
@@ -216,6 +207,7 @@ public class SegmentLoaderConfig
     return "SegmentLoaderConfig{" +
            "locations=" + locations +
            ", lazyLoadOnStart=" + lazyLoadOnStart +
+           ", startupLoadStrategy=" + startupLoadStrategy +
            ", deleteOnRemove=" + deleteOnRemove +
            ", dropSegmentDelayMillis=" + dropSegmentDelayMillis +
            ", announceIntervalMillis=" + announceIntervalMillis +

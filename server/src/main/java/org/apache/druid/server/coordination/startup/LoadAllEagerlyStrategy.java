@@ -22,6 +22,8 @@ package org.apache.druid.server.coordination.startup;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.Locale;
+
 public class LoadAllEagerlyStrategy implements HistoricalStartupCacheLoadStrategy
 {
   private static final Logger log = new Logger(LoadAllEagerlyStrategy.class);
@@ -37,5 +39,11 @@ public class LoadAllEagerlyStrategy implements HistoricalStartupCacheLoadStrateg
   public boolean shouldLoadLazily(DataSegment segment)
   {
     return false;
+  }
+
+  @Override
+  public String toString()
+  {
+    return String.format(Locale.ROOT, "{type=%s}", STRATEGY_NAME);
   }
 }

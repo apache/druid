@@ -29,6 +29,8 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
+import java.util.Locale;
+
 public class LoadEagerlyBeforePeriod implements HistoricalStartupCacheLoadStrategy
 {
   private static final Logger log = new Logger(LoadEagerlyBeforePeriod.class);
@@ -58,5 +60,11 @@ public class LoadEagerlyBeforePeriod implements HistoricalStartupCacheLoadStrate
   public boolean shouldLoadLazily(DataSegment segment)
   {
     return !segment.getInterval().overlaps(eagerLoadingInterval);
+  }
+
+  @Override
+  public String toString()
+  {
+    return String.format(Locale.ROOT, "{type=%s,interval=%s}", STRATEGY_NAME, getEagerLoadingInterval());
   }
 }

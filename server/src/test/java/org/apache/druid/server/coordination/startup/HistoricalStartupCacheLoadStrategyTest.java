@@ -36,6 +36,9 @@ public class HistoricalStartupCacheLoadStrategyTest
     final HistoricalStartupCacheLoadStrategy historicalStartupLoadingStrategy =
         mapper.readValue(json, HistoricalStartupCacheLoadStrategy.class);
     Assert.assertTrue(historicalStartupLoadingStrategy instanceof LoadAllEagerlyStrategy);
+
+    LoadAllEagerlyStrategy strategy = (LoadAllEagerlyStrategy) historicalStartupLoadingStrategy;
+    Assert.assertEquals("{type=" + LoadAllEagerlyStrategy.STRATEGY_NAME + "}", strategy.toString());
   }
 
   @Test
@@ -45,6 +48,8 @@ public class HistoricalStartupCacheLoadStrategyTest
     final HistoricalStartupCacheLoadStrategy historicalStartupLoadingStrategy =
         mapper.readValue(json, HistoricalStartupCacheLoadStrategy.class);
     Assert.assertTrue(historicalStartupLoadingStrategy instanceof LoadAllLazilyStrategy);
+    LoadAllLazilyStrategy strategy = (LoadAllLazilyStrategy) historicalStartupLoadingStrategy;
+    Assert.assertEquals("{type=" + LoadAllLazilyStrategy.STRATEGY_NAME + "}", strategy.toString());
   }
 
   @Test
@@ -53,8 +58,11 @@ public class HistoricalStartupCacheLoadStrategyTest
     final String json = "{\"type\":\"" + LoadEagerlyBeforePeriod.STRATEGY_NAME + "\",\"period\":\"P3D\"}";
     final HistoricalStartupCacheLoadStrategy historicalStartupLoadingStrategy =
         mapper.readValue(json, HistoricalStartupCacheLoadStrategy.class);
+
     Assert.assertTrue(historicalStartupLoadingStrategy instanceof LoadEagerlyBeforePeriod);
-    LoadEagerlyBeforePeriod loadEagerlyBeforePeriodStrategy = (LoadEagerlyBeforePeriod) historicalStartupLoadingStrategy;
-    Assert.assertEquals(Period.days(3).toStandardDuration(), loadEagerlyBeforePeriodStrategy.getEagerLoadingInterval().toDuration());
+    LoadEagerlyBeforePeriod strategy = (LoadEagerlyBeforePeriod) historicalStartupLoadingStrategy;
+
+    Assert.assertEquals(Period.days(3).toStandardDuration(), strategy.getEagerLoadingInterval().toDuration());
+    Assert.assertEquals("{type=" + LoadEagerlyBeforePeriod.STRATEGY_NAME + ",interval=" + strategy.getEagerLoadingInterval() + "}", strategy.toString());
   }
 }
