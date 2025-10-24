@@ -64,7 +64,7 @@ public class SegmentStatsMonitor extends AbstractMonitor
       SegmentLoaderConfig segmentLoaderConfig
   )
   {
-    if (segmentLoaderConfig.getStartupCacheLoadStrategy().equals(LoadAllLazilyStrategy.STRATEGY_NAME)) {
+    if (LoadAllLazilyStrategy.STRATEGY_NAME.equals(segmentLoaderConfig.getStartupCacheLoadStrategy())) {
       // log message ensures there is an error displayed at startup if this fails as the exception isn't logged.
       log.error("Monitor doesn't support working with lazy loading on start");
       // throw this exception it kill the process at startup
@@ -72,7 +72,6 @@ public class SegmentStatsMonitor extends AbstractMonitor
     }
     this.serverConfig = serverConfig;
     this.segmentLoadDropHandler = segmentLoadDropHandler;
-
   }
 
   @Override

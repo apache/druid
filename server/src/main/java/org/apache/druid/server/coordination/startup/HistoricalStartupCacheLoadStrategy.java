@@ -21,7 +21,19 @@ package org.apache.druid.server.coordination.startup;
 
 import org.apache.druid.timeline.DataSegment;
 
+/**
+ * Strategy for determining whether segments should be loaded lazily or eagerly during
+ * Historical process startup. A lazily loaded segment defers the loading of the segment 
+ * until it is first accessed, which can help to lower Historical startup time, but 
+ * it can also impact query latency due to the time it takes to first access a segment.
+ */
 public interface HistoricalStartupCacheLoadStrategy
 {
+  /**
+   * Indicates whether the provided segment should be loaded lazily during Historical startup.
+   *
+   * @param segment the segment being evaluated
+   * @return {@code true} if the segment should be loaded lazily, {@code false} if it should be loaded eagerly.
+   */
   boolean shouldLoadLazily(DataSegment segment);
 }

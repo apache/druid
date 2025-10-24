@@ -858,8 +858,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           final SegmentizerFactory factory = getSegmentFactory(storageDir);
 
           @SuppressWarnings("ObjectEquality")
-          final boolean lazy = loadStrategy.shouldLoadLazily(dataSegment)
-                               && lazyLoadCallback != SegmentLazyLoadFailCallback.NOOP;
+          final boolean lazy = lazyLoadCallback != SegmentLazyLoadFailCallback.NOOP
+                               && loadStrategy.shouldLoadLazily(dataSegment);
           final Segment segment = factory.factorize(dataSegment, storageDir, lazy, lazyLoadCallback);
           // wipe load callback after calling
           lazyLoadCallback = SegmentLazyLoadFailCallback.NOOP;
