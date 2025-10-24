@@ -286,6 +286,13 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
     if (!segmentInfoCacheFile.exists()) {
       jsonMapper.writeValue(segmentInfoCacheFile, segment);
+      FileUtils.writeAtomically(
+          segmentInfoCacheFile,
+          out -> {
+            jsonMapper.writeValue(out, segment);
+            return null;
+          }
+      );
     }
   }
 
@@ -300,8 +307,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     for (StorageLocation location : locations) {
       final SegmentCacheEntry cacheEntry = location.getCacheEntry(entryId);
       if (cacheEntry != null) {
-        isCached = true;
-        cacheEntry.onUnmount.set(delete);
+        isCached = isCached || cacheEntry.setOnUnmount(delete);
       }
     }
 
@@ -387,7 +393,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), dataSegment.getId().toString());
               if (!segmentInfoCacheFile.exists()) {
                 jsonMapper.writeValue(segmentInfoCacheFile, dataSegment);
-                hold.getEntry().onUnmount.set(() -> deleteSegmentInfoFile(dataSegment));
+                hold.getEntry().setOnUnmount(() -> deleteSegmentInfoFile(dataSegment));
               }
 
               return new AcquireSegmentAction(
@@ -458,7 +464,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           for (StorageLocation location : locations) {
             final SegmentCacheEntry cacheEntry = location.getCacheEntry(cacheEntryIdentifier);
             if (cacheEntry != null) {
-              cacheEntry.onUnmount.set(null);
+              cacheEntry.clearOnUnmount();
             }
           }
         }
@@ -500,7 +506,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             final SegmentCacheEntry entry = location.getCacheEntry(id);
             if (entry != null) {
               entry.lazyLoadCallback = loadFailed;
-              entry.onUnmount.set(null);
+              entry.clearOnUnmount();
               entry.mount(location);
             }
           }
@@ -703,7 +709,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             final SegmentCacheEntry entry = location.getCacheEntry(cacheEntry.id);
             if (entry != null) {
               entry.lazyLoadCallback = segmentLoadFailCallback;
-              entry.onUnmount.set(null);
+              entry.clearOnUnmount();
               entry.mount(location);
               return entry;
             }
@@ -725,7 +731,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           final SegmentCacheEntry entry = location.getCacheEntry(cacheEntry.id);
           if (entry != null) {
             entry.lazyLoadCallback = segmentLoadFailCallback;
-            entry.onUnmount.set(null);
+            entry.clearOnUnmount();
             entry.mount(location);
             return entry;
           }
@@ -986,6 +992,20 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         return Optional.empty();
       }
       return referenceProvider.acquireReference();
+    }
+
+    public synchronized boolean setOnUnmount(Runnable runnable)
+    {
+      if (location == null) {
+        return false;
+      }
+      onUnmount.set(runnable);
+      return true;
+    }
+
+    public synchronized void clearOnUnmount()
+    {
+      onUnmount.set(null);
     }
 
     public void loadIntoPageCache()
