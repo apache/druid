@@ -235,6 +235,10 @@ public class IntervalTree<T>
 
   private Node<T> removeNode(Node<T> node, Interval interval)
   {
+    // When deleting a node, try to replace it with the right most leaf child.
+    // If it does not exist, i.e., the right most node at the second last level only has a left child and does not have
+    // a right child, this node becomes the replacement. In this scenario, it's remaining left child (subtree) is moved
+    // up to it's parent
     if (node == null) {
       return null;
     }
