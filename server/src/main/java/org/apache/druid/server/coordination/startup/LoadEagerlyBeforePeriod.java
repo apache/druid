@@ -31,6 +31,12 @@ import org.joda.time.Period;
 
 import java.util.Locale;
 
+/**
+ * Eagerly loads column metadata for segments whose intervals overlap a recent sliding window; all others load lazily.
+ * <p>
+ * Balances bootstrap time and first-query performance by eagerly loading only "hot" segments. The window is
+ * computed as {@code [now - period, now]} at Historical startup.
+ */
 public class LoadEagerlyBeforePeriod implements HistoricalStartupCacheLoadStrategy
 {
   private static final Logger log = new Logger(LoadEagerlyBeforePeriod.class);

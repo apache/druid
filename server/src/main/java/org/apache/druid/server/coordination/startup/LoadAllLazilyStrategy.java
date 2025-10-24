@@ -24,6 +24,12 @@ import org.apache.druid.timeline.DataSegment;
 
 import java.util.Locale;
 
+/**
+ * Defers column metadata loading for all segments until first access.
+ * <p>
+ * Minimizes Historical startup time and I/O during bootstrap at the expense of increased latency on the first
+ * query that touches a segment. {@link #shouldLoadLazily(DataSegment)} always returns {@code true}.
+ */
 public class LoadAllLazilyStrategy implements HistoricalStartupCacheLoadStrategy
 {
   private static final Logger log = new Logger(LoadAllLazilyStrategy.class);
