@@ -74,7 +74,7 @@ public class SegmentStatsMonitorTest
   public void testLazyLoadOnStartThrowsException()
   {
     SegmentLoaderConfig segmentLoaderConfig = Mockito.mock(SegmentLoaderConfig.class);
-    Mockito.when(segmentLoaderConfig.getStartupCacheLoadStrategy()).thenReturn(LoadAllLazilyStrategy.STRATEGY_NAME);
+    Mockito.when(segmentLoaderConfig.getStartupCacheLoadStrategy()).thenReturn(new LoadAllLazilyStrategy());
     new SegmentStatsMonitor(druidServerConfig, segmentLoadDropMgr, segmentLoaderConfig);
   }
 

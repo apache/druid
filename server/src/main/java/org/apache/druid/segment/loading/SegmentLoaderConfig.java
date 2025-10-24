@@ -22,6 +22,7 @@ package org.apache.druid.segment.loading;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
+import org.apache.druid.server.coordination.startup.HistoricalStartupCacheLoadStrategy;
 import org.apache.druid.server.coordination.startup.LoadAllEagerlyStrategy;
 import org.apache.druid.server.coordination.startup.LoadAllLazilyStrategy;
 import org.apache.druid.utils.RuntimeInfo;
@@ -52,7 +53,7 @@ public class SegmentLoaderConfig
   private boolean lazyLoadOnStart = false;
 
   @JsonProperty("startupLoadStrategy")
-  private String startupLoadStrategy = null;
+  private HistoricalStartupCacheLoadStrategy startupLoadStrategy = null;
 
   @JsonProperty("startupLoadPeriod")
   private Period startupLoadPeriod = new Period("P7D");
@@ -108,12 +109,10 @@ public class SegmentLoaderConfig
     return lazyLoadOnStart;
   }
 
-  public String getStartupCacheLoadStrategy()
+  public HistoricalStartupCacheLoadStrategy getStartupCacheLoadStrategy()
   {
     return startupLoadStrategy == null
-           ? isLazyLoadOnStart()
-             ? LoadAllLazilyStrategy.STRATEGY_NAME
-             : LoadAllEagerlyStrategy.STRATEGY_NAME
+           ? isLazyLoadOnStart() ? new LoadAllLazilyStrategy() : new LoadAllEagerlyStrategy()
            : startupLoadStrategy;
   }
 

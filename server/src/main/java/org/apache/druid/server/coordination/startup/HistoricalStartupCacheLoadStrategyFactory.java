@@ -19,25 +19,12 @@
 
 package org.apache.druid.server.coordination.startup;
 
-import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 
 public class HistoricalStartupCacheLoadStrategyFactory
 {
   public static HistoricalStartupCacheLoadStrategy factorize(SegmentLoaderConfig config)
   {
-    String strategyName = config.getStartupCacheLoadStrategy();
-    switch (strategyName) {
-      case LoadAllLazilyStrategy.STRATEGY_NAME:
-        return new LoadAllLazilyStrategy();
-      case LoadAllEagerlyStrategy.STRATEGY_NAME:
-        return new LoadAllEagerlyStrategy();
-      case LoadEagerlyBeforePeriod.STRATEGY_NAME:
-        return new LoadEagerlyBeforePeriod(config.getStartupLoadPeriod());
-      default:
-        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                            .ofCategory(DruidException.Category.UNSUPPORTED)
-                            .build("Unknown configured Historical Startup Loading Strategy[%s]", strategyName);
-    }
+    return config.getStartupCacheLoadStrategy();
   }
 }

@@ -30,8 +30,8 @@ import org.apache.druid.timeline.DataSegment;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = LoadAllEagerlyStrategy.STRATEGY_NAME, value = LoadAllEagerlyStrategy.class)
-    @JsonSubTypes.Type(name = LoadAllLazilyStrategy.STRATEGY_NAME, value = LoadAllLazilyStrategy.class)
+    @JsonSubTypes.Type(name = LoadAllEagerlyStrategy.STRATEGY_NAME, value = LoadAllEagerlyStrategy.class),
+    @JsonSubTypes.Type(name = LoadAllLazilyStrategy.STRATEGY_NAME, value = LoadAllLazilyStrategy.class),
     @JsonSubTypes.Type(name = LoadEagerlyBeforePeriod.STRATEGY_NAME, value = LoadEagerlyBeforePeriod.class)
 })
 public interface HistoricalStartupCacheLoadStrategy

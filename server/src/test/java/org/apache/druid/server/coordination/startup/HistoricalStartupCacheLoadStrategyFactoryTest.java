@@ -33,7 +33,7 @@ public class HistoricalStartupCacheLoadStrategyFactoryTest
     final SegmentLoaderConfig config = new SegmentLoaderConfig()
     {
       @Override
-      public String getStartupCacheLoadStrategy()
+      public HistoricalStartupCacheLoadStrategy getStartupCacheLoadStrategy()
       {
         return LoadEagerlyBeforePeriod.STRATEGY_NAME;
       }
@@ -59,7 +59,7 @@ public class HistoricalStartupCacheLoadStrategyFactoryTest
     final SegmentLoaderConfig config = new SegmentLoaderConfig()
     {
       @Override
-      public String getStartupCacheLoadStrategy()
+      public HistoricalStartupCacheLoadStrategy getStartupCacheLoadStrategy()
       {
         return LoadAllLazilyStrategy.STRATEGY_NAME;
       }
@@ -82,7 +82,7 @@ public class HistoricalStartupCacheLoadStrategyFactoryTest
     final SegmentLoaderConfig config = new SegmentLoaderConfig()
     {
       @Override
-      public String getStartupCacheLoadStrategy()
+      public HistoricalStartupCacheLoadStrategy getStartupCacheLoadStrategy()
       {
         return LoadAllEagerlyStrategy.STRATEGY_NAME;
       }
@@ -135,7 +135,7 @@ public class HistoricalStartupCacheLoadStrategyFactoryTest
     final SegmentLoaderConfig config = new SegmentLoaderConfig()
     {
       @Override
-      public String getStartupCacheLoadStrategy()
+      public HistoricalStartupCacheLoadStrategy getStartupCacheLoadStrategy()
       {
         return unknownStrategy;
       }

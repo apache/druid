@@ -19,6 +19,8 @@
 
 package org.apache.druid.server.coordination.startup;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -34,7 +36,11 @@ public class LoadEagerlyBeforePeriod implements HistoricalStartupCacheLoadStrate
 
   private final Interval eagerLoadingInterval;
 
-  public LoadEagerlyBeforePeriod(Period eagerLoadingPeriod)
+  @VisibleForTesting
+  @JsonCreator
+  public LoadEagerlyBeforePeriod(
+      @JsonProperty("period") Period eagerLoadingPeriod
+  )
   {
     DateTime now = DateTimes.nowUtc();
     this.eagerLoadingInterval = new Interval(now.minus(eagerLoadingPeriod), now);
