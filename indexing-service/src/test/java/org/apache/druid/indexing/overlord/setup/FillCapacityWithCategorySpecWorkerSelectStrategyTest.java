@@ -195,14 +195,13 @@ public class FillCapacityWithCategorySpecWorkerSelectStrategyTest
   @Test
   public void testSupervisorIdCategoryAffinity()
   {
-    // Test that supervisor ID affinity takes precedence over datasource affinity
     final WorkerCategorySpec workerCategorySpec = new WorkerCategorySpec(
         ImmutableMap.of(
             "test_seekable_stream",
             new WorkerCategorySpec.CategoryConfig(
-                "c1",  // default category
-                ImmutableMap.of("ds1", "c1"),  // datasource affinity
-                ImmutableMap.of("supervisor1", "c2")  // supervisor ID affinity
+                "c1",
+                ImmutableMap.of("ds1", "c1"),
+                ImmutableMap.of("supervisor1", "c2")
             )
         ),
         false
@@ -219,8 +218,6 @@ public class FillCapacityWithCategorySpecWorkerSelectStrategyTest
         WORKERS_FOR_TIER_TESTS,
         taskWithSupervisor
     );
-
-    // Should select c2 worker (localhost3) because supervisor ID affinity takes precedence
     Assert.assertNotNull(worker);
     Assert.assertEquals("c2", worker.getWorker().getCategory());
     Assert.assertEquals("localhost3", worker.getWorker().getHost());
@@ -229,14 +226,13 @@ public class FillCapacityWithCategorySpecWorkerSelectStrategyTest
   @Test
   public void testSupervisorIdCategoryAffinityFallbackToDatasource()
   {
-    // Test that it falls back to datasource affinity when supervisor ID affinity is not found
     final WorkerCategorySpec workerCategorySpec = new WorkerCategorySpec(
         ImmutableMap.of(
             "test_seekable_stream",
             new WorkerCategorySpec.CategoryConfig(
-                "c2",  // default category
-                ImmutableMap.of("ds1", "c1"),  // datasource affinity
-                ImmutableMap.of("supervisor2", "c2")  // supervisor ID affinity (different supervisor)
+                "c2",
+                ImmutableMap.of("ds1", "c1"),
+                ImmutableMap.of("supervisor2", "c2")
             )
         ),
         false
@@ -253,8 +249,6 @@ public class FillCapacityWithCategorySpecWorkerSelectStrategyTest
         WORKERS_FOR_TIER_TESTS,
         taskWithSupervisor
     );
-
-    // Should fall back to datasource affinity and select c1 worker
     Assert.assertNotNull(worker);
     Assert.assertEquals("c1", worker.getWorker().getCategory());
     Assert.assertEquals("localhost1", worker.getWorker().getHost());
@@ -263,14 +257,13 @@ public class FillCapacityWithCategorySpecWorkerSelectStrategyTest
   @Test
   public void testSupervisorIdCategoryAffinityFallbackToDefault()
   {
-    // Test that it falls back to default category when neither supervisor ID nor datasource affinity is found
     final WorkerCategorySpec workerCategorySpec = new WorkerCategorySpec(
         ImmutableMap.of(
             "test_seekable_stream",
             new WorkerCategorySpec.CategoryConfig(
-                "c2",  // default category
-                ImmutableMap.of("ds2", "c1"),  // datasource affinity (different datasource)
-                ImmutableMap.of("supervisor2", "c1")  // supervisor ID affinity (different supervisor)
+                "c2",
+                ImmutableMap.of("ds2", "c1"),
+                ImmutableMap.of("supervisor2", "c1")
             )
         ),
         false
@@ -287,8 +280,6 @@ public class FillCapacityWithCategorySpecWorkerSelectStrategyTest
         WORKERS_FOR_TIER_TESTS,
         taskWithSupervisor
     );
-
-    // Should fall back to default category c2
     Assert.assertNotNull(worker);
     Assert.assertEquals("c2", worker.getWorker().getCategory());
     Assert.assertEquals("localhost3", worker.getWorker().getHost());

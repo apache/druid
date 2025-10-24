@@ -21,7 +21,9 @@ package org.apache.druid.indexing.overlord.setup;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.config.Configs;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -86,21 +88,19 @@ public class WorkerCategorySpec
   public static class CategoryConfig
   {
     private final String defaultCategory;
-    // key: datasource, value: category
     private final Map<String, String> categoryAffinity;
-    // key: supervisorId, value: category
     private final Map<String, String> supervisorIdCategoryAffinity;
 
     @JsonCreator
     public CategoryConfig(
         @JsonProperty("defaultCategory") String defaultCategory,
         @JsonProperty("categoryAffinity") Map<String, String> categoryAffinity,
-        @JsonProperty("supervisorIdCategoryAffinity") Map<String, String> supervisorIdCategoryAffinity
+        @JsonProperty("supervisorIdCategoryAffinity") @Nullable Map<String, String> supervisorIdCategoryAffinity
     )
     {
       this.defaultCategory = defaultCategory;
       this.categoryAffinity = categoryAffinity == null ? Collections.emptyMap() : categoryAffinity;
-      this.supervisorIdCategoryAffinity = supervisorIdCategoryAffinity == null ? Collections.emptyMap() : supervisorIdCategoryAffinity;
+      this.supervisorIdCategoryAffinity = Configs.valueOrDefault(supervisorIdCategoryAffinity, Map.of());
     }
 
     @JsonProperty
@@ -109,12 +109,25 @@ public class WorkerCategorySpec
       return defaultCategory;
     }
 
+    /**
+     * Returns a map of datasource names to worker category names.
+     * Used to assign tasks to specific worker categories based on their datasource.
+     *
+     * @return map where key is datasource name and value is worker category name
+     */
     @JsonProperty
     public Map<String, String> getCategoryAffinity()
     {
       return categoryAffinity;
     }
 
+    /**
+     * Returns a map of supervisor IDs to worker category names.
+     * Used to assign tasks to specific worker categories based on their supervisor ID.
+     * This takes precedence over {@link #getCategoryAffinity()} when both are configured.
+     *
+     * @return map where key is supervisor ID and value is worker category name
+     */
     @JsonProperty
     public Map<String, String> getSupervisorIdCategoryAffinity()
     {
