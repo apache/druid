@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.kafka.simulate;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -27,6 +28,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
+import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedFilterConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpecBuilder;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
@@ -35,6 +37,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -48,6 +51,7 @@ import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -142,6 +146,46 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(0, lockedIntervals.size());
   }
 
+  @Test
+  public void test_runKafkaSupervisorWithHeaderFiltering()
+  {
+    final String topic = dataSource;
+    kafkaServer.createTopicWithPartitions(topic, 2);
+
+    final int totalRecords = 10;
+    final int expectedRecords = 4; // Only production records (indices 0, 3, 6, 9)
+    kafkaServer.produceRecordsToTopic(
+        generateRecordsWithEnvironmentHeaders(topic, totalRecords, DateTimes.of("2025-06-01"))
+    );
+
+    // Submit supervisor with header filtering for production environment
+    final String supervisorId = dataSource + "_filtered";
+    final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisorWithHeaderFilter(supervisorId, topic);
+
+    Assertions.assertEquals(supervisorId, cluster.callApi().postSupervisor(kafkaSupervisorSpec));
+
+    // Wait for the broker to discover the realtime segments
+    broker.latchableEmitter().waitForEvent(
+        event -> event.hasDimension(DruidMetrics.DATASOURCE, dataSource)
+    );
+
+    SupervisorStatus supervisorStatus = cluster.callApi().getSupervisorStatus(supervisorId);
+    Assertions.assertFalse(supervisorStatus.isSuspended());
+    Assertions.assertTrue(supervisorStatus.isHealthy());
+    Assertions.assertEquals("RUNNING", supervisorStatus.getState());
+
+    // Suspend the supervisor and wait for segment handoff
+    cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
+    indexer.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("ingest/handoff/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, List.of(dataSource)),
+        agg -> agg.hasSumAtLeast(expectedRecords)
+    );
+
+    // Verify only filtered records were ingested
+    Assertions.assertEquals(String.valueOf(expectedRecords), cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
+  }
+
   private KafkaSupervisorSpec createKafkaSupervisor(String supervisorId, String topic)
   {
     return new KafkaSupervisorSpecBuilder()
@@ -165,6 +209,33 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
         .build(dataSource, topic);
   }
 
+  private KafkaSupervisorSpec createKafkaSupervisorWithHeaderFilter(String supervisorId, String topic)
+  {
+    InDimFilter filter = new InDimFilter("environment", ImmutableSet.of("production"));
+    KafkaHeaderBasedFilterConfig headerFilterConfig = new KafkaHeaderBasedFilterConfig(filter, "UTF-8", 1000);
+
+    return new KafkaSupervisorSpecBuilder()
+        .withDataSchema(
+            schema -> schema
+                .withTimestamp(new TimestampSpec("timestamp", null, null))
+                .withDimensions(DimensionsSpec.EMPTY)
+        )
+        .withTuningConfig(
+            tuningConfig -> tuningConfig
+                .withMaxRowsPerSegment(1)
+                .withReleaseLocksOnHandoff(true)
+        )
+        .withIoConfig(
+            ioConfig -> ioConfig
+                .withInputFormat(new CsvInputFormat(List.of("timestamp", "item"), null, null, false, 0, false))
+                .withConsumerProperties(kafkaServer.consumerProperties())
+                .withUseEarliestSequenceNumber(true)
+                .withHeaderBasedFilterConfig(headerFilterConfig)
+        )
+        .withId(supervisorId)
+        .build(dataSource, topic);
+  }
+
   private List<ProducerRecord<byte[], byte[]>> generateRecordsForTopic(
       String topic,
       int numRecords,
@@ -182,6 +253,20 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
       records.add(
           new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8(valueCsv))
       );
+    }
+    return records;
+  }
+
+  private List<ProducerRecord<byte[], byte[]>> generateRecordsWithEnvironmentHeaders(String topic, int numRecords, DateTime startTime)
+  {
+    final List<ProducerRecord<byte[], byte[]>> records = new ArrayList<>();
+    final String[] environments = {"production", "staging", "development"};
+
+    for (int i = 0; i < numRecords; ++i) {
+      String valueCsv = StringUtils.format("%s,%s", startTime.plusDays(i), IdUtils.getRandomId());
+      ProducerRecord<byte[], byte[]> record = new ProducerRecord<>(topic, 0, null, StringUtils.toUtf8(valueCsv));
+      record.headers().add("environment", environments[i % environments.length].getBytes(StandardCharsets.UTF_8));
+      records.add(record);
     }
     return records;
   }

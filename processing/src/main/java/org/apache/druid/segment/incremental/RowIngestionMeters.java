@@ -40,6 +40,7 @@ public interface RowIngestionMeters extends InputStats
   String PROCESSED_WITH_ERROR = "processedWithError";
   String UNPARSEABLE = "unparseable";
   String THROWN_AWAY = "thrownAway";
+  String FILTERED = "filtered";
 
   /**
    * Number of bytes read by an ingestion task.
@@ -74,6 +75,9 @@ public interface RowIngestionMeters extends InputStats
 
   long getThrownAway();
   void incrementThrownAway();
+
+  long getFiltered();
+  void incrementFiltered();
 
   RowIngestionMetersTotals getTotals();
 
