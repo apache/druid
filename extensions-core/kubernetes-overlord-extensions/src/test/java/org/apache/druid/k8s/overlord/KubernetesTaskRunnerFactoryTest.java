@@ -21,6 +21,7 @@ package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.ConfigBuilder;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.Task;
@@ -57,8 +58,14 @@ public class KubernetesTaskRunnerFactoryTest
         .withCapacity(1)
         .build();
     taskLogs = new NoopTaskLogs();
+
+    Config config = new ConfigBuilder().build();
+    config.setAdditionalProperty(
+        DruidKubernetesClient.ENABLE_INFORMERS_KEY,
+        kubernetesTaskRunnerConfig.isEnableKubernetesClientSharedInformers());
+
     druidKubernetesClient =
-        new DruidKubernetesClient(new DruidKubernetesVertxHttpClientFactory(new DruidKubernetesVertxHttpClientConfig()), new ConfigBuilder().build());
+        new DruidKubernetesClient(new DruidKubernetesVertxHttpClientFactory(new DruidKubernetesVertxHttpClientConfig()), config);
     taskAdapter = new TestTaskAdapter();
   }
 

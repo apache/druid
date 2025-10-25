@@ -19,6 +19,7 @@
 
 package org.apache.druid.k8s.overlord.common;
 
+import com.google.common.base.Preconditions;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.Config;
@@ -60,9 +61,14 @@ public class DruidKubernetesClient implements KubernetesClientApi
         .withConfig(kubernetesClientConfig)
         .build();
 
+    // It is required that the config declares whether informers are enabled or not
+    Preconditions.checkNotNull(kubernetesClientConfig.getAdditionalProperties().get(ENABLE_INFORMERS_KEY),
+                               "Kubernetes client config must contain property [%s]",
+                               ENABLE_INFORMERS_KEY);
+
     informerResyncPeriodMillis = (long) kubernetesClientConfig
         .getAdditionalProperties().getOrDefault(INFORMER_RESYNC_PERIOD_MS_KEY, DEFAULT_INFORMER_RESYNC_PERIOD_MS);
-    if ((boolean) kubernetesClientConfig.getAdditionalProperties().getOrDefault(ENABLE_INFORMERS_KEY, false)) {
+    if ((boolean) kubernetesClientConfig.getAdditionalProperties().get(ENABLE_INFORMERS_KEY)) {
       this.eventNotifier = new KubernetesResourceEventNotifier();
       this.podInformer = setupPodInformer(kubernetesClient.getNamespace());
       this.jobInformer = setupJobInformer(kubernetesClient.getNamespace());
@@ -113,12 +119,18 @@ public class DruidKubernetesClient implements KubernetesClientApi
   @Override
   public SharedIndexInformer<Pod> getPodInformer()
   {
+    if (podInformer == null) {
+      throw DruidException.defensive("Pod informer is not initialized, caching is disabled");
+    }
     return podInformer;
   }
 
   @Override
   public SharedIndexInformer<Job> getJobInformer()
   {
+    if (jobInformer == null) {
+      throw DruidException.defensive("Job informer is not initialized, caching is disabled");
+    }
     return jobInformer;
   }
 
@@ -131,6 +143,13 @@ public class DruidKubernetesClient implements KubernetesClientApi
     return eventNotifier;
   }
 
+  /**
+   * Sets up a shared informer to watch and cache Pod resources in the specified namespace.
+   * <p>
+   * Registers event handlers for pod add/update/delete events and creates a custom index by job-name
+   * for efficient pod lookup by job.
+   * </p>
+   */
   private SharedIndexInformer<Pod> setupPodInformer(String namespace)
   {
     SharedIndexInformer<Pod> podInformer =
@@ -174,12 +193,19 @@ public class DruidKubernetesClient implements KubernetesClientApi
     };
 
     Map<String, Function<Pod, List<String>>> customPodIndexers = new HashMap<>();
-    customPodIndexers.put("byJobName", jobNameIndexer);
+    customPodIndexers.put(JOB_NAME_INDEX, jobNameIndexer);
 
     podInformer.addIndexers(customPodIndexers);
     return podInformer;
   }
 
+  /**
+   * Sets up a shared informer to watch and cache Job resources in the specified namespace.
+   * <p>
+   * Registers event handlers for job add/update/delete events and creates custom indexes by job-name
+   * and overlord-namespace for efficient job lookup and filtering.
+   * </p>
+   */
   private SharedIndexInformer<Job> setupJobInformer(String namespace)
   {
     SharedIndexInformer<Job> jobInformer =
@@ -232,20 +258,22 @@ public class DruidKubernetesClient implements KubernetesClientApi
     };
 
     Map<String, Function<Job, List<String>>> customJobIndexers = new HashMap<>();
-    customJobIndexers.put("byOverlordNamespace", overlordNamespaceIndexer);
-    customJobIndexers.put("byJobName", jobNameIndexer);
+    customJobIndexers.put(OVERLORD_NAMESPACE_INDEX, overlordNamespaceIndexer);
+    customJobIndexers.put(JOB_NAME_INDEX, jobNameIndexer);
 
     jobInformer.addIndexers(customJobIndexers);
 
     return jobInformer;
   }
 
+  /**
+   * Utility method to only notify pod changes for pods that are part of indexing jobs.
+   */
   private void notifyPodChange(Pod pod)
   {
     if (pod.getMetadata() != null && pod.getMetadata().getLabels() != null) {
       String jobName = pod.getMetadata().getLabels().get("job-name");
       if (jobName != null) {
-        // Prevents us from trying to notify pod changes that are not indexing jobs
         eventNotifier.notifyPodChange(jobName, pod);
       }
     }
