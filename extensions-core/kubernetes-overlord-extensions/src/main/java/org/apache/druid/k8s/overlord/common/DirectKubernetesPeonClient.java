@@ -38,10 +38,11 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
- * A KubernetesPeonClient implementation that directly queries the Kubernetes API server for Job and Pod state.
+ * A KubernetesPeonClient implementation that directly queries the Kubernetes API server for all read and write
+ * operations on a per-task basis.
  * <p>
- * This implementation does not use caching and may put more load on the Kubernetes API server when many tasks
- * are running.
+ * This implementation does not use caching and may put more load on the Kubernetes API server compared to
+ * {@link CachingKubernetesPeonClient}, especially when many tasks are running concurrently.
  * </p>
  */
 public class DirectKubernetesPeonClient extends AbstractKubernetesPeonClient

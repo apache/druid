@@ -33,10 +33,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * A KubernetesPeonClient implementation that uses cached informers to read Job and Pod state.
+ * A KubernetesPeonClient implementation that uses shared informers to read Job and Pod state from a local cache.
  * <p>
- * This reduces load on the Kubernetes API server by centralizing watches allowing tasks to query cached K8s resource
- * information.
+ * This implementation greatly reduces load on the Kubernetes API server by centralizing watches and allowing
+ * tasks to query cached resource state instead of making per-task API calls. Mutable operations (job creation,
+ * deletion) still contact the API server directly.
  * </p>
  */
 public class CachingKubernetesPeonClient extends AbstractKubernetesPeonClient

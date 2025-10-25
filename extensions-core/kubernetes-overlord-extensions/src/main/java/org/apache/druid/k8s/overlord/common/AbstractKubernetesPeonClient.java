@@ -44,7 +44,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Abstract base class for Kubernetes peon clients, providing common functionality for mutable and log related operations
+ * Abstract base class for Kubernetes peon clients providing shared implementation for mutable operations
+ * (job creation, deletion) and log-related operations (log streaming, log watching).
+ * <p>
+ * Subclasses implement read operations (querying job and pod state) with different strategies for
+ * interacting with the Kubernetes API server.
+ * </p>
  */
 public abstract class AbstractKubernetesPeonClient
 {
