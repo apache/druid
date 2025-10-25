@@ -40,7 +40,26 @@ import { deepSet, oneOf, tickIcon, without } from '../../../utils';
 
 import './query-parameters-dialog.scss';
 
-const TYPES = ['VARCHAR', 'TIMESTAMP', 'BIGINT', 'DOUBLE', 'FLOAT'];
+const TYPES = ['VARCHAR', 'TIMESTAMP', 'BIGINT', 'DOUBLE', 'FLOAT', 'ARRAY'];
+
+function parseArrayValue(input: string): any[] | string {
+  try {
+    const parsed = JSON.parse(input);
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+    return input;
+  } catch {
+    return input;
+  }
+}
+
+function formatArrayValue(value: any): string {
+  if (Array.isArray(value)) {
+    return JSON.stringify(value);
+  }
+  return value;
+}
 
 interface QueryParametersDialogProps {
   queryParameters: QueryParameter[] | undefined;
@@ -77,7 +96,11 @@ export const QueryParametersDialog = React.memo(function QueryParametersDialog(
           const { type, value } = queryParameter;
 
           function onValueChange(v: string | number) {
-            setCurrentQueryParameters(deepSet(currentQueryParameters, `${i}.value`, v));
+            let finalValue: any = v;
+            if (type === 'ARRAY' && typeof v === 'string') {
+              finalValue = parseArrayValue(v);
+            }
+            setCurrentQueryParameters(deepSet(currentQueryParameters, `${i}.value`, finalValue));
           }
 
           return (
@@ -111,6 +134,13 @@ export const QueryParametersDialog = React.memo(function QueryParametersDialog(
                     onValueChange={onValueChange}
                     fill
                     arbitraryPrecision={type !== 'BIGINT'}
+                  />
+                ) : type === 'ARRAY' ? (
+                  <InputGroup
+                    value={Array.isArray(value) ? formatArrayValue(value) : String(value)}
+                    onChange={(e: any) => onValueChange(e.target.value)}
+                    placeholder="[-25.7, null, 36.85]"
+                    fill
                   />
                 ) : (
                   <InputGroup
