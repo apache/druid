@@ -205,7 +205,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               FileUtils.deleteDirectory(droppedFile);
             }
             catch (Exception e) {
-              log.error(e, "Unable to remove directory[%s]", droppedFile);
+              log.warn(e, "Unable to remove dropped segment directory[%s]", droppedFile);
             }
           }
         }
@@ -781,7 +781,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       }
       final File tempPath = new File(tempLocation, path.getName());
       log.debug("moving[%s] to temp location[%s]", path, tempLocation);
-      Files.move(path.toPath(), tempPath.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+      Files.move(path.toPath(), tempPath.toPath(), StandardCopyOption.ATOMIC_MOVE);
       log.info("Deleting directory[%s]", path);
       FileUtils.deleteDirectory(tempPath);
     }
@@ -802,11 +802,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
 
     try {
-      log.info("Deleting directory[%s]", cacheFile);
+      log.info("Deleting migrated segment directory[%s]", cacheFile);
       FileUtils.deleteDirectory(cacheFile);
     }
     catch (Exception e) {
-      log.error(e, "Unable to remove directory[%s]", cacheFile);
+      log.warn(e, "Unable to remove directory[%s]", cacheFile);
     }
 
     File parent = cacheFile.getParentFile();
