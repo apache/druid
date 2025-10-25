@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import junitparams.converters.Nullable;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
@@ -64,9 +65,11 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -112,7 +115,10 @@ import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.easymock.EasyMock;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.jupiter.api.AfterAll;
@@ -183,6 +189,7 @@ public class SystemSchemaTest extends CalciteTestBase
   private MetadataSegmentView metadataView;
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
   private FilteredServerInventoryView serverInventoryView;
+  private HttpClient httpClient;
 
   @BeforeAll
   public static void setUpClass()
@@ -261,6 +268,7 @@ public class SystemSchemaTest extends CalciteTestBase
     metadataView = EasyMock.createMock(MetadataSegmentView.class);
     druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     serverInventoryView = EasyMock.createMock(FilteredServerInventoryView.class);
+    httpClient = EasyMock.createMock(HttpClient.class);
     schema = new SystemSchema(
         druidSchema,
         metadataView,
@@ -270,7 +278,8 @@ public class SystemSchemaTest extends CalciteTestBase
         coordinatorClient,
         overlordClient,
         druidNodeDiscoveryProvider,
-        MAPPER
+        MAPPER,
+        httpClient
     );
   }
 
@@ -532,13 +541,13 @@ public class SystemSchemaTest extends CalciteTestBase
   public void testGetTableMap()
   {
     Assert.assertEquals(
-        ImmutableSet.of("segments", "servers", "server_segments", "tasks", "supervisors"),
+        ImmutableSet.of("segments", "servers", "server_segments", "tasks", "supervisors", "properties"),
         schema.getTableNames()
     );
 
     final Map<String, Table> tableMap = schema.getTableMap();
     Assert.assertEquals(
-        ImmutableSet.of("segments", "servers", "server_segments", "tasks", "supervisors"),
+        ImmutableSet.of("segments", "servers", "server_segments", "tasks", "supervisors", "properties"),
         tableMap.keySet()
     );
     final SystemSchema.SegmentsTable segmentsTable = (SystemSchema.SegmentsTable) schema.getTableMap().get("segments");
@@ -561,6 +570,12 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals(12, serverFields.size());
     Assert.assertEquals("server", serverFields.get(0).getName());
     Assert.assertEquals(SqlTypeName.VARCHAR, serverFields.get(0).getType().getSqlTypeName());
+
+    final SystemPropertiesTable propertiesTable = (SystemPropertiesTable) schema.getTableMap()
+                                                                                .get("properties");
+    final RelDataType propertiesRowType = propertiesTable.getRowType(new JavaTypeFactoryImpl());
+    final List<RelDataTypeField> propertiesFields = propertiesRowType.getFieldList();
+    Assert.assertEquals(5, propertiesFields.size());
   }
 
   @Test
@@ -1446,6 +1461,129 @@ public class SystemSchemaTest extends CalciteTestBase
 
     // TODO: Verify value types.
     // verifyTypes(rows, SystemSchema.SUPERVISOR_SIGNATURE);
+  }
+
+  @Test
+  public void testPropertiesTable() throws Exception
+  {
+    SystemPropertiesTable propertiesTable = EasyMock.createMockBuilder(SystemPropertiesTable.class)
+                                                    .withConstructor(druidNodeDiscoveryProvider, authMapper, httpClient, MAPPER)
+                                                    .createMock();
+
+    EasyMock.replay(propertiesTable);
+
+    final DruidNodeDiscovery coordinatorNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+    final DruidNodeDiscovery middleManagerNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+    final DruidNodeDiscovery brokerNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+    final DruidNodeDiscovery routerNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+    final DruidNodeDiscovery historicalNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+    final DruidNodeDiscovery overlordNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+    final DruidNodeDiscovery peonNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+    final DruidNodeDiscovery indexerNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.COORDINATOR)).andReturn(coordinatorNodeDiscovery).once();
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.MIDDLE_MANAGER)).andReturn(middleManagerNodeDiscovery).once();
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.BROKER)).andReturn(brokerNodeDiscovery).once();
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.ROUTER)).andReturn(routerNodeDiscovery).once();
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.HISTORICAL)).andReturn(historicalNodeDiscovery).once();
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.OVERLORD)).andReturn(overlordNodeDiscovery).once();
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.PEON)).andReturn(peonNodeDiscovery).once();
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.INDEXER)).andReturn(indexerNodeDiscovery).once();
+
+    EasyMock.expect(coordinatorNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(coordinator, coordinator2)).once();
+    EasyMock.expect(middleManagerNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(middleManager)).once();
+    EasyMock.expect(brokerNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of()).once();
+    EasyMock.expect(routerNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of()).once();
+    EasyMock.expect(historicalNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of()).once();
+    EasyMock.expect(overlordNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of()).once();
+    EasyMock.expect(peonNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of()).once();
+    EasyMock.expect(indexerNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of()).once();
+
+    HttpResponse coordinatorHttpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    StringFullResponseHolder coordinatorResponseHolder = new StringFullResponseHolder(coordinatorHttpResponse, StandardCharsets.UTF_8);
+    String coordinatorJson = "{\"druid.test-key\": \"test-value\"}";
+    coordinatorResponseHolder.addChunk(coordinatorJson);
+
+    HttpResponse coordinator2HttpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    StringFullResponseHolder coordinator2ResponseHolder = new StringFullResponseHolder(coordinator2HttpResponse, StandardCharsets.UTF_8);
+    String coordinator2Json = "{\"druid.test-key3\": \"test-value3\"}";
+    coordinator2ResponseHolder.addChunk(coordinator2Json);
+
+    HttpResponse middleManagerHttpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    StringFullResponseHolder middleManagerResponseHolder = new StringFullResponseHolder(middleManagerHttpResponse, StandardCharsets.UTF_8);
+    String middleManagerJson = "{\n"
+                               + "\"druid.test-key\": \"test-value\",\n"
+                               + "\"druid.test-key2\": \"test-value2\"\n"
+                               + "}";
+    middleManagerResponseHolder.addChunk(middleManagerJson);
+
+    Map<String, ListenableFuture<StringFullResponseHolder>> urlToResponse = ImmutableMap.of(
+        getStatusPropertiesUrl(coordinator), Futures.immediateFuture(coordinatorResponseHolder),
+        getStatusPropertiesUrl(coordinator2), Futures.immediateFuture(coordinator2ResponseHolder),
+        getStatusPropertiesUrl(middleManager), Futures.immediateFuture(middleManagerResponseHolder)
+    );
+
+    EasyMock.expect(
+        httpClient.go(
+            EasyMock.isA(Request.class),
+            EasyMock.isA(StringFullResponseHandler.class)
+        )
+    ).andAnswer(() -> {
+      Request req = (Request) EasyMock.getCurrentArguments()[0];
+      String url = req.getUrl().toString();
+
+      ListenableFuture<StringFullResponseHolder> future = urlToResponse.get(url);
+      if (future != null) {
+        return future;
+      }
+      return Futures.immediateFailedFuture(new AssertionError("Unexpected URL: " + url));
+    }).times(3);
+
+    EasyMock.replay(druidNodeDiscoveryProvider, responseHandler, httpClient);
+    EasyMock.replay(
+        coordinatorNodeDiscovery,
+        middleManagerNodeDiscovery,
+        brokerNodeDiscovery,
+        routerNodeDiscovery,
+        historicalNodeDiscovery,
+        overlordNodeDiscovery,
+        peonNodeDiscovery,
+        indexerNodeDiscovery
+    );
+
+    List<Object[]> expectedRows = new ArrayList<>();
+    expectedRows.add(new Object[]{
+        coordinator.getDruidNode().getServiceName(), coordinator.getDruidNode().getHost(),
+        coordinator.getNodeRole().getJsonName(), "druid.test-key", "test-value"
+    });
+    expectedRows
+        .add(new Object[]{
+            coordinator2.getDruidNode().getServiceName(), coordinator2.getDruidNode().getHost(),
+            coordinator2.getNodeRole().getJsonName(), "druid.test-key3", "test-value3"
+        });
+    expectedRows
+        .add(new Object[]{
+            middleManager.getDruidNode().getServiceName(), middleManager.getDruidNode().getHost(),
+            middleManager.getNodeRole().getJsonName(), "druid.test-key", "test-value"
+        });
+    expectedRows
+        .add(new Object[]{
+            middleManager.getDruidNode().getServiceName(), middleManager.getDruidNode().getHost(),
+            middleManager.getNodeRole().getJsonName(), "druid.test-key2", "test-value2"
+        });
+
+    DataContext dataContext = createDataContext(Users.SUPER);
+    final List<Object[]> rows = propertiesTable.scan(dataContext).toList();
+    Assert.assertEquals(expectedRows.size(), rows.size());
+    for (int i = 0; i < expectedRows.size(); i++) {
+      Assert.assertArrayEquals(expectedRows.get(i), rows.get(i));
+    }
+
+  }
+
+  private String getStatusPropertiesUrl(DiscoveryDruidNode discoveryDruidNode)
+  {
+    return discoveryDruidNode.getDruidNode().getUriToUse().resolve("/status/properties").toString();
   }
 
   /**
