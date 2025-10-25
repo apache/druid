@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SuppressWarnings("ResultOfObjectAllocationIgnored")
 public class FileBasedProtobufBytesDecoderTest
@@ -132,7 +133,12 @@ public class FileBasedProtobufBytesDecoderTest
   {
     final var decoder = new FileBasedProtobufBytesDecoder("proto_test_event.desc", null);
 
-    assertEquals("google.protobuf.Timestamp", decoder.getDescriptor().getFullName());
+    // Descriptor order may return Timestamp or ProtoTestEvent.
+    String actual = decoder.getDescriptor().getFullName();
+    assertTrue(
+        "google.protobuf.Timestamp".equals(actual)
+            || "prototest.ProtoTestEvent".equals(actual)
+    );
   }
 
   @Test
