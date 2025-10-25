@@ -712,6 +712,8 @@ public class CompactSegmentsTest
     final CoordinatorRunStats stats = doCompactSegments(compactSegments, 3);
     Assert.assertEquals(3, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
     Assert.assertEquals(3, stats.get(Stats.Compaction.MAX_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Compaction.BUSY_SLOTS));
+
     // Native takes up 1 task slot by default whereas MSQ takes up all available upto 5. Since there are 3 available
     // slots, there are 3 submitted tasks for native whereas 1 for MSQ.
     if (engine == CompactionEngine.NATIVE) {
@@ -732,6 +734,7 @@ public class CompactSegmentsTest
         doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot);
     Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
     Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.MAX_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Compaction.BUSY_SLOTS));
     // Native takes up 1 task slot by default whereas MSQ takes up all available upto 5. Since there are 3 available
     // slots, there are 3 submitted tasks for native whereas 1 for MSQ.
     if (engine == CompactionEngine.NATIVE) {
@@ -1166,6 +1169,81 @@ public class CompactSegmentsTest
   }
 
   @Test
+  public void testCompactDutyWithBusyCompactionTask()
+  {
+    final String dataSource = DATA_SOURCE_PREFIX + 0;
+    final String conflictTaskId = "taskIdDummy";
+    final TaskStatusPlus runningConflictCompactionTask = new TaskStatusPlus(
+            conflictTaskId,
+            "groupId",
+            "compact",
+            DateTimes.EPOCH,
+            DateTimes.EPOCH,
+            TaskState.RUNNING,
+            RunnerTaskState.RUNNING,
+            -1L,
+            TaskLocation.unknown(),
+            dataSource,
+            null
+    );
+    final TaskPayloadResponse busyCompactTask = new TaskPayloadResponse(
+            conflictTaskId,
+            new ClientCompactionTaskQuery(
+                    conflictTaskId,
+                    dataSource,
+                    new ClientCompactionIOConfig(
+                            new ClientCompactionIntervalSpec(
+                                    Intervals.of("2000/2005"),
+                                    "testSha256OfSortedSegmentIds"
+                            ),
+                            null
+                    ),
+                    getTuningConfig(7),
+                    new ClientCompactionTaskGranularitySpec(Granularities.DAY, null, null),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+            )
+    );
+
+    final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
+    final ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
+    Mockito.when(mockClient.runTask(ArgumentMatchers.anyString(), payloadCaptor.capture()))
+            .thenReturn(Futures.immediateFuture(null));
+    Mockito.when(mockClient.taskStatuses(null, null, 0))
+            .thenReturn(
+                    Futures.immediateFuture(
+                            CloseableIterators.withEmptyBaggage(ImmutableList.of(runningConflictCompactionTask).iterator())));
+    Mockito.when(mockClient.taskStatuses(ArgumentMatchers.any()))
+            .thenReturn(Futures.immediateFuture(Collections.emptyMap()));
+    Mockito.when(mockClient.findLockedIntervals(ArgumentMatchers.any()))
+            .thenReturn(Futures.immediateFuture(Collections.emptyMap()));
+    Mockito.when(mockClient.cancelTask(conflictTaskId))
+            .thenReturn(Futures.immediateFuture(null));
+    Mockito.when(mockClient.getTotalWorkerCapacity())
+            .thenReturn(Futures.immediateFuture(new IndexingTotalWorkerCapacityInfo(0, 0)));
+    Mockito.when(mockClient.taskPayload(ArgumentMatchers.eq(conflictTaskId)))
+            .thenReturn(Futures.immediateFuture(busyCompactTask));
+
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
+
+    final CoordinatorRunStats stats;
+    if (engine == CompactionEngine.NATIVE) {
+      stats = doCompactSegments(compactSegments, createcompactionConfigsForNative(2), 4);
+    } else {
+      stats = doCompactSegments(compactSegments, createcompactionConfigsForMSQ(2), 4);
+    }
+
+    Assert.assertEquals(0, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Compaction.MAX_SLOTS));
+    Assert.assertEquals(8, stats.get(Stats.Compaction.BUSY_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Compaction.SUBMITTED_TASKS));
+  }
+
+  @Test
   public void testIntervalIsCompactedAgainWhenSegmentIsAdded()
   {
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
@@ -1225,6 +1303,7 @@ public class CompactSegmentsTest
     }
     Assert.assertEquals(4, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
     Assert.assertEquals(4, stats.get(Stats.Compaction.MAX_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Compaction.BUSY_SLOTS));
     Assert.assertEquals(2, stats.get(Stats.Compaction.SUBMITTED_TASKS));
   }
 

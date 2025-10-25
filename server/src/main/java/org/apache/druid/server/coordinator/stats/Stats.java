@@ -114,6 +114,8 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("compactTasks", "compact/task/count");
     public static final CoordinatorStat MAX_SLOTS
         = CoordinatorStat.toDebugAndEmit("compactMaxSlots", "compactTask/maxSlot/count");
+    public static final CoordinatorStat BUSY_SLOTS
+            = CoordinatorStat.toDebugAndEmit("compactBusySlots", "compactTask/busySlot/count");
     public static final CoordinatorStat AVAILABLE_SLOTS
         = CoordinatorStat.toDebugAndEmit("compactAvlSlots", "compactTask/availableSlot/count");
 
