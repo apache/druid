@@ -139,18 +139,14 @@ export const QueryParametersDialog = React.memo(function QueryParametersDialog(
                   <InputGroup
                     value={Array.isArray(value) ? formatArrayValue(value) : String(value)}
                     onChange={(e: any) => onValueChange(e.target.value)}
-                    placeholder='[-25.7, null, 36.85]'
+                    placeholder="[-25.7, null, 36.85]"
                     fill
                   />
-                  ) : (
+                ) : (
                   <InputGroup
                     value={String(value)}
                     onChange={(e: any) => onValueChange(e.target.value)}
-                    placeholder={
-                      type === 'TIMESTAMP' 
-                        ? '2022-01-01 00:00:00' 
-                        : 'Parameter value'
-                    }
+                    placeholder={type === 'TIMESTAMP' ? '2022-01-01 00:00:00' : 'Parameter value'}
                     fill
                   />
                 )}
