@@ -30,8 +30,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Manages event notifications for Kubernetes resources (Jobs and Pods).
- * Allows tasks to wait for specific resource changes without polling,
- * improving efficiency and responsiveness.
+ * <p>
+ * Allows tasks to wait for specific resource changes without polling, improving efficiency and responsiveness.
+ * Crtical component of {@link CachingKubernetesPeonClient} functionality.
+ * </p>
  */
 public class KubernetesResourceEventNotifier
 {
