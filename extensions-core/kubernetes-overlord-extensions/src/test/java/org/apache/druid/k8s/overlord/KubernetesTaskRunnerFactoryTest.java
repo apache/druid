@@ -22,6 +22,7 @@ package org.apache.druid.k8s.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.ConfigBuilder;
+import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -32,6 +33,7 @@ import org.apache.druid.k8s.overlord.common.httpclient.vertx.DruidKubernetesVert
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.TaskLogs;
+import org.easymock.EasyMock;
 import org.easymock.Mock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -42,24 +44,28 @@ import java.io.IOException;
 public class KubernetesTaskRunnerFactoryTest
 {
   private ObjectMapper objectMapper;
-  private KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig;
+  private KubernetesTaskRunnerEffectiveConfig kubernetesTaskRunnerConfig;
   private TaskLogs taskLogs;
 
   private DruidKubernetesClient druidKubernetesClient;
   @Mock private ServiceEmitter emitter;
   private TaskAdapter taskAdapter;
+  @Mock private ConfigManager configManager;
 
   @Before
   public void setup()
   {
     objectMapper = new TestUtils().getTestObjectMapper();
-    kubernetesTaskRunnerConfig = KubernetesTaskRunnerConfig.builder()
+    KubernetesTaskRunnerStaticConfig kubernetesTaskRunnerStaticConfig = KubernetesTaskRunnerConfig.builder()
         .withCapacity(1)
         .build();
     taskLogs = new NoopTaskLogs();
     druidKubernetesClient =
         new DruidKubernetesClient(new DruidKubernetesVertxHttpClientFactory(new DruidKubernetesVertxHttpClientConfig()), new ConfigBuilder().build());
     taskAdapter = new TestTaskAdapter();
+    kubernetesTaskRunnerConfig = new KubernetesTaskRunnerEffectiveConfig(kubernetesTaskRunnerStaticConfig, () -> null);
+    configManager = EasyMock.createNiceMock(ConfigManager.class);
+    EasyMock.replay(configManager);
   }
 
   @Test
@@ -72,7 +78,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskLogs,
         druidKubernetesClient,
         emitter,
-        taskAdapter
+        taskAdapter,
+        configManager
     );
 
     KubernetesTaskRunner expectedRunner = factory.build();

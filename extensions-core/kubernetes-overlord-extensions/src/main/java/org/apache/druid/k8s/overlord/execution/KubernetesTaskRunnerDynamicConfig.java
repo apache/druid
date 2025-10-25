@@ -22,6 +22,9 @@ package org.apache.druid.k8s.overlord.execution;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+
 /**
  * Represents the configuration for task execution within a Kubernetes environment.
  * This interface allows for dynamic configuration of task execution strategies based
@@ -38,7 +41,26 @@ public interface KubernetesTaskRunnerDynamicConfig
 
   /**
    * Retrieves the execution behavior strategy associated with this configuration.
+   *
    * @return the execution behavior strategy
    */
   PodTemplateSelectStrategy getPodTemplateSelectStrategy();
+
+  /**
+   * Retrieves the capacity associated with this configuration.
+   *
+   * @return the capacity
+   */
+  @Min(0)
+  @Max(Integer.MAX_VALUE)
+  Integer getCapacity();
+
+  /**
+   * Merges this configuration with another, preferring values from {@code other}
+   * and falling back to this configuration when not present.
+   *
+   * @param other the configuration to merge with
+   * @return the merged configuration
+   */
+  KubernetesTaskRunnerDynamicConfig merge(KubernetesTaskRunnerDynamicConfig other);
 }

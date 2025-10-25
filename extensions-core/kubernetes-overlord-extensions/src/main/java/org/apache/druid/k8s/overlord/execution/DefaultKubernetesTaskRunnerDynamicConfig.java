@@ -21,21 +21,26 @@ package org.apache.druid.k8s.overlord.execution;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 public class DefaultKubernetesTaskRunnerDynamicConfig implements KubernetesTaskRunnerDynamicConfig
 {
+  @Nullable
   private final PodTemplateSelectStrategy podTemplateSelectStrategy;
+
+  @Nullable
+  private final Integer capacity;
 
   @JsonCreator
   public DefaultKubernetesTaskRunnerDynamicConfig(
-      @JsonProperty("podTemplateSelectStrategy") PodTemplateSelectStrategy podTemplateSelectStrategy
+      @JsonProperty("podTemplateSelectStrategy") PodTemplateSelectStrategy podTemplateSelectStrategy,
+      @JsonProperty("capacity") Integer capacity
   )
   {
-    Preconditions.checkNotNull(podTemplateSelectStrategy);
     this.podTemplateSelectStrategy = podTemplateSelectStrategy;
+    this.capacity = capacity;
   }
 
   @Override
@@ -43,6 +48,31 @@ public class DefaultKubernetesTaskRunnerDynamicConfig implements KubernetesTaskR
   public PodTemplateSelectStrategy getPodTemplateSelectStrategy()
   {
     return podTemplateSelectStrategy;
+  }
+
+  @Override
+  @JsonProperty
+  public Integer getCapacity()
+  {
+    return capacity;
+  }
+
+  @Override
+  public KubernetesTaskRunnerDynamicConfig merge(KubernetesTaskRunnerDynamicConfig other)
+  {
+    if (other == null) {
+      return this;
+    }
+    Integer mergeCapacity = getCapacity();
+    if (other.getCapacity() != null) {
+      mergeCapacity = other.getCapacity();
+    }
+
+    PodTemplateSelectStrategy mergePodTemplateSelectStrategy = getPodTemplateSelectStrategy();
+    if (other.getPodTemplateSelectStrategy() != null) {
+      mergePodTemplateSelectStrategy = other.getPodTemplateSelectStrategy();
+    }
+    return new DefaultKubernetesTaskRunnerDynamicConfig(mergePodTemplateSelectStrategy, mergeCapacity);
   }
 
   @Override
@@ -55,13 +85,14 @@ public class DefaultKubernetesTaskRunnerDynamicConfig implements KubernetesTaskR
       return false;
     }
     DefaultKubernetesTaskRunnerDynamicConfig that = (DefaultKubernetesTaskRunnerDynamicConfig) o;
-    return Objects.equals(podTemplateSelectStrategy, that.podTemplateSelectStrategy);
+    return Objects.equals(capacity, that.capacity) &&
+           Objects.equals(podTemplateSelectStrategy, that.podTemplateSelectStrategy);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hashCode(podTemplateSelectStrategy);
+    return Objects.hash(podTemplateSelectStrategy, capacity);
   }
 
   @Override
@@ -69,6 +100,7 @@ public class DefaultKubernetesTaskRunnerDynamicConfig implements KubernetesTaskR
   {
     return "DefaultKubernetesTaskRunnerDynamicConfig{" +
            "podTemplateSelectStrategy=" + podTemplateSelectStrategy +
+           "capacity=" + capacity +
            '}';
   }
 }
