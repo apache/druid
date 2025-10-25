@@ -19,7 +19,6 @@
 
 package org.apache.druid.k8s.overlord.common;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -73,47 +72,64 @@ public abstract class AbstractKubernetesPeonClient
   }
 
   /**
-   * Wait for the K8s job associated with the given taskId to complete, or until the given timeout is reached
+   * Wait for the K8s job associated with the given taskId to complete, or until the given timeout is reached.
+   * <p>
+   * If the job completes, the {@link JobResponse} is returned in accordance with success or failure. If the timeout
+   * is reached before job completion, a FAILED {@link JobResponse} is returned.
+   * </p>
    *
-   * @return JobResponse indicating the result of the job
+   * @param taskId K8sTaskId representing the job to wait for
+   * @param howLong maximum time to wait
+   * @param unit time unit for the timeout
+   * @return {@link JobResponse} indicating the result of the job
    */
   public abstract JobResponse waitForPeonJobCompletion(K8sTaskId taskId, long howLong, TimeUnit unit);
 
   /**
-   * Get the list of all peon jobs in the namespace associated with this client
+   * Get the list of all peon jobs in the namespace that this client is associated with.
+   *
+   * @return List of {@link Job} objects representing the peon jobs
    */
   public abstract List<Job> getPeonJobs();
 
   /**
    * Get the Pod associated with the given job name, if it exists
    *
-   * @return an Optional containing the Pod if it exists, or absent if not found
+   * @return an Optional containing the {@link Pod} if it exists, or absent if not found
    */
   public abstract Optional<Pod> getPeonPod(String jobName);
 
   /**
    * Get the Job with the given name, if it exists
    *
-   * @return an Optional containing the Job if it exists, or absent if not found
+   * @return an Optional containing the {@link Job} if it exists, or absent if not found
    */
   public abstract Optional<Job> getPeonJob(String jobName);
 
   /**
-   * Waits for a pod associated with a job to be created and reach ready state using the pod cache.
-   * This method polls the informer cache until the pod appears and has a pod IP assigned.
+   * Waits until a pod for the given job is created and ready to be monitored.
+   * <p>
+   * A pod can appear and dissapear in some cases, such as the task being canceled. In this case, null is returned and
+   * the caller should handle accordingly.
+   * </p>
    *
    * @param jobName  the name of the job whose pod we're waiting for
    * @param howLong  the maximum time to wait
    * @param timeUnit the time unit for the timeout
-   * @return the pod in ready state, or null if the pod disappeared after being seen
+   * @return the {@link Pod} which was waited for or null if the pod appeared and dissapeared
    * @throws DruidException if the pod never appears within the timeout period
    */
   @Nullable
   protected abstract Pod waitUntilPeonPodCreatedAndReady(String jobName, long howLong, TimeUnit timeUnit);
 
   /**
-   * Launches the given Job. Waits for the associated pod and job to be created and start running.
+   * Launches the given Kubernetes job for the specified task and waits for its associated pod to be created and ready.:w
    *
+   * @param job {@link Job} being launched in k8s
+   * @param task {@link Task} indexing task associated with the underlying job
+   * @param howLong maximum time to wait for the pod to be created and ready to monitor
+   * @param timeUnit time unit for the timeout
+   * @return the {@link Pod} associated with the launched job once it is created and ready
    */
   public Pod launchPeonJobAndWaitForStart(Job job, Task task, long howLong, TimeUnit timeUnit)
   {
@@ -131,29 +147,44 @@ public abstract class AbstractKubernetesPeonClient
     // Evaluate result of job launch
     if (result == null) {
       throw new ISE(
-          "K8s pod for the task [%s] appeared and disappeared. It can happen if the task was canceled",
+          "K8s pod for the task[%s] appeared and disappeared. It can happen if the task was canceled",
           task.getId()
       );
     }
-    log.info("Pod for job[%s] is in state [%s] for task[%s].", jobName, result.getStatus().getPhase(), task.getId());
+    log.info("Pod for job[%s] is in state[%s] for task[%s].", jobName, result.getStatus().getPhase(), task.getId());
     long duration = System.currentTimeMillis() - start;
     emitK8sPodMetrics(task, "k8s/peon/startup/time", duration);
     return result;
   }
 
+  /**
+   * Deletes the Kubernetes job associated with the given taskId.
+   * <p>
+   * If the debugJobs flag is set to true, the job will not be deleted and a log message will be emitted instead.
+   * </p>
+   *
+   * @return true if the job was deleted successfully or debugJobs is true, false if the job did not exist
+   */
   public boolean deletePeonJob(K8sTaskId taskId)
   {
     if (!debugJobs) {
+      Optional<Job> maybeJob = getPeonJob(taskId.getK8sJobName());
+      if (!maybeJob.isPresent()) {
+        log.info("Asked to delete a k8s job[%s] for task[%s] that does not exist?", taskId.getK8sJobName(), taskId.getOriginalTaskId());
+        return false;
+      }
+      Job job = maybeJob.get();
+
       Boolean result = clientApi.executeRequest(client -> !client.batch()
-                                                                 .v1()
-                                                                 .jobs()
-                                                                 .inNamespace(namespace)
-                                                                 .withName(taskId.getK8sJobName())
-                                                                 .delete().isEmpty());
+                                                                                .v1()
+                                                                                .jobs()
+                                                                                .inNamespace(namespace)
+                                                                                .resource(job)
+                                                                                .delete().isEmpty());
       if (result) {
-        log.info("Cleaned up k8s job: %s", taskId);
+        log.info("Deleted k8s job[%s] for task[%s]", taskId.getK8sJobName(), taskId.getOriginalTaskId());
       } else {
-        log.info("K8s job does not exist: %s", taskId);
+        log.info("Asked to delete a k8s job[%s] for task[%s] that does not exist?", taskId.getK8sJobName(), taskId.getOriginalTaskId());
       }
       return result;
     } else {
@@ -162,9 +193,16 @@ public abstract class AbstractKubernetesPeonClient
     }
   }
 
+  /**
+   * Get a LogWatch for the peon pod associated with the given taskId. Create it if it does not already exist.
+   * <p>
+   * Any issues creating the LogWatch will be logged and an absent Optional will be returned.
+   * </p>
+   *
+   * @return an Optional containing the {@link LogWatch} if it exists or was created.
+   */
   public Optional<LogWatch> getPeonLogWatcher(K8sTaskId taskId)
   {
-    // First, get the pod and if it exists set up log watching
     Optional<Pod> maybePod = getPeonPod(taskId.getK8sJobName());
     if (!maybePod.isPresent()) {
       log.debug("Pod for job[%s] not found in cache, cannot watch logs", taskId.getK8sJobName());
@@ -176,7 +214,6 @@ public abstract class AbstractKubernetesPeonClient
 
     KubernetesClient k8sClient = clientApi.getClient();
     try {
-      // Use resource() to pass the pod object directly, avoiding any lookups
       LogWatch logWatch = k8sClient.pods()
                                    .inNamespace(namespace)
                                    .resource(pod)
@@ -193,9 +230,16 @@ public abstract class AbstractKubernetesPeonClient
     }
   }
 
+  /**
+   * Get an InputStream for the logs of the peon pod associated with the given taskId.
+   * <p>
+   * Any issues creating the InputStream will be logged and an absent Optional will be returned.
+   * </p>
+   *
+   * @return an Optional containing the {@link InputStream} if the pod exists and logs could be streamed, or absent otherwise
+   */
   public Optional<InputStream> getPeonLogs(K8sTaskId taskId)
   {
-    // First, get the pod from cache to avoid unnecessary API calls to look up the job and pod
     Optional<Pod> maybePod = getPeonPod(taskId.getK8sJobName());
     if (!maybePod.isPresent()) {
       log.debug("Pod for job[%s] not found in cache, cannot stream logs", taskId.getK8sJobName());
@@ -207,7 +251,6 @@ public abstract class AbstractKubernetesPeonClient
 
     KubernetesClient k8sClient = clientApi.getClient();
     try {
-      // Use resource() to pass the pod object directly, avoiding any lookups
       InputStream logStream = k8sClient.pods()
                                        .inNamespace(namespace)
                                        .resource(pod)
@@ -219,32 +262,42 @@ public abstract class AbstractKubernetesPeonClient
       return Optional.of(logStream);
     }
     catch (Exception e) {
-      log.error(e, "Error streaming logs from task: %s, pod: %s", taskId, podName);
+      log.error(e, "Error streaming logs for pod[%s] associated with task[%s]", podName, taskId.getOriginalTaskId());
       return Optional.absent();
     }
   }
 
+  /**
+   * Delete completed k8s jobs older than the specified time duration.
+   *
+   * @return the number of k8s jobs deleted
+   */
   public int deleteCompletedPeonJobsOlderThan(long howFarBack, TimeUnit timeUnit)
   {
     AtomicInteger numDeleted = new AtomicInteger();
     return clientApi.executeRequest(client -> {
       List<Job> jobs = getJobsToCleanup(getPeonJobs(), howFarBack, timeUnit);
-      jobs.forEach(x -> {
+      jobs.forEach(job -> {
         if (!client.batch()
                    .v1()
                    .jobs()
                    .inNamespace(namespace)
-                   .withName(x.getMetadata().getName())
+                   .resource(job)
                    .delete().isEmpty()) {
           numDeleted.incrementAndGet();
         } else {
-          log.error("Failed to delete job %s", x.getMetadata().getName());
+          log.error("Failed to delete k8s job[%s] during completed job cleanup", job.getMetadata().getName());
         }
       });
       return numDeleted.get();
     });
   }
 
+  /**
+   * Get the list of jobs to clean up based on their completion time.
+   *
+   * @return List of {@link Job} objects that are ready for cleanup
+   */
   private List<Job> getJobsToCleanup(List<Job> candidates, long howFarBack, TimeUnit timeUnit)
   {
     List<Job> toDelete = new ArrayList<>();
@@ -286,8 +339,7 @@ public abstract class AbstractKubernetesPeonClient
    * @param maxTries   maximum total number of retry attempts
    * @throws DruidException if job creation fails after all retry attempts or encounters non-retryable errors
    */
-  @VisibleForTesting
-  void createK8sJobWithRetries(KubernetesClient client, Job job, int quietTries, int maxTries)
+  private void createK8sJobWithRetries(KubernetesClient client, Job job, int quietTries, int maxTries)
   {
     try {
       RetryUtils.retry(
@@ -325,7 +377,8 @@ public abstract class AbstractKubernetesPeonClient
    * and whether it contains a specific message substring, if applicable.
    * <p>
    * We have experienced connections in the pool being closed by the server-side but remaining in the pool. These issues
-   * should be safe to retry in many cases.
+   * should be safe to retry because even when making mutable calls to create jobs, the k8s control plane API has
+   * gaurds in place preventind duplicate jobs with same job name.
    */
   protected boolean isRetryableTransientConnectionPoolException(Throwable e)
   {

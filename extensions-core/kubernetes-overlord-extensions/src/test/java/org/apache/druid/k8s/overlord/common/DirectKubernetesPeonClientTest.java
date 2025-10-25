@@ -691,7 +691,7 @@ public class DirectKubernetesPeonClientTest
     // Should fail immediately without retries
     DruidException e = Assertions.assertThrows(
         DruidException.class,
-        () -> instance.createK8sJobWithRetries(clientApi.getClient(), job, 0, 5)
+        () -> instance.createK8sJobWithRetries(job)
     );
 
     // Verify the error message contains our job name
@@ -717,7 +717,7 @@ public class DirectKubernetesPeonClientTest
 
     // Should succeed gracefully without throwing exception
     Assertions.assertDoesNotThrow(
-        () -> instance.createK8sJobWithRetries(clientApi.getClient(), job, 0, 5)
+        () -> instance.createK8sJobWithRetries(job)
     );
   }
 
