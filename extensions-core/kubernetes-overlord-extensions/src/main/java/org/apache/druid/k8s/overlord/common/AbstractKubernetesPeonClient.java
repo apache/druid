@@ -20,6 +20,7 @@
 package org.apache.druid.k8s.overlord.common;
 
 import com.google.common.base.Optional;
+import io.fabric8.kubernetes.api.model.DeletionPropagation;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -173,18 +174,12 @@ public abstract class AbstractKubernetesPeonClient
   public boolean deletePeonJob(K8sTaskId taskId)
   {
     if (!debugJobs) {
-      Optional<Job> maybeJob = getPeonJob(taskId.getK8sJobName());
-      if (!maybeJob.isPresent()) {
-        log.info("Asked to delete a k8s job[%s] for task[%s] that does not exist?", taskId.getK8sJobName(), taskId.getOriginalTaskId());
-        return false;
-      }
-      Job job = maybeJob.get();
-
       Boolean result = clientApi.executeRequest(client -> !client.batch()
                                                                                 .v1()
                                                                                 .jobs()
                                                                                 .inNamespace(namespace)
-                                                                                .resource(job)
+                                                                                .withName(taskId.getK8sJobName())
+                                                                                .withPropagationPolicy(DeletionPropagation.BACKGROUND)
                                                                                 .delete().isEmpty());
       if (result) {
         log.info("Deleted k8s job[%s] for task[%s]", taskId.getK8sJobName(), taskId.getOriginalTaskId());
@@ -287,7 +282,8 @@ public abstract class AbstractKubernetesPeonClient
                    .v1()
                    .jobs()
                    .inNamespace(namespace)
-                   .resource(job)
+                   .withName(job.getMetadata().getName())
+                   .withPropagationPolicy(DeletionPropagation.BACKGROUND)
                    .delete().isEmpty()) {
           numDeleted.incrementAndGet();
         } else {
