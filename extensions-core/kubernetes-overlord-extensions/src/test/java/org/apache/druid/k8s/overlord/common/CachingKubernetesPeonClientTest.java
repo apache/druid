@@ -368,21 +368,11 @@ public class CachingKubernetesPeonClientTest
   }
 
   @Test
-  public void test_waitUntilPeonPodCreatedAndReady_throwsWhenPodNeverCreated() throws Exception
+  public void test_waitUntilPeonPodCreatedAndReady_returnNullWhenPodNeverCreated() throws Exception
   {
     clientApi.waitForSync();
 
-    // Wait for pod that is never created with short timeout
-    Exception exception = Assertions.assertThrows(
-        RuntimeException.class,
-        () -> peonClient.waitUntilPeonPodCreatedAndReady(JOB_NAME, 1, TimeUnit.SECONDS)
-    );
-
-    // Should throw DruidException about timeout waiting for pod creation
-    Assertions.assertTrue(
-        exception.getMessage().contains("Timeout waiting for pod") ||
-        exception.getCause().getMessage().contains("Timeout waiting for pod")
-    );
+    Assertions.assertNull(peonClient.waitUntilPeonPodCreatedAndReady(JOB_NAME, 1, TimeUnit.SECONDS));
   }
 
   @Test

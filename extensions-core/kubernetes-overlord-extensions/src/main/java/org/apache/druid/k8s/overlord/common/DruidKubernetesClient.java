@@ -40,6 +40,9 @@ public class DruidKubernetesClient implements KubernetesClientApi
 {
   private static final EmittingLogger log = new EmittingLogger(DruidKubernetesClient.class);
 
+  public static final String JOB_NAME_INDEX = "byJobName";
+  public static final String OVERLORD_NAMESPACE_INDEX = "byOverlordNamespace";
+
   public static final String ENABLE_INFORMERS_KEY = "druid.k8s.informers.enabled";
   public static final String INFORMER_RESYNC_PERIOD_MS_KEY = "druid.k8s.informers.resyncPeriodMs";
   private static final long DEFAULT_INFORMER_RESYNC_PERIOD_MS = 300000L; // 5 minutes

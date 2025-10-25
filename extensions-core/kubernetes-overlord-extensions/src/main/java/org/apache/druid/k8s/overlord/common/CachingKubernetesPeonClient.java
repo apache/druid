@@ -76,7 +76,14 @@ public class CachingKubernetesPeonClient extends AbstractKubernetesPeonClient
     long jobMustBeSeenBy = startTime + (clientApi.getInformerResyncPeriodMillis() * 2);
     boolean jobSeenInCache = false;
 
+    // Set up to watch for job changes
     CompletableFuture<Job> jobFuture = clientApi.getEventNotifier().waitForJobChange(taskId.getK8sJobName());
+
+    // We will loop until the full timeout is reached if the job is seen in cache. If the job does not show up in the cache we will exit earlier.
+    // In this loop we first check the cache to see if our job is there and complete. This avoids missing notifications that happened before we set up the watch.
+    // If the job is not complete we wait for a notification of a job change or a timeout.
+    // If it is a timeout, we loop back to check the cache again.
+    // If it is a job change notification, we check the job state and exit if complete, or loop again if still running.
     do {
       try {
         Optional<Job> maybeJob = getPeonJob(taskId.getK8sJobName());
@@ -118,7 +125,7 @@ public class CachingKubernetesPeonClient extends AbstractKubernetesPeonClient
       catch (TimeoutException e) {
         // A timeout here is not a problem, it forces us to loop around and check the cache again.
         // This prevents the case where we miss a notification and wait forever.
-        log.debug("Timeout waiting for job change notification for job[%s], checking cache again", taskId.getK8sJobName());
+        log.debug("Timeout waiting for job change notification for job[%s]. If full job timeout has not been reached, the job completion wait will continue", taskId.getK8sJobName());
       }
       catch (InterruptedException e) {
         throw DruidException.defensive(e, "Interrupted waiting for job change notification for job[%s]", taskId.getK8sJobName());
@@ -140,7 +147,7 @@ public class CachingKubernetesPeonClient extends AbstractKubernetesPeonClient
     } else {
       return clientApi.executeJobCacheRequest(informer ->
                                                   informer.getIndexer()
-                                                          .byIndex("byOverlordNamespace", overlordNamespace));
+                                                          .byIndex(DruidKubernetesClient.OVERLORD_NAMESPACE_INDEX, overlordNamespace));
     }
   }
 
@@ -148,7 +155,7 @@ public class CachingKubernetesPeonClient extends AbstractKubernetesPeonClient
   public Optional<Pod> getPeonPod(String jobName)
   {
     return clientApi.executePodCacheRequest(informer -> {
-      List<Pod> pods = informer.getIndexer().byIndex("byJobName", jobName);
+      List<Pod> pods = informer.getIndexer().byIndex(DruidKubernetesClient.JOB_NAME_INDEX, jobName);
       return pods.isEmpty() ? Optional.absent() : Optional.of(pods.get(0));
     });
   }
@@ -157,7 +164,7 @@ public class CachingKubernetesPeonClient extends AbstractKubernetesPeonClient
   public Optional<Job> getPeonJob(String jobName)
   {
     return clientApi.executeJobCacheRequest(informer -> {
-      List<Job> jobs = informer.getIndexer().byIndex("byJobName", jobName);
+      List<Job> jobs = informer.getIndexer().byIndex(DruidKubernetesClient.JOB_NAME_INDEX, jobName);
       return jobs.isEmpty() ? Optional.absent() : Optional.of(jobs.get(0));
     });
   }
@@ -168,10 +175,17 @@ public class CachingKubernetesPeonClient extends AbstractKubernetesPeonClient
   {
     long timeoutMs = timeUnit.toMillis(howLong);
     long startTime = System.currentTimeMillis();
-
     String podName = "unknown";
     boolean podSeenInCache = false;
+
+    // Set up to watch for pod changes
     CompletableFuture<Pod> podFuture = clientApi.getEventNotifier().waitForPodChange(jobName);
+
+    // We will loop until the specified timeout is reached, or we see the pod become ready, whichever comes first.
+    // We eagerly check the cache first to avoid missing notifications that happened before we set up the watch.
+    // If the pod is not ready we wait for a notification of a pod change or a timeout.
+    // If it is a timeout, we loop back to check the cache again (if there is time)
+    // If it is a pod change notification, we check the pod state and exit if ready, or loop again if still not ready.
     do {
       try {
         // First check to see if pod is already in cache and ready in case our completion future started after the update event fired
@@ -197,7 +211,8 @@ public class CachingKubernetesPeonClient extends AbstractKubernetesPeonClient
         podFuture = clientApi.getEventNotifier().waitForPodChange(jobName);
         log.debug("Received pod[%s] change notification for job[%s]", podName, jobName);
         if (pod == null) {
-          throw DruidException.defensive("Pod[%s] for job[%s] is null. This is unusual. Investigate Druid and k8s logs.", podName, jobName);
+          log.warn("Pod[%s] for job[%s] is null. This is unusual. Investigate Druid and k8s logs.", podName, jobName);
+          return null;
         } else {
           podSeenInCache = true;
           podName = pod.getMetadata().getName();
@@ -212,7 +227,7 @@ public class CachingKubernetesPeonClient extends AbstractKubernetesPeonClient
       catch (TimeoutException e) {
         // A timeout here is not a problem, it forces us to loop around and check the cache again.
         // This prevents the case where we miss a notification and wait forever.
-        log.debug("Timeout waiting for pod change notification for job[%s], checking cache again", jobName);
+        log.debug("Timeout waiting for pod change notification for job[%s], If full timeout has not been reached, the pod startup wait will continue", jobName);
       }
       catch (InterruptedException e) {
         throw DruidException.defensive(e, "Interrupted waiting for pod change notification for job[%s]", jobName);
@@ -222,13 +237,12 @@ public class CachingKubernetesPeonClient extends AbstractKubernetesPeonClient
       }
     } while (System.currentTimeMillis() - startTime < timeoutMs);
 
-    // Timeout
     if (podSeenInCache) {
-      log.warn("Timeout waiting for pod[%s] for job[%s] to become ready", podName, jobName);
-      return null;
+      log.warn("Timeout waiting for pod[%s] for job[%s] to become ready after it was created", podName, jobName);
     } else {
-      throw DruidException.defensive("Timeout waiting for pod for job[%s] to be created", jobName);
+      log.warn("Timeout waiting for pod for job[%s] to be created", jobName);
     }
+    return null;
   }
 
   /**
@@ -252,6 +266,7 @@ public class CachingKubernetesPeonClient extends AbstractKubernetesPeonClient
       Integer active = job.getStatus().getActive();
       Integer succeeded = job.getStatus().getSucceeded();
       Integer failed = job.getStatus().getFailed();
+
       if ((active == null || active == 0) && (succeeded != null || failed != null)) {
         if (succeeded != null && succeeded > 0) {
           log.info("K8s job[%s] completed successfully", job.getMetadata().getName());
@@ -262,6 +277,7 @@ public class CachingKubernetesPeonClient extends AbstractKubernetesPeonClient
         }
       }
     }
+
     log.debug("K8s job[%s] is still active.", job.getMetadata().getName());
     return new JobResponse(job, PeonPhase.RUNNING);
   }
