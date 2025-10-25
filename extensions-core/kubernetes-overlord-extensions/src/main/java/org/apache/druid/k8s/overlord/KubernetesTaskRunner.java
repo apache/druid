@@ -347,7 +347,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     log.info("Starting K8sTaskRunner...");
     // Load tasks from previously running jobs and wait for their statuses to start running.
     final List<ListenableFuture<Boolean>> taskStatusActiveList = new ArrayList<>();
-    // Get all existing peon jobs.
     final List<Job> peonJobs = client.getPeonJobs();
 
     log.info("Locating [%,d] active tasks.", peonJobs.size());
