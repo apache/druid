@@ -45,6 +45,7 @@ import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -113,6 +114,17 @@ public class MSQTaskQueryMaker implements QueryMaker
   {
     Hook.QUERY_PLAN.run(druidQuery.getQuery());
     String taskId = MSQTasks.controllerTaskId(plannerContext.getSqlQueryId());
+
+    // Create task context map for passing task-level metadata (like tags) to the MSQ controller task.
+    // This enables features like dynamic pod template selection based on context.tags in Kubernetes deployments.
+    final Map<String, Object> taskContext = new HashMap<>();
+    
+    // Extract tags from query context and add to task context if present.
+    // Tags are used for metrics reporting and can be used for resource selection (e.g., pod templates in K8s).
+    final Map<String, Object> queryContextTags = (Map<String, Object>) plannerContext.queryContext().get(DruidMetrics.TAGS);
+    if (queryContextTags != null) {
+      taskContext.put(DruidMetrics.TAGS, queryContextTags);
+    }
 
     // SQL query context: context provided by the user, and potentially modified by handlers during planning.
     // Does not directly influence task execution, but it does form the basis for the initial native query context,
@@ -291,7 +303,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         SqlResults.Context.fromPlannerContext(plannerContext),
         sqlTypeNames,
         columnTypeList,
-        null
+        taskContext
     );
 
     FutureUtils.getUnchecked(overlordClient.runTask(taskId, controllerTask), true);

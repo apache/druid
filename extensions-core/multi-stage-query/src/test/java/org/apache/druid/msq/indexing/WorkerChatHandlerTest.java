@@ -51,6 +51,7 @@ import org.mockito.MockitoAnnotations;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+import java.io.File;
 import java.io.InputStream;
 import java.util.HashMap;
 
@@ -96,6 +97,12 @@ public class WorkerChatHandlerTest
                            public void setObjectMapper(ObjectMapper objectMapper)
                            {
 
+                           }
+
+                           @Override
+                           public File getReportsFile(String taskId)
+                           {
+                             return null;
                            }
                          }
                      )

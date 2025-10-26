@@ -136,6 +136,12 @@ public class MSQTestWorkerContext implements WorkerContext
       {
 
       }
+
+      @Override
+      public File getReportsFile(String taskId)
+      {
+        return null;
+      }
     };
 
     return new IndexerFrameContext(

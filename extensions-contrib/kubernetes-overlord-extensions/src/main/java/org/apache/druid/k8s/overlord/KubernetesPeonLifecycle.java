@@ -121,29 +121,34 @@ public class KubernetesPeonLifecycle
    */
   protected synchronized TaskStatus run(Job job, long launchTimeout, long timeout, boolean useDeepStorageForTaskPayload) throws IllegalStateException, IOException
   {
+    log.info("🚀 [LIFECYCLE] Starting task [%s] in Kubernetes pod", taskId.getOriginalTaskId());
     try {
       updateState(new State[]{State.NOT_STARTED}, State.PENDING);
 
       if (useDeepStorageForTaskPayload) {
+        log.info("📤 [LIFECYCLE] Writing task payload to deep storage for task [%s]", taskId.getOriginalTaskId());
         writeTaskPayload(task);
       }
 
       // In case something bad happens and run is called twice on this KubernetesPeonLifecycle, reset taskLocation.
       taskLocation = null;
+      log.info("⏳ [LIFECYCLE] Launching Kubernetes peon job for task [%s], waiting for start...", taskId.getOriginalTaskId());
       kubernetesClient.launchPeonJobAndWaitForStart(
           job,
           task,
           launchTimeout,
           TimeUnit.MILLISECONDS
       );
+      log.info("✅ [LIFECYCLE] Peon job started for task [%s], joining to wait for completion...", taskId.getOriginalTaskId());
 
       return join(timeout);
     }
     catch (Exception e) {
-      log.info("Failed to run task: %s", taskId.getOriginalTaskId());
+      log.error(e, "❌ [LIFECYCLE] Failed to run task: %s", taskId.getOriginalTaskId());
       throw e;
     }
     finally {
+      log.info("🏁 [LIFECYCLE] Task [%s] run() finally block - will stop task", taskId.getOriginalTaskId());
       stopTask();
     }
   }
@@ -176,6 +181,7 @@ public class KubernetesPeonLifecycle
    */
   protected synchronized TaskStatus join(long timeout) throws IllegalStateException
   {
+    log.info("⏸️  [LIFECYCLE] Joining task [%s], waiting for completion (timeout=%dms)...", taskId.getOriginalTaskId(), timeout);
     try {
       updateState(new State[]{State.NOT_STARTED, State.PENDING}, State.RUNNING);
 
@@ -185,14 +191,18 @@ public class KubernetesPeonLifecycle
           TimeUnit.MILLISECONDS
       );
 
+      log.info("✅ [LIFECYCLE] Task [%s] completed with phase: %s", taskId.getOriginalTaskId(), jobResponse.getPhase());
       return getTaskStatus(jobResponse.getJobDuration());
     }
     finally {
+      log.info("🔧 [LIFECYCLE] Task [%s] join() finally block - will save logs", taskId.getOriginalTaskId());
       try {
+        log.info("📋 [LIFECYCLE] Attempting to save logs for task [%s]...", taskId.getOriginalTaskId());
         saveLogs();
+        log.info("✅ [LIFECYCLE] Successfully saved logs for task [%s]", taskId.getOriginalTaskId());
       }
       catch (Exception e) {
-        log.warn(e, "Log processing failed for task [%s]", taskId);
+        log.warn(e, "❌ [LIFECYCLE] Log processing failed for task [%s]", taskId);
       }
 
       stopTask();
@@ -325,14 +335,19 @@ public class KubernetesPeonLifecycle
 
   protected void saveLogs()
   {
+    log.info("📋 [LOGS] Starting log persistence for task [%s]", taskId.getOriginalTaskId());
     try {
       Path file = Files.createTempFile(taskId.getOriginalTaskId(), "log");
+      log.info("📋 [LOGS] Created temporary log file: %s", file);
       try {
+        log.info("📋 [LOGS] Starting log watch for task [%s]...", taskId.getOriginalTaskId());
         startWatchingLogs();
         if (logWatch != null) {
+          log.info("📋 [LOGS] Log watch active, copying log stream to file...");
           FileUtils.copyInputStreamToFile(logWatch.getOutput(), file.toFile());
+          log.info("📋 [LOGS] Successfully copied log stream to temp file (size: %d bytes)", file.toFile().length());
         } else {
-          log.debug("Log stream not found for %s", taskId.getOriginalTaskId());
+          log.warn("📋 [LOGS] Log stream not found for %s, writing placeholder message", taskId.getOriginalTaskId());
           FileUtils.writeStringToFile(
               file.toFile(),
               StringUtils.format(
@@ -341,22 +356,25 @@ public class KubernetesPeonLifecycle
               ),
               Charset.defaultCharset()
           );
-
         }
+        log.info("📋 [LOGS] Pushing log file to deep storage for task [%s]...", taskId.getOriginalTaskId());
         taskLogs.pushTaskLog(taskId.getOriginalTaskId(), file.toFile());
+        log.info("✅ [LOGS] Successfully pushed logs to deep storage for task [%s]", taskId.getOriginalTaskId());
       }
       catch (IOException e) {
-        log.error(e, "Failed to stream logs for task [%s]", taskId.getOriginalTaskId());
+        log.error(e, "❌ [LOGS] Failed to stream logs for task [%s]", taskId.getOriginalTaskId());
       }
       finally {
         if (logWatch != null) {
+          log.info("📋 [LOGS] Closing log watch for task [%s]", taskId.getOriginalTaskId());
           logWatch.close();
         }
+        log.info("📋 [LOGS] Deleting temporary log file: %s", file);
         Files.deleteIfExists(file);
       }
     }
     catch (IOException e) {
-      log.warn(e, "Failed to manage temporary log file for task [%s]", taskId.getOriginalTaskId());
+      log.warn(e, "❌ [LOGS] Failed to manage temporary log file for task [%s]", taskId.getOriginalTaskId());
     }
   }
 

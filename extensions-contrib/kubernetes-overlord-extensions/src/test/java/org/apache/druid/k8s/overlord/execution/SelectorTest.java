@@ -48,7 +48,7 @@ public class SelectorTest
     Selector selector = new Selector(
         "TestSelector",
         cxtTagsConditions,
-        Sets.newHashSet(NoopTask.TYPE),
+        Sets.newHashSet("noop"),
         new HashSet<>()
     );
 
@@ -86,7 +86,7 @@ public class SelectorTest
     Selector selector = new Selector(
         "TestSelector",
         cxtTagsConditions,
-        Sets.newHashSet(NoopTask.TYPE),
+        Sets.newHashSet("noop"),
         Sets.newHashSet(datasource)
     );
 
@@ -184,7 +184,7 @@ public class SelectorTest
     Selector selector = new Selector(
         "TestSelector",
         cxtTagsConditions,
-        Sets.newHashSet(NoopTask.TYPE),
+        Sets.newHashSet("noop"),
         Sets.newHashSet("my_table")
     );
 
@@ -217,7 +217,7 @@ public class SelectorTest
     Selector selector = new Selector(
         "TestSelector",
         cxtTagsConditions,
-        Sets.newHashSet(NoopTask.TYPE),
+        Sets.newHashSet("noop"),
         Sets.newHashSet("my_table")
     );
 
