@@ -21,7 +21,9 @@ package org.apache.druid.indexing.overlord.setup;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.config.Configs;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -86,17 +88,19 @@ public class WorkerCategorySpec
   public static class CategoryConfig
   {
     private final String defaultCategory;
-    // key: datasource, value: category
     private final Map<String, String> categoryAffinity;
+    private final Map<String, String> supervisorIdCategoryAffinity;
 
     @JsonCreator
     public CategoryConfig(
         @JsonProperty("defaultCategory") String defaultCategory,
-        @JsonProperty("categoryAffinity") Map<String, String> categoryAffinity
+        @JsonProperty("categoryAffinity") Map<String, String> categoryAffinity,
+        @JsonProperty("supervisorIdCategoryAffinity") @Nullable Map<String, String> supervisorIdCategoryAffinity
     )
     {
       this.defaultCategory = defaultCategory;
       this.categoryAffinity = categoryAffinity == null ? Collections.emptyMap() : categoryAffinity;
+      this.supervisorIdCategoryAffinity = Configs.valueOrDefault(supervisorIdCategoryAffinity, Map.of());
     }
 
     @JsonProperty
@@ -105,10 +109,23 @@ public class WorkerCategorySpec
       return defaultCategory;
     }
 
+    /**
+     * Returns a map from datasource name to the worker category name to be used for tasks of that datasource.
+     */
     @JsonProperty
     public Map<String, String> getCategoryAffinity()
     {
       return categoryAffinity;
+    }
+
+    /**
+     * Returns a map from supervisor ID to worker category name to be used for tasks of that supervisor.
+     * This takes precedence over {@link #getCategoryAffinity()} when both are configured.
+     */
+    @JsonProperty
+    public Map<String, String> getSupervisorIdCategoryAffinity()
+    {
+      return supervisorIdCategoryAffinity;
     }
 
     @Override
@@ -122,13 +139,14 @@ public class WorkerCategorySpec
       }
       final CategoryConfig that = (CategoryConfig) o;
       return Objects.equals(defaultCategory, that.defaultCategory) &&
-             Objects.equals(categoryAffinity, that.categoryAffinity);
+             Objects.equals(categoryAffinity, that.categoryAffinity) &&
+             Objects.equals(supervisorIdCategoryAffinity, that.supervisorIdCategoryAffinity);
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(defaultCategory, categoryAffinity);
+      return Objects.hash(defaultCategory, categoryAffinity, supervisorIdCategoryAffinity);
     }
 
     @Override
@@ -137,6 +155,7 @@ public class WorkerCategorySpec
       return "CategoryConfig{" +
              "defaultCategory=" + defaultCategory +
              ", categoryAffinity=" + categoryAffinity +
+             ", supervisorIdCategoryAffinity=" + supervisorIdCategoryAffinity +
              '}';
     }
   }
