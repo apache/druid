@@ -22,6 +22,7 @@ package org.apache.druid.server.coordination.startup;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
@@ -50,6 +51,16 @@ public class LoadEagerlyBeforePeriod implements HistoricalStartupCacheLoadStrate
       @JsonProperty("period") Period eagerLoadingPeriod
   )
   {
+    if (eagerLoadingPeriod == null) {
+      throw DruidException
+          .forPersona(DruidException.Persona.OPERATOR)
+          .ofCategory(DruidException.Category.INVALID_INPUT)
+          .build(
+              "druid.segmentCache.startupLoadStrategy.period must be configured for Historical startup strategy[%s].",
+              STRATEGY_NAME
+          );
+    }
+
     DateTime now = DateTimes.nowUtc();
     this.eagerLoadingInterval = new Interval(now.minus(eagerLoadingPeriod), now);
 
