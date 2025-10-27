@@ -269,11 +269,19 @@ The following example shows a supervisor spec with idle configuration enabled:
 
 Header-based filtering allows you to filter Kafka records based on their headers before ingestion, reducing the amount of data processed and improving ingestion performance. This is particularly useful when you want to ingest only a subset of records from a Kafka topic based on header values.
 
+**Important**: Header-based filtering uses **permissive behavior** by default. Records are included (not filtered out) in the following cases:
+- Records without the specified header
+- Records with the specified header but null or empty values
+- Records with the specified header that fail to decode
+- Records where header evaluation encounters any error
+
+This ensures that data ingestion continues even when header information is missing or malformed. Only records with successfully decoded header values that don't match the filter criteria are excluded.
+
 The following table outlines the configuration options for `headerBasedFilterConfig`:
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
-|`filter`|Object|A Druid filter specification that defines which records to include based on header values. Only `in` filters are supported.|Yes||
+|`filter`|Object|A Druid filter specification that defines which records to include if the evaluation result of this filter is true based on header values. Only `in` filter is supported. The `dimension` field represents the header key/name to filter on.|Yes||
 |`encoding`|String|The character encoding used to decode header values. Supported encodings include `UTF-8`, `UTF-16`, `ISO-8859-1`, `US-ASCII`, `UTF-16BE`, and `UTF-16LE`.|No|`UTF-8`|
 |`stringDecodingCacheSize`|Integer|The maximum number of decoded header strings to cache in memory. Set to a higher value for better performance when processing many unique header values.|No|10000|
 
@@ -349,7 +357,11 @@ The following example shows how to configure header-based filtering to ingest on
 </details>
 
 In this example:
-- Only records with `environment` header values of `production` or `staging` will be ingested
+- Records with `environment` header values of `production` or `staging` will be ingested
+- Records **without** the `environment` header will also be ingested (permissive behavior)
+- Records with the `environment` header but null/empty values will also be ingested (permissive behavior)
+- Records with the `environment` header that fail to decode will also be ingested (permissive behavior)
+- If multiple `environment` headers exist, the **last** header value is used for filtering
 - Header values will be decoded using UTF-8 encoding
 - Up to 10,000 decoded header strings will be cached for performance
 
