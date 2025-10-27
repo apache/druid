@@ -138,7 +138,7 @@ public class WorkerSelectUtils
           preferredCategory = categoryAffinity.get(task.getDataSource());
         }
         
-        // If there is no preferred category for the supervisorId or datasource, then using the defaultCategory.
+        // If there is no preferred category for the supervisorId or datasource, then use the defaultCategory.
         // However, the defaultCategory may be null too, so we need to do one more null check (see below).
         preferredCategory = preferredCategory == null ? defaultCategory : preferredCategory;
 

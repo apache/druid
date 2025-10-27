@@ -110,10 +110,7 @@ public class WorkerCategorySpec
     }
 
     /**
-     * Returns a map of datasource names to worker category names.
-     * Used to assign tasks to specific worker categories based on their datasource.
-     *
-     * @return map where key is datasource name and value is worker category name
+     * Returns a map from datasource name to the worker category name to be used for tasks of that datasource.
      */
     @JsonProperty
     public Map<String, String> getCategoryAffinity()
@@ -122,11 +119,8 @@ public class WorkerCategorySpec
     }
 
     /**
-     * Returns a map of supervisor IDs to worker category names.
-     * Used to assign tasks to specific worker categories based on their supervisor ID.
+     * Returns a map from supervisor ID to worker category name to be used for tasks of that supervisor.
      * This takes precedence over {@link #getCategoryAffinity()} when both are configured.
-     *
-     * @return map where key is supervisor ID and value is worker category name
      */
     @JsonProperty
     public Map<String, String> getSupervisorIdCategoryAffinity()

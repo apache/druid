@@ -305,11 +305,11 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
         supervisorId,
         null,
         DataSchema.builder()
-            .withDataSource(datasource)
-            .withTimestamp(new TimestampSpec(null, null, null))
-            .withDimensions(new DimensionsSpec(Collections.emptyList()))
-            .withGranularity(new ArbitraryGranularitySpec(new AllGranularity(), Collections.emptyList()))
-            .build(),
+          .withDataSource(datasource)
+          .withTimestamp(new TimestampSpec(null, null, null))
+          .withDimensions(new DimensionsSpec(Collections.emptyList()))
+          .withGranularity(new ArbitraryGranularitySpec(new AllGranularity(), Collections.emptyList()))
+          .build(),
         Mockito.mock(SeekableStreamIndexTaskTuningConfig.class),
         Mockito.mock(SeekableStreamIndexTaskIOConfig.class),
         null,
