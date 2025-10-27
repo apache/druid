@@ -454,7 +454,7 @@ public class PrometheusEmitterTest
     Assert.assertNotNull("Test metric should be registered", testMetric);
     Assert.assertFalse(
         "Metric should not be expired initially",
-        testMetric.removeIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
+        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
     );
 
     // Wait for the metric to expire (ttl + 1 second buffer)
@@ -467,7 +467,7 @@ public class PrometheusEmitterTest
 
     Assert.assertTrue(
         "Metric should be expired after TTL",
-        testMetric.removeIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
+        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
     );
     emitter.close();
   }
@@ -496,7 +496,7 @@ public class PrometheusEmitterTest
     );
     Assert.assertFalse(
         "Metric should not be expired initially",
-        testMetric.removeIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
+        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
     );
 
     // Wait for a little, but not long enough for the metric to expire
@@ -510,7 +510,7 @@ public class PrometheusEmitterTest
 
     Assert.assertFalse(
         "Metric should not be expired",
-        testMetric.removeIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
+        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
     );
     emitter.close();
   }
@@ -544,11 +544,11 @@ public class PrometheusEmitterTest
     );
     Assert.assertFalse(
         "Metric should not be expired initially",
-        testMetric.removeIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
+        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
     );
     Assert.assertFalse(
         "Metric should not be expired initially",
-        testMetric.removeIfExpired(Arrays.asList("historical", "druid.test.cn", "historical2"))
+        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical2"))
     );
 
     // Wait for a little, but not long enough for the metric to expire
@@ -562,11 +562,11 @@ public class PrometheusEmitterTest
 
     Assert.assertFalse(
         "Metric should not be expired",
-        testMetric.removeIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
+        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
     );
     Assert.assertFalse(
         "Metric should not be expired",
-        testMetric.removeIfExpired(Arrays.asList("historical", "druid.test.cn", "historical2"))
+        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical2"))
     );
     // Reset update time only for event2
     emitter.emit(event2);
@@ -580,11 +580,11 @@ public class PrometheusEmitterTest
     }
     Assert.assertTrue(
         "Metric should be expired",
-        testMetric.removeIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
+        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
     );
     Assert.assertFalse(
         "Metric should not be expired",
-        testMetric.removeIfExpired(Arrays.asList("historical", "druid.test.cn", "historical2"))
+        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical2"))
     );
     emitter.close();
   }

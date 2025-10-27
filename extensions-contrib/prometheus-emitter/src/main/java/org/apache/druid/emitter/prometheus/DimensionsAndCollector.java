@@ -93,9 +93,10 @@ public class DimensionsAndCollector
 
   /**
    * For the given labelValues, checks if the metric value has been updated within the configured flushPeriod.
-   * Returns true and removes the entry from the map if it has expired, otherwise returns false.
+   * Returns true and removes the entry from the map if it has expired or if the entry doesn't exist, otherwise
+   * returns false.
    */
-  public boolean removeIfExpired(List<String> labelValues)
+  public boolean shouldRemoveIfExpired(List<String> labelValues)
   {
     if (ttlSeconds == null) {
       throw DruidException.defensive("Invalid usage of removeIfExpired, flushPeriod has not been set");
