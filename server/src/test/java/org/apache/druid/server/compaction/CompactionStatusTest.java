@@ -481,9 +481,8 @@ public class CompactionStatusTest
 
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(Collections.singletonList(segment)),
-        compactionConfig,
-        OBJECT_MAPPER
+        CompactionCandidate.from(List.of(segment), null),
+        compactionConfig
     );
     Assert.assertTrue(status.isComplete());
   }
@@ -535,9 +534,8 @@ public class CompactionStatusTest
 
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
-        CompactionCandidate.from(Collections.singletonList(segment)),
-        compactionConfig,
-        OBJECT_MAPPER
+        CompactionCandidate.from(List.of(segment), null),
+        compactionConfig
     );
     Assert.assertFalse(status.isComplete());
   }

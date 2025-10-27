@@ -27,6 +27,7 @@ import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.table.IndexingTemplateDefn;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.error.NotFound;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.template.BatchIndexingJobTemplate;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -84,7 +85,7 @@ public class CatalogCompactionJobTemplate implements CompactionJobTemplate
   {
     final ResolvedTable resolvedTable = catalog.resolveTable(tableId);
     if (resolvedTable == null) {
-      throw InvalidInput.exception("Could not find table[%s] in the catalog", tableId);
+      throw NotFound.exception("Could not find table[%s] in the catalog", tableId);
     }
 
     final BatchIndexingJobTemplate delegate
