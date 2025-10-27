@@ -34,6 +34,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -59,6 +60,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -191,22 +194,48 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       );
     }
 
-    final List<DataSegment> cachedSegments = new ArrayList<>();
     final File[] segmentsToLoad = retrieveSegmentMetadataFiles();
-
+    final ConcurrentLinkedQueue<DataSegment> cachedSegments = new ConcurrentLinkedQueue<>();
     AtomicInteger ignoredFilesCounter = new AtomicInteger(0);
+    CountDownLatch latch = new CountDownLatch(segmentsToLoad.length);
 
-    for (int i = 0; i < segmentsToLoad.length; i++) {
-      final File file = segmentsToLoad[i];
-      log.info("Loading segment cache file [%d/%d][%s].", i + 1, segmentsToLoad.length, file);
-      try {
-        addFilesToCachedSegments(file, ignoredFilesCounter, cachedSegments);
-      }
-      catch (Exception e) {
-        log.makeAlert(e, "Failed to load segment from segment cache file.")
-           .addData("file", file)
-           .emit();
-      }
+    boolean createdNewExecutorServiceToLoadSegmentCache = loadOnBootstrapExec == null;
+    ExecutorService executorService = createdNewExecutorServiceToLoadSegmentCache
+                                      ? MoreExecutors.newDirectExecutorService()
+                                      : loadOnBootstrapExec;
+
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    log.info("Retrieving [%d] cached segment metadata files to cache.", segmentsToLoad.length);
+
+    for (File file : segmentsToLoad) {
+      executorService.submit(() -> {
+        try {
+          loadToCachedSegmentsFromFile(cachedSegments, file, ignoredFilesCounter);
+        }
+        catch (Exception e) {
+          log.makeAlert(e, "Failed to load segment from segment cache file.")
+             .addData("file", file)
+             .emit();
+        }
+        finally {
+          latch.countDown();
+        }
+      });
+    }
+
+    try {
+      latch.await();
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      log.error(e, "Interrupted when trying to retrieve cached segment metadata files");
+    }
+
+    stopwatch.stop();
+    log.info("Retrieved [%d,%d] cached segments in [%d]ms.", cachedSegments.size(), segmentsToLoad.length, stopwatch.millisElapsed());
+
+    if (createdNewExecutorServiceToLoadSegmentCache) {
+      executorService.shutdown();
     }
 
     if (ignoredFilesCounter.get() > 0) {
@@ -215,10 +244,14 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
          .emit();
     }
 
-    return cachedSegments;
+    return new ArrayList<>(cachedSegments);
   }
 
-  private void addFilesToCachedSegments(File file, AtomicInteger ignored, List<DataSegment> cachedSegments) throws IOException
+  private void loadToCachedSegmentsFromFile(
+      ConcurrentLinkedQueue<DataSegment> cachedSegments,
+      File file,
+      AtomicInteger ignored
+  ) throws IOException
   {
     final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
     boolean removeInfo = false;
