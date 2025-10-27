@@ -135,23 +135,10 @@ public class CascadingCompactionTemplate implements CompactionJobTemplate, DataS
       CompactionJobParams jobParams
   )
   {
-    final List<CompactionJob> allJobs = template.createCompactionJobs(
+    return template.createCompactionJobs(
         inputSource.withInterval(searchInterval),
         jobParams
     );
-
-    // Some jobs may have a compaction interval that goes beyond the search interval
-    // in order to be able to align with the target segment granularity.
-    // Filter out such jobs to avoid submission of overlapping compaction tasks.
-    final List<CompactionJob> validJobs = new ArrayList<>();
-    for (CompactionJob job : allJobs) {
-      final Interval compactionInterval = job.getCandidate().getCompactionInterval();
-      if (searchInterval.contains(compactionInterval)) {
-        validJobs.add(job);
-      }
-    }
-
-    return validJobs;
   }
 
   @Override

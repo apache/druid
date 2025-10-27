@@ -112,6 +112,8 @@ public class Stats
   {
     public static final CoordinatorStat JOB_CREATION_TIME
         = CoordinatorStat.toDebugAndEmit("jobCreationTime", "compact/createJobs/time");
+    public static final CoordinatorStat CREATED_JOBS
+        = CoordinatorStat.toDebugAndEmit("jobQueueSize", "compact/createJobs/count");
     public static final CoordinatorStat SCHEDULER_RUN_TIME
         = CoordinatorStat.toDebugAndEmit("schedulerRunTime", "compact/runScheduler/time");
 

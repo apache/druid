@@ -50,6 +50,7 @@ import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 
@@ -139,7 +140,14 @@ public class CompactionJobQueue
     final String supervisorId = supervisor.getSpec().getId();
     try {
       if (supervisor.shouldCreateJobs()) {
-        queue.addAll(supervisor.createJobs(source, destination, jobParams));
+        final List<CompactionJob> jobs = supervisor.createJobs(source, destination, jobParams);
+        queue.addAll(jobs);
+
+        runStats.add(
+            Stats.Compaction.CREATED_JOBS,
+            RowKey.of(Dimension.DATASOURCE, source.getDataSource()),
+            jobs.size()
+        );
       } else {
         log.debug("Skipping job creation for supervisor[%s]", supervisorId);
       }
