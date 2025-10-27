@@ -54,6 +54,7 @@ public class K3sClusterWithOperatorResource extends K3sClusterResource
   private static final String HELM_REPO_NAME = "datainfra";
   private static final String HELM_REPO_URL = "https://charts.datainfra.io";
   private static final String HELM_CHART_NAME = "datainfra/druid-operator";
+  private static final String OPERATOR_IMAGE_TAG = "v1.3.0";
   private static final String HELM_VERSION = "v3.13.1";
   private static final String HELM_PLATFORM = "linux-amd64";
   private static final String HELM_MOUNT_PATH = "/usr/local/bin/helm";
@@ -202,6 +203,7 @@ public class K3sClusterWithOperatorResource extends K3sClusterResource
           "--namespace", OPERATOR_NAMESPACE,
           "--create-namespace",
           "--set", "env.WATCH_NAMESPACE=" + DRUID_NAMESPACE,
+          "--set", "image.tag=" + OPERATOR_IMAGE_TAG,
           "--wait",
           "--timeout", "3m"
       );

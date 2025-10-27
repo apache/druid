@@ -26,10 +26,10 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.utils.ByteUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.CompressedPools;
+import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 
 import java.io.IOException;
@@ -128,10 +128,10 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     META_SERDE_HELPER.writeTo(channel, this);
-    baseBuffers.writeTo(channel, smoosher);
+    baseBuffers.writeTo(channel, fileBuilder);
   }
 
   @VisibleForTesting
@@ -143,7 +143,7 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
   public static CompressedVSizeColumnarIntsSupplier fromByteBuffer(
       ByteBuffer buffer,
       ByteOrder order,
-      SmooshedFileMapper mapper
+      SegmentFileMapper mapper
   )
   {
     byte versionFromBuffer = buffer.get();

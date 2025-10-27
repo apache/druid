@@ -64,9 +64,13 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.nested.NestedPathField;
+import org.apache.druid.segment.nested.ObjectStorageEncoding;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
+import org.apache.druid.segment.virtual.NestedMergeVirtualColumn;
+import org.apache.druid.segment.virtual.NestedObjectVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.CalciteNestedDataQueryTest.NestedComponentSupplier;
@@ -79,17 +83,20 @@ import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 
 @SqlTestFrameworkConfig.ComponentSupplier(NestedComponentSupplier.class)
-public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
+public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 {
   public static final String DATA_SOURCE = "nested";
   public static final String DATA_SOURCE_MIXED = "nested_mix";
@@ -103,7 +110,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .put("t", "2000-01-01")
                   .put("string", "aaa")
                   .put("string_sparse", "zzz")
-                  .put("nest", ImmutableMap.of("x", 100L, "y", 2.02, "z", "300", "mixed", 1L, "mixed2", "1"))
+                  .put("nest", ImmutableMap.of("mixed", 1L, "mixed2", "1", "x", 100L, "y", 2.02, "z", "300"))
                   .put(
                       "nester",
                       ImmutableMap.of("array", ImmutableList.of("a", "b"), "n", ImmutableMap.of("x", "hello"))
@@ -120,7 +127,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .put("t", "2000-01-01")
                   .put("string", "ccc")
                   .put("string_sparse", "10")
-                  .put("nest", ImmutableMap.of("x", 200L, "y", 3.03, "z", "abcdef", "mixed", 1.1, "mixed2", 1L))
+                  .put("nest", ImmutableMap.of("mixed", 1.1, "mixed2", 1L, "x", 200L, "y", 3.03, "z", "abcdef"))
                   .put("long", 3L)
                   .build(),
       ImmutableMap.<String, Object>builder()
@@ -138,7 +145,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       ImmutableMap.<String, Object>builder()
                   .put("t", "2000-01-02")
                   .put("string", "aaa")
-                  .put("nest", ImmutableMap.of("x", 100L, "y", 2.02, "z", "400", "mixed2", 1.1))
+                  .put("nest", ImmutableMap.of("mixed2", 1.1, "x", 100L, "y", 2.02, "z", "400"))
                   .put("nester", ImmutableMap.of("array", ImmutableList.of("a", "b"), "n", ImmutableMap.of("x", 1L)))
                   .put("long", 5L)
                   .build(),
@@ -150,41 +157,80 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .build()
   );
 
-  public static final InputRowSchema ALL_JSON_COLUMNS = new InputRowSchema(
-      new TimestampSpec("t", "iso", null),
-      DimensionsSpec.builder().setDimensions(
-          ImmutableList.<DimensionSchema>builder()
-                       .add(AutoTypeColumnSchema.of("string"))
-                       .add(AutoTypeColumnSchema.of("nest"))
-                       .add(AutoTypeColumnSchema.of("nester"))
-                       .add(AutoTypeColumnSchema.of("long"))
-                       .add(AutoTypeColumnSchema.of("string_sparse"))
-                       .build()
-      ).build(),
-      null
-  );
+  @Nested
+  public static class DefaultCalciteNestedDataQueryTest extends CalciteNestedDataQueryTest
+  {
+  }
 
-  public static final InputRowSchema JSON_AND_SCALAR_MIX = new InputRowSchema(
-      new TimestampSpec("t", "iso", null),
-      DimensionsSpec.builder().setDimensions(
-          ImmutableList.<DimensionSchema>builder()
-                       .add(new StringDimensionSchema("string"))
-                       .add(AutoTypeColumnSchema.of("nest"))
-                       .add(AutoTypeColumnSchema.of("nester"))
-                       .add(new LongDimensionSchema("long"))
-                       .add(new StringDimensionSchema("string_sparse"))
-                       .build()
-      ).build(),
-      null
-  );
-  public static final List<InputRow> ROWS =
-      RAW_ROWS.stream().map(raw -> TestDataBuilder.createRow(raw, ALL_JSON_COLUMNS)).collect(Collectors.toList());
+  @Nested
+  public static class NoneObjectStorageCalciteNestedDataQueryTest extends CalciteNestedDataQueryTest
+  {
+    public NoneObjectStorageCalciteNestedDataQueryTest()
+    {
+      super();
+      // Override with none object storage
+      NestedCommonFormatColumnFormatSpec noneObjectStorage =
+          NestedCommonFormatColumnFormatSpec.builder().setObjectStorageEncoding(ObjectStorageEncoding.NONE).build();
+      Mockito.when(ALL_JSON_COLUMNS.getDimensionsSpec()).thenReturn(
+          DimensionsSpec.builder().setDimensions(
+              ImmutableList.<DimensionSchema>builder()
+                           .add(new AutoTypeColumnSchema("string", null, noneObjectStorage))
+                           .add(new AutoTypeColumnSchema("nest", null, noneObjectStorage))
+                           .add(new AutoTypeColumnSchema("nester", null, noneObjectStorage))
+                           .add(new AutoTypeColumnSchema("long", null, noneObjectStorage))
+                           .add(new AutoTypeColumnSchema("string_sparse", null, noneObjectStorage))
+                           .build()
+          ).build());
+      Mockito.when(JSON_AND_SCALAR_MIX.getDimensionsSpec()).thenReturn(
+          DimensionsSpec.builder().setDimensions(
+              ImmutableList.<DimensionSchema>builder()
+                           .add(new StringDimensionSchema("string"))
+                           .add(new AutoTypeColumnSchema("nest", null, noneObjectStorage))
+                           .add(new AutoTypeColumnSchema("nester", null, noneObjectStorage))
+                           .add(new LongDimensionSchema("long"))
+                           .add(new StringDimensionSchema("string_sparse"))
+                           .build()
+          ).build());
+    }
+  }
 
-  public static final List<InputRow> ROWS_MIX =
-      RAW_ROWS.stream().map(raw -> TestDataBuilder.createRow(raw, JSON_AND_SCALAR_MIX)).collect(Collectors.toList());
+  public static final InputRowSchema ALL_JSON_COLUMNS = Mockito.mock(InputRowSchema.class);
+
+  public static final InputRowSchema JSON_AND_SCALAR_MIX = Mockito.mock(InputRowSchema.class);
+
+  public static List<InputRow> constructInputRows(InputRowSchema inputRowSchema)
+  {
+    return RAW_ROWS.stream().map(raw -> TestDataBuilder.createRow(raw, inputRowSchema)).collect(Collectors.toList());
+  }
 
   public static class NestedComponentSupplier extends StandardComponentSupplier
   {
+    static {
+      Mockito.when(ALL_JSON_COLUMNS.getTimestampSpec()).thenReturn(
+          new TimestampSpec("t", "iso", null));
+      Mockito.when(ALL_JSON_COLUMNS.getDimensionsSpec()).thenReturn(
+          DimensionsSpec.builder().setDimensions(
+              ImmutableList.<DimensionSchema>builder()
+                           .add(AutoTypeColumnSchema.of("string"))
+                           .add(AutoTypeColumnSchema.of("nest"))
+                           .add(AutoTypeColumnSchema.of("nester"))
+                           .add(AutoTypeColumnSchema.of("long"))
+                           .add(AutoTypeColumnSchema.of("string_sparse"))
+                           .build()
+          ).build());
+      Mockito.when(JSON_AND_SCALAR_MIX.getTimestampSpec()).thenReturn(new TimestampSpec("t", "iso", null));
+      Mockito.when(JSON_AND_SCALAR_MIX.getDimensionsSpec()).thenReturn(
+          DimensionsSpec.builder().setDimensions(
+              ImmutableList.<DimensionSchema>builder()
+                           .add(new StringDimensionSchema("string"))
+                           .add(AutoTypeColumnSchema.of("nest"))
+                           .add(AutoTypeColumnSchema.of("nester"))
+                           .add(new LongDimensionSchema("long"))
+                           .add(new StringDimensionSchema("string_sparse"))
+                           .build()
+          ).build());
+    }
+
     public NestedComponentSupplier(TempDirProducer tempFolderProducer)
     {
       super(tempFolderProducer);
@@ -207,7 +253,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                               .withRollup(false)
                               .build()
                       )
-                      .rows(ROWS)
+                      .rows(constructInputRows(ALL_JSON_COLUMNS))
                       .buildMMappedIndex();
 
       final QueryableIndex indexMix11 =
@@ -223,7 +269,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                               .withRollup(false)
                               .build()
                       )
-                      .rows(ROWS)
+                      .rows(constructInputRows(ALL_JSON_COLUMNS))
                       .buildMMappedIndex();
 
 
@@ -240,7 +286,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                               .withRollup(false)
                               .build()
                       )
-                      .rows(ROWS_MIX)
+                      .rows(constructInputRows(JSON_AND_SCALAR_MIX))
                       .buildMMappedIndex();
 
       final QueryableIndex indexMix21 =
@@ -256,7 +302,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                               .withRollup(false)
                               .build()
                       )
-                      .rows(ROWS_MIX)
+                      .rows(constructInputRows(JSON_AND_SCALAR_MIX))
                       .buildMMappedIndex();
 
       final QueryableIndex indexMix22 =
@@ -272,7 +318,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                               .withRollup(false)
                               .build()
                       )
-                      .rows(ROWS)
+                      .rows(constructInputRows(ALL_JSON_COLUMNS))
                       .buildMMappedIndex();
 
       final QueryableIndex indexArrays =
@@ -582,7 +628,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new ExpressionVirtualColumn("v0", "strlen(\"string\")", ColumnType.LONG, queryFramework().macroTable())
+                            new ExpressionVirtualColumn(
+                                "v0",
+                                "strlen(\"string\")",
+                                ColumnType.LONG,
+                                queryFramework().macroTable()
+                            )
                         )
                         .setDimensions(dimensions(new DefaultDimensionSpec("nester", "d0", ColumnType.NESTED_DATA)))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "v0")))
@@ -611,7 +662,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new ExpressionVirtualColumn("v0", "strlen(\"string\")", ColumnType.LONG, queryFramework().macroTable())
+                            new ExpressionVirtualColumn(
+                                "v0",
+                                "strlen(\"string\")",
+                                ColumnType.LONG,
+                                queryFramework().macroTable()
+                            )
                         )
                         .setDimensions(dimensions(new DefaultDimensionSpec("nester", "d0", ColumnType.NESTED_DATA)))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "v0")))
@@ -1163,7 +1219,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                           new NestedFieldVirtualColumn("arrayNestedLong", "$[0]", "v3", ColumnType.LONG_ARRAY)
                       )
                       .columns("v0", "v1", "v2", "v3")
-                      .columnTypes(ColumnType.STRING_ARRAY, ColumnType.LONG_ARRAY, ColumnType.DOUBLE_ARRAY, ColumnType.LONG_ARRAY)
+                      .columnTypes(
+                          ColumnType.STRING_ARRAY,
+                          ColumnType.LONG_ARRAY,
+                          ColumnType.DOUBLE_ARRAY,
+                          ColumnType.LONG_ARRAY
+                      )
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
             )
@@ -1669,23 +1730,23 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
         .expectedQuery(
             GroupByQuery.builder()
-                .setDataSource(
-                    UnnestDataSource.create(
-                        TableDataSource.create(DATA_SOURCE_ARRAYS),
-                        expressionVirtualColumn("j0.unnest", "\"arrayLongNulls\"", ColumnType.LONG_ARRAY),
-                        null
-                    )
-                )
-                .setInterval(querySegmentSpec(Filtration.eternity()))
-                .setGranularity(Granularities.ALL)
-                .setDimensions(
-                    dimensions(
-                        new DefaultDimensionSpec("j0.unnest", "d0", ColumnType.LONG)
-                    )
-                )
-                .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
-                .build()
+                        .setDataSource(
+                            UnnestDataSource.create(
+                                TableDataSource.create(DATA_SOURCE_ARRAYS),
+                                expressionVirtualColumn("j0.unnest", "\"arrayLongNulls\"", ColumnType.LONG_ARRAY),
+                                null
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("j0.unnest", "d0", ColumnType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                        .build()
         )
         .expectedResults(
             ImmutableList.of(
@@ -2753,7 +2814,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{
                 "aaa",
-                "[{\"x\":100,\"y\":2.02,\"z\":\"300\",\"mixed\":1,\"mixed2\":\"1\"},{\"x\":100,\"y\":2.02,\"z\":\"400\",\"mixed2\":1.1}]",
+                "[{\"mixed\":1,\"mixed2\":\"1\",\"x\":100,\"y\":2.02,\"z\":\"300\"},{\"mixed2\":1.1,\"x\":100,\"y\":2.02,\"z\":\"400\"}]",
                 2L
             },
             new Object[]{
@@ -2763,7 +2824,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             },
             new Object[]{
                 "ccc",
-                "[{\"x\":200,\"y\":3.03,\"z\":\"abcdef\",\"mixed\":1.1,\"mixed2\":1}]",
+                "[{\"mixed\":1.1,\"mixed2\":1,\"x\":200,\"y\":3.03,\"z\":\"abcdef\"}]",
                 1L
             },
             new Object[]{
@@ -4646,8 +4707,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{null, 4L},
-            new Object[]{"[\"x\",\"y\",\"z\",\"mixed\",\"mixed2\"]", 2L},
-            new Object[]{"[\"x\",\"y\",\"z\",\"mixed2\"]", 1L}
+            new Object[]{"[\"mixed\",\"mixed2\",\"x\",\"y\",\"z\"]", 2L},
+            new Object[]{"[\"mixed2\",\"x\",\"y\",\"z\"]", 1L}
         ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.STRING_ARRAY)
@@ -4853,10 +4914,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .dataSource(DATA_SOURCE)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .virtualColumns(
-                      new ExpressionVirtualColumn(
+                      new NestedObjectVirtualColumn(
                           "v0",
-                          "json_object('n',\"v1\",'x',\"v2\")",
-                          ColumnType.NESTED_DATA,
+                          ImmutableMap.of(
+                              "n", new NestedObjectVirtualColumn.TypedExpression("\"v1\"", ColumnType.NESTED_DATA),
+                              "x", new NestedObjectVirtualColumn.TypedExpression("\"v2\"", ColumnType.STRING)
+                          ),
                           queryFramework().macroTable()
                       ),
                       new NestedFieldVirtualColumn(
@@ -4891,7 +4954,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testJsonMerging()
+  public void testJsonMerging_lhsStringLiteral()
   {
     testQuery(
         "SELECT "
@@ -4904,7 +4967,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .virtualColumns(
                       new ExpressionVirtualColumn(
                           "v0",
-                          "json_merge('{\\u0022a\\u0022:\\u0022x\\u0022}',json_object('x',\"v1\"))",
+                          "json_merge('{\\u0022a\\u0022:\\u0022x\\u0022}',\"v2\")",
                           ColumnType.NESTED_DATA,
                           queryFramework().macroTable()
                       ),
@@ -4912,12 +4975,21 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                           "nest",
                           "v1",
                           ColumnType.STRING,
-                          ImmutableList.of(
-                            new NestedPathField("x")
-                          ),
+                          ImmutableList.of(new NestedPathField("x")),
                           false,
                           null,
                           false
+                      ),
+                      new NestedObjectVirtualColumn(
+                          "v2",
+                          ImmutableMap.of(
+                              "x",
+                              new NestedObjectVirtualColumn.TypedExpression(
+                                  "\"v1\"",
+                                  ColumnType.STRING
+                              )
+                          ),
+                          queryFramework().macroTable()
                       )
                   )
                   .columns("v0")
@@ -4941,6 +5013,159 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testJsonMerging_lhsJsonObject()
+  {
+    testQuery(
+        "SELECT\n"
+        + "JSON_MERGE(\n"
+        + "  JSON_OBJECT('a': 'x'),\n"
+        + "  JSON_OBJECT(KEY 'x' VALUE JSON_VALUE(nest, '$.x'))"
+        + ")\n"
+        + "FROM druid.nested",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      new NestedMergeVirtualColumn("v0", List.of("v1", "v3"), queryFramework().macroTable()),
+                      new NestedObjectVirtualColumn(
+                          "v1",
+                          ImmutableMap.of("a", new NestedObjectVirtualColumn.TypedExpression("'x'", ColumnType.STRING)),
+                          queryFramework().macroTable()
+                      ),
+                      new NestedFieldVirtualColumn(
+                          "nest",
+                          "v2",
+                          ColumnType.STRING,
+                          ImmutableList.of(new NestedPathField("x")),
+                          false,
+                          null,
+                          false
+                      ),
+                      new NestedObjectVirtualColumn(
+                          "v3",
+                          ImmutableMap.of(
+                              "x",
+                              new NestedObjectVirtualColumn.TypedExpression("\"v2\"", ColumnType.STRING)
+                          ),
+                          queryFramework().macroTable()
+                      )
+                  )
+                  .columns("v0")
+                  .columnTypes(ColumnType.ofComplex("json"))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"{\"a\":\"x\",\"x\":\"100\"}"},
+            new Object[]{"{\"a\":\"x\",\"x\":null}"},
+            new Object[]{"{\"a\":\"x\",\"x\":\"200\"}"},
+            new Object[]{"{\"a\":\"x\",\"x\":null}"},
+            new Object[]{"{\"a\":\"x\",\"x\":null}"},
+            new Object[]{"{\"a\":\"x\",\"x\":\"100\"}"},
+            new Object[]{"{\"a\":\"x\",\"x\":null}"}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.NESTED_DATA)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testJsonValue_onJsonObject_onJsonValue()
+  {
+    testQuery(
+        "SELECT\n"
+        + "JSON_VALUE(\n"
+        + "  JSON_OBJECT('a': JSON_VALUE(nest, '$.x')),\n"
+        + "  '$.a'\n"
+        + ")\n"
+        + "FROM druid.nested",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      new NestedFieldVirtualColumn(
+                          "v2",
+                          "v0",
+                          ColumnType.STRING,
+                          ImmutableList.of(new NestedPathField("a")),
+                          false,
+                          null,
+                          false
+                      ),
+                      new NestedFieldVirtualColumn(
+                          "nest",
+                          "v1",
+                          ColumnType.STRING,
+                          ImmutableList.of(new NestedPathField("x")),
+                          false,
+                          null,
+                          false
+                      ),
+                      new NestedObjectVirtualColumn(
+                          "v2",
+                          ImmutableMap.of(
+                              "a",
+                              new NestedObjectVirtualColumn.TypedExpression("\"v1\"", ColumnType.STRING)
+                          ),
+                          queryFramework().macroTable()
+                      )
+                  )
+                  .columns("v0")
+                  .columnTypes(ColumnType.STRING)
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"100"},
+            new Object[]{null},
+            new Object[]{"200"},
+            new Object[]{null},
+            new Object[]{null},
+            new Object[]{"100"},
+            new Object[]{null}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testJsonMerging_withAggregateFilterAndQueryFilter()
+  {
+    testQuery(
+        "SELECT\n"
+        + "COUNT(*) FILTER (WHERE TIME_IN_INTERVAL(__time, '1000/3000'))\n"
+        + "FROM nested\n"
+        + "WHERE JSON_VALUE(JSON_MERGE(JSON_OBJECT(), \"nest\"), '$.x') = 100",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      new NestedFieldVirtualColumn("v2", "$.x", "v0", ColumnType.LONG),
+                      new NestedObjectVirtualColumn("v1", Map.of(), queryFramework().macroTable()),
+                      new NestedMergeVirtualColumn("v2", List.of("v1", "nest"), queryFramework().macroTable())
+                  )
+                  .filters(equality("v0", 100L, ColumnType.LONG))
+                  .aggregators(
+                      new FilteredAggregatorFactory(
+                          new CountAggregatorFactory("a0"),
+                          range("__time", ColumnType.LONG, timestamp("1000"), timestamp("3000"), false, true)
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{2L}),
+        RowSignature.builder().add("EXPR$0", ColumnType.LONG).build()
+    );
+  }
+
+  @Test
   public void testCompositionTyping()
   {
     testQuery(
@@ -4952,11 +5177,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .dataSource(DATA_SOURCE)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .virtualColumns(
-                      new ExpressionVirtualColumn(
+                      new NestedFieldVirtualColumn(
+                          "v2",
+                          "$.x",
                           "v0",
-                          "json_value(json_object('x',\"v1\"),'$.x', 'LONG')",
-                          ColumnType.LONG,
-                          queryFramework().macroTable()
+                          ColumnType.LONG
                       ),
                       new NestedFieldVirtualColumn(
                           "nest",
@@ -4966,6 +5191,14 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                           false,
                           "$.x",
                           false
+                      ),
+                      new NestedObjectVirtualColumn(
+                          "v2",
+                          ImmutableMap.of(
+                              "x",
+                              new NestedObjectVirtualColumn.TypedExpression("\"v1\"", ColumnType.LONG)
+                          ),
+                          queryFramework().macroTable()
                       )
                   )
                   .columns("v0")
@@ -5020,7 +5253,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .columns("string", "v0", "v1", "v2")
-                  .columnTypes(ColumnType.STRING, ColumnType.NESTED_DATA, ColumnType.NESTED_DATA, ColumnType.NESTED_DATA)
+                  .columnTypes(
+                      ColumnType.STRING,
+                      ColumnType.NESTED_DATA,
+                      ColumnType.NESTED_DATA,
+                      ColumnType.NESTED_DATA
+                  )
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
@@ -5987,7 +6225,44 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       "cObjectArray",
                       "cnt"
                   )
-                  .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.LONG, ColumnType.DOUBLE, ColumnType.LONG, ColumnType.STRING, ColumnType.DOUBLE, ColumnType.ofComplex("json"), ColumnType.LONG_ARRAY, ColumnType.STRING_ARRAY, ColumnType.ofComplex("json"), ColumnType.ofComplex("json"), ColumnType.STRING_ARRAY, ColumnType.STRING_ARRAY, ColumnType.LONG_ARRAY, ColumnType.LONG_ARRAY, ColumnType.DOUBLE_ARRAY, ColumnType.DOUBLE_ARRAY, ColumnType.STRING_ARRAY, ColumnType.LONG_ARRAY, ColumnType.ofComplex("json"), ColumnType.ofComplex("json"), ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.DOUBLE, ColumnType.ofComplex("json"), ColumnType.STRING_ARRAY, ColumnType.LONG_ARRAY, ColumnType.DOUBLE_ARRAY, ColumnType.LONG_ARRAY, ColumnType.ofComplex("json"), ColumnType.LONG_ARRAY, ColumnType.ofComplex("json"), ColumnType.ofComplex("json"), ColumnType.LONG)
+                  .columnTypes(
+                      ColumnType.LONG,
+                      ColumnType.STRING,
+                      ColumnType.LONG,
+                      ColumnType.DOUBLE,
+                      ColumnType.LONG,
+                      ColumnType.STRING,
+                      ColumnType.DOUBLE,
+                      ColumnType.ofComplex("json"),
+                      ColumnType.LONG_ARRAY,
+                      ColumnType.STRING_ARRAY,
+                      ColumnType.ofComplex("json"),
+                      ColumnType.ofComplex("json"),
+                      ColumnType.STRING_ARRAY,
+                      ColumnType.STRING_ARRAY,
+                      ColumnType.LONG_ARRAY,
+                      ColumnType.LONG_ARRAY,
+                      ColumnType.DOUBLE_ARRAY,
+                      ColumnType.DOUBLE_ARRAY,
+                      ColumnType.STRING_ARRAY,
+                      ColumnType.LONG_ARRAY,
+                      ColumnType.ofComplex("json"),
+                      ColumnType.ofComplex("json"),
+                      ColumnType.STRING,
+                      ColumnType.STRING,
+                      ColumnType.LONG,
+                      ColumnType.DOUBLE,
+                      ColumnType.ofComplex("json"),
+                      ColumnType.STRING_ARRAY,
+                      ColumnType.LONG_ARRAY,
+                      ColumnType.DOUBLE_ARRAY,
+                      ColumnType.LONG_ARRAY,
+                      ColumnType.ofComplex("json"),
+                      ColumnType.LONG_ARRAY,
+                      ColumnType.ofComplex("json"),
+                      ColumnType.ofComplex("json"),
+                      ColumnType.LONG
+                  )
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
@@ -6317,9 +6592,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{"{\"x\":100,\"y\":2.02,\"z\":\"300\",\"mixed\":1,\"mixed2\":\"1\"}"},
-            new Object[]{"{\"x\":200,\"y\":3.03,\"z\":\"abcdef\",\"mixed\":1.1,\"mixed2\":1}"},
-            new Object[]{"{\"x\":100,\"y\":2.02,\"z\":\"400\",\"mixed2\":1.1}"}
+            new Object[]{"{\"mixed\":1,\"mixed2\":\"1\",\"x\":100,\"y\":2.02,\"z\":\"300\"}"},
+            new Object[]{"{\"mixed\":1.1,\"mixed2\":1,\"x\":200,\"y\":3.03,\"z\":\"abcdef\"}"},
+            new Object[]{"{\"mixed2\":1.1,\"x\":100,\"y\":2.02,\"z\":\"400\"}"}
         ),
         RowSignature.builder()
                     .add("nest", ColumnType.NESTED_DATA)
@@ -6364,25 +6639,30 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     testBuilder()
         .sql(
             "select c,long,coalesce(c,long) as col "
-                + " from druid.all_auto, unnest(json_value(arrayNestedLong, '$[1]' returning bigint array)) as u(c) "
+            + " from druid.all_auto, unnest(json_value(arrayNestedLong, '$[1]' returning bigint array)) as u(c) "
         )
         .expectedQueries(
             ImmutableList.of(
                 Druids.newScanQueryBuilder()
-                    .dataSource(
-                        UnnestDataSource.create(
-                            new TableDataSource(DATA_SOURCE_ALL),
-                            new NestedFieldVirtualColumn("arrayNestedLong", "$[1]", "j0.unnest", ColumnType.LONG_ARRAY),
-                            null
-                        )
-                    )
-                    .virtualColumns(expressionVirtualColumn("v0", "nvl(\"j0.unnest\",\"long\")", ColumnType.LONG))
-                    .intervals(querySegmentSpec(Filtration.eternity()))
-                    .columns("j0.unnest", "long", "v0")
-                    .columnTypes(ColumnType.LONG, ColumnType.LONG, ColumnType.LONG)
-                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                    .context(QUERY_CONTEXT_DEFAULT)
-                    .build()
+                      .dataSource(
+                          UnnestDataSource.create(
+                              new TableDataSource(DATA_SOURCE_ALL),
+                              new NestedFieldVirtualColumn(
+                                  "arrayNestedLong",
+                                  "$[1]",
+                                  "j0.unnest",
+                                  ColumnType.LONG_ARRAY
+                              ),
+                              null
+                          )
+                      )
+                      .virtualColumns(expressionVirtualColumn("v0", "nvl(\"j0.unnest\",\"long\")", ColumnType.LONG))
+                      .intervals(querySegmentSpec(Filtration.eternity()))
+                      .columns("j0.unnest", "long", "v0")
+                      .columnTypes(ColumnType.LONG, ColumnType.LONG, ColumnType.LONG)
+                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                      .context(QUERY_CONTEXT_DEFAULT)
+                      .build()
             )
         )
         .expectedResults(
@@ -6399,10 +6679,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         )
         .expectedSignature(
             RowSignature.builder()
-                .add("c", ColumnType.LONG)
-                .add("long", ColumnType.LONG)
-                .add("col", ColumnType.LONG)
-                .build()
+                        .add("c", ColumnType.LONG)
+                        .add("long", ColumnType.LONG)
+                        .add("col", ColumnType.LONG)
+                        .build()
         )
         .run();
   }

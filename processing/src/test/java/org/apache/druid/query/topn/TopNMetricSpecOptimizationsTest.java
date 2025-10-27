@@ -83,8 +83,8 @@ public class TopNMetricSpecOptimizationsTest extends InitializedNullHandlingTest
 
     arrayProviderToTest.ignoreAfterThreshold();
     Pair<Integer, Integer> thePair = arrayProviderToTest.computeStartEnd(cardinality);
-    Assert.assertEquals(new Integer(0), thePair.lhs);
-    Assert.assertEquals(new Integer(threshold), thePair.rhs);
+    Assert.assertEquals(Integer.valueOf(0), thePair.lhs);
+    Assert.assertEquals(Integer.valueOf(threshold), thePair.rhs);
   }
 
   @Test
@@ -116,8 +116,8 @@ public class TopNMetricSpecOptimizationsTest extends InitializedNullHandlingTest
 
     arrayProviderToTest.ignoreAfterThreshold();
     Pair<Integer, Integer> thePair = arrayProviderToTest.computeStartEnd(cardinality);
-    Assert.assertEquals(new Integer(0), thePair.lhs);
-    Assert.assertEquals(new Integer(threshold), thePair.rhs);
+    Assert.assertEquals(Integer.valueOf(0), thePair.lhs);
+    Assert.assertEquals(Integer.valueOf(threshold), thePair.rhs);
   }
 
   @Test
@@ -149,8 +149,8 @@ public class TopNMetricSpecOptimizationsTest extends InitializedNullHandlingTest
 
     arrayProviderToTest.ignoreAfterThreshold();
     Pair<Integer, Integer> thePair = arrayProviderToTest.computeStartEnd(cardinality);
-    Assert.assertEquals(new Integer(0), thePair.lhs);
-    Assert.assertEquals(new Integer(cardinality), thePair.rhs);
+    Assert.assertEquals(Integer.valueOf(0), thePair.lhs);
+    Assert.assertEquals(Integer.valueOf(cardinality), thePair.rhs);
   }
 
   @Test
@@ -182,8 +182,8 @@ public class TopNMetricSpecOptimizationsTest extends InitializedNullHandlingTest
 
     arrayProviderToTest.ignoreAfterThreshold();
     Pair<Integer, Integer> thePair = arrayProviderToTest.computeStartEnd(cardinality);
-    Assert.assertEquals(new Integer(0), thePair.lhs);
-    Assert.assertEquals(new Integer(cardinality), thePair.rhs);
+    Assert.assertEquals(Integer.valueOf(0), thePair.lhs);
+    Assert.assertEquals(Integer.valueOf(cardinality), thePair.rhs);
   }
 
   @Test
@@ -213,8 +213,8 @@ public class TopNMetricSpecOptimizationsTest extends InitializedNullHandlingTest
     );
 
     Pair<Integer, Integer> thePair = arrayProviderToTest.computeStartEnd(cardinality);
-    Assert.assertEquals(new Integer(0), thePair.lhs);
-    Assert.assertEquals(new Integer(cardinality), thePair.rhs);
+    Assert.assertEquals(Integer.valueOf(0), thePair.lhs);
+    Assert.assertEquals(Integer.valueOf(cardinality), thePair.rhs);
   }
 
   private TopNCursorInspector makeCursorInspector(String start, String end, int cardinality)

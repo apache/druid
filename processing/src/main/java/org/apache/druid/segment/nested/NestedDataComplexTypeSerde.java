@@ -19,11 +19,7 @@
 
 package org.apache.druid.segment.nested;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import it.unimi.dsi.fastutil.Hash;
 import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.NestedCommonFormatColumnHandler;
@@ -34,7 +30,7 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ObjectStrategyComplexTypeStrategy;
+import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
@@ -42,7 +38,6 @@ import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class NestedDataComplexTypeSerde extends ComplexMetricSerde
@@ -97,131 +92,54 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
   }
 
   @Override
-  public ObjectStrategy getObjectStrategy()
+  public ObjectStrategy<Object> getObjectStrategy()
   {
     return new ObjectStrategy<>()
     {
       @Override
       public int compare(Object o1, Object o2)
       {
-        return Comparators.<StructuredData>naturalNullsFirst()
-                          .compare(StructuredData.wrap(o1), StructuredData.wrap(o2));
+        return TypeStrategies.NESTED.compare(o1, o2);
       }
 
       @Override
       public Class<? extends Object> getClazz()
       {
-        return StructuredData.class;
+        return TypeStrategies.NESTED.getClazz();
       }
 
       @Nullable
       @Override
-      public Object fromByteBuffer(ByteBuffer buffer, int numBytes)
+      public StructuredData fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
-        return deserializeBuffer(buffer, numBytes);
+        return TypeStrategies.NESTED.fromByteBuffer(buffer, numBytes);
       }
 
       @Nullable
       @Override
       public byte[] toBytes(@Nullable Object val)
       {
-        return serializeToBytes(val);
+        return TypeStrategies.NESTED.toBytes(val);
       }
 
       @Override
       public boolean readRetainsBufferReference()
       {
-        return false;
+        return TypeStrategies.NESTED.readRetainsBufferReference();
       }
     };
   }
 
-  /**
-   * Reads numBytes from the position to the limit of the byte buffer argument and deserailizes it into
-   * a {@link StructuredData} object using {@link ColumnSerializerUtils#SMILE_MAPPER}.
-   */
-  public static StructuredData deserializeBuffer(ByteBuffer buf)
+  @Override
+  public TypeStrategy<Object> getTypeStrategy()
   {
-    return deserializeBuffer(buf, buf.remaining());
-  }
-
-  /**
-   * Reads numBytes from the byte buffer argument and deserailizes it into a {@link StructuredData} object
-   * using {@link ColumnSerializerUtils#SMILE_MAPPER}.
-   */
-  public static StructuredData deserializeBuffer(ByteBuffer buf, int numBytes)
-  {
-    if (numBytes == 0) {
-      return null;
-    }
-
-    final byte[] bytes = new byte[numBytes];
-    buf.get(bytes, 0, numBytes);
-    return deserializeBytes(bytes);
-  }
-
-  /**
-   * Converts the bytes array into a {@link StructuredData} object using {@link ColumnSerializerUtils#SMILE_MAPPER}.
-   */
-  public static StructuredData deserializeBytes(byte[] bytes)
-  {
-    return deserializeBytes(bytes, 0, bytes.length);
-  }
-
-  /**
-   * Reads the bytes between offset and len from the byte array and deserializes a {@link StructuredData} object from
-   * it, using {@link ColumnSerializerUtils#SMILE_MAPPER}.
-   */
-  public static StructuredData deserializeBytes(byte[] bytes, int offset, int len)
-  {
-    if (len == 0) {
-      return null;
-    }
-    try {
-      return ColumnSerializerUtils.SMILE_MAPPER.readValue(bytes, offset, len, StructuredData.class);
-    }
-    catch (IOException e) {
-      throw DruidException.defensive(e, "Unable to deserialize value");
-    }
-  }
-
-  /**
-   * Returns a byte array containing the val as serialized by {@link ColumnSerializerUtils#SMILE_MAPPER}.
-   */
-  public static byte[] serializeToBytes(@Nullable Object val)
-  {
-    if (val == null) {
-      return new byte[0];
-    }
-    try {
-      return ColumnSerializerUtils.SMILE_MAPPER.writeValueAsBytes(val);
-    }
-    catch (JsonProcessingException e) {
-      throw DruidException.defensive(e, "Unable to serialize value [%s]", val);
-    }
+    return TypeStrategies.NESTED;
   }
 
   @Override
-  public <T extends Comparable<T>> TypeStrategy<T> getTypeStrategy()
+  public byte[] toBytes(@Nullable Object val)
   {
-    return new ObjectStrategyComplexTypeStrategy<>(
-        getObjectStrategy(),
-        ColumnType.ofComplex(TYPE_NAME),
-        new Hash.Strategy<>()
-        {
-          @Override
-          public int hashCode(Object o)
-          {
-            return StructuredData.wrap(o).equalityHash();
-          }
-
-          @Override
-          public boolean equals(Object a, Object b)
-          {
-            return StructuredData.wrap(a).compareTo(StructuredData.wrap(b)) == 0;
-          }
-        }
-    );
+    return getObjectStrategy().toBytes(val);
   }
 
   public static class NestedColumnFormatV4 implements ColumnFormat

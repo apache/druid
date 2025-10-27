@@ -127,7 +127,6 @@
 
   "task/run/time" : { "dimensions" : ["dataSource", "taskType"], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds taken to run a task."},
   "task/pending/time" : { "dimensions" : ["dataSource", "taskType"], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds taken for a task to wait for running."},
-  "task/action/log/time" : { "dimensions" : ["dataSource", "taskType"], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds taken to log a task action to the audit log."},
   "task/action/run/time" : { "dimensions" : ["dataSource", "taskType"], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds taken to execute a task action."},
   "task/action/success/count" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of task actions that were executed successfully during the emission period."},
   "task/action/failed/count" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of task actions that failed during the emission period."},
@@ -256,8 +255,5 @@
   "sys/tcpv4/in/errs" : { "dimensions" : [], "type" : "gauge", "help": "Errors while reading segments"},
   "sys/tcpv4/out/segs" : { "dimensions" : [], "type" : "gauge", "help": "Total segments sent"},
   "sys/tcpv4/out/rsts" : { "dimensions" : [], "type" : "gauge", "help": "Total out reset packets sent to reset the connection"},
-  "sys/tcpv4/retrans/segs" : { "dimensions" : [], "type" : "gauge", "help": "Total segments re-transmitted"},
-
-  "coordinator_segment/count" : { "dimensions" : ["dataSource"], "type" : "gauge", "help": "Number of served segments."},
-  "historical_segment/count" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge", "help": "Number of served segments."}
+  "sys/tcpv4/retrans/segs" : { "dimensions" : [], "type" : "gauge", "help": "Total segments re-transmitted"}
 }
