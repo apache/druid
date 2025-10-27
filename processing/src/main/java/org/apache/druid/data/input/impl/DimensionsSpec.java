@@ -42,7 +42,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 @PublicApi
@@ -70,7 +69,7 @@ public class DimensionsSpec
   public static final boolean DEFAULT_FORCE_TIME_SORT = true;
 
   private final List<DimensionSchema> dimensions;
-  private final List<String> dimensionExclusions;
+  private final Set<String> dimensionExclusions;
   private final Map<String, DimensionSchema> dimensionSchemaMap;
   private final boolean includeAllDimensions;
   private final Boolean forceSegmentSortByTime;
@@ -127,10 +126,12 @@ public class DimensionsSpec
     this.dimensions = dimensions == null
                       ? new ArrayList<>()
                       : Lists.newArrayList(dimensions);
-
+    
+    // Iteration order affects JSON serialization used by generateSequenceName(),
+    // which depends on stable DataSchema hashing for supervisor consistency
     this.dimensionExclusions = (dimensionExclusions == null)
-                               ? ImmutableList.of()
-                               : ImmutableList.copyOf(new HashSet<>(dimensionExclusions).stream().sorted().collect(Collectors.toList()));
+                               ? new HashSet<>()
+                               : Sets.newHashSet(dimensionExclusions);
 
     List<SpatialDimensionSchema> spatialDims = (spatialDimensions == null)
                                                ? new ArrayList<>()
@@ -164,7 +165,7 @@ public class DimensionsSpec
   @JsonProperty
   public Set<String> getDimensionExclusions()
   {
-    return new TreeSet<>(dimensionExclusions);
+    return dimensionExclusions;
   }
 
   @JsonProperty
@@ -268,11 +269,9 @@ public class DimensionsSpec
 
   public DimensionsSpec withDimensionExclusions(Set<String> dimExs)
   {
-    Set<String> merged = new HashSet<>(dimensionExclusions);
-    merged.addAll(dimExs);
     return new DimensionsSpec(
         dimensions,
-        ImmutableList.copyOf(merged.stream().sorted().collect(Collectors.toList())),
+        ImmutableList.copyOf(Sets.union(dimensionExclusions, dimExs)),
         null,
         includeAllDimensions,
         useSchemaDiscovery,
@@ -297,7 +296,7 @@ public class DimensionsSpec
   {
     List<String> dimNames = getDimensionNames();
     Preconditions.checkArgument(
-        Sets.intersection(Sets.newHashSet(this.dimensionExclusions), Sets.newHashSet(dimNames)).isEmpty(),
+        Sets.intersection(this.dimensionExclusions, Sets.newHashSet(dimNames)).isEmpty(),
         "dimensions and dimensions exclusions cannot overlap"
     );
 
