@@ -39,10 +39,8 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
-import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
@@ -65,6 +63,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.TestSeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
@@ -1151,7 +1150,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             taskTuningConfig,
             taskIoConfig,
             context,
-            "0"
+            "0",
+            null,
+            recordSupplier
     );
 
     TestSeekableStreamIndexTask id2 = new TestSeekableStreamIndexTask(
@@ -1162,7 +1163,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             taskTuningConfig,
             taskIoConfig,
             context,
-            "0"
+            "0",
+            null,
+            recordSupplier
     );
 
     TestSeekableStreamIndexTask id3 = new TestSeekableStreamIndexTask(
@@ -1173,7 +1176,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         taskTuningConfig,
         taskIoConfig,
         context,
-        "0"
+        "0",
+        null,
+        recordSupplier
     );
 
     final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
@@ -1364,7 +1369,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             ioConfig
         ),
         context,
-        "0"
+        "0",
+        null,
+        recordSupplier
     );
 
     TestSeekableStreamIndexTask id2 = new TestSeekableStreamIndexTask(
@@ -1384,7 +1391,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             ioConfig
         ),
         context,
-        "1"
+        "1",
+        null,
+        recordSupplier
     );
 
     TestSeekableStreamIndexTask id3 = new TestSeekableStreamIndexTask(
@@ -1404,7 +1413,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             ioConfig
         ),
         context,
-        "2"
+        "2",
+        null,
+        recordSupplier
     );
 
     final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
@@ -1596,7 +1607,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         ),
         context,
         "0",
-        streamingTaskRunner
+        streamingTaskRunner,
+        recordSupplier
     );
 
     final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
@@ -2856,78 +2868,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     };
   }
 
-  private class TestSeekableStreamIndexTask extends SeekableStreamIndexTask<String, String, ByteEntity>
-  {
-    private final SeekableStreamIndexTaskRunner<String, String, ByteEntity> streamingTaskRunner;
-
-    public TestSeekableStreamIndexTask(
-        String id,
-        @Nullable String supervisorId,
-        @Nullable TaskResource taskResource,
-        DataSchema dataSchema,
-        SeekableStreamIndexTaskTuningConfig tuningConfig,
-        SeekableStreamIndexTaskIOConfig<String, String> ioConfig,
-        @Nullable Map<String, Object> context,
-        @Nullable String groupId
-    )
-    {
-      this(
-          id,
-          supervisorId,
-          taskResource,
-          dataSchema,
-          tuningConfig,
-          ioConfig,
-          context,
-          groupId,
-          null
-      );
-    }
-
-    public TestSeekableStreamIndexTask(
-        String id,
-        @Nullable String supervisorId,
-        @Nullable TaskResource taskResource,
-        DataSchema dataSchema,
-        SeekableStreamIndexTaskTuningConfig tuningConfig,
-        SeekableStreamIndexTaskIOConfig<String, String> ioConfig,
-        @Nullable Map<String, Object> context,
-        @Nullable String groupId,
-        @Nullable SeekableStreamIndexTaskRunner<String, String, ByteEntity> streamingTaskRunner
-    )
-    {
-      super(
-          id,
-          supervisorId,
-          taskResource,
-          dataSchema,
-          tuningConfig,
-          ioConfig,
-          context,
-          groupId
-      );
-      this.streamingTaskRunner = streamingTaskRunner;
-    }
-
-    @Nullable
-    @Override
-    protected SeekableStreamIndexTaskRunner<String, String, ByteEntity> createTaskRunner()
-    {
-      return streamingTaskRunner;
-    }
-
-    @Override
-    protected RecordSupplier<String, String, ByteEntity> newTaskRecordSupplier(final TaskToolbox toolbox)
-    {
-      return recordSupplier;
-    }
-
-    @Override
-    public String getType()
-    {
-      return "test";
-    }
-  }
 
   private abstract class BaseTestSeekableStreamSupervisor extends SeekableStreamSupervisor<String, String, ByteEntity>
   {
@@ -3018,7 +2958,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           taskTuningConfig,
           taskIoConfig,
           null,
-          null
+          null,
+          null,
+          recordSupplier
       ));
     }
 
