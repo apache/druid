@@ -264,7 +264,7 @@ public class LatchableEmitter extends StubServiceEmitter
     /**
      * Matches an event only if the metric value satisfies the given matcher.
      */
-    public EventMatcher hasValue(Matcher<Long> valueMatcher)
+    public EventMatcher hasValueMatching(Matcher<Long> valueMatcher)
     {
       this.valueMatcher = valueMatcher;
       return this;
@@ -282,7 +282,7 @@ public class LatchableEmitter extends StubServiceEmitter
     /**
      * Matches an event if the value of the given dimension satisfies the matcher.
      */
-    public EventMatcher hasDimension(String dimension, Matcher<Object> matcher)
+    public EventMatcher hasDimensionMatching(String dimension, Matcher<Object> matcher)
     {
       dimensionMatchers.put(dimension, matcher);
       return this;

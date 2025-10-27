@@ -32,6 +32,7 @@ import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.template.BatchIndexingJob;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.compaction.CompactionCandidate;
@@ -134,6 +135,7 @@ public class CompactionJobQueue
       DruidDatasourceDestination destination
   )
   {
+    final Stopwatch jobCreationTime = Stopwatch.createStarted();
     final String supervisorId = supervisor.getSpec().getId();
     try {
       if (supervisor.shouldCreateJobs()) {
@@ -144,6 +146,13 @@ public class CompactionJobQueue
     }
     catch (Exception e) {
       log.error(e, "Error while creating jobs for supervisor[%s]", supervisorId);
+    }
+    finally {
+      runStats.add(
+          Stats.Compaction.JOB_CREATION_TIME,
+          RowKey.of(Dimension.DATASOURCE, source.getDataSource()),
+          jobCreationTime.millisElapsed()
+      );
     }
   }
 

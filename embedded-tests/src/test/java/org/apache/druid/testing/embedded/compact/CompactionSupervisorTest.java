@@ -80,7 +80,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer()
       .setServerMemory(2_000_000_000L)
-      .addProperty("druid.worker.capacity", "4");
+      .addProperty("druid.worker.capacity", "20");
   private final EmbeddedOverlord overlord = new EmbeddedOverlord()
       .addProperty("druid.manager.segments.pollDuration", "PT1s")
       .addProperty("druid.manager.segments.useIncrementalCache", "always");
@@ -93,6 +93,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   {
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
+                               .useDefaultTimeoutForLatchableEmitter(600)
                                .addExtensions(
                                    CatalogClientModule.class,
                                    CatalogCoordinatorModule.class,
@@ -114,7 +115,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   public void enableCompactionSupervisors()
   {
     final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
-        o -> o.updateClusterCompactionConfig(new ClusterCompactionConfig(1.0, 10, null, true, null))
+        o -> o.updateClusterCompactionConfig(new ClusterCompactionConfig(1.0, 100, null, true, null))
     );
     Assertions.assertTrue(updateResponse.isSuccess());
   }
@@ -343,7 +344,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     overlord.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("interval/waitCompact/count")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
-                      .hasValue(Matchers.equalTo(0L))
+                      .hasValueMatching(Matchers.equalTo(0L))
     );
 
     // Wait for all submitted compaction jobs to finish
@@ -358,7 +359,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     );
     overlord.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("task/run/time")
-                      .hasDimension(DruidMetrics.TASK_TYPE, taskTypeMatcher)
+                      .hasDimensionMatching(DruidMetrics.TASK_TYPE, taskTypeMatcher)
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasCountAtLeast(numSubmittedTasks)
     );

@@ -212,6 +212,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   public void becomeLeader()
   {
     if (isLeader.compareAndSet(false, true)) {
+      log.info("Running compaction scheduler with period [%d] millis.", schedulePeriodMillis);
       scheduleOnExecutor(this::scheduledRun, schedulePeriodMillis);
     }
   }
@@ -336,6 +337,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
    */
   private synchronized void runCompactionDuty()
   {
+    final Stopwatch runDuration = Stopwatch.createStarted();
     final DataSourcesSnapshot dataSourcesSnapshot = getDatasourceSnapshot();
     final CompactionJobQueue queue = new CompactionJobQueue(
         dataSourcesSnapshot,
@@ -360,6 +362,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
 
     datasourceToCompactionSnapshot.set(queue.getCompactionSnapshots());
     emitStatsIfPeriodHasElapsed(queue.getRunStats());
+    emitStat(Stats.Compaction.SCHEDULER_RUN_TIME, RowKey.empty(), runDuration.millisElapsed());
   }
 
   /**
