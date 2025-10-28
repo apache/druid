@@ -253,7 +253,7 @@ public class CachingKubernetesPeonClient extends AbstractKubernetesPeonClient
     // I could not find constants for Pod phases in fabric8, so hardcoding them here.
     // They are documented here: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-phase
     List<String> matchingPhases = List.of("Running", "Succeeded", "Failed");
-    return pod.getStatus() != null &&
+    return pod.getStatus() != null && pod.getStatus().getPhase() != null &&
            matchingPhases.contains(pod.getStatus().getPhase());
   }
 

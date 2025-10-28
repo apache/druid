@@ -218,10 +218,27 @@ public class DirectKubernetesPeonClientTest
     Job job = new JobBuilder()
         .withNewMetadata()
         .withName(KUBERNETES_JOB_NAME)
+        .withUid("job-uid-123")
+        .endMetadata()
+        .build();
+
+    Pod pod = new PodBuilder()
+        .withNewMetadata()
+        .withName(POD_NAME)
+        .addToLabels("job-name", KUBERNETES_JOB_NAME)
+        .addNewOwnerReference()
+        .withApiVersion("batch/v1")
+        .withKind("Job")
+        .withName(KUBERNETES_JOB_NAME)
+        .withUid("job-uid-123")
+        .withController(true)
+        .withBlockOwnerDeletion(true)
+        .endOwnerReference()
         .endMetadata()
         .build();
 
     client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job).create();
+    client.pods().inNamespace(NAMESPACE).resource(pod).create();
 
     Assertions.assertTrue(instance.deletePeonJob(new K8sTaskId(TASK_NAME_PREFIX, ID)));
   }

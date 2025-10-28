@@ -25,6 +25,7 @@ import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.dsl.LogWatch;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
@@ -34,6 +35,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import java.net.HttpURLConnection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -517,5 +519,29 @@ public class CachingKubernetesPeonClientTest
 
     // Should timeout or detect job was never seen and return FAILED
     Assertions.assertEquals(PeonPhase.FAILED, response.getPhase());
+  }
+
+  @Test
+  void test_getPeonLogsWatcher_withJob_returnsWatchLogInOptional() throws InterruptedException
+  {
+    K8sTaskId taskId = new K8sTaskId("", "id");
+    Pod pod = new PodBuilder()
+        .withNewMetadata()
+        .withName(POD_NAME)
+        .addToLabels("job-name", taskId.getK8sJobName())
+        .endMetadata()
+        .build();
+
+    client.pods().inNamespace(NAMESPACE).resource(pod).create();
+
+    clientApi.waitForSync();
+
+    server.expect().get()
+          .withPath("/api/v1/namespaces/namespace/pods/id/log?pretty=false&container=main")
+          .andReturn(HttpURLConnection.HTTP_OK, "data")
+          .once();
+
+    Optional<LogWatch> maybeLogWatch = peonClient.getPeonLogWatcher(taskId);
+    Assertions.assertTrue(maybeLogWatch.isPresent());
   }
 }

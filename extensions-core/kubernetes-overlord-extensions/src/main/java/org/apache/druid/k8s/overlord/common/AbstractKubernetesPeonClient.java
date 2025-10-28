@@ -216,7 +216,7 @@ public abstract class AbstractKubernetesPeonClient
     try {
       LogWatch logWatch = k8sClient.pods()
                                    .inNamespace(namespace)
-                                   .resource(pod)
+                                   .withName(podName)
                                    .inContainer("main")
                                    .watchLog();
       if (logWatch == null) {
