@@ -137,6 +137,20 @@ then
     cp -f "$DRUID_CONFIG_COMMON" $COMMON_CONF_DIR/common.runtime.properties
 fi
 
+if [ -n "$DRUID_XMX" ]; then setJavaKey ${SERVICE} -Xmx -Xmx${DRUID_XMX}; fi
+if [ -n "$DRUID_XMS" ]; then setJavaKey ${SERVICE} -Xms -Xms${DRUID_XMS}; fi
+if [ -n "$DRUID_MAXNEWSIZE" ]; then setJavaKey ${SERVICE} -XX:MaxNewSize -XX:MaxNewSize=${DRUID_MAXNEWSIZE}; fi
+if [ -n "$DRUID_NEWSIZE" ]; then setJavaKey ${SERVICE} -XX:NewSize -XX:NewSize=${DRUID_NEWSIZE}; fi
+if [ -n "$DRUID_MAXDIRECTMEMORYSIZE" ]; then setJavaKey ${SERVICE} -XX:MaxDirectMemorySize -XX:MaxDirectMemorySize=${DRUID_MAXDIRECTMEMORYSIZE}; fi
+
+# Combine options from jvm.config and those given as JAVA_OPTS
+# If a value is specified in both then JAVA_OPTS will take precedence when using OpenJDK
+# However this behavior is not part of the spec and is thus implementation specific
+JAVA_OPTS="$(cat $SERVICE_CONF_DIR/jvm.config | xargs) $JAVA_OPTS"
+
+# Specify node type used for log4j2.xml
+JAVA_OPTS="-Ddruid.node.type=peon $JAVA_OPTS"
+
 SCONFIG=$(printf "%s_%s" DRUID_CONFIG ${SERVICE})
 SCONFIG=$(eval echo \$$(echo $SCONFIG))
 
