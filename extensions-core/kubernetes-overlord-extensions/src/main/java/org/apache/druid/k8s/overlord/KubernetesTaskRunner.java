@@ -83,6 +83,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -124,7 +125,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   // currently worker categories aren't supported, so it's hardcoded.
   protected static final String WORKER_CATEGORY = "_k8s_worker_category";
 
-  private int currentCapacity;
+  private final AtomicInteger currentCapacity;
 
   public KubernetesTaskRunner(
       TaskAdapter adapter,
@@ -144,8 +145,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     this.cleanupExecutor = Executors.newScheduledThreadPool(1);
     this.emitter = emitter;
 
-    this.currentCapacity = config.getCapacity();
-    this.tpe = new ThreadPoolExecutor(currentCapacity, currentCapacity, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(), Execs.makeThreadFactory("k8s-task-runner-%d", null));
+    this.currentCapacity = new AtomicInteger(config.getCapacity());
+    this.tpe = new ThreadPoolExecutor(currentCapacity.get(), currentCapacity.get(), 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(), Execs.makeThreadFactory("k8s-task-runner-%d", null));
     this.exec = MoreExecutors.listeningDecorator(this.tpe);
     configManager.addListener(KubernetesTaskRunnerDynamicConfig.CONFIG_KEY, StringUtils.format(OBSERVER_KEY, Thread.currentThread().getId()), this::syncCapacityWithDynamicConfig);
   }
@@ -194,19 +195,19 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private void syncCapacityWithDynamicConfig(KubernetesTaskRunnerDynamicConfig config)
   {
     int newCapacity = config.getCapacity();
-    if (newCapacity == currentCapacity) {
+    if (newCapacity == currentCapacity.get()) {
       return;
     }
-    log.info("Adjusting k8s task runner capacity from [%d] to [%d]", currentCapacity, newCapacity);
+    log.info("Adjusting k8s task runner capacity from [%d] to [%d]", currentCapacity.get(), newCapacity);
     // maximum pool size must always be greater than or equal to the core pool size
-    if (newCapacity < currentCapacity) {
+    if (newCapacity < currentCapacity.get()) {
       tpe.setCorePoolSize(newCapacity);
       tpe.setMaximumPoolSize(newCapacity);
     } else {
       tpe.setMaximumPoolSize(newCapacity);
       tpe.setCorePoolSize(newCapacity);
     }
-    currentCapacity = newCapacity;
+    currentCapacity.set(newCapacity);
   }
 
   private TaskStatus runTask(Task task)
@@ -450,7 +451,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Map<String, Long> getTotalTaskSlotCount()
   {
-    return ImmutableMap.of(WORKER_CATEGORY, (long) currentCapacity);
+    return ImmutableMap.of(WORKER_CATEGORY, (long) currentCapacity.get());
   }
 
   @Override
@@ -468,13 +469,13 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Map<String, Long> getIdleTaskSlotCount()
   {
-    return ImmutableMap.of(WORKER_CATEGORY, (long) Math.max(0, currentCapacity - tasks.size()));
+    return ImmutableMap.of(WORKER_CATEGORY, (long) Math.max(0, currentCapacity.get() - tasks.size()));
   }
 
   @Override
   public Map<String, Long> getUsedTaskSlotCount()
   {
-    return ImmutableMap.of(WORKER_CATEGORY, (long) Math.min(currentCapacity, tasks.size()));
+    return ImmutableMap.of(WORKER_CATEGORY, (long) Math.min(currentCapacity.get(), tasks.size()));
   }
 
   @Override
@@ -565,7 +566,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public int getTotalCapacity()
   {
-    return currentCapacity;
+    return currentCapacity.get();
   }
 
   @Override
