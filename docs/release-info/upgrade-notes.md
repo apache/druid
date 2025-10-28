@@ -44,7 +44,7 @@ Upgrade to Java 17 or 21. Note that some versions of Java 21 encountered issues 
 
 #### Jetty 12 
 
-A new server configuration option has been added: `druid.server.http.uriCompliance`. Jetty 12 by default has strict enforcement of RFC3986 URI format. This is a change from Jetty 9. To retain compatibility with legacy Druid, this config defaults to `LEGACY`, which uses the more permissive URI format enforcement that Jetty 9 used. If the cluster you operate does not require legacy compatibility, we recommend you use the upstream Jetty default of `RFC3986` in your Druid deployment. See the jetty documentation for more info.
+A new server configuration option has been added: `druid.server.http.uriCompliance`. Jetty 12 by default has strict enforcement of `RFC3986` URI format. This is a change from Jetty 9. To retain compatibility with legacy Druid, this config defaults to `LEGACY`, which uses the more permissive URI format enforcement that Jetty 9 used. If the cluster you operate does not require legacy compatibility, we recommend you use the upstream Jetty default of `RFC3986` in your Druid deployment. See the jetty documentation for more info.
 
 [#18424](https://github.com/apache/druid/pull/18424)
 
@@ -66,7 +66,7 @@ Druid 35.0.0 will ignore the extension if it's in the load list. Future versions
 
 #### pac4j extension
 
-Due to the upgrade from `pac4j` 4.x to 5.x, session serialization has changed from `pac4j`’s JavaSerializer to standard Java serialization. As a result, clients of clusters using the `pac4j` extension may be logged out during rolling upgrades and need to re‑authenticate.
+Due to the upgrade from `pac4j` 4 to 5, session serialization has changed from `pac4j`’s `JavaSerializer` to standard Java serialization. As a result, clients of clusters using the `pac4j` extension may be logged out during rolling upgrades and need to re‑authenticate.
 
 
 ## 34.0.0

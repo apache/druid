@@ -150,7 +150,7 @@ At ingestion time, dimension schemas in `dimensionsSpec` are now strictly valida
 
 ##### Other SQL-based ingestion improvements
 
-- Added the ability to configure the maximum frazme size. Generally, you don't need to change this unless you have very large rows [#18442](https://github.com/apache/druid/pull/18442)
+- Added the ability to configure the maximum frame size. Generally, you don't need to change this unless you have very large rows [#18442](https://github.com/apache/druid/pull/18442)
 - Added logging for when segment processing fails [#18378](https://github.com/apache/druid/pull/18378)
 - Improved logging to store the cause of invalid field exceptions [#18517](https://github.com/apache/druid/pull/18517) [#18517](https://github.com/apache/druid/pull/18517)
 
@@ -201,11 +201,11 @@ You can now  write exceptions that Druid encounters as a row and then verify whe
 
 - Added stricter validation for `GREATEST` and `LEAST` [#18562](https://github.com/apache/druid/pull/18562)
 - Added a query context option called `realtimeSegmentsOnly` that returns results from realtime segments only when set to `true` [#18329](https://github.com/apache/druid/pull/18329)
-- Improved the performance of the following query types by vectorizing them: 
+- Improved the performance of the following query types through vectorization: 
   - `CASE_SEARCHED` and `CASE_SIMPLE` queries [#18512](https://github.com/apache/druid/pull/18512)
   - `timestamp_ceil` and `timestamp_extract` queries [#18517](https://github.com/apache/druid/pull/18517)
   - `IF` expressions where the `THEN` and `ELSE` expressions [#18507](https://github.com/apache/druid/pull/18507)
-- Improved projections so that the granularty in queries can match UTC time zones [#18403](https://github.com/apache/druid/pull/18403)
+- Improved projections so that the granularity in queries can match UTC time zones [#18403](https://github.com/apache/druid/pull/18403)
 - Improved the deserialization time for intervals by more than 40% [#18477](https://github.com/apache/druid/pull/18477)
 - Improved the performance of `AND`/`OR` as well as `NOT`/`IS TRUE`/`IS FALSE` [#18491](https://github.com/apache/druid/pull/18491) [#18488](https://github.com/apache/druid/pull/18488)
 - Improved the performance of scan queries [#18441](https://github.com/apache/druid/pull/18441)
@@ -223,7 +223,7 @@ One way to view these labels is on the **Services** tab in the web console.
 
 #### TLS server configs
 
-Add a druid.server.https.forceApplyConfig config flag to indicate that the TLSServerConfig values should be applied irrespective of whether a preexisting SslContextFactory.Server binding exists.
+Add a `druid.server.https.forceApplyConfig` config flag to indicate that the `TLSServerConfig` values should be applied irrespective of whether a preexisting `SslContextFactory.Server` binding exists.
 
 [#18610](https://github.com/apache/druid/pull/18610)
 
@@ -278,7 +278,7 @@ Set `flushPeriod` to the `exporter` strategy in the `prometheus-emitter`.
 
 - Added a `statusCode` dimension to `query/time` and `sqlQuery/time` metrics containing the query result status code [#18633](https://github.com/apache/druid/pull/18633) [#18631](https://github.com/apache/druid/pull/18631)
 - Added `segment/schemaCache/refreshSkipped/count` metric that shows the number of segments that skipped schema refresh [#18561](https://github.com/apache/druid/pull/18561)
-- Added a metric for when auto-scaling /gets skipped when the pubishing task set is not empty [#18536](https://github.com/apache/druid/pull/18536)
+- Added a metric for when auto-scaling /gets skipped when the publishing task set is not empty [#18536](https://github.com/apache/druid/pull/18536)
 - Added Kafka consumer metrics for indexing tasks in the `prometheus-emitter` default metrics config [#18458](https://github.com/apache/druid/pull/18458)
 - Added an event when a datasource gets dropped from the Coordinator: `segment/schemaCache/datasource/dropped/count` [#18497](https://github.com/apache/druid/pull/18497)
 - Added the `taskType` dimension to the following Prometheus metrics to distinguish between realtime and compaction tasks: `ingest/count`, `ingest/segments/count`, and `ingest/tombstones/count` [#18452](https://github.com/apache/druid/pull/18452)
@@ -358,9 +358,9 @@ Upgrade to Java 17 or 21. Note that some versions of Java 21 encountered issues 
 
 Druid now uses Jetty 12. Your deployment may be impacted depending, specifically with regards to URI compliance and SNI host checks.
 
-A new server configuration option has been added: `druid.server.http.uriCompliance`. Jetty 12 by default has strict enforcement of RFC3986 URI format. This is a change from Jetty 9. To retain compatibility with legacy Druid, this config defaults to `LEGACY`, which uses the more permissive URI format enforcement that Jetty 9 used. If the cluster you operate does not require legacy compatibility, we recommend you use the upstream Jetty default of `RFC3986` in your Druid deployment. See the jetty documentation for more info.
+A new server configuration option has been added: `druid.server.http.uriCompliance`. Jetty 12 by default has strict enforcement of `RFC3986` URI format. This is a change from Jetty 9. To retain compatibility with legacy Druid, this config defaults to `LEGACY`, which uses the more permissive URI format enforcement that Jetty 9 used. If the cluster you operate does not require legacy compatibility, we recommend you use the upstream Jetty default of `RFC3986` in your Druid deployment. See the jetty documentation for more info.
 
-Jetty 12 servers  do strict SNI host0 checks when TLS is enabled. If the host your client is connecting to the server with does not match what is in the keystore, even if there is only one certificate in that keystore, it will return a 400 response. This could impact some use cases, such as folks connecting over `localhost` for whatever reason. If this change will break your deployment, you can opt-out of the change by setting `druid.server.http.enforceStrictSNIHostChecking` to false in the runtime.properties for some or all of your Druid services. It is recommended that you modify your client behavior to accommodate this change in `jetty` instead of overriding the config whenever possible.
+Jetty 12 servers  do strict SNI `host0` checks when TLS is enabled. If the host your client is connecting to the server with does not match what is in the keystore, even if there is only one certificate in that keystore, it will return a 400 response. This could impact some use cases, such as folks connecting over `localhost` for whatever reason. If this change will break your deployment, you can opt-out of the change by setting `druid.server.http.enforceStrictSNIHostChecking` to false in the runtime.properties for some or all of your Druid services. It is recommended that you modify your client behavior to accommodate this change in `jetty` instead of overriding the config whenever possible.
 
 [#18424](https://github.com/apache/druid/pull/18424) [#18623](https://github.com/apache/druid/pull/18623)
 
@@ -382,7 +382,7 @@ Druid 35.0.0 will ignore the extension if it's in the load list. Future versions
 
 #### pac4j extension
 
-Due to the upgrade from `pac4j` 4.x to 5.x, session serialization has changed from `pac4j`’s JavaSerializer to standard Java serialization. As a result, clients of clusters using the `pac4j` extension may be logged out during rolling upgrades and need to re‑authenticate.
+Due to the upgrade from `pac4j` 4 to 5, session serialization has changed from `pac4j`’s `JavaSerializer` to standard Java serialization. As a result, clients of clusters using the `pac4j` extension may be logged out during rolling upgrades and need to re‑authenticate.
 
 ### Incompatible changes
 
@@ -410,7 +410,7 @@ The changes for PostgreSQL, MySQL and SQLServer are already complete. [#18479](h
 
 #### `DriudLeaderClient` removal
 
-`DruidLeaderClient` has been removed from extensions and replaced with a `ServiceClient`-based implmentation. Additionally, `CoordinatorServiceClient` for querying non-core APIs exposed by the Coordinator is available through `druid-server`.
+`DruidLeaderClient` has been removed from extensions and replaced with a `ServiceClient`-based implementation. Additionally, `CoordinatorServiceClient` for querying non-core APIs exposed by the Coordinator is available through `druid-server`.
 
 [#18297](https://github.com/apache/druid/pull/18297) [#18326](https://github.com/apache/druid/pull/18326)
 
