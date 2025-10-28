@@ -319,10 +319,10 @@ The [make-linkable-release-notes](bin/make-linkable-release-notes.py) script can
 The release branch should have all commits merged before you create a tag. A commit must be in the release branch if
 
 1) it is merged into the master branch before the release branch is created. In this case, the PR corresponding
-to the commit might not have the milestone tagged. The `tag-missing-milestones` script can be useful to find such PRs and
+to the commit might not have the milestone tagged. The [tag-missing-milestones](bin/tag-missing-milestones.py) script can be useful to find such PRs and
 tag them properly. See the above [Release notes](#release-notes) section for more details about the script.
 2) it is merged into the master branch after the release branch is created and tagged with the release version.
-In this case, the commit must be backported to the release branch. The `find-missing-backports` script can be used to
+In this case, the commit must be backported to the release branch. The [find-missing-backports](bin/find-missing-backports.py) script can be used to
 find such commits that have not been backported. Note that this script relies on the milestone tagged in the PR, so PRs
 must be tagged properly to make this script working. See the above [Release notes](#release-notes) section for more details about the script.
 
@@ -417,7 +417,7 @@ $ svn commit -m 'add 0.17.0-rc3 artifacts'
 
 > Before you start, you need the following: Python 3.11 (or later) and Node 16.14 (or later).
 
-This repo (`druid`) is the source of truth for the Markdown files. The Markdown files get copied to `druid-website-src` and built there as part of the release process. It's all handled by a script in that repo  called `do_all_things`.
+This repo (`druid-release`) is the source of truth for the Markdown files. The Markdown files get copied to `druid-website-src` and built there as part of the release process. It's all handled by a script in that repo  called `do_all_things`.
 
 For more thorough instructions and a description of what the `do_all_things` script does, see the [`druid-website-src` README](https://github.com/apache/druid-website-src)
 
@@ -439,15 +439,17 @@ For more thorough instructions and a description of what the `do_all_things` scr
    
 
 4. Make a PR to the src repo (https://github.com/apache/druid-website-src) for the release branch. In the changed files, you should see the following:
-  - In `published_versions` directory: HTML files for `docs/VERSION` , `docs/latest`, and assorted HTML and non-HTML files 
+  - In `build` directory: HTML files for `docs/VERSION` , `docs/latest`, and assorted HTML and non-HTML files 
   - In the `docs` directory at the root of the repo, the new Markdown files.
     
     All these files should be part of your PR to `druid-website-src`.  
-    Verify the site looks fine and that the versions on the homepage and Downloads page look correct. You can run `http-server` or something similar in `published_versions`.
+    Verify the site looks fine and that the versions on the homepage and Downloads page look correct. You can run `http-server` or something similar in `build`.
   - The PR to `druid-website-src` should not be merged. Leave it in draft for reference. It can be closed when you're ready to push to production. 
    
 
-5. Make a PR to the website repo (https://github.com/apache/druid-website) for the `asf-staging` branch using the contents of `published_versions` in `druid-website-src`. Once the website PR is pushed to `asf-staging`, https://druid.staged.apache.org/ will be updated near immediately with the new docs.
+5. Make a PR to the website repo (https://github.com/apache/druid-website) for the `asf-staging` branch using the contents of `build` in `druid-website-src`. 
+   - From `druid-website`, run `rsync -av ../druid-website-src/build/* .`, this overwrites assets/docs and doesn't delete docs from previous versions.
+   - Once the website PR is pushed to `asf-staging`, https://druid.staged.apache.org/ will be updated near immediately with the new docs.
 
 ### Create staged Maven repo
 
@@ -696,15 +698,17 @@ For more thorough instructions and a description of what the `do_all_things` scr
    
 
 5. Add the files to a PR to the src repo (https://github.com/apache/druid-website-src) for the release branch you just created. In the changed files, you should see the following:
-  - In `published_versions` directory: HTML files for `docs/VERSION` , `docs/latest`, and assorted HTML and non-HTML files. 
+  - In `build` directory: HTML files for `docs/VERSION` , `docs/latest`, and assorted HTML and non-HTML files. 
   - In the `docs` directory at the root of the repo, the new Markdown files.
     
     All these files should be part of your PR to `druid-website-src`.  
-    Verify the site looks fine and that the versions on the homepage and Downloads page look correct. You can run `http-server` or something similar in `published_versions`.
+    Verify the site looks fine and that the versions on the homepage and Downloads page look correct. You can run `http-server` or something similar in `build`.
 
-6. Make a PR to the website repo (https://github.com/apache/druid-website) for the `asf-site` branch using the contents of `published_versions` in `druid-website-src`. Once the website PR is pushed to `asf-site`, https://druid.apache.org/ will be updated near immediately with the new docs.
+6. Make a PR to the website repo (https://github.com/apache/druid-website) for the `asf-site` branch using the contents of `build` in `druid-website-src`. 
+  - From `druid-website`, run `rsync -av ../druid-website-src/build/* .`, this overwrites assets/docs and doesn't delete docs from previous versions.
+  - Once the website PR is pushed to `asf-site`, https://druid.apache.org/ will be updated near immediately with the new docs.
 
-7. When the site is published, the release PR to `druid-website-src` can also be merged. `asf-site` in `druid-website` and `published_versions` on the `master` branch in `druid-website-src` should align.
+7. When the site is published, the release PR to `druid-website-src` can also be merged. `asf-site` in `druid-website` and `build` on the `master` branch in `druid-website-src` should align.
 
 ### Draft a release on github
 
