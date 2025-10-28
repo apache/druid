@@ -241,24 +241,27 @@ public class SystemSchema extends AbstractSchema
   )
   {
     Preconditions.checkNotNull(serverView, "serverView");
-    this.tableMap = ImmutableMap.<String, Table>builder()
-                                .put(SEGMENTS_TABLE, new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper))
-                                .put(
-                                    SERVERS_TABLE,
-                                    new ServersTable(
-                                        druidNodeDiscoveryProvider,
-                                        serverInventoryView,
-                                        authorizerMapper,
-                                        overlordClient,
-                                        coordinatorClient,
-                                        jsonMapper
-                                    )
-                                )
-                                .put(SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper))
-                                .put(TASKS_TABLE, new TasksTable(overlordClient, authorizerMapper))
-                                .put(SUPERVISOR_TABLE, new SupervisorsTable(overlordClient, authorizerMapper))
-                                .put(SystemPropertiesTable.PROPERTIES_TABLE, new SystemPropertiesTable(druidNodeDiscoveryProvider, authorizerMapper, httpClient, jsonMapper))
-                                .build();
+    this.tableMap = ImmutableMap.of(
+      SEGMENTS_TABLE, 
+      new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper),
+      SERVERS_TABLE,
+      new ServersTable(
+          druidNodeDiscoveryProvider,
+          serverInventoryView,
+          authorizerMapper,
+          overlordClient,
+          coordinatorClient,
+          jsonMapper
+      ),
+      SERVER_SEGMENTS_TABLE,
+      new ServerSegmentsTable(serverView, authorizerMapper),
+      TASKS_TABLE,
+      new TasksTable(overlordClient, authorizerMapper),
+      SUPERVISOR_TABLE, 
+      new SupervisorsTable(overlordClient, authorizerMapper),
+      SystemPropertiesTable.PROPERTIES_TABLE, 
+      new SystemPropertiesTable(druidNodeDiscoveryProvider, authorizerMapper, httpClient, jsonMapper)
+    );
   }
 
   @Override
