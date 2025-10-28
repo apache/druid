@@ -38,6 +38,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.ServerModule;
+import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.guice.security.PolicyModule;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.jackson.JacksonModule;
@@ -218,7 +219,7 @@ public class SqlModuleTest
               binder.bind(CentralizedDatasourceSchemaConfig.class)
                     .toInstance(CentralizedDatasourceSchemaConfig.enabled(false));
               binder.bind(DefaultQueryConfig.class).toInstance(DefaultQueryConfig.NIL);
-              binder.bind(HttpClient.class).toInstance(httpClient);
+              binder.bind(HttpClient.class).annotatedWith(EscalatedClient.class).toInstance(httpClient);
             },
             sqlModule,
             new TestViewManagerModule()
