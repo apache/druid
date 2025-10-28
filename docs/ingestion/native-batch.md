@@ -333,8 +333,8 @@ The `partitionsSpec` types have different characteristics.
 |Property|Description|Default|Required|
 |--------|-----------|-------|---------|
 |`type`|Set the value to `dynamic`.|none|yes|
-|`maxRowsPerSegment`|Used in sharding. Determines how many rows are in each segment.|5000000|no|
-|`maxTotalRows`|Total number of rows across all segments waiting for being pushed. Used in determining when intermediate segment push should occur.|20000000|no|
+|`maxRowsPerSegment`|Used in sharding. Determines how many rows are in each segment. Value must be greater than 0.|5000000|no|
+|`maxTotalRows`|Total number of rows across all segments waiting for being pushed. Used in determining when intermediate segment push should occur. Value must be greater than 0.|20000000|no|
 
 With the dynamic partitioning, the parallel index task runs in a single phase spawning multiple worker tasks (type `single_phase_sub_task`), each of which creates segments.
 
