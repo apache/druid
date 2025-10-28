@@ -34,6 +34,7 @@ import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
@@ -61,15 +62,14 @@ import java.util.stream.Stream;
 /**
  * This table contains row per property. It contains all the properties of all druid servers.
  */
-public final class SystemPropertiesTable extends AbstractTable implements ScannableTable
+public class SystemPropertiesTable extends AbstractTable implements ScannableTable
 {
   public static final String PROPERTIES_TABLE = "server_properties";
 
   static final RowSignature PROPERTIES_SIGNATURE = RowSignature
       .builder()
-      .add("service_name", ColumnType.STRING)
+      .add("service_name_and_role", ColumnType.STRING)
       .add("server", ColumnType.STRING)
-      .add("node_roles", ColumnType.STRING)
       .add("property", ColumnType.STRING)
       .add("value", ColumnType.STRING)
       .build();
@@ -114,29 +114,37 @@ public final class SystemPropertiesTable extends AbstractTable implements Scanna
     SystemSchema.checkStateReadAccessForServers(authenticationResult, authorizerMapper);
     final Iterator<DiscoveryDruidNode> druidServers = SystemSchema.getDruidServers(druidNodeDiscoveryProvider);
 
-    // ! TODO use string builder instead and issue: there are unique service names for each service so combining node_roles we lose the service names
-    final Map<String, Pair<String, Stream<Object[]>>> serverToPropertiesMap = new HashMap<>();
+    final Map<String, Pair<StringBuilder, Stream<Object[]>>> serverToPropertiesMap = new HashMap<>();
     druidServers.forEachRemaining(discoveryDruidNode -> {
       final DruidNode druidNode = discoveryDruidNode.getDruidNode();
       final Map<String, String> propertiesMap = getProperties(druidNode);
       if (serverToPropertiesMap.containsKey(druidNode.getHostAndPortToUse())) {
-        Pair<String, Stream<Object[]>> pair = serverToPropertiesMap.get(druidNode.getHostAndPortToUse());
-        serverToPropertiesMap.put(druidNode.getHostAndPortToUse(), Pair.of(pair.lhs + "," + discoveryDruidNode.getNodeRole().getJsonName(), pair.rhs));
+        Pair<StringBuilder, Stream<Object[]>> pair = serverToPropertiesMap.get(druidNode.getHostAndPortToUse());
+        serverToPropertiesMap.put(druidNode.getHostAndPortToUse(), Pair.of(addServiceNameAndNodeRole(pair.lhs, discoveryDruidNode.getDruidNode().getServiceName(), discoveryDruidNode.getNodeRole().getJsonName(), false), pair.rhs));
+      } else {
+        final StringBuilder builder = new StringBuilder();
+        addServiceNameAndNodeRole(builder, discoveryDruidNode.getDruidNode().getServiceName(), discoveryDruidNode.getNodeRole().getJsonName(), true);
+        serverToPropertiesMap.put(druidNode.getHostAndPortToUse(), Pair.of(builder, propertiesMap.entrySet().stream()
+                                                                                                              .map(entry -> new Object[]{
+                                                                                                                    druidNode.getHostAndPortToUse(),
+                                                                                                                    entry.getKey(),
+                                                                                                                    entry.getValue()
+                                                                                                              })
+            )
+        );
       }
-      else {
-      serverToPropertiesMap.put(
-          druidNode.getHostAndPortToUse(), Pair.of(discoveryDruidNode.getNodeRole().getJsonName(), propertiesMap.entrySet().stream()
-                                                        .map(entry -> new Object[]{
-                                                            druidNode.getServiceName(),
-                                                            druidNode.getHostAndPortToUse(),
-                                                            discoveryDruidNode.getNodeRole().getJsonName(),
-                                                            entry.getKey(),
-                                                            entry.getValue()
-                                                        }))
-      );
-                                                      }
     });
-    return Linq4j.asEnumerable(serverToPropertiesMap.values().stream().flatMap(pair -> pair.rhs.map(entry -> new Object[]{entry[0], entry[1], pair.lhs, entry[3], entry[4]})).collect(Collectors.toList()));
+    return Linq4j.asEnumerable(serverToPropertiesMap.values().stream().flatMap(pair -> pair.rhs.map(entry -> new Object[]{pair.lhs.toString(), entry[0], entry[1], entry[2]})).collect(Collectors.toList()));
+  }
+
+  private static StringBuilder addServiceNameAndNodeRole(StringBuilder builder, String serviceName, String nodeRole, boolean isFirstEntry)
+  {
+    if (isFirstEntry) {
+      builder.append(StringUtils.format("[%s,%s]", serviceName, nodeRole));
+    } else {
+      builder.append(StringUtils.format(",[%s,%s]", serviceName, nodeRole));
+    }
+    return builder;
   }
 
   private Map<String, String> getProperties(DruidNode druidNode)
