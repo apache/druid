@@ -22,7 +22,6 @@ package org.apache.druid.sql.calcite.schema;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.FluentIterable;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Linq4j;
@@ -33,6 +32,7 @@ import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
@@ -51,20 +51,25 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+/**
+ * This table contains row per property. It contains all the properties of all druid servers.
+ */
 public final class SystemPropertiesTable extends AbstractTable implements ScannableTable
 {
-  public static final String PROPERTIES_TABLE = "properties";
+  public static final String PROPERTIES_TABLE = "server_properties";
 
   static final RowSignature PROPERTIES_SIGNATURE = RowSignature
       .builder()
-      .add("service", ColumnType.STRING)
-      .add("host", ColumnType.STRING)
-      .add("server_type", ColumnType.STRING)
+      .add("service_name", ColumnType.STRING)
+      .add("server", ColumnType.STRING)
+      .add("node_roles", ColumnType.STRING)
       .add("property", ColumnType.STRING)
       .add("value", ColumnType.STRING)
       .build();
@@ -109,38 +114,40 @@ public final class SystemPropertiesTable extends AbstractTable implements Scanna
     SystemSchema.checkStateReadAccessForServers(authenticationResult, authorizerMapper);
     final Iterator<DiscoveryDruidNode> druidServers = SystemSchema.getDruidServers(druidNodeDiscoveryProvider);
 
-    final FluentIterable<Object[]> results = FluentIterable
-        .from(() -> druidServers)
-        .transformAndConcat((DiscoveryDruidNode discoveryDruidNode) -> {
-          final DruidNode druidNode = discoveryDruidNode.getDruidNode();
-          final Map<String, String> propertiesMap = getProperties(druidNode);
-          return propertiesMap.entrySet().stream()
-                              .map(entry -> new Object[]{
-                                  druidNode.getServiceName(),
-                                  druidNode.getHost(),
-                                  discoveryDruidNode.getNodeRole().getJsonName(),
-                                  entry.getKey(),
-                                  entry.getValue()
-                              })
-                              .collect(Collectors.toList());
-        });
-    return Linq4j.asEnumerable(results);
+    // ! TODO use string builder instead and issue: there are unique service names for each service so combining node_roles we lose the service names
+    final Map<String, Pair<String, Stream<Object[]>>> serverToPropertiesMap = new HashMap<>();
+    druidServers.forEachRemaining(discoveryDruidNode -> {
+      final DruidNode druidNode = discoveryDruidNode.getDruidNode();
+      final Map<String, String> propertiesMap = getProperties(druidNode);
+      if (serverToPropertiesMap.containsKey(druidNode.getHostAndPortToUse())) {
+        Pair<String, Stream<Object[]>> pair = serverToPropertiesMap.get(druidNode.getHostAndPortToUse());
+        serverToPropertiesMap.put(druidNode.getHostAndPortToUse(), Pair.of(pair.lhs + "," + discoveryDruidNode.getNodeRole().getJsonName(), pair.rhs));
+      }
+      else {
+      serverToPropertiesMap.put(
+          druidNode.getHostAndPortToUse(), Pair.of(discoveryDruidNode.getNodeRole().getJsonName(), propertiesMap.entrySet().stream()
+                                                        .map(entry -> new Object[]{
+                                                            druidNode.getServiceName(),
+                                                            druidNode.getHostAndPortToUse(),
+                                                            discoveryDruidNode.getNodeRole().getJsonName(),
+                                                            entry.getKey(),
+                                                            entry.getValue()
+                                                        }))
+      );
+                                                      }
+    });
+    return Linq4j.asEnumerable(serverToPropertiesMap.values().stream().flatMap(pair -> pair.rhs.map(entry -> new Object[]{entry[0], entry[1], pair.lhs, entry[3], entry[4]})).collect(Collectors.toList()));
   }
 
   private Map<String, String> getProperties(DruidNode druidNode)
   {
+    final String url = druidNode.getUriToUse().resolve("/status/properties").toString();
     try {
-      final String url = druidNode.getUriToUse().resolve("/status/properties").toString();
       final Request request = new Request(HttpMethod.GET, new URL(url));
       final StringFullResponseHolder response;
-      try {
-        response = httpClient
-            .go(request, new StringFullResponseHandler(StandardCharsets.UTF_8))
-            .get();
-      }
-      catch (ExecutionException e) {
-        throw new RE(e, "HTTP request to[%s] failed", request.getUrl());
-      }
+      response = httpClient
+          .go(request, new StringFullResponseHandler(StandardCharsets.UTF_8))
+          .get();
 
       if (response.getStatus().getCode() != HttpServletResponse.SC_OK) {
         throw new RE(
@@ -151,13 +158,17 @@ public final class SystemPropertiesTable extends AbstractTable implements Scanna
         );
       }
       return jsonMapper.readValue(
-          response.getContent(), new TypeReference<Map<String, String>>()
+          response.getContent(),
+          new TypeReference<Map<String, String>>()
           {
           }
       );
     }
     catch (IOException | InterruptedException e) {
       throw new RuntimeException(e);
+    }
+    catch (ExecutionException e) {
+      throw new RE(e, "HTTP request to[%s] failed", url);
     }
   }
 }

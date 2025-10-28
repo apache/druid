@@ -37,6 +37,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
@@ -93,6 +94,8 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   private SegmentManager segmentManager;
   @Mock
   private DruidOperatorTable druidOperatorTable;
+  @Mock
+  private HttpClient httpClient;
 
   private DruidCalciteSchemaModule target;
   private Injector injector;
@@ -125,6 +128,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
           binder.bind(CoordinatorClient.class).to(NoopCoordinatorClient.class);
           binder.bind(CentralizedDatasourceSchemaConfig.class)
                 .toInstance(CentralizedDatasourceSchemaConfig.create());
+          binder.bind(HttpClient.class).toInstance(httpClient);
         },
         new LifecycleModule(),
         target);

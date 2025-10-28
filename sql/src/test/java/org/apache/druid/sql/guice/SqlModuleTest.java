@@ -42,6 +42,7 @@ import org.apache.druid.guice.security.PolicyModule;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.GenericQueryMetricsFactory;
@@ -119,6 +120,9 @@ public class SqlModuleTest
   @Mock
   private QueryRunnerFactoryConglomerate conglomerate;
 
+  @Mock
+  private HttpClient httpClient;
+
   private Injector injector;
 
   @Before
@@ -134,7 +138,8 @@ public class SqlModuleTest
         queryToolChestWarehouse,
         lookupExtractorFactoryContainerProvider,
         joinableFactory,
-        segmentCacheManager
+        segmentCacheManager,
+        httpClient
     );
   }
 
@@ -213,6 +218,7 @@ public class SqlModuleTest
               binder.bind(CentralizedDatasourceSchemaConfig.class)
                     .toInstance(CentralizedDatasourceSchemaConfig.enabled(false));
               binder.bind(DefaultQueryConfig.class).toInstance(DefaultQueryConfig.NIL);
+              binder.bind(HttpClient.class).toInstance(httpClient);
             },
             sqlModule,
             new TestViewManagerModule()

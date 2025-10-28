@@ -1116,6 +1116,9 @@ public class SystemSchema extends AbstractSchema
     }
   }
 
+  /**
+   * Returns an iterator over all discoverable Druid nodes in the cluster.
+   */
   public static Iterator<DiscoveryDruidNode> getDruidServers(DruidNodeDiscoveryProvider druidNodeDiscoveryProvider)
   {
     return Arrays.stream(NodeRole.values())
