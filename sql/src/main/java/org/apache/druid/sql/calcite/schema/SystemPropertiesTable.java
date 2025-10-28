@@ -68,8 +68,9 @@ public class SystemPropertiesTable extends AbstractTable implements ScannableTab
 
   static final RowSignature PROPERTIES_SIGNATURE = RowSignature
       .builder()
-      .add("service_name_and_role", ColumnType.STRING)
+      .add("service_name", ColumnType.STRING)
       .add("server", ColumnType.STRING)
+      .add("node_roles", ColumnType.STRING)
       .add("property", ColumnType.STRING)
       .add("value", ColumnType.STRING)
       .build();
@@ -120,12 +121,13 @@ public class SystemPropertiesTable extends AbstractTable implements ScannableTab
       final Map<String, String> propertiesMap = getProperties(druidNode);
       if (serverToPropertiesMap.containsKey(druidNode.getHostAndPortToUse())) {
         Pair<StringBuilder, Stream<Object[]>> pair = serverToPropertiesMap.get(druidNode.getHostAndPortToUse());
-        serverToPropertiesMap.put(druidNode.getHostAndPortToUse(), Pair.of(addServiceNameAndNodeRole(pair.lhs, discoveryDruidNode.getDruidNode().getServiceName(), discoveryDruidNode.getNodeRole().getJsonName(), false), pair.rhs));
+        pair.lhs.append(StringUtils.format(",%s", discoveryDruidNode.getNodeRole().getJsonName()));
       } else {
         final StringBuilder builder = new StringBuilder();
-        addServiceNameAndNodeRole(builder, discoveryDruidNode.getDruidNode().getServiceName(), discoveryDruidNode.getNodeRole().getJsonName(), true);
+        builder.append(StringUtils.format("%s", discoveryDruidNode.getNodeRole().getJsonName()));
         serverToPropertiesMap.put(druidNode.getHostAndPortToUse(), Pair.of(builder, propertiesMap.entrySet().stream()
                                                                                                               .map(entry -> new Object[]{
+                                                                                                                    druidNode.getServiceName(),
                                                                                                                     druidNode.getHostAndPortToUse(),
                                                                                                                     entry.getKey(),
                                                                                                                     entry.getValue()
@@ -134,17 +136,7 @@ public class SystemPropertiesTable extends AbstractTable implements ScannableTab
         );
       }
     });
-    return Linq4j.asEnumerable(serverToPropertiesMap.values().stream().flatMap(pair -> pair.rhs.map(entry -> new Object[]{pair.lhs.toString(), entry[0], entry[1], entry[2]})).collect(Collectors.toList()));
-  }
-
-  private static StringBuilder addServiceNameAndNodeRole(StringBuilder builder, String serviceName, String nodeRole, boolean isFirstEntry)
-  {
-    if (isFirstEntry) {
-      builder.append(StringUtils.format("[%s,%s]", serviceName, nodeRole));
-    } else {
-      builder.append(StringUtils.format(",[%s,%s]", serviceName, nodeRole));
-    }
-    return builder;
+    return Linq4j.asEnumerable(serverToPropertiesMap.values().stream().flatMap(pair -> pair.rhs.map(entry -> new Object[]{entry[0], entry[1], pair.lhs.toString(), entry[2], entry[3]})).collect(Collectors.toList()));
   }
 
   private Map<String, String> getProperties(DruidNode druidNode)

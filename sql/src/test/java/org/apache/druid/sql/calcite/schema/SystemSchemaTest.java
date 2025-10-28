@@ -575,7 +575,7 @@ public class SystemSchemaTest extends CalciteTestBase
                                                                                 .get("server_properties");
     final RelDataType propertiesRowType = propertiesTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> propertiesFields = propertiesRowType.getFieldList();
-    Assert.assertEquals(4, propertiesFields.size());
+    Assert.assertEquals(5, propertiesFields.size());
   }
 
   @Test
@@ -1487,8 +1487,9 @@ public class SystemSchemaTest extends CalciteTestBase
     String coordinatorJson = "{\"druid.test-key\": \"test-value\"}";
     coordinatorResponseHolder.addChunk(coordinatorJson);
     expectedRows.add(new Object[]{
-        StringUtils.format("[%s,%s]", coordinator.getDruidNode().getServiceName(), coordinator.getNodeRole().getJsonName()), 
+        coordinator.getDruidNode().getServiceName(),
         coordinator.getDruidNode().getHostAndPortToUse(),
+        coordinator.getNodeRole().getJsonName(),
         "druid.test-key", "test-value"
     });
 
@@ -1498,8 +1499,9 @@ public class SystemSchemaTest extends CalciteTestBase
     coordinator2ResponseHolder.addChunk(coordinator2Json);
     expectedRows
         .add(new Object[]{
-            StringUtils.format("[%s,%s]", coordinator2.getDruidNode().getServiceName(), coordinator2.getNodeRole().getJsonName()), 
+            coordinator2.getDruidNode().getServiceName(),
             coordinator2.getDruidNode().getHostAndPortToUse(),
+            coordinator2.getNodeRole().getJsonName(),
             "druid.test-key3", "test-value3"
         });
 
@@ -1513,13 +1515,17 @@ public class SystemSchemaTest extends CalciteTestBase
     middleManagerResponseHolder.addChunk(middleManagerJson);
     expectedRows
         .add(new Object[]{
-            StringUtils.format("[%s,%s]", middleManager.getDruidNode().getServiceName(), middleManager.getNodeRole().getJsonName()),
-            middleManager.getDruidNode().getHostAndPortToUse(), "druid.test-key", "test-value"
+            middleManager.getDruidNode().getServiceName(),
+            middleManager.getDruidNode().getHostAndPortToUse(),
+            middleManager.getNodeRole().getJsonName(),
+            "druid.test-key", "test-value"
         });
     expectedRows
         .add(new Object[]{
-            StringUtils.format("[%s,%s]", middleManager.getDruidNode().getServiceName(), middleManager.getNodeRole().getJsonName()),
-            middleManager.getDruidNode().getHostAndPortToUse(), "druid.test-key2", "test-value2"
+            middleManager.getDruidNode().getServiceName(),  
+            middleManager.getDruidNode().getHostAndPortToUse(),
+            middleManager.getNodeRole().getJsonName(),
+            "druid.test-key2", "test-value2"
         });
 
     Map<String, ListenableFuture<StringFullResponseHolder>> urlToResponse = ImmutableMap.of(
