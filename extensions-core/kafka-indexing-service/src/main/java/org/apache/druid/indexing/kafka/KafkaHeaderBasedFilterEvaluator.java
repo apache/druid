@@ -24,7 +24,6 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedFilterConfig;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.filter.Filter;
-import org.apache.druid.query.filter.InDimFilter;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
@@ -33,8 +32,6 @@ import javax.annotation.Nullable;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * Evaluates Kafka header filters for pre-ingestion filtering.
@@ -43,11 +40,17 @@ public class KafkaHeaderBasedFilterEvaluator
 {
   private static final Logger log = new Logger(KafkaHeaderBasedFilterEvaluator.class);
 
-  private final Filter filter;
+  private final HeaderFilterHandler filterHandler;
+  private final String headerName;
   private final Charset encoding;
   private final Cache<ByteBuffer, String> stringDecodingCache;
-  private final Set<String> filterValues;
 
+  /**
+   * Creates a new KafkaHeaderBasedFilterEvaluator with the given configuration.
+   *
+   * @param headerBasedFilterConfig the configuration containing filter, encoding, and cache settings
+   * @throws IllegalArgumentException if the filter type is not supported
+   */
   public KafkaHeaderBasedFilterEvaluator(KafkaHeaderBasedFilterConfig headerBasedFilterConfig)
   {
     this.encoding = Charset.forName(headerBasedFilterConfig.getEncoding());
@@ -55,21 +58,14 @@ public class KafkaHeaderBasedFilterEvaluator
         .maximumSize(headerBasedFilterConfig.getStringDecodingCacheSize())
         .build();
 
-    this.filter = headerBasedFilterConfig.getFilter().toFilter();
-    if (!(filter instanceof InDimFilter)) {
-      // Only InDimFilter supported
-      throw new IllegalStateException("Unsupported filter type: " + filter.getClass().getSimpleName());
-    }
+    Filter filter = headerBasedFilterConfig.getFilter().toFilter();
+    this.filterHandler = HeaderFilterHandlerFactory.forFilter(filter);
+    this.headerName = filterHandler.getHeaderName();
 
-    // Convert SortedSet to HashSet for O(1) lookups instead of O(log n) TreeSet lookups
-    InDimFilter inFilter = (InDimFilter) filter;
-    this.filterValues = new HashSet<>(inFilter.getValues());
-
-    log.info("Initialized Kafka header filter with encoding [%s] - direct evaluation for [%s] with Caffeine string cache (max %d entries) and HashSet lookup (%d filter values)",
+    log.info("Initialized Kafka header filter: %s with encoding [%s] and cache size [%d]",
+            filterHandler.getDescription(),
             headerBasedFilterConfig.getEncoding(),
-            this.filter.getClass().getSimpleName(),
-            headerBasedFilterConfig.getStringDecodingCacheSize(),
-            this.filterValues.size());
+            headerBasedFilterConfig.getStringDecodingCacheSize());
   }
 
 
@@ -96,16 +92,25 @@ public class KafkaHeaderBasedFilterEvaluator
     }
   }
 
+  /**
+   * Evaluates whether a record should be included based on its headers.
+   * 
+   * Uses permissive behavior: records with missing, null, or undecodable headers
+   * are included by default. Only records with successfully decoded header values
+   * that don't match the filter criteria are excluded.
+   * 
+   * @param headers the Kafka message headers to evaluate
+   * @return true if the record should be included, false if it should be filtered out
+   */
   private boolean evaluateInclusion(Headers headers)
   {
-    InDimFilter inFilter = (InDimFilter) filter;
-
     // Permissive behavior: missing headers result in inclusion
     if (headers == null) {
       return true;
     }
 
-    Header header = headers.lastHeader(inFilter.getDimension());
+    Header header = headers.lastHeader(headerName);
+    
     // Permissive behavior: header is null or empty
     if (header == null || header.value() == null) {
       return true;
@@ -117,7 +122,7 @@ public class KafkaHeaderBasedFilterEvaluator
       return true;
     }
 
-    return filterValues.contains(headerValue);
+    return filterHandler.shouldInclude(headerValue);
   }
 
 
