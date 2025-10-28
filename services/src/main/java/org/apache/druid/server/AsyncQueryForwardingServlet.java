@@ -107,7 +107,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private static final String PROPERTY_SQL_ENABLE_DEFAULT = "false";
 
   private static final long CANCELLATION_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(5);
-  private static final int UNASSIGNED_DEFAULT_STATUS_CODE = 0; // Jetty-specific default (un-assigned) status code
+  // Jetty-specific default (un-assigned) status code
+  private static final int UNASSIGNED_DEFAULT_STATUS_CODE = 0;
 
   private final AtomicLong successfulQueryCount = new AtomicLong();
   private final AtomicLong failedQueryCount = new AtomicLong();
@@ -770,7 +771,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       }
 
       // As router is simply a proxy, we don't make an effort to construct the error code from the exception ourselves.
-      // We rely on broker to set this for us if the error occurs downstream. Otherwise, if there's a router/client error, we log this as an ISE.
+      // We rely on broker to set this for us if the error occurs downstream.
+      // Otherwise, if there's a router/client error, we log this as an unknown error.
       emitQueryTime(requestTimeNs, success, sqlQueryId, queryId, statusCode);
 
       AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
@@ -858,7 +860,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       failedQueryCount.incrementAndGet();
 
       // As router is simply a proxy, we don't make an effort to construct the error code from the exception ourselves.
-      // We rely on broker to set this for us if the error occurs downstream. Otherwise, if there's a router/client error, we log this as an ISE.
+      // We rely on broker to set this for us if the error occurs downstream. 
+      // Otherwise, if there's a router/client error, we log this as an unknown error.
       final int statusCode = determineStatusCode(false, response.getStatus());
       emitQueryTime(requestTimeNs, false, sqlQueryId, queryId, statusCode);
       AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
