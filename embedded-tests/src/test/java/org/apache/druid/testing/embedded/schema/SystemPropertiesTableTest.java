@@ -37,32 +37,34 @@ import java.util.Map;
 
 public class SystemPropertiesTableTest extends EmbeddedClusterTestBase
 {
-  private static final String HOST = "localhost";
-  private static final String BROKER_PORT = "8082";
-  private static final String OVERLORD_PORT = "8090";
+  private static final String BROKER_PORT = "9082";
   private static final String BROKER_SERVICE = "test/broker";
+  private static final String OVERLORD_PORT = "9090";
   private static final String OVERLORD_SERVICE = "test/overlord";
+  private static final String COORDINATOR_PORT = "9081";
+  private static final String COORDINATOR_SERVICE = "test/coordinator";
 
   private final EmbeddedBroker broker = new EmbeddedBroker()
-      .addProperty("test.onlyBroker", "brokerValue")
-      .addProperty("mytestbrokerproperty", "mytestbrokervalue")
-      .addProperty("druid.host", HOST)
+      .addProperty("druid.service", BROKER_SERVICE)
       .addProperty("druid.plaintextPort", BROKER_PORT)
-      .addProperty("druid.service", BROKER_SERVICE);
+      .addProperty("test.onlyBroker", "brokerValue");
 
   private final EmbeddedOverlord overlord = new EmbeddedOverlord()
-      .addProperty("druid.service", OVERLORD_SERVICE)
-      .addProperty("druid.host", HOST)
-      .addProperty("druid.plaintextPort", OVERLORD_PORT)
-      .addProperty("test.onlyOverlord", "overlordValue");
+       .addProperty("druid.service", OVERLORD_SERVICE)
+       .addProperty("druid.plaintextPort", OVERLORD_PORT)
+       .addProperty("test.onlyOverlord", "overlordValue");
 
+  private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator()
+      .addProperty("druid.service", COORDINATOR_SERVICE)
+      .addProperty("druid.plaintextPort", COORDINATOR_PORT)
+      .addProperty("test.onlyCoordinator", "coordinatorValue");
 
   @Override
   protected EmbeddedDruidCluster createCluster()
   {
     return EmbeddedDruidCluster
         .withZookeeper()
-        .addServer(new EmbeddedCoordinator())
+        .addServer(coordinator)
         .addServer(overlord)
         .addServer(broker)
         .addCommonProperty("commonProperty", "commonValue");
@@ -75,14 +77,19 @@ public class SystemPropertiesTableTest extends EmbeddedClusterTestBase
         mapper -> new RequestBuilder(HttpMethod.GET, "/status/properties"),
         new TypeReference<>(){}
     );
-    verifyPropertiesForServer(overlordProps, OVERLORD_SERVICE, getHostAndPort(HOST, OVERLORD_PORT), NodeRole.OVERLORD_JSON_NAME);
+    verifyPropertiesForServer(overlordProps, OVERLORD_SERVICE, StringUtils.format("localhost:%s", OVERLORD_PORT), NodeRole.OVERLORD_JSON_NAME);
 
     final Map<String, String> brokerProps = cluster.callApi().serviceClient().onAnyBroker(
         mapper -> new RequestBuilder(HttpMethod.GET, "/status/properties"),
         new TypeReference<>(){}
     );
-    verifyPropertiesForServer(brokerProps, BROKER_SERVICE, getHostAndPort(HOST, BROKER_PORT), NodeRole.BROKER_JSON_NAME);
-    final String test = cluster.runSql("SELECT * FROM sys.server_properties");
+    verifyPropertiesForServer(brokerProps, BROKER_SERVICE, StringUtils.format("localhost:%s", BROKER_PORT), NodeRole.BROKER_JSON_NAME);
+
+    final Map<String, String> coordinatorProps = cluster.callApi().serviceClient().onLeaderCoordinator(
+        mapper -> new RequestBuilder(HttpMethod.GET, "/status/properties"),
+        new TypeReference<>(){}
+    );
+    verifyPropertiesForServer(coordinatorProps, COORDINATOR_SERVICE, StringUtils.format("localhost:%s", COORDINATOR_PORT), NodeRole.COORDINATOR_JSON_NAME);
   }
 
   private void verifyPropertiesForServer(Map<String, String> properties, String serivceName, String hostAndPort, String nodeRole)
@@ -113,10 +120,5 @@ public class SystemPropertiesTableTest extends EmbeddedClusterTestBase
       return "\"" + StringUtils.replace(field, "\"", "\"\"") + "\"";
     }
     return field;
-  }
-
-  private String getHostAndPort(String host, String port)
-  {
-    return StringUtils.format("%s:%s", host, port);
   }
 }
