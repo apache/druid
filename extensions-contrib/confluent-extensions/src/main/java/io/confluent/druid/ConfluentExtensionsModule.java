@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
+import io.confluent.druid.transform.EnrichResourceNameTransform;
 import io.confluent.druid.transform.ExtractTenantTopicTransform;
 import io.confluent.druid.transform.ExtractTenantTransform;
 import org.apache.druid.initialization.DruidModule;
@@ -24,7 +25,8 @@ public class ConfluentExtensionsModule implements DruidModule
         new SimpleModule("ConfluentTransformsModule")
             .registerSubtypes(
                 new NamedType(ExtractTenantTransform.class, "extractTenant"),
-                new NamedType(ExtractTenantTopicTransform.class, "extractTenantTopic")
+                new NamedType(ExtractTenantTopicTransform.class, "extractTenantTopic"),
+                new NamedType(EnrichResourceNameTransform.class, "enrichResourceName")
             )
     );
   }
