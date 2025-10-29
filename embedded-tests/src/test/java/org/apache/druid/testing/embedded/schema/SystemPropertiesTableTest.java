@@ -98,7 +98,7 @@ public class SystemPropertiesTableTest extends EmbeddedClusterTestBase
         ",",
         escapeCsvField(serivceName),
         escapeCsvField(hostAndPort),
-        escapeCsvField(nodeRole),
+        escapeCsvField(ImmutableList.of(nodeRole).toString()),
         escapeCsvField(entry.getKey()),
         escapeCsvField(entry.getValue())
     )).toArray(String[]::new);
