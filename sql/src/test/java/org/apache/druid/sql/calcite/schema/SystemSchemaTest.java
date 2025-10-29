@@ -1489,7 +1489,7 @@ public class SystemSchemaTest extends CalciteTestBase
     expectedRows.add(new Object[]{
         coordinator.getDruidNode().getServiceName(),
         coordinator.getDruidNode().getHostAndPortToUse(),
-        coordinator.getNodeRole().getJsonName(),
+        ImmutableList.of(coordinator.getNodeRole().getJsonName()).toString(),
         "druid.test-key", "test-value"
     });
 
@@ -1501,7 +1501,7 @@ public class SystemSchemaTest extends CalciteTestBase
         .add(new Object[]{
             coordinator2.getDruidNode().getServiceName(),
             coordinator2.getDruidNode().getHostAndPortToUse(),
-            coordinator2.getNodeRole().getJsonName(),
+            ImmutableList.of(coordinator2.getNodeRole().getJsonName()).toString(),
             "druid.test-key3", "test-value3"
         });
 
@@ -1517,14 +1517,14 @@ public class SystemSchemaTest extends CalciteTestBase
         .add(new Object[]{
             middleManager.getDruidNode().getServiceName(),
             middleManager.getDruidNode().getHostAndPortToUse(),
-            middleManager.getNodeRole().getJsonName(),
+            ImmutableList.of(middleManager.getNodeRole().getJsonName()).toString(),
             "druid.test-key", "test-value"
         });
     expectedRows
         .add(new Object[]{
             middleManager.getDruidNode().getServiceName(),  
             middleManager.getDruidNode().getHostAndPortToUse(),
-            middleManager.getNodeRole().getJsonName(),
+            ImmutableList.of(middleManager.getNodeRole().getJsonName()).toString(),
             "druid.test-key2", "test-value2"
         });
 
