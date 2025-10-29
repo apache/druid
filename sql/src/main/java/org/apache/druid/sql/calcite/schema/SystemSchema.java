@@ -237,7 +237,7 @@ public class SystemSchema extends AbstractSchema
       final OverlordClient overlordClient,
       final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       final ObjectMapper jsonMapper,
-      final @EscalatedClient HttpClient httpClient
+      @EscalatedClient final HttpClient httpClient
   )
   {
     Preconditions.checkNotNull(serverView, "serverView");
@@ -259,7 +259,7 @@ public class SystemSchema extends AbstractSchema
       new TasksTable(overlordClient, authorizerMapper),
       SUPERVISOR_TABLE, 
       new SupervisorsTable(overlordClient, authorizerMapper),
-      SystemPropertiesTable.PROPERTIES_TABLE, 
+      SystemPropertiesTable.TABLE_NAME, 
       new SystemPropertiesTable(druidNodeDiscoveryProvider, authorizerMapper, httpClient, jsonMapper)
     );
   }

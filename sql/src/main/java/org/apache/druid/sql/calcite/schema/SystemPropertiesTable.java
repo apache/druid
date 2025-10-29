@@ -32,9 +32,8 @@ import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
-import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.RE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
@@ -49,13 +48,14 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -118,28 +118,18 @@ public class SystemPropertiesTable extends AbstractTable implements ScannableTab
     SystemSchema.checkStateReadAccessForServers(authenticationResult, authorizerMapper);
     final Iterator<DiscoveryDruidNode> druidServers = SystemSchema.getDruidServers(druidNodeDiscoveryProvider);
 
-    final Map<String, Pair<StringBuilder, Stream<Object[]>>> serverToPropertiesMap = new HashMap<>();
+    final Map<String, ServerProperties> serverToPropertiesMap = new HashMap<>();
     druidServers.forEachRemaining(discoveryDruidNode -> {
       final DruidNode druidNode = discoveryDruidNode.getDruidNode();
       final Map<String, String> propertiesMap = getProperties(druidNode);
       if (serverToPropertiesMap.containsKey(druidNode.getHostAndPortToUse())) {
-        Pair<StringBuilder, Stream<Object[]>> pair = serverToPropertiesMap.get(druidNode.getHostAndPortToUse());
-        pair.lhs.append(StringUtils.format(",%s", discoveryDruidNode.getNodeRole().getJsonName()));
+        ServerProperties serverProperties = serverToPropertiesMap.get(druidNode.getHostAndPortToUse());
+        serverProperties.addNodeRole(discoveryDruidNode.getNodeRole().getJsonName());
       } else {
-        final StringBuilder builder = new StringBuilder();
-        builder.append(StringUtils.format("%s", discoveryDruidNode.getNodeRole().getJsonName()));
-        serverToPropertiesMap.put(druidNode.getHostAndPortToUse(), Pair.of(builder, propertiesMap.entrySet().stream()
-                                                                                                              .map(entry -> new Object[]{
-                                                                                                                    druidNode.getServiceName(),
-                                                                                                                    druidNode.getHostAndPortToUse(),
-                                                                                                                    entry.getKey(),
-                                                                                                                    entry.getValue()
-                                                                                                              })
-            )
-        );
+        serverToPropertiesMap.put(druidNode.getHostAndPortToUse(), new ServerProperties(druidNode.getServiceName(), druidNode.getHostAndPortToUse(), new ArrayList<>(Arrays.asList(discoveryDruidNode.getNodeRole().getJsonName())), propertiesMap));
       }
     });
-    return Linq4j.asEnumerable(serverToPropertiesMap.values().stream().flatMap(pair -> pair.rhs.map(entry -> new Object[]{entry[0], entry[1], pair.lhs.toString(), entry[2], entry[3]})).collect(Collectors.toList()));
+    return Linq4j.asEnumerable(serverToPropertiesMap.values().stream().flatMap(ServerProperties::toRows).collect(Collectors.toList()));
   }
 
   private Map<String, String> getProperties(DruidNode druidNode)
@@ -170,11 +160,31 @@ public class SystemPropertiesTable extends AbstractTable implements ScannableTab
                           .ofCategory(DruidException.Category.UNCATEGORIZED)
                           .build(e, "HTTP request to[%s] failed", url);
     }
-    catch (IOException | InterruptedException e) {
-      throw new RuntimeException(e);
+  }
+
+  private static class ServerProperties
+  {
+    final String serviceName;
+    final String server;
+    final List<String> nodeRoles;
+    final Map<String, String> properties;
+
+    public ServerProperties(String serviceName, String server, List<String> nodeRoles, Map<String, String> properties)
+    {
+      this.serviceName = serviceName;
+      this.server = server;
+      this.nodeRoles = nodeRoles;
+      this.properties = properties;
     }
-    catch (ExecutionException e) {
-      throw new RE(e, "HTTP request to[%s] failed", url);
+
+    public void addNodeRole(String nodeRole)
+    {
+      nodeRoles.add(nodeRole);
+    }
+
+    public Stream<Object[]> toRows()
+    {
+      return properties.entrySet().stream().map(entry -> new Object[]{serviceName, server, nodeRoles.toString(), entry.getKey(), entry.getValue()});
     }
   }
 }
