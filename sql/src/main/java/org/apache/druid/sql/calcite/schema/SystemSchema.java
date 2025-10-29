@@ -242,25 +242,25 @@ public class SystemSchema extends AbstractSchema
   {
     Preconditions.checkNotNull(serverView, "serverView");
     this.tableMap = ImmutableMap.of(
-      SEGMENTS_TABLE, 
-      new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper),
-      SERVERS_TABLE,
-      new ServersTable(
-          druidNodeDiscoveryProvider,
-          serverInventoryView,
-          authorizerMapper,
-          overlordClient,
-          coordinatorClient,
-          jsonMapper
-      ),
-      SERVER_SEGMENTS_TABLE,
-      new ServerSegmentsTable(serverView, authorizerMapper),
-      TASKS_TABLE,
-      new TasksTable(overlordClient, authorizerMapper),
-      SUPERVISOR_TABLE, 
-      new SupervisorsTable(overlordClient, authorizerMapper),
-      SystemPropertiesTable.TABLE_NAME, 
-      new SystemPropertiesTable(druidNodeDiscoveryProvider, authorizerMapper, httpClient, jsonMapper)
+        SEGMENTS_TABLE,
+        new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper),
+        SERVERS_TABLE,
+        new ServersTable(
+            druidNodeDiscoveryProvider,
+            serverInventoryView,
+            authorizerMapper,
+            overlordClient,
+            coordinatorClient,
+            jsonMapper
+        ),
+        SERVER_SEGMENTS_TABLE,
+        new ServerSegmentsTable(serverView, authorizerMapper),
+        TASKS_TABLE,
+        new TasksTable(overlordClient, authorizerMapper),
+        SUPERVISOR_TABLE,
+        new SupervisorsTable(overlordClient, authorizerMapper),
+        SystemPropertiesTable.TABLE_NAME,
+        new SystemPropertiesTable(druidNodeDiscoveryProvider, authorizerMapper, httpClient, jsonMapper)
     );
   }
 
