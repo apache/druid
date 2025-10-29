@@ -60,13 +60,16 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * This table contains row per property. It contains all the properties of all druid servers.
+ * System schema table {@code sys.server_properties} that contains the properties of all Druid servers.
+ * Each row contains the value of a single property. If a server has multiple node roles, all the rows for
+ * that server would have multiple values in the column {@code node_roles} rather than duplicating all the
+ * rows.
  */
 public class SystemPropertiesTable extends AbstractTable implements ScannableTable
 {
-  public static final String PROPERTIES_TABLE = "server_properties";
+  public static final String TABLE_NAME = "server_properties";
 
-  static final RowSignature PROPERTIES_SIGNATURE = RowSignature
+  static final RowSignature ROW_SIGNATURE = RowSignature
       .builder()
       .add("service_name", ColumnType.STRING)
       .add("server", ColumnType.STRING)
@@ -96,7 +99,7 @@ public class SystemPropertiesTable extends AbstractTable implements ScannableTab
   @Override
   public RelDataType getRowType(RelDataTypeFactory typeFactory)
   {
-    return RowSignatures.toRelDataType(PROPERTIES_SIGNATURE, typeFactory);
+    return RowSignatures.toRelDataType(ROW_SIGNATURE, typeFactory);
   }
 
   @Override
@@ -151,7 +154,7 @@ public class SystemPropertiesTable extends AbstractTable implements ScannableTab
 
       if (response.getStatus().getCode() != HttpServletResponse.SC_OK) {
         throw new RE(
-            "Failed to get properties from node at [%s]. Error code [%d], description [%s].",
+            "Failed to get properties from node[%s]. Error code[%d], description[%s].",
             url,
             response.getStatus().getCode(),
             response.getStatus().getReasonPhrase()
@@ -159,10 +162,13 @@ public class SystemPropertiesTable extends AbstractTable implements ScannableTab
       }
       return jsonMapper.readValue(
           response.getContent(),
-          new TypeReference<Map<String, String>>()
-          {
-          }
+          new TypeReference<Map<String, String>>(){}
       );
+    }
+    catch (Exception e) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.UNCATEGORIZED)
+                          .build(e, "HTTP request to[%s] failed", url);
     }
     catch (IOException | InterruptedException e) {
       throw new RuntimeException(e);
