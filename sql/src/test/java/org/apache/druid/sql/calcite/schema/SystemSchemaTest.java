@@ -1464,7 +1464,7 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
   @Test
-  public void testPropertiesTable() throws Exception
+  public void testPropertiesTable()
   {
     SystemPropertiesTable propertiesTable = EasyMock.createMockBuilder(SystemPropertiesTable.class)
                                                     .withConstructor(druidNodeDiscoveryProvider, authMapper, httpClient, MAPPER)
