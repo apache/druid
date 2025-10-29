@@ -110,7 +110,7 @@ public class SystemPropertiesTableTest extends EmbeddedClusterTestBase
       return "";
     }
     if (field.contains(",") || field.contains("\"") || field.contains("\n") || field.contains("\r")) {
-      return "\"" + field.replace("\"", "\"\"") + "\"";
+      return "\"" + StringUtils.replace(field, "\"", "\"\"") + "\"";
     }
     return field;
   }
