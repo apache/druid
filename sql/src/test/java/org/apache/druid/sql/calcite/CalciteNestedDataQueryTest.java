@@ -2454,6 +2454,54 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testGroupByRootSingleTypeArrayLongElementFilteredBoolean()
+  {
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "__time,"
+            + "SUM(cnt) "
+            + "FROM druid.arrays "
+            + "WHERE JSON_VALUE(arrayLongNulls, '$[1]' RETURNING BOOLEAN) IS NULL "
+            + "GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("__time", "d0", ColumnType.LONG)
+                                )
+                            )
+                            .setVirtualColumns(
+                                new NestedFieldVirtualColumn("arrayLongNulls", "$[1]", "v0", ColumnType.LONG)
+                            )
+                            .setDimFilter(isNull("v0"))
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{1672531200000L, 4L},
+                new Object[]{1672617600000L, 4L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("__time", ColumnType.LONG)
+                        .add("EXPR$1", ColumnType.LONG)
+                        .build()
+        )
+        .run();
+  }
+
+  @Test
   public void testGroupByRootSingleTypeArrayStringElement()
   {
     testBuilder()

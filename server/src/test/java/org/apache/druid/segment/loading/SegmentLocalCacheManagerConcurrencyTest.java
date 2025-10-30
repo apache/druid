@@ -716,8 +716,9 @@ class SegmentLocalCacheManagerConcurrencyTest
     Assertions.assertEquals(0, location2.getActiveWeakHolds());
     Assertions.assertTrue(4 >= location.getWeakEntryCount());
     Assertions.assertTrue(4 >= location2.getWeakEntryCount());
-    Assertions.assertTrue(4 >= location.getPath().listFiles().length);
-    Assertions.assertTrue(4 >= location2.getPath().listFiles().length);
+    // 5 because __drop path
+    Assertions.assertTrue(5 >= location.getPath().listFiles().length);
+    Assertions.assertTrue(5 >= location2.getPath().listFiles().length);
     Assertions.assertTrue(location.getStats().getLoadCount() >= 4);
     Assertions.assertTrue(location2.getStats().getLoadCount() >= 4);
     Assertions.assertEquals(location.getStats().getEvictionCount(), location.getStats().getUnmountCount());

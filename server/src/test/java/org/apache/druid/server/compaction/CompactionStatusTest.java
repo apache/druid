@@ -211,8 +211,8 @@ public class CompactionStatusTest
   @Test
   public void testStatusOnPartitionsSpecMismatch()
   {
-    final PartitionsSpec requiredPartitionsSpec = new DynamicPartitionsSpec(5_000_000, 0L);
-    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, 0L);
+    final PartitionsSpec requiredPartitionsSpec = new DynamicPartitionsSpec(5_000_000, null);
+    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, null);
 
     final CompactionState lastCompactionState
         = new CompactionState(currentPartitionsSpec, null, null, null, null, null, null);
@@ -236,7 +236,7 @@ public class CompactionStatusTest
     final IndexSpec currentIndexSpec
         = IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build();
 
-    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, 0L);
+    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, null);
     final CompactionState lastCompactionState = new CompactionState(
         currentPartitionsSpec,
         null,
@@ -273,7 +273,7 @@ public class CompactionStatusTest
     final GranularitySpec currentGranularitySpec
         = new UniformGranularitySpec(Granularities.HOUR, null, null);
 
-    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, 0L);
+    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, null);
     final IndexSpec currentIndexSpec
         = IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build();
     final CompactionState lastCompactionState = new CompactionState(
@@ -304,7 +304,7 @@ public class CompactionStatusTest
   {
     final GranularitySpec currentGranularitySpec
         = new UniformGranularitySpec(Granularities.HOUR, null, null);
-    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, 0L);
+    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, null);
     final IndexSpec currentIndexSpec
         = IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build();
     final CompactionState lastCompactionState = new CompactionState(
@@ -336,7 +336,7 @@ public class CompactionStatusTest
   {
     final GranularitySpec currentGranularitySpec
         = new UniformGranularitySpec(Granularities.HOUR, null, null);
-    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, 0L);
+    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, null);
     final IndexSpec currentIndexSpec
         = IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build();
     final AggregateProjectionSpec projection1 =
@@ -385,7 +385,7 @@ public class CompactionStatusTest
   {
     final GranularitySpec currentGranularitySpec
         = new UniformGranularitySpec(Granularities.HOUR, null, null);
-    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, 0L);
+    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, null);
     final IndexSpec currentIndexSpec
         = IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build();
     final AggregateProjectionSpec projection1 =
@@ -439,7 +439,7 @@ public class CompactionStatusTest
   {
     final GranularitySpec currentGranularitySpec
         = new UniformGranularitySpec(Granularities.HOUR, null, null);
-    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, 0L);
+    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, null);
 
     final CompactionState lastCompactionState = new CompactionState(
         currentPartitionsSpec,
@@ -492,7 +492,7 @@ public class CompactionStatusTest
   {
     final GranularitySpec currentGranularitySpec
         = new UniformGranularitySpec(Granularities.HOUR, null, null);
-    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, 0L);
+    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, null);
 
     final CompactionState lastCompactionState = new CompactionState(
         currentPartitionsSpec,

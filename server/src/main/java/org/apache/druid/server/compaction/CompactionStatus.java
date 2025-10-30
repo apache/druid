@@ -344,6 +344,10 @@ public class CompactionStatus
       PartitionsSpec existingPartionsSpec = lastCompactionState.getPartitionsSpec();
       if (existingPartionsSpec instanceof DimensionRangePartitionsSpec) {
         existingPartionsSpec = getEffectiveRangePartitionsSpec((DimensionRangePartitionsSpec) existingPartionsSpec);
+      } else if (existingPartionsSpec instanceof DynamicPartitionsSpec) {
+        existingPartionsSpec = new DynamicPartitionsSpec(
+            existingPartionsSpec.getMaxRowsPerSegment(),
+            ((DynamicPartitionsSpec) existingPartionsSpec).getMaxTotalRowsOr(Long.MAX_VALUE));
       }
       return CompactionStatus.completeIfNullOrEqual(
           "partitionsSpec",
