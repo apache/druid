@@ -75,6 +75,9 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Embedded test that runs compaction supervisors of various types.
+ */
 public class CompactionSupervisorTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedBroker broker = new EmbeddedBroker();

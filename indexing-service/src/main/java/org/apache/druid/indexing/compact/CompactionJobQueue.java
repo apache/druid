@@ -25,9 +25,10 @@ import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.input.DruidDatasourceDestination;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.template.BatchIndexingJob;
@@ -50,6 +51,8 @@ import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
@@ -58,6 +61,13 @@ import java.util.PriorityQueue;
  * Iterates over all eligible compaction jobs in order of their priority.
  * A fresh instance of this class must be used in every run of the
  * {@link CompactionScheduler}.
+ * <p>
+ * Unlike the Coordinator duty {@code CompactSegments}, the job queue currently
+ * does not cancel running compaction tasks even if their target segment
+ * granularity has changed. This has not been done here for simplicity since the
+ * {@code CompactionJobQueue} uses compaction templates and may have a different
+ * target segment granulariy for different intervals of the same datasource.
+ * The cancellation of invalid tasks has been left as a future enhancement.
  */
 public class CompactionJobQueue
 {
@@ -65,6 +75,7 @@ public class CompactionJobQueue
 
   private final CompactionJobParams jobParams;
   private final CompactionCandidateSearchPolicy searchPolicy;
+  private final ClusterCompactionConfig clusterCompactionConfig;
 
   private final ObjectMapper objectMapper;
   private final CompactionStatusTracker statusTracker;
@@ -75,9 +86,8 @@ public class CompactionJobQueue
 
   private final CompactionSnapshotBuilder snapshotBuilder;
   private final PriorityQueue<CompactionJob> queue;
+  private final Map<String, CompactionJob> submittedTaskIdToJob;
   private final CoordinatorRunStats runStats;
-
-  private final CompactionSlotManager slotManager;
 
   public CompactionJobQueue(
       DataSourcesSnapshot dataSourcesSnapshot,
@@ -92,20 +102,17 @@ public class CompactionJobQueue
   {
     this.runStats = new CoordinatorRunStats();
     this.snapshotBuilder = new CompactionSnapshotBuilder(runStats);
+    this.clusterCompactionConfig = clusterCompactionConfig;
     this.searchPolicy = clusterCompactionConfig.getCompactionPolicy();
     this.queue = new PriorityQueue<>(
         (o1, o2) -> searchPolicy.compareCandidates(o1.getCandidate(), o2.getCandidate())
     );
+    this.submittedTaskIdToJob = new HashMap<>();
     this.jobParams = new CompactionJobParams(
         DateTimes.nowUtc(),
         clusterCompactionConfig,
         dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource()::get,
         snapshotBuilder
-    );
-    this.slotManager = new CompactionSlotManager(
-        overlordClient,
-        statusTracker,
-        clusterCompactionConfig
     );
 
     this.taskActionClientFactory = taskActionClientFactory;
@@ -114,16 +121,6 @@ public class CompactionJobQueue
     this.statusTracker = statusTracker;
     this.objectMapper = objectMapper;
     this.taskLockbox = taskLockbox;
-
-    computeAvailableTaskSlots();
-  }
-
-  /**
-   * Adds a job to this queue.
-   */
-  public void add(CompactionJob job)
-  {
-    queue.add(job);
   }
 
   /**
@@ -132,15 +129,16 @@ public class CompactionJobQueue
    */
   public void createAndEnqueueJobs(
       CompactionSupervisor supervisor,
-      DruidInputSource source,
-      DruidDatasourceDestination destination
+      DruidInputSource source
   )
   {
     final Stopwatch jobCreationTime = Stopwatch.createStarted();
     final String supervisorId = supervisor.getSpec().getId();
     try {
       if (supervisor.shouldCreateJobs()) {
-        final List<CompactionJob> jobs = supervisor.createJobs(source, destination, jobParams);
+        final List<CompactionJob> jobs = supervisor.createJobs(source, jobParams);
+        jobs.forEach(job -> snapshotBuilder.addToPending(job.getCandidate()));
+
         queue.addAll(jobs);
 
         runStats.add(
@@ -170,21 +168,43 @@ public class CompactionJobQueue
    */
   public void runReadyJobs()
   {
+    final CompactionSlotManager slotManager = new CompactionSlotManager(
+        overlordClient,
+        statusTracker,
+        clusterCompactionConfig
+    );
+    slotManager.reserveTaskSlotsForRunningCompactionTasks();
+
+    final List<CompactionJob> pendingJobs = new ArrayList<>();
     while (!queue.isEmpty()) {
       final CompactionJob job = queue.poll();
-      if (startJobIfPendingAndReady(job, searchPolicy)) {
+      if (startJobIfPendingAndReady(job, searchPolicy, pendingJobs, slotManager)) {
         runStats.add(Stats.Compaction.SUBMITTED_TASKS, RowKey.of(Dimension.DATASOURCE, job.getDataSource()), 1);
       }
     }
+
+    // Requeue pending jobs so that they can be launched when slots become available
+    queue.addAll(pendingJobs);
   }
 
   /**
-   * Builds and returns the compaction snapshots for all the datasources being
-   * tracked in this queue. Must be called after {@link #runReadyJobs()}.
+   * Notifies completion of the given so that the compaction snapshots may be
+   * updated.
    */
-  public Map<String, AutoCompactionSnapshot> getCompactionSnapshots()
+  public void onTaskFinished(String taskId, TaskStatus taskStatus)
   {
-    return snapshotBuilder.build();
+    final CompactionJob job = submittedTaskIdToJob.remove(taskId);
+    if (job == null || !taskStatus.getStatusCode().isComplete()) {
+      // This is an unknown task ID
+      return;
+    }
+
+    if (taskStatus.getStatusCode() == TaskState.FAILED) {
+      // Add this job back to the queue
+      queue.add(job);
+    } else {
+      snapshotBuilder.moveFromPendingToCompleted(job.getCandidate());
+    }
   }
 
   public CoordinatorRunStats getRunStats()
@@ -192,13 +212,14 @@ public class CompactionJobQueue
     return runStats;
   }
 
-  private void computeAvailableTaskSlots()
+  /**
+   * Builds compaction snapshots for all the datasources being tracked by this
+   * queue.
+   */
+  public Map<String, AutoCompactionSnapshot> getSnapshots()
   {
-    // Do not cancel any currently running compaction tasks to be valid
-    // Future iterations can cancel a job if it doesn't match the given template
-    for (ClientCompactionTaskQuery task : slotManager.fetchRunningCompactionTasks()) {
-      slotManager.reserveTaskSlots(task);
-    }
+    // TODO: fix the stats problem
+    return snapshotBuilder.build();
   }
 
   /**
@@ -206,14 +227,19 @@ public class CompactionJobQueue
    *
    * @return true if the job was submitted successfully for execution
    */
-  private boolean startJobIfPendingAndReady(CompactionJob job, CompactionCandidateSearchPolicy policy)
+  private boolean startJobIfPendingAndReady(
+      CompactionJob job,
+      CompactionCandidateSearchPolicy policy,
+      List<CompactionJob> pendingJobs,
+      CompactionSlotManager slotManager
+  )
   {
     // Check if the job is a valid compaction job
     final CompactionCandidate candidate = job.getCandidate();
     final CompactionConfigValidationResult validationResult = validateCompactionJob(job);
     if (!validationResult.isValid()) {
       log.error("Skipping invalid compaction job[%s] due to reason[%s].", job, validationResult.getReason());
-      snapshotBuilder.addToSkipped(candidate);
+      snapshotBuilder.moveFromPendingToSkipped(candidate);
       return false;
     }
 
@@ -221,11 +247,12 @@ public class CompactionJobQueue
     final CompactionStatus compactionStatus = getCurrentStatusForJob(job, policy);
     switch (compactionStatus.getState()) {
       case RUNNING:
+        return false;
       case COMPLETE:
-        snapshotBuilder.addToComplete(candidate);
+        snapshotBuilder.moveFromPendingToCompleted(candidate);
         return false;
       case SKIPPED:
-        snapshotBuilder.addToSkipped(candidate);
+        snapshotBuilder.moveFromPendingToSkipped(candidate);
         return false;
       default:
         break;
@@ -233,7 +260,7 @@ public class CompactionJobQueue
 
     // Check if enough compaction task slots are available
     if (job.getMaxRequiredTaskSlots() > slotManager.getNumAvailableTaskSlots()) {
-      snapshotBuilder.addToPending(candidate);
+      pendingJobs.add(job);
       return false;
     }
 
@@ -242,11 +269,11 @@ public class CompactionJobQueue
     final String taskId = startTaskIfReady(job);
     if (taskId == null) {
       // Mark the job as skipped for now as the intervals might be locked by other tasks
-      snapshotBuilder.addToSkipped(candidate);
+      snapshotBuilder.moveFromPendingToSkipped(candidate);
       return false;
     } else {
-      snapshotBuilder.addToComplete(candidate);
       statusTracker.onTaskSubmitted(taskId, job.getCandidate());
+      submittedTaskIdToJob.put(taskId, job);
       return true;
     }
   }

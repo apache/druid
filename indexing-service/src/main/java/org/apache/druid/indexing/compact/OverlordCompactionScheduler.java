@@ -29,7 +29,6 @@ import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
-import org.apache.druid.indexing.input.DruidDatasourceDestination;
 import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
@@ -37,7 +36,6 @@ import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Stopwatch;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -89,6 +87,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
 {
   private static final Logger log = new Logger(OverlordCompactionScheduler.class);
 
+  private static final long DEFAULT_SCHEDULE_PERIOD_MILLIS = 15 * 60_000;
   private static final Duration METRIC_EMISSION_PERIOD = Duration.standardMinutes(5);
 
   private final SegmentsMetadataManager segmentManager;
@@ -102,6 +101,11 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   private final ConcurrentHashMap<String, CompactionSupervisor> activeSupervisors;
 
   private final AtomicReference<Map<String, AutoCompactionSnapshot>> datasourceToCompactionSnapshot;
+
+  /**
+   * Compaction job queue built in the last invocation of {@link #resetCompactionJobQueue()}.
+   */
+  private final AtomicReference<CompactionJobQueue> latestJobQueue;
 
   /**
    * Single-threaded executor to process the compaction queue.
@@ -150,9 +154,9 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       ObjectMapper objectMapper
   )
   {
-    final long segmentPollPeriodSeconds =
+    final long segmentPollPeriodMillis =
         segmentManagerConfig.getPollDuration().toStandardDuration().getMillis();
-    this.schedulePeriodMillis = Math.min(5_000, segmentPollPeriodSeconds);
+    this.schedulePeriodMillis = Math.min(DEFAULT_SCHEDULE_PERIOD_MILLIS, segmentPollPeriodMillis);
 
     this.segmentManager = segmentManager;
     this.emitter = emitter;
@@ -169,6 +173,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     this.brokerClient = brokerClient;
     this.activeSupervisors = new ConcurrentHashMap<>();
     this.datasourceToCompactionSnapshot = new AtomicReference<>();
+    this.latestJobQueue = new AtomicReference<>();
 
     this.taskActionClientFactory = taskActionClientFactory;
     this.druidInputSourceFactory = druidInputSourceFactory;
@@ -190,7 +195,8 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       public void statusChanged(String taskId, TaskStatus status)
       {
         if (status.isComplete()) {
-          statusTracker.onTaskFinished(taskId, status);
+          onTaskFinished(taskId, status);
+          launchPendingJobs();
         }
       }
     };
@@ -271,7 +277,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     log.info("Starting compaction scheduler.");
     final Optional<TaskRunner> taskRunnerOptional = taskMaster.getTaskRunner();
     if (taskRunnerOptional.isPresent()) {
-      taskRunnerOptional.get().registerListener(taskRunnerListener, Execs.directExecutor());
+      taskRunnerOptional.get().registerListener(taskRunnerListener, executor);
     }
     if (shouldPollSegments) {
       segmentManager.startPollingDatabasePeriodically();
@@ -320,7 +326,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     if (isEnabled()) {
       initState();
       try {
-        runCompactionDuty();
+        resetCompactionJobQueue();
       }
       catch (Exception e) {
         log.error(e, "Error processing compaction queue. Continuing schedule.");
@@ -333,9 +339,9 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   }
 
   /**
-   * Creates and runs eligible compaction jobs.
+   * Creates and launches eligible compaction jobs.
    */
-  private synchronized void runCompactionDuty()
+  private synchronized void resetCompactionJobQueue()
   {
     final Stopwatch runDuration = Stopwatch.createStarted();
     final DataSourcesSnapshot dataSourcesSnapshot = getDatasourceSnapshot();
@@ -349,20 +355,41 @@ public class OverlordCompactionScheduler implements CompactionScheduler
         brokerClient,
         objectMapper
     );
+    latestJobQueue.set(queue);
+
     statusTracker.resetActiveDatasources(activeSupervisors.keySet());
     statusTracker.onSegmentTimelineUpdated(dataSourcesSnapshot.getSnapshotTime());
     activeSupervisors.forEach(
         (datasource, supervisor) -> queue.createAndEnqueueJobs(
             supervisor,
-            druidInputSourceFactory.create(datasource, Intervals.ETERNITY),
-            new DruidDatasourceDestination(datasource)
+            druidInputSourceFactory.create(datasource, Intervals.ETERNITY)
         )
     );
-    queue.runReadyJobs();
-
-    datasourceToCompactionSnapshot.set(queue.getCompactionSnapshots());
+    launchPendingJobs();
     emitStatsIfPeriodHasElapsed(queue.getRunStats());
     emitStat(Stats.Compaction.SCHEDULER_RUN_TIME, RowKey.empty(), runDuration.millisElapsed());
+  }
+
+  /**
+   * Launches pending compaction jobs if compaction task slots become available.
+   * This method uses the jobs created by the last invocation of {@link #resetCompactionJobQueue()}.
+   */
+  private synchronized void launchPendingJobs()
+  {
+    final CompactionJobQueue queue = latestJobQueue.get();
+    if (queue == null) {
+      // Job queue has not been built yet
+      return;
+    }
+
+    queue.runReadyJobs();
+    updateCompactionSnapshots(queue);
+
+    // TODO: Try to trigger a recompute in these cases:
+    // supervisor spec updated - schedule recompute atleast for that supervisor?
+    // dynamic config updated - schedule full recompute?
+    //
+    // supervisor reset? not needed right now? we can probably do it later
   }
 
   /**
@@ -381,6 +408,22 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       stats.forEachEntry(Stats.Compaction.SKIPPED_INTERVALS, this::emitNonZeroStat);
       stats.forEachEntry(Stats.Compaction.PENDING_INTERVALS, this::emitStat);
     }
+  }
+
+  private void onTaskFinished(String taskId, TaskStatus taskStatus)
+  {
+    statusTracker.onTaskFinished(taskId, taskStatus);
+
+    final CompactionJobQueue queue = latestJobQueue.get();
+    if (queue != null) {
+      queue.onTaskFinished(taskId, taskStatus);
+      updateCompactionSnapshots(queue);
+    }
+  }
+
+  private void updateCompactionSnapshots(CompactionJobQueue queue)
+  {
+    datasourceToCompactionSnapshot.set(queue.getSnapshots());
   }
 
   @Override

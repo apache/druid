@@ -60,6 +60,20 @@ public class CompactionSnapshotBuilder
         .incrementSkippedStats(candidate.getStats());
   }
 
+  public void moveFromPendingToSkipped(CompactionCandidate candidate)
+  {
+    getBuilderForDatasource(candidate.getDataSource())
+        .decrementWaitingStats(candidate.getStats());
+    addToSkipped(candidate);
+  }
+
+  public void moveFromPendingToCompleted(CompactionCandidate candidate)
+  {
+    getBuilderForDatasource(candidate.getDataSource())
+        .decrementWaitingStats(candidate.getStats());
+    addToComplete(candidate);
+  }
+
   public Map<String, AutoCompactionSnapshot> build()
   {
     final Map<String, AutoCompactionSnapshot> datasourceToSnapshot = new HashMap<>();

@@ -45,7 +45,10 @@ import java.util.Objects;
  * separate to allow:
  * <ul>
  * <li>fields to be nullable so that only non-null fields are used for matching</li>
- * <li>legacy "compaction-incompatible" fields to be removed</li>
+ * <li>legacy "compaction-incompatible" fields such as {@link #transformSpec} to
+ * be removed in the future. These fields do not just change the layout/partitioning
+ * of the data but may also alter its meaning which does not fall in the purview
+ * of compaction.</li>
  * </ul>
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)

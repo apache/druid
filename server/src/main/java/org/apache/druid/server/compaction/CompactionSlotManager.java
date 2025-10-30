@@ -115,6 +115,16 @@ public class CompactionSlotManager
   }
 
   /**
+   * Reserves task slots for all running compaction tasks.
+   */
+  public void reserveTaskSlotsForRunningCompactionTasks()
+  {
+    for (ClientCompactionTaskQuery task : fetchRunningCompactionTasks()) {
+      reserveTaskSlots(task);
+    }
+  }
+
+  /**
    * Retrieves currently running tasks of type {@link #COMPACTION_TASK_TYPE} from
    * the Overlord.
    * <p>

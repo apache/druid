@@ -241,6 +241,11 @@ public class AutoCompactionSnapshot
       waitingStats.increment(entry);
     }
 
+    public void decrementWaitingStats(CompactionStatistics entry)
+    {
+      waitingStats.decrement(entry);
+    }
+
     public void incrementCompactedStats(CompactionStatistics entry)
     {
       compactedStats.increment(entry);

@@ -73,7 +73,6 @@ public class CompactionSupervisor implements Supervisor
    */
   public List<CompactionJob> createJobs(
       DruidInputSource inputSource,
-      DruidDatasourceDestination destination,
       CompactionJobParams jobParams
   )
   {

@@ -85,8 +85,6 @@ public class CompactionStatusTracker
       CompactionCandidateSearchPolicy searchPolicy
   )
   {
-    final CompactionStatus pendingStatus = CompactionStatus.pending("not compacted yet");
-
     // Skip intervals that already have a running task
     final CompactionTaskStatus lastTaskStatus = getLatestTaskStatus(candidate);
     if (lastTaskStatus != null && lastTaskStatus.getState() == TaskState.RUNNING) {
@@ -104,11 +102,11 @@ public class CompactionStatusTracker
     }
 
     // Skip intervals that have been filtered out by the policy
-    if (!searchPolicy.isEligibleForCompaction(candidate, pendingStatus, lastTaskStatus)) {
+    if (!searchPolicy.isEligibleForCompaction(candidate, CompactionStatus.pending(""), lastTaskStatus)) {
       return CompactionStatus.skipped("Rejected by search policy");
     }
 
-    return pendingStatus;
+    return CompactionStatus.pending("Not compacted yet");
   }
 
   /**
