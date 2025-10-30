@@ -28,6 +28,10 @@ import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 
 import java.util.Map;
 
+/**
+ * Monitor that reports CPU set metrics from cgroups both v1 and v2.
+ */
+
 public class CgroupCpuSetMonitor extends FeedDefiningMonitor
 {
   final CgroupDiscoverer cgroupDiscoverer;
@@ -42,7 +46,7 @@ public class CgroupCpuSetMonitor extends FeedDefiningMonitor
 
   public CgroupCpuSetMonitor(final Map<String, String[]> dimensions, String feed)
   {
-    this(new ProcSelfCgroupDiscoverer(), dimensions, feed);
+    this(ProcSelfCgroupDiscoverer.autoCgroupDiscoverer(), dimensions, feed);
   }
 
   public CgroupCpuSetMonitor(final Map<String, String[]> dimensions)
@@ -58,11 +62,10 @@ public class CgroupCpuSetMonitor extends FeedDefiningMonitor
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    final CpuSet cpuset = new CpuSet(cgroupDiscoverer);
-    final CpuSet.CpuSetMetric cpusetSnapshot = cpuset.snapshot();
-
+    final CpuSet.CpuSetMetric cpusetSnapshot = cgroupDiscoverer.getCpuSetMetrics();
     final ServiceMetricEvent.Builder builder = builder();
     MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+    builder.setDimension("cgroupversion", cgroupDiscoverer.getCgroupVersion().name());
     emitter.emit(builder.setMetric(
         "cgroup/cpuset/cpu_count",
         cpusetSnapshot.getCpuSetCpus().length
@@ -81,4 +84,5 @@ public class CgroupCpuSetMonitor extends FeedDefiningMonitor
     ));
     return true;
   }
+
 }

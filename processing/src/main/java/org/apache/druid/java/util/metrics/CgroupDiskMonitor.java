@@ -22,28 +22,43 @@ package org.apache.druid.java.util.metrics;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
+import org.apache.druid.java.util.metrics.cgroups.CgroupVersion;
 import org.apache.druid.java.util.metrics.cgroups.Disk;
+import org.apache.druid.java.util.metrics.cgroups.ProcCgroupV2Discoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 
 import java.util.Map;
 
 public class CgroupDiskMonitor extends FeedDefiningMonitor
 {
+  private static final Logger LOG = new Logger(CgroupDiskMonitor.class);
   final CgroupDiscoverer cgroupDiscoverer;
   final Map<String, String[]> dimensions;
   private final KeyedDiff diff = new KeyedDiff();
+  private final boolean isRunningOnCgroupsV2;
+  private final CgroupV2DiskMonitor cgroupV2DiskMonitor;
 
   public CgroupDiskMonitor(CgroupDiscoverer cgroupDiscoverer, final Map<String, String[]> dimensions, String feed)
   {
     super(feed);
     this.cgroupDiscoverer = cgroupDiscoverer;
     this.dimensions = dimensions;
+    
+    // Check if we're running on cgroups v2
+    this.isRunningOnCgroupsV2 = cgroupDiscoverer.getCgroupVersion().equals(CgroupVersion.V2);
+    if (isRunningOnCgroupsV2) {
+      this.cgroupV2DiskMonitor = new CgroupV2DiskMonitor(cgroupDiscoverer, dimensions, feed);
+      LOG.info("Detected cgroups v2, using CgroupV2DiskMonitor behavior for accurate metrics");
+    } else {
+      this.cgroupV2DiskMonitor = null;
+    }
   }
 
   public CgroupDiskMonitor(final Map<String, String[]> dimensions, String feed)
   {
-    this(new ProcSelfCgroupDiscoverer(), dimensions, feed);
+    this(ProcSelfCgroupDiscoverer.autoCgroupDiscoverer(), dimensions, feed);
   }
 
   public CgroupDiskMonitor(final Map<String, String[]> dimensions)
@@ -58,6 +73,15 @@ public class CgroupDiskMonitor extends FeedDefiningMonitor
 
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
+  {
+    if (isRunningOnCgroupsV2) {
+      return cgroupV2DiskMonitor.doMonitor(emitter);
+    } else {
+      return doMonitorV1(emitter);
+    }
+  }
+
+  private boolean doMonitorV1(ServiceEmitter emitter)
   {
     Map<String, Disk.Metrics> snapshot = new Disk(cgroupDiscoverer).snapshot();
     for (Map.Entry<String, Disk.Metrics> entry : snapshot.entrySet()) {
@@ -75,6 +99,7 @@ public class CgroupDiskMonitor extends FeedDefiningMonitor
         final ServiceMetricEvent.Builder builder = builder()
             .setDimension("diskName", entry.getValue().getDiskName());
         MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+        builder.setDimension("cgroupversion", cgroupDiscoverer.getCgroupVersion());
         for (Map.Entry<String, Long> stat : stats.entrySet()) {
           emitter.emit(builder.setMetric(stat.getKey(), stat.getValue()));
         }

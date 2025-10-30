@@ -21,11 +21,16 @@ package org.apache.druid.java.util.metrics.cgroups;
 
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 
 public class TestUtils
@@ -84,5 +89,43 @@ public class TestUtils
     Files.copy(TestUtils.class.getResourceAsStream(resource), out.toPath(), StandardCopyOption.REPLACE_EXISTING);
     Assert.assertTrue(out.exists());
     Assert.assertNotEquals(0, out.length());
+  }
+
+  public static void writeCpuCgroupV2Files(File cgroupRoot) throws IOException
+  {
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.max"), "150000 100000\n".getBytes(StandardCharsets.UTF_8));
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.weight"), "100\n".getBytes(StandardCharsets.UTF_8));
+    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus.effective"), "0-3\n".getBytes(StandardCharsets.UTF_8));
+  }
+
+
+  public static @NotNull CgroupDiscoverer exceptionThrowingDiscoverer()
+  {
+    return new CgroupDiscoverer()
+    {
+      @Override
+      public Path discover(String cgroup)
+      {
+        throw new RuntimeException("shouldContinue");
+      }
+
+      @Override
+      public Cpu.CpuMetrics getCpuMetrics()
+      {
+        throw new RuntimeException("shouldContinue");
+      }
+
+      @Override
+      public CpuSet.CpuSetMetric getCpuSetMetrics()
+      {
+        throw new RuntimeException("shouldContinue");
+      }
+
+      @Override
+      public CgroupVersion getCgroupVersion()
+      {
+        return CgroupVersion.UNKNOWN;
+      }
+    };
   }
 }

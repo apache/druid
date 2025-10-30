@@ -22,6 +22,10 @@ package org.apache.druid.java.util.metrics;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
+import org.apache.druid.java.util.metrics.cgroups.CgroupVersion;
+import org.apache.druid.java.util.metrics.cgroups.Cpu;
+import org.apache.druid.java.util.metrics.cgroups.CpuSet;
 import org.apache.druid.java.util.metrics.cgroups.TestUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -33,6 +37,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Path;
 
 public class CpuAcctDeltaMonitorTest
 {
@@ -65,9 +70,7 @@ public class CpuAcctDeltaMonitorTest
     final CpuAcctDeltaMonitor monitor = new CpuAcctDeltaMonitor(
         "some_feed",
         ImmutableMap.of(),
-        cgroup -> {
-          throw new RuntimeException("Should continue");
-        }
+        TestUtils.exceptionThrowingDiscoverer()
     );
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
@@ -89,7 +92,32 @@ public class CpuAcctDeltaMonitorTest
     final CpuAcctDeltaMonitor monitor = new CpuAcctDeltaMonitor(
         "some_feed",
         ImmutableMap.of(),
-        (cgroup) -> cpuacctDir.toPath()
+        new CgroupDiscoverer()
+        {
+          @Override
+          public Path discover(String cgroup)
+          {
+            return cpuacctDir.toPath();
+          }
+
+          @Override
+          public Cpu.CpuMetrics getCpuMetrics()
+          {
+            return null;
+          }
+
+          @Override
+          public CpuSet.CpuSetMetric getCpuSetMetrics()
+          {
+            return null;
+          }
+
+          @Override
+          public CgroupVersion getCgroupVersion()
+          {
+            return CgroupVersion.V1;
+          }
+        }
     );
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     Assert.assertFalse(monitor.doMonitor(emitter));
