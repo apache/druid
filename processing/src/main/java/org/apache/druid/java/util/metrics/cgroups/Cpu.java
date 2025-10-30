@@ -113,7 +113,16 @@ public class Cpu
     private final long totalUs;
 
 
-    CpuMetrics(long shares, long quotaUs, long periodUs, long systemJiffis, long userJiffies,long userUs, long systemUs, long totalUs )
+    CpuMetrics(
+        long shares,
+        long quotaUs,
+        long periodUs,
+        long systemJiffis,
+        long userJiffies,
+        long userUs,
+        long systemUs,
+        long totalUs
+    )
     {
       this.shares = shares;
       this.quotaUs = quotaUs;
@@ -169,7 +178,8 @@ public class Cpu
       return systemUs;
     }
 
-    public long getTotalUs(){
+    public long getTotalUs()
+    {
       return totalUs;
     }
   }

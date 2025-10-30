@@ -114,11 +114,11 @@ public class CpuAcctDeltaMonitor extends FeedDefiningMonitor
       final ServiceMetricEvent.Builder builderUsr = builder()
           .setDimension("cpuName", Integer.toString(i))
           .setDimension("cpuTime", "usr")
-          .setDimension("cgroupversion", cgroupDiscoverer.getCgroupVersion().name());;
+          .setDimension("cgroupversion", cgroupDiscoverer.getCgroupVersion().name());
       final ServiceMetricEvent.Builder builderSys = builder()
           .setDimension("cpuName", Integer.toString(i))
           .setDimension("cpuTime", "sys")
-          .setDimension("cgroupversion", cgroupDiscoverer.getCgroupVersion().name());;
+          .setDimension("cgroupversion", cgroupDiscoverer.getCgroupVersion().name());
       MonitorUtils.addDimensionsToBuilder(builderUsr, dimensions);
       MonitorUtils.addDimensionsToBuilder(builderSys, dimensions);
       emitter.emit(builderUsr.setCreatedTime(dateTime).setMetric(

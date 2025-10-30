@@ -21,7 +21,6 @@ package org.apache.druid.java.util.metrics.cgroups;
 
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.UOE;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 

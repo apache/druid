@@ -31,10 +31,10 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.charset.StandardCharsets;
 
 public class CgroupUtilTest
 {
@@ -82,7 +82,7 @@ public class CgroupUtilTest
   {
     // Set up cgroups v2 structure with only v2 files (no v1 files present)
     TestUtils.setUpCgroupsV2(procDir, cgroupDir);
-    
+
     // Create only v2 CPU files
     File cpuDir = new File(cgroupDir, "cpu_v2_test");
     FileUtils.mkdirp(cpuDir);
@@ -110,10 +110,10 @@ public class CgroupUtilTest
   {
     // Create a scenario where both v1 and v2 files exist (should prefer v1 logic)
     TestUtils.setUpCgroups(procDir, cgroupDir);
-    
+
     File cpuDir = new File(cgroupDir, "cpu_mixed_test");
     FileUtils.mkdirp(cpuDir);
-    
+
     // Create both v1 and v2 files
     Files.write(Paths.get(cpuDir.getAbsolutePath(), "cpu.cfs_quota_us"), "-1\n".getBytes(StandardCharsets.UTF_8));
     Files.write(Paths.get(cpuDir.getAbsolutePath(), "cpu.max"), "max\n".getBytes(StandardCharsets.UTF_8));
@@ -124,17 +124,20 @@ public class CgroupUtilTest
     Assert.assertFalse("Should detect v1 when both files are present", isV2);
   }
 
-  @Test  
+  @Test
   public void testDetectCgroupsV2UsingCpusetFallback() throws IOException
   {
     // Test fallback to cpuset detection when CPU cgroup is not available
     TestUtils.setUpCgroupsV2(procDir, cgroupDir);
-    
+
     File cpusetDir = new File(cgroupDir, "cpuset_v2_test");
     FileUtils.mkdirp(cpusetDir);
-    
+
     // Create v2 cpuset files
-    Files.write(Paths.get(cpusetDir.getAbsolutePath(), "cpuset.cpus.effective"), "0-3\n".getBytes(StandardCharsets.UTF_8));
+    Files.write(
+        Paths.get(cpusetDir.getAbsolutePath(), "cpuset.cpus.effective"),
+        "0-3\n".getBytes(StandardCharsets.UTF_8)
+    );
     // Don't create cpuset.effective_cpus (v1 file)
 
     CgroupDiscoverer discoverer = new CpusetOnlyMockDiscoverer();
@@ -148,7 +151,7 @@ public class CgroupUtilTest
     // Create v1 CPU files
     File cpuDir = new File(cgroupDir, "cpu,cpuacct/system.slice/test.service");
     FileUtils.mkdirp(cpuDir);
-    
+
     Files.write(Paths.get(cpuDir.getAbsolutePath(), "cpu.cfs_quota_us"), "-1\n".getBytes(StandardCharsets.UTF_8));
     Files.write(Paths.get(cpuDir.getAbsolutePath(), "cpu.cfs_period_us"), "100000\n".getBytes(StandardCharsets.UTF_8));
     Files.write(Paths.get(cpuDir.getAbsolutePath(), "cpu.shares"), "1024\n".getBytes(StandardCharsets.UTF_8));
@@ -156,7 +159,10 @@ public class CgroupUtilTest
     // Create v1 cpuset files
     File cpusetDir = new File(cgroupDir, "cpuset/system.slice/test.service");
     FileUtils.mkdirp(cpusetDir);
-    Files.write(Paths.get(cpusetDir.getAbsolutePath(), "cpuset.effective_cpus"), "0-3\n".getBytes(StandardCharsets.UTF_8));
+    Files.write(
+        Paths.get(cpusetDir.getAbsolutePath(), "cpuset.effective_cpus"),
+        "0-3\n".getBytes(StandardCharsets.UTF_8)
+    );
   }
 
   private void setupCgroupsV2Files() throws IOException

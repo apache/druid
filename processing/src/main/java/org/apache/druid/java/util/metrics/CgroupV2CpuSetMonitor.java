@@ -49,5 +49,4 @@ public class CgroupV2CpuSetMonitor extends CgroupCpuSetMonitor
   {
     this(new ProcSelfCgroupDiscoverer(ProcCgroupV2Discoverer.class));
   }
-
 }

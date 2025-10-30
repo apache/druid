@@ -35,9 +35,9 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.nio.charset.StandardCharsets;
 
 public class CgroupCpuSetMonitorTest
 {
@@ -95,9 +95,9 @@ public class CgroupCpuSetMonitorTest
     FileUtils.mkdirp(cgroupRoot);
     Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus.effective"), "0-3\n".getBytes(StandardCharsets.UTF_8));
     Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems.effective"), "0\n".getBytes(StandardCharsets.UTF_8));
-    
+
     CgroupDiscoverer v2Discoverer = ProcSelfCgroupDiscoverer.autoCgroupDiscoverer(procV2Dir.toPath());
-    Assert.assertEquals(CgroupVersion.V2,v2Discoverer.getCgroupVersion());
+    Assert.assertEquals(CgroupVersion.V2, v2Discoverer.getCgroupVersion());
 
     // Constructor should detect v2 and log warning
     CgroupCpuSetMonitor monitor = new CgroupCpuSetMonitor(v2Discoverer, ImmutableMap.of(), "test-feed");

@@ -75,21 +75,22 @@ public class CgroupUtil
       if (cpuCgroupPath != null) {
         Path cpuMaxFile = cpuCgroupPath.resolve("cpu.max");
         Path cpuQuotaFile = cpuCgroupPath.resolve("cpu.cfs_quota_us");
-        
+
         if (Files.exists(cpuMaxFile) && !Files.exists(cpuQuotaFile)) {
           return true;
         }
       }
-      
+
       // Fallback: Try cpuset cgroup - check if cpuset.cpus.effective exists (v2) vs cpuset.effective_cpus (v1)
       Path cpusetCgroupPath = cgroupDiscoverer.discover("cpuset");
       if (cpusetCgroupPath != null) {
         Path v2EffectiveCpusFile = cpusetCgroupPath.resolve("cpuset.cpus.effective");
         Path v1EffectiveCpusFile = cpusetCgroupPath.resolve("cpuset.effective_cpus");
-        
+
         return Files.exists(v2EffectiveCpusFile) && !Files.exists(v1EffectiveCpusFile);
       }
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       LOG.debug(e, "Could not determine cgroups version, assuming v1");
     }
     return false;

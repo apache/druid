@@ -75,5 +75,4 @@ public class CpuSetV2
     }
     return output;
   }
-
 }

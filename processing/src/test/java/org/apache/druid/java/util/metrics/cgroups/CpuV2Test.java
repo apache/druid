@@ -153,15 +153,15 @@ public class CpuV2Test
     // Test the weight to shares conversion logic via snapshot
     File cgroupRoot = cgroupDir;
     try {
-      
+
       // Test various weight values
       testWeightConversion(cgroupRoot, 1, 10);     // Minimum weight -> minimum shares (clamped to 2)
       testWeightConversion(cgroupRoot, 100, 1024); // Default weight -> default shares
       testWeightConversion(cgroupRoot, 200, 2048); // Double weight -> double shares  
       testWeightConversion(cgroupRoot, 1000, 10240); // 10x weight -> 10x shares
       testWeightConversion(cgroupRoot, 10000, 102400); // Maximum weight -> maximum shares
-      
-    } catch (IOException e) {
+    }
+    catch (IOException e) {
       Assert.fail("IOException during weight conversion test: " + e.getMessage());
     }
   }
