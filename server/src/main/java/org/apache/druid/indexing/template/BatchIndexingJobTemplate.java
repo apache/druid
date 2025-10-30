@@ -22,26 +22,17 @@ package org.apache.druid.indexing.template;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.data.input.InputSource;
-import org.apache.druid.data.output.OutputDestination;
-
-import java.util.List;
 
 /**
  * ETL template to create a {@link BatchIndexingJob} that indexes data from an
- * {@link InputSource} into an {@link OutputDestination}.
+ * {@link InputSource} into an output destination.
+ * <p>
+ * This interface currently defines no methods and is used only as the root type
+ * for serialization of compaction template objects.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public interface BatchIndexingJobTemplate
 {
-  /**
-   * Creates jobs with this template for the given input and output.
-   */
-  List<BatchIndexingJob> createJobs(
-      InputSource source,
-      OutputDestination destination,
-      JobParams jobParams
-  );
-
   /**
    * Unique type name of this template used for JSON serialization.
    */

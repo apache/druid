@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.compact;
 
-import org.apache.druid.indexing.template.JobParams;
 import org.apache.druid.server.compaction.CompactionSnapshotBuilder;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -28,8 +27,9 @@ import org.joda.time.DateTime;
 /**
  * Parameters used while creating a {@link CompactionJob} using a {@link CompactionJobTemplate}.
  */
-public class CompactionJobParams extends JobParams
+public class CompactionJobParams
 {
+  private final DateTime scheduleStartTime;
   private final TimelineProvider timelineProvider;
   private final ClusterCompactionConfig clusterCompactionConfig;
   private final CompactionSnapshotBuilder snapshotBuilder;
@@ -41,10 +41,19 @@ public class CompactionJobParams extends JobParams
       CompactionSnapshotBuilder snapshotBuilder
   )
   {
-    super(scheduleStartTime);
+    this.scheduleStartTime = scheduleStartTime;
     this.clusterCompactionConfig = clusterCompactionConfig;
     this.timelineProvider = timelineProvider;
     this.snapshotBuilder = snapshotBuilder;
+  }
+
+  /**
+   * Timestamp denoting the start of the current run of the scheduler which has
+   * triggered creation of jobs using these {@link CompactionJobParams}.
+   */
+  public DateTime getScheduleStartTime()
+  {
+    return scheduleStartTime;
   }
 
   /**

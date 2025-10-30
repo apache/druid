@@ -29,7 +29,6 @@ import org.apache.druid.indexing.compact.CascadingCompactionTemplate;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.compact.InlineCompactionJobTemplate;
 import org.apache.druid.indexing.compact.MSQCompactionJobTemplate;
-import org.apache.druid.indexing.input.DruidDatasourceDestination;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.scheduledbatch.ScheduledBatchSupervisorSpec;
 import org.apache.druid.initialization.DruidModule;
@@ -54,8 +53,7 @@ public class SupervisorModule implements DruidModule
                 new NamedType(MSQCompactionJobTemplate.class, MSQCompactionJobTemplate.TYPE),
                 new NamedType(CascadingCompactionTemplate.class, CascadingCompactionTemplate.TYPE),
                 new NamedType(CompactionSupervisorSpec.class, CompactionSupervisorSpec.TYPE),
-                new NamedType(ScheduledBatchSupervisorSpec.class, ScheduledBatchSupervisorSpec.TYPE),
-                new NamedType(DruidDatasourceDestination.class, DruidDatasourceDestination.TYPE)
+                new NamedType(ScheduledBatchSupervisorSpec.class, ScheduledBatchSupervisorSpec.TYPE)
             )
     );
   }

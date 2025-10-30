@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
-import org.apache.druid.catalog.MapMetadataCatalog;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.ClientMSQContext;
@@ -141,7 +140,6 @@ public class OverlordCompactionSchedulerTest
   private StubServiceEmitter serviceEmitter;
 
   private String dataSource;
-  private MapMetadataCatalog catalog;
   private OverlordCompactionScheduler scheduler;
 
   private Map<Interval, String> submittedMsqTaskIds;
@@ -156,7 +154,6 @@ public class OverlordCompactionSchedulerTest
     Mockito.when(taskRunner.getMaximumCapacityWithAutoscale()).thenReturn(100);
 
     taskQueue = Mockito.mock(TaskQueue.class);
-    catalog = new MapMetadataCatalog(OBJECT_MAPPER);
 
     submittedMsqTaskIds = new HashMap<>();
     brokerClient = Mockito.mock(BrokerClient.class);
@@ -408,7 +405,7 @@ public class OverlordCompactionSchedulerTest
     runCompactionTasks(1);
 
     final AutoCompactionSnapshot.Builder expectedSnapshot = AutoCompactionSnapshot.builder(dataSource);
-    expectedSnapshot.incrementCompactedStats(CompactionStatistics.create(100_000_000, 1, 1));
+    expectedSnapshot.incrementWaitingStats(CompactionStatistics.create(100_000_000, 1, 1));
 
     Assert.assertEquals(
         expectedSnapshot.build(),
@@ -420,7 +417,7 @@ public class OverlordCompactionSchedulerTest
     );
 
     serviceEmitter.verifyValue(Stats.Compaction.SUBMITTED_TASKS.getMetricName(), 1L);
-    serviceEmitter.verifyValue(Stats.Compaction.COMPACTED_BYTES.getMetricName(), 100_000_000L);
+    serviceEmitter.verifyValue(Stats.Compaction.PENDING_BYTES.getMetricName(), 100_000_000L);
 
     scheduler.stopBeingLeader();
   }

@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.compact;
 
-import org.apache.druid.indexing.input.DruidDatasourceDestination;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;

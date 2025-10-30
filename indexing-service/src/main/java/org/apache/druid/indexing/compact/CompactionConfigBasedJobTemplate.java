@@ -22,7 +22,6 @@ package org.apache.druid.indexing.compact;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
-import org.apache.druid.indexing.input.DruidDatasourceDestination;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -151,16 +150,6 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
       throw InvalidInput.exception(
           "Datasource[%s] in compaction config does not match datasource[%s] in input source",
           config.getDataSource(), druidInputSource.getDataSource()
-      );
-    }
-  }
-
-  private void validateOutput(DruidDatasourceDestination druidDestination)
-  {
-    if (!druidDestination.getDataSource().equals(config.getDataSource())) {
-      throw InvalidInput.exception(
-          "Datasource[%s] in compaction config does not match datasource[%s] in output destination",
-          config.getDataSource(), druidDestination.getDataSource()
       );
     }
   }
