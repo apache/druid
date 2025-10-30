@@ -19,12 +19,13 @@
 
 package org.apache.druid.catalog.model;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.catalog.model.table.ExternalTableDefn;
 import org.apache.druid.server.security.ResourceType;
 
-import java.util.Comparator;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -95,7 +96,7 @@ public class SchemaRegistryImpl implements SchemaRegistry
     register(new SchemaDefnImpl(
         TableId.DRUID_SCHEMA,
         ResourceType.DATASOURCE,
-        Set.of(DatasourceDefn.TABLE_TYPE)
+        ImmutableSet.of(DatasourceDefn.TABLE_TYPE)
     ));
     register(new SchemaDefnImpl(
         TableId.LOOKUP_SCHEMA,
@@ -115,7 +116,7 @@ public class SchemaRegistryImpl implements SchemaRegistry
     register(new SchemaDefnImpl(
         TableId.EXTERNAL_SCHEMA,
         EXTERNAL_RESOURCE,
-        Set.of(ExternalTableDefn.TABLE_TYPE)
+        ImmutableSet.of(ExternalTableDefn.TABLE_TYPE)
     ));
     register(new SchemaDefnImpl(
         TableId.VIEW_SCHEMA,
@@ -147,7 +148,7 @@ public class SchemaRegistryImpl implements SchemaRegistry
     // No real need to sort every time. However, this is used infrequently,
     // so OK for now.
     List<SchemaSpec> schemas = Lists.newArrayList(builtIns.values());
-    schemas.sort(Comparator.comparing(SchemaSpec::name));
+    Collections.sort(schemas, (s1, s2) -> s1.name().compareTo(s2.name()));
     return schemas;
   }
 }

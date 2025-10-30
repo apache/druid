@@ -41,11 +41,6 @@ public class TableId
   // Extra for views
   public static final String VIEW_SCHEMA = "view";
 
-  /**
-   * Schema for indexing templates.
-   */
-  public static final String INDEXING_TEMPLATE_SCHEMA = "index_template";
-
   private final String schema;
   private final String name;
 
