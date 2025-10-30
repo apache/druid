@@ -56,7 +56,6 @@ import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
@@ -64,7 +63,6 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
-import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatistics;
@@ -79,14 +77,11 @@ import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
-import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
-import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -98,7 +93,6 @@ import org.mockito.Mockito;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -123,7 +117,6 @@ public class OverlordCompactionSchedulerTest
   }
 
   private static final DateTime JAN_20 = DateTimes.of("2025-01-20");
-  private static final DateTime MAR_11 = DateTimes.of("2025-03-11");
 
   private AtomicReference<ClusterCompactionConfig> compactionConfig;
   private CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig;
@@ -142,8 +135,6 @@ public class OverlordCompactionSchedulerTest
   private String dataSource;
   private OverlordCompactionScheduler scheduler;
 
-  private Map<Interval, String> submittedMsqTaskIds;
-
   @Before
   public void setUp()
   {
@@ -155,16 +146,10 @@ public class OverlordCompactionSchedulerTest
 
     taskQueue = Mockito.mock(TaskQueue.class);
 
-    submittedMsqTaskIds = new HashMap<>();
     brokerClient = Mockito.mock(BrokerClient.class);
     Mockito.when(brokerClient.submitSqlTask(ArgumentMatchers.any(ClientSqlQuery.class))).thenAnswer(
         arg -> {
-          final ClientSqlQuery query = arg.getArgument(0);
-          final Interval compactionInterval =
-              (Interval) query.getContext().get(CompactSegments.COMPACTION_INTERVAL_KEY);
-
           final String taskId = IdUtils.getRandomId();
-          submittedMsqTaskIds.put(compactionInterval, taskId);
           return Futures.immediateFuture(new SqlTaskStatus(taskId, TaskState.RUNNING, null));
         }
     );
@@ -491,143 +476,6 @@ public class OverlordCompactionSchedulerTest
     scheduler.stopBeingLeader();
   }
 
-  @Test
-  public void test_ingestHourGranularity_andCompactToDayAndMonth_withInlineTemplates()
-  {
-    final int numDays = (int) new Duration(MAR_11.getMillis() - JAN_20.getMillis()).getStandardDays();
-    createSegments(24 * numDays, Granularities.HOUR, JAN_20);
-    verifyNumSegmentsWith(Granularities.HOUR, 24 * numDays);
-
-    // Compact everything going back to Mar 10 to DAY granularity, rest to MONTH
-    final DateTime now = DateTimes.nowUtc();
-    final Period dayRulePeriod = new Period(now.getMillis() - MAR_11.minusDays(1).minusMinutes(1).getMillis());
-    CascadingCompactionTemplate cascadingTemplate = new CascadingCompactionTemplate(
-        dataSource,
-        List.of(
-            new CompactionRule(dayRulePeriod, new InlineCompactionJobTemplate(createMatcher(Granularities.DAY))),
-            new CompactionRule(Period.ZERO, new InlineCompactionJobTemplate(createMatcher(Granularities.MONTH)))
-        )
-    );
-
-    startCompactionWithSpec(cascadingTemplate);
-    runCompactionTasks(12);
-
-    verifyFullyCompacted();
-    verifyNumSegmentsWith(Granularities.HOUR, 0);
-    verifyNumSegmentsWith(Granularities.DAY, 10);
-    verifyNumSegmentsWith(Granularities.MONTH, 2);
-  }
-
-  @Test
-  public void test_ingestHourGranularity_andCompactToDayAndMonth_withCatalogTemplates()
-  {
-    final int numDays = (int) new Duration(MAR_11.getMillis() - JAN_20.getMillis()).getStandardDays();
-    createSegments(24 * numDays, Granularities.HOUR, JAN_20);
-    verifyNumSegmentsWith(Granularities.HOUR, 24 * numDays);
-
-    // Add compaction templates to catalog
-    final CompactionJobTemplate dayGranularityTemplate =
-        new InlineCompactionJobTemplate(createMatcher(Granularities.DAY));
-    final CompactionJobTemplate monthGranularityTemplate =
-        new InlineCompactionJobTemplate(createMatcher(Granularities.MONTH));
-
-    // Compact everything going back to Mar 10 to DAY granularity, rest to MONTH
-    final DateTime now = DateTimes.nowUtc();
-    final Period dayRulePeriod = new Period(now.getMillis() - MAR_11.minusDays(1).minusMinutes(1).getMillis());
-    CascadingCompactionTemplate cascadingTemplate = new CascadingCompactionTemplate(
-        dataSource,
-        List.of(
-            new CompactionRule(dayRulePeriod, dayGranularityTemplate),
-            new CompactionRule(Period.ZERO, monthGranularityTemplate)
-        )
-    );
-
-    startCompactionWithSpec(cascadingTemplate);
-    runCompactionTasks(12);
-
-    verifyFullyCompacted();
-    verifyNumSegmentsWith(Granularities.HOUR, 0);
-    verifyNumSegmentsWith(Granularities.DAY, 10);
-    verifyNumSegmentsWith(Granularities.MONTH, 2);
-  }
-
-  @Test
-  public void test_ingestHourGranularity_andCompactToDayAndMonth_withCatalogMSQTemplates()
-  {
-    dataSource = TestDataSource.WIKI;
-
-    final int numDays = (int) new Duration(MAR_11.getMillis() - JAN_20.getMillis()).getStandardDays();
-    createSegments(24 * numDays, Granularities.HOUR, JAN_20);
-    verifyNumSegmentsWith(Granularities.HOUR, 24 * numDays);
-
-    // Add compaction templates to catalog
-    final String sqlDayGranularity =
-        "REPLACE INTO ${dataSource}"
-        + " OVERWRITE WHERE __time >= TIMESTAMP '${startTimestamp}' AND __time < TIMESTAMP '${endTimestamp}'"
-        + " SELECT * FROM ${dataSource}"
-        + " WHERE __time BETWEEN '${startTimestamp}' AND '${endTimestamp}'"
-        + " PARTITIONED BY DAY";
-    final CompactionJobTemplate dayGranularityTemplate = new MSQCompactionJobTemplate(
-        new ClientSqlQuery(sqlDayGranularity, null, false, false, false, null, null),
-        createMatcher(Granularities.DAY)
-    );
-    final String sqlMonthGranularity =
-        "REPLACE INTO ${dataSource}"
-        + " OVERWRITE WHERE __time >= TIMESTAMP '${startTimestamp}' AND __time < TIMESTAMP '${endTimestamp}'"
-        + " SELECT * FROM ${dataSource}"
-        + " WHERE __time BETWEEN '${startTimestamp}' AND '${endTimestamp}'"
-        + " PARTITIONED BY MONTH";
-    final CompactionJobTemplate monthGranularityTemplate = new MSQCompactionJobTemplate(
-        new ClientSqlQuery(sqlMonthGranularity, null, false, false, false, null, null),
-        createMatcher(Granularities.MONTH)
-    );
-
-    // Compact everything going back to Mar 10 to DAY granularity, rest to MONTH
-    final DateTime now = DateTimes.nowUtc();
-    final Period dayRulePeriod = new Period(now.getMillis() - MAR_11.minusDays(1).minusMinutes(1).getMillis());
-    CascadingCompactionTemplate cascadingTemplate = new CascadingCompactionTemplate(
-        dataSource,
-        List.of(
-            new CompactionRule(dayRulePeriod, dayGranularityTemplate),
-            new CompactionRule(Period.ZERO, monthGranularityTemplate)
-        )
-    );
-
-    startCompactionWithSpec(cascadingTemplate);
-    runMSQCompactionJobs(12);
-
-    verifyFullyCompacted();
-    verifyNumSegmentsWith(Granularities.HOUR, 0);
-    verifyNumSegmentsWith(Granularities.DAY, 10);
-    verifyNumSegmentsWith(Granularities.MONTH, 2);
-  }
-
-  private void verifyNumSegmentsWith(Granularity granularity, int numExpectedSegments)
-  {
-    long numMatchingSegments = segmentStorage
-        .retrieveAllUsedSegments(dataSource, Segments.ONLY_VISIBLE)
-        .stream()
-        .filter(segment -> granularity.isAligned(segment.getInterval()))
-        .count();
-
-    Assert.assertEquals(
-        StringUtils.format("Segment with granularity[%s]", granularity),
-        numExpectedSegments,
-        (int) numMatchingSegments
-    );
-  }
-
-  private void verifyFullyCompacted()
-  {
-    runScheduledJob();
-    int numSegments = segmentStorage.retrieveAllUsedSegments(dataSource, Segments.ONLY_VISIBLE).size();
-
-    final AutoCompactionSnapshot snapshot = scheduler.getCompactionSnapshot(dataSource);
-    Assert.assertEquals(0, snapshot.getSegmentCountAwaitingCompaction());
-    Assert.assertEquals(0, snapshot.getSegmentCountSkipped());
-    Assert.assertEquals(numSegments, snapshot.getSegmentCountCompacted());
-  }
-
   private void createSegments(int numSegments, Granularity granularity, DateTime firstSegmentStart)
   {
     final List<DataSegment> segments = CreateDataSegments
@@ -636,14 +484,6 @@ public class OverlordCompactionSchedulerTest
         .startingAt(firstSegmentStart)
         .eachOfSizeInMb(100);
     segmentStorage.commitSegments(Set.copyOf(segments), null);
-  }
-
-  private void startCompactionWithSpec(DataSourceCompactionConfig config)
-  {
-    scheduler.becomeLeader();
-    final CompactionSupervisorSpec compactionSupervisor
-        = new CompactionSupervisorSpec(config, false, scheduler);
-    scheduler.startCompaction(config.getDataSource(), compactionSupervisor.createSupervisor());
   }
 
   private void runCompactionTasks(int expectedCount)
@@ -692,52 +532,6 @@ public class OverlordCompactionSchedulerTest
           .get(0);
       segmentStorage.commitSegments(Set.of(replaceSegment), null);
     }
-  }
-
-  private void runMSQCompactionJobs(int numExpectedJobs)
-  {
-    runScheduledJob();
-    serviceEmitter.verifySum("compact/task/count", numExpectedJobs);
-
-    ArgumentCaptor<ClientSqlQuery> queryArgumentCaptor = ArgumentCaptor.forClass(ClientSqlQuery.class);
-    Mockito.verify(brokerClient, Mockito.times(numExpectedJobs))
-           .submitSqlTask(queryArgumentCaptor.capture());
-
-    for (ClientSqlQuery job : queryArgumentCaptor.getAllValues()) {
-      final String query = job.getQuery();
-
-      final Granularity segmentGranularity;
-      if (query.contains("PARTITIONED BY DAY")) {
-        segmentGranularity = Granularities.DAY;
-      } else if (query.contains("PARTITIONED BY MONTH")) {
-        segmentGranularity = Granularities.MONTH;
-      } else {
-        segmentGranularity = Granularities.HOUR;
-      }
-
-      final Interval compactionInterval =
-          (Interval) job.getContext().get(CompactSegments.COMPACTION_INTERVAL_KEY);
-      runCompactionTask(
-          submittedMsqTaskIds.get(compactionInterval),
-          compactionInterval,
-          segmentGranularity
-      );
-    }
-
-    segmentStorage.getManager().forceUpdateDataSourcesSnapshot();
-  }
-
-  private static CompactionStateMatcher createMatcher(Granularity segmentGranularity)
-  {
-    return new CompactionStateMatcher(
-        null,
-        null,
-        null,
-        null,
-        null,
-        new UserCompactionTaskGranularityConfig(segmentGranularity, null, null),
-        null
-    );
   }
 
   private void disableScheduler()

@@ -30,11 +30,9 @@ import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.DataSourceCompactibleSegmentIterator;
 import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
-import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
-import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -53,21 +51,6 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
   public CompactionConfigBasedJobTemplate(DataSourceCompactionConfig config)
   {
     this.config = config;
-  }
-
-  public static CompactionConfigBasedJobTemplate create(String dataSource, CompactionStateMatcher stateMatcher)
-  {
-    return new CompactionConfigBasedJobTemplate(
-        InlineSchemaDataSourceCompactionConfig
-            .builder()
-            .forDataSource(dataSource)
-            .withSkipOffsetFromLatest(Period.ZERO)
-            .withTransformSpec(stateMatcher.getTransformSpec())
-            .withProjections(stateMatcher.getProjections())
-            .withMetricsSpec(stateMatcher.getMetricsSpec())
-            .withGranularitySpec(stateMatcher.getGranularitySpec())
-            .build()
-    );
   }
 
   @Nullable

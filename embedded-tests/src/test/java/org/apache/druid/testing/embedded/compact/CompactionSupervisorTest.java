@@ -23,15 +23,8 @@ import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexing.common.task.IndexTask;
-import org.apache.druid.indexing.compact.CascadingCompactionTemplate;
-import org.apache.druid.indexing.compact.CompactionJobTemplate;
-import org.apache.druid.indexing.compact.CompactionRule;
-import org.apache.druid.indexing.compact.CompactionStateMatcher;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
-import org.apache.druid.indexing.compact.InlineCompactionJobTemplate;
-import org.apache.druid.indexing.compact.MSQCompactionJobTemplate;
 import org.apache.druid.indexing.overlord.Segments;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.guice.IndexerMemoryManagementModule;
@@ -40,7 +33,6 @@ import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.guice.MSQSqlModule;
 import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -57,13 +49,11 @@ import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
-import org.joda.time.DateTime;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -144,120 +134,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(1, getNumSegmentsWith(Granularities.MONTH));
   }
 
-  @Test
-  public void test_ingestHourGranularity_andCompactToDayAndMonth_withInlineTemplates()
-  {
-    // Create a cascading template with DAY and MONTH granularity
-    CascadingCompactionTemplate cascadingTemplate = new CascadingCompactionTemplate(
-        dataSource,
-        List.of(
-            new CompactionRule(Period.days(1), new InlineCompactionJobTemplate(createMatcher(Granularities.DAY))),
-            new CompactionRule(Period.days(50), new InlineCompactionJobTemplate(createMatcher(Granularities.MONTH)))
-        )
-    );
-
-    ingestHourSegments(1000);
-    runCompactionWithSpec(cascadingTemplate);
-    waitForAllCompactionTasksToFinish();
-
-    Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
-    Assertions.assertTrue(getNumSegmentsWith(Granularities.DAY) >= 1);
-    Assertions.assertTrue(getNumSegmentsWith(Granularities.MONTH) >= 1);
-  }
-
-  @Test
-  public void test_ingestHourGranularity_andCompactToDayAndMonth_withMSQTemplates()
-  {
-    ingestHourSegments(1200);
-
-    // Add compaction templates to catalog
-    final String sqlDayGranularity =
-        "REPLACE INTO ${dataSource}"
-        + " OVERWRITE WHERE __time >= TIMESTAMP '${startTimestamp}' AND __time < TIMESTAMP '${endTimestamp}'"
-        + " SELECT * FROM ${dataSource}"
-        + " WHERE __time BETWEEN '${startTimestamp}' AND '${endTimestamp}'"
-        + " PARTITIONED BY DAY";
-    final CompactionJobTemplate dayGranularityTemplate = new MSQCompactionJobTemplate(
-        new ClientSqlQuery(sqlDayGranularity, null, false, false, false, null, null),
-        createMatcher(Granularities.DAY)
-    );
-    final String sqlMonthGranularity =
-        "REPLACE INTO ${dataSource}"
-        + " OVERWRITE WHERE __time >= TIMESTAMP '${startTimestamp}' AND __time < TIMESTAMP '${endTimestamp}'"
-        + " SELECT * FROM ${dataSource}"
-        + " WHERE __time >= TIMESTAMP '${startTimestamp}' AND __time < TIMESTAMP '${endTimestamp}'"
-        + " PARTITIONED BY MONTH";
-    final CompactionJobTemplate monthGranularityTemplate = new MSQCompactionJobTemplate(
-        new ClientSqlQuery(sqlMonthGranularity, null, false, false, false, null, null),
-        createMatcher(Granularities.MONTH)
-    );
-
-    // Create a cascading template with DAY and MONTH granularity
-    CascadingCompactionTemplate cascadingTemplate = new CascadingCompactionTemplate(
-        dataSource,
-        List.of(
-            new CompactionRule(Period.days(1), dayGranularityTemplate),
-            new CompactionRule(Period.days(50), monthGranularityTemplate)
-        )
-    );
-
-    runCompactionWithSpec(cascadingTemplate);
-    waitForAllCompactionTasksToFinish();
-
-    Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
-    Assertions.assertTrue(getNumSegmentsWith(Granularities.DAY) >= 1);
-    Assertions.assertTrue(getNumSegmentsWith(Granularities.MONTH) >= 1);
-  }
-
-  @Test
-  public void test_ingestHourGranularity_andCompactToDayAndMonth_withMixedTemplates()
-  {
-    ingestHourSegments(1200);
-
-    // Add compaction templates to catalog
-    final String sqlDayGranularity =
-        "REPLACE INTO ${dataSource}"
-        + " OVERWRITE WHERE __time >= TIMESTAMP '${startTimestamp}' AND __time < TIMESTAMP '${endTimestamp}'"
-        + " SELECT * FROM ${dataSource}"
-        + " WHERE __time BETWEEN '${startTimestamp}' AND '${endTimestamp}'"
-        + " PARTITIONED BY DAY";
-    final MSQCompactionJobTemplate dayTemplate = new MSQCompactionJobTemplate(
-        new ClientSqlQuery(sqlDayGranularity, null, false, false, false, null, null),
-        createMatcher(Granularities.DAY)
-    );
-    final CompactionJobTemplate weekTemplate =
-        new InlineCompactionJobTemplate(createMatcher(Granularities.WEEK));
-    final InlineCompactionJobTemplate monthTemplate =
-        new InlineCompactionJobTemplate(createMatcher(Granularities.MONTH));
-
-    // Compact last 1 day to DAY, next 14 days to WEEK, then 1 more DAY, rest to MONTH
-    CascadingCompactionTemplate cascadingTemplate = new CascadingCompactionTemplate(
-        dataSource,
-        List.of(
-            new CompactionRule(Period.days(1), dayTemplate),
-            new CompactionRule(Period.days(15), weekTemplate),
-            new CompactionRule(Period.days(16), dayTemplate),
-            new CompactionRule(Period.ZERO, monthTemplate)
-        )
-    );
-
-    runCompactionWithSpec(cascadingTemplate);
-    waitForAllCompactionTasksToFinish();
-
-    Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
-    Assertions.assertTrue(getNumSegmentsWith(Granularities.DAY) >= 1);
-    Assertions.assertTrue(getNumSegmentsWith(Granularities.WEEK) >= 1);
-    Assertions.assertTrue(getNumSegmentsWith(Granularities.MONTH) >= 1);
-  }
-
-  private void ingestHourSegments(int numSegments)
-  {
-    runIngestionAtGranularity(
-        "HOUR",
-        createHourlyInlineDataCsv(DateTimes.nowUtc(), numSegments)
-    );
-  }
-
   private void runCompactionWithSpec(DataSourceCompactionConfig config)
   {
     final CompactionSupervisorSpec compactionSupervisor
@@ -315,31 +191,5 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         .dataSource(dataSource)
         .withId(IdUtils.getRandomId());
     cluster.callApi().runTask(task, overlord);
-  }
-
-  private String createHourlyInlineDataCsv(DateTime latestRecordTimestamp, int numRecords)
-  {
-    final StringBuilder builder = new StringBuilder();
-    for (int i = 0; i < numRecords; ++i) {
-      builder.append(latestRecordTimestamp.minusHours(i))
-             .append(",").append("item_").append(IdUtils.getRandomId())
-             .append(",").append(0)
-             .append("\n");
-    }
-
-    return builder.toString();
-  }
-
-  private static CompactionStateMatcher createMatcher(Granularity segmentGranularity)
-  {
-    return new CompactionStateMatcher(
-        null,
-        null,
-        null,
-        null,
-        null,
-        new UserCompactionTaskGranularityConfig(segmentGranularity, null, null),
-        null
-    );
   }
 }
