@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import org.apache.druid.indexing.compact.CascadingCompactionTemplate;
-import org.apache.druid.indexing.compact.CatalogCompactionJobTemplate;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.compact.InlineCompactionJobTemplate;
 import org.apache.druid.indexing.compact.MSQCompactionJobTemplate;
@@ -52,7 +51,6 @@ public class SupervisorModule implements DruidModule
         new SimpleModule(getClass().getSimpleName())
             .registerSubtypes(
                 new NamedType(InlineCompactionJobTemplate.class, InlineCompactionJobTemplate.TYPE),
-                new NamedType(CatalogCompactionJobTemplate.class, CatalogCompactionJobTemplate.TYPE),
                 new NamedType(MSQCompactionJobTemplate.class, MSQCompactionJobTemplate.TYPE),
                 new NamedType(CascadingCompactionTemplate.class, CascadingCompactionTemplate.TYPE),
                 new NamedType(CompactionSupervisorSpec.class, CompactionSupervisorSpec.TYPE),

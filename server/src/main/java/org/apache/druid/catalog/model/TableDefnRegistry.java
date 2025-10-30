@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.catalog.model.table.ExternalTableDefn;
 import org.apache.druid.catalog.model.table.HttpInputSourceDefn;
-import org.apache.druid.catalog.model.table.IndexingTemplateDefn;
 import org.apache.druid.catalog.model.table.InlineInputSourceDefn;
 import org.apache.druid.catalog.model.table.InputFormatDefn;
 import org.apache.druid.catalog.model.table.InputFormats;
@@ -64,8 +63,7 @@ public class TableDefnRegistry
   // Guice later to allow extensions to define table types.
   private static final List<TableDefn> BUILTIN_TABLE_DEFNS = Arrays.asList(
       new DatasourceDefn(),
-      new ExternalTableDefn(),
-      new IndexingTemplateDefn()
+      new ExternalTableDefn()
   );
   private static final List<InputSourceDefn> BUILTIN_INPUT_SOURCE_DEFNS = Arrays.asList(
       new InlineInputSourceDefn(),

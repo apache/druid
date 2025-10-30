@@ -24,10 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.catalog.MapMetadataCatalog;
-import org.apache.druid.catalog.model.ResolvedTable;
-import org.apache.druid.catalog.model.TableId;
-import org.apache.druid.catalog.model.TableSpec;
-import org.apache.druid.catalog.model.table.IndexingTemplateDefn;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.ClientMSQContext;
@@ -533,12 +529,10 @@ public class OverlordCompactionSchedulerTest
     verifyNumSegmentsWith(Granularities.HOUR, 24 * numDays);
 
     // Add compaction templates to catalog
-    final String dayGranularityTemplateId = saveTemplateToCatalog(
-        new InlineCompactionJobTemplate(createMatcher(Granularities.DAY))
-    );
-    final String monthGranularityTemplateId = saveTemplateToCatalog(
-        new InlineCompactionJobTemplate(createMatcher(Granularities.MONTH))
-    );
+    final CompactionJobTemplate dayGranularityTemplate =
+        new InlineCompactionJobTemplate(createMatcher(Granularities.DAY));
+    final CompactionJobTemplate monthGranularityTemplate =
+        new InlineCompactionJobTemplate(createMatcher(Granularities.MONTH));
 
     // Compact everything going back to Mar 10 to DAY granularity, rest to MONTH
     final DateTime now = DateTimes.nowUtc();
@@ -546,8 +540,8 @@ public class OverlordCompactionSchedulerTest
     CascadingCompactionTemplate cascadingTemplate = new CascadingCompactionTemplate(
         dataSource,
         List.of(
-            new CompactionRule(dayRulePeriod, new CatalogCompactionJobTemplate(dayGranularityTemplateId, catalog)),
-            new CompactionRule(Period.ZERO, new CatalogCompactionJobTemplate(monthGranularityTemplateId, catalog))
+            new CompactionRule(dayRulePeriod, dayGranularityTemplate),
+            new CompactionRule(Period.ZERO, monthGranularityTemplate)
         )
     );
 
@@ -576,11 +570,9 @@ public class OverlordCompactionSchedulerTest
         + " SELECT * FROM ${dataSource}"
         + " WHERE __time BETWEEN '${startTimestamp}' AND '${endTimestamp}'"
         + " PARTITIONED BY DAY";
-    final String dayGranularityTemplateId = saveTemplateToCatalog(
-        new MSQCompactionJobTemplate(
-            new ClientSqlQuery(sqlDayGranularity, null, false, false, false, null, null),
-            createMatcher(Granularities.DAY)
-        )
+    final CompactionJobTemplate dayGranularityTemplate = new MSQCompactionJobTemplate(
+        new ClientSqlQuery(sqlDayGranularity, null, false, false, false, null, null),
+        createMatcher(Granularities.DAY)
     );
     final String sqlMonthGranularity =
         "REPLACE INTO ${dataSource}"
@@ -588,11 +580,9 @@ public class OverlordCompactionSchedulerTest
         + " SELECT * FROM ${dataSource}"
         + " WHERE __time BETWEEN '${startTimestamp}' AND '${endTimestamp}'"
         + " PARTITIONED BY MONTH";
-    final String monthGranularityTemplateId = saveTemplateToCatalog(
-        new MSQCompactionJobTemplate(
-            new ClientSqlQuery(sqlMonthGranularity, null, false, false, false, null, null),
-            createMatcher(Granularities.MONTH)
-        )
+    final CompactionJobTemplate monthGranularityTemplate = new MSQCompactionJobTemplate(
+        new ClientSqlQuery(sqlMonthGranularity, null, false, false, false, null, null),
+        createMatcher(Granularities.MONTH)
     );
 
     // Compact everything going back to Mar 10 to DAY granularity, rest to MONTH
@@ -601,8 +591,8 @@ public class OverlordCompactionSchedulerTest
     CascadingCompactionTemplate cascadingTemplate = new CascadingCompactionTemplate(
         dataSource,
         List.of(
-            new CompactionRule(dayRulePeriod, new CatalogCompactionJobTemplate(dayGranularityTemplateId, catalog)),
-            new CompactionRule(Period.ZERO, new CatalogCompactionJobTemplate(monthGranularityTemplateId, catalog))
+            new CompactionRule(dayRulePeriod, dayGranularityTemplate),
+            new CompactionRule(Period.ZERO, monthGranularityTemplate)
         )
     );
 
@@ -649,26 +639,6 @@ public class OverlordCompactionSchedulerTest
         .startingAt(firstSegmentStart)
         .eachOfSizeInMb(100);
     segmentStorage.commitSegments(Set.copyOf(segments), null);
-  }
-
-  private String saveTemplateToCatalog(CompactionJobTemplate template)
-  {
-    final String templateId = IdUtils.getRandomId();
-    final TableId tableId = TableId.of(TableId.INDEXING_TEMPLATE_SCHEMA, templateId);
-
-    catalog.addSpec(
-        tableId,
-        new TableSpec(
-            IndexingTemplateDefn.TYPE,
-            Map.of(IndexingTemplateDefn.PROPERTY_PAYLOAD, template),
-            null
-        )
-    );
-
-    ResolvedTable table = catalog.resolveTable(tableId);
-    Assert.assertNotNull(table);
-
-    return templateId;
   }
 
   private void startCompactionWithSpec(DataSourceCompactionConfig config)

@@ -19,18 +19,11 @@
 
 package org.apache.druid.testing.embedded.compact;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
-import org.apache.druid.catalog.model.ResolvedTable;
-import org.apache.druid.catalog.model.TableId;
-import org.apache.druid.catalog.model.TableSpec;
-import org.apache.druid.catalog.model.table.IndexingTemplateDefn;
-import org.apache.druid.catalog.sync.CatalogClient;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.compact.CascadingCompactionTemplate;
-import org.apache.druid.indexing.compact.CatalogCompactionJobTemplate;
 import org.apache.druid.indexing.compact.CompactionJobTemplate;
 import org.apache.druid.indexing.compact.CompactionRule;
 import org.apache.druid.indexing.compact.CompactionStateMatcher;
@@ -39,7 +32,6 @@ import org.apache.druid.indexing.compact.InlineCompactionJobTemplate;
 import org.apache.druid.indexing.compact.MSQCompactionJobTemplate;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.guice.IndexerMemoryManagementModule;
@@ -50,7 +42,6 @@ import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.rpc.UpdateResponse;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
@@ -124,37 +115,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void test_saveCompactionTemplateToCatalog_andQueryDefinition() throws Exception
-  {
-    final String templateId = saveTemplateToCatalog(
-        new InlineCompactionJobTemplate(createMatcher(Granularities.DAY))
-    );
-
-    final ClientSqlQuery query = new ClientSqlQuery(
-        StringUtils.format("SELECT * FROM index_template.%s", templateId),
-        "array",
-        true,
-        true,
-        true,
-        null,
-        null
-    );
-
-    final String result = cluster.callApi().onAnyBroker(b -> b.submitSqlQuery(query));
-    final List<List<String>> rows = TestHelper.JSON_MAPPER.readValue(result, new TypeReference<>() {});
-
-    Assertions.assertEquals(
-        List.of(
-            List.of("type", "payload"),
-            List.of("STRING", "COMPLEX"),
-            List.of("VARCHAR", "OTHER"),
-            List.of("compactInline", "{\"targetState\":{\"granularitySpec\":{\"segmentGranularity\":\"DAY\"}},\"type\":\"compactInline\"}")
-        ),
-        rows
-    );
-  }
-
-  @Test
   public void test_ingestDayGranularity_andCompactToMonthGranularity_withInlineConfig()
   {
     // Ingest data at DAY granularity and verify
@@ -211,19 +171,17 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     ingestHourSegments(1200);
 
     // Add compaction templates to catalog
-    final String dayGranularityTemplateId = saveTemplateToCatalog(
-        new InlineCompactionJobTemplate(createMatcher(Granularities.DAY))
-    );
-    final String monthGranularityTemplateId = saveTemplateToCatalog(
-        new InlineCompactionJobTemplate(createMatcher(Granularities.MONTH))
-    );
+    final CompactionJobTemplate dayGranularityTemplate =
+        new InlineCompactionJobTemplate(createMatcher(Granularities.DAY));
+    final CompactionJobTemplate monthGranularityTemplate =
+        new InlineCompactionJobTemplate(createMatcher(Granularities.MONTH));
 
     // Create a cascading template with DAY and MONTH granularity
     CascadingCompactionTemplate cascadingTemplate = new CascadingCompactionTemplate(
         dataSource,
         List.of(
-            new CompactionRule(Period.days(1), new CatalogCompactionJobTemplate(dayGranularityTemplateId, null)),
-            new CompactionRule(Period.days(50), new CatalogCompactionJobTemplate(monthGranularityTemplateId, null))
+            new CompactionRule(Period.days(1), dayGranularityTemplate),
+            new CompactionRule(Period.days(50), monthGranularityTemplate)
         )
     );
 
@@ -247,11 +205,9 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         + " SELECT * FROM ${dataSource}"
         + " WHERE __time BETWEEN '${startTimestamp}' AND '${endTimestamp}'"
         + " PARTITIONED BY DAY";
-    final String dayGranularityTemplateId = saveTemplateToCatalog(
-        new MSQCompactionJobTemplate(
-            new ClientSqlQuery(sqlDayGranularity, null, false, false, false, null, null),
-            createMatcher(Granularities.DAY)
-        )
+    final CompactionJobTemplate dayGranularityTemplate = new MSQCompactionJobTemplate(
+        new ClientSqlQuery(sqlDayGranularity, null, false, false, false, null, null),
+        createMatcher(Granularities.DAY)
     );
     final String sqlMonthGranularity =
         "REPLACE INTO ${dataSource}"
@@ -259,19 +215,17 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         + " SELECT * FROM ${dataSource}"
         + " WHERE __time >= TIMESTAMP '${startTimestamp}' AND __time < TIMESTAMP '${endTimestamp}'"
         + " PARTITIONED BY MONTH";
-    final String monthGranularityTemplateId = saveTemplateToCatalog(
-        new MSQCompactionJobTemplate(
-            new ClientSqlQuery(sqlMonthGranularity, null, false, false, false, null, null),
-            createMatcher(Granularities.MONTH)
-        )
+    final CompactionJobTemplate monthGranularityTemplate = new MSQCompactionJobTemplate(
+        new ClientSqlQuery(sqlMonthGranularity, null, false, false, false, null, null),
+        createMatcher(Granularities.MONTH)
     );
 
     // Create a cascading template with DAY and MONTH granularity
     CascadingCompactionTemplate cascadingTemplate = new CascadingCompactionTemplate(
         dataSource,
         List.of(
-            new CompactionRule(Period.days(1), new CatalogCompactionJobTemplate(dayGranularityTemplateId, null)),
-            new CompactionRule(Period.days(50), new CatalogCompactionJobTemplate(monthGranularityTemplateId, null))
+            new CompactionRule(Period.days(1), dayGranularityTemplate),
+            new CompactionRule(Period.days(50), monthGranularityTemplate)
         )
     );
 
@@ -299,10 +253,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         new ClientSqlQuery(sqlDayGranularity, null, false, false, false, null, null),
         createMatcher(Granularities.DAY)
     );
-    final String dayTemplateId = saveTemplateToCatalog(dayTemplate);
-    final String weekTemplateId = saveTemplateToCatalog(
-        new InlineCompactionJobTemplate(createMatcher(Granularities.WEEK))
-    );
+    final CompactionJobTemplate weekTemplate =
+        new InlineCompactionJobTemplate(createMatcher(Granularities.WEEK));
     final InlineCompactionJobTemplate monthTemplate =
         new InlineCompactionJobTemplate(createMatcher(Granularities.MONTH));
 
@@ -310,8 +262,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     CascadingCompactionTemplate cascadingTemplate = new CascadingCompactionTemplate(
         dataSource,
         List.of(
-            new CompactionRule(Period.days(1), new CatalogCompactionJobTemplate(dayTemplateId, null)),
-            new CompactionRule(Period.days(15), new CatalogCompactionJobTemplate(weekTemplateId, null)),
+            new CompactionRule(Period.days(1), dayTemplate),
+            new CompactionRule(Period.days(15), weekTemplate),
             new CompactionRule(Period.days(16), dayTemplate),
             new CompactionRule(Period.ZERO, monthTemplate)
         )
@@ -377,27 +329,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         .stream()
         .filter(segment -> granularity.isAligned(segment.getInterval()))
         .count();
-  }
-
-  private String saveTemplateToCatalog(CompactionJobTemplate template)
-  {
-    final String templateId = IdUtils.getRandomId();
-    final CatalogClient catalogClient = overlord.bindings().getInstance(CatalogClient.class);
-
-    final TableId tableId = TableId.of(TableId.INDEXING_TEMPLATE_SCHEMA, templateId);
-    catalogClient.createTable(
-        tableId,
-        new TableSpec(
-            IndexingTemplateDefn.TYPE,
-            Map.of(IndexingTemplateDefn.PROPERTY_PAYLOAD, template),
-            null
-        )
-    );
-
-    ResolvedTable table = catalogClient.resolveTable(tableId);
-    Assertions.assertNotNull(table);
-
-    return templateId;
   }
 
   private void runIngestionAtGranularity(

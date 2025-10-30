@@ -55,14 +55,12 @@ public class DruidCalciteSchemaModule implements Module
     binder.bind(SystemSchema.class).in(LazySingleton.class);
     binder.bind(InformationSchema.class).in(LazySingleton.class);
     binder.bind(LookupSchema.class).in(LazySingleton.class);
-    binder.bind(IndexingTemplateSchema.class).in(LazySingleton.class);
 
     // Binder to inject different schema to Calcite
     SqlBindings.addSchema(binder, NamedDruidSchema.class);
     SqlBindings.addSchema(binder, NamedSystemSchema.class);
     SqlBindings.addSchema(binder, NamedLookupSchema.class);
     SqlBindings.addSchema(binder, NamedViewSchema.class);
-    SqlBindings.addSchema(binder, NamedIndexingTemplateSchema.class);
   }
 
   @Provides

@@ -22,7 +22,6 @@ package org.apache.druid.catalog.model;
 import com.google.common.collect.Lists;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.catalog.model.table.ExternalTableDefn;
-import org.apache.druid.catalog.model.table.IndexingTemplateDefn;
 import org.apache.druid.server.security.ResourceType;
 
 import java.util.Comparator;
@@ -122,11 +121,6 @@ public class SchemaRegistryImpl implements SchemaRegistry
         TableId.VIEW_SCHEMA,
         ResourceType.VIEW,
         null // TODO
-    ));
-    register(new SchemaDefnImpl(
-        TableId.INDEXING_TEMPLATE_SCHEMA,
-        ResourceType.CONFIG,
-        Set.of(IndexingTemplateDefn.TYPE)
     ));
   }
 

@@ -166,8 +166,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
         NamedSystemSchema.class,
         NamedDruidSchema.class,
         NamedLookupSchema.class,
-        NamedViewSchema.class,
-        NamedIndexingTemplateSchema.class
+        NamedViewSchema.class
     );
     Assertions.assertEquals(expectedSchemas.size(), sqlSchemas.size());
     Assertions.assertEquals(
@@ -208,15 +207,6 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
     LookupSchema schema = injector.getInstance(LookupSchema.class);
     Assertions.assertNotNull(schema);
     LookupSchema other = injector.getInstance(LookupSchema.class);
-    Assertions.assertSame(other, schema);
-  }
-
-  @Test
-  public void testIndexingTemplateSchemaIsInjectedAsSingleton()
-  {
-    IndexingTemplateSchema schema = injector.getInstance(IndexingTemplateSchema.class);
-    Assertions.assertNotNull(schema);
-    IndexingTemplateSchema other = injector.getInstance(IndexingTemplateSchema.class);
     Assertions.assertSame(other, schema);
   }
 
