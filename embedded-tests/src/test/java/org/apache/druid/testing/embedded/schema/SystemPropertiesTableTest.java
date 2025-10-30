@@ -20,6 +20,7 @@
 package org.apache.druid.testing.embedded.schema;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.rpc.RequestBuilder;
