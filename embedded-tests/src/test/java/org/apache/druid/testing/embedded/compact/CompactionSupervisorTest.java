@@ -166,35 +166,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void test_ingestHourGranularity_andCompactToDayAndMonth_withCatalogTemplates()
-  {
-    ingestHourSegments(1200);
-
-    // Add compaction templates to catalog
-    final CompactionJobTemplate dayGranularityTemplate =
-        new InlineCompactionJobTemplate(createMatcher(Granularities.DAY));
-    final CompactionJobTemplate monthGranularityTemplate =
-        new InlineCompactionJobTemplate(createMatcher(Granularities.MONTH));
-
-    // Create a cascading template with DAY and MONTH granularity
-    CascadingCompactionTemplate cascadingTemplate = new CascadingCompactionTemplate(
-        dataSource,
-        List.of(
-            new CompactionRule(Period.days(1), dayGranularityTemplate),
-            new CompactionRule(Period.days(50), monthGranularityTemplate)
-        )
-    );
-
-    runCompactionWithSpec(cascadingTemplate);
-    waitForAllCompactionTasksToFinish();
-
-    Assertions.assertEquals(0, getNumSegmentsWith(Granularities.HOUR));
-    Assertions.assertTrue(getNumSegmentsWith(Granularities.DAY) >= 1);
-    Assertions.assertTrue(getNumSegmentsWith(Granularities.MONTH) >= 1);
-  }
-
-  @Test
-  public void test_ingestHourGranularity_andCompactToDayAndMonth_withCatalogMSQTemplates()
+  public void test_ingestHourGranularity_andCompactToDayAndMonth_withMSQTemplates()
   {
     ingestHourSegments(1200);
 

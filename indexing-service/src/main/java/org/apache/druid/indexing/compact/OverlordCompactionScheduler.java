@@ -54,11 +54,9 @@ import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
-import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
-import org.joda.time.Duration;
 
 import java.util.Collections;
 import java.util.List;
@@ -68,6 +66,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -87,8 +86,13 @@ public class OverlordCompactionScheduler implements CompactionScheduler
 {
   private static final Logger log = new Logger(OverlordCompactionScheduler.class);
 
+  /**
+   * Scheduler run period is 15 minutes. It has been kept high to avoid eager
+   * recomputation of the queue as it may be a very compute-intensive operation
+   * taking upto several minutes on clusters with a large number of used segments.
+   * Jobs for a single supervisor may still be recomputed when the supervisor is updated.
+   */
   private static final long DEFAULT_SCHEDULE_PERIOD_MILLIS = 15 * 60_000;
-  private static final Duration METRIC_EMISSION_PERIOD = Duration.standardMinutes(5);
 
   private final SegmentsMetadataManager segmentManager;
   private final LocalOverlordClient overlordClient;
@@ -101,6 +105,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   private final ConcurrentHashMap<String, CompactionSupervisor> activeSupervisors;
 
   private final AtomicReference<Map<String, AutoCompactionSnapshot>> datasourceToCompactionSnapshot;
+  private final AtomicBoolean shouldRecomputeJobsForAnyDatasource = new AtomicBoolean(false);
 
   /**
    * Compaction job queue built in the last invocation of {@link #resetCompactionJobQueue()}.
@@ -133,8 +138,6 @@ public class OverlordCompactionScheduler implements CompactionScheduler
    */
   private final boolean shouldPollSegments;
   private final long schedulePeriodMillis;
-
-  private final Stopwatch sinceStatsEmitted = Stopwatch.createUnstarted();
 
   @Inject
   public OverlordCompactionScheduler(
@@ -218,8 +221,8 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   public void becomeLeader()
   {
     if (isLeader.compareAndSet(false, true)) {
-      log.info("Running compaction scheduler with period [%d] millis.", schedulePeriodMillis);
-      scheduleOnExecutor(this::scheduledRun, schedulePeriodMillis);
+      // Schedule first run after a small delay
+      scheduleOnExecutor(this::scheduledRun, 1_000L);
     }
   }
 
@@ -251,10 +254,15 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   @Override
   public void startCompaction(String dataSourceName, CompactionSupervisor supervisor)
   {
-    // Track active datasources even if scheduler has not started yet because
+    // Track active supervisors even if scheduler has not started yet because
     // SupervisorManager is started before the scheduler
     if (isEnabled()) {
       activeSupervisors.put(dataSourceName, supervisor);
+
+      if (started.get()) {
+        shouldRecomputeJobsForAnyDatasource.set(true);
+        scheduleOnExecutor(() -> recreateJobs(dataSourceName, supervisor), 0L);
+      }
     }
   }
 
@@ -262,6 +270,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   public void stopCompaction(String dataSourceName)
   {
     activeSupervisors.remove(dataSourceName);
+    updateQueueIfComputed(queue -> queue.removeJobs(dataSourceName));
     statusTracker.removeDatasource(dataSourceName);
   }
 
@@ -274,7 +283,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       return;
     }
 
-    log.info("Starting compaction scheduler.");
+    log.info("Starting compaction scheduler with period [%d] millis.", schedulePeriodMillis);
     final Optional<TaskRunner> taskRunnerOptional = taskMaster.getTaskRunner();
     if (taskRunnerOptional.isPresent()) {
       taskRunnerOptional.get().registerListener(taskRunnerListener, executor);
@@ -300,6 +309,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     }
     statusTracker.stop();
     activeSupervisors.clear();
+    latestJobQueue.set(null);
 
     if (shouldPollSegments) {
       segmentManager.stopPollingDatabasePeriodically();
@@ -334,7 +344,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       scheduleOnExecutor(this::scheduledRun, schedulePeriodMillis);
     } else {
       cleanupState();
-      scheduleOnExecutor(this::scheduledRun, schedulePeriodMillis * 4);
+      scheduleOnExecutor(this::scheduledRun, schedulePeriodMillis);
     }
   }
 
@@ -343,6 +353,9 @@ public class OverlordCompactionScheduler implements CompactionScheduler
    */
   private synchronized void resetCompactionJobQueue()
   {
+    // Remove the old queue so that no more jobs are added to it
+    latestJobQueue.set(null);
+
     final Stopwatch runDuration = Stopwatch.createStarted();
     final DataSourcesSnapshot dataSourcesSnapshot = getDatasourceSnapshot();
     final CompactionJobQueue queue = new CompactionJobQueue(
@@ -359,14 +372,14 @@ public class OverlordCompactionScheduler implements CompactionScheduler
 
     statusTracker.resetActiveDatasources(activeSupervisors.keySet());
     statusTracker.onSegmentTimelineUpdated(dataSourcesSnapshot.getSnapshotTime());
-    activeSupervisors.forEach(
-        (datasource, supervisor) -> queue.createAndEnqueueJobs(
-            supervisor,
-            druidInputSourceFactory.create(datasource, Intervals.ETERNITY)
-        )
-    );
+
+    // Jobs for all active supervisors are being freshly created
+    // recomputation will not be needed
+    shouldRecomputeJobsForAnyDatasource.set(false);
+    activeSupervisors.forEach(this::createAndEnqueueJobs);
+
     launchPendingJobs();
-    emitStatsIfPeriodHasElapsed(queue.getRunStats());
+    queue.getRunStats().forEachStat(this::emitStat);
     emitStat(Stats.Compaction.SCHEDULER_RUN_TIME, RowKey.empty(), runDuration.millisElapsed());
   }
 
@@ -376,37 +389,38 @@ public class OverlordCompactionScheduler implements CompactionScheduler
    */
   private synchronized void launchPendingJobs()
   {
-    final CompactionJobQueue queue = latestJobQueue.get();
-    if (queue == null) {
-      // Job queue has not been built yet
-      return;
+    updateQueueIfComputed(queue -> {
+      queue.runReadyJobs();
+      updateCompactionSnapshots(queue);
+    });
+  }
+
+  private synchronized void recreateJobs(String dataSource, CompactionSupervisor supervisor)
+  {
+    if (shouldRecomputeJobsForAnyDatasource.get()) {
+      createAndEnqueueJobs(dataSource, supervisor);
     }
+  }
 
-    queue.runReadyJobs();
-    updateCompactionSnapshots(queue);
-
-    // TODO: Try to trigger a recompute in these cases:
-    // supervisor spec updated - schedule recompute atleast for that supervisor?
-    // dynamic config updated - schedule full recompute?
-    //
-    // supervisor reset? not needed right now? we can probably do it later
+  private synchronized void createAndEnqueueJobs(String dataSource, CompactionSupervisor supervisor)
+  {
+    updateQueueIfComputed(
+        queue -> queue.createAndEnqueueJobs(
+            supervisor,
+            druidInputSourceFactory.create(dataSource, Intervals.ETERNITY)
+        )
+    );
   }
 
   /**
-   * Emits stats if {@link #METRIC_EMISSION_PERIOD} has elapsed.
+   * Performs an operation on the {@link #latestJobQueue} if it has been already
+   * computed.
    */
-  private void emitStatsIfPeriodHasElapsed(CoordinatorRunStats stats)
+  private void updateQueueIfComputed(Consumer<CompactionJobQueue> operation)
   {
-    // Emit stats only if emission period has elapsed
-    if (!sinceStatsEmitted.isRunning() || sinceStatsEmitted.hasElapsed(METRIC_EMISSION_PERIOD)) {
-      stats.forEachStat(this::emitStat);
-      sinceStatsEmitted.restart();
-    } else {
-      // Always emit number of submitted tasks and interval statuses
-      stats.forEachEntry(Stats.Compaction.SUBMITTED_TASKS, this::emitNonZeroStat);
-      stats.forEachEntry(Stats.Compaction.COMPACTED_INTERVALS, this::emitNonZeroStat);
-      stats.forEachEntry(Stats.Compaction.SKIPPED_INTERVALS, this::emitNonZeroStat);
-      stats.forEachEntry(Stats.Compaction.PENDING_INTERVALS, this::emitStat);
+    final CompactionJobQueue queue = latestJobQueue.get();
+    if (queue != null) {
+      operation.accept(queue);
     }
   }
 
@@ -414,11 +428,10 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   {
     statusTracker.onTaskFinished(taskId, taskStatus);
 
-    final CompactionJobQueue queue = latestJobQueue.get();
-    if (queue != null) {
+    updateQueueIfComputed(queue -> {
       queue.onTaskFinished(taskId, taskStatus);
       updateCompactionSnapshots(queue);
-    }
+    });
   }
 
   private void updateCompactionSnapshots(CompactionJobQueue queue)
@@ -464,13 +477,6 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       );
     } else {
       return new CompactionSimulateResult(Collections.emptyMap());
-    }
-  }
-
-  private void emitNonZeroStat(CoordinatorStat stat, RowKey rowKey, long value)
-  {
-    if (value > 0) {
-      emitStat(stat, rowKey, value);
     }
   }
 

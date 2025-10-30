@@ -112,7 +112,7 @@ public class CompactionStatusTrackerTest
     CompactionStatus status
         = statusTracker.computeCompactionStatus(candidateSegments, policy);
     Assert.assertEquals(CompactionStatus.State.PENDING, status.getState());
-    Assert.assertEquals("not compacted yet", status.getReason());
+    Assert.assertEquals("Not compacted yet", status.getReason());
 
     // Verify that interval is skipped for compaction after task has finished
     statusTracker.onSegmentTimelineUpdated(DateTimes.nowUtc().minusMinutes(1));

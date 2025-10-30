@@ -51,11 +51,15 @@ import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Iterates over all eligible compaction jobs in order of their priority.
@@ -69,6 +73,7 @@ import java.util.PriorityQueue;
  * target segment granulariy for different intervals of the same datasource.
  * The cancellation of invalid tasks has been left as a future enhancement.
  */
+@NotThreadSafe
 public class CompactionJobQueue
 {
   private static final Logger log = new Logger(CompactionJobQueue.class);
@@ -86,8 +91,10 @@ public class CompactionJobQueue
 
   private final CompactionSnapshotBuilder snapshotBuilder;
   private final PriorityQueue<CompactionJob> queue;
-  private final Map<String, CompactionJob> submittedTaskIdToJob;
   private final CoordinatorRunStats runStats;
+
+  private final Set<String> activeSupervisors;
+  private final Map<String, CompactionJob> submittedTaskIdToJob;
 
   public CompactionJobQueue(
       DataSourcesSnapshot dataSourcesSnapshot,
@@ -108,6 +115,7 @@ public class CompactionJobQueue
         (o1, o2) -> searchPolicy.compareCandidates(o1.getCandidate(), o2.getCandidate())
     );
     this.submittedTaskIdToJob = new HashMap<>();
+    this.activeSupervisors = new HashSet<>();
     this.jobParams = new CompactionJobParams(
         DateTimes.nowUtc(),
         clusterCompactionConfig,
@@ -126,6 +134,9 @@ public class CompactionJobQueue
   /**
    * Creates jobs for the given {@link CompactionSupervisor} and adds them to
    * the job queue.
+   * <p>
+   * This method is idempotent. If jobs for the given supervisor already exist
+   * in the queue, the method does nothing.
    */
   public void createAndEnqueueJobs(
       CompactionSupervisor supervisor,
@@ -135,11 +146,13 @@ public class CompactionJobQueue
     final Stopwatch jobCreationTime = Stopwatch.createStarted();
     final String supervisorId = supervisor.getSpec().getId();
     try {
-      if (supervisor.shouldCreateJobs()) {
+      if (supervisor.shouldCreateJobs() && !activeSupervisors.contains(supervisorId)) {
+        // Queue fresh jobs
         final List<CompactionJob> jobs = supervisor.createJobs(source, jobParams);
         jobs.forEach(job -> snapshotBuilder.addToPending(job.getCandidate()));
 
         queue.addAll(jobs);
+        activeSupervisors.add(supervisorId);
 
         runStats.add(
             Stats.Compaction.CREATED_JOBS,
@@ -160,6 +173,20 @@ public class CompactionJobQueue
           jobCreationTime.millisElapsed()
       );
     }
+  }
+
+  /**
+   * Removes all existing jobs for the given datasource from the queue.
+   */
+  public void removeJobs(String dataSource)
+  {
+    final List<CompactionJob> jobsToRemove = queue
+        .stream()
+        .filter(job -> job.getDataSource().equals(dataSource))
+        .collect(Collectors.toList());
+
+    queue.removeAll(jobsToRemove);
+    log.info("Removed [%d] jobs for datasource[%s] from queue.", jobsToRemove.size(), dataSource);
   }
 
   /**
@@ -218,7 +245,6 @@ public class CompactionJobQueue
    */
   public Map<String, AutoCompactionSnapshot> getSnapshots()
   {
-    // TODO: fix the stats problem
     return snapshotBuilder.build();
   }
 

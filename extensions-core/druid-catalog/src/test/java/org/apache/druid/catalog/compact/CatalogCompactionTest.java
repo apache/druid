@@ -53,7 +53,8 @@ import java.util.List;
 public class CatalogCompactionTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedOverlord overlord = new EmbeddedOverlord()
-      .addProperty("druid.catalog.client.maxSyncRetries", "0");
+      .addProperty("druid.catalog.client.maxSyncRetries", "0")
+      .addProperty("druid.manager.segments.pollDuration", "PT1s");
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator()
       .addProperty("druid.manager.segments.useIncrementalCache", "always");
   private final EmbeddedBroker broker = new EmbeddedBroker()
