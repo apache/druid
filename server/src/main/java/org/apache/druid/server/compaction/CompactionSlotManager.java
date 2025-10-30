@@ -206,24 +206,32 @@ public class CompactionSlotManager
    * we skip these Intervals until the next compaction run by adding them to
    * {@link #intervalsToSkipCompaction}.
    * <p>
+   * This method must be called after invalid compaction tasks have already been
+   * cancelled using {@link #cancelTaskOnlyIfGranularityChanged} so that their
+   * intervals are not considered locked.
    */
   public void skipLockedIntervals(List<DataSourceCompactionConfig> compactionConfigs)
   {
     final List<LockFilterPolicy> lockFilterPolicies = compactionConfigs
         .stream()
-        .map(config ->
-                 new LockFilterPolicy(config.getDataSource(), config.getTaskPriority(), null, config.getTaskContext()))
+        .map(
+            config -> new LockFilterPolicy(
+                config.getDataSource(),
+                config.getTaskPriority(),
+                null,
+                config.getTaskContext()
+            )
+        )
         .collect(Collectors.toList());
-    final Map<String, List<Interval>> datasourceToLockedIntervals =
-        new HashMap<>(FutureUtils.getUnchecked(overlordClient.findLockedIntervals(lockFilterPolicies), true));
+    final Map<String, List<Interval>> datasourceToLockedIntervals = new HashMap<>(
+        FutureUtils.getUnchecked(overlordClient.findLockedIntervals(lockFilterPolicies), true)
+    );
     log.debug(
         "Skipping the following intervals for Compaction as they are currently locked: %s",
         datasourceToLockedIntervals
     );
 
     // Skip all the intervals locked by higher priority tasks for each datasource
-    // This must be done after the invalid compaction tasks are cancelled
-    // in the loop above so that their intervals are not considered locked
     datasourceToLockedIntervals.forEach(
         (dataSource, intervals) ->
             intervalsToSkipCompaction
