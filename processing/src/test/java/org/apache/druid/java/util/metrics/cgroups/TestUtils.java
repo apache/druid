@@ -21,7 +21,6 @@ package org.apache.druid.java.util.metrics.cgroups;
 
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 
 import java.io.File;
@@ -98,7 +97,7 @@ public class TestUtils
   }
 
 
-  public static @NotNull CgroupDiscoverer exceptionThrowingDiscoverer()
+  public static CgroupDiscoverer exceptionThrowingDiscoverer()
   {
     return new CgroupDiscoverer()
     {

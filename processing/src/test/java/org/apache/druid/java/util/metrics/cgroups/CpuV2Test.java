@@ -53,19 +53,23 @@ public class CpuV2Test
   public void testCpuV2Snapshot() throws IOException
   {
     // Set up v2 files directly in cgroupDir (unified hierarchy root)
-    File cgroupRoot = cgroupDir;
-    
     // Create cpu.stat with microsecond values
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.stat"), 
-        "user_usec 123456789\nsystem_usec 987654321\ncore_sched.force_idle_usec 0\n".getBytes(StandardCharsets.UTF_8));
-    
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.stat"),
+        "user_usec 123456789\nsystem_usec 987654321\ncore_sched.force_idle_usec 0\n".getBytes(StandardCharsets.UTF_8)
+    );
+
     // Create cpu.weight (v2 weight)
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.weight"), 
-        "200\n".getBytes(StandardCharsets.UTF_8));
-    
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.weight"),
+        "200\n".getBytes(StandardCharsets.UTF_8)
+    );
+
     // Create cpu.max (quota period)
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.max"), 
-        "150000 100000\n".getBytes(StandardCharsets.UTF_8));
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.max"),
+        "150000 100000\n".getBytes(StandardCharsets.UTF_8)
+    );
 
     CpuV2 cpuV2 = new CpuV2(discoverer);
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
@@ -74,7 +78,7 @@ public class CpuV2Test
     Assert.assertEquals("Weight should be converted to shares", 2048L, metrics.getShares());
     Assert.assertEquals("Quota should be preserved", 150000L, metrics.getQuotaUs());
     Assert.assertEquals("Period should be preserved", 100000L, metrics.getPeriodUs());
-    
+
     // V2 should not provide jiffies, only microseconds
     Assert.assertEquals("V2 should not provide user jiffies", -1L, metrics.getUserJiffies());
     Assert.assertEquals("V2 should not provide system jiffies", -1L, metrics.getSystemJiffies());
@@ -85,16 +89,20 @@ public class CpuV2Test
   public void testCpuV2SnapshotWithMaxQuota() throws IOException
   {
     // Set up v2 files with unlimited quota
-    File cgroupRoot = cgroupDir;
-    
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.stat"), 
-        "user_usec 50000000\nsystem_usec 25000000\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.weight"), 
-        "100\n".getBytes(StandardCharsets.UTF_8));
-    
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.stat"),
+        "user_usec 50000000\nsystem_usec 25000000\n".getBytes(StandardCharsets.UTF_8)
+    );
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.weight"),
+        "100\n".getBytes(StandardCharsets.UTF_8)
+    );
+
     // cpu.max with "max" means no limit
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.max"), 
-        "max\n".getBytes(StandardCharsets.UTF_8));
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.max"),
+        "max\n".getBytes(StandardCharsets.UTF_8)
+    );
 
     CpuV2 cpuV2 = new CpuV2(discoverer);
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
@@ -109,8 +117,6 @@ public class CpuV2Test
   public void testCpuV2SnapshotWithMissingFiles() throws IOException
   {
     // Set up directory but don't create the files
-    File cgroupRoot = cgroupDir;
-
     CpuV2 cpuV2 = new CpuV2(discoverer);
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
 
@@ -127,14 +133,18 @@ public class CpuV2Test
   public void testCpuV2SnapshotWithInvalidData() throws IOException
   {
     // Set up v2 files with invalid/malformed data
-    File cgroupRoot = cgroupDir;
-    
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.stat"), 
-        "user_usec invalid_number\nsystem_usec not_a_number\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.weight"), 
-        "invalid\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.max"), 
-        "invalid format\n".getBytes(StandardCharsets.UTF_8));
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.stat"),
+        "user_usec invalid_number\nsystem_usec not_a_number\n".getBytes(StandardCharsets.UTF_8)
+    );
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.weight"),
+        "invalid\n".getBytes(StandardCharsets.UTF_8)
+    );
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.max"),
+        "invalid format\n".getBytes(StandardCharsets.UTF_8)
+    );
 
     CpuV2 cpuV2 = new CpuV2(discoverer);
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
@@ -151,47 +161,61 @@ public class CpuV2Test
   public void testWeightToSharesConversion()
   {
     // Test the weight to shares conversion logic via snapshot
-    File cgroupRoot = cgroupDir;
     try {
 
       // Test various weight values
-      testWeightConversion(cgroupRoot, 1, 10);     // Minimum weight -> minimum shares (clamped to 2)
-      testWeightConversion(cgroupRoot, 100, 1024); // Default weight -> default shares
-      testWeightConversion(cgroupRoot, 200, 2048); // Double weight -> double shares  
-      testWeightConversion(cgroupRoot, 1000, 10240); // 10x weight -> 10x shares
-      testWeightConversion(cgroupRoot, 10000, 102400); // Maximum weight -> maximum shares
+      testWeightConversion(cgroupDir, 1, 10);     // Minimum weight -> minimum shares (clamped to 2)
+      testWeightConversion(cgroupDir, 100, 1024); // Default weight -> default shares
+      testWeightConversion(cgroupDir, 200, 2048); // Double weight -> double shares
+      testWeightConversion(cgroupDir, 1000, 10240); // 10x weight -> 10x shares
+      testWeightConversion(cgroupDir, 10000, 102400); // Maximum weight -> maximum shares
     }
     catch (IOException e) {
       Assert.fail("IOException during weight conversion test: " + e.getMessage());
     }
   }
 
-  private void testWeightConversion(File cgroupRoot, int weight, long expectedShares) throws IOException
+  private void testWeightConversion(File cgroupDir, int weight, long expectedShares) throws IOException
   {
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.weight"), 
-        (weight + "\n").getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.stat"), 
-        "user_usec 0\nsystem_usec 0\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.max"), 
-        "max\n".getBytes(StandardCharsets.UTF_8));
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.weight"),
+        (weight + "\n").getBytes(StandardCharsets.UTF_8)
+    );
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.stat"),
+        "user_usec 0\nsystem_usec 0\n".getBytes(StandardCharsets.UTF_8)
+    );
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.max"),
+        "max\n".getBytes(StandardCharsets.UTF_8)
+    );
 
     CpuV2 cpuV2 = new CpuV2(discoverer);
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
-    
-    Assert.assertEquals("Weight " + weight + " should convert to shares " + expectedShares, 
-                       expectedShares, metrics.getShares());
+
+    Assert.assertEquals(
+        "Weight " + weight + " should convert to shares " + expectedShares,
+        expectedShares, metrics.getShares()
+    );
   }
 
   @Test
   public void testMicrosecondToJiffiesConversion() throws IOException
   {
-    File cgroupRoot = cgroupDir;
-    
+
     // Test microsecond to jiffies conversion (divide by 10000)
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.stat"), 
-        "user_usec 100000000\nsystem_usec 50000000\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.weight"), "100\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.max"), "max\n".getBytes(StandardCharsets.UTF_8));
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.stat"),
+        "user_usec 100000000\nsystem_usec 50000000\n".getBytes(StandardCharsets.UTF_8)
+    );
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.weight"),
+        "100\n".getBytes(StandardCharsets.UTF_8)
+    );
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.max"),
+        "max\n".getBytes(StandardCharsets.UTF_8)
+    );
 
     CpuV2 cpuV2 = new CpuV2(discoverer);
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
@@ -206,18 +230,26 @@ public class CpuV2Test
   public void testCpuStatFileWithExtraFields() throws IOException
   {
     // Test parsing cpu.stat with additional fields that should be ignored
-    File cgroupRoot = cgroupDir;
-    
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.stat"), 
+
+
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.stat"),
         ("usage_usec 75000000\n" +
          "user_usec 30000000\n" +
          "system_usec 45000000\n" +
          "core_sched.force_idle_usec 12345\n" +
          "nr_periods 5000\n" +
          "nr_throttled 100\n" +
-         "throttled_usec 1000000\n").getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.weight"), "150\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.max"), "max\n".getBytes(StandardCharsets.UTF_8));
+         "throttled_usec 1000000\n").getBytes(StandardCharsets.UTF_8)
+    );
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.weight"),
+        "150\n".getBytes(StandardCharsets.UTF_8)
+    );
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.max"),
+        "max\n".getBytes(StandardCharsets.UTF_8)
+    );
 
     CpuV2 cpuV2 = new CpuV2(discoverer);
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
@@ -230,15 +262,22 @@ public class CpuV2Test
   public void testCpuMaxFileWithOnlyQuota() throws IOException
   {
     // Test cpu.max with only quota value (no period)
-    File cgroupRoot = cgroupDir;
-    
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.stat"), 
-        "user_usec 10000000\nsystem_usec 5000000\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.weight"), "100\n".getBytes(StandardCharsets.UTF_8));
-    
+
+
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.stat"),
+        "user_usec 10000000\nsystem_usec 5000000\n".getBytes(StandardCharsets.UTF_8)
+    );
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.weight"),
+        "100\n".getBytes(StandardCharsets.UTF_8)
+    );
+
     // Invalid format - single value instead of "quota period"
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.max"), 
-        "75000\n".getBytes(StandardCharsets.UTF_8));
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.max"),
+        "75000\n".getBytes(StandardCharsets.UTF_8)
+    );
 
     CpuV2 cpuV2 = new CpuV2(discoverer);
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
@@ -252,12 +291,20 @@ public class CpuV2Test
   public void testZeroMicrosecondValues() throws IOException
   {
     // Test handling of zero values in cpu.stat
-    File cgroupRoot = cgroupDir;
-    
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.stat"), 
-        "user_usec 0\nsystem_usec 0\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.weight"), "100\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.max"), "max\n".getBytes(StandardCharsets.UTF_8));
+
+
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.stat"),
+        "user_usec 0\nsystem_usec 0\n".getBytes(StandardCharsets.UTF_8)
+    );
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.weight"),
+        "100\n".getBytes(StandardCharsets.UTF_8)
+    );
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.max"),
+        "max\n".getBytes(StandardCharsets.UTF_8)
+    );
 
     CpuV2 cpuV2 = new CpuV2(discoverer);
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
@@ -272,15 +319,20 @@ public class CpuV2Test
   public void testCpuMaxWithExtraWhitespace() throws IOException
   {
     // Test cpu.max parsing with various whitespace scenarios
-    File cgroupRoot = cgroupDir;
-    
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.stat"), 
-        "user_usec 20000000\nsystem_usec 10000000\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.weight"), "100\n".getBytes(StandardCharsets.UTF_8));
-    
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.stat"),
+        "user_usec 20000000\nsystem_usec 10000000\n".getBytes(StandardCharsets.UTF_8)
+    );
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.weight"),
+        "100\n".getBytes(StandardCharsets.UTF_8)
+    );
+
     // cpu.max with extra whitespace
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.max"), 
-        "  200000   100000  \n".getBytes(StandardCharsets.UTF_8));
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.max"),
+        "  200000   100000  \n".getBytes(StandardCharsets.UTF_8)
+    );
 
     CpuV2 cpuV2 = new CpuV2(discoverer);
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
@@ -294,12 +346,18 @@ public class CpuV2Test
   public void testNegativeWeightValue() throws IOException
   {
     // Test handling of negative weight (should not happen in practice but test robustness)
-    File cgroupRoot = cgroupDir;
-    
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.stat"), 
-        "user_usec 1000000\nsystem_usec 2000000\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.weight"), "-5\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.max"), "max\n".getBytes(StandardCharsets.UTF_8));
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.stat"),
+        "user_usec 1000000\nsystem_usec 2000000\n".getBytes(StandardCharsets.UTF_8)
+    );
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.weight"),
+        "-5\n".getBytes(StandardCharsets.UTF_8)
+    );
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.max"),
+        "max\n".getBytes(StandardCharsets.UTF_8)
+    );
 
     CpuV2 cpuV2 = new CpuV2(discoverer);
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
@@ -312,12 +370,20 @@ public class CpuV2Test
   public void testZeroWeightValue() throws IOException
   {
     // Test handling of zero weight (should not happen in practice but test robustness)
-    File cgroupRoot = cgroupDir;
-    
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.stat"), 
-        "user_usec 1000000\nsystem_usec 2000000\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.weight"), "0\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.max"), "max\n".getBytes(StandardCharsets.UTF_8));
+
+
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.stat"),
+        "user_usec 1000000\nsystem_usec 2000000\n".getBytes(StandardCharsets.UTF_8)
+    );
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.weight"),
+        "0\n".getBytes(StandardCharsets.UTF_8)
+    );
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.max"),
+        "max\n".getBytes(StandardCharsets.UTF_8)
+    );
 
     CpuV2 cpuV2 = new CpuV2(discoverer);
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
@@ -330,16 +396,22 @@ public class CpuV2Test
   public void testMalformedCpuStatLines() throws IOException
   {
     // Test cpu.stat with various malformed lines
-    File cgroupRoot = cgroupDir;
-    
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.stat"), 
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.stat"),
         ("incomplete_line\n" +
          "user_usec 15000000\n" +
-         "too many parts here extra\n" + 
+         "too many parts here extra\n" +
          "system_usec 25000000\n" +
-         "empty_value \n").getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.weight"), "100\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpu.max"), "max\n".getBytes(StandardCharsets.UTF_8));
+         "empty_value \n").getBytes(StandardCharsets.UTF_8)
+    );
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.weight"),
+        "100\n".getBytes(StandardCharsets.UTF_8)
+    );
+    Files.write(
+        Paths.get(cgroupDir.getAbsolutePath(), "cpu.max"),
+        "max\n".getBytes(StandardCharsets.UTF_8)
+    );
 
     CpuV2 cpuV2 = new CpuV2(discoverer);
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
