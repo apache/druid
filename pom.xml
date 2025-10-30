@@ -265,7 +265,7 @@
         <module>extensions-contrib/druid-ranger-security</module>
         <!-- distribution packaging -->
         <module>distribution</module>
-        <!-- Revised integration tests -->
+        <!-- more test stuff -->
         <module>integration-tests-ex/tools</module>
         <module>quidem-ut</module>
         <module>embedded-tests</module>

@@ -50,14 +50,6 @@
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.github.rvesse</groupId>
-            <artifactId>airline</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-kinesis</artifactId>
             <version>${aws.sdk.version}</version>
@@ -225,11 +217,6 @@
         <dependency>
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-multi-stage-query</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid</groupId>
-            <artifactId>druid-services</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
