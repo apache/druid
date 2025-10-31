@@ -108,9 +108,8 @@ A new contributor extension (`druid-exact-count-bitmap`) adds support for exact 
 [#18021](https://github.com/apache/druid/pull/18021)
 
 
-### Customize JSON and auto column physical storage 
+### Improved `indexSpec`
 
-NEED TO WRITE
 
 [#17762](https://github.com/apache/druid/pull/17762)
 
@@ -124,7 +123,9 @@ This section contains detailed release notes separated by areas.
 
 You can now configure whether the web console displays local time or UTC. This setting is stored locally in your browser and doesn't impact other users. 
 
-Note that 
+Note that the URL maintains the query parameters in UTC time, but the Druid console automatically converts the filter to local time.
+
+[#18455](https://github.com/apache/druid/pull/18455)
 
 #### Other web console improvements
 
@@ -337,8 +338,6 @@ Previously, you could specify additional configuration to be mounted to `_common
 
 [#18447](https://github.com/apache/druid/pull/18447) 
 
-### Documentation improvements
-
 ## Upgrade notes and incompatible changes
 
 ### Upgrade notes
@@ -348,12 +347,6 @@ Previously, you could specify additional configuration to be mounted to `_common
 The `druid.expressions.allowVectorizeFallback` now defaults to `true`. Additionally, `SAFE_DIVIDE` can now vectorize as a fallback.
 
 [#18549](https://github.com/apache/druid/pull/18549)
-
-#### Java 11 support removed
-
-Upgrade to Java 17 or 21. Note that some versions of Java 21 encountered issues during test, specifically Java 21.05-21.07. If possible, avoid these versions.
-
-[#18424](https://github.com/apache/druid/pull/18424)
 
 #### Jetty 12 
 
@@ -387,9 +380,14 @@ Due to the upgrade from `pac4j` 4 to 5, session serialization has changed from `
 
 ### Incompatible changes
 
+#### Java 11 support removed
+
+Upgrade to Java 17 or 21. Note that some versions of Java 21 encountered issues during test, specifically Java 21.05-21.07. If possible, avoid these versions.
+
+[#18424](https://github.com/apache/druid/pull/18424)
+
 
 ### Developer notes
-
 
 #### Specialized virtual columns for JSON
 
@@ -417,15 +415,15 @@ The changes for PostgreSQL, MySQL and SQLServer are already complete. [#18479](h
 
 #### Dependency updates
 
-The following dependencies have had their versions bumped:
+The following dependencies have been updated:
 
-- `pac4j` version 4.5.7 to 5.7.3
-- `nimbus-jose-jwt` version 8.22.1 to 9.37.2
-- `oauth2-oidc-sdk` version 8.22 to 10.8
-- `avactica` version 1.25.0 to 1.26.0
-- `protobuf-dynamic` library replaced with a built-in protobuf method
-- `com.github.spotbugs:spotbugs-maven-plugin` version 4.8.6.6 to 4.9.3.2
-- `com.google.code.gson` version 2.10.1 to 2.12.0
-- `org.apache.commons` version 3.17.0 to 3.18.0
-- `fabric8` version 7.2.0 to 7.4
-- `jackson` version 2.18.4 to 2.19.2
+- `pac4j` version 4.5.7 to 5.7.3 [#18259](https://github.com/apache/druid/pull/18259)
+- `nimbus-jose-jwt` version 8.22.1 to 9.37.2 [#18259](https://github.com/apache/druid/pull/18259)
+- `oauth2-oidc-sdk` version 8.22 to 10.8 [#18259](https://github.com/apache/druid/pull/18259)
+- `avactica` version 1.25.0 to 1.26.0 [#18421](https://github.com/apache/druid/pull/18421)
+- `protobuf-dynamic` library replaced with a built-in protobuf method [#18401](https://github.com/apache/druid/pull/18401)
+- `com.github.spotbugs:spotbugs-maven-plugin` version 4.8.6.6 to 4.9.3.2 [#18177](https://github.com/apache/druid/pull/18177)
+- `com.google.code.gson` version 2.10.1 to 2.12.0 [#18527](https://github.com/apache/druid/pull/18527)
+- `org.apache.commons` version 3.17.0 to 3.18.0 [#18572](https://github.com/apache/druid/pull/18572)
+- `fabric8` version 7.2.0 to 7.4 [#18556](https://github.com/apache/druid/pull/18556)
+- `jackson` version 2.18.4 to 2.19.2 [#18556](https://github.com/apache/druid/pull/18556)
