@@ -80,7 +80,9 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
+import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.compaction.FixedIntervalOrderPolicy;
 import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
@@ -226,7 +228,7 @@ public class CompactSegmentsTest
       }
     }
     dataSources = DataSourcesSnapshot.fromUsedSegments(allSegments);
-    statusTracker = new CompactionStatusTracker(JSON_MAPPER);
+    statusTracker = new CompactionStatusTracker();
     policy = new NewestSegmentFirstPolicy(null);
   }
 
@@ -712,8 +714,6 @@ public class CompactSegmentsTest
     final CoordinatorRunStats stats = doCompactSegments(compactSegments, 3);
     Assert.assertEquals(3, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
     Assert.assertEquals(3, stats.get(Stats.Compaction.MAX_SLOTS));
-    Assert.assertEquals(0, stats.get(Stats.Compaction.BUSY_SLOTS));
-
     // Native takes up 1 task slot by default whereas MSQ takes up all available upto 5. Since there are 3 available
     // slots, there are 3 submitted tasks for native whereas 1 for MSQ.
     if (engine == CompactionEngine.NATIVE) {
@@ -734,7 +734,6 @@ public class CompactSegmentsTest
         doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot);
     Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
     Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.MAX_SLOTS));
-    Assert.assertEquals(0, stats.get(Stats.Compaction.BUSY_SLOTS));
     // Native takes up 1 task slot by default whereas MSQ takes up all available upto 5. Since there are 3 available
     // slots, there are 3 submitted tasks for native whereas 1 for MSQ.
     if (engine == CompactionEngine.NATIVE) {
@@ -873,8 +872,8 @@ public class CompactSegmentsTest
     // All segments is compact at the same time since we changed the segment granularity to YEAR and all segment
     // are within the same year
     Assert.assertEquals(
-        ClientCompactionIntervalSpec.fromSegments(datasourceToSegments.get(dataSource), Granularities.YEAR),
-        taskPayload.getIoConfig().getInputSpec()
+        CompactionCandidate.from(datasourceToSegments.get(dataSource), Granularities.YEAR).getCompactionInterval(),
+        taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
     ClientCompactionTaskGranularitySpec expectedGranularitySpec =
@@ -1064,8 +1063,8 @@ public class CompactSegmentsTest
     // All segments is compact at the same time since we changed the segment granularity to YEAR and all segment
     // are within the same year
     Assert.assertEquals(
-        ClientCompactionIntervalSpec.fromSegments(datasourceToSegments.get(dataSource), Granularities.YEAR),
-        taskPayload.getIoConfig().getInputSpec()
+        CompactionCandidate.from(datasourceToSegments.get(dataSource), Granularities.YEAR).getCompactionInterval(),
+        taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
     ClientCompactionTaskGranularitySpec expectedGranularitySpec =
@@ -1159,88 +1158,13 @@ public class CompactSegmentsTest
     // All segments is compact at the same time since we changed the segment granularity to YEAR and all segment
     // are within the same year
     Assert.assertEquals(
-        ClientCompactionIntervalSpec.fromSegments(datasourceToSegments.get(dataSource), Granularities.YEAR),
-        taskPayload.getIoConfig().getInputSpec()
+        CompactionCandidate.from(datasourceToSegments.get(dataSource), Granularities.YEAR).getCompactionInterval(),
+        taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
     ClientCompactionTaskGranularitySpec expectedGranularitySpec =
         new ClientCompactionTaskGranularitySpec(Granularities.YEAR, null, null);
     Assert.assertEquals(expectedGranularitySpec, taskPayload.getGranularitySpec());
-  }
-
-  @Test
-  public void testCompactDutyWithBusyCompactionTask()
-  {
-    final String dataSource = DATA_SOURCE_PREFIX + 0;
-    final String conflictTaskId = "taskIdDummy";
-    final TaskStatusPlus runningConflictCompactionTask = new TaskStatusPlus(
-            conflictTaskId,
-            "groupId",
-            "compact",
-            DateTimes.EPOCH,
-            DateTimes.EPOCH,
-            TaskState.RUNNING,
-            RunnerTaskState.RUNNING,
-            -1L,
-            TaskLocation.unknown(),
-            dataSource,
-            null
-    );
-    final TaskPayloadResponse busyCompactTask = new TaskPayloadResponse(
-            conflictTaskId,
-            new ClientCompactionTaskQuery(
-                    conflictTaskId,
-                    dataSource,
-                    new ClientCompactionIOConfig(
-                            new ClientCompactionIntervalSpec(
-                                    Intervals.of("2000/2005"),
-                                    "testSha256OfSortedSegmentIds"
-                            ),
-                            null
-                    ),
-                    getTuningConfig(7),
-                    new ClientCompactionTaskGranularitySpec(Granularities.DAY, null, null),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
-            )
-    );
-
-    final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
-    final ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
-    Mockito.when(mockClient.runTask(ArgumentMatchers.anyString(), payloadCaptor.capture()))
-            .thenReturn(Futures.immediateFuture(null));
-    Mockito.when(mockClient.taskStatuses(null, null, 0))
-            .thenReturn(
-                    Futures.immediateFuture(
-                            CloseableIterators.withEmptyBaggage(ImmutableList.of(runningConflictCompactionTask).iterator())));
-    Mockito.when(mockClient.taskStatuses(ArgumentMatchers.any()))
-            .thenReturn(Futures.immediateFuture(Collections.emptyMap()));
-    Mockito.when(mockClient.findLockedIntervals(ArgumentMatchers.any()))
-            .thenReturn(Futures.immediateFuture(Collections.emptyMap()));
-    Mockito.when(mockClient.cancelTask(conflictTaskId))
-            .thenReturn(Futures.immediateFuture(null));
-    Mockito.when(mockClient.getTotalWorkerCapacity())
-            .thenReturn(Futures.immediateFuture(new IndexingTotalWorkerCapacityInfo(0, 0)));
-    Mockito.when(mockClient.taskPayload(ArgumentMatchers.eq(conflictTaskId)))
-            .thenReturn(Futures.immediateFuture(busyCompactTask));
-
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
-
-    final CoordinatorRunStats stats;
-    if (engine == CompactionEngine.NATIVE) {
-      stats = doCompactSegments(compactSegments, createcompactionConfigsForNative(2), 4);
-    } else {
-      stats = doCompactSegments(compactSegments, createcompactionConfigsForMSQ(2), 4);
-    }
-
-    Assert.assertEquals(0, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
-    Assert.assertEquals(0, stats.get(Stats.Compaction.MAX_SLOTS));
-    Assert.assertEquals(8, stats.get(Stats.Compaction.BUSY_SLOTS));
-    Assert.assertEquals(0, stats.get(Stats.Compaction.SUBMITTED_TASKS));
   }
 
   @Test
@@ -1303,7 +1227,6 @@ public class CompactSegmentsTest
     }
     Assert.assertEquals(4, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
     Assert.assertEquals(4, stats.get(Stats.Compaction.MAX_SLOTS));
-    Assert.assertEquals(0, stats.get(Stats.Compaction.BUSY_SLOTS));
     Assert.assertEquals(2, stats.get(Stats.Compaction.SUBMITTED_TASKS));
   }
 
@@ -1476,8 +1399,8 @@ public class CompactSegmentsTest
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
 
     Assert.assertEquals(
-        ClientCompactionIntervalSpec.fromSegments(segments, Granularities.DAY),
-        taskPayload.getIoConfig().getInputSpec()
+        CompactionCandidate.from(segments, Granularities.DAY).getCompactionInterval(),
+        taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
     ClientCompactionTaskGranularitySpec expectedGranularitySpec =
@@ -1539,8 +1462,8 @@ public class CompactSegmentsTest
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
 
     Assert.assertEquals(
-        ClientCompactionIntervalSpec.fromSegments(segments, Granularities.YEAR),
-        taskPayload.getIoConfig().getInputSpec()
+        CompactionCandidate.from(segments, Granularities.YEAR).getCompactionInterval(),
+        taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
     ClientCompactionTaskGranularitySpec expectedGranularitySpec =
@@ -2083,7 +2006,7 @@ public class CompactSegmentsTest
     @Test
     public void testIsParalleModeNullTuningConfigReturnFalse()
     {
-      Assert.assertFalse(CompactSegments.isParallelMode(null));
+      Assert.assertFalse(CompactionSlotManager.isParallelMode(null));
     }
 
     @Test
@@ -2091,7 +2014,7 @@ public class CompactSegmentsTest
     {
       ClientCompactionTaskQueryTuningConfig tuningConfig = Mockito.mock(ClientCompactionTaskQueryTuningConfig.class);
       Mockito.when(tuningConfig.getPartitionsSpec()).thenReturn(null);
-      Assert.assertFalse(CompactSegments.isParallelMode(tuningConfig));
+      Assert.assertFalse(CompactionSlotManager.isParallelMode(tuningConfig));
     }
 
     @Test
@@ -2101,13 +2024,13 @@ public class CompactSegmentsTest
       Mockito.when(tuningConfig.getPartitionsSpec()).thenReturn(Mockito.mock(PartitionsSpec.class));
 
       Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(null);
-      Assert.assertFalse(CompactSegments.isParallelMode(tuningConfig));
+      Assert.assertFalse(CompactionSlotManager.isParallelMode(tuningConfig));
 
       Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(1);
-      Assert.assertFalse(CompactSegments.isParallelMode(tuningConfig));
+      Assert.assertFalse(CompactionSlotManager.isParallelMode(tuningConfig));
 
       Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(2);
-      Assert.assertTrue(CompactSegments.isParallelMode(tuningConfig));
+      Assert.assertTrue(CompactionSlotManager.isParallelMode(tuningConfig));
     }
 
     @Test
@@ -2117,13 +2040,13 @@ public class CompactSegmentsTest
       Mockito.when(tuningConfig.getPartitionsSpec()).thenReturn(Mockito.mock(SingleDimensionPartitionsSpec.class));
 
       Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(null);
-      Assert.assertFalse(CompactSegments.isParallelMode(tuningConfig));
+      Assert.assertFalse(CompactionSlotManager.isParallelMode(tuningConfig));
 
       Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(1);
-      Assert.assertTrue(CompactSegments.isParallelMode(tuningConfig));
+      Assert.assertTrue(CompactionSlotManager.isParallelMode(tuningConfig));
 
       Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(2);
-      Assert.assertTrue(CompactSegments.isParallelMode(tuningConfig));
+      Assert.assertTrue(CompactionSlotManager.isParallelMode(tuningConfig));
     }
 
     @Test
@@ -2132,7 +2055,7 @@ public class CompactSegmentsTest
       ClientCompactionTaskQueryTuningConfig tuningConfig = Mockito.mock(ClientCompactionTaskQueryTuningConfig.class);
       Mockito.when(tuningConfig.getPartitionsSpec()).thenReturn(Mockito.mock(PartitionsSpec.class));
       Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(2);
-      Assert.assertEquals(3, CompactSegments.findMaxNumTaskSlotsUsedByOneNativeCompactionTask(tuningConfig));
+      Assert.assertEquals(3, CompactionSlotManager.getMaxTaskSlotsForNativeCompactionTask(tuningConfig));
     }
 
     @Test
@@ -2141,7 +2064,7 @@ public class CompactSegmentsTest
       ClientCompactionTaskQueryTuningConfig tuningConfig = Mockito.mock(ClientCompactionTaskQueryTuningConfig.class);
       Mockito.when(tuningConfig.getPartitionsSpec()).thenReturn(Mockito.mock(PartitionsSpec.class));
       Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(1);
-      Assert.assertEquals(1, CompactSegments.findMaxNumTaskSlotsUsedByOneNativeCompactionTask(tuningConfig));
+      Assert.assertEquals(1, CompactionSlotManager.getMaxTaskSlotsForNativeCompactionTask(tuningConfig));
     }
   }
 

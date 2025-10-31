@@ -110,12 +110,19 @@ public class Stats
 
   public static class Compaction
   {
+    public static final CoordinatorStat JOB_CREATION_TIME
+        = CoordinatorStat.toDebugAndEmit("jobCreationTime", "compact/createJobs/time");
+    public static final CoordinatorStat CREATED_JOBS
+        = CoordinatorStat.toDebugAndEmit("jobQueueSize", "compact/createJobs/count");
+    public static final CoordinatorStat SCHEDULER_RUN_TIME
+        = CoordinatorStat.toDebugAndEmit("schedulerRunTime", "compact/runScheduler/time");
+
     public static final CoordinatorStat SUBMITTED_TASKS
         = CoordinatorStat.toDebugAndEmit("compactTasks", "compact/task/count");
+    public static final CoordinatorStat CANCELLED_TASKS
+        = CoordinatorStat.toDebugAndEmit("compactCancelled", "compactTask/cancelled/count");
     public static final CoordinatorStat MAX_SLOTS
         = CoordinatorStat.toDebugAndEmit("compactMaxSlots", "compactTask/maxSlot/count");
-    public static final CoordinatorStat BUSY_SLOTS
-            = CoordinatorStat.toDebugAndEmit("compactBusySlots", "compactTask/busySlot/count");
     public static final CoordinatorStat AVAILABLE_SLOTS
         = CoordinatorStat.toDebugAndEmit("compactAvlSlots", "compactTask/availableSlot/count");
 
