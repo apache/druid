@@ -1,5 +1,373 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`QueryParametersDialog handles ARRAY type parameters correctly 1`] = `
+<Blueprint5.Dialog
+  canOutsideClickClose={true}
+  className="query-parameters-dialog"
+  isOpen={true}
+  onClose={[Function]}
+  title="Dynamic query parameters"
+>
+  <div
+    className="bp5-dialog-body"
+  >
+    <p>
+      Druid SQL supports dynamic parameters using question mark 
+      <ForwardRef>
+        ?
+      </ForwardRef>
+       syntax, where parameters are bound positionally to ? placeholders at execution time.
+    </p>
+    <Blueprint5.FormGroup
+      label="Parameter in position 1"
+    >
+      <Blueprint5.ControlGroup
+        fill={true}
+      >
+        <Blueprint5.Popover
+          boundary="clippingParents"
+          captureDismiss={false}
+          content={
+            <Blueprint5.Menu>
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="VARCHAR"
+              />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="TIMESTAMP"
+              />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="BIGINT"
+              />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="DOUBLE"
+              />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="FLOAT"
+              />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="tick"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="ARRAY"
+              />
+            </Blueprint5.Menu>
+          }
+          defaultIsOpen={false}
+          disabled={false}
+          fill={false}
+          hasBackdrop={false}
+          hoverCloseDelay={300}
+          hoverOpenDelay={150}
+          inheritDarkTheme={true}
+          interactionKind="click"
+          matchTargetWidth={false}
+          minimal={true}
+          openOnTargetFocus={true}
+          position="bottom-left"
+          positioningStrategy="absolute"
+          shouldReturnFocusOnClose={false}
+          targetTagName="span"
+          transitionDuration={300}
+          usePortal={true}
+        >
+          <Blueprint5.Button
+            rightIcon="caret-down"
+            text="ARRAY"
+          />
+        </Blueprint5.Popover>
+        <Blueprint5.InputGroup
+          fill={true}
+          onChange={[Function]}
+          placeholder="[-25.7, null, 36.85]"
+          value="[1,2,3]"
+        />
+        <Blueprint5.Button
+          icon="trash"
+          onClick={[Function]}
+        />
+      </Blueprint5.ControlGroup>
+    </Blueprint5.FormGroup>
+    <Blueprint5.FormGroup
+      label="Parameter in position 2"
+    >
+      <Blueprint5.ControlGroup
+        fill={true}
+      >
+        <Blueprint5.Popover
+          boundary="clippingParents"
+          captureDismiss={false}
+          content={
+            <Blueprint5.Menu>
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="VARCHAR"
+              />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="TIMESTAMP"
+              />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="BIGINT"
+              />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="DOUBLE"
+              />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="FLOAT"
+              />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="tick"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="ARRAY"
+              />
+            </Blueprint5.Menu>
+          }
+          defaultIsOpen={false}
+          disabled={false}
+          fill={false}
+          hasBackdrop={false}
+          hoverCloseDelay={300}
+          hoverOpenDelay={150}
+          inheritDarkTheme={true}
+          interactionKind="click"
+          matchTargetWidth={false}
+          minimal={true}
+          openOnTargetFocus={true}
+          position="bottom-left"
+          positioningStrategy="absolute"
+          shouldReturnFocusOnClose={false}
+          targetTagName="span"
+          transitionDuration={300}
+          usePortal={true}
+        >
+          <Blueprint5.Button
+            rightIcon="caret-down"
+            text="ARRAY"
+          />
+        </Blueprint5.Popover>
+        <Blueprint5.InputGroup
+          fill={true}
+          onChange={[Function]}
+          placeholder="[-25.7, null, 36.85]"
+          value="["a","b",null]"
+        />
+        <Blueprint5.Button
+          icon="trash"
+          onClick={[Function]}
+        />
+      </Blueprint5.ControlGroup>
+    </Blueprint5.FormGroup>
+    <Blueprint5.FormGroup
+      label="Parameter in position 3"
+    >
+      <Blueprint5.ControlGroup
+        fill={true}
+      >
+        <Blueprint5.Popover
+          boundary="clippingParents"
+          captureDismiss={false}
+          content={
+            <Blueprint5.Menu>
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="VARCHAR"
+              />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="TIMESTAMP"
+              />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="BIGINT"
+              />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="DOUBLE"
+              />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="FLOAT"
+              />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="tick"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="ARRAY"
+              />
+            </Blueprint5.Menu>
+          }
+          defaultIsOpen={false}
+          disabled={false}
+          fill={false}
+          hasBackdrop={false}
+          hoverCloseDelay={300}
+          hoverOpenDelay={150}
+          inheritDarkTheme={true}
+          interactionKind="click"
+          matchTargetWidth={false}
+          minimal={true}
+          openOnTargetFocus={true}
+          position="bottom-left"
+          positioningStrategy="absolute"
+          shouldReturnFocusOnClose={false}
+          targetTagName="span"
+          transitionDuration={300}
+          usePortal={true}
+        >
+          <Blueprint5.Button
+            rightIcon="caret-down"
+            text="ARRAY"
+          />
+        </Blueprint5.Popover>
+        <Blueprint5.InputGroup
+          fill={true}
+          onChange={[Function]}
+          placeholder="[-25.7, null, 36.85]"
+          value="[]"
+        />
+        <Blueprint5.Button
+          icon="trash"
+          onClick={[Function]}
+        />
+      </Blueprint5.ControlGroup>
+    </Blueprint5.FormGroup>
+    <Blueprint5.Button
+      icon="plus"
+      onClick={[Function]}
+      text="Add parameter"
+    />
+  </div>
+  <div
+    className="bp5-dialog-footer"
+  >
+    <div
+      className="bp5-dialog-footer-actions"
+    >
+      <Blueprint5.Button
+        onClick={[Function]}
+        text="Close"
+      />
+      <Blueprint5.Button
+        intent="primary"
+        onClick={[Function]}
+        text="Save"
+      />
+    </div>
+  </div>
+</Blueprint5.Dialog>
+`;
+
 exports[`QueryParametersDialog matches snapshot 1`] = `
 <Blueprint5.Dialog
   canOutsideClickClose={true}
@@ -78,6 +446,16 @@ exports[`QueryParametersDialog matches snapshot 1`] = `
                 popoverProps={{}}
                 shouldDismissPopover={true}
                 text="FLOAT"
+              />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="ARRAY"
               />
             </Blueprint5.Menu>
           }
@@ -177,6 +555,16 @@ exports[`QueryParametersDialog matches snapshot 1`] = `
                 shouldDismissPopover={true}
                 text="FLOAT"
               />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="ARRAY"
+              />
             </Blueprint5.Menu>
           }
           defaultIsOpen={false}
@@ -274,6 +662,16 @@ exports[`QueryParametersDialog matches snapshot 1`] = `
                 popoverProps={{}}
                 shouldDismissPopover={true}
                 text="FLOAT"
+              />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="ARRAY"
               />
             </Blueprint5.Menu>
           }
@@ -373,6 +771,16 @@ exports[`QueryParametersDialog matches snapshot 1`] = `
                 shouldDismissPopover={true}
                 text="FLOAT"
               />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="ARRAY"
+              />
             </Blueprint5.Menu>
           }
           defaultIsOpen={false}
@@ -403,6 +811,114 @@ exports[`QueryParametersDialog matches snapshot 1`] = `
           fill={true}
           onValueChange={[Function]}
           value={1.618}
+        />
+        <Blueprint5.Button
+          icon="trash"
+          onClick={[Function]}
+        />
+      </Blueprint5.ControlGroup>
+    </Blueprint5.FormGroup>
+    <Blueprint5.FormGroup
+      label="Parameter in position 5"
+    >
+      <Blueprint5.ControlGroup
+        fill={true}
+      >
+        <Blueprint5.Popover
+          boundary="clippingParents"
+          captureDismiss={false}
+          content={
+            <Blueprint5.Menu>
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="VARCHAR"
+              />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="TIMESTAMP"
+              />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="BIGINT"
+              />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="DOUBLE"
+              />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="blank"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="FLOAT"
+              />
+              <Blueprint5.MenuItem
+                active={false}
+                disabled={false}
+                icon="tick"
+                multiline={false}
+                onClick={[Function]}
+                popoverProps={{}}
+                shouldDismissPopover={true}
+                text="ARRAY"
+              />
+            </Blueprint5.Menu>
+          }
+          defaultIsOpen={false}
+          disabled={false}
+          fill={false}
+          hasBackdrop={false}
+          hoverCloseDelay={300}
+          hoverOpenDelay={150}
+          inheritDarkTheme={true}
+          interactionKind="click"
+          matchTargetWidth={false}
+          minimal={true}
+          openOnTargetFocus={true}
+          position="bottom-left"
+          positioningStrategy="absolute"
+          shouldReturnFocusOnClose={false}
+          targetTagName="span"
+          transitionDuration={300}
+          usePortal={true}
+        >
+          <Blueprint5.Button
+            rightIcon="caret-down"
+            text="ARRAY"
+          />
+        </Blueprint5.Popover>
+        <Blueprint5.InputGroup
+          fill={true}
+          onChange={[Function]}
+          placeholder="[-25.7, null, 36.85]"
+          value="[-25.7,null,36.85]"
         />
         <Blueprint5.Button
           icon="trash"

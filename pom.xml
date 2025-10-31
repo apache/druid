@@ -265,7 +265,7 @@
         <module>extensions-contrib/druid-ranger-security</module>
         <!-- distribution packaging -->
         <module>distribution</module>
-        <!-- Revised integration tests -->
+        <!-- more test stuff -->
         <module>integration-tests-ex/tools</module>
         <module>quidem-ut</module>
         <module>embedded-tests</module>
@@ -345,7 +345,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
-                <version>3.18.0</version>
+                <version>3.19.0</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>

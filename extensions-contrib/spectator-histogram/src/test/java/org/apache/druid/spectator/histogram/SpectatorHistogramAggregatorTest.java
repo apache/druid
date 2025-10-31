@@ -783,6 +783,107 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     Assert.assertEquals(n * segments.size(), (Double) results.get(0).get(1), 0.001);
   }
 
+  @Test
+  public void testPercentilePostAggregatorWithNullSketch() throws Exception
+  {
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+        new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
+        INPUT_DATA_PARSE_SPEC,
+        String.join(
+            "\n",
+            "[",
+            "  {\"type\": \"spectatorHistogram\", \"name\": \"histogram\", \"fieldName\": \"cost\"}",
+            "]"
+        ),
+        0, // minTimestamp
+        Granularities.NONE,
+        10, // maxRowCount
+        String.join(
+            "\n",
+            "{",
+            "  \"queryType\": \"groupBy\",",
+            "  \"dataSource\": \"test_datasource\",",
+            "  \"granularity\": \"ALL\",",
+            "  \"dimensions\": [\"product\"],",
+            "  \"aggregations\": [",
+            "    {\"type\": \"spectatorHistogram\", \"name\": \"merged_histogram\", \"fieldName\": "
+            + "\"histogram\"}",
+            "  ],",
+            "  \"postAggregations\": [",
+            "    {\"type\": \"percentileSpectatorHistogram\", \"name\": \"p50\", \"field\": {\"type\": \"fieldAccess\",\"fieldName\": \"merged_histogram\"}"
+            + ", \"percentile\": \"50.0\"}",
+            "  ],",
+            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
+            "}"
+        )
+    );
+
+    List<ResultRow> results = seq.toList();
+    Assert.assertEquals(6, results.size());
+
+    // First three rows should have valid histograms and percentile values
+    Assert.assertNotNull("Row [0] should have non-null percentile", results.get(0).get(2));
+    Assert.assertNotNull("Row [1] should have non-null percentile", results.get(1).get(2));
+    Assert.assertNotNull("Row [2] should have non-null percentile", results.get(2).get(2));
+
+    // Last three rows have null histograms, so percentile should also be null
+    Assert.assertNull("Row [3] should have null percentile when histogram is null", results.get(3).get(2));
+    Assert.assertNull("Row [4] should have null percentile when histogram is null", results.get(4).get(2));
+    Assert.assertNull("Row [5] should have null percentile when histogram is null", results.get(5).get(2));
+  }
+
+  @Test
+  public void testPercentilesPostAggregatorWithNullSketch() throws Exception
+  {
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+        new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
+        INPUT_DATA_PARSE_SPEC,
+        String.join(
+            "\n",
+            "[",
+            "  {\"type\": \"spectatorHistogram\", \"name\": \"histogram\", \"fieldName\": \"cost\"}",
+            "]"
+        ),
+        0, // minTimestamp
+        Granularities.NONE,
+        10, // maxRowCount
+        String.join(
+            "\n",
+            "{",
+            "  \"queryType\": \"groupBy\",",
+            "  \"dataSource\": \"test_datasource\",",
+            "  \"granularity\": \"ALL\",",
+            "  \"dimensions\": [\"product\"],",
+            "  \"aggregations\": [",
+            "    {\"type\": \"spectatorHistogram\", \"name\": \"merged_histogram\", \"fieldName\": "
+            + "\"histogram\"}",
+            "  ],",
+            "  \"postAggregations\": [",
+            "    {\"type\": \"percentilesSpectatorHistogram\", \"name\": \"percentiles\", \"field\": {\"type\": \"fieldAccess\",\"fieldName\": \"merged_histogram\"}"
+            + ", \"percentiles\": [25.0, 50.0, 75.0]}",
+            "  ],",
+            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
+            "}"
+        )
+    );
+
+    List<ResultRow> results = seq.toList();
+    Assert.assertEquals(6, results.size());
+
+    // First three rows should have valid histograms and percentiles arrays
+    Assert.assertNotNull("Row [0] should have non-null percentiles array", results.get(0).get(2));
+    Assert.assertTrue("Row [0] percentiles should be double array", results.get(0).get(2) instanceof double[]);
+    Assert.assertNotNull("Row [1] should have non-null percentiles array", results.get(1).get(2));
+    Assert.assertTrue("Row [1] percentiles should be double array", results.get(1).get(2) instanceof double[]);
+    Assert.assertNotNull("Row [2] should have non-null percentiles array", results.get(2).get(2));
+    Assert.assertTrue("Row [2] percentiles should be double array", results.get(2).get(2) instanceof double[]);
+
+    // Last three rows have null histograms, so percentiles should also be null
+    Assert.assertNull("Row [3] should have null percentiles when histogram is null", results.get(3).get(2));
+    Assert.assertNull("Row [4] should have null percentiles when histogram is null", results.get(4).get(2));
+    Assert.assertNull("Row [5] should have null percentiles when histogram is null", results.get(5).get(2));
+  }
+
   private static void assertResultsMatch(List<ResultRow> results, int rowNum, String expectedProduct)
   {
     ResultRow row = results.get(rowNum);

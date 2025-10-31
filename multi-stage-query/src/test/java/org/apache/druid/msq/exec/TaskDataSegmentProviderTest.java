@@ -214,9 +214,9 @@ class TaskDataSegmentProviderTest extends InitializedNullHandlingTest
       Assertions.assertTrue(FutureUtils.getUnchecked(testFuture, false), "Test iteration #" + i);
     }
 
-    // Cache dir should exist, but be empty, since we've closed all holders.
+    // Cache dir should exist, but be (mostly) empty, since we've closed all holders.
     Assertions.assertTrue(cacheDir.exists());
-    Assertions.assertEquals(List.of(), List.of(cacheDir.list()));
+    Assertions.assertEquals(List.of("__drop"), List.of(cacheDir.list()));
   }
 
   private class TestCoordinatorClientImpl extends NoopCoordinatorClient
