@@ -21,15 +21,31 @@ package org.apache.druid.indexing.compact;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
+import com.google.common.util.concurrent.Futures;
+import org.apache.druid.client.broker.BrokerClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.ClientMSQContext;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
+import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
+import org.apache.druid.indexing.common.TimeChunkLock;
+import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
+import org.apache.druid.indexing.common.actions.TaskAction;
+import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
+import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.indexing.overlord.TaskQueue;
@@ -38,10 +54,15 @@ import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.apache.druid.segment.TestDataSource;
+import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
+import org.apache.druid.query.http.ClientSqlQuery;
+import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatistics;
@@ -57,10 +78,11 @@ import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
-import org.apache.druid.server.coordinator.simulate.TestSegmentsMetadataManager;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
@@ -72,6 +94,8 @@ import org.mockito.Mockito;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class OverlordCompactionSchedulerTest
@@ -81,6 +105,7 @@ public class OverlordCompactionSchedulerTest
   static {
     OBJECT_MAPPER = new DefaultObjectMapper();
     OBJECT_MAPPER.registerModules(new IndexingServiceTuningConfigModule().getJacksonModules());
+    OBJECT_MAPPER.registerModules(new SupervisorModule().getJacksonModules());
     OBJECT_MAPPER.setInjectableValues(
         new InjectableValues
             .Std()
@@ -91,24 +116,43 @@ public class OverlordCompactionSchedulerTest
     );
   }
 
+  private static final DateTime JAN_20 = DateTimes.of("2025-01-20");
+
   private AtomicReference<ClusterCompactionConfig> compactionConfig;
   private CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig;
 
   private TaskMaster taskMaster;
   private TaskQueue taskQueue;
+  private BrokerClient brokerClient;
+  private TaskActionClientFactory taskActionClientFactory;
   private BlockingExecutorService executor;
 
   private HeapMemoryTaskStorage taskStorage;
-  private TestSegmentsMetadataManager segmentsMetadataManager;
+  private TestIndexerMetadataStorageCoordinator segmentStorage;
+  private SegmentsMetadataManager segmentsMetadataManager;
   private StubServiceEmitter serviceEmitter;
 
+  private String dataSource;
   private OverlordCompactionScheduler scheduler;
 
   @Before
   public void setUp()
   {
+    dataSource = "wiki_" + IdUtils.getRandomId();
+
     final TaskRunner taskRunner = Mockito.mock(TaskRunner.class);
+    Mockito.when(taskRunner.getTotalCapacity()).thenReturn(100);
+    Mockito.when(taskRunner.getMaximumCapacityWithAutoscale()).thenReturn(100);
+
     taskQueue = Mockito.mock(TaskQueue.class);
+
+    brokerClient = Mockito.mock(BrokerClient.class);
+    Mockito.when(brokerClient.submitSqlTask(ArgumentMatchers.any(ClientSqlQuery.class))).thenAnswer(
+        arg -> {
+          final String taskId = IdUtils.getRandomId();
+          return Futures.immediateFuture(new SqlTaskStatus(taskId, TaskState.RUNNING, null));
+        }
+    );
 
     taskMaster = new TaskMaster(null, null);
     Assert.assertFalse(taskMaster.isHalfOrFullLeader());
@@ -126,10 +170,38 @@ public class OverlordCompactionSchedulerTest
 
     executor = new BlockingExecutorService("test");
     serviceEmitter = new StubServiceEmitter();
-    segmentsMetadataManager = new TestSegmentsMetadataManager();
+    segmentStorage = new TestIndexerMetadataStorageCoordinator();
+    segmentsMetadataManager = segmentStorage.getManager();
 
-    compactionConfig = new AtomicReference<>(new ClusterCompactionConfig(null, null, null, true, null));
+    compactionConfig = new AtomicReference<>(new ClusterCompactionConfig(1.0, 100, null, true, null));
     coordinatorOverlordServiceConfig = new CoordinatorOverlordServiceConfig(false, null);
+
+    taskActionClientFactory = task -> new TaskActionClient()
+    {
+      @Override
+      @SuppressWarnings("unchecked")
+      public <RetType> RetType submit(TaskAction<RetType> taskAction)
+      {
+        if (taskAction instanceof RetrieveUsedSegmentsAction) {
+          return (RetType) segmentStorage.retrieveAllUsedSegments(
+              ((RetrieveUsedSegmentsAction) taskAction).getDataSource(),
+              Segments.ONLY_VISIBLE
+          );
+        } else if (taskAction instanceof TimeChunkLockTryAcquireAction) {
+          final TimeChunkLockTryAcquireAction lockAcquireAction = (TimeChunkLockTryAcquireAction) taskAction;
+          return (RetType) new TimeChunkLock(
+              null,
+              task.getGroupId(),
+              task.getDataSource(),
+              lockAcquireAction.getInterval(),
+              DateTimes.nowUtc().toString(),
+              1
+          );
+        } else {
+          return null;
+        }
+      }
+    };
 
     initScheduler();
   }
@@ -142,19 +214,29 @@ public class OverlordCompactionSchedulerTest
         = new DefaultWorkerBehaviorConfig(WorkerBehaviorConfig.DEFAULT_STRATEGY, null);
     scheduler = new OverlordCompactionScheduler(
         taskMaster,
+        taskLockbox,
         new TaskQueryTool(taskStorage, taskLockbox, taskMaster, null, () -> defaultWorkerConfig),
         segmentsMetadataManager,
+        new SegmentsMetadataManagerConfig(null, null, null),
         () -> DruidCompactionConfig.empty().withClusterConfig(compactionConfig.get()),
-        new CompactionStatusTracker(OBJECT_MAPPER),
+        new CompactionStatusTracker(),
         coordinatorOverlordServiceConfig,
+        taskActionClientFactory,
+        new DruidInputSourceFactory(
+            TestIndex.INDEX_IO,
+            Mockito.mock(TaskConfig.class),
+            new NoopCoordinatorClient(),
+            new SegmentCacheManagerFactory(TestIndex.INDEX_IO, OBJECT_MAPPER)
+        ),
         (nameFormat, numThreads) -> new WrappingScheduledExecutorService("test", executor, false),
+        brokerClient,
         serviceEmitter,
         OBJECT_MAPPER
     );
   }
 
   @Test
-  public void testBecomeLeader_triggersStart_ifEnabled()
+  public void test_becomeLeader_triggersStart_ifEnabled()
   {
     Assert.assertTrue(scheduler.isEnabled());
 
@@ -168,7 +250,7 @@ public class OverlordCompactionSchedulerTest
   }
 
   @Test
-  public void testBecomeLeader_doesNotTriggerStart_ifDisabled()
+  public void test_becomeLeader_doesNotTriggerStart_ifDisabled()
   {
     disableScheduler();
     Assert.assertFalse(scheduler.isEnabled());
@@ -182,7 +264,7 @@ public class OverlordCompactionSchedulerTest
   }
 
   @Test
-  public void testStopBeingLeader_triggersStop()
+  public void test_stopBeingLeader_triggersStop()
   {
     Assert.assertFalse(scheduler.isRunning());
 
@@ -198,7 +280,7 @@ public class OverlordCompactionSchedulerTest
   }
 
   @Test
-  public void testDisablingScheduler_triggersStop()
+  public void test_disableSupervisors_triggersStop()
   {
     // Start scheduler
     scheduler.becomeLeader();
@@ -216,7 +298,7 @@ public class OverlordCompactionSchedulerTest
   }
 
   @Test
-  public void testEnablingScheduler_triggersStart()
+  public void test_enableSupervisors_triggersStart()
   {
     disableScheduler();
 
@@ -235,7 +317,7 @@ public class OverlordCompactionSchedulerTest
   }
 
   @Test
-  public void testSegmentsAreNotPolled_ifSupervisorsAreDisabled()
+  public void test_disableSupervisors_disablesSegmentPolling()
   {
     disableScheduler();
 
@@ -243,7 +325,7 @@ public class OverlordCompactionSchedulerTest
   }
 
   @Test
-  public void testSegmentsArePolled_whenRunningInStandaloneMode()
+  public void test_enableSupervisors_inStandaloneMode_enablesSegmentPolling()
   {
     coordinatorOverlordServiceConfig = new CoordinatorOverlordServiceConfig(false, null);
     initScheduler();
@@ -252,7 +334,7 @@ public class OverlordCompactionSchedulerTest
   }
 
   @Test
-  public void testSegmentsAreNotPolled_whenRunningInCoordinatorMode()
+  public void test_enableSupervisors_inCoordinatorMode_disablesSegmentPolling()
   {
     coordinatorOverlordServiceConfig = new CoordinatorOverlordServiceConfig(true, "overlord");
     initScheduler();
@@ -272,7 +354,7 @@ public class OverlordCompactionSchedulerTest
   }
 
   @Test
-  public void testNullCompactionConfigIsInvalid()
+  public void test_validateCompactionConfig_returnsInvalid_forNullConfig()
   {
     final CompactionConfigValidationResult result = scheduler.validateCompactionConfig(null);
     Assert.assertFalse(result.isValid());
@@ -280,11 +362,11 @@ public class OverlordCompactionSchedulerTest
   }
 
   @Test
-  public void testMsqCompactionConfigWithOneMaxTasksIsInvalid()
+  public void test_validateCompactionConfig_returnsInvalid_forMSQConfigWithOneMaxTasks()
   {
     final DataSourceCompactionConfig datasourceConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
-        .forDataSource(TestDataSource.WIKI)
+        .forDataSource(dataSource)
         .withEngine(CompactionEngine.MSQ)
         .withTaskContext(Collections.singletonMap(ClientMSQContext.CTX_MAX_NUM_TASKS, 1))
         .build();
@@ -298,75 +380,50 @@ public class OverlordCompactionSchedulerTest
   }
 
   @Test
-  public void testStartCompaction()
+  public void test_startCompaction_enablesTaskSubmission_forDatasource()
   {
-    final List<DataSegment> wikiSegments = CreateDataSegments.ofDatasource(TestDataSource.WIKI).eachOfSizeInMb(100);
-    wikiSegments.forEach(segmentsMetadataManager::addSegment);
+    createSegments(1, Granularities.DAY, JAN_20);
 
     scheduler.becomeLeader();
-    scheduler.startCompaction(
-        TestDataSource.WIKI,
-        InlineSchemaDataSourceCompactionConfig.builder()
-                                              .forDataSource(TestDataSource.WIKI)
-                                              .withSkipOffsetFromLatest(Period.seconds(0))
-                                              .build()
-    );
+    scheduler.startCompaction(dataSource, createSupervisorWithInlineSpec());
 
-    executor.finishNextPendingTask();
+    runCompactionTasks(1);
 
-    ArgumentCaptor<Task> taskArgumentCaptor = ArgumentCaptor.forClass(Task.class);
-    Mockito.verify(taskQueue, Mockito.times(1)).add(taskArgumentCaptor.capture());
-
-    Task submittedTask = taskArgumentCaptor.getValue();
-    Assert.assertNotNull(submittedTask);
-    Assert.assertTrue(submittedTask instanceof CompactionTask);
-
-    final CompactionTask compactionTask = (CompactionTask) submittedTask;
-    Assert.assertEquals(TestDataSource.WIKI, compactionTask.getDataSource());
-
-    final AutoCompactionSnapshot.Builder expectedSnapshot = AutoCompactionSnapshot.builder(TestDataSource.WIKI);
-    expectedSnapshot.incrementCompactedStats(CompactionStatistics.create(100_000_000, 1, 1));
+    final AutoCompactionSnapshot.Builder expectedSnapshot = AutoCompactionSnapshot.builder(dataSource);
+    expectedSnapshot.incrementWaitingStats(CompactionStatistics.create(100_000_000, 1, 1));
 
     Assert.assertEquals(
         expectedSnapshot.build(),
-        scheduler.getCompactionSnapshot(TestDataSource.WIKI)
+        scheduler.getCompactionSnapshot(dataSource)
     );
     Assert.assertEquals(
-        Collections.singletonMap(TestDataSource.WIKI, expectedSnapshot.build()),
+        Map.of(dataSource, expectedSnapshot.build()),
         scheduler.getAllCompactionSnapshots()
     );
 
     serviceEmitter.verifyValue(Stats.Compaction.SUBMITTED_TASKS.getMetricName(), 1L);
-    serviceEmitter.verifyValue(Stats.Compaction.COMPACTED_BYTES.getMetricName(), 100_000_000L);
+    serviceEmitter.verifyValue(Stats.Compaction.PENDING_BYTES.getMetricName(), 100_000_000L);
 
     scheduler.stopBeingLeader();
   }
 
   @Test
-  public void testStopCompaction()
+  public void test_stopCompaction_disablesTaskSubmission_forDatasource()
   {
-    final List<DataSegment> wikiSegments = CreateDataSegments.ofDatasource(TestDataSource.WIKI).eachOfSizeInMb(100);
-    wikiSegments.forEach(segmentsMetadataManager::addSegment);
+    createSegments(1, Granularities.DAY, JAN_20);
 
     scheduler.becomeLeader();
-    scheduler.startCompaction(
-        TestDataSource.WIKI,
-        InlineSchemaDataSourceCompactionConfig.builder()
-                                              .forDataSource(TestDataSource.WIKI)
-                                              .withSkipOffsetFromLatest(Period.seconds(0))
-                                              .build()
-    );
-    scheduler.stopCompaction(TestDataSource.WIKI);
+    scheduler.startCompaction(dataSource, createSupervisorWithInlineSpec());
+    scheduler.stopCompaction(dataSource);
 
-    executor.finishNextPendingTask();
-
+    runScheduledJob();
     Mockito.verify(taskQueue, Mockito.never()).add(ArgumentMatchers.any());
 
     Assert.assertEquals(
-        AutoCompactionSnapshot.builder(TestDataSource.WIKI)
+        AutoCompactionSnapshot.builder(dataSource)
                               .withStatus(AutoCompactionSnapshot.ScheduleStatus.NOT_ENABLED)
                               .build(),
-        scheduler.getCompactionSnapshot(TestDataSource.WIKI)
+        scheduler.getCompactionSnapshot(dataSource)
     );
     Assert.assertTrue(scheduler.getAllCompactionSnapshots().isEmpty());
 
@@ -377,26 +434,14 @@ public class OverlordCompactionSchedulerTest
   }
 
   @Test
-  public void testSimulateRun()
+  public void test_simulateRunWithConfigUpdate()
   {
-    final List<DataSegment> wikiSegments = CreateDataSegments
-        .ofDatasource(TestDataSource.WIKI)
-        .forIntervals(1, Granularities.DAY)
-        .startingAt("2013-01-01")
-        .withNumPartitions(10)
-        .eachOfSizeInMb(100);
-    wikiSegments.forEach(segmentsMetadataManager::addSegment);
+    createSegments(1, Granularities.DAY, DateTimes.of("2013-01-01"));
 
     scheduler.becomeLeader();
     runScheduledJob();
 
-    scheduler.startCompaction(
-        TestDataSource.WIKI,
-        InlineSchemaDataSourceCompactionConfig.builder()
-                                              .forDataSource(TestDataSource.WIKI)
-                                              .withSkipOffsetFromLatest(Period.seconds(0))
-                                              .build()
-    );
+    scheduler.startCompaction(dataSource, createSupervisorWithInlineSpec());
 
     final CompactionSimulateResult simulateResult = scheduler.simulateRunWithConfigUpdate(
         new ClusterCompactionConfig(null, null, null, null, null)
@@ -410,10 +455,10 @@ public class OverlordCompactionSchedulerTest
     Assert.assertEquals(
         Collections.singletonList(
             Arrays.asList(
-                TestDataSource.WIKI,
+                dataSource,
                 Intervals.of("2013-01-01/P1D"),
-                10,
-                1_000_000_000L,
+                1,
+                100_000_000L,
                 1,
                 "not compacted yet"
             )
@@ -421,7 +466,7 @@ public class OverlordCompactionSchedulerTest
         pendingCompactionTable.getRows()
     );
 
-    scheduler.stopCompaction(TestDataSource.WIKI);
+    scheduler.stopCompaction(dataSource);
 
     final CompactionSimulateResult simulateResultWhenDisabled = scheduler.simulateRunWithConfigUpdate(
         new ClusterCompactionConfig(null, null, null, null, null)
@@ -429,6 +474,64 @@ public class OverlordCompactionSchedulerTest
     Assert.assertTrue(simulateResultWhenDisabled.getCompactionStates().isEmpty());
 
     scheduler.stopBeingLeader();
+  }
+
+  private void createSegments(int numSegments, Granularity granularity, DateTime firstSegmentStart)
+  {
+    final List<DataSegment> segments = CreateDataSegments
+        .ofDatasource(dataSource)
+        .forIntervals(numSegments, granularity)
+        .startingAt(firstSegmentStart)
+        .eachOfSizeInMb(100);
+    segmentStorage.commitSegments(Set.copyOf(segments), null);
+  }
+
+  private void runCompactionTasks(int expectedCount)
+  {
+    runScheduledJob();
+    serviceEmitter.verifySum("compact/task/count", expectedCount);
+
+    ArgumentCaptor<Task> taskArgumentCaptor = ArgumentCaptor.forClass(Task.class);
+    Mockito.verify(taskQueue, Mockito.times(expectedCount)).add(taskArgumentCaptor.capture());
+
+    for (Task task : taskArgumentCaptor.getAllValues()) {
+      Assert.assertTrue(task instanceof CompactionTask);
+      Assert.assertEquals(dataSource, task.getDataSource());
+
+      final CompactionTask compactionTask = (CompactionTask) task;
+      runCompactionTask(
+          compactionTask.getId(),
+          compactionTask.getIoConfig().getInputSpec().findInterval(dataSource),
+          compactionTask.getSegmentGranularity()
+      );
+    }
+
+    segmentStorage.getManager().forceUpdateDataSourcesSnapshot();
+  }
+
+  private void runCompactionTask(String taskId, Interval compactionInterval, Granularity segmentGranularity)
+  {
+    // Update status of task in TaskQueue
+    Mockito.when(taskQueue.getTaskStatus(taskId))
+           .thenReturn(Optional.of(TaskStatus.success(taskId)));
+
+    // Determine interval and granularity and apply it to the timeline
+    if (segmentGranularity == null) {
+      // Nothing to do
+      return;
+    }
+
+    for (Interval replaceInterval : segmentGranularity.getIterable(compactionInterval)) {
+      // Create a single segment in this interval
+      DataSegment replaceSegment = CreateDataSegments
+          .ofDatasource(dataSource)
+          .forIntervals(1, segmentGranularity)
+          .startingAt(replaceInterval.getStart())
+          .withVersion("2")
+          .eachOfSizeInMb(100)
+          .get(0);
+      segmentStorage.commitSegments(Set.of(replaceSegment), null);
+    }
   }
 
   private void disableScheduler()
@@ -446,4 +549,16 @@ public class OverlordCompactionSchedulerTest
     executor.finishNextPendingTask();
   }
 
+  private CompactionSupervisor createSupervisorWithInlineSpec()
+  {
+    return new CompactionSupervisorSpec(
+        InlineSchemaDataSourceCompactionConfig
+            .builder()
+            .forDataSource(dataSource)
+            .withSkipOffsetFromLatest(Period.seconds(0))
+            .build(),
+        false,
+        scheduler
+    ).createSupervisor();
+  }
 }
