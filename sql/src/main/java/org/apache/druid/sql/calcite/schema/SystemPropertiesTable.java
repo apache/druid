@@ -184,7 +184,8 @@ public class SystemPropertiesTable extends AbstractTable implements ScannableTab
 
     public Stream<Object[]> toRows()
     {
-      return properties.entrySet().stream().map(entry -> new Object[]{serviceName, server, nodeRoles.toString(), entry.getKey(), entry.getValue()});
+      String nodeRolesString = nodeRoles.toString();
+      return properties.entrySet().stream().map(entry -> new Object[]{serviceName, server, nodeRolesString, entry.getKey(), entry.getValue()});
     }
   }
 }
