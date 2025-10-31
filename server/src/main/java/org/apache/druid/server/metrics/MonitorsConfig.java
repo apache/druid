@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.query.DruidMetrics;
 
+import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -79,7 +80,7 @@ public class MonitorsConfig
            '}';
   }
 
-  public static Map<String, String[]> mapOfDatasourceAndTaskID(final String datasource, final String taskId)
+  public static Map<String, String[]> mapOfDatasourceAndTaskID(@Nullable final String datasource, @Nullable final String taskId)
   {
     final ImmutableMap.Builder<String, String[]> builder = ImmutableMap.builder();
     if (datasource != null) {

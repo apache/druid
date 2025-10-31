@@ -77,6 +77,7 @@ import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
 
+import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
@@ -526,7 +527,7 @@ public class JettyServerModule extends JerseyServletModule
   {
     private final Map<String, String[]> dimensions;
 
-    public JettyMonitor(String dataSource, String taskId)
+    public JettyMonitor(@Nullable String dataSource, @Nullable String taskId)
     {
       this.dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(dataSource, taskId);
     }

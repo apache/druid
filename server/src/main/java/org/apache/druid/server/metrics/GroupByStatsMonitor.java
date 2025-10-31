@@ -27,9 +27,11 @@ import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
+import org.apache.druid.java.util.metrics.MonitorUtils;
 import org.apache.druid.query.groupby.GroupByStatsProvider;
 
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 @LoadScope(roles = {
     NodeRole.BROKER_JSON_NAME,
@@ -41,21 +43,28 @@ public class GroupByStatsMonitor extends AbstractMonitor
 {
   private final GroupByStatsProvider groupByStatsProvider;
   private final BlockingPool<ByteBuffer> mergeBufferPool;
+  private final Map<String, String[]> dimensions;
 
   @Inject
   public GroupByStatsMonitor(
       GroupByStatsProvider groupByStatsProvider,
-      @Merging BlockingPool<ByteBuffer> mergeBufferPool
+      @Merging BlockingPool<ByteBuffer> mergeBufferPool,
+      DataSourceTaskIdHolder dataSourceTaskIdHolder
   )
   {
     this.groupByStatsProvider = groupByStatsProvider;
     this.mergeBufferPool = mergeBufferPool;
+    this.dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
+            dataSourceTaskIdHolder.getDataSource(),
+            dataSourceTaskIdHolder.getTaskId()
+    );
   }
 
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+    MonitorUtils.addDimensionsToBuilder(builder, dimensions);
 
     emitter.emit(builder.setMetric("mergeBuffer/pendingRequests", mergeBufferPool.getPendingRequests()));
 

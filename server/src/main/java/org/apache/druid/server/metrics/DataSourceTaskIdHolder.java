@@ -24,6 +24,8 @@ import com.google.inject.name.Named;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 
+import javax.annotation.Nullable;
+
 public class DataSourceTaskIdHolder
 {
   public static final String DATA_SOURCE_BINDING = "druidDataSource";
@@ -46,11 +48,13 @@ public class DataSourceTaskIdHolder
   @Inject(optional = true)
   BroadcastDatasourceLoadingSpec broadcastDatasourceLoadingSpec = BroadcastDatasourceLoadingSpec.ALL;
 
+  @Nullable
   public String getDataSource()
   {
     return dataSource;
   }
 
+  @Nullable
   public String getTaskId()
   {
     return taskId;
