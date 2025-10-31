@@ -47,7 +47,6 @@
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
-      <version>${protobuf.version}</version>
     </dependency>
     <dependency>
       <groupId>com.google.inject</groupId>
@@ -128,7 +127,6 @@
     <dependency>
       <groupId>org.apache.curator</groupId>
       <artifactId>curator-client</artifactId>
-      <version>${apache.curator.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
