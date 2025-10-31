@@ -35,16 +35,6 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
-import org.apache.druid.msq.dart.guice.DartControllerMemoryManagementModule;
-import org.apache.druid.msq.dart.guice.DartControllerModule;
-import org.apache.druid.msq.dart.guice.DartWorkerMemoryManagementModule;
-import org.apache.druid.msq.dart.guice.DartWorkerModule;
-import org.apache.druid.msq.guice.IndexerMemoryManagementModule;
-import org.apache.druid.msq.guice.MSQDurableStorageModule;
-import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
-import org.apache.druid.msq.guice.MSQIndexingModule;
-import org.apache.druid.msq.guice.MSQSqlModule;
-import org.apache.druid.msq.guice.SqlTaskModule;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.segment.TestHelper;
@@ -277,18 +267,6 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
         .addCommonProperty("druid.msq.dart.enabled", "true")
         .addCommonProperty("druid.sql.planner.authorizeSystemTablesDirectly", "true")
         .addCommonProperty("druid.server.http.allowedHttpMethods", "[\"OPTIONS\"]")
-        .addExtensions(
-            MSQSqlModule.class,
-            MSQIndexingModule.class,
-            SqlTaskModule.class,
-            MSQDurableStorageModule.class,
-            MSQExternalDataSourceModule.class,
-            IndexerMemoryManagementModule.class,
-            DartControllerModule.class,
-            DartWorkerModule.class,
-            DartControllerMemoryManagementModule.class,
-            DartWorkerMemoryManagementModule.class
-        )
         .addServer(coordinator)
         .addServer(overlord)
         .addServer(indexer)
