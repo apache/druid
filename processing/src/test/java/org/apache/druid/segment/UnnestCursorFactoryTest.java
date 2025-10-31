@@ -22,7 +22,6 @@ package org.apache.druid.segment;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.ResourceInputSource;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
@@ -32,9 +31,11 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -61,12 +62,14 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.ToLongFunction;
 
@@ -139,7 +142,7 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
                                                              .withMinTimestamp(0)
                                                              .build()
                                    )
-                                   .indexSpec(IndexSpec.DEFAULT)
+                                   .indexSpec(IndexSpec.getDefault())
                                    .inputSource(inputSource)
                                    .inputFormat(TestIndex.DEFAULT_JSON_INPUT_FORMAT)
                                    .transform(TransformSpec.NONE)
@@ -836,6 +839,190 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
     }
   }
 
+  @Test
+  public void testTransformCursor()
+  {
+    final String inputColumn = "col";
+    final String unnestColumn = "unnest";
+    ExpressionVirtualColumn identifier = new ExpressionVirtualColumn(
+        unnestColumn,
+        "\"" + inputColumn + "\"",
+        ColumnType.STRING_ARRAY,
+        ExprMacroTable.nil()
+    );
+    CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                               .setPhysicalColumns(Set.of(unnestColumn))
+                                               .setGroupingColumns(List.of(unnestColumn))
+                                               .build();
+
+
+    CursorBuildSpec expected = CursorBuildSpec.builder()
+                                              .setPhysicalColumns(Set.of(inputColumn))
+                                              .setVirtualColumns(VirtualColumns.create(identifier))
+                                              .build();
+
+    CursorBuildSpec transformed = UnnestCursorFactory.transformCursorBuildSpec(
+        buildSpec,
+        identifier,
+        null
+    );
+
+    Assertions.assertEquals(expected, transformed);
+  }
+
+  @Test
+  public void testTransformCursorMoreGrouping()
+  {
+    final String unnestColumn = "unnest";
+    ExpressionVirtualColumn identifier = new ExpressionVirtualColumn(
+        unnestColumn,
+        "\"a\"",
+        ColumnType.STRING_ARRAY,
+        ExprMacroTable.nil()
+    );
+    CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                               .setPhysicalColumns(Set.of(unnestColumn, "b", "c"))
+                                               .setGroupingColumns(List.of(unnestColumn, "b", "c"))
+                                               .build();
+
+
+    CursorBuildSpec expected = CursorBuildSpec.builder()
+                                              .setPhysicalColumns(Set.of("a", "b", "c"))
+                                              .setVirtualColumns(VirtualColumns.create(identifier))
+                                              .build();
+
+    CursorBuildSpec transformed = UnnestCursorFactory.transformCursorBuildSpec(
+        buildSpec,
+        identifier,
+        null
+    );
+
+    Assertions.assertEquals(expected, transformed);
+  }
+
+  @Test
+  public void testTransformCursorFilter()
+  {
+    final String unnestColumn = "unnest";
+    ExpressionVirtualColumn identifier = new ExpressionVirtualColumn(
+        unnestColumn,
+        "\"a\"",
+        ColumnType.STRING_ARRAY,
+        ExprMacroTable.nil()
+    );
+    Filter unnestEquals = new EqualityFilter(unnestColumn, ColumnType.STRING, "value", null);
+    Filter bRange = new RangeFilter("b", ColumnType.LONG, 1L, 10L, false, false, null);
+    CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                               .setPhysicalColumns(Set.of(unnestColumn, "b", "c"))
+                                               .setGroupingColumns(List.of(unnestColumn, "b", "c"))
+                                               .setFilter(bRange)
+                                               .build();
+
+    UnnestCursorFactory.UnnestFilterSplit split = UnnestCursorFactory.computeBaseAndPostUnnestFilters(
+        buildSpec.getFilter(),
+        unnestEquals,
+        buildSpec.getVirtualColumns(),
+        identifier,
+        "a",
+        ColumnCapabilitiesImpl.createDefault().setType(ColumnType.STRING_ARRAY)
+    );
+
+    // expect unnest filter not pushed down since is array column
+    CursorBuildSpec expected = CursorBuildSpec.builder()
+                                              .setPhysicalColumns(Set.of("a", "b", "c"))
+                                              .setVirtualColumns(VirtualColumns.create(identifier))
+                                              .setFilter(bRange)
+                                              .build();
+
+    CursorBuildSpec transformed = UnnestCursorFactory.transformCursorBuildSpec(
+        buildSpec,
+        identifier,
+        split.getBaseTableFilter()
+    );
+
+    Assertions.assertEquals(expected, transformed);
+  }
+
+  @Test
+  public void testTransformCursorFilterMvd()
+  {
+    final String unnestColumn = "unnest";
+    ExpressionVirtualColumn identifier = new ExpressionVirtualColumn(
+        unnestColumn,
+        "\"a\"",
+        ColumnType.STRING_ARRAY,
+        ExprMacroTable.nil()
+    );
+    Filter unnestEquals = new EqualityFilter(unnestColumn, ColumnType.STRING, "value", null);
+    Filter bRange = new RangeFilter("b", ColumnType.LONG, 1L, 10L, false, false, null);
+    CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                               .setPhysicalColumns(Set.of(unnestColumn, "b", "c"))
+                                               .setGroupingColumns(List.of(unnestColumn, "b", "c"))
+                                               .setFilter(bRange)
+                                               .build();
+
+    UnnestCursorFactory.UnnestFilterSplit split = UnnestCursorFactory.computeBaseAndPostUnnestFilters(
+        buildSpec.getFilter(),
+        unnestEquals,
+        buildSpec.getVirtualColumns(),
+        identifier,
+        "a",
+        ColumnCapabilitiesImpl.createDefault().setHasMultipleValues(true).setType(ColumnType.STRING)
+    );
+
+    // since unnest column is mvd, expect pushdown filter as on base table
+    CursorBuildSpec expected = CursorBuildSpec.builder()
+                                              .setPhysicalColumns(Set.of("a", "b", "c"))
+                                              .setVirtualColumns(VirtualColumns.create(identifier))
+                                              .setFilter(
+                                                  new AndFilter(
+                                                      List.of(
+                                                          bRange,
+                                                          new EqualityFilter("a", ColumnType.STRING, "value", null)
+                                                      )
+                                                  )
+                                              )
+                                              .build();
+
+    CursorBuildSpec transformed = UnnestCursorFactory.transformCursorBuildSpec(
+        buildSpec,
+        identifier,
+        split.getBaseTableFilter()
+    );
+
+    Assertions.assertEquals(expected, transformed);
+  }
+
+  @Test
+  public void testTransformCursorArray()
+  {
+    final String unnestColumn = "unnest";
+    ExpressionVirtualColumn array = new ExpressionVirtualColumn(
+        unnestColumn,
+        "array(x, y, z)",
+        ColumnType.DOUBLE_ARRAY,
+        ExprMacroTable.nil()
+    );
+    CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                               .setPhysicalColumns(Set.of(unnestColumn))
+                                               .setGroupingColumns(List.of(unnestColumn))
+                                               .build();
+
+
+    CursorBuildSpec expected = CursorBuildSpec.builder()
+                                              .setPhysicalColumns(Set.of("x", "y", "z"))
+                                              .setVirtualColumns(VirtualColumns.create(array))
+                                              .build();
+
+    CursorBuildSpec transformed = UnnestCursorFactory.transformCursorBuildSpec(
+        buildSpec,
+        array,
+        null
+    );
+
+    Assertions.assertEquals(expected, transformed);
+  }
+
   public void testComputeBaseAndPostUnnestFilters(
       Filter testQueryFilter,
       String expectedBasePushDown,
@@ -858,16 +1045,18 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
   )
   {
     final String inputColumn = cursorFactory.getUnnestInputIfDirectAccess(cursorFactory.getUnnestColumn());
+    Assert.assertNotNull(inputColumn);
     final VirtualColumn vc = cursorFactory.getUnnestColumn();
-    Pair<Filter, Filter> filterPair = cursorFactory.computeBaseAndPostUnnestFilters(
+    UnnestCursorFactory.UnnestFilterSplit filterSplit = UnnestCursorFactory.computeBaseAndPostUnnestFilters(
         testQueryFilter,
         null,
         VirtualColumns.EMPTY,
+        cursorFactory.getUnnestColumn(),
         inputColumn,
         vc.capabilities(cursorFactory, inputColumn)
     );
-    Filter actualPushDownFilter = filterPair.lhs;
-    Filter actualPostUnnestFilter = filterPair.rhs;
+    Filter actualPushDownFilter = filterSplit.getBaseTableFilter();
+    Filter actualPostUnnestFilter = filterSplit.getPostUnnestFilter();
     Assert.assertEquals(
         "Expects only top level child of And Filter to push down to base",
         expectedBasePushDown,

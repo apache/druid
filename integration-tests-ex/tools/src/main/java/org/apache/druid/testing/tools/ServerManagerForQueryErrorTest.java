@@ -48,28 +48,34 @@ import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
-import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.server.SegmentManager;
-import org.apache.druid.server.coordination.ServerManager;
+import org.apache.druid.server.ServerManager;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 
-import java.util.HashSet;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * This server manager is designed to test various query failures.
- *
- * - Missing segments. A segment can be missing during a query if a historical drops the segment
+ * <ul>
+ *  <li> Missing segments. A segment can be missing during a query if a historical drops the segment
  *   after the broker issues the query to the historical. To mimic this situation, the historical
- *   with this server manager announces all segments assigned, but reports missing segments for the
- *   first 3 segments specified in the query. See ITQueryRetryTestOnMissingSegments.
- * - Other query errors. This server manager returns a sequence that always throws an exception
- *   based on a given query context value. See ITQueryErrorTest.
+ *   with this server manager announces all segments assigned, and reports missing segments based on the following:
+ *   <ul>
+ *     <li> If {@link #QUERY_RETRY_UNAVAILABLE_SEGMENT_IDX_KEY} and {@link #QUERY_RETRY_TEST_CONTEXT_KEY} are set,
+ *           the segment at that index is reported as missing exactly once.</li>
+ *     <li> If {@link #QUERY_RETRY_UNAVAILABLE_SEGMENT_IDX_KEY} is not set or is -1, it simulates missing segments
+ *     starting from the beginning, up to {@link #MAX_NUM_FALSE_MISSING_SEGMENTS_REPORTS}.</li>
+ *   </ul>
+ *   The missing report is only generated once for the first time. Post that report, upon retry, all segments are served
+ *   for the datasource. See ITQueryRetryTestOnMissingSegments. </li>
+ * <li> Other query errors. This server manager returns a sequence that always throws an exception
+ *   based on a given query context value. See ITQueryErrorTest. </li>
+ * </ul>
  *
  * @see org.apache.druid.query.RetryQueryRunner for query retrying.
  * @see org.apache.druid.client.JsonParserIterator for handling query errors from historicals.
@@ -83,11 +89,21 @@ public class ServerManagerForQueryErrorTest extends ServerManager
   public static final String QUERY_UNSUPPORTED_TEST_CONTEXT_KEY = "query-unsupported-test";
   public static final String RESOURCE_LIMIT_EXCEEDED_TEST_CONTEXT_KEY = "resource-limit-exceeded-test";
   public static final String QUERY_FAILURE_TEST_CONTEXT_KEY = "query-failure-test";
+  /**
+   * Query context that indicates which segment should be marked as unavilable/missing.
+   * This should be used in conjunction with {@link #QUERY_RETRY_TEST_CONTEXT_KEY}.
+   * <p>
+   * A value of {@code 0} means the first segment will be reported as missing, {@code 1} for the second, and so on.
+   * If this key is not set (default = -1), the test will instead simulate missing up to
+   * {@link #MAX_NUM_FALSE_MISSING_SEGMENTS_REPORTS} segments from the beginning.
+   * </p>
+   */
+  public static final String QUERY_RETRY_UNAVAILABLE_SEGMENT_IDX_KEY = "unavailable-segment-idx";
+  private static final int MAX_NUM_FALSE_MISSING_SEGMENTS_REPORTS = 1;
 
   private static final Logger LOG = new Logger(ServerManagerForQueryErrorTest.class);
-  private static final int MAX_NUM_FALSE_MISSING_SEGMENTS_REPORTS = 3;
 
-  private final ConcurrentHashMap<String, Set<SegmentDescriptor>> queryToIgnoredSegments = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, Integer> queryToIgnoredSegments = new ConcurrentHashMap<>();
 
   @Inject
   public ServerManagerForQueryErrorTest(
@@ -118,7 +134,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
 
   @Override
   protected <T> FunctionalIterable<QueryRunner<T>> getQueryRunnersForSegments(
-      final VersionedIntervalTimeline<String, ReferenceCountedSegmentProvider> timeline,
+      final VersionedIntervalTimeline<String, DataSegment> timeline,
       final Iterable<SegmentDescriptor> specs,
       final Query<T> query,
       final QueryRunnerFactory<T, Query<T>> factory,
@@ -130,37 +146,50 @@ public class ServerManagerForQueryErrorTest extends ServerManager
   )
   {
     return FunctionalIterable
-        .create(acquireAllSegments(timeline, specs, segmentMapFn, closer))
+        .create(getSegmentReferences(timeline, specs, segmentMapFn, query.context().getTimeout()))
         .transform(
             ref ->
                 ref.getSegmentReference()
                    .map(segment -> {
                           final QueryContext queryContext = query.context();
                           if (queryContext.getBoolean(QUERY_RETRY_TEST_CONTEXT_KEY, false)) {
+                            final int unavailableSegmentIdx = queryContext.getInt(QUERY_RETRY_UNAVAILABLE_SEGMENT_IDX_KEY, -1);
                             final MutableBoolean isIgnoreSegment = new MutableBoolean(false);
                             queryToIgnoredSegments.compute(
                                 query.getMostSpecificId(),
-                                (queryId, ignoredSegments) -> {
-                                  if (ignoredSegments == null) {
-                                    ignoredSegments = new HashSet<>();
+                                (queryId, ignoreCounter) -> {
+                                  if (ignoreCounter == null) {
+                                    ignoreCounter = 0;
                                   }
-                                  if (ignoredSegments.size() < MAX_NUM_FALSE_MISSING_SEGMENTS_REPORTS) {
-                                    ignoredSegments.add(ref.getSegmentDescriptor());
+
+                                  if (unavailableSegmentIdx >= 0 && unavailableSegmentIdx == ignoreCounter) {
+                                    // Fail exactly once when counter matches the configured retry index
+                                    ignoreCounter++;
+                                    isIgnoreSegment.setTrue();
+                                  } else if (ignoreCounter < MAX_NUM_FALSE_MISSING_SEGMENTS_REPORTS) {
+                                    // Fail up to N times for this query
+                                    ignoreCounter++;
                                     isIgnoreSegment.setTrue();
                                   }
-                                  return ignoredSegments;
+                                  return ignoreCounter;
                                 }
                             );
 
                             if (isIgnoreSegment.isTrue()) {
-                              LOG.info("Pretending I don't have segment [%s]", ref.getSegmentReference());
+                              LOG.info(
+                                  "Pretending I don't have segment[%s]",
+                                  ref.getSegmentDescriptor()
+                              );
                               return new ReportTimelineMissingSegmentQueryRunner<T>(ref.getSegmentDescriptor());
                             }
                           } else if (queryContext.getBoolean(QUERY_TIMEOUT_TEST_CONTEXT_KEY, false)) {
                             return (QueryRunner<T>) (queryPlus, responseContext) -> new Sequence<>()
                             {
                               @Override
-                              public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
+                              public <OutType> OutType accumulate(
+                                  OutType initValue,
+                                  Accumulator<OutType, T> accumulator
+                              )
                               {
                                 throw new QueryTimeoutException("query timeout test");
                               }
@@ -178,10 +207,14 @@ public class ServerManagerForQueryErrorTest extends ServerManager
                             return (QueryRunner<T>) (queryPlus, responseContext) -> new Sequence<>()
                             {
                               @Override
-                              public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
+                              public <OutType> OutType accumulate(
+                                  OutType initValue,
+                                  Accumulator<OutType, T> accumulator
+                              )
                               {
                                 throw QueryCapacityExceededException.withErrorMessageAndResolvedHost(
-                                    "query capacity exceeded test");
+                                    "query capacity exceeded test"
+                                );
                               }
 
                               @Override
@@ -191,14 +224,18 @@ public class ServerManagerForQueryErrorTest extends ServerManager
                               )
                               {
                                 throw QueryCapacityExceededException.withErrorMessageAndResolvedHost(
-                                    "query capacity exceeded test");
+                                    "query capacity exceeded test"
+                                );
                               }
                             };
                           } else if (queryContext.getBoolean(QUERY_UNSUPPORTED_TEST_CONTEXT_KEY, false)) {
                             return (QueryRunner<T>) (queryPlus, responseContext) -> new Sequence<>()
                             {
                               @Override
-                              public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
+                              public <OutType> OutType accumulate(
+                                  OutType initValue,
+                                  Accumulator<OutType, T> accumulator
+                              )
                               {
                                 throw new QueryUnsupportedException("query unsupported test");
                               }
@@ -216,7 +253,10 @@ public class ServerManagerForQueryErrorTest extends ServerManager
                             return (QueryRunner<T>) (queryPlus, responseContext) -> new Sequence<>()
                             {
                               @Override
-                              public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
+                              public <OutType> OutType accumulate(
+                                  OutType initValue,
+                                  Accumulator<OutType, T> accumulator
+                              )
                               {
                                 throw new ResourceLimitExceededException("resource limit exceeded test");
                               }
@@ -234,7 +274,10 @@ public class ServerManagerForQueryErrorTest extends ServerManager
                             return (QueryRunner<T>) (queryPlus, responseContext) -> new Sequence<>()
                             {
                               @Override
-                              public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
+                              public <OutType> OutType accumulate(
+                                  OutType initValue,
+                                  Accumulator<OutType, T> accumulator
+                              )
                               {
                                 throw new RuntimeException("query failure test");
                               }
@@ -249,6 +292,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
                               }
                             };
                           }
+
                           return buildQueryRunnerForSegment(
                               ref.getSegmentDescriptor(),
                               segment,

@@ -22,6 +22,7 @@ package org.apache.druid.segment.virtual;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
@@ -48,7 +49,6 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -56,11 +56,15 @@ import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.NumericColumn;
+import org.apache.druid.segment.column.SelectableColumn;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.column.ValueTypes;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
+import org.apache.druid.segment.nested.NestedColumnIndexSupplier;
+import org.apache.druid.segment.nested.NestedColumnSelectorFactory;
+import org.apache.druid.segment.nested.NestedColumnTypeInspector;
 import org.apache.druid.segment.nested.NestedCommonFormatColumn;
 import org.apache.druid.segment.nested.NestedDataComplexColumn;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
@@ -68,6 +72,7 @@ import org.apache.druid.segment.nested.NestedFieldDictionaryEncodedColumn;
 import org.apache.druid.segment.nested.NestedPathArrayElement;
 import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.NestedPathPart;
+import org.apache.druid.segment.nested.NestedVectorColumnSelectorFactory;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.nested.VariantColumn;
 import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
@@ -78,6 +83,7 @@ import org.apache.druid.segment.vector.NilVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
@@ -106,6 +112,7 @@ import java.util.Set;
  * will be best effor cast to the expected type if the column is not natively the expected type so that this column can
  * fulfill the contract of the type of selector that is likely to be created to read this column.
  */
+@JsonTypeName("nested-field")
 public class NestedFieldVirtualColumn implements VirtualColumn
 {
   private static final NestedDataExpressions.JsonQueryExprMacro JSON_QUERY = new NestedDataExpressions.JsonQueryExprMacro();
@@ -228,53 +235,17 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   @Override
   public DimensionSelector makeDimensionSelector(
       DimensionSpec dimensionSpec,
-      ColumnSelectorFactory factory
+      ColumnSelectorFactory selectorFactory,
+      @Nullable ColumnSelector columnSelector,
+      @Nullable ReadableOffset offset
   )
   {
-    // this dimension selector is used for realtime queries, nested paths are not themselves dictionary encoded until
-    // written to segment, so we fall back to processing the structured data from a column value selector on the
-    // complex column
-    ColumnValueSelector<?> valueSelector = makeColumnValueSelector(dimensionSpec.getOutputName(), factory);
-    return dimensionSpec.decorate(new FieldDimensionSelector(valueSelector));
-  }
-
-  @Override
-  public ColumnValueSelector<?> makeColumnValueSelector(
-      String columnName,
-      ColumnSelectorFactory factory
-  )
-  {
-    // realtime selectors have no optimization, fallback to json_query/json_value expressions
-    final Expr identifier = Parser.identifier(fieldSpec.columnName);
-    final Expr path = Parser.constant(NestedPathFinder.toNormalizedJsonPath(fieldSpec.parts));
-    final Expr jsonExpr;
-    if (fieldSpec.processFromRaw) {
-      // processFromRaw is true that means JSON_QUERY, which can return partial object results
-      jsonExpr = JSON_QUERY.apply(List.of(identifier, path));
-    } else {
-      // otherwise, this virtual column is JSON_VALUE which only returns primitives
-      final List<Expr> args;
-      if (fieldSpec.expectedType != null) {
-        final Expr castType = Parser.constant(
-            ExpressionType.fromColumnTypeStrict(fieldSpec.expectedType).asTypeString()
-        );
-        args = List.of(identifier, path, castType);
-      } else {
-        args = List.of(identifier, path);
-      }
-      jsonExpr = JSON_VALUE.apply(args);
+    if (columnSelector == null) {
+      return dimensionSpec.decorate(
+          new FieldDimensionSelector(makeColumnValueSelectorUsingColumnSelectorFactory(selectorFactory))
+      );
     }
-    return ExpressionSelectors.makeColumnValueSelector(factory, jsonExpr);
-  }
 
-  @Nullable
-  @Override
-  public DimensionSelector makeDimensionSelector(
-      DimensionSpec dimensionSpec,
-      ColumnSelector columnSelector,
-      ReadableOffset offset
-  )
-  {
     ColumnHolder holder = columnSelector.getColumnHolder(fieldSpec.columnName);
     if (holder == null) {
       // column doesn't exist
@@ -283,28 +254,41 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     if (hasNegativeArrayIndex) {
       // negative array elements in a path expression mean that values should be fetched 'from the end' of the array
       // if the path has negative array elements, then we have to use the 'raw' processing of the FieldDimensionSelector
-      // created with the column selector factory instead of using the optimized nested field column, return null
-      // to fall through
-      return null;
+      // created with the column selector factory instead of using the optimized nested field column, so fall back
+      return dimensionSpec.decorate(
+          new FieldDimensionSelector(makeColumnValueSelectorUsingColumnSelectorFactory(selectorFactory))
+      );
     }
 
-    return dimensionSpec.decorate(makeDimensionSelectorUndecorated(holder, offset, dimensionSpec.getExtractionFn()));
+    return dimensionSpec.decorate(
+        makeDimensionSelectorUndecorated(
+            holder,
+            dimensionSpec.getExtractionFn(),
+            selectorFactory,
+            offset
+        )
+    );
   }
 
   private DimensionSelector makeDimensionSelectorUndecorated(
       ColumnHolder holder,
-      ReadableOffset offset,
-      @Nullable ExtractionFn extractionFn
+      @Nullable ExtractionFn extractionFn,
+      ColumnSelectorFactory selectorFactory,
+      ReadableOffset offset
   )
   {
-    BaseColumn theColumn = holder.getColumn();
-    if (theColumn instanceof NestedDataComplexColumn) {
-      final NestedDataComplexColumn column = (NestedDataComplexColumn) theColumn;
-      final ColumnType logicalType = column.getFieldLogicalType(fieldSpec.parts);
+    final SelectableColumn theColumn = holder.getColumn();
+    final NestedColumnTypeInspector nestedTypeInspector = theColumn.as(NestedColumnTypeInspector.class);
+    final NestedColumnSelectorFactory nestedColumnSelectorFactory = theColumn.as(NestedColumnSelectorFactory.class);
+
+    if (nestedTypeInspector != null && nestedColumnSelectorFactory != null) {
+      final ColumnType logicalType = nestedTypeInspector.getFieldLogicalType(fieldSpec.parts);
       if (logicalType != null && logicalType.isArray()) {
-        return new FieldDimensionSelector(column.makeColumnValueSelector(fieldSpec.parts, offset));
+        return new FieldDimensionSelector(
+            nestedColumnSelectorFactory.makeColumnValueSelector(fieldSpec.parts, selectorFactory, offset)
+        );
       }
-      return column.makeDimensionSelector(fieldSpec.parts, offset, extractionFn);
+      return nestedColumnSelectorFactory.makeDimensionSelector(fieldSpec.parts, extractionFn, selectorFactory, offset);
     }
 
     // not a nested column, but we can still do stuff if the path is the 'root', indicated by an empty path parts
@@ -315,13 +299,14 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       if (theColumn instanceof DictionaryEncodedColumn) {
         final DictionaryEncodedColumn<?> column = (DictionaryEncodedColumn<?>) theColumn;
         return new BestEffortCastingValueSelector(column.makeDimensionSelector(offset, extractionFn));
+      } else {
+        // for non-dictionary encoded columns, wrap a value selector to make it appear as a dimension selector
+        return ValueTypes.makeNumericWrappingDimensionSelector(
+            holder.getCapabilities().getType(),
+            selectorFactory.makeColumnValueSelector(fieldSpec.columnName),
+            extractionFn
+        );
       }
-      // for non-dictionary encoded columns, wrap a value selector to make it appear as a dimension selector
-      return ValueTypes.makeNumericWrappingDimensionSelector(
-          holder.getCapabilities().getType(),
-          theColumn.makeColumnValueSelector(offset),
-          extractionFn
-      );
     }
 
     if (isRootArrayElementPathAndArrayColumn(theColumn)) {
@@ -363,42 +348,47 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     return DimensionSelector.constant(null, extractionFn);
   }
 
-
-  @Nullable
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(
       String columnName,
-      ColumnSelector columnSelector,
-      ReadableOffset offset
+      ColumnSelectorFactory selectorFactory,
+      @Nullable ColumnSelector columnSelector,
+      @Nullable ReadableOffset offset
   )
   {
+    if (columnSelector == null) {
+      return makeColumnValueSelectorUsingColumnSelectorFactory(selectorFactory);
+    }
+
     ColumnHolder holder = columnSelector.getColumnHolder(fieldSpec.columnName);
     if (holder == null) {
       return NilColumnValueSelector.instance();
     }
-    BaseColumn theColumn = holder.getColumn();
+    SelectableColumn theColumn = holder.getColumn();
 
     if (fieldSpec.processFromRaw || hasNegativeArrayIndex) {
       // if the path has negative array elements, or has set the flag to process 'raw' values explicitly (JSON_QUERY),
       // then we use the 'raw' processing of the RawFieldColumnSelector/RawFieldLiteralColumnValueSelector created
       // with the column selector factory instead of using the optimized nested field column
-      return null;
+      return makeColumnValueSelectorUsingColumnSelectorFactory(selectorFactory);
     }
 
     // "JSON_VALUE", which only returns literals, on a NestedDataComplexColumn, so we can use the fields value selector
 
-    if (theColumn instanceof NestedDataComplexColumn) {
-      final NestedDataComplexColumn column = (NestedDataComplexColumn) theColumn;
-      final ColumnType fieldType = column.getFieldLogicalType(fieldSpec.parts);
+    final NestedColumnTypeInspector nestedTypeInspector = theColumn.as(NestedColumnTypeInspector.class);
+    final NestedColumnSelectorFactory nestedColumnSelectorFactory = theColumn.as(NestedColumnSelectorFactory.class);
+
+    if (nestedTypeInspector != null && nestedColumnSelectorFactory != null) {
+      final ColumnType fieldType = nestedTypeInspector.getFieldLogicalType(fieldSpec.parts);
       if (fieldType != null && fieldSpec.expectedType != null && !fieldSpec.expectedType.equals(fieldType)) {
         return ExpressionSelectors.castColumnValueSelector(
             offset::getOffset,
-            column.makeColumnValueSelector(fieldSpec.parts, offset),
+            nestedColumnSelectorFactory.makeColumnValueSelector(fieldSpec.parts, selectorFactory, offset),
             fieldType,
             fieldSpec.expectedType
         );
       }
-      return column.makeColumnValueSelector(fieldSpec.parts, offset);
+      return nestedColumnSelectorFactory.makeColumnValueSelector(fieldSpec.parts, selectorFactory, offset);
     }
 
     // not a nested column, but we can still do stuff if the path is the 'root', indicated by an empty path parts
@@ -411,7 +401,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       }
       // otherwise it is probably cool to pass through the value selector directly, if numbers make sense the selector
       // very likely implemented them, and everyone implements getObject if not
-      return theColumn.makeColumnValueSelector(offset);
+      return selectorFactory.makeColumnValueSelector(fieldSpec.columnName);
     }
 
     if (isRootArrayElementPathAndArrayColumn(theColumn)) {
@@ -424,8 +414,14 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       return new ArrayElementColumnValueSelector(arraySelector, elementNumber);
     }
 
-    // we are not a nested column and are being asked for a path that will never exist, so we are nil selector
-    return NilColumnValueSelector.instance();
+    if (holder.getCapabilities().isArray() || ColumnType.NESTED_DATA.equals(holder.getCapabilities().toColumnType())) {
+      // Not a root access and no specialized path available. But the underlying column is array or nested typed,
+      // so we may still be able to walk it using exprs. Try that.
+      return makeColumnValueSelectorUsingColumnSelectorFactory(selectorFactory);
+    } else {
+      // we are not a nested or array column, and are being asked for a path that will never exist, so nil selector
+      return NilColumnValueSelector.instance();
+    }
   }
 
   @Override
@@ -434,10 +430,10 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     return !hasNegativeArrayIndex;
   }
 
-  @Nullable
   @Override
   public SingleValueDimensionVectorSelector makeSingleValueVectorDimensionSelector(
       DimensionSpec dimensionSpec,
+      VectorColumnSelectorFactory selectorFactory,
       ColumnSelector columnSelector,
       ReadableVectorOffset offset
   )
@@ -447,18 +443,25 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       return dimensionSpec.decorate(NilVectorSelector.create(offset));
     }
 
-    return dimensionSpec.decorate(makeSingleValueVectorDimensionSelectorUndecorated(holder, offset));
+    return dimensionSpec.decorate(makeSingleValueVectorDimensionSelectorUndecorated(holder, selectorFactory, offset));
   }
 
   private SingleValueDimensionVectorSelector makeSingleValueVectorDimensionSelectorUndecorated(
       ColumnHolder holder,
+      VectorColumnSelectorFactory selectorFactory,
       ReadableVectorOffset offset
   )
   {
-    BaseColumn theColumn = holder.getColumn();
-    if (theColumn instanceof NestedDataComplexColumn) {
-      final NestedDataComplexColumn column = (NestedDataComplexColumn) theColumn;
-      return column.makeSingleValueDimensionVectorSelector(fieldSpec.parts, offset);
+    final SelectableColumn theColumn = holder.getColumn();
+    final NestedVectorColumnSelectorFactory nestedColumnSelectorFactory =
+        theColumn.as(NestedVectorColumnSelectorFactory.class);
+
+    if (nestedColumnSelectorFactory != null) {
+      return nestedColumnSelectorFactory.makeSingleValueDimensionVectorSelector(
+          fieldSpec.parts,
+          selectorFactory,
+          offset
+      );
     }
 
     // not a nested column, but we can still do stuff if the path is the 'root', indicated by an empty path parts
@@ -472,11 +475,10 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     return NilVectorSelector.create(offset);
   }
 
-
-  @Nullable
   @Override
   public VectorObjectSelector makeVectorObjectSelector(
       String columnName,
+      VectorColumnSelectorFactory selectorFactory,
       ColumnSelector columnSelector,
       ReadableVectorOffset offset
   )
@@ -485,49 +487,59 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     if (holder == null) {
       return NilVectorSelector.create(offset);
     }
-    BaseColumn column = holder.getColumn();
+    final SelectableColumn column = holder.getColumn();
+    final NestedColumnTypeInspector nestedTypeInspector = column.as(NestedColumnTypeInspector.class);
+    final NestedVectorColumnSelectorFactory nestedColumnSelectorFactory =
+        column.as(NestedVectorColumnSelectorFactory.class);
 
-
-    if (column instanceof NestedDataComplexColumn) {
-      final NestedDataComplexColumn complexColumn = (NestedDataComplexColumn) column;
-      if (fieldSpec.processFromRaw) {
-        // processFromRaw is true, that means JSON_QUERY, which can return partial results, otherwise this virtual column
-        // is JSON_VALUE which only returns literals, so we can use the nested columns value selector
-        return new RawFieldVectorObjectSelector(complexColumn.makeVectorObjectSelector(offset), fieldSpec.parts);
+    if (isNestedColumn(holder) || holder.getCapabilities().isArray()) {
+      if (fieldSpec.processFromRaw || nestedTypeInspector == null || nestedColumnSelectorFactory == null) {
+        // 1) If processFromRaw is true, that means JSON_QUERY.
+        // 2) If no nestedTypeInspector, nestedColumnSelectorFactory then that means this is a nested or array
+        //    type that is not exposed as a nested column.
+        // Either way, we read and process raw objects.
+        return new RawFieldVectorObjectSelector(
+            selectorFactory.makeObjectSelector(fieldSpec.columnName),
+            fieldSpec.parts,
+            fieldSpec.processFromRaw ? ColumnType.NESTED_DATA : getExpectedType()
+        );
       }
-      final ColumnType leastRestrictiveType = complexColumn.getFieldLogicalType(fieldSpec.parts);
-      if (leastRestrictiveType != null && leastRestrictiveType.isNumeric() && !Types.isNumeric(fieldSpec.expectedType)) {
+      final ColumnType leastRestrictiveType = nestedTypeInspector.getFieldLogicalType(fieldSpec.parts);
+      if (leastRestrictiveType != null
+          && leastRestrictiveType.isNumeric()
+          && !Types.isNumeric(fieldSpec.expectedType)) {
         return ExpressionVectorSelectors.castValueSelectorToObject(
             offset,
             columnName,
-            complexColumn.makeVectorValueSelector(fieldSpec.parts, offset),
+            nestedColumnSelectorFactory.makeVectorValueSelector(fieldSpec.parts, selectorFactory, offset),
             leastRestrictiveType,
             fieldSpec.expectedType == null ? ColumnType.STRING : fieldSpec.expectedType
         );
       }
-      final VectorObjectSelector objectSelector = complexColumn.makeVectorObjectSelector(fieldSpec.parts, offset);
+      final VectorObjectSelector objectSelector =
+          nestedColumnSelectorFactory.makeVectorObjectSelector(fieldSpec.parts, selectorFactory, offset);
 
       return castVectorObjectSelectorIfNeeded(columnName, offset, leastRestrictiveType, objectSelector);
     }
-    // not a nested column, but we can still do stuff if the path is the 'root', indicated by an empty path parts
+    // not a nested column, but we can still do stuff if path is the 'root', indicated by an empty path parts
     if (fieldSpec.parts.isEmpty()) {
       ColumnCapabilities capabilities = holder.getCapabilities();
-      // expectedType shouldn't possibly be null if we are being asked for an object selector and the underlying column
-      // is numeric, else we would have been asked for a value selector
-      Preconditions.checkArgument(
-          fieldSpec.expectedType != null,
-          "Asked for a VectorObjectSelector on a numeric column, 'expectedType' must not be null"
-      );
       if (capabilities.isNumeric()) {
+        // expectedType shouldn't possibly be null if we are being asked for an object selector and the underlying column
+        // is numeric, else we would have been asked for a value selector
+        Preconditions.checkArgument(
+            fieldSpec.expectedType != null,
+            "Asked for a VectorObjectSelector on a numeric column, 'expectedType' must not be null"
+        );
         return ExpressionVectorSelectors.castValueSelectorToObject(
             offset,
             fieldSpec.columnName,
-            column.makeVectorValueSelector(offset),
+            selectorFactory.makeValueSelector(fieldSpec.columnName),
             capabilities.toColumnType(),
             fieldSpec.expectedType
         );
       }
-      final VectorObjectSelector delegate = column.makeVectorObjectSelector(offset);
+      final VectorObjectSelector delegate = selectorFactory.makeObjectSelector(fieldSpec.columnName);
       return castVectorObjectSelectorIfNeeded(columnName, offset, capabilities.toColumnType(), delegate);
     }
 
@@ -551,11 +563,10 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     return NilVectorSelector.create(offset);
   }
 
-
-  @Nullable
   @Override
   public VectorValueSelector makeVectorValueSelector(
       String columnName,
+      VectorColumnSelectorFactory selectorFactory,
       ColumnSelector columnSelector,
       ReadableVectorOffset offset
   )
@@ -564,26 +575,26 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     if (holder == null) {
       return NilVectorSelector.create(offset);
     }
-    BaseColumn theColumn = holder.getColumn();
-    if (!(theColumn instanceof NestedDataComplexColumn)) {
+    SelectableColumn theColumn = holder.getColumn();
+    final NestedColumnTypeInspector nestedTypeInspector = theColumn.as(NestedColumnTypeInspector.class);
+    final NestedVectorColumnSelectorFactory nestedColumnSelectorFactory =
+        theColumn.as(NestedVectorColumnSelectorFactory.class);
+    if (!isNestedColumn(holder)) {
       // not a nested column, but we can still try to coerce the values to the expected type of value selector if the
       // path is the root path
       if (fieldSpec.parts.isEmpty()) {
-        // coerce string columns (a bit presumptuous in general, but in practice these are going to be string columns
-        // ... revisit this if that ever changes)
-        if (theColumn instanceof DictionaryEncodedColumn) {
-          final VectorObjectSelector delegate = theColumn.makeVectorObjectSelector(offset);
+        if (holder.getCapabilities().isNumeric()) {
+          return selectorFactory.makeValueSelector(fieldSpec.columnName);
+        } else {
           final ColumnType castTo = fieldSpec.expectedType != null ? fieldSpec.expectedType : ColumnType.DOUBLE;
           return ExpressionVectorSelectors.castObjectSelectorToNumeric(
               offset,
               columnName,
-              delegate,
+              selectorFactory.makeObjectSelector(fieldSpec.columnName),
               holder.getCapabilities().toColumnType(),
               castTo
           );
         }
-        // otherwise, just use the columns native vector value selector (this might explode if not natively numeric)
-        return theColumn.makeVectorValueSelector(offset);
       }
       // array columns can also be handled if the path is a root level array element accessor
       if (isRootArrayElementPathAndArrayColumn(theColumn)) {
@@ -605,16 +616,25 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       return NilVectorSelector.create(offset);
     }
 
-    final NestedDataComplexColumn column = (NestedDataComplexColumn) theColumn;
-    // if column is numeric, it has a vector value selector, so we can directly make a vector value selector
-    // if we are missing an expectedType, then we've got nothing else to work with so try it anyway
-    final ColumnType leastRestrictiveType = column.getFieldLogicalType(fieldSpec.parts);
-
-    if (column.isNumeric(fieldSpec.parts) || fieldSpec.expectedType == null) {
-      return column.makeVectorValueSelector(fieldSpec.parts, offset);
+    // If the column has nested type but is not exposed as a nested column, process the raw data.
+    if (nestedTypeInspector == null || nestedColumnSelectorFactory == null) {
+      final ColumnType objectType = fieldSpec.expectedType == null ? ColumnType.DOUBLE : fieldSpec.expectedType;
+      return new RawFieldVectorObjectSelector(
+          selectorFactory.makeObjectSelector(fieldSpec.columnName),
+          fieldSpec.parts,
+          objectType
+      );
     }
 
-    final VectorObjectSelector fieldSelector = column.makeVectorObjectSelector(fieldSpec.parts, offset);
+    // if column is numeric, it has a vector value selector, so we can directly make a vector value selector
+    // if we are missing an expectedType, then we've got nothing else to work with so try it anyway
+    if (nestedTypeInspector.isNumeric(fieldSpec.parts) || fieldSpec.expectedType == null) {
+      return nestedColumnSelectorFactory.makeVectorValueSelector(fieldSpec.parts, selectorFactory, offset);
+    }
+
+    final VectorObjectSelector fieldSelector =
+        nestedColumnSelectorFactory.makeVectorObjectSelector(fieldSpec.parts, selectorFactory, offset);
+    final ColumnType leastRestrictiveType = nestedTypeInspector.getFieldLogicalType(fieldSpec.parts);
     return ExpressionVectorSelectors.castObjectSelectorToNumeric(
         offset,
         columnName,
@@ -635,17 +655,24 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     if (holder == null) {
       return null;
     }
-    BaseColumn theColumn = holder.getColumn();
-    if (theColumn instanceof NestedDataComplexColumn) {
-      final NestedDataComplexColumn nestedColumn = (NestedDataComplexColumn) theColumn;
-      final ColumnIndexSupplier nestedColumnPathIndexSupplier = nestedColumn.getColumnIndexSupplier(fieldSpec.parts);
+    final SelectableColumn theColumn = holder.getColumn();
+    final NestedColumnTypeInspector typeInspector = theColumn.as(NestedColumnTypeInspector.class);
+    final NestedColumnIndexSupplier indexSupplier = theColumn.as(NestedColumnIndexSupplier.class);
+
+    if (isNestedColumn(holder)) {
+      if (typeInspector == null || indexSupplier == null) {
+        // Fall back to no indexes.
+        return NoIndexesColumnIndexSupplier.getInstance();
+      }
+      final ColumnIndexSupplier nestedColumnPathIndexSupplier =
+          indexSupplier.getColumnIndexSupplier(fieldSpec.parts);
       if (nestedColumnPathIndexSupplier == null && fieldSpec.processFromRaw) {
         // if processing from raw, a non-exstent path from parts doesn't mean the path doesn't really exist
         // so fall back to no indexes
         return NoIndexesColumnIndexSupplier.getInstance();
       }
       if (fieldSpec.expectedType != null) {
-        final Set<ColumnType> types = nestedColumn.getFieldTypes(fieldSpec.parts);
+        final Set<ColumnType> types = typeInspector.getFieldTypes(fieldSpec.parts);
         // if the expected output type is numeric but not all of the input types are numeric, we might have additional
         // null values than what the null value bitmap is tracking, fall back to not using indexes
         if (fieldSpec.expectedType.isNumeric() && (types == null || types.stream().anyMatch(t -> !t.isNumeric()))) {
@@ -655,7 +682,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       return nestedColumnPathIndexSupplier;
     }
     if (fieldSpec.parts.isEmpty()) {
-      final ColumnIndexSupplier baseIndexSupplier = holder.getIndexSupplier();
+      final ColumnIndexSupplier baseIndexSupplier = indexSelector.getIndexSupplier(fieldSpec.columnName);
       if (fieldSpec.expectedType != null) {
         if (theColumn instanceof NumericColumn) {
           return baseIndexSupplier;
@@ -804,10 +831,35 @@ public class NestedFieldVirtualColumn implements VirtualColumn
            '}';
   }
 
+  private ColumnValueSelector<?> makeColumnValueSelectorUsingColumnSelectorFactory(ColumnSelectorFactory factory)
+  {
+    // realtime selectors have no optimization, fallback to json_query/json_value expressions
+    final Expr identifier = Parser.identifier(fieldSpec.columnName);
+    final Expr path = Parser.constant(NestedPathFinder.toNormalizedJsonPath(fieldSpec.parts));
+    final Expr jsonExpr;
+    if (fieldSpec.processFromRaw) {
+      // processFromRaw is true that means JSON_QUERY, which can return partial object results
+      jsonExpr = JSON_QUERY.apply(List.of(identifier, path));
+    } else {
+      // otherwise, this virtual column is JSON_VALUE which only returns primitives
+      final List<Expr> args;
+      if (fieldSpec.expectedType != null) {
+        final Expr castType = Parser.constant(
+            ExpressionType.fromColumnTypeStrict(fieldSpec.expectedType).asTypeString()
+        );
+        args = List.of(identifier, path, castType);
+      } else {
+        args = List.of(identifier, path);
+      }
+      jsonExpr = JSON_VALUE.apply(args);
+    }
+    return ExpressionSelectors.makeColumnValueSelector(factory, jsonExpr);
+  }
+
   /**
    * Returns true if json path is a root array element (for example '$[1]') and the column array column
    */
-  private boolean isRootArrayElementPathAndArrayColumn(BaseColumn theColumn)
+  private boolean isRootArrayElementPathAndArrayColumn(SelectableColumn theColumn)
   {
     return fieldSpec.parts.size() == 1
            && fieldSpec.parts.get(0) instanceof NestedPathArrayElement
@@ -831,6 +883,11 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       );
     }
     return objectSelector;
+  }
+
+  private static boolean isNestedColumn(final ColumnHolder holder)
+  {
+    return holder.getCapabilities().toColumnType().equals(ColumnType.NESTED_DATA);
   }
 
   private static class NestedFieldSpec implements EquivalenceKey
@@ -879,23 +936,30 @@ public class NestedFieldVirtualColumn implements VirtualColumn
 
 
   /**
-   * Process the "raw" data to extract vectors of values with {@link NestedPathFinder#find(Object, List)}, wrapping the
-   * result in {@link StructuredData}
+   * Process the "raw" data to extract vectors of values with {@link NestedPathFinder#find(Object, List)}, returning
+   * a value matching an expected type.
    */
-  public static final class RawFieldVectorObjectSelector implements VectorObjectSelector
+  public static final class RawFieldVectorObjectSelector implements VectorObjectSelector, VectorValueSelector
   {
     private final VectorObjectSelector baseSelector;
     private final List<NestedPathPart> parts;
     private final Object[] vector;
+    @Nullable
+    private final ColumnType expectedType;
+    @Nullable
+    private final ExpressionType expectedExpressionType;
 
     public RawFieldVectorObjectSelector(
         VectorObjectSelector baseSelector,
-        List<NestedPathPart> parts
+        List<NestedPathPart> parts,
+        @Nullable ColumnType expectedType
     )
     {
       this.baseSelector = baseSelector;
       this.parts = parts;
       this.vector = new Object[baseSelector.getMaxVectorSize()];
+      this.expectedType = expectedType;
+      this.expectedExpressionType = ExpressionType.fromColumnType(expectedType);
     }
 
     @Override
@@ -906,6 +970,55 @@ public class NestedFieldVirtualColumn implements VirtualColumn
         vector[i] = compute(baseVector[i]);
       }
       return vector;
+    }
+
+    @Override
+    public long[] getLongVector()
+    {
+      // Best-effort cast to long.
+      final Object[] objects = getObjectVector();
+      final long[] retVal = new long[baseSelector.getMaxVectorSize()];
+      for (int i = 0; i < baseSelector.getCurrentVectorSize(); i++) {
+        retVal[i] = Numbers.tryParseLong(objects[i], 0L);
+      }
+      return retVal;
+    }
+
+    @Override
+    public float[] getFloatVector()
+    {
+      // Best-effort cast to float.
+      final Object[] objects = getObjectVector();
+      final float[] retVal = new float[baseSelector.getMaxVectorSize()];
+      for (int i = 0; i < baseSelector.getCurrentVectorSize(); i++) {
+        retVal[i] = Numbers.tryParseFloat(objects[i], 0L);
+      }
+      return retVal;
+    }
+
+    @Override
+    public double[] getDoubleVector()
+    {
+      // Best-effort cast to double.
+      final Object[] objects = getObjectVector();
+      final double[] retVal = new double[baseSelector.getMaxVectorSize()];
+      for (int i = 0; i < baseSelector.getCurrentVectorSize(); i++) {
+        retVal[i] = Numbers.tryParseDouble(objects[i], 0L);
+      }
+      return retVal;
+    }
+
+    @Override
+    public boolean[] getNullVector()
+    {
+      // Best-effort cast to double, see if the double value is null.
+      final Object[] objects = getObjectVector();
+      final boolean[] retVal = new boolean[baseSelector.getMaxVectorSize()];
+      for (int i = 0; i < baseSelector.getCurrentVectorSize(); i++) {
+        retVal[i] = objects[i] == null || (objects[i] instanceof String
+                                           && Doubles.tryParse((String) objects[i]) == null);
+      }
+      return retVal;
     }
 
     @Override
@@ -920,10 +1033,18 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       return baseSelector.getCurrentVectorSize();
     }
 
+    @Nullable
     private Object compute(Object input)
     {
       StructuredData data = StructuredData.wrap(input);
-      return StructuredData.wrap(NestedPathFinder.find(data == null ? null : data.getValue(), parts));
+      final Object obj = NestedPathFinder.find(data == null ? null : data.getValue(), parts);
+      if (expectedType == null) {
+        return obj;
+      } else if (expectedType.equals(ColumnType.NESTED_DATA)) {
+        return StructuredData.wrap(obj);
+      } else {
+        return ExprEval.bestEffortOf(obj).castTo(expectedExpressionType).value();
+      }
     }
   }
 

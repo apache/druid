@@ -94,6 +94,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
@@ -3060,7 +3061,7 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
             new AggregatorFactory[0],
             temporaryFolder.newFolder(),
             dimensionsBuilder.build(),
-            IndexSpec.DEFAULT,
+            IndexSpec.getDefault(),
             -1
         )
     );
@@ -3071,6 +3072,7 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
                                                     ImmutableMap.of(QueryContexts.USE_PROJECTION, "a_hourly_c_sum")
                                                 )
                                             )
+                                            .setPhysicalColumns(Set.of("c", ColumnHolder.TIME_COLUMN_NAME))
                                             .setVirtualColumns(
                                                 VirtualColumns.create(
                                                     Granularities.toVirtualColumn(Granularities.HOUR, "gran")
@@ -3089,6 +3091,7 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
                                                     ImmutableMap.of(QueryContexts.USE_PROJECTION, "a_c_sum")
                                                 )
                                             )
+                                            .setPhysicalColumns(Set.of("a", "c"))
                                             .setAggregators(
                                                 Collections.singletonList(
                                                     new LongSumAggregatorFactory("c", "c")

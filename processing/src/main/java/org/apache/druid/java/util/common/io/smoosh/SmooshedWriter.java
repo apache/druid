@@ -19,11 +19,10 @@
 
 package org.apache.druid.java.util.common.io.smoosh;
 
-import java.io.Closeable;
-import java.nio.channels.GatheringByteChannel;
+import org.apache.druid.segment.file.SegmentFileChannel;
 
 /**
  */
-public interface SmooshedWriter extends Closeable, GatheringByteChannel
+public interface SmooshedWriter extends SegmentFileChannel
 {
 }

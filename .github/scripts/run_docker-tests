@@ -33,5 +33,7 @@ else
   echo "Running Docker tests with image[$DRUID_IMAGE_NAME]"
 fi
 
-OPTS+="-pl embedded-tests"
-mvn -B $OPTS verify -Pdocker-tests -D$DRUID_IMAGE_SYS_PROPERTY=$DRUID_IMAGE_NAME "-DjfrProfilerArgLine=$JFR_PROFILER_ARG_LINE" "$@"
+# No snapshot updates
+OPTS+=" -nsu"
+OPTS+=" -pl !integration-tests"
+mvn -B $OPTS verify -Pdocker-tests,skip-static-checks -DskipUTs -D$DRUID_IMAGE_SYS_PROPERTY=$DRUID_IMAGE_NAME "-DjfrProfilerArgLine=$JFR_PROFILER_ARG_LINE" "$@"

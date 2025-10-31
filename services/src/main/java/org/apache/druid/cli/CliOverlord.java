@@ -38,6 +38,7 @@ import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.DerbyTaskStorageModule;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.IndexingServiceTaskLogsModule;
@@ -69,6 +70,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import org.apache.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
 import org.apache.druid.indexing.compact.CompactionScheduler;
+import org.apache.druid.indexing.compact.DruidInputSourceFactory;
 import org.apache.druid.indexing.compact.OverlordCompactionScheduler;
 import org.apache.druid.indexing.overlord.DruidOverlord;
 import org.apache.druid.indexing.overlord.ForkingTaskRunnerFactory;
@@ -111,6 +113,9 @@ import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.indexing.worker.shuffle.LocalIntermediaryDataManager;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.input.InputSourceModule;
+import org.apache.druid.msq.guice.MSQDurableStorageModule;
+import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
+import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
@@ -136,14 +141,13 @@ import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.druid.tasklogs.TaskLogs;
+import org.eclipse.jetty.ee8.servlet.DefaultServlet;
+import org.eclipse.jetty.ee8.servlet.FilterHolder;
+import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee8.servlet.ServletHolder;
 import org.eclipse.jetty.rewrite.handler.RewriteHandler;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.HandlerList;
-import org.eclipse.jetty.servlet.DefaultServlet;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
 
 import java.util.HashMap;
 import java.util.List;
@@ -195,6 +199,7 @@ public class CliOverlord extends ServerRunnable
   protected List<? extends Module> getModules(final boolean standalone)
   {
     return ImmutableList.of(
+        new DerbyTaskStorageModule(),
         standalone ? new MetadataManagerModule() : binder -> {},
         new Module()
         {
@@ -243,6 +248,7 @@ public class CliOverlord extends ServerRunnable
             binder.bind(TaskQueryTool.class).in(LazySingleton.class);
             binder.bind(IndexerMetadataStorageAdapter.class).in(LazySingleton.class);
             binder.bind(CompactionScheduler.class).to(OverlordCompactionScheduler.class).in(ManageLifecycle.class);
+            binder.bind(DruidInputSourceFactory.class).in(LazySingleton.class);
             binder.bind(ScheduledBatchTaskManager.class).in(LazySingleton.class);
             binder.bind(SupervisorManager.class).in(LazySingleton.class);
 
@@ -454,13 +460,16 @@ public class CliOverlord extends ServerRunnable
           }
         },
         new IndexingServiceInputSourceModule(),
-        new IndexingServiceTaskLogsModule(),
+        new IndexingServiceTaskLogsModule(properties),
         new IndexingServiceTuningConfigModule(),
         new InputSourceModule(),
         new HadoopIndexTaskModule(),
         new SupervisorModule(),
         new LookupSerdeModule(),
-        new SamplerModule()
+        new SamplerModule(),
+        new MSQIndexingModule(),
+        new MSQDurableStorageModule(),
+        new MSQExternalDataSourceModule()
     );
   }
 
@@ -531,17 +540,13 @@ public class CliOverlord extends ServerRunnable
       RewriteHandler rewriteHandler = WebConsoleJettyServerInitializer.createWebConsoleRewriteHandler();
       JettyServerInitUtils.maybeAddHSTSPatternRule(serverConfig, rewriteHandler);
 
-      HandlerList handlerList = new HandlerList();
-      handlerList.setHandlers(
-          new Handler[]{
-              rewriteHandler,
-              JettyServerInitUtils.getJettyRequestLogHandler(),
-              JettyServerInitUtils.wrapWithDefaultGzipHandler(
-                  root,
-                  serverConfig.getInflateBufferSize(),
-                  serverConfig.getCompressionLevel()
-              )
-          }
+      Handler.Sequence handlerList = new Handler.Sequence(
+          rewriteHandler,
+          JettyServerInitUtils.wrapWithDefaultGzipHandler(
+              root,
+              serverConfig.getInflateBufferSize(),
+              serverConfig.getCompressionLevel()
+          )
       );
 
       server.setHandler(handlerList);

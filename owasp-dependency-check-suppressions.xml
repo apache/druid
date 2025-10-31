@@ -259,6 +259,17 @@
     <cve>CVE-2022-24823</cve> <!-- We don't decode user HTTP requests nor forward them to remote systems, we also don't support for java 6 or lower - https://github.com/advisories/GHSA-269q-hmxg-m83q -->
     <cve>CVE-2022-41881</cve>
     <cve>CVE-2023-34462</cve>	<!-- Suppressed since netty requests in Druid are internal, and not user-facing -->
+    <cve>CVE-2025-55163</cve> <!-- Netty 3.x not affected; HTTP/2 issues only in 4.x -->
+    <cve>CVE-2025-58056</cve>
+    <cve>CVE-2025-58057</cve> <!-- Netty 3.x not affected; compression issue only in 4.x -->
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+   file name: icu4j-77.1.jar
+   ]]></notes>
+      <packageUrl regex="true">^pkg:maven/com\.ibm\.icu/icu4j@77.1$</packageUrl>
+      <cve>CVE-2025-5222</cve> <!-- False positive: https://github.com/dependency-check/DependencyCheck/issues/7860 -->
   </suppress>
 
   <suppress>
@@ -352,16 +363,6 @@
   </suppress>
 
   <suppress>
-    <!-- 4.5.5 is a fixed version as per https://nvd.nist.gov/vuln/detail/CVE-2021-44878. -->
-    <!-- However, vulnerability scan still shows this CVE. Pac4j release notes mention 5.3.1 as "fully fixed" version. -->
-    <!-- Remove suppression once upgraded to 5.3.1. -->
-    <notes><![CDATA[
-   file name: pac4j-core-4.5.7.jar
-   ]]></notes>
-    <cve>CVE-2021-44878</cve>
-  </suppress>
-
-  <suppress>
     <!-- package-lock.json?d3-color -->
     <notes><![CDATA[
    file name: d3-color:2.0.0
@@ -387,14 +388,6 @@
      file name: protobuf-java-3.11.0.jar
      ]]></notes>
      <packageUrl regex="true">^pkg:maven/com\.google\.protobuf/protobuf\-java@.*$</packageUrl>
-     <cve>CVE-2022-3171</cve>
-   </suppress>
-
-   <suppress>
-     <notes><![CDATA[
-     file name: protobuf-java-util-3.11.0.jar
-     ]]></notes>
-     <packageUrl regex="true">^pkg:maven/com\.google\.protobuf/protobuf\-java\-util@.*$</packageUrl>
      <cve>CVE-2022-3171</cve>
    </suppress>
 
@@ -441,6 +434,9 @@
     <cve>CVE-2023-39410</cve> <!-- This seems to be a legitimate vulnerability. But there is no fix as of yet in Hadoop repo -->
     <cve>CVE-2023-44487</cve> <!-- Occurs in the version of Hadoop used by Jetty, but it hasn't been fixed by Hadoop yet-->
     <cve>CVE-2023-36478</cve> <!-- Occurs in the version of Hadoop used by Jetty, but it hasn't been fixed by Hadoop yet-->
+    <cve>CVE-2025-48734</cve> <!-- Since Druid 35, Hadoop is no longer supported. -->
+    <cve>CVE-2023-52428</cve> <!-- Since Druid 35, Hadoop is no longer supported. -->
+    <cve>CVE-2024-13009</cve> <!-- Since Druid 35, Hadoop is no longer supported. -->
   </suppress>
 
   <suppress>
@@ -675,24 +671,6 @@
       file name: azure-identity-1.11.1.jar
     ]]></notes>
     <cve>CVE-2023-36415</cve>
-  </suppress>
-  <suppress>
-    <!-- Used in Pac4j. Pac4j versions (such as v5.7.3) corresponding
-    to the safe nimbus-jose-jwt v9.37.2 are incompatible with druid as they don't support JDK 8
-    https://www.pac4j.org/docs/alldocs.html -->
-
-    <notes><![CDATA[
-   file name: nimbus-jose-jwt-8.22.1.jar
-   ]]></notes>
-    <cve>CVE-2023-52428</cve>
-  </suppress>
-  <suppress>
-    <!-- Used in Azure dependencies.
-    Current latest version of Azure BOM (1.2.21) still uses 9.30.2, whereas bug resolved in 9.37.2 -->
-    <notes><![CDATA[
-   file name: nimbus-jose-jwt-9.30.2.jar
-   ]]></notes>
-    <cve>CVE-2023-52428</cve>
   </suppress>
   <suppress>
     <!-- Legit issues but currently use the latest ranger-plugins-audit jar v2.4.0 -->

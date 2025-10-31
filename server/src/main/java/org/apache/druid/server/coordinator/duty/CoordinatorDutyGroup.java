@@ -101,14 +101,13 @@ public class CoordinatorDutyGroup
    */
   public void run(DruidCoordinatorRuntimeParams params)
   {
-    markRunStarted();
-
     final boolean coordinationPaused = params.getCoordinatorDynamicConfig().getPauseCoordination();
     if (coordinationPaused && coordinator.isLeader()) {
       log.info("Coordination has been paused. Duties will not run until coordination is resumed.");
       return;
     }
 
+    markRunStarted();
     final CoordinatorRunStats stats = params.getCoordinatorStats();
     for (CoordinatorDuty duty : duties) {
       if (coordinator.isLeader()) {

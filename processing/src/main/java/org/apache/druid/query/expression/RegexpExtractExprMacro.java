@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.expression;
 
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -30,6 +31,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
 {
@@ -59,9 +61,7 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
     }
 
     // Precompile the pattern.
-    final Pattern pattern = Pattern.compile(
-        StringUtils.nullToEmptyNonDruidDataString((String) patternExpr.getLiteralValue())
-    );
+    final Pattern pattern = compilePattern((String) patternExpr.getLiteralValue());
 
     final int index = indexExpr == null ? 0 : ((Number) indexExpr.getLiteralValue()).intValue();
 
@@ -79,12 +79,12 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
         final String s = arg.eval(bindings).asString();
 
         if (s == null) {
-          // True nulls do not match anything. Note: this branch only executes in SQL-compatible null handling mode.
-          return ExprEval.of(null);
+          // True nulls do not match anything.
+          return ExprEval.ofString(null);
         } else {
           final Matcher matcher = pattern.matcher(s);
           final String retVal = matcher.find() ? matcher.group(index) : null;
-          return ExprEval.of(retVal);
+          return ExprEval.ofString(retVal);
         }
       }
 
@@ -96,5 +96,26 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
       }
     }
     return new RegexpExtractExpr(args);
+  }
+
+  /**
+   * Compile the provided pattern, or provide a nice error message if it cannot be compiled.
+   */
+  private static Pattern compilePattern(@Nullable String pattern)
+  {
+    try {
+      return Pattern.compile(StringUtils.nullToEmptyNonDruidDataString(pattern));
+    }
+    catch (PatternSyntaxException e) {
+      throw InvalidInput.exception(
+          e,
+          StringUtils.format(
+              "An invalid pattern [%s] was provided for the %s function, error: [%s]",
+              e.getPattern(),
+              FN_NAME,
+              e.getMessage()
+          )
+      );
+    }
   }
 }

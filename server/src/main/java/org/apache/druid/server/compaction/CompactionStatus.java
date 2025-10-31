@@ -19,9 +19,7 @@
 
 package org.apache.druid.server.compaction;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -64,6 +62,7 @@ public class CompactionStatus
    * The order of the checks must be honored while evaluating them.
    */
   private static final List<Function<Evaluator, CompactionStatus>> CHECKS = Arrays.asList(
+      Evaluator::inputBytesAreWithinLimit,
       Evaluator::segmentsHaveBeenCompactedAtLeastOnce,
       Evaluator::allCandidatesHaveSameCompactionState,
       Evaluator::partitionsSpecIsUpToDate,
@@ -115,12 +114,17 @@ public class CompactionStatus
            '}';
   }
 
-  private static CompactionStatus incomplete(String reasonFormat, Object... args)
+  public static CompactionStatus pending(String reasonFormat, Object... args)
   {
     return new CompactionStatus(State.PENDING, StringUtils.format(reasonFormat, args));
   }
 
-  private static <T> CompactionStatus completeIfEqual(
+  /**
+   * Computes compaction status for the given field. The status is assumed to be
+   * COMPLETE (i.e. no further compaction is required) if the configured value
+   * of the field is null or equal to the current value.
+   */
+  private static <T> CompactionStatus completeIfNullOrEqual(
       String field,
       T configured,
       T current,
@@ -141,7 +145,7 @@ public class CompactionStatus
       Function<T, String> stringFunction
   )
   {
-    return CompactionStatus.incomplete(
+    return CompactionStatus.pending(
         "'%s' mismatch: required[%s], current[%s]",
         field,
         target == null ? null : stringFunction.apply(target),
@@ -187,14 +191,19 @@ public class CompactionStatus
     }
   }
 
-  static CompactionStatus skipped(String reasonFormat, Object... args)
+  public static CompactionStatus skipped(String reasonFormat, Object... args)
   {
     return new CompactionStatus(State.SKIPPED, StringUtils.format(reasonFormat, args));
   }
 
-  static CompactionStatus running(String reasonForCompaction)
+  public static CompactionStatus running(String message)
   {
-    return new CompactionStatus(State.RUNNING, reasonForCompaction);
+    return new CompactionStatus(State.RUNNING, message);
+  }
+
+  public static CompactionStatus complete(String message)
+  {
+    return new CompactionStatus(State.COMPLETE, message);
   }
 
   /**
@@ -204,22 +213,30 @@ public class CompactionStatus
    */
   static CompactionStatus compute(
       CompactionCandidate candidateSegments,
-      DataSourceCompactionConfig config,
-      ObjectMapper objectMapper
+      DataSourceCompactionConfig config
   )
   {
-    final Evaluator evaluator = new Evaluator(candidateSegments, config, objectMapper);
-    return CHECKS.stream().map(f -> f.apply(evaluator))
+    final Evaluator evaluator = new Evaluator(candidateSegments, config);
+    return CHECKS.stream()
+                 .map(f -> f.apply(evaluator))
                  .filter(status -> !status.isComplete())
                  .findFirst().orElse(COMPLETE);
   }
 
+  @Nullable
   static PartitionsSpec findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig tuningConfig)
   {
     final PartitionsSpec partitionsSpecFromTuningConfig = tuningConfig.getPartitionsSpec();
     if (partitionsSpecFromTuningConfig == null) {
-      final long maxTotalRows = Configs.valueOrDefault(tuningConfig.getMaxTotalRows(), Long.MAX_VALUE);
-      return new DynamicPartitionsSpec(tuningConfig.getMaxRowsPerSegment(), maxTotalRows);
+      final Long maxTotalRows = tuningConfig.getMaxTotalRows();
+      final Integer maxRowsPerSegment = tuningConfig.getMaxRowsPerSegment();
+
+      if (maxTotalRows == null && maxRowsPerSegment == null) {
+        // If not specified, return null so that partitionsSpec is not compared
+        return null;
+      } else {
+        return new DynamicPartitionsSpec(maxRowsPerSegment, maxTotalRows);
+      }
     } else if (partitionsSpecFromTuningConfig instanceof DynamicPartitionsSpec) {
       return new DynamicPartitionsSpec(
           partitionsSpecFromTuningConfig.getMaxRowsPerSegment(),
@@ -232,19 +249,28 @@ public class CompactionStatus
     }
   }
 
+  @Nullable
   private static List<DimensionSchema> getNonPartitioningDimensions(
       @Nullable final List<DimensionSchema> dimensionSchemas,
-      @Nullable final PartitionsSpec partitionsSpec
+      @Nullable final PartitionsSpec partitionsSpec,
+      @Nullable final IndexSpec indexSpec
   )
   {
+    final IndexSpec effectiveIndexSpec = (indexSpec == null ? IndexSpec.getDefault() : indexSpec).getEffectiveSpec();
     if (dimensionSchemas == null || !(partitionsSpec instanceof DimensionRangePartitionsSpec)) {
-      return dimensionSchemas;
+      if (dimensionSchemas != null) {
+        return dimensionSchemas.stream()
+                               .map(dim -> dim.getEffectiveSchema(effectiveIndexSpec))
+                               .collect(Collectors.toList());
+      }
+      return null;
     }
 
     final List<String> partitionsDimensions = ((DimensionRangePartitionsSpec) partitionsSpec).getPartitionDimensions();
     return dimensionSchemas.stream()
-                     .filter(dim -> !partitionsDimensions.contains(dim.getName()))
-                     .collect(Collectors.toList());
+                           .filter(dim -> !partitionsDimensions.contains(dim.getName()))
+                           .map(dim -> dim.getEffectiveSchema(effectiveIndexSpec))
+                           .collect(Collectors.toList());
   }
 
   /**
@@ -266,22 +292,19 @@ public class CompactionStatus
    */
   private static class Evaluator
   {
-    private final ObjectMapper objectMapper;
     private final DataSourceCompactionConfig compactionConfig;
     private final CompactionCandidate candidateSegments;
     private final CompactionState lastCompactionState;
     private final ClientCompactionTaskQueryTuningConfig tuningConfig;
-    private final ClientCompactionTaskGranularitySpec existingGranularitySpec;
+    private final UserCompactionTaskGranularityConfig existingGranularitySpec;
     private final UserCompactionTaskGranularityConfig configuredGranularitySpec;
 
     private Evaluator(
         CompactionCandidate candidateSegments,
-        DataSourceCompactionConfig compactionConfig,
-        ObjectMapper objectMapper
+        DataSourceCompactionConfig compactionConfig
     )
     {
       this.candidateSegments = candidateSegments;
-      this.objectMapper = objectMapper;
       this.lastCompactionState = candidateSegments.getSegments().get(0).getLastCompactionState();
       this.compactionConfig = compactionConfig;
       this.tuningConfig = ClientCompactionTaskQueryTuningConfig.from(compactionConfig);
@@ -289,9 +312,8 @@ public class CompactionStatus
       if (lastCompactionState == null) {
         this.existingGranularitySpec = null;
       } else {
-        this.existingGranularitySpec = convertIfNotNull(
-            lastCompactionState.getGranularitySpec(),
-            ClientCompactionTaskGranularitySpec.class
+        this.existingGranularitySpec = UserCompactionTaskGranularityConfig.from(
+            lastCompactionState.getGranularitySpec()
         );
       }
     }
@@ -299,7 +321,7 @@ public class CompactionStatus
     private CompactionStatus segmentsHaveBeenCompactedAtLeastOnce()
     {
       if (lastCompactionState == null) {
-        return CompactionStatus.incomplete("not compacted yet");
+        return CompactionStatus.pending("not compacted yet");
       } else {
         return COMPLETE;
       }
@@ -313,7 +335,7 @@ public class CompactionStatus
       if (allHaveSameCompactionState) {
         return COMPLETE;
       } else {
-        return CompactionStatus.incomplete("segments have different last compaction states");
+        return CompactionStatus.pending("segments have different last compaction states");
       }
     }
 
@@ -322,8 +344,12 @@ public class CompactionStatus
       PartitionsSpec existingPartionsSpec = lastCompactionState.getPartitionsSpec();
       if (existingPartionsSpec instanceof DimensionRangePartitionsSpec) {
         existingPartionsSpec = getEffectiveRangePartitionsSpec((DimensionRangePartitionsSpec) existingPartionsSpec);
+      } else if (existingPartionsSpec instanceof DynamicPartitionsSpec) {
+        existingPartionsSpec = new DynamicPartitionsSpec(
+            existingPartionsSpec.getMaxRowsPerSegment(),
+            ((DynamicPartitionsSpec) existingPartionsSpec).getMaxTotalRowsOr(Long.MAX_VALUE));
       }
-      return CompactionStatus.completeIfEqual(
+      return CompactionStatus.completeIfNullOrEqual(
           "partitionsSpec",
           findPartitionsSpecFromConfig(tuningConfig),
           existingPartionsSpec,
@@ -333,22 +359,35 @@ public class CompactionStatus
 
     private CompactionStatus indexSpecIsUpToDate()
     {
-      return CompactionStatus.completeIfEqual(
+      return CompactionStatus.completeIfNullOrEqual(
           "indexSpec",
-          Configs.valueOrDefault(tuningConfig.getIndexSpec(), IndexSpec.DEFAULT),
-          objectMapper.convertValue(lastCompactionState.getIndexSpec(), IndexSpec.class),
+          Configs.valueOrDefault(tuningConfig.getIndexSpec(), IndexSpec.getDefault()).getEffectiveSpec(),
+          lastCompactionState.getIndexSpec().getEffectiveSpec(),
           String::valueOf
       );
     }
 
     private CompactionStatus projectionsAreUpToDate()
     {
-      return CompactionStatus.completeIfEqual(
+      return CompactionStatus.completeIfNullOrEqual(
           "projections",
           compactionConfig.getProjections(),
           lastCompactionState.getProjections(),
           String::valueOf
       );
+    }
+
+    private CompactionStatus inputBytesAreWithinLimit()
+    {
+      final long inputSegmentSize = compactionConfig.getInputSegmentSizeBytes();
+      if (candidateSegments.getTotalBytes() > inputSegmentSize) {
+        return CompactionStatus.skipped(
+            "'inputSegmentSize' exceeded: Total segment size[%d] is larger than allowed inputSegmentSize[%d]",
+            candidateSegments.getTotalBytes(), inputSegmentSize
+        );
+      } else {
+        return COMPLETE;
+      }
     }
 
     private CompactionStatus segmentGranularityIsUpToDate()
@@ -371,7 +410,7 @@ public class CompactionStatus
             segment -> !configuredSegmentGranularity.isAligned(segment.getInterval())
         );
         if (needsCompaction) {
-          return CompactionStatus.incomplete(
+          return CompactionStatus.pending(
               "segmentGranularity: segments do not align with target[%s]",
               asString(configuredSegmentGranularity)
           );
@@ -393,7 +432,7 @@ public class CompactionStatus
       if (configuredGranularitySpec == null) {
         return COMPLETE;
       } else {
-        return CompactionStatus.completeIfEqual(
+        return CompactionStatus.completeIfNullOrEqual(
             "rollup",
             configuredGranularitySpec.isRollup(),
             existingGranularitySpec == null ? null : existingGranularitySpec.isRollup(),
@@ -407,7 +446,7 @@ public class CompactionStatus
       if (configuredGranularitySpec == null) {
         return COMPLETE;
       } else {
-        return CompactionStatus.completeIfEqual(
+        return CompactionStatus.completeIfNullOrEqual(
             "queryGranularity",
             configuredGranularitySpec.getQueryGranularity(),
             existingGranularitySpec == null ? null : existingGranularitySpec.getQueryGranularity(),
@@ -430,20 +469,22 @@ public class CompactionStatus
             lastCompactionState.getDimensionsSpec() == null
             ? null
             : lastCompactionState.getDimensionsSpec().getDimensions(),
-            lastCompactionState.getPartitionsSpec()
+            lastCompactionState.getPartitionsSpec(),
+            lastCompactionState.getIndexSpec()
         );
         List<DimensionSchema> configuredDimensions = getNonPartitioningDimensions(
             compactionConfig.getDimensionsSpec().getDimensions(),
-            compactionConfig.getTuningConfig() == null ? null : compactionConfig.getTuningConfig().getPartitionsSpec()
+            compactionConfig.getTuningConfig() == null ? null : compactionConfig.getTuningConfig().getPartitionsSpec(),
+            compactionConfig.getTuningConfig() == null
+            ? IndexSpec.getDefault()
+            : compactionConfig.getTuningConfig().getIndexSpec()
         );
-        {
-          return CompactionStatus.completeIfEqual(
-              "dimensionsSpec",
-              configuredDimensions,
-              existingDimensions,
-              String::valueOf
-          );
-        }
+        return CompactionStatus.completeIfNullOrEqual(
+            "dimensionsSpec",
+            configuredDimensions,
+            existingDimensions,
+            String::valueOf
+        );
       }
     }
 
@@ -477,26 +518,13 @@ public class CompactionStatus
         return COMPLETE;
       }
 
-      CompactionTransformSpec existingTransformSpec = convertIfNotNull(
-          lastCompactionState.getTransformSpec(),
-          CompactionTransformSpec.class
-      );
-      return CompactionStatus.completeIfEqual(
+      CompactionTransformSpec existingTransformSpec = lastCompactionState.getTransformSpec();
+      return CompactionStatus.completeIfNullOrEqual(
           "transformSpec filter",
           compactionConfig.getTransformSpec().getFilter(),
           existingTransformSpec == null ? null : existingTransformSpec.getFilter(),
           String::valueOf
       );
-    }
-
-    @Nullable
-    private <T> T convertIfNotNull(Object object, Class<T> clazz)
-    {
-      if (object == null) {
-        return null;
-      } else {
-        return objectMapper.convertValue(object, clazz);
-      }
     }
   }
 }

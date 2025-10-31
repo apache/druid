@@ -110,12 +110,12 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
     }
   }
 
-  /**
-   * Produces records to a topic of this embedded Kafka server.
-   */
-  public void produceRecordsToTopic(List<ProducerRecord<byte[], byte[]>> records)
+  public void produceRecordsToTopic(
+      List<ProducerRecord<byte[], byte[]>> records,
+      Map<String, Object> extraProducerProperties
+  )
   {
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = newProducer()) {
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = newProducer(extraProducerProperties)) {
       kafkaProducer.initTransactions();
       kafkaProducer.beginTransaction();
       for (ProducerRecord<byte[], byte[]> record : records) {
@@ -126,6 +126,14 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  /**
+   * Produces records to a topic of this embedded Kafka server.
+   */
+  public void produceRecordsToTopic(List<ProducerRecord<byte[], byte[]>> records)
+  {
+    produceRecordsToTopic(records, null);
   }
 
   public Map<String, Object> producerProperties()
@@ -152,9 +160,13 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
     return "KafkaResource";
   }
 
-  private KafkaProducer<byte[], byte[]> newProducer()
+  private KafkaProducer<byte[], byte[]> newProducer(Map<String, Object> extraProperties)
   {
-    return new KafkaProducer<>(producerProperties());
+    final Map<String, Object> producerProperties = new HashMap<>(producerProperties());
+    if (extraProperties != null) {
+      producerProperties.putAll(extraProperties);
+    }
+    return new KafkaProducer<>(producerProperties);
   }
 
   private Map<String, Object> commonClientProperties()

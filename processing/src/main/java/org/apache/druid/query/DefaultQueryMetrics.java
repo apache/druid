@@ -194,6 +194,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
+  public void statusCode(int code)
+  {
+    setDimension(DruidMetrics.STATUS_CODE, code);
+  }
+
+  @Override
   public void segment(String segmentIdentifier)
   {
     setDimension("segment", segmentIdentifier);

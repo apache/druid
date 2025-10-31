@@ -186,11 +186,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                    .add(new DoubleDimensionSchema("d0"))
                    .add(new FloatDimensionSchema("f0"))
                    .add(new LongDimensionSchema("l0"))
-                   .add(new AutoTypeColumnSchema("arrayString", ColumnType.STRING_ARRAY))
-                   .add(new AutoTypeColumnSchema("arrayLong", ColumnType.LONG_ARRAY))
-                   .add(new AutoTypeColumnSchema("arrayDouble", ColumnType.DOUBLE_ARRAY))
-                   .add(new AutoTypeColumnSchema("variant", null))
-                   .add(new AutoTypeColumnSchema("nested", null))
+                   .add(new AutoTypeColumnSchema("arrayString", ColumnType.STRING_ARRAY, null))
+                   .add(new AutoTypeColumnSchema("arrayLong", ColumnType.LONG_ARRAY, null))
+                   .add(new AutoTypeColumnSchema("arrayDouble", ColumnType.DOUBLE_ARRAY, null))
+                   .add(AutoTypeColumnSchema.of("variant"))
+                   .add(AutoTypeColumnSchema.of("nested"))
                    .build()
   );
 
@@ -514,7 +514,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                     .put(
                         "incrementalAutoTypes",
                         input -> {
-                          input.indexSpec(IndexSpec.builder().build());
                           input.mapSchema(
                               schema ->
                                   new IncrementalIndexSchema(
@@ -527,7 +526,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                 .getDimensions()
                                                 .stream()
                                                 .map(
-                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName(), null)
+                                                    dimensionSchema ->
+                                                        AutoTypeColumnSchema.of(dimensionSchema.getName())
                                                 )
                                                 .collect(Collectors.toList())
                                       ),
@@ -543,7 +543,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                     .put(
                         "mmappedAutoTypes",
                         input -> {
-                          input.indexSpec(IndexSpec.builder().build());
                           input.mapSchema(
                               schema ->
                                   new IncrementalIndexSchema(
@@ -556,7 +555,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                 .getDimensions()
                                                 .stream()
                                                 .map(
-                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName(), null)
+                                                    dimensionSchema ->
+                                                        AutoTypeColumnSchema.of(dimensionSchema.getName())
                                                 )
                                                 .collect(Collectors.toList())
                                       ),
@@ -586,7 +586,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                         .getDimensions()
                                                         .stream()
                                                         .map(
-                                                            dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName(), null)
+                                                            dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName(), null, null)
                                                         )
                                                         .collect(Collectors.toList())
                                               ),
@@ -1192,11 +1192,14 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       final List<String> expectedRows
   )
   {
-    final boolean vectorize = ExpressionProcessing.allowVectorizeFallback();
-    assertFilterMatches(filter, expectedRows, vectorize);
-    // test double inverted
-    if (!StringUtils.toLowerCase(testName).contains("concise")) {
-      assertFilterMatches(NotDimFilter.of(NotDimFilter.of(filter)), expectedRows, vectorize);
+    if (ExpressionProcessing.allowVectorizeFallback()) {
+      assertFilterMatches(filter, expectedRows);
+    } else {
+      assertFilterMatches(filter, expectedRows, false);
+      // test double inverted
+      if (!StringUtils.toLowerCase(testName).contains("concise")) {
+        assertFilterMatches(NotDimFilter.of(NotDimFilter.of(filter)), expectedRows, false);
+      }
     }
   }
 

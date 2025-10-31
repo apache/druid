@@ -29,9 +29,9 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.HeapByteBufferWriteOutBytes;
@@ -177,7 +177,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
 
   /**
    * Reads a GenericIndexed from a {@link ByteBuffer}, possibly using additional secondary files from a
-   * {@link SmooshedFileMapper}.
+   * {@link SegmentFileMapper}.
    *
    * @param buffer     primary buffer to read from
    * @param strategy   deserialization strategy
@@ -187,7 +187,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
   public static <T> GenericIndexed<T> read(
       ByteBuffer buffer,
       ObjectStrategy<T> strategy,
-      @Nullable SmooshedFileMapper fileMapper
+      @Nullable SegmentFileMapper fileMapper
   )
   {
     byte versionFromBuffer = buffer.get();
@@ -197,7 +197,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
     } else if (VERSION_TWO == versionFromBuffer) {
       if (fileMapper == null) {
         throw DruidException.defensive(
-            "use read(ByteBuffer buffer, ObjectStrategy<T> strategy, SmooshedFileMapper fileMapper)"
+            "use read(ByteBuffer buffer, ObjectStrategy<T> strategy, SegmentFileMapper fileMapper)"
             + " with non-null fileMapper to read version 2 indexed."
         );
       }
@@ -350,7 +350,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
     }
 
     @Override
-    public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+    public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
     {
       META_SERDE_HELPER.writeTo(channel, this);
       Channels.writeFully(channel, theBuffer.asReadOnlyBuffer());
@@ -463,7 +463,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
     }
 
     @Override
-    public void writeTo(WritableByteChannel channel, FileSmoosher smoosher)
+    public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder)
     {
       throw new UnsupportedOperationException(
           "GenericIndexed serialization for V2 is unsupported. Use GenericIndexedWriter instead.");
@@ -759,11 +759,11 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
   private static <T> GenericIndexed<T> createGenericIndexedVersionTwo(
       ByteBuffer byteBuffer,
       ObjectStrategy<T> strategy,
-      SmooshedFileMapper fileMapper
+      SegmentFileMapper fileMapper
   )
   {
     if (fileMapper == null) {
-      throw new IAE("SmooshedFileMapper can not be null for version 2.");
+      throw new IAE("SegmentFileMapper can not be null for version 2.");
     }
     boolean allowReverseLookup = byteBuffer.get() == REVERSE_LOOKUP_ALLOWED;
     int logBaseTwoOfElementsPerValueFile = byteBuffer.getInt();
@@ -775,7 +775,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
       int numberOfFilesRequired = getNumberOfFilesRequired(elementsPerValueFile, numElements);
       ByteBuffer[] valueBuffersToUse = new ByteBuffer[numberOfFilesRequired];
       for (int i = 0; i < numberOfFilesRequired; i++) {
-        // SmooshedFileMapper.mapFile() contract guarantees that the valueBuffer's limit equals to capacity.
+        // SegmentFileMapper.mapFile() contract guarantees that the valueBuffer's limit equals to capacity.
         ByteBuffer valueBuffer = fileMapper.mapFile(GenericIndexedWriter.generateValueFileName(columnName, i));
         valueBuffersToUse[i] = valueBuffer.asReadOnlyBuffer();
       }

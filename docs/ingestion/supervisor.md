@@ -80,6 +80,7 @@ The following table outlines the configuration properties for `autoScalerConfig`
 |`taskCountStart`|Optional config to specify the number of ingestion tasks to start with. When you enable the autoscaler, Druid ignores the value of `taskCount` in `ioConfig` and, if specified, starts with the `taskCountStart` number of tasks. Otherwise, defaults to `taskCountMin`.|No|`taskCountMin`|
 |`minTriggerScaleActionFrequencyMillis`|The minimum time interval between two scale actions.| No|600000|
 |`autoScalerStrategy`|The algorithm of autoscaler. Druid only supports the `lagBased` strategy. See [Autoscaler strategy](#autoscaler-strategy) for more information.|No|`lagBased`|
+|`stopTaskCountRatio`|A variable version of `ioConfig.stopTaskCount` with a valid range of (0.0, 1.0]. Allows the maximum number of stoppable tasks in steady state to be proportional to the number of tasks currently running.|No||
 
 ##### Autoscaler strategy
 

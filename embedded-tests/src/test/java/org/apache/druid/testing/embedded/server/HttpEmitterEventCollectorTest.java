@@ -42,6 +42,7 @@ public class HttpEmitterEventCollectorTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
+  private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedEventCollector eventCollector = new EmbeddedEventCollector()
       .addProperty("druid.emitter", "latching");
 
@@ -59,8 +60,8 @@ public class HttpEmitterEventCollectorTest extends EmbeddedClusterTestBase
         .addServer(overlord)
         .addServer(eventCollector)
         .addServer(coordinator)
+        .addServer(broker)
         .addServer(new EmbeddedHistorical())
-        .addServer(new EmbeddedBroker())
         .addServer(new EmbeddedIndexer());
   }
 

@@ -28,12 +28,10 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSerializer;
@@ -44,6 +42,7 @@ import org.apache.druid.segment.data.FixedIndexedWriter;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexedWriter;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.SingleValueColumnarIntsSerializer;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
@@ -67,7 +66,7 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
 
   private final String name;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
-  private final IndexSpec indexSpec;
+  private final NestedCommonFormatColumnFormatSpec columnFormatSpec;
   @SuppressWarnings("unused")
   private final Closer closer;
   private DictionaryIdLookup dictionaryIdLookup;
@@ -93,7 +92,7 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
       String name,
       @Nullable ColumnType logicalType,
       @Nullable Byte variantTypeSetByte,
-      IndexSpec indexSpec,
+      NestedCommonFormatColumnFormatSpec columnFormatSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       Closer closer
   )
@@ -102,7 +101,7 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
     this.expectedExpressionType = logicalType != null ? ExpressionType.fromColumnTypeStrict(logicalType) : null;
     this.variantTypeSetByte = variantTypeSetByte;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
-    this.indexSpec = indexSpec;
+    this.columnFormatSpec = columnFormatSpec;
     this.closer = closer;
   }
 
@@ -136,7 +135,7 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
   public void openDictionaryWriter(File segmentBaseDir) throws IOException
   {
     dictionaryWriter = StringEncodingStrategies.getStringDictionaryWriter(
-        indexSpec.getStringDictionaryEncoding(),
+        columnFormatSpec.getStringDictionaryEncoding(),
         segmentWriteOutMedium,
         name
     );
@@ -311,7 +310,7 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
                                     + dictionaryIdLookup.getLongCardinality()
                                     + dictionaryIdLookup.getDoubleCardinality();
       final int cardinality = scalarCardinality + dictionaryIdLookup.getArrayCardinality();
-      final CompressionStrategy compression = indexSpec.getDimensionCompression();
+      final CompressionStrategy compression = columnFormatSpec.getDictionaryEncodedColumnCompression();
       final CompressionStrategy compressionToUse;
       if (compression != CompressionStrategy.UNCOMPRESSED && compression != CompressionStrategy.NONE) {
         compressionToUse = compression;
@@ -332,19 +331,19 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
       final GenericIndexedWriter<ImmutableBitmap> bitmapIndexWriter = new GenericIndexedWriter<>(
           segmentWriteOutMedium,
           name,
-          indexSpec.getBitmapSerdeFactory().getObjectStrategy()
+          columnFormatSpec.getBitmapEncoding().getObjectStrategy()
       );
       bitmapIndexWriter.open();
       bitmapIndexWriter.setObjectsNotSorted();
       final MutableBitmap[] bitmaps = new MutableBitmap[cardinality];
       final MutableBitmap[] arrayElements = new MutableBitmap[scalarCardinality];
       for (int i = 0; i < bitmaps.length; i++) {
-        bitmaps[i] = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
+        bitmaps[i] = columnFormatSpec.getBitmapEncoding().getBitmapFactory().makeEmptyMutableBitmap();
       }
       final GenericIndexedWriter<ImmutableBitmap> arrayElementIndexWriter = new GenericIndexedWriter<>(
           segmentWriteOutMedium,
           name + "_arrays",
-          indexSpec.getBitmapSerdeFactory().getObjectStrategy()
+          columnFormatSpec.getBitmapEncoding().getObjectStrategy()
       );
       arrayElementIndexWriter.open();
       arrayElementIndexWriter.setObjectsNotSorted();
@@ -363,7 +362,7 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
           for (int elementId : array) {
             MutableBitmap bitmap = arrayElements[elementId];
             if (bitmap == null) {
-              bitmap = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
+              bitmap = columnFormatSpec.getBitmapEncoding().getBitmapFactory().makeEmptyMutableBitmap();
               arrayElements[elementId] = bitmap;
             }
             bitmap.add(rowCount);
@@ -374,9 +373,7 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
 
       for (int i = 0; i < bitmaps.length; i++) {
         final MutableBitmap bitmap = bitmaps[i];
-        bitmapIndexWriter.write(
-            indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeImmutableBitmap(bitmap)
-        );
+        bitmapIndexWriter.write(columnFormatSpec.getBitmapEncoding().getBitmapFactory().makeImmutableBitmap(bitmap));
         bitmaps[i] = null; // Reclaim memory
       }
       if (writeDictionary) {
@@ -414,15 +411,15 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     closeForWrite();
-    internalSerializer.writeTo(channel, smoosher);
+    internalSerializer.writeTo(channel, fileBuilder);
   }
 
   /**
    * Internal serializer used to serialize a {@link VariantColumn}. Encapsulates just the logic to write out the column
-   * to a {@link FileSmoosher} without the parts to update the dictionaries themselves, so that it can be reused.
+   * to a {@link SegmentFileBuilder} without the parts to update the dictionaries themselves, so that it can be reused.
    * Created by {@link VariantColumnSerializer} once it is closed for writes.
    */
   public static class InternalSerializer implements Serializer
@@ -504,7 +501,7 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
     }
 
     @Override
-    public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+    public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
     {
       writeV0Header(channel, columnNameBytes);
       if (variantTypeSetByte != null) {
@@ -513,33 +510,33 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
 
       if (writeDictionary) {
         if (dictionaryIdLookup.getStringBufferMapper() != null) {
-          copyFromTempSmoosh(smoosher, dictionaryIdLookup.getStringBufferMapper());
+          copyFromTempSmoosh(fileBuilder, dictionaryIdLookup.getStringBufferMapper());
         } else {
-          ColumnSerializerUtils.writeInternal(smoosher, dictionaryWriter, columnName, ColumnSerializerUtils.STRING_DICTIONARY_FILE_NAME);
+          ColumnSerializerUtils.writeInternal(fileBuilder, dictionaryWriter, columnName, ColumnSerializerUtils.STRING_DICTIONARY_FILE_NAME);
         }
 
         if (dictionaryIdLookup.getLongBufferMapper() != null) {
-          copyFromTempSmoosh(smoosher, dictionaryIdLookup.getLongBufferMapper());
+          copyFromTempSmoosh(fileBuilder, dictionaryIdLookup.getLongBufferMapper());
         } else {
-          ColumnSerializerUtils.writeInternal(smoosher, longDictionaryWriter, columnName, ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME);
+          ColumnSerializerUtils.writeInternal(fileBuilder, longDictionaryWriter, columnName, ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME);
         }
 
         if (dictionaryIdLookup.getDoubleBufferMapper() != null) {
-          copyFromTempSmoosh(smoosher, dictionaryIdLookup.getDoubleBufferMapper());
+          copyFromTempSmoosh(fileBuilder, dictionaryIdLookup.getDoubleBufferMapper());
         } else {
-          ColumnSerializerUtils.writeInternal(smoosher, doubleDictionaryWriter, columnName, ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME);
+          ColumnSerializerUtils.writeInternal(fileBuilder, doubleDictionaryWriter, columnName, ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME);
         }
         if (dictionaryIdLookup.getArrayBufferMapper() != null) {
-          copyFromTempSmoosh(smoosher, dictionaryIdLookup.getArrayBufferMapper());
+          copyFromTempSmoosh(fileBuilder, dictionaryIdLookup.getArrayBufferMapper());
         } else {
-          ColumnSerializerUtils.writeInternal(smoosher, arrayDictionaryWriter, columnName, ColumnSerializerUtils.ARRAY_DICTIONARY_FILE_NAME);
+          ColumnSerializerUtils.writeInternal(fileBuilder, arrayDictionaryWriter, columnName, ColumnSerializerUtils.ARRAY_DICTIONARY_FILE_NAME);
         }
 
-        ColumnSerializerUtils.writeInternal(smoosher, arrayElementDictionaryWriter, columnName, ColumnSerializerUtils.ARRAY_ELEMENT_DICTIONARY_FILE_NAME);
+        ColumnSerializerUtils.writeInternal(fileBuilder, arrayElementDictionaryWriter, columnName, ColumnSerializerUtils.ARRAY_ELEMENT_DICTIONARY_FILE_NAME);
       }
-      ColumnSerializerUtils.writeInternal(smoosher, encodedValueSerializer, columnName, ColumnSerializerUtils.ENCODED_VALUE_COLUMN_FILE_NAME);
-      ColumnSerializerUtils.writeInternal(smoosher, bitmapIndexWriter, columnName, ColumnSerializerUtils.BITMAP_INDEX_FILE_NAME);
-      ColumnSerializerUtils.writeInternal(smoosher, arrayElementIndexWriter, columnName, ColumnSerializerUtils.ARRAY_ELEMENT_BITMAP_INDEX_FILE_NAME);
+      ColumnSerializerUtils.writeInternal(fileBuilder, encodedValueSerializer, columnName, ColumnSerializerUtils.ENCODED_VALUE_COLUMN_FILE_NAME);
+      ColumnSerializerUtils.writeInternal(fileBuilder, bitmapIndexWriter, columnName, ColumnSerializerUtils.BITMAP_INDEX_FILE_NAME);
+      ColumnSerializerUtils.writeInternal(fileBuilder, arrayElementIndexWriter, columnName, ColumnSerializerUtils.ARRAY_ELEMENT_BITMAP_INDEX_FILE_NAME);
 
       log.info("Column [%s] serialized successfully.", columnName);
     }

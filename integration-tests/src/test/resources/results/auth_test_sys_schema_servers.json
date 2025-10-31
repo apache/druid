@@ -9,7 +9,9 @@
     "curr_size": 2208932412,
     "max_size": 5000000000,
     "is_leader": null,
-    "start_time": "0"
+    "start_time": "0",
+    "version": "0.0.0",
+    "labels": null
   },
   {
     "server": "%%BROKER%%:8282",
@@ -21,6 +23,8 @@
     "curr_size": 0,
     "max_size": 1000000000,
     "is_leader": null,
-    "start_time": "0"
+    "start_time": "0",
+    "version": "0.0.0",
+    "labels": null
   }
 ]

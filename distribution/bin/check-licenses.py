@@ -308,6 +308,9 @@ def build_compatible_license_names():
     compatible_licenses['The MIT License (MIT)'] = 'MIT License'
     compatible_licenses['Bouncy Castle Licence'] = 'MIT License'
     compatible_licenses['SPDX-License-Identifier: MIT'] = 'MIT License'
+    compatible_licenses['MIT'] = 'MIT License'
+
+    compatible_licenses['MIT-0'] = 'MIT No Attribution'
 
     compatible_licenses['The Go license'] = 'The Go license'
     compatible_licenses['Universal Permissive License, Version 1.0'] = 'Universal Permissive License, Version 1.0'
@@ -440,6 +443,8 @@ def check_licenses(license_yaml, dependency_reports_root):
     print_log_to_stderr("")
 
     if len(mismatched_licenses) > 0 or len(missing_licenses) > 0:
+        print_log_to_stderr("Mismatched licenses: {}".format(mismatched_licenses))
+        print_log_to_stderr("Missing licenses: {}".format(missing_licenses))
         sys.exit(1)
 
 

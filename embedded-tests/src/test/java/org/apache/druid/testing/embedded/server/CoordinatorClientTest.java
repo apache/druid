@@ -193,6 +193,6 @@ public class CoordinatorClientTest extends EmbeddedClusterTestBase
                                  .withId(taskId);
 
     cluster.callApi().runTask(task, overlord);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
   }
 }

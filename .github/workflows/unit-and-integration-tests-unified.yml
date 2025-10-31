@@ -51,36 +51,12 @@ env:
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
 
 jobs:
-  set-env-var:
-    name: Set env var
-    runs-on: ubuntu-latest
-    outputs:
-      DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ steps.image_name.outputs.image_name }}
-      BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ steps.it_enabled.outputs.enabled }}
-      DRUID_PREVIOUS_VERSION: ${{ env.DRUID_PREVIOUS_VERSION }}
-      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ env.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
-    steps:
-      - name: Set image name env var
-        id: image_name
-        run: |
-          echo "::set-output name=image_name::org.apache.druid.integration-tests/test:${{ env.DRUID_PREVIOUS_VERSION }}"
-      - name: Set env for enabling backward compatibility it
-        id: it_enabled
-        run: |
-          if [ -n "${{ env.DRUID_PREVIOUS_VERSION }}" ]; then
-            echo "::set-output name=enabled::true"
-          else
-            echo "::set-output name=enabled::false"
-          fi
-
   build:
-    needs: set-env-var
     name: "build (jdk${{ matrix.jdk }})"
     strategy:
       fail-fast: false
       matrix:
-        # Use JDK 21.0.4 to work around https://github.com/apache/druid/issues/17429
-        jdk: [ '11', '17', '21.0.4' ]
+        jdk: [ '17', '21' ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
@@ -120,42 +96,10 @@ jobs:
             ./druid-container-jdk${{ matrix.jdk }}.tar.gz
             ./integration-tests-ex/image/target/env.sh
 
-      - name: Cache previous version image
-        id: docker_container_previous_version
-        uses: actions/cache@v4
-        with:
-          key: druid-container-jdk${{ matrix.jdk }}-version${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}.tar.gz-${{ github.sha }}
-          path: |
-            ./druid-container-jdk${{ matrix.jdk }}-version${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}.tar.gz
-
       - name: Maven build
         id: maven_build
         run: |
           ./it.sh ci
-
-      - name: Container build
-        env:
-          BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ needs.set-env-var.outputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
-          DRUID_PREVIOUS_VERSION: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}
-          DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
-          DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
-        run: |
-          ./it.sh image
-          source ./integration-tests-ex/image/target/env.sh
-          docker tag $DRUID_IT_IMAGE_NAME $DRUID_IT_IMAGE_NAME-jdk${{ matrix.jdk }}
-
-      - name: Save docker container to archive
-        run: |
-          source ./integration-tests-ex/image/target/env.sh
-          echo $DRUID_IT_IMAGE_NAME
-          docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ matrix.jdk }}.tar.gz
-
-      - name: Save previous version docker image
-        if: ${{ needs.set-env-var.outputs.BACKWARD_COMPATIBILITY_IT_ENABLED == 'true' }}
-        run: |
-          docker tag ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }} ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}-jdk${{ matrix.jdk }}-version${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}
-          echo ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
-          docker save "${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}" | gzip > druid-container-jdk${{ matrix.jdk }}-version${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}.tar.gz    
 
   unit-tests:
     name: "unit tests"
@@ -165,22 +109,13 @@ jobs:
     needs: [build, unit-tests]
     uses: ./.github/workflows/standard-its.yml
 
-  revised-its:
-    needs: [build, unit-tests]
-    uses: ./.github/workflows/revised-its.yml
-    with:
-      BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ needs.set-env-var.outputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
-      DRUID_PREVIOUS_VERSION: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}
-      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
-      DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
-
   docker-tests:
     needs: [build, unit-tests]
     uses: ./.github/workflows/docker-tests.yml
 
   actions-timeline:
-    needs: [build, unit-tests, revised-its, standard-its, docker-tests]
+    needs: [build, unit-tests, standard-its, docker-tests]
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     steps:
-      - uses: Kesin11/actions-timeline@427ee2cf860166e404d0d69b4f2b24012bb7af4f
+      - uses: Kesin11/actions-timeline@54d513e0b5ff1158f1cf8321108d666a5a6c1fca

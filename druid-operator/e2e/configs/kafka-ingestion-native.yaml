@@ -1,0 +1,83 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#-------------------------------------------------------------------------
+apiVersion: druid.apache.org/v1alpha1
+kind: DruidIngestion
+metadata:
+  labels:
+    app.kubernetes.io/name: druidingestion
+    app.kubernetes.io/instance: druidingestion-sample
+  name: kafka-2
+spec:
+  suspend: false
+  druidCluster: tiny-cluster
+  ingestion:
+    type: kafka
+    compaction:
+      tuningConfig:
+        type: "kafka"
+        partitionsSpec:
+          type: "dynamic"
+      skipOffsetFromLatest: "PT0S"
+      granularitySpec:
+        segmentGranularity: "DAY"
+    rules:
+    - type: dropByPeriod
+      period: P1M
+      includeFuture: true
+    - type: broadcastByPeriod
+      period: P1M
+      includeFuture: true
+    nativeSpec:
+      type: kafka
+      spec:
+        dataSchema:
+          dataSource: metrics-kafka-2
+          timestampSpec:
+            column: timestamp
+            format: auto
+          dimensionsSpec:
+            dimensions: []
+            dimensionExclusions:
+            - timestamp
+            - value
+          metricsSpec:
+          - name: count
+            type: count
+          - name: value_sum
+            fieldName: value
+            type: doubleSum
+          - name: value_min
+            fieldName: value
+            type: doubleMin
+          - name: value_max
+            fieldName: value
+            type: doubleMax
+          granularitySpec:
+            type: uniform
+            segmentGranularity: HOUR
+            queryGranularity: NONE
+        ioConfig:
+          topic: metrics
+          inputFormat:
+            type: json
+          consumerProperties:
+            bootstrap.servers: localhost:9092
+          taskCount: 1
+          replicas: 1
+          taskDuration: PT1H
+        tuningConfig:
+          type: kafka
+          maxRowsPerSegment: 5000000

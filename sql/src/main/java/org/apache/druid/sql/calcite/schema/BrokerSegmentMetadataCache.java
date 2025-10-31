@@ -32,6 +32,8 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -220,6 +222,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     // update datasource metadata in the cache
     polledDataSourceMetadata.forEach(this::updateDSMetadata);
 
+    emitMetricForSkippedSegments(segmentsToRefresh, polledDataSourceMetadata);
     // Remove segments of the datasource from refresh list for which we received schema from the Coordinator.
     segmentsToRefresh.removeIf(segmentId -> polledDataSourceMetadata.containsKey(segmentId.getDataSource()));
 
@@ -243,13 +246,16 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
 
       dataSourcesNeedingRebuild.clear();
     }
-
     // Rebuild the datasources.
     for (String dataSource : dataSourcesToRebuild) {
       final RowSignature rowSignature = buildDataSourceRowSignature(dataSource);
       if (rowSignature == null) {
         log.info("datasource [%s] no longer exists, all metadata removed.", dataSource);
         tables.remove(dataSource);
+        emitMetric(
+            Metric.DATASOURCE_REMOVED,
+            1,
+            ServiceMetricEvent.builder().setDimension(DruidMetrics.DATASOURCE, dataSource));
         continue;
       }
 
@@ -260,12 +266,39 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
                  + "check coordinator logs if this message is persistent.", dataSource);
         // this is a harmless call
         tables.remove(dataSource);
+        emitMetric(
+            Metric.DATASOURCE_REMOVED,
+            1,
+            ServiceMetricEvent.builder().setDimension(DruidMetrics.DATASOURCE, dataSource));
         continue;
       }
 
       final PhysicalDatasourceMetadata physicalDatasourceMetadata = dataSourceMetadataFactory.build(dataSource, rowSignature);
       updateDSMetadata(dataSource, physicalDatasourceMetadata);
     }
+  }
+
+  private void emitMetricForSkippedSegments(
+      Set<SegmentId> segmentsToRefresh,
+      Map<String, PhysicalDatasourceMetadata> polledDataSourceMetadata
+  )
+  {
+    final Map<String, Integer> datasourceToNumSegmentsSkipped = new HashMap<>();
+
+    for (SegmentId segmentId : segmentsToRefresh) {
+      if (polledDataSourceMetadata.containsKey(segmentId.getDataSource())) {
+        datasourceToNumSegmentsSkipped.merge(segmentId.getDataSource(), 1, Integer::sum);
+      }
+    }
+
+    datasourceToNumSegmentsSkipped.forEach(
+        (dataSource, count) ->
+            emitMetric(
+                Metric.BROKER_SEGMENTS_SKIPPED_REFRESH,
+                count,
+                new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource)
+            )
+    );
   }
 
   @Override

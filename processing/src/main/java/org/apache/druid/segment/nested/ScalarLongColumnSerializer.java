@@ -22,14 +22,13 @@ package org.apache.druid.segment.nested;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
-import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.ColumnarLongsSerializer;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.FixedIndexedWriter;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
@@ -47,12 +46,12 @@ public class ScalarLongColumnSerializer extends ScalarNestedCommonFormatColumnSe
 
   public ScalarLongColumnSerializer(
       String name,
-      IndexSpec indexSpec,
+      NestedCommonFormatColumnFormatSpec columnFormatSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       Closer closer
   )
   {
-    super(name, indexSpec, segmentWriteOutMedium, closer);
+    super(name, columnFormatSpec, segmentWriteOutMedium, closer);
   }
 
   @Override
@@ -97,8 +96,8 @@ public class ScalarLongColumnSerializer extends ScalarNestedCommonFormatColumnSe
         segmentWriteOutMedium,
         StringUtils.format("%s.long_column", name),
         ByteOrder.nativeOrder(),
-        indexSpec.getLongEncoding(),
-        indexSpec.getDimensionCompression(),
+        columnFormatSpec.getLongColumnEncoding(),
+        columnFormatSpec.getLongColumnCompression(),
         segmentWriteOutMedium.getCloser()
     );
     longsSerializer.open();
@@ -128,18 +127,18 @@ public class ScalarLongColumnSerializer extends ScalarNestedCommonFormatColumnSe
   }
 
   @Override
-  protected void writeValueColumn(FileSmoosher smoosher) throws IOException
+  protected void writeValueColumn(SegmentFileBuilder fileBuilder) throws IOException
   {
-    writeInternal(smoosher, longsSerializer, ColumnSerializerUtils.LONG_VALUE_COLUMN_FILE_NAME);
+    writeInternal(fileBuilder, longsSerializer, ColumnSerializerUtils.LONG_VALUE_COLUMN_FILE_NAME);
   }
 
   @Override
-  protected void writeDictionaryFile(FileSmoosher smoosher) throws IOException
+  protected void writeDictionaryFile(SegmentFileBuilder fileBuilder) throws IOException
   {
     if (dictionaryIdLookup.getLongBufferMapper() != null) {
-      copyFromTempSmoosh(smoosher, dictionaryIdLookup.getLongBufferMapper());
+      copyFromTempSmoosh(fileBuilder, dictionaryIdLookup.getLongBufferMapper());
     } else {
-      writeInternal(smoosher, dictionaryWriter, ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME);
+      writeInternal(fileBuilder, dictionaryWriter, ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME);
     }
   }
 

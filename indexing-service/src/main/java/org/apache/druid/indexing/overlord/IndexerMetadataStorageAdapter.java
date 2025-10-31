@@ -22,8 +22,6 @@ package org.apache.druid.indexing.overlord;
 import com.google.inject.Inject;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskInfo;
-import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.TaskLookup;
 import org.joda.time.Interval;
@@ -50,13 +48,13 @@ public class IndexerMetadataStorageAdapter
   {
     // Find the earliest active task created for the specified datasource; if one exists,
     // check if its interval overlaps with the delete interval.
-    final Optional<TaskInfo<Task, TaskStatus>> earliestActiveTaskOptional = taskStorage
+    final Optional<TaskInfo> earliestActiveTaskOptional = taskStorage
         .getTaskInfos(TaskLookup.activeTasksOnly(), dataSource)
         .stream()
         .min(Comparator.comparing(TaskInfo::getCreatedTime));
 
     if (earliestActiveTaskOptional.isPresent()) {
-      final TaskInfo<Task, TaskStatus> earliestActiveTask = earliestActiveTaskOptional.get();
+      final TaskInfo earliestActiveTask = earliestActiveTaskOptional.get();
       final Interval activeTaskInterval = new Interval(
           earliestActiveTask.getCreatedTime(),
           DateTimes.MAX

@@ -35,9 +35,11 @@ import com.google.inject.Key;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ErrorResponse;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Accumulator;
@@ -50,10 +52,13 @@ import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.BadJsonQueryException;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryException;
@@ -74,7 +79,6 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.mocks.ExceptionalInputStream;
-import org.apache.druid.server.mocks.MockAsyncContext;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.apache.druid.server.mocks.MockHttpServletResponse;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
@@ -91,11 +95,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.http.HttpStatus;
-import org.easymock.EasyMock;
-import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpHeader;
-import org.eclipse.jetty.server.HttpChannel;
-import org.eclipse.jetty.server.HttpOutput;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
@@ -114,6 +114,7 @@ import javax.ws.rs.core.Response.Status;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -121,12 +122,14 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class QueryResourceTest
 {
@@ -201,6 +204,22 @@ public class QueryResourceTest
       + "    \"context\": { \"priority\": -1 }"
       + "}";
 
+  private static final String SIMPLE_TIMESERIES_QUERY_WRITE_EXCEPTION_AS_ROW =
+      "{\n"
+      + "    \"queryType\": \"timeseries\",\n"
+      + "    \"dataSource\": \"mmx_metrics\",\n"
+      + "    \"granularity\": \"hour\",\n"
+      + "    \"intervals\": [\n"
+      + "      \"2014-12-17/2015-12-30\"\n"
+      + "    ],\n"
+      + "    \"aggregations\": [\n"
+      + "      {\n"
+      + "        \"type\": \"count\",\n"
+      + "        \"name\": \"rows\"\n"
+      + "      }\n"
+      + "    ],\n"
+      + "    \"context\": { \"writeExceptionBodyAsResponseRow\": \"true\" }"
+      + "}";
 
   private static final ServiceEmitter NOOP_SERVICE_EMITTER = new NoopServiceEmitter();
   private static final DruidNode DRUID_NODE = new DruidNode(
@@ -218,6 +237,7 @@ public class QueryResourceTest
   private QueryResource queryResource;
   private QueryScheduler queryScheduler;
   private TestRequestLogger testRequestLogger;
+  private StubServiceEmitter emitter;
 
   @BeforeClass
   public static void staticSetup()
@@ -238,6 +258,7 @@ public class QueryResourceTest
 
     queryScheduler = QueryStackTests.DEFAULT_NOOP_SCHEDULER;
     testRequestLogger = new TestRequestLogger();
+    emitter = new StubServiceEmitter();
     queryResource = createQueryResource(ResponseContextConfig.newConfig(true));
   }
 
@@ -248,7 +269,7 @@ public class QueryResourceTest
             CONGLOMERATE,
             TEST_SEGMENT_WALKER,
             new DefaultGenericQueryMetricsFactory(),
-            new NoopServiceEmitter(),
+            emitter,
             testRequestLogger,
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
@@ -275,7 +296,15 @@ public class QueryResourceTest
   {
     expectPermissiveHappyPathAuth();
 
-    Assert.assertEquals(200, expectAsyncRequestFlow(SIMPLE_TIMESERIES_QUERY).getStatus());
+    HttpServletResponse servletResponse = expectAsyncRequestFlow(SIMPLE_TIMESERIES_QUERY);
+    Assert.assertEquals(200, servletResponse.getStatus());
+    Assert.assertTrue(servletResponse.containsHeader(HttpHeader.TRAILER.toString()));
+
+    final Map<String, String> fields = servletResponse.getTrailerFields().get();
+    Assert.assertFalse(fields.containsKey(QueryResource.ERROR_MESSAGE_TRAILER_HEADER));
+
+    Assert.assertTrue(fields.containsKey(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
+    Assert.assertEquals(fields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER), "true");
   }
 
   @Test
@@ -289,7 +318,7 @@ public class QueryResourceTest
             CONGLOMERATE,
             TEST_SEGMENT_WALKER,
             new DefaultGenericQueryMetricsFactory(),
-            new NoopServiceEmitter(),
+            emitter,
             testRequestLogger,
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
@@ -369,7 +398,7 @@ public class QueryResourceTest
               }
             },
             new DefaultGenericQueryMetricsFactory(),
-            new NoopServiceEmitter(),
+            emitter,
             testRequestLogger,
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
@@ -394,6 +423,8 @@ public class QueryResourceTest
 
     final Response response = expectSynchronousRequestFlow(SIMPLE_TIMESERIES_QUERY);
     Assert.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(500, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
 
     final ErrorResponse entity = (ErrorResponse) response.getEntity();
     MatcherAssert.assertThat(
@@ -467,7 +498,7 @@ public class QueryResourceTest
               }
             },
             new DefaultGenericQueryMetricsFactory(),
-            new NoopServiceEmitter(),
+            emitter,
             testRequestLogger,
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
@@ -487,16 +518,12 @@ public class QueryResourceTest
 
     expectPermissiveHappyPathAuth();
 
-    org.eclipse.jetty.server.Response response = this.jettyResponseforRequest(testServletRequest);
-    Assert.assertNull(queryResource.doPost(new ByteArrayInputStream(
-                                               SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
-                                           null /*pretty*/,
-                                           testServletRequest
-    ));
+    HttpServletResponse response = expectAsyncRequestFlow(testServletRequest, SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8), queryResource);
+
     Assert.assertTrue(response.containsHeader(HttpHeader.TRAILER.toString()));
     Assert.assertEquals(response.getHeader(HttpHeader.TRAILER.toString()), QueryResultPusher.RESULT_TRAILER_HEADERS);
 
-    final HttpFields fields = response.getTrailers().get();
+    final Map<String, String> fields = response.getTrailerFields().get();
     Assert.assertTrue(fields.containsKey(QueryResource.ERROR_MESSAGE_TRAILER_HEADER));
     Assert.assertEquals(
         fields.get(QueryResource.ERROR_MESSAGE_TRAILER_HEADER),
@@ -505,17 +532,58 @@ public class QueryResourceTest
 
     Assert.assertTrue(fields.containsKey(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
     Assert.assertEquals(fields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER), "false");
+
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(504, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
-  public void testSuccessResponseWithTrailerHeader() throws IOException
+  public void testResponseWithMidFlightExceptions() throws IOException
   {
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
             CONGLOMERATE,
-            TEST_SEGMENT_WALKER,
+            new QuerySegmentWalker()
+            {
+              @Override
+              public <T> QueryRunner<T> getQueryRunnerForIntervals(
+                  Query<T> query,
+                  Iterable<Interval> intervals
+              )
+              {
+                return (queryPlus, responseContext) -> new Sequence<T>()
+                {
+                  @Override
+                  public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
+                  {
+                    accumulator.accumulate(null,
+                                           (T) new TimeBoundaryResultValue(ImmutableMap.<String, Object>of("maxTime", DateTimes.of("2014-08-02")))
+                    );
+                    throw InvalidInput.exception("mid-flight exception");
+                  }
+
+                  @Override
+                  public <OutType> Yielder<OutType> toYielder(
+                      OutType initValue,
+                      YieldingAccumulator<OutType, T> accumulator
+                  )
+                  {
+                    throw new UnsupportedOperationException("not implemented");
+                  }
+                };
+              }
+
+              @Override
+              public <T> QueryRunner<T> getQueryRunnerForSegments(
+                  Query<T> query,
+                  Iterable<SegmentDescriptor> specs
+              )
+              {
+                throw new UnsupportedOperationException();
+              }
+            },
             new DefaultGenericQueryMetricsFactory(),
-            new NoopServiceEmitter(),
+            emitter,
             testRequestLogger,
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
@@ -535,19 +603,20 @@ public class QueryResourceTest
 
     expectPermissiveHappyPathAuth();
 
-    org.eclipse.jetty.server.Response response = this.jettyResponseforRequest(testServletRequest);
-    Assert.assertNull(queryResource.doPost(new ByteArrayInputStream(
-                                               SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
-                                           null /*pretty*/,
-                                           testServletRequest
-    ));
-    Assert.assertTrue(response.containsHeader(HttpHeader.TRAILER.toString()));
-
-    final HttpFields fields = response.getTrailers().get();
-    Assert.assertFalse(fields.containsKey(QueryResource.ERROR_MESSAGE_TRAILER_HEADER));
-
-    Assert.assertTrue(fields.containsKey(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
-    Assert.assertEquals(fields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER), "true");
+    MockHttpServletResponse response = expectAsyncRequestFlow(testServletRequest,
+                                                              SIMPLE_TIMESERIES_QUERY_WRITE_EXCEPTION_AS_ROW.getBytes(
+                                                                  StandardCharsets.UTF_8),
+                                                              queryResource
+    );
+    String actualOutput = response.baos.toString(Charset.defaultCharset());
+    Assert.assertEquals(
+        "[{\"maxTime\":\"2014-08-02T00:00:00.000Z\"},{\"error\":\"druidException\","
+        + "\"errorCode\":\"invalidInput\",\"persona\":\"USER\",\"category\":\"INVALID_INPUT\","
+        + "\"errorMessage\":\"mid-flight exception\",\"context\":{}}]",
+        actualOutput
+    );
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(400, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -612,7 +681,7 @@ public class QueryResourceTest
               }
             },
             new DefaultGenericQueryMetricsFactory(),
-            new NoopServiceEmitter(),
+            emitter,
             testRequestLogger,
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
@@ -635,29 +704,23 @@ public class QueryResourceTest
 
     expectPermissiveHappyPathAuth();
 
-    org.eclipse.jetty.server.Response response = this.jettyResponseforRequest(testServletRequest);
-
-    // Execute the query
-    Assert.assertNull(queryResource.doPost(
-        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
-        null,
-        testServletRequest
-    ));
-
+    HttpServletResponse response = expectAsyncRequestFlow(testServletRequest, SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8), queryResource);
 
     Assert.assertTrue(response.containsHeader(HttpHeader.TRAILER.toString()));
     Assert.assertEquals(QueryResultPusher.RESULT_TRAILER_HEADERS, response.getHeader(HttpHeader.TRAILER.toString()));
 
-    final HttpFields observedFields = response.getTrailers().get();
-
+    final Map<String, String> fields = response.getTrailerFields().get();
     Assert.assertTrue(response.containsHeader(QueryResource.HEADER_RESPONSE_CONTEXT));
     Assert.assertEquals(
         jsonMapper.writeValueAsString(ImmutableMap.of("missingSegments", ImmutableList.of(missingSegDesc))),
         response.getHeader(QueryResource.HEADER_RESPONSE_CONTEXT)
     );
 
-    Assert.assertTrue(observedFields.containsKey(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
-    Assert.assertEquals("true", observedFields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
+    Assert.assertTrue(fields.containsKey(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
+    Assert.assertEquals("true", fields.get(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER));
+
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
 
@@ -701,7 +764,7 @@ public class QueryResourceTest
                 CONGLOMERATE,
                 querySegmentWalker,
                 new DefaultGenericQueryMetricsFactory(),
-                new NoopServiceEmitter(),
+                emitter,
                 testRequestLogger,
                 AuthTestUtils.TEST_AUTHORIZER_MAPPER,
                 overrideConfig,
@@ -714,6 +777,7 @@ public class QueryResourceTest
               @Override
               public void emitLogsAndMetrics(@Nullable Throwable e, @Nullable String remoteAddress, long bytesWritten)
               {
+                super.emitLogsAndMetrics(e, remoteAddress, bytesWritten);
                 Assert.assertTrue(Throwables.getStackTraceAsString(e).contains(embeddedExceptionMessage));
               }
             };
@@ -747,6 +811,8 @@ public class QueryResourceTest
         )
             .expectMessageIs("something")
     );
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(500, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -760,7 +826,7 @@ public class QueryResourceTest
             CONGLOMERATE,
             TEST_SEGMENT_WALKER,
             new DefaultGenericQueryMetricsFactory(),
-            new NoopServiceEmitter(),
+            emitter,
             testRequestLogger,
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
@@ -807,6 +873,8 @@ public class QueryResourceTest
         -1,
         testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(overrideConfigKey)
     );
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -831,6 +899,8 @@ public class QueryResourceTest
         expectedException,
         jsonMapper.readValue(response.baos.toByteArray(), QueryInterruptedException.class).toString()
     );
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(500, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -845,6 +915,10 @@ public class QueryResourceTest
         queryResource
     );
     Assert.assertEquals(HttpStatus.SC_OK, response.getStatus());
+
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(1, queryResource.getSuccessfulQueryCount());
+    Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -857,6 +931,10 @@ public class QueryResourceTest
     Assert.assertEquals(HttpStatus.SC_OK, response.getStatus());
     //since accept header is null, the response content type should be same as the value of 'Content-Type' header
     Assert.assertEquals(MediaType.APPLICATION_JSON, response.getContentType());
+
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(1, queryResource.getSuccessfulQueryCount());
+    Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -870,6 +948,10 @@ public class QueryResourceTest
     Assert.assertEquals(HttpStatus.SC_OK, response.getStatus());
     //since accept header is empty, the response content type should be same as the value of 'Content-Type' header
     Assert.assertEquals(MediaType.APPLICATION_JSON, response.getContentType());
+
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(1, queryResource.getSuccessfulQueryCount());
+    Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -885,6 +967,10 @@ public class QueryResourceTest
 
     // Content-Type in response should be Smile
     Assert.assertEquals(SmileMediaTypes.APPLICATION_JACKSON_SMILE, response.getContentType());
+
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(1, queryResource.getSuccessfulQueryCount());
+    Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -905,6 +991,10 @@ public class QueryResourceTest
 
     // Content-Type in response should be Smile
     Assert.assertEquals(SmileMediaTypes.APPLICATION_JACKSON_SMILE, response.getContentType());
+
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(1, queryResource.getSuccessfulQueryCount());
+    Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -924,6 +1014,10 @@ public class QueryResourceTest
 
     // Content-Type in response should default to Content-Type from request
     Assert.assertEquals(SmileMediaTypes.APPLICATION_JACKSON_SMILE, response.getContentType());
+
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(1, queryResource.getSuccessfulQueryCount());
+    Assert.assertEquals(200, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -1084,7 +1178,7 @@ public class QueryResourceTest
             CONGLOMERATE,
             timeoutSegmentWalker,
             new DefaultGenericQueryMetricsFactory(),
-            new NoopServiceEmitter(),
+            emitter,
             testRequestLogger,
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
@@ -1133,6 +1227,8 @@ public class QueryResourceTest
     Assert.assertEquals(QueryException.QUERY_TIMEOUT_ERROR_CODE, ex.getErrorCode());
     Assert.assertEquals(1, timeoutQueryResource.getTimedOutQueryCount());
 
+    emitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals(504, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test(timeout = 60_000L)
@@ -1433,6 +1529,16 @@ public class QueryResourceTest
     }
     Assert.assertEquals(2, queryResource.getSuccessfulQueryCount());
     Assert.assertEquals(1, queryResource.getFailedQueryCount());
+
+    emitter.verifyEmitted("query/time", 3);
+    Map<Integer, Long> codeFrequencies = emitter.getMetricEvents("query/time").stream()
+                                                .map(ServiceMetricEvent::toMap)
+                                                .map(map -> (int) map.get(DruidMetrics.STATUS_CODE))
+                                                .collect(Collectors.groupingBy(
+                                                    code -> code,
+                                                    Collectors.counting()
+                                                ));
+    Assert.assertEquals(Map.of(200, 2L, 429, 1L), codeFrequencies);
   }
 
   @Test(timeout = 10_000L)
@@ -1503,6 +1609,16 @@ public class QueryResourceTest
     for (Future<Boolean> theFuture : back2) {
       Assert.assertTrue(theFuture.get());
     }
+
+    emitter.verifyEmitted("query/time", 3);
+    Map<Integer, Long> codeFrequencies = emitter.getMetricEvents("query/time").stream()
+                                                .map(ServiceMetricEvent::toMap)
+                                                .map(map -> (int) map.get(DruidMetrics.STATUS_CODE))
+                                                .collect(Collectors.groupingBy(
+                                                    code -> code,
+                                                    Collectors.counting()
+                                                ));
+    Assert.assertEquals(Map.of(200, 2L, 429, 1L), codeFrequencies);
   }
 
   @Test(timeout = 10_000L)
@@ -1571,6 +1687,15 @@ public class QueryResourceTest
     for (Future<Boolean> theFuture : back2) {
       Assert.assertTrue(theFuture.get());
     }
+    emitter.verifyEmitted("query/time", 3);
+    Map<Integer, Long> codeFrequencies = emitter.getMetricEvents("query/time").stream()
+                                                .map(ServiceMetricEvent::toMap)
+                                                .map(map -> (int) map.get(DruidMetrics.STATUS_CODE))
+                                                .collect(Collectors.groupingBy(
+                                                    code -> code,
+                                                    Collectors.counting()
+                                                ));
+    Assert.assertEquals(Map.of(200, 2L, 429, 1L), codeFrequencies);
   }
 
   @Test
@@ -1659,7 +1784,7 @@ public class QueryResourceTest
             CONGLOMERATE,
             texasRanger,
             new DefaultGenericQueryMetricsFactory(),
-            new NoopServiceEmitter(),
+            emitter,
             testRequestLogger,
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
@@ -1781,30 +1906,5 @@ public class QueryResourceTest
   ) throws IOException
   {
     return queryResource.doPost(new ByteArrayInputStream(bytes), null, req);
-  }
-
-  private org.eclipse.jetty.server.Response jettyResponseforRequest(MockHttpServletRequest req) throws IOException
-  {
-    HttpChannel channelMock = EasyMock.mock(HttpChannel.class);
-    HttpOutput outputMock = EasyMock.mock(HttpOutput.class);
-    org.eclipse.jetty.server.Response response = new org.eclipse.jetty.server.Response(channelMock, outputMock);
-
-    EasyMock.expect(channelMock.isSendError()).andReturn(false);
-    EasyMock.expect(channelMock.isCommitted()).andReturn(true);
-
-    outputMock.close();
-    EasyMock.expectLastCall().andVoid();
-
-    outputMock.write(EasyMock.anyObject(byte[].class), EasyMock.anyInt(), EasyMock.anyInt());
-    EasyMock.expectLastCall().andVoid();
-
-    EasyMock.replay(outputMock, channelMock);
-
-    req.newAsyncContext(() -> {
-      final MockAsyncContext retVal = new MockAsyncContext();
-      retVal.response = response;
-      return retVal;
-    });
-    return response;
   }
 }

@@ -20,7 +20,8 @@
 package org.apache.druid.testing.utils;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.testing.IntegrationTestingConfig;
+import org.apache.druid.testing.tools.IntegrationTestingConfig;
+import org.apache.druid.testing.tools.KafkaUtil;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.CreatePartitionsResult;

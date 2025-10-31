@@ -1,0 +1,134 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#-------------------------------------------------------------------------
+EOF < /dev/nullapiVersion: druid.apache.org/v1alpha1
+kind: Druid
+metadata:
+  name: ordering
+  namespace: default
+spec:
+  image: apache/druid:25.0.0
+  startScript: /druid.sh
+  rollingDeploy: false
+  securityContext:
+    fsGroup: 1000
+    runAsUser: 1000
+    runAsGroup: 1000
+  services:
+    - spec:
+        type: ClusterIP
+  commonConfigMountPath: "/opt/druid/conf/druid/cluster/_common"
+  jvm.options: |-
+    -server
+    -XX:MaxDirectMemorySize=10240g
+    -Duser.timezone=UTC
+    -Dfile.encoding=UTF-8
+    -Djava.io.tmpdir=/druid/data
+  common.runtime.properties: |-
+    # Metadata Store
+    druid.metadata.storage.type=derby
+    druid.metadata.storage.connector.connectURI=jdbc:derby://localhost:1527/druid/data/derbydb/metadata.db;create=true
+    druid.metadata.storage.connector.host=localhost
+    druid.metadata.storage.connector.port=1527
+    druid.metadata.storage.connector.createTables=true
+    
+    # Deep Storage
+    druid.storage.type=local
+    druid.storage.storageDirectory=/druid/deepstorage
+    
+    # Service discovery
+    druid.selectors.indexing.serviceName=druid/overlord
+    druid.selectors.coordinator.serviceName=druid/coordinator
+  nodes:
+    indexers:
+      nodeType: "indexer"
+      druid.port: 8080
+      nodeConfigMountPath: "/opt/druid/conf/druid/cluster/master/indexers"
+      replicas: 1
+      runtime.properties: |-
+        druid.service=druid/indexer
+    brokers:
+      nodeType: "broker"
+      kind: "Deployment"
+      druid.port: 8088
+      nodeConfigMountPath: "/opt/druid/conf/druid/cluster/query/broker"
+      replicas: 1
+      runtime.properties: |-
+        druid.service=druid/broker
+      additionalContainer:
+        - command:
+            - /bin/sh echo hello
+          containerName: node-level
+          image: hello-world
+    historicals2:
+      nodeType: "historical"
+      druid.port: 8080
+      nodeConfigMountPath: "/opt/druid/conf/druid/cluster/data/historical"
+      replicas: 1
+      runtime.properties: |-
+        druid.service=druid/historical
+        druid.segmentCache.locations=[{\"path\":\"/druid/data/segments\",\"maxSize\":10737418240}]
+        druid.server.maxSize=10737418240
+    routers:
+      nodeType: "router"
+      kind: "Deployment"
+      druid.port: 8088
+      nodeConfigMountPath: "/opt/druid/conf/druid/cluster/query/router"
+      replicas: 1
+      runtime.properties: |
+        # General
+        druid.service=druid/router
+        # Service discovery
+        druid.router.defaultBrokerServiceName=druid/broker
+        druid.router.coordinatorServiceName=druid/coordinator
+        # Management proxy to coordinator / overlord: required for unified web console.
+        druid.router.managementProxy.enabled=true
+    coordinators:
+      nodeType: "coordinator"
+      druid.port: 8080
+      nodeConfigMountPath: "/opt/druid/conf/druid/cluster/master/coordinator-overlord"
+      replicas: 1
+      runtime.properties: |-
+        druid.service=druid/coordinator
+        druid.coordinator.asOverlord.enabled=true
+        druid.coordinator.asOverlord.overlordService=druid/overlord
+    middle-managers:
+      nodeType: "middleManager"
+      kind: "Deployment"
+      druid.port: 8091
+      nodeConfigMountPath: "/opt/druid/conf/druid/cluster/data/middleManager"
+      replicas: 1
+      runtime.properties: |
+        # Caching
+        druid.realtime.cache.useCache=true
+        druid.realtime.cache.populateCache=true
+        druid.indexer.runner.javaOptsArray=["-server","-Duser.timezone=UTC","-Dfile.encoding=UTF-8","-XX:+ExitOnOutOfMemoryError","-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager","--add-exports=java.base/jdk.internal.ref=ALL-UNNAMED","--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED","--add-opens=java.base/java.lang=ALL-UNNAMED","--add-opens=java.base/java.io=ALL-UNNAMED","--add-opens=java.base/java.nio=ALL-UNNAMED","--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED","--add-opens=java.base/sun.nio.ch=ALL-UNNAMED"]
+        druid.indexer.task.restoreTasksOnRestart=true
+    historicals:
+      nodeType: "historical"
+      druid.port: 8080
+      nodeConfigMountPath: "/opt/druid/conf/druid/cluster/data/historical"
+      replicas: 1
+      runtime.properties: |-
+        druid.service=druid/historical
+        druid.segmentCache.locations=[{\"path\":\"/druid/data/segments\",\"maxSize\":10737418240}]
+        druid.server.maxSize=10737418240
+    overlords:
+      nodeType: "overlord"
+      druid.port: 8080
+      nodeConfigMountPath: "/opt/druid/conf/druid/cluster/master/overlord"
+      replicas: 1
+      runtime.properties: |-
+        druid.service=druid/overlord

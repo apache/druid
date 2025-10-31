@@ -77,9 +77,22 @@
   "query/cache/total/put/error" : { "dimensions" : [], "type" : "gauge", "help": "Total number of new cache entries that could not be cached due to errors."},
   "query/cache/total/put/oversized" : { "dimensions" : [], "type" : "gauge", "help": "Total number of potential new cache entries that were skipped due to being too large (based on druid.{broker,historical,realtime}.cache.maxEntrySize properties)."},
 
-  "ingest/count" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Count of 1 every time an ingestion job runs (includes compaction jobs). Aggregate using dimensions." },
-  "ingest/segments/count" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Count of final segments created by job (includes tombstones)." },
-  "ingest/tombstones/count" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Count of final segments created by job (includes tombstones)." },
+  "kafka/consumer/bytesConsumed" : { "dimensions" : ["topic"], "type" : "count", "help": "Bytes consumed by the consumer of a Kafka indexing task (per topic)."},
+  "kafka/consumer/recordsConsumed" : { "dimensions" : ["topic"], "type" : "count", "help": "Records consumed by the consumer of a Kafka indexing task (per topic)."},
+  "kafka/consumer/fetch" : { "dimensions" : [], "type" : "count", "help": "Fetch requests issued by the consumer of a Kafka indexing task."},
+  "kafka/consumer/fetchRate" : { "dimensions" : [], "type" : "gauge", "help": "Fetch requests per second from the consumer of a Kafka indexing task."},
+  "kafka/consumer/fetchLatencyAvg" : { "dimensions" : [], "type" : "gauge", "help": "Average fetch latency observed by the consumer of a Kafka indexing task."},
+  "kafka/consumer/fetchLatencyMax" : { "dimensions" : [], "type" : "gauge", "help": "Maximum fetch latency observed by the consumer of a Kafka indexing task."},
+  "kafka/consumer/fetchSizeAvg" : { "dimensions" : ["topic"], "type" : "gauge", "help": "Average fetch response size in bytes by the consumer of a Kafka indexing task (per topic)."},
+  "kafka/consumer/fetchSizeMax" : { "dimensions" : ["topic"], "type" : "gauge", "help": "Maximum fetch response size in bytes by the consumer of a Kafka indexing task (per topic)."},
+  "kafka/consumer/recordsLag" : { "dimensions" : ["topic", "partition"], "type" : "gauge", "help": "Partition lag in records as seen by the consumer of a Kafka indexing task (per topic and partition)."},
+  "kafka/consumer/recordsPerRequestAvg" : { "dimensions" : ["topic"], "type" : "gauge", "help": "Average records per fetch request as seen by the consumer of a Kafka indexing task (per topic)."},
+  "kafka/consumer/outgoingBytes" : { "dimensions" : ["node_id"], "type" : "count", "help": "Bytes sent to Kafka brokers by the consumer of a Kafka indexing task (per node)."},
+  "kafka/consumer/incomingBytes" : { "dimensions" : ["node_id"], "type" : "count", "help": "Bytes received from Kafka brokers by the consumer of a Kafka indexing task (per node)."},
+
+  "ingest/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "count", "help": "Count of 1 every time an ingestion job runs (includes compaction jobs). Aggregate using dimensions." },
+  "ingest/segments/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "count", "help": "Count of final segments created by job (includes tombstones)." },
+  "ingest/tombstones/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "count", "help": "Count of tombstones created by job." },
 
   "ingest/kafka/lag" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge", "help": "Total lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute."},
   "ingest/kafka/maxLag" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge", "help": "Max lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute."},
@@ -114,7 +127,6 @@
 
   "task/run/time" : { "dimensions" : ["dataSource", "taskType"], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds taken to run a task."},
   "task/pending/time" : { "dimensions" : ["dataSource", "taskType"], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds taken for a task to wait for running."},
-  "task/action/log/time" : { "dimensions" : ["dataSource", "taskType"], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds taken to log a task action to the audit log."},
   "task/action/run/time" : { "dimensions" : ["dataSource", "taskType"], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds taken to execute a task action."},
   "task/action/success/count" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of task actions that were executed successfully during the emission period."},
   "task/action/failed/count" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of task actions that failed during the emission period."},
@@ -243,8 +255,5 @@
   "sys/tcpv4/in/errs" : { "dimensions" : [], "type" : "gauge", "help": "Errors while reading segments"},
   "sys/tcpv4/out/segs" : { "dimensions" : [], "type" : "gauge", "help": "Total segments sent"},
   "sys/tcpv4/out/rsts" : { "dimensions" : [], "type" : "gauge", "help": "Total out reset packets sent to reset the connection"},
-  "sys/tcpv4/retrans/segs" : { "dimensions" : [], "type" : "gauge", "help": "Total segments re-transmitted"},
-
-  "coordinator_segment/count" : { "dimensions" : ["dataSource"], "type" : "gauge", "help": "Number of served segments."},
-  "historical_segment/count" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge", "help": "Number of served segments."}
+  "sys/tcpv4/retrans/segs" : { "dimensions" : [], "type" : "gauge", "help": "Total segments re-transmitted"}
 }

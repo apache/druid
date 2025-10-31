@@ -20,11 +20,13 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -47,6 +49,7 @@ import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
 import org.apache.druid.segment.virtual.PrefixFilteredVirtualColumn;
 import org.apache.druid.segment.virtual.RegexFilteredVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
@@ -1603,25 +1606,25 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "array_length(\"v2\")",
-                                ColumnType.LONG
-                            ),
-                            expressionVirtualColumn(
-                                "v1",
-                                "array_length(\"dim3\")",
+                                "array_length(\"v1\")",
                                 ColumnType.LONG
                             ),
                             new ListFilteredVirtualColumn(
-                                "v2",
+                                "v1",
                                 DefaultDimensionSpec.of("dim3"),
                                 ImmutableSet.of("b"),
                                 true
+                            ),
+                            expressionVirtualColumn(
+                                "v2",
+                                "array_length(\"dim3\")",
+                                ColumnType.LONG
                             )
                         )
                         .setDimensions(
                             dimensions(
                                 new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
-                                new DefaultDimensionSpec("v1", "d1", ColumnType.LONG)
+                                new DefaultDimensionSpec("v2", "d1", ColumnType.LONG)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -2123,6 +2126,43 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "filter((x) -> array_contains(array(null), x), lookup(\"dim3\",'lookyloo'))",
+                                ColumnType.STRING
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build())
+        .expectedResults(
+            ImmutableList.of(new Object[]{null, 7L}))
+        .run();
+
+  }
+
+  @Test
+  public void testMultiValuedFilterOnlyWhenLookupPullsInDuplicatesWithExtractionFn()
+  {
+    cannotVectorize();
+
+    final Map<String, Object> queryContext = QueryContexts.override(
+        QUERY_CONTEXT_DEFAULT,
+        ImmutableMap.of(PlannerContext.CTX_SQL_USE_EXTRACTION_FNS, true)
+    );
+
+    testBuilder()
+        .sql("SELECT \n"
+             + "  MV_FILTER_ONLY(LOOKUP(dim3,'lookyloo'),ARRAY[null]),count(1) \n"
+             + "FROM druid.foo AS t group by 1\n")
+        .queryContext(queryContext)
+        .expectedQuery(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
                             new ListFilteredVirtualColumn(
                                 "v0",
                                 new ExtractionDimensionSpec(
@@ -2137,17 +2177,21 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         )
                         .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
                         .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
-                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .setContext(queryContext)
                         .build())
         .expectedResults(
             ImmutableList.of(new Object[]{null, 7L}))
         .run();
-
   }
 
   @Test
   public void testMvContainsFilterWithExtractionFn()
   {
+    final Map<String, Object> queryContext = QueryContexts.override(
+        QUERY_CONTEXT_DEFAULT,
+        ImmutableMap.of(PlannerContext.CTX_SQL_USE_EXTRACTION_FNS, true)
+    );
+
     Druids.ScanQueryBuilder builder = newScanQueryBuilder()
         .dataSource(CalciteTests.DATASOURCE3)
         .intervals(querySegmentSpec(Filtration.eternity()))
@@ -2165,6 +2209,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
         );
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE MV_CONTAINS(SUBSTRING(dim3, 1, 1), ARRAY['a','b']) LIMIT 5",
+        queryContext,
         ImmutableList.of(builder.build()),
         ImmutableList.of(
             new Object[]{"[\"a\",\"b\"]"}

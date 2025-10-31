@@ -117,7 +117,7 @@ public class SegmentGenerator implements Closeable
         schemaInfo,
         schemaInfo.getDimensionsSpec(),
         TransformSpec.NONE,
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
         granularity,
         Collections.emptyList(),
         numRows

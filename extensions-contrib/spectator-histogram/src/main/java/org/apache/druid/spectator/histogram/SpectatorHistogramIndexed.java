@@ -20,11 +20,11 @@
 package org.apache.druid.spectator.histogram;
 
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.IndexedIterable;
 import org.apache.druid.segment.data.ObjectStrategy;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.serde.Serializer;
 
 import javax.annotation.Nullable;
@@ -154,7 +154,7 @@ public class SpectatorHistogramIndexed implements CloseableIndexed<SpectatorHist
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher)
+  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder)
   {
     throw new UnsupportedOperationException("Serialization not supported here");
   }

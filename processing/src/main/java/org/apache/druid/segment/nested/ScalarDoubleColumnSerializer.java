@@ -22,14 +22,13 @@ package org.apache.druid.segment.nested;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
-import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.ColumnarDoublesSerializer;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.FixedIndexedWriter;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
@@ -47,12 +46,12 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
 
   public ScalarDoubleColumnSerializer(
       String name,
-      IndexSpec indexSpec,
+      NestedCommonFormatColumnFormatSpec columnFormatSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       Closer closer
   )
   {
-    super(name, indexSpec, segmentWriteOutMedium, closer);
+    super(name, columnFormatSpec, segmentWriteOutMedium, closer);
   }
 
   @Override
@@ -96,7 +95,7 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
         segmentWriteOutMedium,
         StringUtils.format("%s.double_column", name),
         ByteOrder.nativeOrder(),
-        indexSpec.getDimensionCompression(),
+        columnFormatSpec.getDoubleColumnCompression(),
         segmentWriteOutMedium.getCloser()
     );
     doublesSerializer.open();
@@ -128,18 +127,18 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
   }
 
   @Override
-  protected void writeValueColumn(FileSmoosher smoosher) throws IOException
+  protected void writeValueColumn(SegmentFileBuilder fileBuilder) throws IOException
   {
-    writeInternal(smoosher, doublesSerializer, ColumnSerializerUtils.DOUBLE_VALUE_COLUMN_FILE_NAME);
+    writeInternal(fileBuilder, doublesSerializer, ColumnSerializerUtils.DOUBLE_VALUE_COLUMN_FILE_NAME);
   }
 
   @Override
-  protected void writeDictionaryFile(FileSmoosher smoosher) throws IOException
+  protected void writeDictionaryFile(SegmentFileBuilder fileBuilder) throws IOException
   {
     if (dictionaryIdLookup.getDoubleBufferMapper() != null) {
-      copyFromTempSmoosh(smoosher, dictionaryIdLookup.getDoubleBufferMapper());
+      copyFromTempSmoosh(fileBuilder, dictionaryIdLookup.getDoubleBufferMapper());
     } else {
-      writeInternal(smoosher, dictionaryWriter, ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME);
+      writeInternal(fileBuilder, dictionaryWriter, ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME);
     }
   }
 

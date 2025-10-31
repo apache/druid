@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import org.apache.calcite.avatica.AvaticaSqlException;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexing.common.task.Task;
@@ -297,7 +298,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
   }
 
   @BeforeAll
-  public void setupDataAndRoles() throws Exception
+  public void setupDataAndRoles()
   {
     httpClient = router.bindings().globalHttpClient();
 
@@ -311,7 +312,7 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
         .withId(taskId);
 
     cluster.callApi().runTask(task, overlord);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     setupHttpClientsAndUsers();
     setExpectedSystemSchemaObjects(dataSource, taskId);
@@ -1046,6 +1047,26 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
         "http://%s:%s",
         node.getHost(),
         node.getPlaintextPort()
+    );
+  }
+
+  /**
+   * curr_size on historicals changes because cluster state is not isolated across
+   * different
+   * integration tests, zero it out for consistent test results
+   * version and start_time are not configurable therefore we zero them as well
+   */
+  protected static List<Map<String, Object>> getServersWithoutNonConfigurableFields(List<Map<String, Object>> servers)
+  {
+    return Lists.transform(
+        servers,
+        (server) -> {
+          Map<String, Object> newServer = new HashMap<>(server);
+          newServer.put("curr_size", 0);
+          newServer.put("start_time", "0");
+          newServer.put("version", "0.0.0");
+          return newServer;
+        }
     );
   }  
 }
