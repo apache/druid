@@ -80,14 +80,44 @@ public class MonitorsConfig
            '}';
   }
 
-  public static Map<String, String[]> mapOfDatasourceAndTaskID(@Nullable final String datasource, @Nullable final String taskId)
+  /**
+   * Similar to {@link #mapOfDatasourceAndTaskID}, but uses {@code taskId} as the dimension instead of {@code id}
+   * to disambiguate the identifier.
+   *
+   * @return a map containing the supplied datasource and taskId dimensions if provided; otherwise returns an empty map.
+   */
+  public static Map<String, String[]> mapOfDatasourceAndTaskIdDimension(
+      @Nullable final String datasource,
+      @Nullable final String taskId
+  )
+  {
+    return mapOfDatasourceAndTaskDimension(datasource, taskId, DruidMetrics.TASK_ID);
+  }
+
+  /**
+   * This is left for backwards compatibility with existing monitors.
+   * Use {@link #mapOfDatasourceAndTaskIdDimension} to disambiguate the id dimension.
+   */
+  public static Map<String, String[]> mapOfDatasourceAndTaskID(
+      @Nullable final String datasource,
+      @Nullable final String taskId
+  )
+  {
+    return mapOfDatasourceAndTaskDimension(datasource, taskId, DruidMetrics.ID);
+  }
+
+  private static Map<String, String[]> mapOfDatasourceAndTaskDimension(
+      @Nullable final String datasource,
+      @Nullable final String taskId,
+      final String taskKey
+  )
   {
     final ImmutableMap.Builder<String, String[]> builder = ImmutableMap.builder();
     if (datasource != null) {
       builder.put(DruidMetrics.DATASOURCE, new String[]{datasource});
     }
     if (taskId != null) {
-      builder.put(DruidMetrics.ID, new String[]{taskId});
+      builder.put(taskKey, new String[]{taskId});
     }
     return builder.build();
   }

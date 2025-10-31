@@ -131,13 +131,13 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`query/failed/count`|Number of failed queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
 |`query/interrupted/count`|Number of queries interrupted due to cancellation.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
 |`query/timeout/count`|Number of timed out queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
-|`mergeBuffer/pendingRequests`|Number of requests waiting to acquire a batch of buffers from the merge buffer pool.|`dataSource`, task `id`. This metric is only available if the `GroupByStatsMonitor` module is included.|Should be ideally 0, though a higher number isn't representative of a problem.|
-|`mergeBuffer/used`|Number of merge buffers used from the merge buffer pool.|`dataSource`, task `id`. This metric is only available if the `GroupByStatsMonitor` module is included.|Depends on the number of groupBy queries needing merge buffers.|
-|`mergeBuffer/queries`|Number of groupBy queries that acquired a batch of buffers from the merge buffer pool.|`dataSource`, task `id`, This metric is only available if the `GroupByStatsMonitor` module is included.|Depends on the number of groupBy queries needing merge buffers.|
-|`mergeBuffer/acquisitionTimeNs`|Total time in nanoseconds to acquire merge buffer for groupBy queries.|`dataSource`, task `id`. This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
-|`groupBy/spilledQueries`|Number of groupBy queries that have spilled onto the disk.|`dataSource`, task `id`. This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
-|`groupBy/spilledBytes`|Number of bytes spilled on the disk by the groupBy queries.|`dataSource`, task `id`. This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
-|`groupBy/mergeDictionarySize`|Size of on-heap merge dictionary in bytes.|`dataSource`, task `id`. This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
+|`mergeBuffer/pendingRequests`|Number of requests waiting to acquire a batch of buffers from the merge buffer pool.|`dataSource`, `taskId`. This metric is only available if the `GroupByStatsMonitor` module is included.|Should be ideally 0, though a higher number isn't representative of a problem.|
+|`mergeBuffer/used`|Number of merge buffers used from the merge buffer pool.|`dataSource`, `taskId`. This metric is only available if the `GroupByStatsMonitor` module is included.|Depends on the number of groupBy queries needing merge buffers.|
+|`mergeBuffer/queries`|Number of groupBy queries that acquired a batch of buffers from the merge buffer pool.|`dataSource`, `taskId`, This metric is only available if the `GroupByStatsMonitor` module is included.|Depends on the number of groupBy queries needing merge buffers.|
+|`mergeBuffer/acquisitionTimeNs`|Total time in nanoseconds to acquire merge buffer for groupBy queries.|`dataSource`, `taskId`. This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
+|`groupBy/spilledQueries`|Number of groupBy queries that have spilled onto the disk.|`dataSource`, `taskId`. This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
+|`groupBy/spilledBytes`|Number of bytes spilled on the disk by the groupBy queries.|`dataSource`, `taskId`. This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
+|`groupBy/mergeDictionarySize`|Size of on-heap merge dictionary in bytes.|`dataSource`, `taskId`. This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
 
 ### Jetty
 
