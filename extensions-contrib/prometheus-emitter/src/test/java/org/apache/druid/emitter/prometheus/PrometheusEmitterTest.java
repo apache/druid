@@ -24,6 +24,7 @@ import io.prometheus.client.Collector;
 import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.exporter.HTTPServer;
 import io.prometheus.client.exporter.PushGateway;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.easymock.EasyMock;
@@ -34,6 +35,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static org.easymock.EasyMock.anyObject;
@@ -438,7 +440,8 @@ public class PrometheusEmitterTest
   {
     int flushPeriod = 3;
     PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "test", null, 0, null, true, true, flushPeriod, null, false, null);
-    PrometheusEmitter emitter = new PrometheusEmitter(config);
+    ScheduledExecutorService exec = ScheduledExecutors.fixed(1, "PrometheusTTLExecutor-%s");
+    PrometheusEmitter emitter = new PrometheusEmitter(config, exec);
     emitter.start();
 
     ServiceMetricEvent event = ServiceMetricEvent.builder()
@@ -456,19 +459,17 @@ public class PrometheusEmitterTest
         "Metric should not be expired initially",
         testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
     );
+    Assert.assertEquals(1, testMetric.getCollector().collect().get(0).samples.size());
 
     // Wait for the metric to expire (ttl + 1 second buffer)
-    try {
-      Thread.sleep(TimeUnit.SECONDS.toMillis(flushPeriod) + 1000);
-    }
-    catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    }
+    sleep(TimeUnit.SECONDS.toMillis(flushPeriod) + 1000);
 
     Assert.assertTrue(
         "Metric should be expired after TTL",
         testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
     );
+    exec.execute(emitter::cleanUpStaleMetrics);
+    Assert.assertEquals(0, testMetric.getCollector().collect().get(0).samples.size());
     emitter.close();
   }
 
@@ -477,7 +478,8 @@ public class PrometheusEmitterTest
   {
     int flushPeriod = 3;
     PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "test", null, 0, null, true, true, flushPeriod, null, false, null);
-    PrometheusEmitter emitter = new PrometheusEmitter(config);
+    ScheduledExecutorService exec = ScheduledExecutors.fixed(1, "PrometheusTTLExecutor-%s");
+    PrometheusEmitter emitter = new PrometheusEmitter(config, exec);
     emitter.start();
 
     ServiceMetricEvent event = ServiceMetricEvent.builder()
@@ -498,20 +500,18 @@ public class PrometheusEmitterTest
         "Metric should not be expired initially",
         testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
     );
+    Assert.assertEquals(1, testMetric.getCollector().collect().get(0).samples.size());
 
     // Wait for a little, but not long enough for the metric to expire
     long waitTime = TimeUnit.SECONDS.toMillis(flushPeriod) / 5;
-    try {
-      Thread.sleep(waitTime);
-    }
-    catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    }
+    sleep(waitTime);
 
     Assert.assertFalse(
         "Metric should not be expired",
         testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
     );
+    exec.execute(emitter::cleanUpStaleMetrics);
+    Assert.assertEquals(1, testMetric.getCollector().collect().get(0).samples.size());
     emitter.close();
   }
 
@@ -520,7 +520,8 @@ public class PrometheusEmitterTest
   {
     int flushPeriod = 3;
     PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "test", null, 0, null, true, true, flushPeriod, null, false, null);
-    PrometheusEmitter emitter = new PrometheusEmitter(config);
+    ScheduledExecutorService exec = ScheduledExecutors.fixed(1, "PrometheusTTLExecutor-%s");
+    PrometheusEmitter emitter = new PrometheusEmitter(config, exec);
     emitter.start();
 
     ServiceMetricEvent event1 = ServiceMetricEvent.builder()
@@ -550,15 +551,12 @@ public class PrometheusEmitterTest
         "Metric should not be expired initially",
         testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical2"))
     );
+    exec.execute(emitter::cleanUpStaleMetrics);
+    Assert.assertEquals(2, testMetric.getCollector().collect().get(0).samples.size());
 
     // Wait for a little, but not long enough for the metric to expire
     long waitTime = TimeUnit.SECONDS.toMillis(flushPeriod) / 5;
-    try {
-      Thread.sleep(waitTime);
-    }
-    catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    }
+    sleep(waitTime);
 
     Assert.assertFalse(
         "Metric should not be expired",
@@ -568,16 +566,14 @@ public class PrometheusEmitterTest
         "Metric should not be expired",
         testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical2"))
     );
+    exec.execute(emitter::cleanUpStaleMetrics);
+    Assert.assertEquals(2, testMetric.getCollector().collect().get(0).samples.size());
     // Reset update time only for event2
     emitter.emit(event2);
 
-    try {
-      // Wait for the remainder of the TTL to allow event1 to expire
-      Thread.sleep(waitTime * 4);
-    }
-    catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    }
+    // Wait for the remainder of the TTL to allow event1 to expire
+    sleep(waitTime * 4);
+
     Assert.assertTrue(
         "Metric should be expired",
         testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
@@ -586,6 +582,18 @@ public class PrometheusEmitterTest
         "Metric should not be expired",
         testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical2"))
     );
+    exec.execute(emitter::cleanUpStaleMetrics);
+    Assert.assertEquals(1, testMetric.getCollector().collect().get(0).samples.size());
     emitter.close();
+  }
+
+  private void sleep(long millis)
+  {
+    try {
+      Thread.sleep(millis);
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
   }
 }

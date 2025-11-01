@@ -74,6 +74,14 @@ public class PrometheusEmitter implements Emitter
     metrics = new Metrics(config);
   }
 
+  public PrometheusEmitter(PrometheusEmitterConfig config, ScheduledExecutorService exec)
+  {
+    this.config = config;
+    this.strategy = config.getStrategy();
+    metrics = new Metrics(config);
+    this.exec = exec;
+  }
+
   @Override
   public void start()
   {
@@ -89,7 +97,7 @@ public class PrometheusEmitter implements Emitter
         log.error("HTTPServer is already started");
       }
       // Start TTL scheduler if TTL is configured
-      if (config.getFlushPeriod() != null) {
+      if (config.getFlushPeriod() != null && exec != null) {
         exec = ScheduledExecutors.fixed(1, "PrometheusTTLExecutor-%s");
         exec.scheduleAtFixedRate(
             this::cleanUpStaleMetrics,
@@ -279,7 +287,7 @@ public class PrometheusEmitter implements Emitter
    * This method is called periodically by the TTL scheduler when using the 'exporter' strategy with
    * a configured flushPeriod.
    */
-  private void cleanUpStaleMetrics()
+  protected void cleanUpStaleMetrics()
   {
     if (config.getFlushPeriod() == null) {
       return;
