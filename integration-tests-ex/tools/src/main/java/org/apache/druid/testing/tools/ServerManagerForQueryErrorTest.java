@@ -31,6 +31,7 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -47,7 +48,6 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryUnsupportedException;
-import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.planning.ExecutionVertex;
@@ -148,7 +148,10 @@ public class ServerManagerForQueryErrorTest extends ServerManager
     final Optional<VersionedIntervalTimeline<String, DataSegment>> maybeTimeline =
         segmentManager.getTimeline(ev.getBaseTableDataSource());
     if (maybeTimeline.isEmpty()) {
-      return new ReportTimelineMissingSegmentQueryRunner<>(Lists.newArrayList(specs));
+      return (queryPlus, responseContext) -> {
+        responseContext.addMissingSegments(Lists.newArrayList(specs));
+        return Sequences.empty();
+      };
     }
 
     final QueryRunnerFactory<T, Query<T>> factory = getQueryRunnerFactory(query);

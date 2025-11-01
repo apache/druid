@@ -34,6 +34,7 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -58,7 +59,6 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryUnsupportedException;
-import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
@@ -184,7 +184,10 @@ public class ServerManager implements QuerySegmentWalker
     final Optional<VersionedIntervalTimeline<String, DataSegment>> maybeTimeline =
         segmentManager.getTimeline(ev.getBaseTableDataSource());
     if (maybeTimeline.isEmpty()) {
-      return new ReportTimelineMissingSegmentQueryRunner<>(Lists.newArrayList(specs));
+      return (queryPlus, responseContext) -> {
+        responseContext.addMissingSegments(Lists.newArrayList(specs));
+        return Sequences.empty();
+      };
     }
 
     final QueryRunnerFactory<T, Query<T>> factory = getQueryRunnerFactory(query);
@@ -223,19 +226,6 @@ public class ServerManager implements QuerySegmentWalker
     }
 
     return segmentManager.getSegmentsBundle(segmentsToMap, segmentMapFunction);
-  }
-
-
-
-  /**
-   * Returns a {@link LeafSegmentsBundle} which partitions segments into cached, loadable, and missing segments
-   */
-  protected LeafSegmentsBundle getSegmentsBundle(
-      List<DataSegmentAndDescriptor> segments,
-      SegmentMapFunction segmentMapFunction
-  )
-  {
-    return segmentManager.getSegmentsBundle(segments, segmentMapFunction);
   }
 
   protected ArrayList<SegmentReference> getOrLoadBundleSegments(
