@@ -119,7 +119,7 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
       }
     };
 
-    final File vsfRoot =  temporaryFolder.newFolder();
+    final File vsfRoot = temporaryFolder.newFolder();
     final File virtualSegmentCacheDir = new File(vsfRoot, "segmentCache");
     FileUtils.mkdirp(virtualSegmentCacheDir);
     final File vsfInfoDir = new File(vsfRoot, "info");
