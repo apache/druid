@@ -97,7 +97,7 @@ public class PrometheusEmitter implements Emitter
         log.error("HTTPServer is already started");
       }
       // Start TTL scheduler if TTL is configured
-      if (config.getFlushPeriod() != null && exec != null) {
+      if (config.getFlushPeriod() != null && exec == null) {
         exec = ScheduledExecutors.fixed(1, "PrometheusTTLExecutor-%s");
         exec.scheduleAtFixedRate(
             this::cleanUpStaleMetrics,
