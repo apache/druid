@@ -562,7 +562,7 @@ public class PrometheusEmitterTest
         "Metric should not be expired",
         testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical2"))
     );
-    exec.execute(emitter::cleanUpStaleMetrics);
+    exec.submit(emitter::cleanUpStaleMetrics).get();
     Assert.assertEquals(2, testMetric.getCollector().collect().get(0).samples.size());
     // Reset update time only for event2
     emitter.emit(event2);
