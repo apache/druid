@@ -76,9 +76,7 @@ public class PrometheusEmitter implements Emitter
 
   public PrometheusEmitter(PrometheusEmitterConfig config, ScheduledExecutorService exec)
   {
-    this.config = config;
-    this.strategy = config.getStrategy();
-    metrics = new Metrics(config);
+    this(config);
     this.exec = exec;
   }
 
