@@ -5122,7 +5122,7 @@ name: Docker Java
 license_category: binary
 module: extensions-core/druid-testcontainers
 license_name: Apache License version 2.0
-version: 3.3.4
+version: 3.6.0
 libraries:
   - com.github.docker-java: docker-java-api
   - com.github.docker-java: docker-java-transport
