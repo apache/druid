@@ -77,6 +77,12 @@ Projections now support static filters. Additionally, there have been general im
 
 ### Virtual storage (experimental)
 
+Virtual storage fabric mode for the Historical service lowers the disk space your Historical servers require for segments. Instead of loading segments when they're published, segments get loaded on demand during queries. Any unneeded segments get removed from disk but get loaded again when processing a query requires that particular segment.
+
+To enable virtual storage, set `druid.segmentCache.virtualStorage` to `true`. 
+
+This feature is experimental and has several limitations. For more information, see the pull request:
+
 [#18176](https://github.com/apache/druid/pull/18176)
 
 ### New input format
@@ -243,7 +249,7 @@ The `druid.auth.authenticator.kerberos.cookieSignatureSecret` config is now mand
 
 #### Other cluster management improvements
 
-- Added a `version` column `sys.server`. This is useful during rolling upgrades to verify the state of the cluster [#18542](https://github.com/apache/druid/pull/18542)
+- Added a `version` column to `sys.server`. This is useful during rolling upgrades to verify the state of the cluster [#18542](https://github.com/apache/druid/pull/18542)
 - Added support for short, unique index names in metadata stores [#18515](https://github.com/apache/druid/pull/18515)
 - Added config `stopTaskCountPercent` to lag-based auto-scaler to allow task count to be scaled as a percentage of the current task count. [#18480](https://github.com/apache/druid/pull/18480)
 - Added headers to the user agent for services, improving traceability between services [#18505](https://github.com/apache/druid/pull/18505)
