@@ -69,15 +69,14 @@ Additionally, support for Java 11 has been removed. Upgrade to Java 17 or 21.
 
 [#18424](https://github.com/apache/druid/pull/18424) [#18624](https://github.com/apache/druid/pull/18624)
 
-### Projections (beta)
-
+### Projections 
 Projections now support static filters. Additionally, there have been general improvements to performance and reliability.
 
 [#18342](https://github.com/apache/druid/pull/18342) [#18535](https://github.com/apache/druid/pull/18535)
 
 ### Virtual storage (experimental)
 
-Virtual storage fabric mode for the Historical service lowers the disk space your Historical servers require for segments. Instead of loading segments when they're published, segments get loaded on demand during queries. Any unneeded segments get removed from disk but get loaded again when processing a query requires that particular segment.
+Virtual storage fabric mode for enables Historical servers to serve more segments than what their physical disk can hold. Instead of loading segments when they're published, segments get loaded on demand during queries. Any unneeded segments get removed from disk but get loaded again when processing a query requires that particular segment.
 
 To enable virtual storage, set `druid.segmentCache.virtualStorage` to `true`. 
 
