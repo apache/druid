@@ -249,7 +249,7 @@ The `druid.auth.authenticator.kerberos.cookieSignatureSecret` config is now mand
 - Added headers to the user agent for services, improving traceability between services [#18505](https://github.com/apache/druid/pull/18505)
 - Added a new Kafka emitter config: `druid.emitter.kafka.producer.shutdownTimeout`. It controls how long the Kafka producer waits for pending requests to finish before shutting down [#18427](https://github.com/apache/druid/pull/18427)
 - Changed how Netty worker threads get calculated, lowering the number of threads used at small processor counts [#18493](https://github.com/apache/druid/pull/18493)
-- Changed the response for the `/status/properties` to be alphabetical. The response is more readable now and related keys are grouped together [#18506](https://github.com/apache/druid/pull/18506) 
+- Changed the response for the `/status/properties` to be sorted lexicographically on the property names. The response is more readable now and related keys are grouped together [#18506](https://github.com/apache/druid/pull/18506).
 - Improved segment loading during startup in certain situations by optimizing concurrent writing [#18470](https://github.com/apache/druid/pull/18470)
 
 ### Data management
