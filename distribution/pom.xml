@@ -785,6 +785,10 @@
                                         <argument>io.confluent.druid.extensions:confluent-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:opentelemetry-emitter</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-kafka-extraction-namespace</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-lookups-cached-global</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
