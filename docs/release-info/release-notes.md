@@ -245,7 +245,7 @@ The `druid.auth.authenticator.kerberos.cookieSignatureSecret` config is now mand
 
 - Added a `version` column `sys.server`. This is useful during rolling upgrades to verify the state of the cluster [#18542](https://github.com/apache/druid/pull/18542)
 - Added support for short, unique index names in metadata stores [#18515](https://github.com/apache/druid/pull/18515)
-- Added support for proportional `stopTaskCount` to the task count autoscaler 
+- Added config `stopTaskCountPercent` to lag-based auto-scaler to allow task count to be scaled as a percentage of the current task count. [#18480](https://github.com/apache/druid/pull/18480)
 - Added headers to the user agent for services, improving traceability between services [#18505](https://github.com/apache/druid/pull/18505)
 - Added a new Kafka emitter config: `druid.emitter.kafka.producer.shutdownTimeout`. It controls how long the Kafka producer waits for pending requests to finish before shutting down [#18427](https://github.com/apache/druid/pull/18427)
 - Changed how Netty worker threads get calculated, lowering the number of threads used at small processor counts [#18493](https://github.com/apache/druid/pull/18493)
