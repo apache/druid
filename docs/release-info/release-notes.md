@@ -145,7 +145,7 @@ At ingestion time, dimension schemas in `dimensionsSpec` are now strictly valida
 #### Other ingestion improvements
 
 - Added support for session tokens (`sessionToken`) to the S3 input source [#18609](https://github.com/apache/druid/pull/18609)
-- Improved task performance. Druid now polls from memory before fetching task information from the metadata database [#18448](https://github.com/apache/druid/pull/18448)
+- Improved performance of task APIs served by the Overlord. Druid now reads the in-memory state of the Overlord before fetching task information from the metadata store [#18448](https://github.com/apache/druid/pull/18448)
 - Improved task execution so that they can successfully complete even if there are problems pushing logs and reports to deep storage [#18210](https://github.com/apache/druid/pull/18210)
 
 #### SQL-based ingestion
