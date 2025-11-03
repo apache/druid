@@ -391,7 +391,7 @@ Upgrade to Java 17 or 21. Note that some versions of Java 21 encountered issues 
 
 #### Embedded cluster tests
 
-You can use the new embedded cluster test framework to run lightweight integration tests using a fully-functional Druid cluster that runs on a single process, including any extensions you want to load as well as ZooKeeper and Derby metadata store.
+You can use the new embedded cluster test framework to run lightweight integration tests using a fully functional Druid cluster that runs on a single process, including any extensions you want to load as well as ZooKeeper and Derby metadata store.
 
 You no longer need to run `mvn build`, create a docker image, or even run startup scripts to perform integration tests.
 
