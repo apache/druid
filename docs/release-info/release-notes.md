@@ -97,7 +97,7 @@ Druid 35.0.0 will ignore the extension if it's in the load list. Future versions
 
 ### Improved monitor loading
 
-You can now specify monitors in `common.runtime.properties`. Previously, you needed to define monitors in the specific `runtime.properties` file for the service a monitor is meant for.
+You can now specify monitors in `common.runtime.properties` and each monitor will be loaded only on the applicable server types. Previously, you needed to define monitors in the specific `runtime.properties` file for the service a monitor is meant for.
 
 [#18321](https://github.com/apache/druid/pull/18321)
 
