@@ -389,6 +389,14 @@ Upgrade to Java 17 or 21. Note that some versions of Java 21 encountered issues 
 
 ### Developer notes
 
+#### Embedded cluster tests
+
+You can use the new embedded cluster test framework to run lightweight integration tests using a fully-functional Druid cluster that runs on a single process, including any extensions you want to load as well as ZooKeeper and Derby metadata store.
+
+You no longer need to run `mvn build`, create a docker image, or even run startup scripts to perform integration tests.
+
+[#18147](https://github.com/apache/druid/pull/18147)
+
 #### Specialized virtual columns for JSON
 
 The `ColumnHolder` returned by `ColumnSelector` now returns a `SelectableColumn` rather than `BaseColumn` from `getColumn()`. The `SelectableColumn` may be a `BaseColumn` or may be an implementation provided by a virtual column. Extensions that need to retrieve physical columns from a `ColumnSelector` can check if the column is a `BaseColumn` using `instanceof`. For convenience, the return type of `getColumnHolder` on `QueryableIndex` has been specialized to `BaseColumnHolder`, which always returns `BaseColumn` from `getColumn()`. Extensions that are calling this method on `QueryableIndex` can store the result in a variable of type `BaseColumnHolder` to avoid needing to cast the column.
@@ -407,7 +415,7 @@ The `MetadataStorageActionHandler` extension point now has simpler APIs.
 This is a breaking change for any SQL metadata extensions in the wild.
 The changes for PostgreSQL, MySQL and SQLServer are already complete. [#18479](https://github.com/apache/druid/pull/18479)
 
-#### `DriudLeaderClient` removal
+#### `DriudLeaderClient` removed
 
 `DruidLeaderClient` has been removed from extensions and replaced with a `ServiceClient`-based implementation. Additionally, `CoordinatorServiceClient` for querying non-core APIs exposed by the Coordinator is available through `druid-server`.
 
