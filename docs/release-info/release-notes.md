@@ -219,7 +219,7 @@ You can now  write exceptions that Druid encounters as a row and then verify whe
 
 You can now configure labels for Druid services. Use the `druid.labels` field in the configuration options for the service and provide a JSON object of key-value pairs, such as `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`.
 
-One way to view these labels is on the **Services** tab in the web console.
+These labels can be queried using the `sys.servers` system table and are also displayed on the **Services** tab in the web console.
 
 [#18547](https://github.com/apache/druid/pull/18547)
 
