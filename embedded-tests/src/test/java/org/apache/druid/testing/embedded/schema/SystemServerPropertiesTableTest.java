@@ -36,7 +36,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.Map;
 
-public class SystemPropertiesTableTest extends EmbeddedClusterTestBase
+public class SystemServerPropertiesTableTest extends EmbeddedClusterTestBase
 {
   private static final String BROKER_PORT = "9082";
   private static final String BROKER_SERVICE = "test/broker";

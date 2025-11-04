@@ -259,8 +259,8 @@ public class SystemSchema extends AbstractSchema
         new TasksTable(overlordClient, authorizerMapper),
         SUPERVISOR_TABLE,
         new SupervisorsTable(overlordClient, authorizerMapper),
-        SystemPropertiesTable.TABLE_NAME,
-        new SystemPropertiesTable(druidNodeDiscoveryProvider, authorizerMapper, httpClient, jsonMapper)
+        SystemServerPropertiesTable.TABLE_NAME,
+        new SystemServerPropertiesTable(druidNodeDiscoveryProvider, authorizerMapper, httpClient, jsonMapper)
     );
   }
 

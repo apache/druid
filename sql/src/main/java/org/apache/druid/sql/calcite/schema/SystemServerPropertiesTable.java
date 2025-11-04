@@ -57,7 +57,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * System schema table {@code sys.server_properties} that contains the properties of all Druid servers.
@@ -65,7 +64,7 @@ import java.util.stream.Stream;
  * that server would have multiple values in the column {@code node_roles} rather than duplicating all the
  * rows.
  */
-public class SystemPropertiesTable extends AbstractTable implements ScannableTable
+public class SystemServerPropertiesTable extends AbstractTable implements ScannableTable
 {
   public static final String TABLE_NAME = "server_properties";
 
@@ -83,7 +82,7 @@ public class SystemPropertiesTable extends AbstractTable implements ScannableTab
   private final HttpClient httpClient;
   private final ObjectMapper jsonMapper;
 
-  public SystemPropertiesTable(
+  public SystemServerPropertiesTable(
       DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       AuthorizerMapper authorizerMapper,
       HttpClient httpClient,
