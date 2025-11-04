@@ -27,9 +27,11 @@ import org.apache.druid.indexing.overlord.SegmentCreateRequest;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.ReplaceTaskLock;
+import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SortOrder;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -55,6 +57,11 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   private final TestSegmentsMetadataManager segmentsMetadataManager = new TestSegmentsMetadataManager();
 
   private int deleteSegmentsCount = 0;
+
+  public SegmentsMetadataManager getManager()
+  {
+    return segmentsMetadataManager;
+  }
 
   @Override
   public Set<String> retrieveAllDatasourceNames()
@@ -106,9 +113,15 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public Set<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility)
   {
-    return Set.copyOf(
-        segmentsMetadataManager.getRecentDataSourcesSnapshot().getDataSource(dataSource).getSegments()
-    );
+    if (visibility == Segments.ONLY_VISIBLE) {
+      return segmentsMetadataManager
+          .getRecentDataSourcesSnapshot()
+          .getAllUsedNonOvershadowedSegments(dataSource, Intervals.ETERNITY);
+    } else {
+      return Set.copyOf(
+          segmentsMetadataManager.getRecentDataSourcesSnapshot().getDataSource(dataSource).getSegments()
+      );
+    }
   }
 
   @Override

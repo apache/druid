@@ -61,6 +61,8 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Supplier;
 
@@ -69,6 +71,8 @@ import java.util.function.Supplier;
  */
 public class SegmentLocalCacheManager implements SegmentCacheManager
 {
+  private static final String DROP_PATH = "__drop";
+
   @VisibleForTesting
   static final String DOWNLOAD_START_MARKER_FILE_NAME = "downloadStartMarker";
 
@@ -181,6 +185,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
+  public boolean canLoadSegmentOnDemand(DataSegment dataSegment)
+  {
+    return config.isVirtualStorage();
+  }
+
+  @Override
   public List<DataSegment> getCachedSegments() throws IOException
   {
     if (!canHandleSegments()) {
@@ -188,68 +198,36 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           "canHandleSegments() is false. getCachedSegments() must be invoked only when canHandleSegments() returns true."
       );
     }
-    final File infoDir = getEffectiveInfoDir();
-    FileUtils.mkdirp(infoDir);
+
+    // clean up any dropping files
+    for (StorageLocation location : locations) {
+      File dropFiles = new File(location.getPath(), DROP_PATH);
+      if (dropFiles.exists()) {
+        final File[] dropping = dropFiles.listFiles();
+        if (dropping != null) {
+          log.debug("cleaning up[%s] segments in[%s]", dropping.length, dropFiles);
+          for (File droppedFile : dropping) {
+            try {
+              FileUtils.deleteDirectory(droppedFile);
+            }
+            catch (Exception e) {
+              log.warn(e, "Unable to remove dropped segment directory[%s]", droppedFile);
+            }
+          }
+        }
+      }
+    }
 
     final List<DataSegment> cachedSegments = new ArrayList<>();
-    final File[] segmentsToLoad = infoDir.listFiles();
+    final File[] segmentsToLoad = retrieveSegmentMetadataFiles();
 
-    int ignored = 0;
+    AtomicInteger ignoredFilesCounter = new AtomicInteger(0);
 
     for (int i = 0; i < segmentsToLoad.length; i++) {
       final File file = segmentsToLoad[i];
       log.info("Loading segment cache file [%d/%d][%s].", i + 1, segmentsToLoad.length, file);
       try {
-        final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
-        boolean removeInfo = false;
-        if (!segment.getId().toString().equals(file.getName())) {
-          log.warn("Ignoring cache file[%s] for segment[%s].", file.getPath(), segment.getId());
-          ignored++;
-        } else {
-          removeInfo = true;
-          final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
-          for (StorageLocation location : locations) {
-            // check for migrate from old nested local storage path format
-            final File legacyPath = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
-            if (legacyPath.exists()) {
-              final File destination = cacheEntry.toPotentialLocation(location.getPath());
-              FileUtils.mkdirp(destination);
-              final File[] oldFiles = legacyPath.listFiles();
-              final File[] newFiles = destination.listFiles();
-              // make sure old files exist and new files do not exist
-              if (oldFiles != null && oldFiles.length > 0 && newFiles != null && newFiles.length == 0) {
-                Files.move(legacyPath.toPath(), destination.toPath(), StandardCopyOption.ATOMIC_MOVE);
-              }
-              cleanupLegacyCacheLocation(location.getPath(), legacyPath);
-            }
-
-            if (cacheEntry.checkExists(location.getPath())) {
-              removeInfo = false;
-              final boolean reserveResult;
-              if (config.isVirtualStorage()) {
-                reserveResult = location.reserveWeak(cacheEntry);
-              } else {
-                reserveResult = location.reserve(cacheEntry);
-              }
-              if (!reserveResult) {
-                log.makeAlert(
-                    "storage[%s:%,d] has more segments than it is allowed. Currently loading Segment[%s:%,d]. Please increase druid.segmentCache.locations maxSize param",
-                    location.getPath(),
-                    location.availableSizeBytes(),
-                    segment.getId(),
-                    segment.getSize()
-                ).emit();
-              }
-              cachedSegments.add(segment);
-            }
-          }
-        }
-
-        if (removeInfo) {
-          final SegmentId segmentId = segment.getId();
-          log.warn("Unable to find cache file for segment[%s]. Deleting lookup entry.", segmentId);
-          removeInfoFile(segment);
-        }
+        addFilesToCachedSegments(file, ignoredFilesCounter, cachedSegments);
       }
       catch (Exception e) {
         log.makeAlert(e, "Failed to load segment from segment cache file.")
@@ -258,13 +236,75 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       }
     }
 
-    if (ignored > 0) {
+    if (ignoredFilesCounter.get() > 0) {
       log.makeAlert("Ignored misnamed segment cache files on startup.")
-         .addData("numIgnored", ignored)
+         .addData("numIgnored", ignoredFilesCounter.get())
          .emit();
     }
 
     return cachedSegments;
+  }
+
+  private void addFilesToCachedSegments(File file, AtomicInteger ignored, List<DataSegment> cachedSegments) throws IOException
+  {
+    final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
+    boolean removeInfo = false;
+    if (!segment.getId().toString().equals(file.getName())) {
+      log.warn("Ignoring cache file[%s] for segment[%s].", file.getPath(), segment.getId());
+      ignored.incrementAndGet();
+    } else {
+      removeInfo = true;
+      final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
+      for (StorageLocation location : locations) {
+        // check for migrate from old nested local storage path format
+        final File legacyPath = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
+        if (legacyPath.exists()) {
+          final File destination = cacheEntry.toPotentialLocation(location.getPath());
+          FileUtils.mkdirp(destination);
+          final File[] oldFiles = legacyPath.listFiles();
+          final File[] newFiles = destination.listFiles();
+          // make sure old files exist and new files do not exist
+          if (oldFiles != null && oldFiles.length > 0 && newFiles != null && newFiles.length == 0) {
+            Files.move(legacyPath.toPath(), destination.toPath(), StandardCopyOption.ATOMIC_MOVE);
+          }
+          cleanupLegacyCacheLocation(location.getPath(), legacyPath);
+        }
+
+        if (cacheEntry.checkExists(location.getPath())) {
+          removeInfo = false;
+          final boolean reserveResult;
+          if (config.isVirtualStorage()) {
+            reserveResult = location.reserveWeak(cacheEntry);
+          } else {
+            reserveResult = location.reserve(cacheEntry);
+          }
+          if (!reserveResult) {
+            log.makeAlert(
+                "storage[%s:%,d] has more segments than it is allowed. Currently loading Segment[%s:%,d]. Please increase druid.segmentCache.locations maxSize param",
+                location.getPath(),
+                location.availableSizeBytes(),
+                segment.getId(),
+                segment.getSize()
+            ).emit();
+          }
+          cachedSegments.add(segment);
+        }
+      }
+    }
+
+    if (removeInfo) {
+      final SegmentId segmentId = segment.getId();
+      log.warn("Unable to find cache file for segment[%s]. Deleting lookup entry.", segmentId);
+      removeInfoFile(segment);
+    }
+  }
+
+  private File[] retrieveSegmentMetadataFiles() throws IOException
+  {
+    final File infoDir = getEffectiveInfoDir();
+    FileUtils.mkdirp(infoDir);
+    File[] files = infoDir.listFiles();
+    return files == null ? new File[0] : files;
   }
 
   @Override
@@ -272,12 +312,38 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   {
     final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
     if (!segmentInfoCacheFile.exists()) {
-      jsonMapper.writeValue(segmentInfoCacheFile, segment);
+      FileUtils.writeAtomically(
+          segmentInfoCacheFile,
+          out -> {
+            jsonMapper.writeValue(out, segment);
+            return null;
+          }
+      );
     }
   }
 
   @Override
   public void removeInfoFile(final DataSegment segment)
+  {
+    final Runnable delete = () -> deleteSegmentInfoFile(segment);
+    final SegmentCacheEntryIdentifier entryId = new SegmentCacheEntryIdentifier(segment.getId());
+    boolean isCached = false;
+    // defer deleting until the unmount operation of the cache entry, if possible, so that if the process stops before
+    // the segment files are deleted, they can be properly managed on startup (since the info entry still exists)
+    for (StorageLocation location : locations) {
+      final SegmentCacheEntry cacheEntry = location.getCacheEntry(entryId);
+      if (cacheEntry != null) {
+        isCached = isCached || cacheEntry.setOnUnmount(delete);
+      }
+    }
+
+    // otherwise we are probably deleting for cleanup reasons, so try it anyway if it wasn't present in any location
+    if (!isCached) {
+      delete.run();
+    }
+  }
+
+  private void deleteSegmentInfoFile(DataSegment segment)
   {
     final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
     if (!segmentInfoCacheFile.delete()) {
@@ -298,7 +364,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           location.addWeakReservationHoldIfExists(cacheEntryIdentifier);
       try {
         if (hold != null) {
-
           if (hold.getEntry().isMounted()) {
             Optional<Segment> segment = hold.getEntry().acquireReference();
             if (segment.isPresent()) {
@@ -336,6 +401,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         if (retryAcquireExisting != null) {
           return retryAcquireExisting;
         }
+
+        if (!config.isVirtualStorage()) {
+          return AcquireSegmentAction.missingSegment();
+        }
+
         final Iterator<StorageLocation> iterator = strategy.getLocations();
         while (iterator.hasNext()) {
           final StorageLocation location = iterator.next();
@@ -345,6 +415,16 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           );
           try {
             if (hold != null) {
+              // write the segment info file if it doesn't exist. this can happen if we are loading after a drop
+              final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), dataSegment.getId().toString());
+              if (!segmentInfoCacheFile.exists()) {
+                FileUtils.writeAtomically(segmentInfoCacheFile, out -> {
+                  jsonMapper.writeValue(out, dataSegment);
+                  return null;
+                });
+                hold.getEntry().setOnUnmount(() -> deleteSegmentInfoFile(dataSegment));
+              }
+
               return new AcquireSegmentAction(
                   makeOnDemandLoadSupplier(hold.getEntry(), location),
                   hold
@@ -404,7 +484,23 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   public void load(final DataSegment dataSegment) throws SegmentLoadingException
   {
     if (config.isVirtualStorage()) {
-      // no-op, we'll do a load when someone asks for the segment
+      // virtual storage doesn't do anything with loading immediately, but check to see if the segment is already cached
+      // and if so, clear out the onUnmount action
+      final ReferenceCountingLock lock = lock(dataSegment);
+      synchronized (lock) {
+        try {
+          final SegmentCacheEntryIdentifier cacheEntryIdentifier = new SegmentCacheEntryIdentifier(dataSegment.getId());
+          for (StorageLocation location : locations) {
+            final SegmentCacheEntry cacheEntry = location.getCacheEntry(cacheEntryIdentifier);
+            if (cacheEntry != null) {
+              cacheEntry.clearOnUnmount();
+            }
+          }
+        }
+        finally {
+          unlock(dataSegment, lock);
+        }
+      }
       return;
     }
     final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(dataSegment);
@@ -439,6 +535,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             final SegmentCacheEntry entry = location.getCacheEntry(id);
             if (entry != null) {
               entry.lazyLoadCallback = loadFailed;
+              entry.clearOnUnmount();
               entry.mount(location);
             }
           }
@@ -641,12 +738,13 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             final SegmentCacheEntry entry = location.getCacheEntry(cacheEntry.id);
             if (entry != null) {
               entry.lazyLoadCallback = segmentLoadFailCallback;
+              entry.clearOnUnmount();
               entry.mount(location);
               return entry;
             }
           } else {
             // entry is not reserved, clean it up
-            deleteCacheEntryDirectory(cacheEntry.toPotentialLocation(location.getPath()));
+            atomicMoveAndDeleteCacheEntryDirectory(cacheEntry.toPotentialLocation(location.getPath()));
           }
         }
       }
@@ -662,6 +760,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           final SegmentCacheEntry entry = location.getCacheEntry(cacheEntry.id);
           if (entry != null) {
             entry.lazyLoadCallback = segmentLoadFailCallback;
+            entry.clearOnUnmount();
             entry.mount(location);
             return entry;
           }
@@ -675,13 +774,22 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   /**
-   * Deletes a directory and logs about it. This method should only be called under the lock of a {@link #segmentLocks}
+   * Performs an atomic move to a sibling {@link #DROP_PATH} directory, and then deletes the directory and logs about
+   * it. This method should only be called under the lock of a {@link #segmentLocks}.
    */
-  private static void deleteCacheEntryDirectory(final File path)
+  private static void atomicMoveAndDeleteCacheEntryDirectory(final File path)
   {
-    log.info("Deleting directory[%s]", path);
+    final File parent = path.getParentFile();
+    final File tempLocation = new File(parent, DROP_PATH);
     try {
-      FileUtils.deleteDirectory(path);
+      if (!tempLocation.exists()) {
+        FileUtils.mkdirp(tempLocation);
+      }
+      final File tempPath = new File(tempLocation, path.getName());
+      log.debug("moving[%s] to temp location[%s]", path, tempLocation);
+      Files.move(path.toPath(), tempPath.toPath(), StandardCopyOption.ATOMIC_MOVE);
+      log.info("Deleting directory[%s]", path);
+      FileUtils.deleteDirectory(tempPath);
     }
     catch (Exception e) {
       log.error(e, "Unable to remove directory[%s]", path);
@@ -689,7 +797,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   /**
-   * Calls {@link #deleteCacheEntryDirectory(File)} and then checks parent path if it is empty, and recursively
+   * Calls {@link FileUtils#deleteDirectory(File)} and then checks parent path if it is empty, and recursively
    * continues until a non-empty directory or the base path is reached. This method is not thread-safe, and should only
    * be used by a single caller.
    */
@@ -699,7 +807,13 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       return;
     }
 
-    deleteCacheEntryDirectory(cacheFile);
+    try {
+      log.info("Deleting migrated segment directory[%s]", cacheFile);
+      FileUtils.deleteDirectory(cacheFile);
+    }
+    catch (Exception e) {
+      log.warn(e, "Unable to remove directory[%s]", cacheFile);
+    }
 
     File parent = cacheFile.getParentFile();
     if (parent != null) {
@@ -754,6 +868,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     private StorageLocation location;
     private File storageDir;
     private ReferenceCountedSegmentProvider referenceProvider;
+    private final AtomicReference<Runnable> onUnmount = new AtomicReference<>();
 
     private SegmentCacheEntry(final DataSegment dataSegment)
     {
@@ -825,7 +940,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                   "[%s] may be damaged. Delete all the segment files and pull from DeepStorage again.",
                   storageDir.getAbsolutePath()
               );
-              deleteCacheEntryDirectory(storageDir);
+              atomicMoveAndDeleteCacheEntryDirectory(storageDir);
             } else {
               needsLoad = false;
             }
@@ -900,9 +1015,14 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             return;
           }
           if (storageDir != null) {
-            deleteCacheEntryDirectory(storageDir);
+            atomicMoveAndDeleteCacheEntryDirectory(storageDir);
             storageDir = null;
             location = null;
+          }
+
+          final Runnable onUnmountRunnable = onUnmount.get();
+          if (onUnmountRunnable != null) {
+            onUnmountRunnable.run();
           }
         }
       }
@@ -917,6 +1037,20 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         return Optional.empty();
       }
       return referenceProvider.acquireReference();
+    }
+
+    public synchronized boolean setOnUnmount(Runnable runnable)
+    {
+      if (location == null) {
+        return false;
+      }
+      onUnmount.set(runnable);
+      return true;
+    }
+
+    public synchronized void clearOnUnmount()
+    {
+      onUnmount.set(null);
     }
 
     public void loadIntoPageCache()
