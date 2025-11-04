@@ -17,15 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.testing.utils;
+package org.apache.druid.testing.embedded.auth;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.segment.TestHelper;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
@@ -35,62 +36,41 @@ import java.net.URL;
 
 public class HttpUtil
 {
-  private static final Logger LOG = new Logger(HttpUtil.class);
   private static final StatusResponseHandler RESPONSE_HANDLER = StatusResponseHandler.getInstance();
+  private static final ObjectMapper MAPPER = TestHelper.JSON_MAPPER;
 
-  static final int NUM_RETRIES = 0;
-  static final long DELAY_FOR_RETRIES_MS = 10000;
-
-  public static StatusResponseHolder makeRequest(HttpClient httpClient, HttpMethod method, String url, byte[] content)
+  public static StatusResponseHolder makeRequest(HttpClient httpClient, HttpMethod method, String url)
   {
-    return makeRequestWithExpectedStatus(
+    return makeRequest(
         httpClient,
         method,
         url,
-        content,
+        null,
         HttpResponseStatus.OK
     );
   }
 
-  public static StatusResponseHolder makeRequestWithExpectedStatus(
+  public static StatusResponseHolder makeRequest(
       HttpClient httpClient,
       HttpMethod method,
       String url,
-      @Nullable byte[] content,
+      @Nullable Object content,
       HttpResponseStatus expectedStatus
   )
   {
     try {
       Request request = new Request(method, new URL(url));
       if (content != null) {
-        request.setContent(MediaType.APPLICATION_JSON, content);
+        request.setContent(MediaType.APPLICATION_JSON, MAPPER.writeValueAsBytes(content));
       }
-      int retryCount = 0;
+      StatusResponseHolder response = httpClient.go(request, RESPONSE_HANDLER).get();
 
-      StatusResponseHolder response;
-
-      while (true) {
-        response = httpClient.go(request, RESPONSE_HANDLER).get();
-
-        if (!response.getStatus().equals(expectedStatus)) {
-          String errMsg = StringUtils.format(
-              "Error while making request to url[%s] status[%s] content[%s]",
-              url,
-              response.getStatus(),
-              response.getContent()
-          );
-          // it can take time for the auth config to propagate, so we retry
-          if (retryCount > NUM_RETRIES) {
-            throw new ISE(errMsg);
-          } else {
-            LOG.error(errMsg);
-            LOG.error("retrying in 3000ms, retryCount: " + retryCount);
-            retryCount++;
-            Thread.sleep(DELAY_FOR_RETRIES_MS);
-          }
-        } else {
-          break;
-        }
+      if (!response.getStatus().equals(expectedStatus)) {
+        String errMsg = StringUtils.format(
+            "Unexpected status[%s] content[%s] while making request[%s] to URL[%s]",
+            response.getStatus(), response.getContent(), method, url
+        );
+        throw new ISE(errMsg);
       }
       return response;
     }
