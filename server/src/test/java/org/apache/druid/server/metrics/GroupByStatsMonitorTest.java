@@ -102,10 +102,10 @@ public class GroupByStatsMonitorTest
   }
 
   @Test
-  public void testMonitorWithDatasourceAndTaskIdDimensions()
+  public void testMonitorWithServiceDimensions()
   {
     final String dataSource = "fooDs";
-    final String taskId = "taskId";
+    final String taskId = "taskId1";
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
         List.of(binder -> {
@@ -120,11 +120,10 @@ public class GroupByStatsMonitorTest
                 .toInstance(taskId);
         })
     );
-    final DataSourceTaskIdHolder dimensionIdHolder = new DataSourceTaskIdHolder();
-    injector.injectMembers(dimensionIdHolder);
-
+    final DataSourceTaskIdHolder dsTaskIdHolder = new DataSourceTaskIdHolder();
+    injector.injectMembers(dsTaskIdHolder);
     final GroupByStatsMonitor monitor =
-        new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool, dimensionIdHolder);
+        new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool, dsTaskIdHolder);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
     emitter.flush();

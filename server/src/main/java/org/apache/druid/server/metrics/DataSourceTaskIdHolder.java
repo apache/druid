@@ -26,6 +26,9 @@ import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 
 import javax.annotation.Nullable;
 
+/**
+ * This holder is only applicable to {@code CliPeon} servers.
+ */
 public class DataSourceTaskIdHolder
 {
   public static final String DATA_SOURCE_BINDING = "druidDataSource";
@@ -36,6 +39,7 @@ public class DataSourceTaskIdHolder
   @Named(DATA_SOURCE_BINDING)
   @Inject(optional = true)
   String dataSource = null;
+
   @Named(TASK_ID_BINDING)
   @Inject(optional = true)
   String taskId = null;
@@ -48,12 +52,18 @@ public class DataSourceTaskIdHolder
   @Inject(optional = true)
   BroadcastDatasourceLoadingSpec broadcastDatasourceLoadingSpec = BroadcastDatasourceLoadingSpec.ALL;
 
+  /**
+   * @return the taskId for CliPeon servers; {@code null} for all other servers.
+   */
   @Nullable
   public String getDataSource()
   {
     return dataSource;
   }
 
+  /**
+   * @return the dataSource for CliPeon servers; {@code null} for all other servers.
+   */
   @Nullable
   public String getTaskId()
   {

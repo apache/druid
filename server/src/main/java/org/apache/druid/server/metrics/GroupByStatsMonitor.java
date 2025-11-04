@@ -55,8 +55,8 @@ public class GroupByStatsMonitor extends AbstractMonitor
     this.groupByStatsProvider = groupByStatsProvider;
     this.mergeBufferPool = mergeBufferPool;
     this.dimensions = MonitorsConfig.mapOfDatasourceAndTaskIdDimension(
-            dataSourceTaskIdHolder.getDataSource(),
-            dataSourceTaskIdHolder.getTaskId()
+        dataSourceTaskIdHolder.getDataSource(),
+        dataSourceTaskIdHolder.getTaskId()
     );
   }
 
