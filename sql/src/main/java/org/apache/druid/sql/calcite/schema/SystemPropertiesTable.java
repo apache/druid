@@ -32,7 +32,7 @@ import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
-import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InternalServerError;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
@@ -71,8 +71,8 @@ public class SystemPropertiesTable extends AbstractTable implements ScannableTab
 
   static final RowSignature ROW_SIGNATURE = RowSignature
       .builder()
-      .add("service_name", ColumnType.STRING)
       .add("server", ColumnType.STRING)
+      .add("service_name", ColumnType.STRING)
       .add("node_roles", ColumnType.STRING)
       .add("property", ColumnType.STRING)
       .add("value", ColumnType.STRING)
@@ -126,10 +126,22 @@ public class SystemPropertiesTable extends AbstractTable implements ScannableTab
         ServerProperties serverProperties = serverToPropertiesMap.get(druidNode.getHostAndPortToUse());
         serverProperties.addNodeRole(discoveryDruidNode.getNodeRole().getJsonName());
       } else {
-        serverToPropertiesMap.put(druidNode.getHostAndPortToUse(), new ServerProperties(druidNode.getServiceName(), druidNode.getHostAndPortToUse(), new ArrayList<>(Arrays.asList(discoveryDruidNode.getNodeRole().getJsonName())), propertiesMap));
+        serverToPropertiesMap.put(
+            druidNode.getHostAndPortToUse(),
+            new ServerProperties(
+              druidNode.getServiceName(),
+              druidNode.getHostAndPortToUse(),
+              new ArrayList<>(Arrays.asList(discoveryDruidNode.getNodeRole().getJsonName())),
+              propertiesMap
+          )
+        );
       }
     });
-    return Linq4j.asEnumerable(serverToPropertiesMap.values().stream().flatMap(ServerProperties::toRows).collect(Collectors.toList()));
+    ArrayList<Object[]> rows = new ArrayList<>();
+    for (ServerProperties serverProperties : serverToPropertiesMap.values()) {
+      rows.addAll(serverProperties.toRows());
+    }
+    return Linq4j.asEnumerable(rows);
   }
 
   private Map<String, String> getProperties(DruidNode druidNode)
@@ -152,13 +164,11 @@ public class SystemPropertiesTable extends AbstractTable implements ScannableTab
       }
       return jsonMapper.readValue(
           response.getContent(),
-          new TypeReference<Map<String, String>>(){}
+          new TypeReference<>(){}
       );
     }
     catch (Exception e) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.UNCATEGORIZED)
-                          .build(e, "HTTP request to[%s] failed", url);
+      throw InternalServerError.exception(e, "HTTP request to[%s] failed", url);
     }
   }
 
@@ -182,10 +192,10 @@ public class SystemPropertiesTable extends AbstractTable implements ScannableTab
       nodeRoles.add(nodeRole);
     }
 
-    public Stream<Object[]> toRows()
+    public List<Object[]> toRows()
     {
       String nodeRolesString = nodeRoles.toString();
-      return properties.entrySet().stream().map(entry -> new Object[]{serviceName, server, nodeRolesString, entry.getKey(), entry.getValue()});
+      return properties.entrySet().stream().map(entry -> new Object[]{server, serviceName, nodeRolesString, entry.getKey(), entry.getValue()}).collect(Collectors.toList());
     }
   }
 }

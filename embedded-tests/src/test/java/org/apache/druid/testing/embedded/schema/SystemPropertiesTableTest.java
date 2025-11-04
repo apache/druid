@@ -97,14 +97,15 @@ public class SystemPropertiesTableTest extends EmbeddedClusterTestBase
   {
     String[] expectedRows = properties.entrySet().stream().map(entry -> String.join(
         ",",
-        escapeCsvField(serivceName),
         escapeCsvField(hostAndPort),
+        escapeCsvField(serivceName),
         escapeCsvField(ImmutableList.of(nodeRole).toString()),
         escapeCsvField(entry.getKey()),
         escapeCsvField(entry.getValue())
     )).toArray(String[]::new);
     Arrays.sort(expectedRows, String::compareTo);
-    String[] actualRows = Arrays.stream(cluster.runSql("SELECT * FROM sys.server_properties WHERE server='%s'", hostAndPort).split("\n")).map(entry -> StringUtils.replace(entry, "...", "\"\"")).toArray(String[]::new);
+    final String result = cluster.runSql("SELECT * FROM sys.server_properties WHERE server='%s'", hostAndPort);
+    String[] actualRows = result.split("\n");
     Arrays.sort(actualRows, String::compareTo);
     Assertions.assertArrayEquals(expectedRows, actualRows);
   }
