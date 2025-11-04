@@ -232,7 +232,7 @@
       <plugin>
         <groupId>io.github.ascopes</groupId>
         <artifactId>protobuf-maven-plugin</artifactId>
-        <version>3.7.0</version>
+        <version>3.10.2</version>
         <configuration>
           <protocVersion>${protobuf.version}</protocVersion>
           <sourceDirectories>
