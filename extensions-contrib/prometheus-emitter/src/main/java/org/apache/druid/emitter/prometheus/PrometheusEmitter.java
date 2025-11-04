@@ -20,6 +20,7 @@
 package org.apache.druid.emitter.prometheus;
 
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.Counter;
@@ -285,6 +286,7 @@ public class PrometheusEmitter implements Emitter
    * This method is called periodically by the TTL scheduler when using the 'exporter' strategy with
    * a configured flushPeriod.
    */
+  @VisibleForTesting
   protected void cleanUpStaleMetrics()
   {
     if (config.getFlushPeriod() == null) {

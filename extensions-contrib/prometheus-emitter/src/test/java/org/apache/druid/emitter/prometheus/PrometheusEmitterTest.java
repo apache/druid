@@ -463,7 +463,7 @@ public class PrometheusEmitterTest
     Assert.assertEquals(1, testMetric.getCollector().collect().get(0).samples.size());
 
     // Wait for the metric to expire (ttl + 1 second buffer)
-    sleep(TimeUnit.SECONDS.toMillis(flushPeriod) + 1000);
+    Thread.sleep(TimeUnit.SECONDS.toMillis(flushPeriod) + 1000);
     exec.submit(emitter::cleanUpStaleMetrics).get();
     Assert.assertEquals(0, testMetric.getCollector().collect().get(0).samples.size());
     emitter.close();
@@ -500,7 +500,7 @@ public class PrometheusEmitterTest
 
     // Wait for a little, but not long enough for the metric to expire
     long waitTime = TimeUnit.SECONDS.toMillis(flushPeriod) / 5;
-    sleep(waitTime);
+    Thread.sleep(waitTime);
 
     Assert.assertFalse(
         "Metric should not be expired",
@@ -552,7 +552,7 @@ public class PrometheusEmitterTest
 
     // Wait for a little, but not long enough for the metric to expire
     long waitTime = TimeUnit.SECONDS.toMillis(flushPeriod) / 5;
-    sleep(waitTime);
+    Thread.sleep(waitTime);
 
     Assert.assertFalse(
         "Metric should not be expired",
@@ -568,20 +568,11 @@ public class PrometheusEmitterTest
     emitter.emit(event2);
 
     // Wait for the remainder of the TTL to allow event1 to expire
-    sleep(waitTime * 4);
+    Thread.sleep(waitTime * 4);
 
     exec.submit(emitter::cleanUpStaleMetrics).get();
     Assert.assertEquals(1, testMetric.getCollector().collect().get(0).samples.size());
     emitter.close();
   }
 
-  private void sleep(long millis)
-  {
-    try {
-      Thread.sleep(millis);
-    }
-    catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    }
-  }
 }
