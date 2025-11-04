@@ -1487,8 +1487,8 @@ public class SystemSchemaTest extends CalciteTestBase
     String coordinatorJson = "{\"druid.test-key\": \"test-value\"}";
     coordinatorResponseHolder.addChunk(coordinatorJson);
     expectedRows.add(new Object[]{
-        coordinator.getDruidNode().getServiceName(),
         coordinator.getDruidNode().getHostAndPortToUse(),
+        coordinator.getDruidNode().getServiceName(),
         ImmutableList.of(coordinator.getNodeRole().getJsonName()).toString(),
         "druid.test-key", "test-value"
     });
@@ -1499,8 +1499,8 @@ public class SystemSchemaTest extends CalciteTestBase
     coordinator2ResponseHolder.addChunk(coordinator2Json);
     expectedRows
         .add(new Object[]{
-            coordinator2.getDruidNode().getServiceName(),
             coordinator2.getDruidNode().getHostAndPortToUse(),
+            coordinator2.getDruidNode().getServiceName(),
             ImmutableList.of(coordinator2.getNodeRole().getJsonName()).toString(),
             "druid.test-key3", "test-value3"
         });
@@ -1515,15 +1515,15 @@ public class SystemSchemaTest extends CalciteTestBase
     middleManagerResponseHolder.addChunk(middleManagerJson);
     expectedRows
         .add(new Object[]{
-            middleManager.getDruidNode().getServiceName(),
             middleManager.getDruidNode().getHostAndPortToUse(),
+            middleManager.getDruidNode().getServiceName(),
             ImmutableList.of(middleManager.getNodeRole().getJsonName()).toString(),
             "druid.test-key", "test-value"
         });
     expectedRows
         .add(new Object[]{
-            middleManager.getDruidNode().getServiceName(),  
             middleManager.getDruidNode().getHostAndPortToUse(),
+            middleManager.getDruidNode().getServiceName(),  
             ImmutableList.of(middleManager.getNodeRole().getJsonName()).toString(),
             "druid.test-key2", "test-value2"
         });
@@ -1554,8 +1554,8 @@ public class SystemSchemaTest extends CalciteTestBase
 
     DataContext dataContext = createDataContext(Users.SUPER);
     final List<Object[]> rows = propertiesTable.scan(dataContext).toList();
-    expectedRows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[1]).compareTo(row2[1]));
-    rows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[1]).compareTo(row2[1]));
+    expectedRows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[0]).compareTo(row2[0]));
+    rows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[0]).compareTo(row2[0]));
     Assert.assertEquals(expectedRows.size(), rows.size());
     for (int i = 0; i < expectedRows.size(); i++) {
       Assert.assertArrayEquals(expectedRows.get(i), rows.get(i));
