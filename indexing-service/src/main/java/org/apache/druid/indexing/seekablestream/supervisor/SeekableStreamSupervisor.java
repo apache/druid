@@ -614,7 +614,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     partitionGroups.clear();
     partitionOffsets.clear();
 
-    pendingCompletionTaskGroups.clear();
+    // Note: We intentionally do NOT clear pendingCompletionTaskGroups here.
+    // When the autoscaler calls this method after gracefulShutdownInternal(), tasks have been moved to
+    // pendingCompletionTaskGroups and are transitioning from READING -> PUBLISHING state.
+    // If we clear pendingCompletionTaskGroups, the supervisor "forgets" about these publishing tasks.
+    // Then, during the next discoverTasks(), if tasks haven't transitioned yet, they get re-added to
+    // activelyReadingTaskGroups, causing the autoscaler to repeatedly attempt scale-down and create
+    // duplicate supervisor history entries. By preserving pendingCompletionTaskGroups, the autoscaler's
+    // check at DynamicAllocationTasksNotice.handle() will correctly skip scale actions until tasks complete.
+
     partitionIds.clear();
   }
 
