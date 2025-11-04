@@ -49,7 +49,8 @@ public class SystemServerPropertiesTableTest extends EmbeddedClusterTestBase
       .addProperty("druid.service", BROKER_SERVICE)
       .addProperty("druid.plaintextPort", BROKER_PORT)
       .addProperty("test.onlyBroker", "brokerValue")
-      .addProperty("test.nonUniqueProperty", "brokerNonUniqueValue");
+      .addProperty("test.nonUniqueProperty", "brokerNonUniqueValue")
+      .addProperty("password", "brokerPassword");
 
   private final EmbeddedOverlord overlord = new EmbeddedOverlord()
       .addProperty("druid.service", OVERLORD_SERVICE)
@@ -133,6 +134,16 @@ public class SystemServerPropertiesTableTest extends EmbeddedClusterTestBase
     Arrays.sort(actualRows, String::compareTo);
     Assertions.assertArrayEquals(expectedRows, actualRows);
         
+  }
+
+  @Test
+  public void test_serverPropertiesTable_hiddenProperties()
+  {
+    final Map<String, String> brokerProps = cluster.callApi().serviceClient().onAnyBroker(
+        mapper -> new RequestBuilder(HttpMethod.GET, "/status/properties"),
+        new TypeReference<>(){}
+    );
+    Assertions.assertFalse(brokerProps.containsKey("password"));
   }
 
   private void verifyPropertiesForServer(Map<String, String> properties, String serivceName, String hostAndPort, String nodeRole)
