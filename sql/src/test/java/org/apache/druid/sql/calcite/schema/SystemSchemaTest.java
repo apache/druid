@@ -571,8 +571,8 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals("server", serverFields.get(0).getName());
     Assert.assertEquals(SqlTypeName.VARCHAR, serverFields.get(0).getType().getSqlTypeName());
 
-    final SystemPropertiesTable propertiesTable = (SystemPropertiesTable) schema.getTableMap()
-                                                                                .get("server_properties");
+    final SystemServerPropertiesTable propertiesTable = (SystemServerPropertiesTable) schema.getTableMap()
+                                                                                            .get("server_properties");
     final RelDataType propertiesRowType = propertiesTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> propertiesFields = propertiesRowType.getFieldList();
     Assert.assertEquals(5, propertiesFields.size());
@@ -1466,9 +1466,9 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testPropertiesTable()
   {
-    SystemPropertiesTable propertiesTable = EasyMock.createMockBuilder(SystemPropertiesTable.class)
-                                                    .withConstructor(druidNodeDiscoveryProvider, authMapper, httpClient, MAPPER)
-                                                    .createMock();
+    SystemServerPropertiesTable propertiesTable = EasyMock.createMockBuilder(SystemServerPropertiesTable.class)
+                                                          .withConstructor(druidNodeDiscoveryProvider, authMapper, httpClient, MAPPER)
+                                                          .createMock();
 
     EasyMock.replay(propertiesTable);
 
