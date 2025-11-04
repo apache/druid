@@ -35,7 +35,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - metadata_data:/var/lib/postgresql/data
+      - metadata_data:/var/lib/postgresql
     environment:
       - POSTGRES_PASSWORD=FoolishPassword
       - POSTGRES_USER=druid
