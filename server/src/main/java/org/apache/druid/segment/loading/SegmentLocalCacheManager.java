@@ -185,6 +185,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   @Override
+  public boolean canLoadSegmentOnDemand(DataSegment dataSegment)
+  {
+    return config.isVirtualStorage();
+  }
+
+  @Override
   public List<DataSegment> getCachedSegments() throws IOException
   {
     if (!canHandleSegments()) {

@@ -81,35 +81,14 @@ public class MonitorsConfig
   }
 
   /**
-   * Similar to {@link #mapOfDatasourceAndTaskID}, but uses {@code taskId} as the dimension instead of {@code id}
-   * to disambiguate the identifier.
-   *
-   * @return a map containing the supplied datasource and taskId dimensions if provided; otherwise returns an empty map.
-   */
-  public static Map<String, String[]> mapOfDatasourceAndTaskIdDimension(
-      @Nullable final String datasource,
-      @Nullable final String taskId
-  )
-  {
-    return mapOfDatasourceAndTaskDimension(datasource, taskId, DruidMetrics.TASK_ID);
-  }
-
-  /**
-   * This is left for backwards compatibility with existing monitors.
-   * Use {@link #mapOfDatasourceAndTaskIdDimension} to disambiguate the id dimension.
+   * @return a map of {@code datasource} and {@code taskId} dimensions if provided; otherwise, returns an empty map.
+   * When {@code taskId} is provided, both {@link DruidMetrics#ID} and {@link DruidMetrics#TASK_ID} dimensions are added
+   * to the map for backward compatibility. {@link DruidMetrics#ID} is deprecated because it's ambiguous and will be
+   * removed in a future release.
    */
   public static Map<String, String[]> mapOfDatasourceAndTaskID(
       @Nullable final String datasource,
       @Nullable final String taskId
-  )
-  {
-    return mapOfDatasourceAndTaskDimension(datasource, taskId, DruidMetrics.ID);
-  }
-
-  private static Map<String, String[]> mapOfDatasourceAndTaskDimension(
-      @Nullable final String datasource,
-      @Nullable final String taskId,
-      final String taskKey
   )
   {
     final ImmutableMap.Builder<String, String[]> builder = ImmutableMap.builder();
@@ -117,7 +96,8 @@ public class MonitorsConfig
       builder.put(DruidMetrics.DATASOURCE, new String[]{datasource});
     }
     if (taskId != null) {
-      builder.put(taskKey, new String[]{taskId});
+      builder.put(DruidMetrics.TASK_ID, new String[]{taskId});
+      builder.put(DruidMetrics.ID, new String[]{taskId});
     }
     return builder.build();
   }

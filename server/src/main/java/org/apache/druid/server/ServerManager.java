@@ -20,6 +20,7 @@
 package org.apache.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -33,6 +34,7 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -41,6 +43,7 @@ import org.apache.druid.query.CPUTimeMetricQueryRunner;
 import org.apache.druid.query.DataSegmentAndDescriptor;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
+import org.apache.druid.query.LeafSegmentsBundle;
 import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.PerSegmentOptimizingQueryRunner;
@@ -56,7 +59,6 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryUnsupportedException;
-import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
@@ -102,7 +104,7 @@ public class ServerManager implements QuerySegmentWalker
   private final Cache cache;
   private final ObjectMapper objectMapper;
   private final CacheConfig cacheConfig;
-  private final SegmentManager segmentManager;
+  protected final SegmentManager segmentManager;
   private final ServerConfig serverConfig;
   private final PolicyEnforcer policyEnforcer;
 
@@ -182,7 +184,10 @@ public class ServerManager implements QuerySegmentWalker
     final Optional<VersionedIntervalTimeline<String, DataSegment>> maybeTimeline =
         segmentManager.getTimeline(ev.getBaseTableDataSource());
     if (maybeTimeline.isEmpty()) {
-      return new ReportTimelineMissingSegmentQueryRunner<>(Lists.newArrayList(specs));
+      return (queryPlus, responseContext) -> {
+        responseContext.addMissingSegments(Lists.newArrayList(specs));
+        return Sequences.empty();
+      };
     }
 
     final QueryRunnerFactory<T, Query<T>> factory = getQueryRunnerFactory(query);
@@ -193,17 +198,15 @@ public class ServerManager implements QuerySegmentWalker
   }
 
   /**
-   * For each {@link SegmentDescriptor}, we try to fetch a {@link DataSegment} from the supplied
-   * {@link VersionedIntervalTimeline} to build a list of {@link DataSegmentAndDescriptor} and then hand off to
-   * {@link #getSegmentReferences(List, SegmentMapFunction, long)} to transform  into {@link SegmentReference}
-   * wrappers. The wrappers contain the {@link SegmentDescriptor} and an {@link Optional<Segment>}, and MUST BE
-   * CLOSED to release the references when processing is complete.
+   * For each {@link SegmentDescriptor}, we try to obtain a {@link DataSegment} from the supplied
+   * {@link VersionedIntervalTimeline} to create a {@link LeafSegmentsBundle} which contains the partitioned segments
+   * into 3 groups: those which are already present in the cache, those which can be loaded on demand, and those which
+   * were missing from the {@link VersionedIntervalTimeline}.
    */
-  protected List<SegmentReference> getSegmentReferences(
+  protected LeafSegmentsBundle getSegmentsBundle(
       VersionedIntervalTimeline<String, DataSegment> timeline,
       Iterable<SegmentDescriptor> segments,
-      SegmentMapFunction segmentMapFunction,
-      final long timeout
+      SegmentMapFunction segmentMapFunction
   )
   {
     // first we build a list of DataSegment we need to get references for, paired with the descriptor from the query
@@ -222,7 +225,51 @@ public class ServerManager implements QuerySegmentWalker
       }
     }
 
-    return getSegmentReferences(segmentsToMap, segmentMapFunction, timeout);
+    return segmentManager.getSegmentsBundle(segmentsToMap, segmentMapFunction);
+  }
+
+  protected ArrayList<SegmentReference> getOrLoadBundleSegments(
+      Query<?> query,
+      LeafSegmentsBundle segmentsBundle,
+      SegmentMapFunction segmentMapFunction
+  )
+  {
+    final ArrayList<SegmentReference> segmentReferences = new ArrayList<>(
+        segmentsBundle.getCachedSegments().size() + segmentsBundle.getLoadableSegments().size()
+    );
+    segmentReferences.addAll(segmentsBundle.getCachedSegments());
+
+    // loadable segments are skipped for segment metadata queries to not cause disk churn from pulling them all down,
+    // so we use placeholders instead. this is kind of gross, but otherwise we're going to be loading weak assignments
+    // more or less as soon as they are assigned instead of on demand at query time due to the broker issuing metadata
+    // queries to build the SQL schema
+    if (query instanceof SegmentMetadataQuery) {
+      for (DataSegmentAndDescriptor segment : segmentsBundle.getLoadableSegments()) {
+        segmentReferences.add(
+            new SegmentReference(
+                segment.getDescriptor(),
+                Optional.of(new VirtualPlaceholderSegment(segment.getDataSegment())),
+                null
+            )
+        );
+      }
+    } else {
+      // load the remaining segments
+      try {
+        segmentReferences.addAll(
+            getSegmentReferences(
+                segmentsBundle.getLoadableSegments(),
+                segmentMapFunction,
+                query.context().getTimeout()
+            )
+        );
+      }
+      catch (Throwable t) {
+        throw CloseableUtils.closeAndWrapInCatch(t, segmentsBundle::closeCachedReferences);
+      }
+    }
+
+    return segmentReferences;
   }
 
   /**
@@ -233,7 +280,7 @@ public class ServerManager implements QuerySegmentWalker
    * For each of these segments, we then apply a {@link SegmentMapFunction} to prepare for processing. The returned
    * {@link SegmentReference} MUST BE CLOSED to release the reference.
    */
-  private ArrayList<SegmentReference> getSegmentReferences(
+  protected ArrayList<SegmentReference> getSegmentReferences(
       List<DataSegmentAndDescriptor> segmentsToMap,
       SegmentMapFunction segmentMapFunction,
       long timeout
@@ -371,81 +418,15 @@ public class ServerManager implements QuerySegmentWalker
     return segmentReferences;
   }
 
-
-  /**
-   * Special handling for {@link SegmentMetadataQuery}, to force it to only use segments that are already stored in the
-   * cache as strong references, using empty placeholder segments with a __time column and 0 rows for all segments that
-   * are in the timeline but are missing from the cache (e.g. weak references)
-   */
-  private List<SegmentReference> getSegmentMetadataSegmentReferences(
-      VersionedIntervalTimeline<String, DataSegment> timeline,
-      Iterable<SegmentDescriptor> segments,
-      SegmentMapFunction segmentMapFn
-  )
-  {
-    // materialize to list to acquire all of the references
-    List<SegmentReference> segmentReferences = new ArrayList<>();
-    for (SegmentDescriptor descriptor : segments) {
-      final PartitionChunk<DataSegment> chunk = timeline.findChunk(
-          descriptor.getInterval(),
-          descriptor.getVersion(),
-          descriptor.getPartitionNumber()
-      );
-      if (chunk == null) {
-        segmentReferences.add(SegmentReference.missing(descriptor));
-      } else {
-        final DataSegment dataSegment = chunk.getObject();
-        final Optional<Segment> theSegment = segmentMapFn.apply(segmentManager.acquireCachedSegment(dataSegment));
-        if (theSegment.isPresent()) {
-          segmentReferences.add(
-              new SegmentReference(
-                  descriptor,
-                  theSegment,
-                  null
-              )
-          );
-        } else {
-          // make a stub to run the segment metadata query instead of being a 'missing' segment
-          segmentReferences.add(
-              new SegmentReference(
-                  descriptor,
-                  Optional.of(new VirtualPlaceholderSegment(dataSegment)),
-                  null
-              )
-          );
-        }
-      }
-    }
-    return segmentReferences;
-  }
-
   protected <T> FunctionalIterable<QueryRunner<T>> getQueryRunnersForSegments(
-      final VersionedIntervalTimeline<String, DataSegment> timeline,
-      final Iterable<SegmentDescriptor> specs,
       final Query<T> query,
       final QueryRunnerFactory<T, Query<T>> factory,
       final QueryToolChest<T, Query<T>> toolChest,
-      final SegmentMapFunction segmentMapFn,
+      final List<SegmentReference> segmentReferences,
       final AtomicLong cpuTimeAccumulator,
-      final Optional<byte[]> cacheKeyPrefix,
-      final Closer closer
+      final Optional<byte[]> cacheKeyPrefix
   )
   {
-    final List<SegmentReference> segmentReferences;
-    // this is kind of gross, but otherwise we're going to be loading weak assignments more or less as soon as they
-    // are assigned instead of on demand at query time
-    if (query instanceof SegmentMetadataQuery) {
-      segmentReferences = getSegmentMetadataSegmentReferences(timeline, specs, segmentMapFn);
-    } else {
-      segmentReferences = getSegmentReferences(
-          timeline,
-          specs,
-          segmentMapFn,
-          query.context().getTimeout()
-      );
-    }
-    closer.registerAll(segmentReferences);
-
     return FunctionalIterable
         .create(segmentReferences)
         .transform(
@@ -460,8 +441,8 @@ public class ServerManager implements QuerySegmentWalker
                                 cpuTimeAccumulator,
                                 cacheKeyPrefix
                             )
-                   ).orElse(
-                       new ReportTimelineMissingSegmentQueryRunner<>(ref.getSegmentDescriptor())
+                   ).orElseThrow(
+                       () -> DruidException.defensive("Unexpected missing segment[%s]", ref.getSegmentDescriptor())
                    )
         );
   }
@@ -545,8 +526,7 @@ public class ServerManager implements QuerySegmentWalker
     );
   }
 
-
-  private <T> QueryRunnerFactory<T, Query<T>> getQueryRunnerFactory(Query<T> query)
+  protected <T> QueryRunnerFactory<T, Query<T>> getQueryRunnerFactory(Query<T> query)
   {
     final DataSource dataSourceFromQuery = query.getDataSource();
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
@@ -562,7 +542,7 @@ public class ServerManager implements QuerySegmentWalker
     return factory;
   }
 
-  private static <T> QueryToolChest<T, Query<T>> getQueryToolChest(Query<T> query, QueryRunnerFactory<T, Query<T>> factory)
+  protected static <T> QueryToolChest<T, Query<T>> getQueryToolChest(Query<T> query, QueryRunnerFactory<T, Query<T>> factory)
   {
     final DataSource dataSourceFromQuery = query.getDataSource();
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
@@ -580,7 +560,7 @@ public class ServerManager implements QuerySegmentWalker
    * which are registered with a closer as they are acquired, and then released in the baggage of merged result
    * {@link Sequence}
    */
-  public final class ResourceManagingQueryRunner<T> implements QueryRunner<T>
+  public class ResourceManagingQueryRunner<T> implements QueryRunner<T>
   {
     private final VersionedIntervalTimeline<String, DataSegment> timeline;
     private final QueryRunnerFactory<T, Query<T>> factory;
@@ -603,7 +583,6 @@ public class ServerManager implements QuerySegmentWalker
       this.specs = specs;
     }
 
-
     @Override
     public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
     {
@@ -623,16 +602,20 @@ public class ServerManager implements QuerySegmentWalker
       // closer to track all used resources
       final Closer closer = Closer.create();
       try {
+        final LeafSegmentsBundle segmentsBundle = getLeafSegmentsBundle(query, segmentMapFn);
+
+        responseContext.addMissingSegments(segmentsBundle.getMissingSegments());
+
+        final List<SegmentReference> segmentReferences = getOrLoadBundleSegments(query, segmentsBundle, segmentMapFn);
+        closer.registerAll(segmentReferences);
+
         final FunctionalIterable<QueryRunner<T>> queryRunners = getQueryRunnersForSegments(
-            timeline,
-            specs,
             query,
             factory,
             toolChest,
-            segmentMapFn,
+            segmentReferences,
             cpuTimeAccumulator,
-            cacheKeyPrefix,
-            closer
+            cacheKeyPrefix
         );
         final QueryRunner<T> queryRunner = CPUTimeMetricQueryRunner.safeBuild(
             new FinalizeResultsQueryRunner<>(
@@ -649,6 +632,13 @@ public class ServerManager implements QuerySegmentWalker
       catch (Throwable t) {
         throw CloseableUtils.closeAndWrapInCatch(t, closer);
       }
+    }
+
+
+    @VisibleForTesting
+    protected LeafSegmentsBundle getLeafSegmentsBundle(Query<T> query, SegmentMapFunction segmentMapFunction)
+    {
+      return ServerManager.this.getSegmentsBundle(timeline, specs, segmentMapFunction);
     }
   }
 }

@@ -130,7 +130,9 @@ public class GroupByStatsMonitorTest
     // Trigger metric emission
     monitor.doMonitor(emitter);
 
-    final Map<String, Object> dimFilters = Map.of("taskId", List.of(taskId), "dataSource", List.of(dataSource));
+    final Map<String, Object> dimFilters = Map.of(
+        "taskId", List.of(taskId), "dataSource", List.of(dataSource), "id", List.of(taskId)
+    );
     Assert.assertEquals(7, emitter.getNumEmittedEvents());
     emitter.verifyValue("mergeBuffer/pendingRequests", dimFilters, 0L);
     emitter.verifyValue("mergeBuffer/used", dimFilters, 0L);
