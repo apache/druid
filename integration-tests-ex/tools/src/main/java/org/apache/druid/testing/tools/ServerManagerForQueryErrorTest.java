@@ -20,20 +20,24 @@
 package org.apache.druid.testing.tools;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.DataSegmentAndDescriptor;
+import org.apache.druid.query.LeafSegmentsBundle;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContext;
@@ -44,17 +48,22 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryUnsupportedException;
-import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.ServerManager;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.partition.PartitionChunk;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -133,56 +142,127 @@ public class ServerManagerForQueryErrorTest extends ServerManager
   }
 
   @Override
+  public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
+  {
+    final ExecutionVertex ev = ExecutionVertex.of(query);
+    final Optional<VersionedIntervalTimeline<String, DataSegment>> maybeTimeline =
+        segmentManager.getTimeline(ev.getBaseTableDataSource());
+    if (maybeTimeline.isEmpty()) {
+      return (queryPlus, responseContext) -> {
+        responseContext.addMissingSegments(Lists.newArrayList(specs));
+        return Sequences.empty();
+      };
+    }
+
+    final QueryRunnerFactory<T, Query<T>> factory = getQueryRunnerFactory(query);
+    final QueryToolChest<T, Query<T>> toolChest = getQueryToolChest(query, factory);
+    final VersionedIntervalTimeline<String, DataSegment> timeline = maybeTimeline.get();
+
+    return new ResourceManagingQueryRunner<>(timeline, factory, toolChest, ev, specs)
+    {
+      @Override
+      protected LeafSegmentsBundle getLeafSegmentsBundle(Query<T> query, SegmentMapFunction segmentMapFunction)
+      {
+        // override this method so that we can artifically create missing segments
+        final List<DataSegmentAndDescriptor> segments = new ArrayList<>();
+        final ArrayList<SegmentDescriptor> missingSegments = new ArrayList<>();
+        final ArrayList<SegmentReference> segmentReferences = new ArrayList<>();
+        final ArrayList<DataSegmentAndDescriptor> loadableSegments = new ArrayList<>();
+
+        final QueryContext queryContext = query.context();
+
+        for (SegmentDescriptor descriptor : specs) {
+          final MutableBoolean isIgnoreSegment = new MutableBoolean(false);
+          if (queryContext.getBoolean(QUERY_RETRY_TEST_CONTEXT_KEY, false)) {
+            final int unavailableSegmentIdx = queryContext.getInt(QUERY_RETRY_UNAVAILABLE_SEGMENT_IDX_KEY, -1);
+            queryToIgnoredSegments.compute(
+                query.getMostSpecificId(),
+                (queryId, ignoreCounter) -> {
+                  if (ignoreCounter == null) {
+                    ignoreCounter = 0;
+                  }
+
+                  if (unavailableSegmentIdx >= 0 && unavailableSegmentIdx == ignoreCounter) {
+                    // Fail exactly once when counter matches the configured retry index
+                    ignoreCounter++;
+                    isIgnoreSegment.setTrue();
+                  } else if (ignoreCounter < MAX_NUM_FALSE_MISSING_SEGMENTS_REPORTS) {
+                    // Fail up to N times for this query
+                    ignoreCounter++;
+                    isIgnoreSegment.setTrue();
+                  }
+                  return ignoreCounter;
+                }
+            );
+
+            if (isIgnoreSegment.isTrue()) {
+              LOG.info(
+                  "Pretending I don't have segment[%s]",
+                  descriptor
+              );
+              missingSegments.add(descriptor);
+              continue;
+            }
+          }
+
+          final PartitionChunk<DataSegment> chunk = timeline.findChunk(
+              descriptor.getInterval(),
+              descriptor.getVersion(),
+              descriptor.getPartitionNumber()
+          );
+
+          if (chunk != null) {
+            segments.add(new DataSegmentAndDescriptor(chunk.getObject(), descriptor));
+          } else {
+            missingSegments.add(descriptor);
+          }
+        }
+
+        // inlined logic of ServerManager.getSegmentsBundle
+        for (DataSegmentAndDescriptor segment : segments) {
+          final DataSegment dataSegment = segment.getDataSegment();
+          if (dataSegment == null) {
+            missingSegments.add(segment.getDescriptor());
+            continue;
+          }
+          Optional<Segment> ref = segmentManager.acquireCachedSegment(dataSegment);
+          if (ref.isPresent()) {
+            segmentReferences.add(
+                new SegmentReference(
+                    segment.getDescriptor(),
+                    segmentMapFunction.apply(ref),
+                    null
+                )
+            );
+          } else if (segmentManager.canLoadSegmentOnDemand(dataSegment)) {
+            loadableSegments.add(segment);
+          } else {
+            missingSegments.add(segment.getDescriptor());
+          }
+        }
+        return new LeafSegmentsBundle(segmentReferences, loadableSegments, missingSegments);
+      }
+    };
+  }
+
+  @Override
   protected <T> FunctionalIterable<QueryRunner<T>> getQueryRunnersForSegments(
-      final VersionedIntervalTimeline<String, DataSegment> timeline,
-      final Iterable<SegmentDescriptor> specs,
-      final Query<T> query,
-      final QueryRunnerFactory<T, Query<T>> factory,
-      final QueryToolChest<T, Query<T>> toolChest,
-      final SegmentMapFunction segmentMapFn,
-      final AtomicLong cpuTimeAccumulator,
-      final Optional<byte[]> cacheKeyPrefix,
-      final Closer closer
+      Query<T> query,
+      QueryRunnerFactory<T, Query<T>> factory,
+      QueryToolChest<T, Query<T>> toolChest,
+      List<SegmentReference> segmentReferences,
+      AtomicLong cpuTimeAccumulator,
+      Optional<byte[]> cacheKeyPrefix
   )
   {
     return FunctionalIterable
-        .create(getSegmentReferences(timeline, specs, segmentMapFn, query.context().getTimeout()))
+        .create(segmentReferences)
         .transform(
             ref ->
                 ref.getSegmentReference()
                    .map(segment -> {
                           final QueryContext queryContext = query.context();
-                          if (queryContext.getBoolean(QUERY_RETRY_TEST_CONTEXT_KEY, false)) {
-                            final int unavailableSegmentIdx = queryContext.getInt(QUERY_RETRY_UNAVAILABLE_SEGMENT_IDX_KEY, -1);
-                            final MutableBoolean isIgnoreSegment = new MutableBoolean(false);
-                            queryToIgnoredSegments.compute(
-                                query.getMostSpecificId(),
-                                (queryId, ignoreCounter) -> {
-                                  if (ignoreCounter == null) {
-                                    ignoreCounter = 0;
-                                  }
-
-                                  if (unavailableSegmentIdx >= 0 && unavailableSegmentIdx == ignoreCounter) {
-                                    // Fail exactly once when counter matches the configured retry index
-                                    ignoreCounter++;
-                                    isIgnoreSegment.setTrue();
-                                  } else if (ignoreCounter < MAX_NUM_FALSE_MISSING_SEGMENTS_REPORTS) {
-                                    // Fail up to N times for this query
-                                    ignoreCounter++;
-                                    isIgnoreSegment.setTrue();
-                                  }
-                                  return ignoreCounter;
-                                }
-                            );
-
-                            if (isIgnoreSegment.isTrue()) {
-                              LOG.info(
-                                  "Pretending I don't have segment[%s]",
-                                  ref.getSegmentDescriptor()
-                              );
-                              return new ReportTimelineMissingSegmentQueryRunner<T>(ref.getSegmentDescriptor());
-                            }
-                          } else if (queryContext.getBoolean(QUERY_TIMEOUT_TEST_CONTEXT_KEY, false)) {
+                          if (queryContext.getBoolean(QUERY_TIMEOUT_TEST_CONTEXT_KEY, false)) {
                             return (QueryRunner<T>) (queryPlus, responseContext) -> new Sequence<>()
                             {
                               @Override
@@ -302,8 +382,8 @@ public class ServerManagerForQueryErrorTest extends ServerManager
                               cacheKeyPrefix
                           );
                         }
-                   ).orElse(
-                       new ReportTimelineMissingSegmentQueryRunner<>(ref.getSegmentDescriptor())
+                   ).orElseThrow(
+                       () -> DruidException.defensive("Unexpected missing segment[%s]", ref.getSegmentDescriptor())
                    )
         );
   }
