@@ -48,17 +48,20 @@ public class SystemPropertiesTableTest extends EmbeddedClusterTestBase
   private final EmbeddedBroker broker = new EmbeddedBroker()
       .addProperty("druid.service", BROKER_SERVICE)
       .addProperty("druid.plaintextPort", BROKER_PORT)
-      .addProperty("test.onlyBroker", "brokerValue");
+      .addProperty("test.onlyBroker", "brokerValue")
+      .addProperty("test.nonUniqueProperty", "brokerNonUniqueValue");
 
   private final EmbeddedOverlord overlord = new EmbeddedOverlord()
-       .addProperty("druid.service", OVERLORD_SERVICE)
-       .addProperty("druid.plaintextPort", OVERLORD_PORT)
-       .addProperty("test.onlyOverlord", "overlordValue");
+      .addProperty("druid.service", OVERLORD_SERVICE)
+      .addProperty("druid.plaintextPort", OVERLORD_PORT)
+      .addProperty("test.onlyOverlord", "overlordValue")
+      .addProperty("test.nonUniqueProperty", "overlordNonUniqueValue");
 
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator()
       .addProperty("druid.service", COORDINATOR_SERVICE)
       .addProperty("druid.plaintextPort", COORDINATOR_PORT)
-      .addProperty("test.onlyCoordinator", "coordinatorValue");
+      .addProperty("test.onlyCoordinator", "coordinatorValue")
+      .addProperty("test.nonUniqueProperty", "coordinatorNonUniqueValue");
 
   @Override
   protected EmbeddedDruidCluster createCluster()
@@ -72,25 +75,64 @@ public class SystemPropertiesTableTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void test_serverPropertiesTable()
+  public void test_serverPropertiesTable_brokerServer()
+  {
+    final Map<String, String> brokerProps = cluster.callApi().serviceClient().onAnyBroker(
+        mapper -> new RequestBuilder(HttpMethod.GET, "/status/properties"),
+        new TypeReference<>(){}
+    );
+    verifyPropertiesForServer(brokerProps, BROKER_SERVICE, StringUtils.format("localhost:%s", BROKER_PORT), NodeRole.BROKER_JSON_NAME);
+  }
+
+  @Test
+  public void test_serverPropertiesTable_overlordServer()
   {
     final Map<String, String> overlordProps = cluster.callApi().serviceClient().onLeaderOverlord(
         mapper -> new RequestBuilder(HttpMethod.GET, "/status/properties"),
         new TypeReference<>(){}
     );
     verifyPropertiesForServer(overlordProps, OVERLORD_SERVICE, StringUtils.format("localhost:%s", OVERLORD_PORT), NodeRole.OVERLORD_JSON_NAME);
+  }
 
-    final Map<String, String> brokerProps = cluster.callApi().serviceClient().onAnyBroker(
-        mapper -> new RequestBuilder(HttpMethod.GET, "/status/properties"),
-        new TypeReference<>(){}
-    );
-    verifyPropertiesForServer(brokerProps, BROKER_SERVICE, StringUtils.format("localhost:%s", BROKER_PORT), NodeRole.BROKER_JSON_NAME);
-
+  @Test
+  public void test_serverPropertiesTable_coordinatorServer()
+  {
     final Map<String, String> coordinatorProps = cluster.callApi().serviceClient().onLeaderCoordinator(
         mapper -> new RequestBuilder(HttpMethod.GET, "/status/properties"),
         new TypeReference<>(){}
     );
     verifyPropertiesForServer(coordinatorProps, COORDINATOR_SERVICE, StringUtils.format("localhost:%s", COORDINATOR_PORT), NodeRole.COORDINATOR_JSON_NAME);
+  }
+
+  @Test
+  public void test_serverPropertiesTable_specificProperty()
+  {
+    Assertions.assertEquals(
+        "brokerValue",
+        cluster.runSql("SELECT \"value\" FROM sys.server_properties WHERE server = 'localhost:%s' AND property = 'test.onlyBroker'", BROKER_PORT)
+    );
+
+    Assertions.assertEquals(
+        "brokerValue",
+        cluster.runSql("SELECT \"value\" FROM sys.server_properties WHERE service_name = '%s' AND property = 'test.onlyBroker'", BROKER_SERVICE)
+    );
+
+    Assertions.assertEquals(
+        StringUtils.format("localhost:%s,%s,[%s],test.onlyBroker,brokerValue", BROKER_PORT, BROKER_SERVICE, NodeRole.BROKER_JSON_NAME),
+        cluster.runSql("SELECT * FROM sys.server_properties WHERE server = 'localhost:%s' AND property = 'test.onlyBroker'", BROKER_PORT)
+    );
+
+    String[] expectedRows = new String[] {
+        StringUtils.format("localhost:%s,%s,[%s],test.nonUniqueProperty,brokerNonUniqueValue", BROKER_PORT, BROKER_SERVICE, NodeRole.BROKER_JSON_NAME),
+        StringUtils.format("localhost:%s,%s,[%s],test.nonUniqueProperty,overlordNonUniqueValue", OVERLORD_PORT, OVERLORD_SERVICE, NodeRole.OVERLORD_JSON_NAME),
+        StringUtils.format("localhost:%s,%s,[%s],test.nonUniqueProperty,coordinatorNonUniqueValue", COORDINATOR_PORT, COORDINATOR_SERVICE, NodeRole.COORDINATOR_JSON_NAME),
+    };
+    Arrays.sort(expectedRows, String::compareTo);
+    final String result = cluster.runSql("SELECT * FROM sys.server_properties WHERE property='test.nonUniqueProperty'");
+    String[] actualRows = result.split("\n");
+    Arrays.sort(actualRows, String::compareTo);
+    Assertions.assertArrayEquals(expectedRows, actualRows);
+        
   }
 
   private void verifyPropertiesForServer(Map<String, String> properties, String serivceName, String hostAndPort, String nodeRole)
