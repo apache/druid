@@ -447,6 +447,7 @@ namespaced
 namespaces
 natively
 netflow
+node_roles
 nondescriptive
 nonfinalized
 non-null
@@ -539,6 +540,7 @@ searchable
 secondaryPartitionPruning
 seekable
 seekable-stream
+service_name
 servlet
 setProcessingThreadNames
 sigterm
@@ -677,6 +679,7 @@ PT5M
 SCHEMA_NAME
 SCHEMA_OWNER
 SERVER_SEGMENTS
+SERVER_PROPERTIES
 SMALLINT
 SQL_PATH
 STRING_AGG
