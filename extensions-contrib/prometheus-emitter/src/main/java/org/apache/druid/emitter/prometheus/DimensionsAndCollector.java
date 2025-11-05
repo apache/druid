@@ -77,6 +77,7 @@ public class DimensionsAndCollector
   public void resetLastUpdateTime(List<String> labelValues)
   {
     if (ttlSeconds == null) {
+      // Label tracking is only required if a metric TTL has been configured
       return;
     }
     labelValuesToStopwatch.compute(labelValues, (k, v) -> {
