@@ -72,12 +72,11 @@ public class DimensionsAndCollector
 
   /**
    * For each unique set of labelValues, keeps track of the amount of time that has elapsed since its metric
-   * value has been updated.
+   * value has been updated. Label tracking is only required if a metric TTL has been configured
    */
   public void resetLastUpdateTime(List<String> labelValues)
   {
     if (ttlSeconds == null) {
-      // Label tracking is only required if a metric TTL has been configured
       return;
     }
     labelValuesToStopwatch.compute(labelValues, (k, v) -> {
