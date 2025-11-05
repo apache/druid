@@ -70,6 +70,7 @@ Additionally, support for Java 11 has been removed. Upgrade to Java 17 or 21.
 [#18424](https://github.com/apache/druid/pull/18424) [#18624](https://github.com/apache/druid/pull/18624)
 
 ### Projections 
+
 Projections now support static filters. Additionally, there have been general improvements to performance and reliability.
 
 [#18342](https://github.com/apache/druid/pull/18342) [#18535](https://github.com/apache/druid/pull/18535)
@@ -115,8 +116,9 @@ A new contributor extension (`druid-exact-count-bitmap`) adds support for exact 
 
 ### Improved `indexSpec`
 
+Users can now specify a format specification for each JSON column individually, which will override the `IndexSpec` defined in the ingestion job. Additionally, a system-wide default `IndexSpec` can be set using the `druid.indexing.formats.indexSpec` property.
 
-[#17762](https://github.com/apache/druid/pull/17762)
+[#17762](https://github.com/apache/druid/pull/17762) [#18638](https://github.com/apache/druid/pull/18638)
 
 ## Functional area and related changes
 
