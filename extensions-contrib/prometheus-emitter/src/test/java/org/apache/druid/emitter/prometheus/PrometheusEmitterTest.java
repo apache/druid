@@ -598,4 +598,16 @@ public class PrometheusEmitterTest
     Assert.assertEquals(1, metric.getLabelValuesToStopwatch().size());
     emitter.close();
   }
+
+  @Test
+  public void testCounterWithNegativeValue()
+  {
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "test", null, 0, null, true, true, null, null, false, null);
+    PrometheusEmitter emitter = new PrometheusEmitter(config);
+    ServiceMetricEvent event = ServiceMetricEvent.builder()
+            .setMetric("segment/moveSkipped/count", -1)
+            .setDimension("server", "historical1")
+            .build(ImmutableMap.of("service", "historical", "host", "druid.test.cn"));
+    emitter.emit(event);
+  }
 }

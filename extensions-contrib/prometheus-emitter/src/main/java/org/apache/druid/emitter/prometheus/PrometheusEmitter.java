@@ -179,8 +179,13 @@ public class PrometheusEmitter implements Emitter
       }
 
       if (metric.getCollector() instanceof Counter) {
-        ((Counter) metric.getCollector()).labels(labelValues).inc(value.doubleValue());
-        metric.resetLastUpdateTime(Arrays.asList(labelValues));
+        double metricValue = value.doubleValue();
+        if (metricValue >= 0) {
+          ((Counter) metric.getCollector()).labels(labelValues).inc(metricValue);
+          metric.resetLastUpdateTime(Arrays.asList(labelValues));
+        } else {
+          log.warn("Amount to increment must be non-negative for counter [%s] with value [%f]", name, metricValue);
+        }
       } else if (metric.getCollector() instanceof Gauge) {
         ((Gauge) metric.getCollector()).labels(labelValues).set(value.doubleValue());
         metric.resetLastUpdateTime(Arrays.asList(labelValues));
