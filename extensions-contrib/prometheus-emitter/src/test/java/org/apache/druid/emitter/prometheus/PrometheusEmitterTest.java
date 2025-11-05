@@ -439,6 +439,7 @@ public class PrometheusEmitterTest
   @Test
   public void testMetricTtlExpiration() throws ExecutionException, InterruptedException
   {
+    CollectorRegistry.defaultRegistry.clear();
     int flushPeriod = 3;
     PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "test", null, 0, null, true, true, flushPeriod, null, false, null);
     ScheduledExecutorService exec = ScheduledExecutors.fixed(1, "PrometheusTTLExecutor-%s");
@@ -472,6 +473,7 @@ public class PrometheusEmitterTest
   @Test
   public void testMetricTtlUpdate() throws ExecutionException, InterruptedException
   {
+    CollectorRegistry.defaultRegistry.clear();
     int flushPeriod = 3;
     PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "test", null, 0, null, true, true, flushPeriod, null, false, null);
     ScheduledExecutorService exec = ScheduledExecutors.fixed(1, "PrometheusTTLExecutor-%s");
@@ -514,6 +516,7 @@ public class PrometheusEmitterTest
   @Test
   public void testMetricTtlUpdateWithDifferentLabels() throws ExecutionException, InterruptedException
   {
+    CollectorRegistry.defaultRegistry.clear();
     int flushPeriod = 3;
     PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "test", null, 0, null, true, true, flushPeriod, null, false, null);
     ScheduledExecutorService exec = ScheduledExecutors.fixed(1, "PrometheusTTLExecutor-%s");
@@ -578,6 +581,7 @@ public class PrometheusEmitterTest
   @Test
   public void testLabelsNotTrackedWithTtlUnset()
   {
+    CollectorRegistry.defaultRegistry.clear();
     PrometheusEmitterConfig flushPeriodNull = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "test", null, 0, null, true, true, null, null, false, null);
     PrometheusEmitterConfig flushPeriodSet = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "test", null, 0, null, true, true, 3, null, false, null);
 
@@ -602,6 +606,7 @@ public class PrometheusEmitterTest
   @Test
   public void testCounterWithNegativeValue()
   {
+    CollectorRegistry.defaultRegistry.clear();
     PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "test", null, 0, null, true, true, null, null, false, null);
     PrometheusEmitter emitter = new PrometheusEmitter(config);
     ServiceMetricEvent event = ServiceMetricEvent.builder()
@@ -609,5 +614,6 @@ public class PrometheusEmitterTest
             .setDimension("server", "historical1")
             .build(ImmutableMap.of("service", "historical", "host", "druid.test.cn"));
     emitter.emit(event);
+    emitter.close();
   }
 }
