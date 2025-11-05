@@ -76,6 +76,9 @@ public class DimensionsAndCollector
    */
   public void resetLastUpdateTime(List<String> labelValues)
   {
+    if (ttlSeconds == null) {
+      return;
+    }
     labelValuesToStopwatch.compute(labelValues, (k, v) -> {
       if (v != null) {
         v.restart();
