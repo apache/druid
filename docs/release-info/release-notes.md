@@ -172,6 +172,16 @@ At ingestion time, dimension schemas in `dimensionsSpec` are now strictly valida
 
 ### Querying
 
+#### Segment timeout
+
+You can now configure timeout for a query's segment processing.
+
+To set a timeout, set `druid.processing.numTimeoutThreads` to a low number, such as 3, on all data nodes where you want this feature enabled.
+
+Then, include the `perSegmentTimeout` query context parameter in your query and set it to a value in milliseconds.
+
+[#18148](https://github.com/apache/druid/pull/18148)
+
 #### Caching scan query results
 
 Druid now supports result-level caching for scan queries.
@@ -261,16 +271,6 @@ The `druid.auth.authenticator.kerberos.cookieSignatureSecret` config is now mand
 
 ### Data management
 
-#### Segment timeout
-
-You can now configure timeout for a query's segment processing.
-
-To set a timeout, set `druid.processing.numTimeoutThreads` to a low number, such as 3, on all data nodes where you want this feature enabled.
-
-Then, include the `perSegmentTimeout` query context parameter in your query and set it to a value in milliseconds.
-
-#### Other data management improvements
-
 - Improved S3 storage to support storing segments in S3 without zip compression [#18544](https://github.com/apache/druid/pull/18544)
 
 ### Metrics and monitoring
@@ -279,7 +279,7 @@ Then, include the `perSegmentTimeout` query context parameter in your query and 
 
 You can now specify the TTL for a metric. If a metric value has not been updated within the TTL period then the value will stop being emitted.
 
-Set `flushPeriod` to the `exporter` strategy in the `prometheus-emitter`. 
+Set `flushPeriod` when using the `exporter` strategy in the `prometheus-emitter`. 
 
 [#18598](https://github.com/apache/druid/pull/18598)
 
@@ -437,7 +437,7 @@ The following dependencies have been updated:
 - `pac4j` version 4.5.7 to 5.7.3 [#18259](https://github.com/apache/druid/pull/18259)
 - `nimbus-jose-jwt` version 8.22.1 to 9.37.2 [#18259](https://github.com/apache/druid/pull/18259)
 - `oauth2-oidc-sdk` version 8.22 to 10.8 [#18259](https://github.com/apache/druid/pull/18259)
-- `avactica` version 1.25.0 to 1.26.0 [#18421](https://github.com/apache/druid/pull/18421)
+- `avactica` version 1.25.0 to 1.27.0 [#18421](https://github.com/apache/druid/pull/18421) [#18671](https://github.com/apache/druid/pull/18671)
 - `protobuf-dynamic` library replaced with a built-in protobuf method [#18401](https://github.com/apache/druid/pull/18401)
 - `com.github.spotbugs:spotbugs-maven-plugin` version 4.8.6.6 to 4.9.3.2 [#18177](https://github.com/apache/druid/pull/18177)
 - `com.google.code.gson` version 2.10.1 to 2.12.0 [#18527](https://github.com/apache/druid/pull/18527)
