@@ -327,7 +327,7 @@ Additionally, task log storage for the Kubernetes runner is now optional.
 
 ##### Improved fault tolerance
 
-The Kubernetes extension is now more resilient against certain transient faults. 
+The `druid-kubernetes-overlord-extensions` that uses Kubernetes for launching and managing tasks instead of the Middle Managers is now more resilient against certain transient faults.
 
 [#18406](https://github.com/apache/druid/pull/18406)
 
