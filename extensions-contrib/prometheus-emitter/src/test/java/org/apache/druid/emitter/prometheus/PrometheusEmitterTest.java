@@ -575,4 +575,27 @@ public class PrometheusEmitterTest
     emitter.close();
   }
 
+  @Test
+  public void testLabelsNotTrackedWithTtlUnset()
+  {
+    PrometheusEmitterConfig flushPeriodNull = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "test", null, 0, null, true, true, null, null, false, null);
+    PrometheusEmitterConfig flushPeriodSet = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "test", null, 0, null, true, true, 3, null, false, null);
+
+    PrometheusEmitter emitter = new PrometheusEmitter(flushPeriodNull);
+    ServiceMetricEvent event = ServiceMetricEvent.builder()
+            .setMetric("segment/loadQueue/count", 10)
+            .setDimension("server", "historical1")
+            .build(ImmutableMap.of("service", "historical", "host", "druid.test.cn"));
+    emitter.emit(event);
+    DimensionsAndCollector metric = emitter.getMetrics().getRegisteredMetrics().get("segment/loadQueue/count");
+    Assert.assertEquals(0, metric.getLabelValuesToStopwatch().size());
+    emitter.close();
+    CollectorRegistry.defaultRegistry.clear();
+
+    emitter = new PrometheusEmitter(flushPeriodSet);
+    emitter.emit(event);
+    metric = emitter.getMetrics().getRegisteredMetrics().get("segment/loadQueue/count");
+    Assert.assertEquals(1, metric.getLabelValuesToStopwatch().size());
+    emitter.close();
+  }
 }
