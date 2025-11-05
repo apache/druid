@@ -17,35 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.tests.security;
+package org.apache.druid.testing.embedded.auth;
 
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.tools.ITRetryUtil;
-import org.apache.druid.testing.utils.HttpUtil;
-import org.apache.druid.tests.TestNGGroup;
+import org.apache.druid.testing.embedded.EmbeddedResource;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Guice;
-import org.testng.annotations.Test;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
 
-@Test(groups = TestNGGroup.SECURITY)
-@Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
+public class BasicAuthConfigurationTest extends AbstractAuthConfigurationTest
 {
-  private static final Logger LOG = new Logger(ITBasicAuthConfigurationTest.class);
-
   private static final String BASIC_AUTHENTICATOR = "basic";
   private static final String BASIC_AUTHORIZER = "basic";
 
@@ -59,16 +49,10 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
 
   private HttpClient druid99;
 
-  @BeforeClass
-  public void before() throws Exception
+  @Override
+  protected EmbeddedResource getAuthResource()
   {
-    // ensure that auth_test segments are loaded completely, we use them for testing system schema tables
-    ITRetryUtil.retryUntilTrue(
-        () -> coordinatorClient.areSegmentsLoaded("auth_test"), "auth_test segment load"
-    );
-
-    setupHttpClientsAndUsers();
-    setExpectedSystemSchemaObjects();
+    return new EmbeddedBasicAuthResource();
   }
 
   @Test
@@ -78,22 +62,7 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   }
 
   @Override
-  protected void setupHttpClientsAndUsers() throws Exception
-  {
-    super.setupHttpClientsAndUsers();
-
-    // Add a large enough delay to allow propagation of credentials to all services. It'd be ideal
-    // to have a "readiness" endpoint exposed by different services that'd return the version of auth creds cached.
-    try {
-      Thread.sleep(20000);
-    }
-    catch (InterruptedException e) {
-      // Ignore exception
-    }
-  }
-
-  @Override
-  protected void setupDatasourceOnlyUser() throws Exception
+  protected void setupDatasourceOnlyUser()
   {
     createUserAndRoleWithPermissions(
         "datasourceOnlyUser",
@@ -104,7 +73,7 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   }
 
   @Override
-  protected void setupDatasourceAndContextParamsUser() throws Exception
+  protected void setupDatasourceAndContextParamsUser()
   {
     createUserAndRoleWithPermissions(
         "datasourceAndContextParamsUser",
@@ -115,7 +84,7 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   }
 
   @Override
-  protected void setupDatasourceAndSysTableUser() throws Exception
+  protected void setupDatasourceAndSysTableUser()
   {
     createUserAndRoleWithPermissions(
         "datasourceAndSysUser",
@@ -126,7 +95,7 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   }
 
   @Override
-  protected void setupDatasourceAndSysAndStateUser() throws Exception
+  protected void setupDatasourceAndSysAndStateUser()
   {
     createUserAndRoleWithPermissions(
         "datasourceWithStateUser",
@@ -137,7 +106,7 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   }
 
   @Override
-  protected void setupSysTableAndStateOnlyUser() throws Exception
+  protected void setupSysTableAndStateOnlyUser()
   {
     createUserAndRoleWithPermissions(
         "stateOnlyUser",
@@ -148,7 +117,7 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   }
 
   @Override
-  protected void setupTestSpecificHttpClients() throws Exception
+  protected void setupTestSpecificHttpClients()
   {
     // create a new user+role that can read /status
     createUserAndRoleWithPermissions(
@@ -163,7 +132,6 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
       final String username = "druid" + i;
       postAsAdmin(null, "/authentication/db/basic/users/%s", username);
       postAsAdmin(null, "/authorization/db/basic/users/%s", username);
-      LOG.info("Created user[%s]", username);
     }
 
     // setup the last of 100 users and check that it works
@@ -226,7 +194,7 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
       String password,
       String role,
       List<ResourceAction> permissions
-  ) throws Exception
+  )
   {
     // Setup authentication by creating user and password
     postAsAdmin(null, "/authentication/db/basic/users/%s", user);
@@ -246,17 +214,15 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
       Object payload,
       String pathFormat,
       Object... pathParams
-  ) throws IOException
+  )
   {
     HttpClient adminClient = getHttpClient(User.ADMIN);
-
-    byte[] payloadBytes = payload == null ? null : jsonMapper.writeValueAsBytes(payload);
     String url = getBaseUrl() + StringUtils.format(pathFormat, pathParams);
-    HttpUtil.makeRequest(adminClient, HttpMethod.POST, url, payloadBytes);
+    HttpUtil.makeRequest(adminClient, HttpMethod.POST, url, payload, HttpResponseStatus.OK);
   }
 
   private String getBaseUrl()
   {
-    return config.getCoordinatorUrl() + "/druid-ext/basic-security";
+    return getCoordinatorUrl() + "/druid-ext/basic-security";
   }
 }
