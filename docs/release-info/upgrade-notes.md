@@ -30,6 +30,8 @@ For the full release notes for a specific version, see the [releases page](https
 
 ## 35.0.0
 
+### Upgrade notes
+
 #### Fallback vectorization on by default
 
 The `druid.expressions.allowVectorizeFallback` now defaults to `true`. Additionally, `SAFE_DIVIDE` can now vectorize as a fallback.
@@ -68,6 +70,7 @@ Druid 35.0.0 will ignore the extension if it's in the load list. Future versions
 
 Due to the upgrade from `pac4j` 4 to 5, session serialization has changed from `pac4j`’s `JavaSerializer` to standard Java serialization. As a result, clients of clusters using the `pac4j` extension may be logged out during rolling upgrades and need to re‑authenticate.
 
+[#18259](https://github.com/apache/druid/pull/18259)
 
 ## 34.0.0
 
@@ -187,7 +190,7 @@ We recommend that you upgrade to Java 17.
 
 ### Deprecations
 
-### Hadoop-based ingestion
+#### Hadoop-based ingestion
 
 Hadoop-based ingestion is now deprecated. We recommend that you migrate to SQL-based ingestion. 
 

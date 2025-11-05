@@ -385,6 +385,8 @@ Druid 35.0.0 will ignore the extension if it's in the load list. Future versions
 
 Due to the upgrade from `pac4j` 4 to 5, session serialization has changed from `pac4j`’s `JavaSerializer` to standard Java serialization. As a result, clients of clusters using the `pac4j` extension may be logged out during rolling upgrades and need to re‑authenticate.
 
+[#18259](https://github.com/apache/druid/pull/18259)
+
 ### Incompatible changes
 
 #### Java 11 support removed
