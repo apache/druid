@@ -16,10 +16,15 @@
  * limitations under the License.
  */
 
+import { Intent } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import type { SqlQuery } from 'druid-query-toolkit';
 import { L, SqlFunction } from 'druid-query-toolkit';
 
+import { AppToaster } from '../../../singletons';
 import { getMaxTimeForTable } from '../utils';
+
+const tablesForWhichWeCouldNotDetermineMaxTime = new Set<string>();
 
 export async function rewriteMaxDataTime(
   query: SqlQuery,
@@ -27,10 +32,23 @@ export async function rewriteMaxDataTime(
   if (!query.containsFunction('MAX_DATA_TIME')) return { query };
 
   const tableName = query.getFirstTableName();
-  if (!tableName) return { query };
+  if (!tableName) throw new Error(`something went wrong - unable to find table name in query`);
 
-  const maxTime = await getMaxTimeForTable(tableName);
-  if (!maxTime) return { query };
+  let maxTime: Date;
+  try {
+    maxTime = await getMaxTimeForTable(tableName);
+  } catch (error) {
+    if (!tablesForWhichWeCouldNotDetermineMaxTime.has(tableName)) {
+      tablesForWhichWeCouldNotDetermineMaxTime.add(tableName);
+      AppToaster.show({
+        icon: IconNames.ERROR,
+        intent: Intent.DANGER,
+        timeout: 120000,
+        message: `Could not determine max data time for ${tableName}: ${error.message}. Using current time instead.`,
+      });
+    }
+    maxTime = new Date();
+  }
 
   const adjustedMaxTime = new Date(maxTime.valueOf() + 1); // Add 1ms to the maxTime date to allow filters like `"__time" < {maxTime}" to capture the last event which might also be the only event
 
