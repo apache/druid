@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.data.ColumnarLongsSerializer;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.serde.DictionarySerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
@@ -49,6 +50,10 @@ public final class ScalarLongFieldColumnWriter extends GlobalDictionaryEncodedFi
   )
   {
     super(columnName, fieldName, segmentWriteOutMedium, columnFormatSpec, globalDictionaryIdLookup);
+    if (columnFormatSpec.getNumericFieldBitmapIndex() != null) {
+      flags = flags | DictionarySerdeHelper.Feature.CONFIGURABLE_BITMAP_INDEX.getMask();
+      bitmapIndexEncoding = columnFormatSpec.getNumericFieldBitmapIndex();
+    }
   }
 
   @Override

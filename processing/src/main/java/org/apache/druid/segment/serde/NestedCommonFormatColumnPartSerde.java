@@ -22,6 +22,7 @@ package org.apache.druid.segment.serde;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.segment.column.BitmapIndexEncodingStrategy;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -464,7 +465,8 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           spec.getLongColumnEncoding(),
           spec.getLongColumnCompression(),
           spec.getDoubleColumnCompression(),
-          spec.getBitmapEncoding()
+          spec.getBitmapEncoding(),
+          spec.getNumericFieldBitmapIndex()
       );
     }
 
@@ -478,7 +480,8 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
         @JsonProperty("longColumnEncoding")@Nullable CompressionFactory.LongEncodingStrategy longColumnEncoding,
         @JsonProperty("longColumnCompression")@Nullable CompressionStrategy longColumnCompression,
         @JsonProperty("doubleColumnCompression")@Nullable CompressionStrategy doubleColumnCompression,
-        @JsonProperty("bitmapEncoding") @Nullable BitmapSerdeFactory bitmapEncoding
+        @JsonProperty("bitmapEncoding") @Nullable BitmapSerdeFactory bitmapEncoding,
+        @JsonProperty("numericFieldBitmapIndex")@Nullable BitmapIndexEncodingStrategy numericFieldBitmapIndex
     )
     {
       super(
@@ -490,7 +493,8 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           longColumnEncoding,
           longColumnCompression,
           doubleColumnCompression,
-          bitmapEncoding
+          bitmapEncoding,
+          numericFieldBitmapIndex
       );
     }
 
@@ -501,6 +505,15 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
     public BitmapSerdeFactory getBitmapEncoding()
     {
       return super.getBitmapEncoding();
+    }
+
+    @JsonProperty("numericFieldBitmapIndex")
+    @JsonIgnore(false)
+    @Nullable
+    @Override
+    public BitmapIndexEncodingStrategy getNumericFieldBitmapIndex()
+    {
+      return super.getNumericFieldBitmapIndex();
     }
   }
 }

@@ -31,6 +31,7 @@ import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.column.BitmapIndexEncodingStrategy;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSerializer;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.FixedIndexedIntWriter;
@@ -40,7 +41,7 @@ import org.apache.druid.segment.data.VSizeColumnarIntsSerializer;
 import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
-import org.apache.druid.segment.serde.DictionaryEncodedColumnPartSerde;
+import org.apache.druid.segment.serde.DictionarySerdeHelper;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
@@ -80,14 +81,15 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
   protected final DictionaryIdLookup globalDictionaryIdLookup;
   protected final LocalDimensionDictionary localDictionary = new LocalDimensionDictionary();
 
+  public BitmapIndexEncodingStrategy bitmapIndexEncoding = BitmapIndexEncodingStrategy.DictionaryId.INSTANCE;
   protected final Int2ObjectRBTreeMap<MutableBitmap> arrayElements = new Int2ObjectRBTreeMap<>();
 
   protected final Closer fieldResourceCloser = Closer.create();
 
   protected FixedIndexedIntWriter intermediateValueWriter;
-  // maybe someday we allow no bitmap indexes or multi-value columns
-  protected int flags = DictionaryEncodedColumnPartSerde.NO_FLAGS;
-  protected DictionaryEncodedColumnPartSerde.VERSION version = null;
+  // Start with no flags enabled, it can get changed.
+  protected int flags = DictionarySerdeHelper.NO_FLAGS;
+  protected final DictionarySerdeHelper.VERSION version = DictionarySerdeHelper.VERSION.FLAG_BASED;
   protected SingleValueColumnarIntsSerializer encodedValueSerializer;
 
   protected int cursorPosition;
@@ -105,6 +107,9 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
     this.columnFormatSpec = columnFormatSpec;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.globalDictionaryIdLookup = globalDictionaryIdLookup;
+    if (columnFormatSpec.getDictionaryEncodedColumnCompression() != CompressionStrategy.UNCOMPRESSED) {
+      this.flags |= DictionarySerdeHelper.Feature.COMPRESSED.getMask();
+    }
   }
 
   /**
@@ -226,13 +231,12 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
     IntArrays.unstableSort(sortedGlobal);
 
     final int[] unsortedToSorted = new int[unsortedToGlobal.length];
-    final MutableBitmap[] bitmaps = new MutableBitmap[sortedGlobal.length];
+    bitmapIndexEncoding.init(columnFormatSpec.getBitmapEncoding().getBitmapFactory(), sortedGlobal.length);
     for (int index = 0; index < sortedGlobal.length; index++) {
       final int globalId = sortedGlobal[index];
       sortedDictionaryWriter.write(globalId);
       final int unsortedId = globalToUnsorted.get(globalId);
       unsortedToSorted[unsortedId] = index;
-      bitmaps[index] = columnFormatSpec.getBitmapEncoding().getBitmapFactory().makeEmptyMutableBitmap();
     }
 
     for (Int2ObjectMap.Entry<MutableBitmap> arrayElement : arrayElements.int2ObjectEntrySet()) {
@@ -249,20 +253,20 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
       final int unsortedLocalId = rows.nextInt();
       final int sortedLocalId = unsortedToSorted[unsortedLocalId];
       encodedValueSerializer.addValue(sortedLocalId);
-      writeValue((T) globalDictionaryIdLookup.getDictionaryValue(unsortedToGlobal[unsortedLocalId]));
-      bitmaps[sortedLocalId].add(rowCount++);
+      T value = (T) globalDictionaryIdLookup.getDictionaryValue(unsortedToGlobal[unsortedLocalId]);
+      writeValue(value);
+      bitmapIndexEncoding.add(rowCount, sortedLocalId, value);
+      rowCount++;
     }
-
-    for (int i = 0; i < bitmaps.length; i++) {
-      final MutableBitmap bitmap = bitmaps[i];
-      bitmapIndexWriter.write(
-          columnFormatSpec.getBitmapEncoding().getBitmapFactory().makeImmutableBitmap(bitmap)
-      );
-      bitmaps[i] = null; // Reclaim memory
-    }
+    bitmapIndexEncoding.writeTo(columnFormatSpec.getBitmapEncoding().getBitmapFactory(), bitmapIndexWriter);
 
     final Serializer fieldSerializer = new Serializer()
     {
+      //       if this column has configurable bitmap index, we write the bitmap index strategy bit before bitmapIndexWriter
+      byte[] configurableBitmapIndexStrategy =
+          DictionarySerdeHelper.Feature.CONFIGURABLE_BITMAP_INDEX.isSet(flags) ?
+          bitmapIndexEncoding.toBytes() : new byte[]{};
+
       @Override
       public long getSerializedSize() throws IOException
       {
@@ -272,20 +276,21 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
         } else {
           arraySize = 0;
         }
-        return 1 + Integer.BYTES +
+        return 1 + Integer.BYTES + // version + feature flags
                sortedDictionaryWriter.getSerializedSize() +
-               bitmapIndexWriter.getSerializedSize() +
-               arraySize +
-               getSerializedColumnSize();
+               getSerializedColumnSize() +
+               configurableBitmapIndexStrategy.length + bitmapIndexWriter.getSerializedSize() +
+               arraySize;
       }
 
       @Override
       public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
       {
         Channels.writeFully(channel, ByteBuffer.wrap(new byte[]{version.asByte()}));
-        channel.write(ByteBuffer.wrap(Ints.toByteArray(flags)));
+        Channels.writeFully(channel, ByteBuffer.wrap(Ints.toByteArray(flags)));
         sortedDictionaryWriter.writeTo(channel, fileBuilder);
         writeColumnTo(channel, fileBuilder);
+        Channels.writeFully(channel, ByteBuffer.wrap(configurableBitmapIndexStrategy));
         bitmapIndexWriter.writeTo(channel, fileBuilder);
         if (arrayElements.size() > 0) {
           arrayElementDictionaryWriter.writeTo(channel, fileBuilder);
@@ -308,7 +313,6 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
   public void openColumnSerializer(SegmentWriteOutMedium medium, int maxId) throws IOException
   {
     if (columnFormatSpec.getDictionaryEncodedColumnCompression() != CompressionStrategy.UNCOMPRESSED) {
-      this.version = DictionaryEncodedColumnPartSerde.VERSION.COMPRESSED;
       encodedValueSerializer = CompressedVSizeColumnarIntsSerializer.create(
           fieldName,
           medium,
@@ -319,7 +323,6 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
       );
     } else {
       encodedValueSerializer = new VSizeColumnarIntsSerializer(medium, maxId);
-      this.version = DictionaryEncodedColumnPartSerde.VERSION.UNCOMPRESSED_SINGLE_VALUE;
     }
     encodedValueSerializer.open();
   }

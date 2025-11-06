@@ -19,12 +19,14 @@
 
 package org.apache.druid.segment.nested;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Doubles;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.common.semantic.SemanticUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
@@ -42,6 +44,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.column.BaseColumnHolder;
+import org.apache.druid.segment.column.BitmapIndexEncodingStrategy;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -69,7 +72,7 @@ import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.data.VSizeColumnarInts;
 import org.apache.druid.segment.data.WritableSupplier;
 import org.apache.druid.segment.file.SegmentFileMapper;
-import org.apache.druid.segment.serde.DictionaryEncodedColumnPartSerde;
+import org.apache.druid.segment.serde.DictionarySerdeHelper;
 import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 import org.apache.druid.segment.vector.NilVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorInspector;
@@ -85,7 +88,9 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -115,6 +120,12 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
   private static final Map<Class<?>, Function<CompressedNestedDataComplexColumn, ?>> AS_MAP =
       SemanticUtils.makeAsMap(CompressedNestedDataComplexColumn.class);
 
+  private static final EnumSet<DictionarySerdeHelper.Feature> SUPPORTED_FEATURES = EnumSet.of(
+      DictionarySerdeHelper.Feature.MULTI_VALUE,
+      DictionarySerdeHelper.Feature.MULTI_VALUE_V3,
+      DictionarySerdeHelper.Feature.COMPRESSED,
+      DictionarySerdeHelper.Feature.CONFIGURABLE_BITMAP_INDEX
+  );
   private static final ObjectStrategy<Object> STRATEGY = NestedDataComplexTypeSerde.INSTANCE.getObjectStrategy();
   public static final IntTypeStrategy INT_TYPE_STRATEGY = new IntTypeStrategy();
   private final ColumnConfig columnConfig;
@@ -369,14 +380,14 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
         return STRATEGY.fromByteBuffer(valueBuffer, valueBuffer.remaining());
       };
     } else {
-      List<Pair<List<NestedPathPart>, ColumnValueSelector>> fieldSelectors =
+      List<Pair<List<NestedPathPart>, ? extends ColumnValueSelector>> fieldSelectors =
           getAllParsedNestedFields().stream()
                                     .map(pair -> Pair.of(
                                         pair.rhs,
-                                        ((DictionaryEncodedColumn) getColumnHolder(
+                                        getColumnHolder(
                                             pair.lhs.fieldName,
                                             pair.lhs.fieldIndex
-                                        ).getColumn()).makeColumnValueSelector(offset)
+                                        ).getColumn().makeColumnValueSelector(offset)
                                     ))
                                     .collect(Collectors.toList());
       valueProvider = () -> {
@@ -439,14 +450,14 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
       };
     } else {
       AtomicIntegerReadableOffset readableAtomicOffset = new AtomicIntegerReadableOffset(atomicOffset);
-      final List<Pair<List<NestedPathPart>, ColumnValueSelector>> fieldSelectors =
+      final List<Pair<List<NestedPathPart>, ? extends ColumnValueSelector>> fieldSelectors =
           allFields.stream()
                    .map(pair -> Pair.of(
                        pair.rhs,
-                       ((DictionaryEncodedColumn) getColumnHolder(
+                       getColumnHolder(
                            pair.lhs.fieldName,
                            pair.lhs.fieldIndex
-                       ).getColumn()).makeColumnValueSelector(readableAtomicOffset)
+                       ).getColumn().makeColumnValueSelector(readableAtomicOffset)
                    ))
                    .collect(Collectors.toList());
       valueProvider = () -> {
@@ -580,11 +591,10 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
             path
         );
       }
-      DictionaryEncodedColumn<?> col = (DictionaryEncodedColumn<?>) getColumnHolder(
+      ColumnValueSelector<?> arraySelector = getColumnHolder(
           arrayField.nestedField.fieldName,
           arrayField.nestedField.fieldIndex
-      ).getColumn();
-      ColumnValueSelector<?> arraySelector = col.makeColumnValueSelector(readableOffset);
+      ).getColumn().makeColumnValueSelector(readableOffset);
       return new BaseSingleValueDimensionSelector()
       {
         @Nullable
@@ -646,11 +656,10 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
                                 path
                             );
       }
-      DictionaryEncodedColumn<?> col = (DictionaryEncodedColumn<?>) getColumnHolder(
+      ColumnValueSelector<?> arraySelector = getColumnHolder(
           arrayField.nestedField.fieldName,
           arrayField.nestedField.fieldIndex
-      ).getColumn();
-      ColumnValueSelector arraySelector = col.makeColumnValueSelector(readableOffset);
+      ).getColumn().makeColumnValueSelector(readableOffset);
       return new ColumnValueSelector<>()
       {
         @Override
@@ -1074,6 +1083,10 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
         return null;
       }
       final FieldTypeInfo.TypeSet types = fieldInfo.getTypes(fieldIndex);
+      final ColumnType theType = GuavaUtils.firstNonNull(
+          types.getSingleType(),
+          ColumnType.leastRestrictiveType(FieldTypeInfo.convertToSet(types.getByteValue()))
+      );
       final String fieldFileName = getFieldFileName(columnName, field, fieldIndex);
       final ByteBuffer dataBuffer = fileMapper.mapFile(fieldFileName);
       if (dataBuffer == null) {
@@ -1085,18 +1098,21 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
         );
       }
 
-      ColumnBuilder columnBuilder = new ColumnBuilder().setFileMapper(fileMapper);
+      ColumnBuilder columnBuilder = new ColumnBuilder().setFileMapper(fileMapper).setType(theType);
       // heh, maybe this should be its own class, or DictionaryEncodedColumnPartSerde could be cooler
-      DictionaryEncodedColumnPartSerde.VERSION version = DictionaryEncodedColumnPartSerde.VERSION.fromByte(
-          dataBuffer.get()
+      DictionarySerdeHelper.VERSION version = DictionarySerdeHelper.VERSION.fromByte(dataBuffer.get());
+      Preconditions.checkArgument(
+          version.equals(DictionarySerdeHelper.VERSION.FLAG_BASED),
+          "Unexpected version[%s]",
+          version
       );
-      // we should check this someday soon, but for now just read it to push the buffer position ahead
-      int flags = dataBuffer.getInt();
-      if (flags != DictionaryEncodedColumnPartSerde.NO_FLAGS) {
-        throw DruidException.defensive(
-            "Unrecognized bits set in space reserved for future flags for field column [%s]", field
-        );
-      }
+      int flags = version.getFlags(dataBuffer);
+      List<DictionarySerdeHelper.Feature> unsupported =
+          Arrays.stream(DictionarySerdeHelper.Feature.values())
+                .filter(f -> f.isSet(flags))
+                .filter(f -> !SUPPORTED_FEATURES.contains(f))
+                .collect(Collectors.toList());
+      Preconditions.checkArgument(unsupported.isEmpty(), "Unsupported features[%s].", unsupported);
 
       final Supplier<FixedIndexed<Integer>> localDictionarySupplier = FixedIndexed.read(
           dataBuffer,
@@ -1104,6 +1120,9 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
           byteOrder,
           Integer.BYTES
       );
+      final boolean hasNull = localDictionarySupplier.get().get(0) == 0;
+      columnBuilder.setHasMultipleValues(false)
+                   .setHasNulls(hasNull);
       ByteBuffer bb = dataBuffer.asReadOnlyBuffer().order(byteOrder);
       int longsLength = bb.getInt();
       int doublesLength = bb.getInt();
@@ -1123,18 +1142,22 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
       ) : () -> null;
       dataBuffer.position(pos + doublesLength);
       final WritableSupplier<ColumnarInts> ints;
-      if (version == DictionaryEncodedColumnPartSerde.VERSION.COMPRESSED) {
-        ints = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(dataBuffer, byteOrder, columnBuilder.getFileMapper());
+      if (DictionarySerdeHelper.Feature.COMPRESSED.isSet(flags)) {
+        ints = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
+            dataBuffer,
+            byteOrder,
+            columnBuilder.getFileMapper()
+        );
       } else {
         ints = VSizeColumnarInts.readFromByteBuffer(dataBuffer);
       }
-      ColumnType theType = types.getSingleType();
-      if (theType == null) {
-        theType = ColumnType.leastRestrictiveType(FieldTypeInfo.convertToSet(types.getByteValue()));
-      }
-      columnBuilder.setType(theType);
 
-      GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
+      boolean configurableBitmapIndex = DictionarySerdeHelper.Feature.CONFIGURABLE_BITMAP_INDEX.isSet(flags);
+      final BitmapIndexEncodingStrategy indexStrategy =
+          configurableBitmapIndex
+          ? BitmapIndexEncodingStrategy.fromByteBuffer(dataBuffer)
+          : BitmapIndexEncodingStrategy.DictionaryId.INSTANCE;
+      final GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
           dataBuffer,
           bitmapSerdeFactory.getObjectStrategy(),
           columnBuilder.getFileMapper()
@@ -1157,7 +1180,29 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
         arrayElementDictionarySupplier = null;
         arrayElementBitmaps = null;
       }
-      final boolean hasNull = localDictionarySupplier.get().get(0) == 0;
+      if (indexStrategy.equals(BitmapIndexEncodingStrategy.DictionaryId.INSTANCE)) {
+        columnBuilder.setIndexSupplier(new NestedFieldColumnIndexSupplier(
+            types,
+            bitmapSerdeFactory.getBitmapFactory(),
+            columnConfig,
+            rBitmaps,
+            localDictionarySupplier,
+            stringDictionarySupplier,
+            longDictionarySupplier,
+            doubleDictionarySupplier,
+            arrayDictionarySupplier,
+            arrayElementDictionarySupplier,
+            arrayElementBitmaps
+        ), true, false);
+      } else if (indexStrategy.equals(BitmapIndexEncodingStrategy.NullsOnly.INSTANCE)) {
+        Preconditions.checkArgument(
+            rBitmaps.size() == 1,
+            StringUtils.format("expecting 1 bitmap, got [%d]", rBitmaps.size())
+        );
+      } else {
+        throw DruidException.defensive("Unsupported BitmapIndexEncodingStrategy[%s]", strategy);
+      }
+
       Supplier<DictionaryEncodedColumn<?>> columnSupplier = () -> {
         FixedIndexed<Integer> localDict = localDictionarySupplier.get();
         return closer.register(new NestedFieldDictionaryEncodedColumn(
@@ -1175,27 +1220,8 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
             : bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap()
         ));
       };
-      columnBuilder.setHasMultipleValues(false)
-                   .setHasNulls(hasNull)
-                   .setDictionaryEncodedColumnSupplier(columnSupplier);
+      columnBuilder.setDictionaryEncodedColumnSupplier(columnSupplier);
 
-      columnBuilder.setIndexSupplier(
-          new NestedFieldColumnIndexSupplier(
-              types,
-              bitmapSerdeFactory.getBitmapFactory(),
-              columnConfig,
-              rBitmaps,
-              localDictionarySupplier,
-              stringDictionarySupplier,
-              longDictionarySupplier,
-              doubleDictionarySupplier,
-              arrayDictionarySupplier,
-              arrayElementDictionarySupplier,
-              arrayElementBitmaps
-          ),
-          true,
-          false
-      );
       return columnBuilder.build();
     }
     catch (IOException ex) {

@@ -22,8 +22,10 @@ package org.apache.druid.segment.nested;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.column.BitmapIndexEncodingStrategy;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory;
@@ -34,8 +36,7 @@ import java.util.Objects;
 
 /**
  * Defines storage format for 'auto' and json columns. This can be convered into the 'effective' format spec by calling
- * {@link #getEffectiveSpec(IndexSpec)}, which will fill in any values which were not specified from
- * {@link IndexSpec#getAutoColumnFormatSpec()}, falling back to hard-coded defaults, useful when generating segments or
+ * {@link #getEffectiveFormatSpec(NestedCommonFormatColumnFormatSpec, IndexSpec)}, useful when generating segments or
  * comparing compaction state.
  */
 public class NestedCommonFormatColumnFormatSpec
@@ -43,6 +44,7 @@ public class NestedCommonFormatColumnFormatSpec
   private static final NestedCommonFormatColumnFormatSpec DEFAULT =
       builder().setObjectFieldsDictionaryEncoding(StringEncodingStrategy.UTF8_STRATEGY)
                .setObjectStorageEncoding(ObjectStorageEncoding.SMILE)
+               .setNumericFieldBitmapIndex(BitmapIndexEncodingStrategy.NullsOnly.INSTANCE)
                .build();
 
   public static Builder builder()
@@ -56,10 +58,11 @@ public class NestedCommonFormatColumnFormatSpec
   }
 
   /**
-   * Create a {@link NestedCommonFormatColumnFormatSpec} with all fields fully populated. Values from the supplied
-   * column format spec take priority, any null values are then populated by checking
-   * {@link IndexSpec#getAutoColumnFormatSpec()}, then falling back to fields on {@link IndexSpec} itself if applicable,
-   * and finally resorting to hard coded defaults.
+   * Create a {@link NestedCommonFormatColumnFormatSpec} with all fields fully populated. Values are populated in the following order:
+   * <li> value in the given column format spec, if non-null </li>
+   * <li> value in {@link IndexSpec#getAutoColumnFormatSpec()}, if non-null </li>
+   * <li> fall back to equivalent fields on {@link IndexSpec} itself if applicable </li>
+   * <li> hard coded defaults in {@link #DEFAULT}</li>
    */
   public static NestedCommonFormatColumnFormatSpec getEffectiveFormatSpec(
       @Nullable NestedCommonFormatColumnFormatSpec columnFormatSpec,
@@ -83,6 +86,13 @@ public class NestedCommonFormatColumnFormatSpec
       defaultSpec = indexSpec.getAutoColumnFormatSpec();
     } else {
       defaultSpec = DEFAULT;
+    }
+
+    if (builder.numericFieldBitmapIndex == null) {
+      builder.setNumericFieldBitmapIndex(GuavaUtils.firstNonNull(
+          defaultSpec.getNumericFieldBitmapIndex(),
+          BitmapIndexEncodingStrategy.DictionaryId.INSTANCE
+      ));
     }
 
     if (builder.objectFieldsDictionaryEncoding == null) {
@@ -172,14 +182,18 @@ public class NestedCommonFormatColumnFormatSpec
   private final CompressionStrategy doubleColumnCompression;
   @Nullable
   private final BitmapSerdeFactory bitmapEncoding;
+  @Nullable
+  private final BitmapIndexEncodingStrategy numericFieldBitmapIndex;
 
   @JsonCreator
   public NestedCommonFormatColumnFormatSpec(
       @JsonProperty("objectFieldsDictionaryEncoding") @Nullable StringEncodingStrategy objectFieldsDictionaryEncoding,
+      @JsonProperty("bitmapIndexEncoding") @Nullable BitmapIndexEncodingStrategy bitmapIndexEncoding,
       @JsonProperty("objectStorageEncoding") @Nullable ObjectStorageEncoding objectStorageEncoding,
       @JsonProperty("objectStorageCompression") @Nullable CompressionStrategy objectStorageCompression,
       @JsonProperty("stringDictionaryEncoding") @Nullable StringEncodingStrategy stringDictionaryEncoding,
-      @JsonProperty("dictionaryEncodedColumnCompression") @Nullable CompressionStrategy dictionaryEncodedColumnCompression,
+      @JsonProperty("dictionaryEncodedColumnCompression") @Nullable
+      CompressionStrategy dictionaryEncodedColumnCompression,
       @JsonProperty("longColumnEncoding") @Nullable CompressionFactory.LongEncodingStrategy longColumnEncoding,
       @JsonProperty("longColumnCompression") @Nullable CompressionStrategy longColumnCompression,
       @JsonProperty("doubleColumnCompression") @Nullable CompressionStrategy doubleColumnCompression
@@ -194,7 +208,8 @@ public class NestedCommonFormatColumnFormatSpec
         longColumnEncoding,
         longColumnCompression,
         doubleColumnCompression,
-        null
+        null,
+        BitmapIndexEncodingStrategy.DictionaryId.INSTANCE
     );
   }
 
@@ -212,7 +227,8 @@ public class NestedCommonFormatColumnFormatSpec
       @Nullable CompressionFactory.LongEncodingStrategy longColumnEncoding,
       @Nullable CompressionStrategy longColumnCompression,
       @Nullable CompressionStrategy doubleColumnCompression,
-      @Nullable BitmapSerdeFactory bitmapEncoding
+      @Nullable BitmapSerdeFactory bitmapEncoding,
+      @Nullable BitmapIndexEncodingStrategy numericFieldBitmapIndex
   )
   {
     this.objectFieldsDictionaryEncoding = objectFieldsDictionaryEncoding;
@@ -224,6 +240,7 @@ public class NestedCommonFormatColumnFormatSpec
     this.longColumnCompression = longColumnCompression;
     this.doubleColumnCompression = doubleColumnCompression;
     this.bitmapEncoding = bitmapEncoding;
+    this.numericFieldBitmapIndex = numericFieldBitmapIndex;
   }
 
   @Nullable
@@ -289,6 +306,13 @@ public class NestedCommonFormatColumnFormatSpec
     return bitmapEncoding;
   }
 
+  @Nullable
+  @JsonIgnore
+  public BitmapIndexEncodingStrategy getNumericFieldBitmapIndex()
+  {
+    return numericFieldBitmapIndex;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -304,7 +328,8 @@ public class NestedCommonFormatColumnFormatSpec
            && longColumnEncoding == that.longColumnEncoding
            && longColumnCompression == that.longColumnCompression
            && doubleColumnCompression == that.doubleColumnCompression
-           && Objects.equals(bitmapEncoding, that.bitmapEncoding);
+           && Objects.equals(bitmapEncoding, that.bitmapEncoding)
+           && Objects.equals(numericFieldBitmapIndex, that.numericFieldBitmapIndex);
   }
 
   @Override
@@ -319,7 +344,8 @@ public class NestedCommonFormatColumnFormatSpec
         longColumnEncoding,
         longColumnCompression,
         doubleColumnCompression,
-        bitmapEncoding
+        bitmapEncoding,
+        numericFieldBitmapIndex
     );
   }
 
@@ -336,6 +362,7 @@ public class NestedCommonFormatColumnFormatSpec
            ", longColumnCompression=" + longColumnCompression +
            ", doubleColumnCompression=" + doubleColumnCompression +
            ", bitmapEncoding=" + bitmapEncoding +
+           ", numericFieldBitmapIndex=" + numericFieldBitmapIndex +
            '}';
   }
 
@@ -358,6 +385,8 @@ public class NestedCommonFormatColumnFormatSpec
     @Nullable
     private CompressionStrategy doubleColumnCompression;
     @Nullable
+    private BitmapIndexEncodingStrategy numericFieldBitmapIndex;
+    @Nullable
     private BitmapSerdeFactory bitmapEncoding;
 
     public Builder()
@@ -376,6 +405,7 @@ public class NestedCommonFormatColumnFormatSpec
       this.longColumnCompression = spec.longColumnCompression;
       this.doubleColumnCompression = spec.doubleColumnCompression;
       this.bitmapEncoding = spec.bitmapEncoding;
+      this.numericFieldBitmapIndex = spec.numericFieldBitmapIndex;
     }
 
     public Builder setObjectFieldsDictionaryEncoding(@Nullable StringEncodingStrategy objectFieldsDictionaryEncoding)
@@ -428,6 +458,12 @@ public class NestedCommonFormatColumnFormatSpec
       return this;
     }
 
+    public Builder setNumericFieldBitmapIndex(@Nullable BitmapIndexEncodingStrategy numericFieldBitmapIndex)
+    {
+      this.numericFieldBitmapIndex = numericFieldBitmapIndex;
+      return this;
+    }
+
     public Builder setBitmapEncoding(@Nullable BitmapSerdeFactory bitmapEncoding)
     {
       this.bitmapEncoding = bitmapEncoding;
@@ -445,7 +481,8 @@ public class NestedCommonFormatColumnFormatSpec
           longColumnEncoding,
           longColumnCompression,
           doubleColumnCompression,
-          bitmapEncoding
+          bitmapEncoding,
+          numericFieldBitmapIndex
       );
     }
   }
