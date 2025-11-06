@@ -332,5 +332,5 @@ The `server_properties` table exposes the runtime properties configured on for e
 For example, to retrieve properties for a specific server, use the query
 
 ```sql
-SELECT * FROM sys.server_properties WHERE server='123.456.789.1:8081'
+SELECT * FROM sys.server_properties WHERE server='192.168.1.1:8081'
 ```
