@@ -106,5 +106,9 @@ export function formatDate(value: string) {
     LocalStorageKeys.WEB_CONSOLE_CONFIGS,
   );
   const showLocalTime = webConsoleConfig?.showLocalTime;
-  return showLocalTime ? dayjs(value).format(DATE_FORMAT) : dayjs(value).toISOString();
+  try {
+    return showLocalTime ? dayjs(value).format(DATE_FORMAT) : dayjs(value).toISOString();
+  } catch {
+    return value;
+  }
 }
