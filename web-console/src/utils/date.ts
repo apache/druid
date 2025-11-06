@@ -112,3 +112,75 @@ export function formatDate(value: string) {
     return value;
   }
 }
+
+/**
+ * Parses an ISO 8601 date string into a Date object.
+ * Accepts flexible formats including:
+ * - Year only: "2016"
+ * - Year-month: "2016-06"
+ * - Date only: "2016-06-20"
+ * - Date with hour: "2016-06-20 21" or "2016-06-20T21"
+ * - Date with hour-minute: "2016-06-20 21:31" or "2016-06-20T21:31"
+ * - Date with hour-minute-second: "2016-06-20 21:31:02" or "2016-06-20T21:31:02"
+ * - Full datetime: "2016-06-20T21:31:02.123" or "2016-06-20 21:31:02.123"
+ * - Optional trailing "Z": "2016-06-20T21:31:02Z" (the Z is ignored, date is always parsed as UTC)
+ *
+ * Missing components default to: month=1, day=1, hour=0, minute=0, second=0, millisecond=0
+ *
+ * @param dateString - The ISO date string to parse
+ * @returns A Date object in UTC
+ * @throws Error if the date string is invalid or components are out of range
+ */
+export function parseIsoDate(dateString: string): Date {
+  // Match ISO 8601 date format with optional date and time components and optional trailing Z
+  // Format: YYYY[-MM[-DD[[T| ]HH[:mm[:ss[.SSS]]]]]][Z]
+  const isoRegex =
+    /^(\d{4})(?:-(\d{2})(?:-(\d{2})(?:[T ](\d{2})(?::(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?)?)?)?)?Z?$/;
+  const match = isoRegex.exec(dateString.trim());
+
+  if (!match) {
+    throw new Error(`Invalid date format: expected ISO 8601 format`);
+  }
+
+  const year = parseInt(match[1], 10);
+  const month = match[2] ? parseInt(match[2], 10) : 1;
+  const day = match[3] ? parseInt(match[3], 10) : 1;
+  const hour = match[4] ? parseInt(match[4], 10) : 0;
+  const minute = match[5] ? parseInt(match[5], 10) : 0;
+  const second = match[6] ? parseInt(match[6], 10) : 0;
+  const millisecond = match[7] ? parseInt(match[7].padEnd(3, '0'), 10) : 0;
+
+  // Validate year
+  if (year < 1000 || year > 3999) {
+    throw new Error(`Invalid year: must be between 1000 and 3999, got ${year}`);
+  }
+
+  // Validate month
+  if (month < 1 || month > 12) {
+    throw new Error(`Invalid month: must be between 1 and 12, got ${month}`);
+  }
+
+  // Validate day
+  if (day < 1 || day > 31) {
+    throw new Error(`Invalid day: must be between 1 and 31, got ${day}`);
+  }
+
+  // Validate time components
+  if (hour > 23) {
+    throw new Error(`Invalid hour: must be between 0 and 23, got ${hour}`);
+  }
+  if (minute > 59) {
+    throw new Error(`Invalid minute: must be between 0 and 59, got ${minute}`);
+  }
+  if (second > 59) {
+    throw new Error(`Invalid second: must be between 0 and 59, got ${second}`);
+  }
+
+  // Create UTC date
+  const value = Date.UTC(year, month - 1, day, hour, minute, second, millisecond);
+  if (isNaN(value)) {
+    throw new Error(`Invalid date: the date components do not form a valid date`);
+  }
+
+  return new Date(value);
+}
