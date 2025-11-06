@@ -135,9 +135,7 @@ export function parseIsoDate(dateString: string): Date {
   const match = isoRegex.exec(dateString.trim());
 
   if (!match) {
-    throw new Error(
-      `Invalid date format: expected ISO 8601 format`,
-    );
+    throw new Error(`Invalid date format: expected ISO 8601 format`);
   }
 
   const year = parseInt(match[1], 10);
