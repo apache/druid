@@ -23,14 +23,11 @@ sidebar_label: "Key concepts"
   ~ under the License.
   -->
 
-:::info
- This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md). Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
- ingestion method is right for you.
-:::
+ This page describes SQL-based batch ingestion using the [multi-stage query (MSQ) task engine](../multi-stage-query/index.md) (MSQ task engine). Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which ingestion method is right for you.
 
 ## Multi-stage query task engine
 
-The `druid-multi-stage-query` extension adds a multi-stage query (MSQ) task engine that executes SQL statements as batch
+The MSQ task engine executes SQL statements as batch
 tasks in the indexing service, which execute on [Middle Managers](../design/architecture.md#druid-services).
 [INSERT](reference.md#insert) and [REPLACE](reference.md#replace) tasks publish
 [segments](../design/storage.md) just like [all other forms of batch

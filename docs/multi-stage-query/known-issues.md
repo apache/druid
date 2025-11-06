@@ -23,11 +23,6 @@ sidebar_label: Known issues
   ~ under the License.
   -->
 
-:::info
- This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md). Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
- ingestion method is right for you.
-:::
-
 ## Multi-stage query task runtime
 
 - Fault tolerance is partially implemented. Workers get relaunched when they are killed unexpectedly. The controller does not get relaunched if it is killed unexpectedly.
