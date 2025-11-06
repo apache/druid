@@ -21,6 +21,7 @@ package org.apache.druid.segment.serde;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 
 import java.nio.ByteBuffer;
 
@@ -77,7 +78,7 @@ public class DictionarySerdeHelper
       int validMask = (1 << Feature.values().length) - 1;
       Preconditions.checkArgument(
           (flags & ~validMask) == 0,
-          String.format("Invalid flag bits set: 0x%X (valid mask: 0x%X)", flags, validMask)
+          StringUtils.format("Invalid flag bits set: 0x%X (valid mask: 0x%X)", flags, validMask)
       );
       requireAtMostOneSet(flags, Feature.MULTI_VALUE, Feature.MULTI_VALUE_V3);
       requireFlagDependency(flags, Feature.MULTI_VALUE_V3, Feature.COMPRESSED);
