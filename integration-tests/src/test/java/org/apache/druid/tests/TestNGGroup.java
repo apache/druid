@@ -25,12 +25,6 @@ package org.apache.druid.tests;
  */
 public class TestNGGroup
 {
-  public static final String BATCH_INDEX = "batch-index";
-
-  public static final String INPUT_FORMAT = "input-format";
-
-  public static final String INPUT_SOURCE = "input-source";
-
   public static final String KAFKA_INDEX = "kafka-index";
 
   public static final String KAFKA_INDEX_SLOW = "kafka-index-slow";
@@ -54,11 +48,6 @@ public class TestNGGroup
    * This group can only be run individually using -Dgroups=security since it requires specific test data setup.
    */
   public static final String SECURITY = "security";
-
-  /**
-   * This group can only be run individually using -Dgroups=ldap-security since it requires specific test data setup.
-   */
-  public static final String LDAP_SECURITY = "ldap-security";
 
   /**
    * This group is not part of CI. To run this group, s3 configs/credentials for your s3 must be provided in a file.
@@ -113,18 +102,6 @@ public class TestNGGroup
    * See integration-tests/docker/environment-configs/override-examples/s3 for env vars to provide.
    */
   public static final String S3_INGESTION = "s3-ingestion";
-
-  /**
-   * This group is not part of CI explicitly. It allows you to run all the tests that have been tested with
-   * against a quickstart deployment of Druid using the instructions in this project's README.
-   * No tests should belong exclusively to this group. It is only meant to be a helper group to run tests against
-   * a local quickstart deployment.
-   *
-   * As you run tests in your environment, mark the tests as quickstart compatible (see
-   * {@link org.apache.druid.tests.indexer.ITIndexerTest}) and add any additional instructions that were needed to
-   * get the tests to work to this project's README.
-   */
-  public static final String QUICKSTART_COMPATIBLE = "quickstart-compatible";
 
   /**
    * This group is not part of CI. To run this group, AWS kinesis configs/credentials for your AWS kinesis must be

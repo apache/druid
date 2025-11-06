@@ -57,7 +57,7 @@ public class GuavaUtilsTest
     Assert.assertNull(GuavaUtils.tryParseLong("++100"));
     Assert.assertEquals((Object) Long.parseLong("+100"), GuavaUtils.tryParseLong("+100"));
     Assert.assertEquals((Object) Long.parseLong("-100"), GuavaUtils.tryParseLong("-100"));
-    Assert.assertNotEquals(new Long(100), GuavaUtils.tryParseLong("+101"));
+    Assert.assertNotEquals(Long.valueOf(100L), GuavaUtils.tryParseLong("+101"));
   }
 
   @Test

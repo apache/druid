@@ -51,6 +51,7 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
@@ -91,6 +92,7 @@ import org.eclipse.jetty.ee8.servlet.ServletHolder;
 import org.eclipse.jetty.http.HttpField;
 import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpVersion;
+import org.eclipse.jetty.io.EofException;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.junit.Assert;
@@ -466,6 +468,196 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   }
 
   @Test
+  public void testMetricsEmittedWithErrorStatusCodeButNoResultException()
+  {
+    final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                        .dataSource("foo")
+                                        .intervals("2000/P1D")
+                                        .granularity(Granularities.ALL)
+                                        .context(ImmutableMap.of("queryId", "test-query-504"))
+                                        .build();
+
+    final HttpServletRequest requestMock = Mockito.mock(HttpServletRequest.class);
+    Mockito.when(requestMock.getAttribute("org.apache.druid.proxy.avaticaQuery")).thenReturn(null);
+    Mockito.when(requestMock.getAttribute("org.apache.druid.proxy.query")).thenReturn(query);
+    Mockito.when(requestMock.getAttribute("org.apache.druid.proxy.sqlQuery")).thenReturn(null);
+    Mockito.when(requestMock.getRemoteAddr()).thenReturn("127.0.0.1");
+    Mockito.when(requestMock.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+           .thenReturn(new AuthenticationResult("testUser", "basic", "basic", null));
+
+    final Request proxyRequestMock = Mockito.mock(Request.class);
+    final Response responseMock = Mockito.mock(Response.class);
+    Mockito.when(responseMock.getStatus()).thenReturn(504); // Gateway Timeout
+    Mockito.when(responseMock.getHeaders()).thenReturn(HttpFields.build());
+    Mockito.when(responseMock.getRequest()).thenReturn(proxyRequestMock);
+
+    final Result result = new Result(proxyRequestMock, responseMock)
+    {
+      @Override
+      public Throwable getFailure()
+      {
+        return null; // No exception thrown
+      }
+    };
+
+    final StubServiceEmitter stubServiceEmitter = new StubServiceEmitter("", "");
+    final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
+        new MapQueryToolChestWarehouse(ImmutableMap.of()),
+        TestHelper.makeJsonMapper(),
+        TestHelper.makeSmileMapper(),
+        null,
+        null,
+        null,
+        stubServiceEmitter,
+        NoopRequestLogger.instance(),
+        new DefaultGenericQueryMetricsFactory(),
+        new AuthenticatorMapper(ImmutableMap.of()),
+        new Properties(),
+        new ServerConfig()
+    );
+
+    try {
+      servlet.newProxyResponseListener(requestMock, null).onComplete(result);
+    }
+    catch (NullPointerException ignored) {
+    }
+
+    stubServiceEmitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals("test-query-504", stubServiceEmitter.getEvents().get(0).toMap().get("id"));
+    Assert.assertEquals(
+        504,
+        stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
+    );
+    Assert.assertEquals("false", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("success"));
+  }
+
+  @Test
+  public void testOnCompleteWithClosedException()
+  {
+    final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                        .dataSource("foo")
+                                        .intervals("2000/P1D")
+                                        .granularity(Granularities.ALL)
+                                        .context(ImmutableMap.of("queryId", "closed-test"))
+                                        .build();
+
+    final HttpServletRequest requestMock = Mockito.mock(HttpServletRequest.class);
+    Mockito.when(requestMock.getAttribute("org.apache.druid.proxy.avaticaQuery")).thenReturn(null);
+    Mockito.when(requestMock.getAttribute("org.apache.druid.proxy.query")).thenReturn(query);
+    Mockito.when(requestMock.getAttribute("org.apache.druid.proxy.sqlQuery")).thenReturn(null);
+    Mockito.when(requestMock.getRemoteAddr()).thenReturn("127.0.0.1");
+    Mockito.when(requestMock.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+           .thenReturn(new AuthenticationResult("testUser", "basic", "basic", null));
+
+    final Request proxyRequestMock = Mockito.mock(Request.class);
+    final Response responseMock = Mockito.mock(Response.class);
+    Mockito.when(responseMock.getStatus()).thenReturn(200); // Status OK
+    Mockito.when(responseMock.getHeaders()).thenReturn(HttpFields.build());
+    Mockito.when(responseMock.getRequest()).thenReturn(proxyRequestMock);
+
+    // Result where connection is closed prematurely
+    final Result result = new Result(proxyRequestMock, responseMock)
+    {
+      @Override
+      public boolean isSucceeded()
+      {
+        return false;
+      }
+
+      @Override
+      public Throwable getFailure()
+      {
+        return new EofException("Stream closed");
+      }
+    };
+
+    final StubServiceEmitter stubServiceEmitter = new StubServiceEmitter("", "");
+    final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
+        new MapQueryToolChestWarehouse(ImmutableMap.of()),
+        TestHelper.makeJsonMapper(),
+        TestHelper.makeSmileMapper(),
+        null,
+        null,
+        null,
+        stubServiceEmitter,
+        NoopRequestLogger.instance(),
+        new DefaultGenericQueryMetricsFactory(),
+        new AuthenticatorMapper(ImmutableMap.of()),
+        new Properties(),
+        new ServerConfig()
+    );
+
+    try {
+      servlet.newProxyResponseListener(requestMock, null).onComplete(result);
+    }
+    catch (NullPointerException ignored) {
+    }
+
+    stubServiceEmitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals("closed-test", stubServiceEmitter.getEvents().get(0).toMap().get("id"));
+    Assert.assertEquals(
+        500,
+        stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
+    );
+    Assert.assertEquals("false", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("success"));
+  }
+
+  @Test
+  public void testOnFailureWithExceptionAndUnassignedStatusCode()
+  {
+    final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                        .dataSource("foo")
+                                        .intervals("2000/P1D")
+                                        .granularity(Granularities.ALL)
+                                        .context(ImmutableMap.of("queryId", "zero-status-test"))
+                                        .build();
+
+    final HttpServletRequest requestMock = Mockito.mock(HttpServletRequest.class);
+    Mockito.when(requestMock.getAttribute("org.apache.druid.proxy.avaticaQuery")).thenReturn(null);
+    Mockito.when(requestMock.getAttribute("org.apache.druid.proxy.query")).thenReturn(query);
+    Mockito.when(requestMock.getAttribute("org.apache.druid.proxy.sqlQuery")).thenReturn(null);
+    Mockito.when(requestMock.getRemoteAddr()).thenReturn("127.0.0.1");
+    Mockito.when(requestMock.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+           .thenReturn(new AuthenticationResult("testUser", "basic", "basic", null));
+
+    final Response responseMock = Mockito.mock(Response.class);
+    Mockito.when(responseMock.getStatus()).thenReturn(0); // Test unassigned http status code case from server
+    Mockito.when(responseMock.getHeaders()).thenReturn(HttpFields.build());
+
+    final StubServiceEmitter stubServiceEmitter = new StubServiceEmitter("", "");
+    final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
+        new MapQueryToolChestWarehouse(ImmutableMap.of()),
+        TestHelper.makeJsonMapper(),
+        TestHelper.makeSmileMapper(),
+        null,
+        null,
+        null,
+        stubServiceEmitter,
+        NoopRequestLogger.instance(),
+        new DefaultGenericQueryMetricsFactory(),
+        new AuthenticatorMapper(ImmutableMap.of()),
+        new Properties(),
+        new ServerConfig()
+    );
+
+    try {
+      servlet.newProxyResponseListener(requestMock, null)
+             .onFailure(responseMock, new IOException("Connection reset by peer"));
+    }
+    catch (NullPointerException ignored) {
+    }
+
+    stubServiceEmitter.verifyEmitted("query/time", 1);
+    Assert.assertEquals("zero-status-test", stubServiceEmitter.getEvents().get(0).toMap().get("id"));
+    Assert.assertEquals(
+        500, // Should default to 500 when status is 0
+        stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
+    );
+    Assert.assertEquals("false", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("success"));
+  }
+
+
+  @Test
   public void testNoParseExceptionOnGroupByWithFilteredAggregationOnLookups() throws Exception
   {
     class TestLookupReferenceManager implements LookupExtractorFactoryContainerProvider
@@ -645,7 +837,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       @Override
       public int getStatus()
       {
-        return 0;
+        return isFailure ? 500 : 200;
       }
 
       @Override
@@ -719,10 +911,20 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     }
     catch (NullPointerException ignored) {
     }
-    // Assert.assertEquals("query/time", stubServiceEmitter.getEvents().get(0).toMap().get("metric"));
     stubServiceEmitter.verifyEmitted("query/time", 1);
     if (!isJDBCSql) {
       Assert.assertEquals("dummy", stubServiceEmitter.getEvents().get(0).toMap().get("id"));
+    }
+    if (isFailure) {
+      Assert.assertEquals(
+          500,
+          stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
+      );
+    } else {
+      Assert.assertEquals(
+          200,
+          stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
+      );
     }
 
     // This test is mostly about verifying that the servlet calls the right methods the right number of times.

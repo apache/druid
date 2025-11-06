@@ -107,6 +107,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private static final String PROPERTY_SQL_ENABLE_DEFAULT = "false";
 
   private static final long CANCELLATION_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(5);
+  // Jetty-specific default (un-assigned) status code
+  private static final int UNASSIGNED_DEFAULT_STATUS_CODE = 0;
 
   private final AtomicLong successfulQueryCount = new AtomicLong();
   private final AtomicLong failedQueryCount = new AtomicLong();
@@ -760,13 +762,18 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         return;
       }
 
-      boolean success = result.isSucceeded();
+      final boolean success = result.isSucceeded() && result.getResponse().getStatus() == Status.OK.getStatusCode();
+      final int statusCode = determineStatusCode(success, result.getResponse().getStatus());
       if (success) {
         successfulQueryCount.incrementAndGet();
       } else {
         failedQueryCount.incrementAndGet();
       }
-      emitQueryTime(requestTimeNs, success, sqlQueryId, queryId);
+
+      // As router is simply a proxy, we don't make an effort to construct the error code from the exception ourselves.
+      // We rely on broker to set this for us if the error occurs downstream.
+      // Otherwise, if there's a router/client error, we log this as an unknown error.
+      emitQueryTime(requestTimeNs, success, sqlQueryId, queryId, statusCode);
 
       AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
@@ -786,8 +793,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                             "query/time",
                             TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
                             "success",
-                            success
-                            && result.getResponse().getStatus() == Status.OK.getStatusCode(),
+                            success,
                             "identity",
                             authenticationResult.getIdentity()
                         )
@@ -814,8 +820,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                         "query/time",
                         TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
                         "success",
-                        success
-                        && result.getResponse().getStatus() == Status.OK.getStatusCode(),
+                        success,
                         "identity",
                         authenticationResult.getIdentity()
                     )
@@ -853,7 +858,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       }
 
       failedQueryCount.incrementAndGet();
-      emitQueryTime(requestTimeNs, false, sqlQueryId, queryId);
+
+      // As router is simply a proxy, we don't make an effort to construct the error code from the exception ourselves.
+      // We rely on broker to set this for us if the error occurs downstream. 
+      // Otherwise, if there's a router/client error, we log this as an unknown error.
+      final int statusCode = determineStatusCode(false, response.getStatus());
+      emitQueryTime(requestTimeNs, false, sqlQueryId, queryId, statusCode);
       AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
       //noinspection VariableNotUsedInsideIf
@@ -929,7 +939,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         long requestTimeNs,
         boolean success,
         @Nullable String sqlQueryId,
-        @Nullable String queryId
+        @Nullable String queryId,
+        int statusCode
     )
     {
       QueryMetrics queryMetrics;
@@ -950,7 +961,28 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         );
       }
       queryMetrics.success(success);
+      queryMetrics.statusCode(statusCode);
       queryMetrics.reportQueryTime(requestTimeNs).emit(emitter);
     }
+  }
+
+  /**
+   * Helper method to assign reasonable status codes in ambigious cases like client/broker connection errors.
+   *
+   * @param success Whether the query was successful
+   * @param statusCode Status code reported by the broker (or {@value UNASSIGNED_DEFAULT_STATUS_CODE})
+   */
+  private static int determineStatusCode(boolean success, int statusCode)
+  {
+    if (success) {
+      if (statusCode == UNASSIGNED_DEFAULT_STATUS_CODE) {
+        statusCode = Status.OK.getStatusCode();
+      }
+    } else {
+      if (statusCode == UNASSIGNED_DEFAULT_STATUS_CODE || statusCode == Status.OK.getStatusCode()) {
+        statusCode = Status.INTERNAL_SERVER_ERROR.getStatusCode();
+      }
+    }
+    return statusCode;
   }
 }

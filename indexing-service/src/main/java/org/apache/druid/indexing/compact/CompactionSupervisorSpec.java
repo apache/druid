@@ -93,6 +93,14 @@ public class CompactionSupervisorSpec implements SupervisorSpec
     return new CompactionSupervisor(this, scheduler);
   }
 
+  /**
+   * @return {@link CompactionJobTemplate} used to create jobs for the supervisor.
+   */
+  public CompactionJobTemplate getTemplate()
+  {
+    return new CompactionConfigBasedJobTemplate(spec);
+  }
+
   @Override
   public List<String> getDataSources()
   {

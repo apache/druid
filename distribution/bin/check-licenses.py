@@ -443,6 +443,8 @@ def check_licenses(license_yaml, dependency_reports_root):
     print_log_to_stderr("")
 
     if len(mismatched_licenses) > 0 or len(missing_licenses) > 0:
+        print_log_to_stderr("Mismatched licenses: {}".format(mismatched_licenses))
+        print_log_to_stderr("Missing licenses: {}".format(missing_licenses))
         sys.exit(1)
 
 

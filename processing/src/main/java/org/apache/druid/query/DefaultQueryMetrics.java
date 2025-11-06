@@ -22,6 +22,7 @@ package org.apache.druid.query;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.druid.collections.bitmap.BitmapFactory;
+import org.apache.druid.java.util.common.FastIntervalStringFormatter;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -65,7 +66,8 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
 
   public static String[] getIntervalsAsStringArray(Collection<Interval> intervals)
   {
-    return intervals.stream().map(Interval::toString).toArray(String[]::new);
+    return intervals.stream().map(FastIntervalStringFormatter::format).toArray(String[]::new);
+
   }
 
   protected void checkModifiedFromOwnerThread()
@@ -191,6 +193,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   public void success(boolean success)
   {
     setDimension("success", String.valueOf(success));
+  }
+
+  @Override
+  public void statusCode(int code)
+  {
+    setDimension(DruidMetrics.STATUS_CODE, code);
   }
 
   @Override
