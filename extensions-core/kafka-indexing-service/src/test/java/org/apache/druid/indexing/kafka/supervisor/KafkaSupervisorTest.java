@@ -5049,24 +5049,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(differentTaskType.getSupervisorId()).andReturn("supervisorId");
     EasyMock.replay(differentTaskType);
   }
-
-  /**
-   * Test that clearAllocationInfo() preserves pendingCompletionTaskGroups to prevent
-   * duplicate history entries during autoscaler scale-down operations.
-   * <p>
-   * Bug: When autoscaler scales down, it calls gracefulShutdownInternal() which moves tasks
-   * to pendingCompletionTaskGroups, then calls clearAllocationInfo(). If clearAllocationInfo()
-   * clears pendingCompletionTaskGroups, the supervisor "forgets" about publishing tasks.
-   * During the next discoverTasks(), these tasks get rediscovered and re-added to
-   * activelyReadingTaskGroups, causing the autoscaler to repeatedly attempt scale-down
-   * and create duplicate history entries.
-   * <p>
-   * Fix: clearAllocationInfo() must preserve pendingCompletionTaskGroups so the autoscaler's
-   * built-in check (DynamicAllocationTasksNotice.handle()) can skip scale actions while
-   * tasks are completing.
-   */
+  
   @Test
-  public void test_clearAllocationInfo_preservesPendingCompletionTaskGroups() throws Exception
+  public void test_autoScaler_doesNotRepeatScaleDownActions_ifTasksAreStillPublishing() throws Exception
   {
     final TaskLocation location1 = TaskLocation.create("testHost1", 1234, -1);
     final TaskLocation location2 = TaskLocation.create("testHost2", 1235, -1);

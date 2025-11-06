@@ -608,6 +608,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
+  /**
+   * Clears allocation information including active task groups, partition groups, partition offsets, and partition IDs.
+   * <p>
+   * Note: Does not clear {@link #pendingCompletionTaskGroups} so that the supervisor remembers that these
+   * tasks are publishing and auto-scaler does not repeatedly attempt a scale down until these tasks
+   * complete. If this is cleared, the next {@link #discoverTasks()} might add these tasks to
+   * {@link #activelyReadingTaskGroups}.
+   */
   private void clearAllocationInfo()
   {
     activelyReadingTaskGroups.clear();
@@ -615,13 +623,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     partitionOffsets.clear();
 
     // Note: We intentionally do NOT clear pendingCompletionTaskGroups here.
-    // When the autoscaler calls this method after gracefulShutdownInternal(), tasks have been moved to
-    // pendingCompletionTaskGroups and are transitioning from READING -> PUBLISHING state.
-    // If we clear pendingCompletionTaskGroups, the supervisor "forgets" about these publishing tasks.
-    // Then, during the next discoverTasks(), if tasks haven't transitioned yet, they get re-added to
-    // activelyReadingTaskGroups, causing the autoscaler to repeatedly attempt scale-down and create
-    // duplicate supervisor history entries. By preserving pendingCompletionTaskGroups, the autoscaler's
-    // check at DynamicAllocationTasksNotice.handle() will correctly skip scale actions until tasks complete.
 
     partitionIds.clear();
   }
