@@ -141,11 +141,90 @@ public class S3UtilsTest
           if (count.incrementAndGet() >= maxRetries) {
             return "donezo";
           } else {
-            throw new AmazonS3Exception("We encountered an internal error. Please try again. (Service: Amazon S3; Status Code: 200; Error Code: InternalError; Request ID: some-id)");
+            AmazonS3Exception s3Exception = new AmazonS3Exception("We encountered an internal error. Please try again. (Service: Amazon S3; Status Code: 200; Error Code: InternalError; Request ID: some-id)");
+            s3Exception.setStatusCode(200);
+            throw s3Exception;
           }
         },
         maxRetries
     );
     Assert.assertEquals(maxRetries, count.get());
+  }
+
+  @Test
+  public void testRetryWithAmazonS3SlowDown() throws Exception
+  {
+    final int maxRetries = 3;
+    final AtomicInteger count = new AtomicInteger();
+    S3Utils.retryS3Operation(
+        () -> {
+          if (count.incrementAndGet() >= maxRetries) {
+            return "success";
+          } else {
+            AmazonS3Exception s3Exception = new AmazonS3Exception("Please reduce your request rate. SlowDown");
+            s3Exception.setStatusCode(200);
+            throw s3Exception;
+          }
+        },
+        maxRetries
+    );
+    Assert.assertEquals(maxRetries, count.get());
+  }
+
+  @Test
+  public void testNoRetryWithAmazonS3InternalErrorNon200Status()
+  {
+    final AtomicInteger count = new AtomicInteger();
+    Assert.assertThrows(
+        Exception.class,
+        () -> S3Utils.retryS3Operation(
+            () -> {
+              count.incrementAndGet();
+              AmazonS3Exception s3Exception = new AmazonS3Exception("InternalError occurred");
+              s3Exception.setStatusCode(403);
+              throw s3Exception;
+            },
+            3
+        )
+    );
+    Assert.assertEquals(1, count.get());
+  }
+
+  @Test
+  public void testNoRetryWithAmazonS3SlowDownNon200Status()
+  {
+    final AtomicInteger count = new AtomicInteger();
+    Assert.assertThrows(
+        Exception.class,
+        () -> S3Utils.retryS3Operation(
+            () -> {
+              count.incrementAndGet();
+              AmazonS3Exception s3Exception = new AmazonS3Exception("SlowDown message");
+              s3Exception.setStatusCode(404);
+              throw s3Exception;
+            },
+            3
+        )
+    );
+    Assert.assertEquals(1, count.get());
+  }
+
+  @Test
+  public void testRetryWithAmazonS3Status200ButDifferentError()
+  {
+    final AtomicInteger count = new AtomicInteger();
+    Assert.assertThrows(
+        Exception.class,
+        () -> S3Utils.retryS3Operation(
+            () -> {
+              count.incrementAndGet();
+              AmazonS3Exception s3Exception = new AmazonS3Exception("Some other error message");
+              s3Exception.setStatusCode(200);
+              throw s3Exception;
+            },
+            3
+        )
+    );
+    Assert.assertEquals(1, count.get());
   }
 }
