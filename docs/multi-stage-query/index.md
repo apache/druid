@@ -25,8 +25,7 @@ description: Introduces multi-stage query architecture and its task engine
   -->
 
 :::info
- This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
- extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
+ This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md). Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
  ingestion method is right for you.
 :::
 
@@ -59,12 +58,9 @@ transformation: creating new tables based on queries of other tables.
 - **Shuffle**: Workers exchange data between themselves on a per-partition basis in a process called
   shuffling. During a shuffle, each output partition is sorted by a clustering key.
 
-## Load the extension
+## External resource types
 
-To add the extension to an existing cluster, add `druid-multi-stage-query` to `druid.extensions.loadlist` in your
-`common.runtime.properties` file.
-
-For more information about how to load an extension, see [Loading extensions](../configuration/extensions.md#loading-extensions).
+The MSQ task engine supports reading and writing data from external sources through the EXTERN function.
 
 To use [EXTERN](reference.md#extern-function), you need READ permission on the resource named "EXTERNAL" of the resource type
 "EXTERNAL". If you encounter a 403 error when trying to use `EXTERN`, verify that you have the correct permissions.
