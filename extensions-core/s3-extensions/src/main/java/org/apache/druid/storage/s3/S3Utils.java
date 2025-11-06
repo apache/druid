@@ -96,6 +96,10 @@ public class S3Utils
         // This can happen sometimes when AWS isn't able to obtain the credentials for some service:
         // https://github.com/aws/aws-sdk-java/issues/2285
         return true;
+      } else if (e instanceof AmazonS3Exception && e.getMessage().contains("InternalError")) {
+        // This can happen sometimes when AWS returns a 200 response with internal error message
+        // https://repost.aws/knowledge-center/s3-resolve-200-internalerror
+        return true;
       } else if (e instanceof InterruptedException) {
         Thread.interrupted(); // Clear interrupted state and not retry
         return false;

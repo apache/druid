@@ -130,4 +130,22 @@ public class S3UtilsTest
     );
     Assert.assertEquals(maxRetries, count.get());
   }
+
+  @Test
+  public void testRetryWithAmazonS3InternalError() throws Exception
+  {
+    final int maxRetries = 3;
+    final AtomicInteger count = new AtomicInteger();
+    S3Utils.retryS3Operation(
+        () -> {
+          if (count.incrementAndGet() >= maxRetries) {
+            return "donezo";
+          } else {
+            throw new AmazonS3Exception("We encountered an internal error. Please try again. (Service: Amazon S3; Status Code: 200; Error Code: InternalError; Request ID: some-id)");
+          }
+        },
+        maxRetries
+    );
+    Assert.assertEquals(maxRetries, count.get());
+  }
 }
