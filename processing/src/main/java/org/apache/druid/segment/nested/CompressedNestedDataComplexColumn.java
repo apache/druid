@@ -1200,7 +1200,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
             StringUtils.format("expecting 1 bitmap, got [%d]", rBitmaps.size())
         );
       } else {
-        throw DruidException.defensive("Unsupported BitmapIndexEncodingStrategy[%s]", strategy);
+        throw DruidException.defensive("Unsupported BitmapIndexEncodingStrategy[%s]", indexStrategy);
       }
 
       Supplier<DictionaryEncodedColumn<?>> columnSupplier = () -> {
