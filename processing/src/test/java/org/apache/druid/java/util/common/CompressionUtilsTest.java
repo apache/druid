@@ -602,7 +602,7 @@ public class CompressionUtilsTest
       }
     };
 
-    Assert.assertEquals(EXPECTED.length * 3, CompressionUtils.gunzip(inputStreamFactory, testFile).size());
+    Assert.assertEquals((long) (EXPECTED.length * 3), CompressionUtils.gunzip(inputStreamFactory, testFile).size());
 
     try (final InputStream inputStream = new FileInputStream(testFile)) {
       try (final ByteArrayOutputStream outputStream = new ByteArrayOutputStream(EXPECTED.length * 3)) {
@@ -624,6 +624,7 @@ public class CompressionUtilsTest
   // http://bugs.java.com/bugdatabase/view_bug.do?bug_id=7036144
   public void testGunzipBugStreamWorkarround() throws IOException
   {
+
     final ByteArrayOutputStream tripleGzByteStream = new ByteArrayOutputStream(GZ_BYTES.length * 3);
     tripleGzByteStream.write(GZ_BYTES);
     tripleGzByteStream.write(GZ_BYTES);
