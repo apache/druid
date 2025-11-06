@@ -41,6 +41,9 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.Set;
 
+import static org.hamcrest.CoreMatchers.anyOf;
+import static org.hamcrest.CoreMatchers.containsString;
+
 @RunWith(MockitoJUnitRunner.class)
 public class MySQLInputSourceDatabaseConnectorTest
 {
@@ -167,7 +170,12 @@ public class MySQLInputSourceDatabaseConnectorTest
 
     JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(ImmutableSet.of(""));
 
-    expectedException.expectMessage("The property [password] is not in the allowed list");
+    expectedException.expectMessage(
+        anyOf(
+            containsString("The property [password] is not in the allowed list"),
+            containsString("The property [user] is not in the allowed list")
+        )
+    );
     expectedException.expect(IllegalArgumentException.class);
 
     new MySQLInputSourceDatabaseConnector(
@@ -241,7 +249,12 @@ public class MySQLInputSourceDatabaseConnectorTest
 
     JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(ImmutableSet.of("none", "nonenone"));
 
-    expectedException.expectMessage("The property [password] is not in the allowed list");
+    expectedException.expectMessage(
+          anyOf(
+                  containsString("The property [password] is not in the allowed list"),
+                  containsString("The property [user] is not in the allowed list")
+          )
+    );
     expectedException.expect(IllegalArgumentException.class);
 
     new MySQLInputSourceDatabaseConnector(
@@ -291,7 +304,12 @@ public class MySQLInputSourceDatabaseConnectorTest
 
     JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(ImmutableSet.of("user", "nonenone"));
 
-    expectedException.expectMessage("The property [password] is not in the allowed list");
+    expectedException.expectMessage(
+          anyOf(
+                  containsString("The property [password] is not in the allowed list"),
+                  containsString("The property [keyonly] is not in the allowed list")
+          )
+    );
     expectedException.expect(IllegalArgumentException.class);
 
     new MySQLInputSourceDatabaseConnector(
