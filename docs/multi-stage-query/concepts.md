@@ -23,17 +23,12 @@ sidebar_label: "Key concepts"
   ~ under the License.
   -->
 
- This page describes SQL-based batch ingestion using the [multi-stage query (MSQ) task engine](../multi-stage-query/index.md) (MSQ task engine). Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which ingestion method is right for you.
+ This page describes SQL-based batch ingestion using the [multi-stage query (MSQ) task engine](../multi-stage-query/index.md). Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which ingestion method is right for you.
 
 ## Multi-stage query task engine
 
-The MSQ task engine executes SQL statements as batch
-tasks in the indexing service, which execute on [Middle Managers](../design/architecture.md#druid-services).
-[INSERT](reference.md#insert) and [REPLACE](reference.md#replace) tasks publish
-[segments](../design/storage.md) just like [all other forms of batch
-ingestion](../ingestion/index.md#batch). Each query occupies at least two task slots while running: one controller task,
-and at least one worker task. As an experimental feature, the MSQ task engine also supports running SELECT queries as
-batch tasks. The behavior and result format of plain SELECT (without INSERT or REPLACE) is subject to change.
+The MSQ task engine executes SQL statements as batch tasks in the indexing service, which execute on [Middle Managers](../design/architecture.md#druid-services).
+[INSERT](reference.md#insert) and [REPLACE](reference.md#replace) tasks publish [segments](../design/storage.md) just like [all other forms of batch ingestion](../ingestion/index.md#batch). Each query occupies at least two task slots while running: one controller task, and at least one worker task. As an experimental feature, the MSQ task engine also supports running SELECT queries as batch tasks. The behavior and result format of plain SELECT (without INSERT or REPLACE) is subject to change.
 
 You can execute SQL statements using the MSQ task engine through the **Query** view in the [web
 console](../operations/web-console.md) or through the [`/druid/v2/sql/task` API](../api-reference/sql-ingestion-api.md).
