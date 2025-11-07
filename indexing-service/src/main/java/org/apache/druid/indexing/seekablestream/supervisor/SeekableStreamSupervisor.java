@@ -621,9 +621,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     activelyReadingTaskGroups.clear();
     partitionGroups.clear();
     partitionOffsets.clear();
-
-    // Note: We intentionally do NOT clear pendingCompletionTaskGroups here.
-
     partitionIds.clear();
   }
 
