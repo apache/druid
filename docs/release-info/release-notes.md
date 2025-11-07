@@ -71,9 +71,14 @@ Additionally, support for Java 11 has been removed. Upgrade to Java 17 or 21.
 
 ### Projections 
 
-Projections now support static filters. Additionally, there have been general improvements to performance and reliability.
+Projections have been improved:
 
-[#18342](https://github.com/apache/druid/pull/18342) [#18535](https://github.com/apache/druid/pull/18535)
+- Static filters are now supported
+- The granularity in queries can match UTC time zones 
+
+Additionally, there have been general improvements to performance and reliability.  
+
+[#18342](https://github.com/apache/druid/pull/18342) [#18535](https://github.com/apache/druid/pull/18535) [#18403](https://github.com/apache/druid/pull/18403)
 
 ### Virtual storage (experimental)
 
