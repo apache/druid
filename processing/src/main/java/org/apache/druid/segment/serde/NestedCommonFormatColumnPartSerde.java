@@ -466,7 +466,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           spec.getLongColumnCompression(),
           spec.getDoubleColumnCompression(),
           spec.getBitmapEncoding(),
-          spec.getNumericFieldBitmapIndex()
+          spec.getNumericFieldsBitmapIndexEncoding()
       );
     }
 
@@ -481,7 +481,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
         @JsonProperty("longColumnCompression")@Nullable CompressionStrategy longColumnCompression,
         @JsonProperty("doubleColumnCompression")@Nullable CompressionStrategy doubleColumnCompression,
         @JsonProperty("bitmapEncoding") @Nullable BitmapSerdeFactory bitmapEncoding,
-        @JsonProperty("numericFieldBitmapIndex")@Nullable BitmapIndexEncodingStrategy numericFieldBitmapIndex
+        @JsonProperty("numericFieldsBitmapIndex")@Nullable BitmapIndexEncodingStrategy numericFieldsBitmapIndex
     )
     {
       super(
@@ -494,7 +494,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           longColumnCompression,
           doubleColumnCompression,
           bitmapEncoding,
-          numericFieldBitmapIndex
+          numericFieldsBitmapIndex
       );
     }
 
@@ -505,15 +505,6 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
     public BitmapSerdeFactory getBitmapEncoding()
     {
       return super.getBitmapEncoding();
-    }
-
-    @JsonProperty("numericFieldBitmapIndex")
-    @JsonIgnore(false)
-    @Nullable
-    @Override
-    public BitmapIndexEncodingStrategy getNumericFieldBitmapIndex()
-    {
-      return super.getNumericFieldBitmapIndex();
     }
   }
 }

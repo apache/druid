@@ -36,7 +36,7 @@ import java.util.Objects;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
-    @JsonSubTypes.Type(value = BitmapIndexEncodingStrategy.DictionaryId.class, name = "DictionaryId"),
+    @JsonSubTypes.Type(value = BitmapIndexEncodingStrategy.DictionaryId.class, name = "dictionaryId"),
     @JsonSubTypes.Type(value = BitmapIndexEncodingStrategy.NullsOnly.class, name = "nullsOnly")
 })
 public abstract class BitmapIndexEncodingStrategy implements Serializer

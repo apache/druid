@@ -1171,8 +1171,8 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
         arrayElementBitmaps = null;
       }
       if (types.getSingleType() != null && types.getSingleType().isNumeric()
-          && !(formatSpec.getNumericFieldBitmapIndex() instanceof BitmapIndexEncodingStrategy.DictionaryId)) {
-        if (formatSpec.getNumericFieldBitmapIndex() instanceof BitmapIndexEncodingStrategy.NullsOnly) {
+          && !(formatSpec.getNumericFieldsBitmapIndexEncoding() instanceof BitmapIndexEncodingStrategy.DictionaryId)) {
+        if (formatSpec.getNumericFieldsBitmapIndexEncoding() instanceof BitmapIndexEncodingStrategy.NullsOnly) {
           Preconditions.checkArgument(
               rBitmaps.size() == 1,
               StringUtils.format("expecting 1 bitmap, got [%d]", rBitmaps.size())
@@ -1180,7 +1180,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
         } else {
           throw DruidException.defensive(
               "Unsupported BitmapIndexEncodingStrategy[%s]",
-              formatSpec.getNumericFieldBitmapIndex()
+              formatSpec.getNumericFieldsBitmapIndexEncoding()
           );
         }
       } else {

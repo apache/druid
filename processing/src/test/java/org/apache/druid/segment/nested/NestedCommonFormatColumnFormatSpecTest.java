@@ -47,7 +47,7 @@ public class NestedCommonFormatColumnFormatSpecTest
                                           .setStringDictionaryEncoding(
                                               new StringEncodingStrategy.FrontCoded(16, FrontCodedIndexed.V1)
                                           )
-                                          .setNumericFieldBitmapIndex(BitmapIndexEncodingStrategy.DictionaryId.INSTANCE)
+                                          .setNumericFieldsBitmapIndexEncoding(BitmapIndexEncodingStrategy.NullsOnly.INSTANCE)
                                           .build();
     Assert.assertEquals(
         spec,

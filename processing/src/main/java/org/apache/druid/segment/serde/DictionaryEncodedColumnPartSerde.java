@@ -210,9 +210,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
             public long getSerializedSize() throws IOException
             {
               long size = 1 + // version
-                          (version.compareTo(DictionarySerdeHelper.VERSION.FLAG_BASED) >= 0
-                           ? Integer.BYTES
-                           : 0); // flag
+                          (version.isFlagBased() ? Integer.BYTES : 0); // flag
               if (dictionaryWriter != null) {
                 size += dictionaryWriter.getSerializedSize();
               }
