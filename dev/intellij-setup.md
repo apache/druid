@@ -52,7 +52,7 @@ The hook can be setup easily by running the <DRUID_HOME>/hooks/install-hooks.sh 
 ## Metadata
 The installation of a MySQL metadata store is outside the scope of this document, but instructions on setting up MySQL can be found at [docs/development/extensions-core/mysql.md](/docs/development/extensions-core/mysql.md). This assumes you followed the example there and have a database named `druid` with proper permissions for a user named `druid` and a password of `diurd`.
 
-Use of other databases such as Postgres or Derby are entirely reasonable, but doing so is left as an excercise to the reader.
+Use of other databases such as Postgres or Derby are entirely reasonable, but doing so is left as an exercise to the reader.
 
 ## ZooKeeper
 This also assumes you have [ZooKeeper](http://zookeeper.apache.org/releases.html) running locally, which usually just involves downloading the latest distribution of ZooKeeper, doing some minor configuration in ZooKeeper's `conf/` directory (most defaults are fine), then running `./bin/zkServer.sh start` in the ZooKeeper directory. 
