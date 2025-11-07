@@ -5049,7 +5049,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(differentTaskType.getSupervisorId()).andReturn("supervisorId");
     EasyMock.replay(differentTaskType);
   }
-  
+
   @Test
   public void test_autoScaler_doesNotRepeatScaleDownActions_ifTasksAreStillPublishing() throws Exception
   {
