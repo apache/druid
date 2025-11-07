@@ -21,6 +21,7 @@ package org.apache.druid.segment.nested;
 
 import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.BitmapIndexEncodingStrategy;
 import org.apache.druid.segment.data.ColumnarLongsSerializer;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.file.SegmentFileBuilder;
@@ -50,7 +51,7 @@ public final class ScalarLongFieldColumnWriter extends GlobalDictionaryEncodedFi
   )
   {
     super(columnName, fieldName, segmentWriteOutMedium, columnFormatSpec, globalDictionaryIdLookup);
-    if (columnFormatSpec.getNumericFieldBitmapIndex() != null) {
+    if (!BitmapIndexEncodingStrategy.DictionaryId.LEGACY.equals(columnFormatSpec.getNumericFieldBitmapIndex())) {
       flags = flags | DictionarySerdeHelper.Feature.CONFIGURABLE_BITMAP_INDEX.getMask();
       bitmapIndexEncoding = columnFormatSpec.getNumericFieldBitmapIndex();
     }
@@ -99,6 +100,8 @@ public final class ScalarLongFieldColumnWriter extends GlobalDictionaryEncodedFi
   @Override
   long getSerializedColumnSize() throws IOException
   {
-    return super.getSerializedColumnSize() + longsSerializer.getSerializedSize();
+    return Integer.BYTES + Integer.BYTES
+           + longsSerializer.getSerializedSize()
+           + encodedValueSerializer.getSerializedSize();
   }
 }

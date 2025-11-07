@@ -81,7 +81,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
   protected final DictionaryIdLookup globalDictionaryIdLookup;
   protected final LocalDimensionDictionary localDictionary = new LocalDimensionDictionary();
 
-  public BitmapIndexEncodingStrategy bitmapIndexEncoding = BitmapIndexEncodingStrategy.DictionaryId.INSTANCE;
+  public BitmapIndexEncodingStrategy bitmapIndexEncoding = BitmapIndexEncodingStrategy.DictionaryId.LEGACY;
   protected final Int2ObjectRBTreeMap<MutableBitmap> arrayElements = new Int2ObjectRBTreeMap<>();
 
   protected final Closer fieldResourceCloser = Closer.create();
@@ -192,7 +192,11 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
    * Defines how to write the column, including the dictionary id column, along with any additional columns
    * such as the long or double value column as type appropriate.
    */
-  abstract void writeColumnTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException;
+  void writeColumnTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
+  {
+    writeLongAndDoubleColumnLength(channel, 0, 0);
+    encodedValueSerializer.writeTo(channel, fileBuilder);
+  }
 
   public void writeTo(int finalRowCount, SegmentFileBuilder fileBuilder) throws IOException
   {
@@ -231,7 +235,6 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
     IntArrays.unstableSort(sortedGlobal);
 
     final int[] unsortedToSorted = new int[unsortedToGlobal.length];
-    bitmapIndexEncoding.init(columnFormatSpec.getBitmapEncoding().getBitmapFactory(), sortedGlobal.length);
     for (int index = 0; index < sortedGlobal.length; index++) {
       final int globalId = sortedGlobal[index];
       sortedDictionaryWriter.write(globalId);
@@ -247,6 +250,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
     }
 
     openColumnSerializer(tmpWriteoutMedium, sortedGlobal[sortedGlobal.length - 1]);
+    bitmapIndexEncoding.init(columnFormatSpec.getBitmapEncoding().getBitmapFactory(), sortedGlobal.length);
     final IntIterator rows = intermediateValueWriter.getIterator();
     int rowCount = 0;
     while (rows.hasNext()) {
@@ -258,15 +262,10 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
       bitmapIndexEncoding.add(rowCount, sortedLocalId, value);
       rowCount++;
     }
-    bitmapIndexEncoding.writeTo(columnFormatSpec.getBitmapEncoding().getBitmapFactory(), bitmapIndexWriter);
+    bitmapIndexEncoding.close(columnFormatSpec.getBitmapEncoding().getBitmapFactory(), bitmapIndexWriter);
 
     final Serializer fieldSerializer = new Serializer()
     {
-      //       if this column has configurable bitmap index, we write the bitmap index strategy bit before bitmapIndexWriter
-      byte[] configurableBitmapIndexStrategy =
-          DictionarySerdeHelper.Feature.CONFIGURABLE_BITMAP_INDEX.isSet(flags) ?
-          bitmapIndexEncoding.toBytes() : new byte[]{};
-
       @Override
       public long getSerializedSize() throws IOException
       {
@@ -279,7 +278,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
         return 1 + Integer.BYTES + // version + feature flags
                sortedDictionaryWriter.getSerializedSize() +
                getSerializedColumnSize() +
-               configurableBitmapIndexStrategy.length + bitmapIndexWriter.getSerializedSize() +
+               bitmapIndexEncoding.getSerializedSize() +
                arraySize;
       }
 
@@ -290,8 +289,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
         Channels.writeFully(channel, ByteBuffer.wrap(Ints.toByteArray(flags)));
         sortedDictionaryWriter.writeTo(channel, fileBuilder);
         writeColumnTo(channel, fileBuilder);
-        Channels.writeFully(channel, ByteBuffer.wrap(configurableBitmapIndexStrategy));
-        bitmapIndexWriter.writeTo(channel, fileBuilder);
+        bitmapIndexEncoding.writeTo(channel, fileBuilder);
         if (arrayElements.size() > 0) {
           arrayElementDictionaryWriter.writeTo(channel, fileBuilder);
           arrayElementIndexWriter.writeTo(channel, fileBuilder);

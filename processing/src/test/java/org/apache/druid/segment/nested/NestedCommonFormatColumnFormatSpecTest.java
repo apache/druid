@@ -24,6 +24,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.BitmapIndexEncodingStrategy;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
@@ -46,6 +47,7 @@ public class NestedCommonFormatColumnFormatSpecTest
                                           .setStringDictionaryEncoding(
                                               new StringEncodingStrategy.FrontCoded(16, FrontCodedIndexed.V1)
                                           )
+                                          .setNumericFieldBitmapIndex(BitmapIndexEncodingStrategy.DictionaryId.LEGACY)
                                           .build();
     Assert.assertEquals(
         spec,
@@ -196,11 +198,17 @@ public class NestedCommonFormatColumnFormatSpecTest
         ISE.class,
         () -> NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(
             NestedCommonFormatColumnFormatSpec.builder().setBitmapEncoding(new ConciseBitmapSerdeFactory()).build(),
-            IndexSpec.builder().withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance()).build().getEffectiveSpec()
+            IndexSpec.builder()
+                     .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                     .build()
+                     .getEffectiveSpec()
         )
     );
 
-    Assert.assertEquals("bitmapEncoding[ConciseBitmapSerdeFactory{}] does not match indexSpec.bitmap[RoaringBitmapSerdeFactory{}]", t.getMessage());
+    Assert.assertEquals(
+        "bitmapEncoding[ConciseBitmapSerdeFactory{}] does not match indexSpec.bitmap[RoaringBitmapSerdeFactory{}]",
+        t.getMessage()
+    );
   }
 
   @Test

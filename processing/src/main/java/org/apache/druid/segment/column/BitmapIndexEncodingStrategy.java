@@ -19,18 +19,23 @@
 
 package org.apache.druid.segment.column;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.data.GenericIndexedWriter;
+import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.serde.Serializer;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.WritableByteChannel;
 import java.util.Objects;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
@@ -38,10 +43,13 @@ import java.util.Objects;
     @JsonSubTypes.Type(value = BitmapIndexEncodingStrategy.DictionaryId.class, name = "DictionaryId"),
     @JsonSubTypes.Type(value = BitmapIndexEncodingStrategy.NullsOnly.class, name = "nullsOnly")
 })
-public abstract class BitmapIndexEncodingStrategy
+public abstract class BitmapIndexEncodingStrategy implements Serializer
 {
-  public static BitmapIndexEncodingStrategy fromByteBuffer(ByteBuffer buffer)
+  public static BitmapIndexEncodingStrategy fromByteBuffer(@Nullable ByteBuffer buffer)
   {
+    if (buffer == null) {
+      return DictionaryId.LEGACY;
+    }
     byte b = buffer.get();
     if (b == 0x00) {
       return DictionaryId.INSTANCE;
@@ -51,7 +59,7 @@ public abstract class BitmapIndexEncodingStrategy
     throw new IAE("Unsupported BitmapIndexEncodingStrategy[%s]", b);
   }
 
-  public byte[] toBytes()
+  public byte[] toTypeBytes()
   {
     if (this instanceof DictionaryId) {
       return new byte[]{0x00};
@@ -61,27 +69,71 @@ public abstract class BitmapIndexEncodingStrategy
     throw new IAE("Unsupported BitmapIndexEncodingStrategy[%s]", this);
   }
 
+  @JsonProperty
+  protected final boolean writeStrategyByte;
+
+  /**
+   * Assigned in {@link #init(BitmapFactory, int)}
+   */
   @Nullable
-  public MutableBitmap[] bitmaps;
+  protected MutableBitmap[] bitmaps;
+  /**
+   * Assigned in {@link #close(BitmapFactory, GenericIndexedWriter)}
+   */
+  @Nullable
+  GenericIndexedWriter<ImmutableBitmap> writer;
+
+  BitmapIndexEncodingStrategy()
+  {
+    this(true);
+  }
+
+  BitmapIndexEncodingStrategy(boolean writeStrategyByte)
+  {
+    this.writeStrategyByte = writeStrategyByte;
+  }
 
   public abstract void init(BitmapFactory bitmapFactory, int dictionarySize);
 
   public abstract void add(int row, int sortedId, @Nullable Object o);
 
-  public void writeTo(BitmapFactory bitmapFactory, GenericIndexedWriter<ImmutableBitmap> writer) throws IOException
+  public void close(BitmapFactory bitmapFactory, GenericIndexedWriter<ImmutableBitmap> writer) throws IOException
   {
     if (bitmaps == null) {
       throw DruidException.defensive("Not initiated yet");
     }
+    this.writer = writer;
     for (int i = 0; i < bitmaps.length; i++) {
       writer.write(bitmapFactory.makeImmutableBitmap(bitmaps[i]));
       bitmaps[i] = null; // Reclaim memory
     }
+    bitmaps = null;
+  }
+
+  @Override
+  public long getSerializedSize()
+  {
+    return (writeStrategyByte ? toTypeBytes().length : 0) + writer.getSerializedSize();
+  }
+
+  @Override
+  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
+  {
+    if (writeStrategyByte) {
+      Channels.writeFully(channel, ByteBuffer.wrap(toTypeBytes()));
+    }
+    writer.writeTo(channel, fileBuilder);
   }
 
   public static class DictionaryId extends BitmapIndexEncodingStrategy
   {
-    public static final DictionaryId INSTANCE = new DictionaryId();
+    public static final DictionaryId LEGACY = new DictionaryId(false);
+    public static final DictionaryId INSTANCE = new DictionaryId(true);
+
+    DictionaryId(@JsonProperty("writeStrategyByte") boolean writeStrategyByte)
+    {
+      super(writeStrategyByte);
+    }
 
     @Override
     public void init(BitmapFactory bitmapFactory, int dictionarySize)
@@ -104,19 +156,21 @@ public abstract class BitmapIndexEncodingStrategy
       if (this == o) {
         return true;
       }
-      return o != null && getClass() == o.getClass();
+      return o != null && getClass() == o.getClass() && this.writeStrategyByte == ((DictionaryId) o).writeStrategyByte;
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hashCode(getClass());
+      return Objects.hashCode(writeStrategyByte);
     }
 
     @Override
     public String toString()
     {
-      return "DictionaryId{}";
+      return "DictionaryId{" +
+             "writeStrategyByte=" + writeStrategyByte +
+             '}';
     }
   }
 

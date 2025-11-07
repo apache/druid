@@ -1101,11 +1101,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
       ColumnBuilder columnBuilder = new ColumnBuilder().setFileMapper(fileMapper).setType(theType);
       // heh, maybe this should be its own class, or DictionaryEncodedColumnPartSerde could be cooler
       DictionarySerdeHelper.VERSION version = DictionarySerdeHelper.VERSION.fromByte(dataBuffer.get());
-      Preconditions.checkArgument(
-          version.equals(DictionarySerdeHelper.VERSION.FLAG_BASED),
-          "Unexpected version[%s]",
-          version
-      );
+      Preconditions.checkArgument(version.isFlagBased(), "Unexpected version[%s]", version);
       int flags = version.getFlags(dataBuffer);
       List<DictionarySerdeHelper.Feature> unsupported =
           Arrays.stream(DictionarySerdeHelper.Feature.values())
@@ -1153,10 +1149,8 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
       }
 
       boolean configurableBitmapIndex = DictionarySerdeHelper.Feature.CONFIGURABLE_BITMAP_INDEX.isSet(flags);
-      final BitmapIndexEncodingStrategy indexStrategy =
-          configurableBitmapIndex
-          ? BitmapIndexEncodingStrategy.fromByteBuffer(dataBuffer)
-          : BitmapIndexEncodingStrategy.DictionaryId.INSTANCE;
+      final BitmapIndexEncodingStrategy indexStrategy = BitmapIndexEncodingStrategy.fromByteBuffer(
+          configurableBitmapIndex ? dataBuffer : null);
       final GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
           dataBuffer,
           bitmapSerdeFactory.getObjectStrategy(),
@@ -1180,7 +1174,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
         arrayElementDictionarySupplier = null;
         arrayElementBitmaps = null;
       }
-      if (indexStrategy.equals(BitmapIndexEncodingStrategy.DictionaryId.INSTANCE)) {
+      if (indexStrategy instanceof BitmapIndexEncodingStrategy.DictionaryId) {
         columnBuilder.setIndexSupplier(new NestedFieldColumnIndexSupplier(
             types,
             bitmapSerdeFactory.getBitmapFactory(),
@@ -1194,7 +1188,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
             arrayElementDictionarySupplier,
             arrayElementBitmaps
         ), true, false);
-      } else if (indexStrategy.equals(BitmapIndexEncodingStrategy.NullsOnly.INSTANCE)) {
+      } else if (indexStrategy instanceof BitmapIndexEncodingStrategy.NullsOnly) {
         Preconditions.checkArgument(
             rBitmaps.size() == 1,
             StringUtils.format("expecting 1 bitmap, got [%d]", rBitmaps.size())

@@ -44,7 +44,7 @@ public class NestedCommonFormatColumnFormatSpec
   private static final NestedCommonFormatColumnFormatSpec DEFAULT =
       builder().setObjectFieldsDictionaryEncoding(StringEncodingStrategy.UTF8_STRATEGY)
                .setObjectStorageEncoding(ObjectStorageEncoding.SMILE)
-               .setNumericFieldBitmapIndex(BitmapIndexEncodingStrategy.NullsOnly.INSTANCE)
+               .setNumericFieldBitmapIndex(BitmapIndexEncodingStrategy.DictionaryId.LEGACY)
                .build();
 
   public static Builder builder()
@@ -91,7 +91,7 @@ public class NestedCommonFormatColumnFormatSpec
     if (builder.numericFieldBitmapIndex == null) {
       builder.setNumericFieldBitmapIndex(GuavaUtils.firstNonNull(
           defaultSpec.getNumericFieldBitmapIndex(),
-          BitmapIndexEncodingStrategy.DictionaryId.INSTANCE
+          DEFAULT.getNumericFieldBitmapIndex()
       ));
     }
 
@@ -209,7 +209,7 @@ public class NestedCommonFormatColumnFormatSpec
         longColumnCompression,
         doubleColumnCompression,
         null,
-        BitmapIndexEncodingStrategy.DictionaryId.INSTANCE
+        BitmapIndexEncodingStrategy.DictionaryId.LEGACY
     );
   }
 

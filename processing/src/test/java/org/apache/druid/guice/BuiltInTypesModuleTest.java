@@ -27,6 +27,7 @@ import org.apache.druid.segment.DimensionHandlerProvider;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.NestedCommonFormatColumnHandler;
+import org.apache.druid.segment.column.BitmapIndexEncodingStrategy;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
@@ -125,7 +126,11 @@ public class BuiltInTypesModuleTest
     );
     Assertions.assertEquals(CompressionStrategy.LZ4, IndexSpec.getDefault().getComplexMetricCompression());
     Assertions.assertEquals(
-        NestedCommonFormatColumnFormatSpec.builder().setStringDictionaryEncoding(new StringEncodingStrategy.FrontCoded(16, (byte) 1)).build(),
+        NestedCommonFormatColumnFormatSpec
+            .builder()
+            .setStringDictionaryEncoding(new StringEncodingStrategy.FrontCoded(16, (byte) 1))
+            .setNumericFieldBitmapIndex(BitmapIndexEncodingStrategy.DictionaryId.LEGACY)
+            .build(),
         IndexSpec.getDefault().getAutoColumnFormatSpec()
     );
 
