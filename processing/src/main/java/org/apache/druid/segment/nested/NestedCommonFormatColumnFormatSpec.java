@@ -44,7 +44,7 @@ public class NestedCommonFormatColumnFormatSpec
   private static final NestedCommonFormatColumnFormatSpec DEFAULT =
       builder().setObjectFieldsDictionaryEncoding(StringEncodingStrategy.UTF8_STRATEGY)
                .setObjectStorageEncoding(ObjectStorageEncoding.SMILE)
-               .setNumericFieldBitmapIndex(BitmapIndexEncodingStrategy.DictionaryId.LEGACY)
+               .setNumericFieldBitmapIndex(BitmapIndexEncodingStrategy.DictionaryId.INSTANCE)
                .build();
 
   public static Builder builder()
@@ -209,7 +209,7 @@ public class NestedCommonFormatColumnFormatSpec
         longColumnCompression,
         doubleColumnCompression,
         null,
-        BitmapIndexEncodingStrategy.DictionaryId.LEGACY
+        BitmapIndexEncodingStrategy.DictionaryId.INSTANCE
     );
   }
 

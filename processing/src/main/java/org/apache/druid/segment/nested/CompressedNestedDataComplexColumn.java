@@ -54,7 +54,6 @@ import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.data.AtomicIntegerReadableOffset;
-import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ColumnarDoubles;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarLongs;
@@ -144,7 +143,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
   private final String rootFieldPath;
   private final ColumnType logicalType;
   private final String columnName;
-  private final BitmapSerdeFactory bitmapSerdeFactory;
+  private final NestedCommonFormatColumnFormatSpec formatSpec;
   private final ByteOrder byteOrder;
   private final ConcurrentHashMap<Integer, BaseColumnHolder> columns = new ConcurrentHashMap<>();
   private CompressedVariableSizedBlobColumn compressedRawColumn;
@@ -162,7 +161,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
       @Nullable Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
       SegmentFileMapper fileMapper,
-      BitmapSerdeFactory bitmapSerdeFactory,
+      NestedCommonFormatColumnFormatSpec formatSpec,
       ByteOrder byteOrder,
       String rootFieldPath
   )
@@ -179,7 +178,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
     this.fileMapper = fileMapper;
     this.closer = Closer.create();
     this.compressedRawColumnSupplier = compressedRawColumnSupplier;
-    this.bitmapSerdeFactory = bitmapSerdeFactory;
+    this.formatSpec = formatSpec;
     this.byteOrder = byteOrder;
     this.rootFieldPath = rootFieldPath;
     this.columnConfig = columnConfig;
@@ -1148,12 +1147,9 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
         ints = VSizeColumnarInts.readFromByteBuffer(dataBuffer);
       }
 
-      boolean configurableBitmapIndex = DictionarySerdeHelper.Feature.CONFIGURABLE_BITMAP_INDEX.isSet(flags);
-      final BitmapIndexEncodingStrategy indexStrategy = BitmapIndexEncodingStrategy.fromByteBuffer(
-          configurableBitmapIndex ? dataBuffer : null);
       final GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
           dataBuffer,
-          bitmapSerdeFactory.getObjectStrategy(),
+          formatSpec.getBitmapEncoding().getObjectStrategy(),
           columnBuilder.getFileMapper()
       );
       final Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier;
@@ -1167,17 +1163,30 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
         );
         arrayElementBitmaps = GenericIndexed.read(
             dataBuffer,
-            bitmapSerdeFactory.getObjectStrategy(),
+            formatSpec.getBitmapEncoding().getObjectStrategy(),
             columnBuilder.getFileMapper()
         );
       } else {
         arrayElementDictionarySupplier = null;
         arrayElementBitmaps = null;
       }
-      if (indexStrategy instanceof BitmapIndexEncodingStrategy.DictionaryId) {
+      if (types.getSingleType() != null && types.getSingleType().isNumeric()
+          && !(formatSpec.getNumericFieldBitmapIndex() instanceof BitmapIndexEncodingStrategy.DictionaryId)) {
+        if (formatSpec.getNumericFieldBitmapIndex() instanceof BitmapIndexEncodingStrategy.NullsOnly) {
+          Preconditions.checkArgument(
+              rBitmaps.size() == 1,
+              StringUtils.format("expecting 1 bitmap, got [%d]", rBitmaps.size())
+          );
+        } else {
+          throw DruidException.defensive(
+              "Unsupported BitmapIndexEncodingStrategy[%s]",
+              formatSpec.getNumericFieldBitmapIndex()
+          );
+        }
+      } else {
         columnBuilder.setIndexSupplier(new NestedFieldColumnIndexSupplier(
             types,
-            bitmapSerdeFactory.getBitmapFactory(),
+            formatSpec.getBitmapEncoding().getBitmapFactory(),
             columnConfig,
             rBitmaps,
             localDictionarySupplier,
@@ -1188,13 +1197,6 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
             arrayElementDictionarySupplier,
             arrayElementBitmaps
         ), true, false);
-      } else if (indexStrategy instanceof BitmapIndexEncodingStrategy.NullsOnly) {
-        Preconditions.checkArgument(
-            rBitmaps.size() == 1,
-            StringUtils.format("expecting 1 bitmap, got [%d]", rBitmaps.size())
-        );
-      } else {
-        throw DruidException.defensive("Unsupported BitmapIndexEncodingStrategy[%s]", indexStrategy);
       }
 
       Supplier<DictionaryEncodedColumn<?>> columnSupplier = () -> {
@@ -1211,7 +1213,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
             localDict,
             hasNull
             ? rBitmaps.get(0)
-            : bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap()
+            : formatSpec.getBitmapEncoding().getBitmapFactory().makeEmptyImmutableBitmap()
         ));
       };
       columnBuilder.setDictionaryEncodedColumnSupplier(columnSupplier);

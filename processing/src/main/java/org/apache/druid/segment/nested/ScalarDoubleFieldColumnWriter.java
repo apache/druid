@@ -21,11 +21,9 @@ package org.apache.druid.segment.nested;
 
 import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.column.BitmapIndexEncodingStrategy;
 import org.apache.druid.segment.data.ColumnarDoublesSerializer;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.file.SegmentFileBuilder;
-import org.apache.druid.segment.serde.DictionarySerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
@@ -51,10 +49,7 @@ public final class ScalarDoubleFieldColumnWriter extends GlobalDictionaryEncoded
   )
   {
     super(columnName, fieldName, segmentWriteOutMedium, columnFormatSpec, globalDictionaryIdLookup);
-    if (!BitmapIndexEncodingStrategy.DictionaryId.LEGACY.equals(columnFormatSpec.getNumericFieldBitmapIndex())) {
-      flags = flags | DictionarySerdeHelper.Feature.CONFIGURABLE_BITMAP_INDEX.getMask();
-      bitmapIndexEncoding = columnFormatSpec.getNumericFieldBitmapIndex();
-    }
+    bitmapIndexEncoding = columnFormatSpec.getNumericFieldBitmapIndex();
   }
 
   @Override

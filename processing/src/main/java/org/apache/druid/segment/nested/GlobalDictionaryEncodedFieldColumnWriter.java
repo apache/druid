@@ -81,7 +81,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
   protected final DictionaryIdLookup globalDictionaryIdLookup;
   protected final LocalDimensionDictionary localDictionary = new LocalDimensionDictionary();
 
-  public BitmapIndexEncodingStrategy bitmapIndexEncoding = BitmapIndexEncodingStrategy.DictionaryId.LEGACY;
+  public BitmapIndexEncodingStrategy bitmapIndexEncoding = BitmapIndexEncodingStrategy.DictionaryId.INSTANCE;
   protected final Int2ObjectRBTreeMap<MutableBitmap> arrayElements = new Int2ObjectRBTreeMap<>();
 
   protected final Closer fieldResourceCloser = Closer.create();

@@ -40,7 +40,7 @@ public class NestedDataColumnSchemaTest
                                             new StringEncodingStrategy.FrontCoded(8, FrontCodedIndexed.V1)
                                         )
                                         .setObjectStorageCompression(CompressionStrategy.ZSTD)
-                                        .setNumericFieldBitmapIndex(BitmapIndexEncodingStrategy.DictionaryId.LEGACY)
+                                        .setNumericFieldBitmapIndex(BitmapIndexEncodingStrategy.DictionaryId.INSTANCE)
                                         .build();
 
   private static final DefaultColumnFormatConfig DEFAULT_NESTED_SPEC_CONFIG = new DefaultColumnFormatConfig(
