@@ -68,7 +68,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       "Not enough disk space to execute this query. Try raising druid.query.groupBy.maxOnDiskStorage."
   );
 
-  private final Grouper<KeyType> grouper;
+  private final AbstractBufferHashGrouper<KeyType> grouper;
   private final KeySerde<KeyType> keySerde;
   private final LimitedTemporaryStorage temporaryStorage;
   private final ObjectMapper spillMapper;
@@ -218,10 +218,21 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   @Override
   public void close()
   {
-    perQueryStats.dictionarySize(keySerde.getDictionarySize());
+    perQueryStats.dictionarySize(getDictionarySizeEstimate());
+    perQueryStats.mergeBufferTotalUsage(getMergeBufferUsage());
     grouper.close();
     keySerde.reset();
     deleteFiles();
+  }
+
+  private long getMergeBufferUsage()
+  {
+    return grouper.getMergeBufferUsage();
+  }
+
+  private long getDictionarySizeEstimate()
+  {
+    return keySerde.getDictionarySize();
   }
 
   /**

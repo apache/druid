@@ -79,6 +79,9 @@ public class ByteBufferHashTable
   @Nullable
   protected BucketUpdateHandler bucketUpdateHandler;
 
+  // Keeps track on how many bytes is being used in the merge buffer.
+  protected long maxTableBufferUsage;
+
   public ByteBufferHashTable(
       float maxLoadFactor,
       int initialBuckets,
@@ -97,6 +100,7 @@ public class ByteBufferHashTable
     this.maxSizeForTesting = maxSizeForTesting;
     this.tableArenaSize = buffer.capacity();
     this.bucketUpdateHandler = bucketUpdateHandler;
+    this.maxTableBufferUsage = 0;
   }
 
   public void reset()
@@ -139,6 +143,7 @@ public class ByteBufferHashTable
     bufferDup.position(tableStart);
     bufferDup.limit(tableStart + maxBuckets * bucketSizeWithHash);
     tableBuffer = bufferDup.slice();
+    updateMaxTableBufferUsage();
 
     // Clear used bits of new table
     for (int i = 0; i < maxBuckets; i++) {
@@ -225,6 +230,7 @@ public class ByteBufferHashTable
     maxBuckets = newBuckets;
     regrowthThreshold = newMaxSize;
     tableBuffer = newTableBuffer;
+    updateMaxTableBufferUsage();
     tableStart = newTableStart;
 
     growthCount++;
@@ -379,6 +385,16 @@ public class ByteBufferHashTable
   public int getGrowthCount()
   {
     return growthCount;
+  }
+
+  protected void updateMaxTableBufferUsage()
+  {
+    maxTableBufferUsage = Math.max(maxTableBufferUsage, tableBuffer.capacity());
+  }
+
+  public long getMaxTableBufferUsage()
+  {
+    return maxTableBufferUsage;
   }
 
   public interface BucketUpdateHandler

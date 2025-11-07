@@ -63,6 +63,7 @@ public class GroupByStatsMonitorTest
         return new AggregateStats(
             1L,
             100L,
+            200L,
             2L,
             200L,
             300L
@@ -70,7 +71,7 @@ public class GroupByStatsMonitorTest
       }
     };
 
-    mergeBufferPool = new DefaultBlockingPool(() -> ByteBuffer.allocate(1024), 5);
+    mergeBufferPool = new DefaultBlockingPool<>(() -> ByteBuffer.allocate(1024), 5);
     executorService = Executors.newSingleThreadExecutor();
   }
 
