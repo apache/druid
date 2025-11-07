@@ -1170,8 +1170,10 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
         arrayElementDictionarySupplier = null;
         arrayElementBitmaps = null;
       }
-      if (types.getSingleType() != null && types.getSingleType().isNumeric()
-          && !(formatSpec.getNumericFieldsBitmapIndexEncoding() instanceof BitmapIndexEncodingStrategy.DictionaryId)) {
+      BitmapIndexEncodingStrategy indexEncoding = (types.getSingleType() != null && types.getSingleType().isNumeric())
+                                                  ? formatSpec.getNumericFieldsBitmapIndexEncoding()
+                                                  : null;
+      if (indexEncoding != null && !(indexEncoding instanceof BitmapIndexEncodingStrategy.DictionaryId)) {
         if (formatSpec.getNumericFieldsBitmapIndexEncoding() instanceof BitmapIndexEncodingStrategy.NullsOnly) {
           Preconditions.checkArgument(
               rBitmaps.size() == 1,
