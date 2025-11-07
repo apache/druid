@@ -92,11 +92,12 @@ public class GroupByStatsMonitorTest
     // Trigger metric emission
     monitor.doMonitor(emitter);
 
-    Assert.assertEquals(7, emitter.getNumEmittedEvents());
+    Assert.assertEquals(8, emitter.getNumEmittedEvents());
     emitter.verifyValue("mergeBuffer/pendingRequests", 0L);
     emitter.verifyValue("mergeBuffer/used", 0L);
     emitter.verifyValue("mergeBuffer/queries", 1L);
     emitter.verifyValue("mergeBuffer/acquisitionTimeNs", 100L);
+    emitter.verifyValue("mergeBuffer/totalBytesUsed", 400L);
     emitter.verifyValue("groupBy/spilledQueries", 2L);
     emitter.verifyValue("groupBy/spilledBytes", 200L);
     emitter.verifyValue("groupBy/mergeDictionarySize", 300L);

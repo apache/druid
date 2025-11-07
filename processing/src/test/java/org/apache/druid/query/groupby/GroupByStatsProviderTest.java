@@ -35,6 +35,7 @@ public class GroupByStatsProviderTest
 
     stats1.mergeBufferAcquisitionTime(300);
     stats1.mergeBufferAcquisitionTime(400);
+    stats1.mergeBufferTotalUsage(50);
     stats1.spilledBytes(200);
     stats1.spilledBytes(400);
     stats1.dictionarySize(100);
@@ -45,6 +46,7 @@ public class GroupByStatsProviderTest
 
     stats2.mergeBufferAcquisitionTime(500);
     stats2.mergeBufferAcquisitionTime(600);
+    stats1.mergeBufferTotalUsage(100);
     stats2.spilledBytes(400);
     stats2.spilledBytes(600);
     stats2.dictionarySize(300);
@@ -53,6 +55,7 @@ public class GroupByStatsProviderTest
     GroupByStatsProvider.AggregateStats aggregateStats = statsProvider.getStatsSince();
     Assert.assertEquals(0L, aggregateStats.getMergeBufferQueries());
     Assert.assertEquals(0L, aggregateStats.getMergeBufferAcquisitionTimeNs());
+    Assert.assertEquals(0L, aggregateStats.getMergeBufferTotalUsage());
     Assert.assertEquals(0L, aggregateStats.getSpilledQueries());
     Assert.assertEquals(0L, aggregateStats.getSpilledBytes());
     Assert.assertEquals(0L, aggregateStats.getMergeDictionarySize());
@@ -63,6 +66,7 @@ public class GroupByStatsProviderTest
     aggregateStats = statsProvider.getStatsSince();
     Assert.assertEquals(2, aggregateStats.getMergeBufferQueries());
     Assert.assertEquals(1800L, aggregateStats.getMergeBufferAcquisitionTimeNs());
+    Assert.assertEquals(150L, aggregateStats.getMergeBufferTotalUsage());
     Assert.assertEquals(2L, aggregateStats.getSpilledQueries());
     Assert.assertEquals(1600L, aggregateStats.getSpilledBytes());
     Assert.assertEquals(1000L, aggregateStats.getMergeDictionarySize());

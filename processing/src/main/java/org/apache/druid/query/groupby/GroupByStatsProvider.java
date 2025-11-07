@@ -27,7 +27,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Metrics collector for groupBy queries like spilled bytes, merge buffer acquistion time, dictionary size.
+ * Metrics collector for groupBy queries like spilled bytes, merge buffer acquisition time, merge buffer memory usage,
+ * and dictionary footprint.
  */
 @LazySingleton
 public class GroupByStatsProvider

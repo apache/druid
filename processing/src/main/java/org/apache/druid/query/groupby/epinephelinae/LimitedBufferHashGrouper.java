@@ -458,6 +458,14 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     }
   }
 
+  @Override
+  public long getMergeBufferUsage()
+  {
+    long hashTableUsage = super.getMergeBufferUsage();
+    long offSetHeapUsage = offsetHeap.getMaxMergeBufferUsageBytes();
+    return hashTableUsage + offSetHeapUsage;
+  }
+
   private class AlternatingByteBufferHashTable extends ByteBufferHashTable
   {
     // The base buffer is split into two alternating halves, with one sub-buffer in use at a given time.
