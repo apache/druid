@@ -51,7 +51,7 @@ jobs:
           path: target/surefire-reports
 
       - name: Publish Test Report
-        uses: mikepenz/action-junit-report@v6.0.1
+        uses: mikepenz/action-junit-report@v5
         with:
           check_name: "Unit Test Report"
           report_paths: '**/target/surefire-reports/TEST-*.xml'
