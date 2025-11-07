@@ -229,7 +229,6 @@ You can now  write exceptions that Druid encounters as a row and then verify whe
   - `CASE_SEARCHED` and `CASE_SIMPLE` queries [#18512](https://github.com/apache/druid/pull/18512)
   - `timestamp_ceil` and `timestamp_extract` queries [#18517](https://github.com/apache/druid/pull/18517)
   - `IF` expressions where the `THEN` and `ELSE` expressions [#18507](https://github.com/apache/druid/pull/18507)
-- Improved projections so that the granularity in queries can match UTC time zones [#18403](https://github.com/apache/druid/pull/18403)
 - Improved the deserialization time for intervals by more than 40% [#18477](https://github.com/apache/druid/pull/18477)
 - Improved the performance of `AND`/`OR` as well as `NOT`/`IS TRUE`/`IS FALSE` [#18491](https://github.com/apache/druid/pull/18491) [#18488](https://github.com/apache/druid/pull/18488)
 - Improved the performance of scan queries [#18441](https://github.com/apache/druid/pull/18441)
