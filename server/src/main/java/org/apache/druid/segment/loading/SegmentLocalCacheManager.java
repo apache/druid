@@ -38,7 +38,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
@@ -182,6 +181,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     final boolean isLocationsValid = !(locations == null || locations.isEmpty());
     final boolean isLocationsConfigValid = !(config.getLocations() == null || config.getLocations().isEmpty());
     return isLocationsValid || isLocationsConfigValid;
+  }
+
+  @Override
+  public boolean canLoadSegmentsOnDemand()
+  {
+    return config.isVirtualStorage();
   }
 
   @Override
@@ -460,7 +465,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         if (hold != null) {
           if (hold.getEntry().isMounted()) {
             return new AcquireSegmentAction(
-                () -> Futures.immediateFuture(hold.getEntry().referenceProvider),
+                () -> Futures.immediateFuture(AcquireSegmentResult.cached(hold.getEntry().referenceProvider)),
                 hold
             );
           } else {
@@ -673,18 +678,28 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return infoDir;
   }
 
-  private Supplier<ListenableFuture<ReferenceCountedObjectProvider<Segment>>> makeOnDemandLoadSupplier(
+  private Supplier<ListenableFuture<AcquireSegmentResult>> makeOnDemandLoadSupplier(
       final SegmentCacheEntry entry,
       final StorageLocation location
   )
   {
     return Suppliers.memoize(
-        () -> virtualStorageLoadOnDemandExec.submit(
-            () -> {
-              entry.mount(location);
-              return entry.referenceProvider;
-            }
-        )
+        () -> {
+          final long startTime = System.nanoTime();
+          return virtualStorageLoadOnDemandExec.submit(
+              () -> {
+                final long execStartTime = System.nanoTime();
+                final long waitTime = execStartTime - startTime;
+                entry.mount(location);
+                return new AcquireSegmentResult(
+                    entry.referenceProvider,
+                    entry.dataSegment.getSize(),
+                    waitTime,
+                    System.nanoTime() - startTime
+                );
+              }
+          );
+        }
     );
   }
 

@@ -35,7 +35,6 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.PhysicalSegmentInspector;
-import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
@@ -856,12 +855,12 @@ class SegmentLocalCacheManagerConcurrencyTest
           segmentManager.acquireSegment(segment)
       );
       try {
-        final ReferenceCountedObjectProvider<Segment> referenceProvider =
+        final AcquireSegmentResult result =
             action.getSegmentFuture().get(timeout, TimeUnit.MILLISECONDS);
-        if (referenceProvider == null) {
+        if (result == null) {
           Assertions.fail("this shouldn't happen");
         }
-        final Optional<Segment> segment = referenceProvider.acquireReference().map(closer::register);
+        final Optional<Segment> segment = result.getReferenceProvider().acquireReference().map(closer::register);
         if (segment.isPresent()) {
           PhysicalSegmentInspector gadget = segment.get().as(PhysicalSegmentInspector.class);
           if (delayMin >= 0 && delayMax > 0) {

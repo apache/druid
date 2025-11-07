@@ -41,10 +41,20 @@ import java.util.stream.Collectors;
  */
 public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMetrics<QueryType>
 {
+  public static final String QUERY_TIME = "query/time";
+  public static final String QUERY_BYTES = "query/bytes";
+  public static final String QUERY_CPU_TIME = "query/cpu/time";
   public static final String QUERY_WAIT_TIME = "query/wait/time";
   public static final String QUERY_SEGMENT_TIME = "query/segment/time";
   public static final String QUERY_SEGMENT_AND_CACHE_TIME = "query/segmentAndCache/time";
   public static final String QUERY_RESULT_CACHE_HIT = "query/resultCache/hit";
+  public static final String QUERY_ON_DEMAND_LOAD_TIME = "query/load/time";
+  public static final String QUERY_ON_DEMAND_LOAD_TIME_AVG = "query/load/time/avg";
+  public static final String QUERY_ON_DEMAND_LOAD_TIME_MAX = "query/load/time/max";
+  public static final String QUERY_ON_DEMAND_WAIT_TIME_AVG = "query/load/wait/avg";
+  public static final String QUERY_ON_DEMAND_WAIT_TIME_MAX = "query/load/wait/max";
+  public static final String QUERY_ON_DEMAND_LOAD_COUNT = "query/load/count";
+  public static final String QUERY_ON_DEMAND_LOAD_BYTES = "query/load/bytes";
 
   protected final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
   protected final Map<String, Number> metrics = new HashMap<>();
@@ -238,13 +248,13 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public QueryMetrics<QueryType> reportQueryTime(long timeNs)
   {
-    return reportMillisTimeMetric("query/time", timeNs);
+    return reportMillisTimeMetric(QUERY_TIME, timeNs);
   }
 
   @Override
   public QueryMetrics<QueryType> reportQueryBytes(long byteCount)
   {
-    return reportMetric("query/bytes", byteCount);
+    return reportMetric(QUERY_BYTES, byteCount);
   }
 
   @Override
@@ -266,6 +276,48 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
+  public QueryMetrics<QueryType> reportSegmentOnDemandLoadTime(long timeNs)
+  {
+    return reportMillisTimeMetric(QUERY_ON_DEMAND_LOAD_TIME, timeNs);
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportSegmentOnDemandLoadTimeAvg(long timeNs)
+  {
+    return reportMillisTimeMetric(QUERY_ON_DEMAND_LOAD_TIME_AVG, timeNs);
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportSegmentOnDemandLoadWaitTimeMax(long timeNs)
+  {
+    return reportMillisTimeMetric(QUERY_ON_DEMAND_WAIT_TIME_MAX, timeNs);
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportSegmentOnDemandLoadWaitTimeAvg(long timeNs)
+  {
+    return reportMillisTimeMetric(QUERY_ON_DEMAND_WAIT_TIME_AVG, timeNs);
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportSegmentOnDemandLoadTimeMax(long timeNs)
+  {
+    return reportMillisTimeMetric(QUERY_ON_DEMAND_LOAD_TIME_MAX, timeNs);
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportSegmentOnDemandLoadBytes(long byteCount)
+  {
+    return reportMetric(QUERY_ON_DEMAND_LOAD_BYTES, byteCount);
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportSegmentOnDemandLoadCount(long count)
+  {
+    return reportMetric(QUERY_ON_DEMAND_LOAD_COUNT, count);
+  }
+
+  @Override
   public QueryMetrics<QueryType> reportResultCachePoll(boolean hit)
   {
     return reportMetric(QUERY_RESULT_CACHE_HIT, hit ? 1 : 0);
@@ -274,7 +326,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public QueryMetrics<QueryType> reportCpuTime(long timeNs)
   {
-    return reportMetric("query/cpu/time", TimeUnit.NANOSECONDS.toMicros(timeNs));
+    return reportMetric(QUERY_CPU_TIME, TimeUnit.NANOSECONDS.toMicros(timeNs));
   }
 
   @Override

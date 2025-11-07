@@ -40,6 +40,18 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
   }
 
   @Override
+  public boolean canLoadSegmentsOnDemand()
+  {
+    return false;
+  }
+
+  @Override
+  public boolean canLoadSegmentOnDemand(DataSegment segment)
+  {
+    return false;
+  }
+
+  @Override
   public List<DataSegment> getCachedSegments()
   {
     throw new UnsupportedOperationException();

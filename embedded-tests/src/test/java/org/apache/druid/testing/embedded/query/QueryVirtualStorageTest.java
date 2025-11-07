@@ -24,8 +24,11 @@ import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
+import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DruidProcessingConfigTest;
+import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -43,10 +46,12 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.shaded.com.google.common.io.ByteStreams;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -140,6 +145,7 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     // "2015-09-12T08:00:00Z/2025-09-12T14:00:00Z"
     // "2015-09-12T14:00:00Z/2025-09-12T19:00:00Z"
     // "2015-09-12T19:00:00Z/2025-09-13T00:00:00Z"
+
     final String[] queries = new String[]{
         "select count(*) from \"%s\" WHERE __time >= TIMESTAMP '2015-09-12 00:00:00' and __time < TIMESTAMP '2015-09-12 08:00:00'",
         "select count(*) from \"%s\" WHERE __time >= TIMESTAMP '2015-09-12 08:00:00' and __time < TIMESTAMP '2015-09-12 14:00:00'",
@@ -154,13 +160,79 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     };
 
     Assertions.assertEquals(expectedResults[0], Long.parseLong(cluster.runSql(queries[0], dataSource)));
+    assertMetrics(1, 8L);
     Assertions.assertEquals(expectedResults[1], Long.parseLong(cluster.runSql(queries[1], dataSource)));
+    assertMetrics(2, 6L);
     Assertions.assertEquals(expectedResults[2], Long.parseLong(cluster.runSql(queries[2], dataSource)));
+    assertMetrics(3, 5L);
     Assertions.assertEquals(expectedResults[3], Long.parseLong(cluster.runSql(queries[3], dataSource)));
+    assertMetrics(4, 5L);
 
     for (int i = 0; i < 1000; i++) {
       int nextQuery = ThreadLocalRandom.current().nextInt(queries.length);
       Assertions.assertEquals(expectedResults[nextQuery], Long.parseLong(cluster.runSql(queries[nextQuery], dataSource)));
+      assertMetrics(i + 5, null);
+    }
+  }
+
+  private void assertMetrics(int expectedEventCount, @Nullable Long expectedLoadCount)
+  {
+    LatchableEmitter emitter = historical.latchableEmitter();
+    final int lastIndex = expectedEventCount - 1;
+
+    List<ServiceMetricEvent> countEvents = emitter.getMetricEvents(DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_COUNT);
+    Assertions.assertEquals(expectedEventCount, countEvents.size());
+    if (expectedLoadCount != null) {
+      Assertions.assertEquals(expectedLoadCount, countEvents.get(lastIndex).getValue());
+    }
+    boolean hasLoads = countEvents.get(lastIndex).getValue().longValue() > 0;
+
+    List<ServiceMetricEvent> timeEvents = emitter.getMetricEvents(DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_TIME);
+    Assertions.assertEquals(expectedEventCount, timeEvents.size());
+    if (hasLoads) {
+      Assertions.assertTrue(timeEvents.get(lastIndex).getValue().longValue() > 0);
+    } else {
+      Assertions.assertEquals(0, timeEvents.get(lastIndex).getValue().longValue());
+    }
+
+    List<ServiceMetricEvent> timeMaxEvents = emitter.getMetricEvents(DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_TIME_MAX);
+    Assertions.assertEquals(expectedEventCount, timeMaxEvents.size());
+    if (hasLoads) {
+      Assertions.assertTrue(timeMaxEvents.get(lastIndex).getValue().longValue() > 0);
+    } else {
+      Assertions.assertEquals(0, timeMaxEvents.get(lastIndex).getValue().longValue());
+    }
+
+    List<ServiceMetricEvent> timeAvgEvents = emitter.getMetricEvents(DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_TIME_AVG);
+    Assertions.assertEquals(expectedEventCount, timeAvgEvents.size());
+    if (hasLoads) {
+      Assertions.assertTrue(timeAvgEvents.get(lastIndex).getValue().longValue() > 0);
+    } else {
+      Assertions.assertEquals(0, timeAvgEvents.get(lastIndex).getValue().longValue());
+    }
+
+    List<ServiceMetricEvent> waitMaxEvents = emitter.getMetricEvents(DefaultQueryMetrics.QUERY_ON_DEMAND_WAIT_TIME_MAX);
+    Assertions.assertEquals(expectedEventCount, waitMaxEvents.size());
+    if (hasLoads) {
+      Assertions.assertTrue(waitMaxEvents.get(lastIndex).getValue().longValue() >= 0);
+    } else {
+      Assertions.assertEquals(0, waitMaxEvents.get(lastIndex).getValue().longValue());
+    }
+
+    List<ServiceMetricEvent> waitAvgEvents = emitter.getMetricEvents(DefaultQueryMetrics.QUERY_ON_DEMAND_WAIT_TIME_AVG);
+    Assertions.assertEquals(expectedEventCount, waitAvgEvents.size());
+    if (hasLoads) {
+      Assertions.assertTrue(waitAvgEvents.get(lastIndex).getValue().longValue() >= 0);
+    } else {
+      Assertions.assertEquals(0, waitAvgEvents.get(lastIndex).getValue().longValue());
+    }
+
+    List<ServiceMetricEvent> loadSizeEvents = emitter.getMetricEvents(DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_BYTES);
+    Assertions.assertEquals(expectedEventCount, loadSizeEvents.size());
+    if (hasLoads) {
+      Assertions.assertTrue(loadSizeEvents.get(lastIndex).getValue().longValue() > 0);
+    } else {
+      Assertions.assertEquals(0, loadSizeEvents.get(lastIndex).getValue().longValue());
     }
   }
 
