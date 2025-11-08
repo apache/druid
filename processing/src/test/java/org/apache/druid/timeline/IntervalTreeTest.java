@@ -360,21 +360,25 @@ public class IntervalTreeTest
     Interval floor = tree.floorKey(Intervals.of("2025-01-11T00:00:00/P1D"));
     Assert.assertEquals("Floor key 1", Intervals.of("2025-01-01T00:00:00/P1Y"), floor);
 
-    // Exact match
+    // Entry with same start date but different end date
+    floor = tree.lowerKey(Intervals.of("2025-01-01T00:00:00/P1M"));
+    Assert.assertEquals("Lower key 2", Intervals.of("2025-01-01T00:00:00/P1D"), floor);
+
+    // Matching entry
     floor = tree.floorKey(Intervals.of("2025-01-12T00:00:00/P1D"));
-    Assert.assertEquals("Floor key 2", Intervals.of("2025-01-12T00:00:00/P1D"), floor);
+    Assert.assertEquals("Floor key 3", Intervals.of("2025-01-12T00:00:00/P1D"), floor);
 
     // Random entry
     floor = tree.floorKey(Intervals.of("2025-08-01T00:00:00/P1D"));
-    Assert.assertEquals("Floor key 3", Intervals.of("2025-07-12T00:00:00/P1D"), floor);
+    Assert.assertEquals("Floor key 4", Intervals.of("2025-07-12T00:00:00/P1D"), floor);
 
     // Last entry
     floor = tree.floorKey(Intervals.of("2025-11-01T00:00:00/P1M"));
-    Assert.assertEquals("Floor key 4", Intervals.of("2025-10-06T00:00:00/P1M"), floor);
+    Assert.assertEquals("Floor key 5", Intervals.of("2025-10-06T00:00:00/P1M"), floor);
 
     // No smaller entry
     floor = tree.floorKey(Intervals.of("2024-12-31T00:00:00/P1D"));
-    Assert.assertNull("Floor key 5", floor);
+    Assert.assertNull("Floor key 6", floor);
   }
 
   @Test
@@ -386,23 +390,26 @@ public class IntervalTreeTest
     Interval lower = tree.lowerKey(Intervals.of("2025-01-11T00:00:00/P1D"));
     Assert.assertEquals("Lower key 1", Intervals.of("2025-01-01T00:00:00/P1Y"), lower);
 
-    // Matching interval entry
+    // Entry with same start date but different end date
+    lower = tree.lowerKey(Intervals.of("2025-01-01T00:00:00/P1M"));
+    Assert.assertEquals("Lower key 2", Intervals.of("2025-01-01T00:00:00/P1D"), lower);
+
+    // Matching entry
     lower = tree.lowerKey(Intervals.of("2025-01-12T00:00:00/P1D"));
-    Assert.assertEquals("Lower key 2", Intervals.of("2025-01-01T00:00:00/P1Y"), lower);
+    Assert.assertEquals("Lower key 3", Intervals.of("2025-01-01T00:00:00/P1Y"), lower);
 
     // Random entry
     lower = tree.lowerKey(Intervals.of("2025-08-01T00:00:00/P1D"));
-    Assert.assertEquals("Lower key 3", Intervals.of("2025-07-12T00:00:00/P1D"), lower);
+    Assert.assertEquals("Lower key 4", Intervals.of("2025-07-12T00:00:00/P1D"), lower);
 
     // Last entry
     lower = tree.lowerKey(Intervals.of("2025-11-01T00:00:00/P1M"));
-    Assert.assertEquals("Lower key 4", Intervals.of("2025-10-06T00:00:00/P1M"), lower);
+    Assert.assertEquals("Lower key 5", Intervals.of("2025-10-06T00:00:00/P1M"), lower);
 
     // No smaller entry
     lower = tree.lowerKey(Intervals.of("2024-12-31T00:00:00/P1D"));
-    Assert.assertNull("Lower key 5", lower);
+    Assert.assertNull("Lower key 6", lower);
   }
-
 
   @Test
   public void testCeiinglKey()
@@ -413,21 +420,25 @@ public class IntervalTreeTest
     Interval ceiling = tree.ceilingKey(Intervals.of("2024-12-31T00:00:00/P1D"));
     Assert.assertEquals("Ceiling key 1", Intervals.of("2025-01-01T00:00:00/P1D"), ceiling);
 
-    // Exact match
+    // Entry with same start date but different end date
+    ceiling = tree.ceilingKey(Intervals.of("2025-02-01T00:00:00/PT6H"));
+    Assert.assertEquals("Ceiling key 2", Intervals.of("2025-02-01T00:00:00/P1D"), ceiling);
+
+    // Matching entry
     ceiling = tree.ceilingKey(Intervals.of("2025-09-04T00:00:00/P1D"));
-    Assert.assertEquals("Ceiling key 2", Intervals.of("2025-09-04T00:00:00/P1D"), ceiling);
+    Assert.assertEquals("Ceiling key 3", Intervals.of("2025-09-04T00:00:00/P1D"), ceiling);
 
     // Random entry
     ceiling = tree.ceilingKey(Intervals.of("2025-03-31T00:00:00/P1D"));
-    Assert.assertEquals("Ceiling key 3", Intervals.of("2025-04-02T00:00:00/P1D"), ceiling);
+    Assert.assertEquals("Ceiling key 4", Intervals.of("2025-04-02T00:00:00/P1D"), ceiling);
 
     // Only one greater entry
     ceiling = tree.ceilingKey(Intervals.of("2025-09-28T00:00:00/P1D"));
-    Assert.assertEquals("Ceiling key 4", Intervals.of("2025-10-06T00:00:00/P1M"), ceiling);
+    Assert.assertEquals("Ceiling key 5", Intervals.of("2025-10-06T00:00:00/P1M"), ceiling);
 
     // No greater entry
     ceiling = tree.ceilingKey(Intervals.of("2025-11-01T00:00:00/P1D"));
-    Assert.assertNull("Ceiling key 5", ceiling);
+    Assert.assertNull("Ceiling key 6", ceiling);
   }
 
   @Test
@@ -439,21 +450,25 @@ public class IntervalTreeTest
     Interval higher = tree.higherKey(Intervals.of("2024-12-31T00:00:00/P1D"));
     Assert.assertEquals("Higher key 1", Intervals.of("2025-01-01T00:00:00/P1D"), higher);
 
-    // Matching interval of an entry
+    // Entry with same start date but different end date
+    higher = tree.ceilingKey(Intervals.of("2025-02-01T00:00:00/PT6H"));
+    Assert.assertEquals("Higher key 2", Intervals.of("2025-02-01T00:00:00/P1D"), higher);
+
+    // Matching entry
     higher = tree.higherKey(Intervals.of("2025-09-04T00:00:00/P1D"));
-    Assert.assertEquals("Higher key 2", Intervals.of("2025-10-06T00:00:00/P1M"), higher);
+    Assert.assertEquals("Higher key 3", Intervals.of("2025-10-06T00:00:00/P1M"), higher);
 
     // Random entry
     higher = tree.higherKey(Intervals.of("2025-03-31T00:00:00/P1D"));
-    Assert.assertEquals("Higher key 3", Intervals.of("2025-04-02T00:00:00/P1D"), higher);
+    Assert.assertEquals("Higher key 4", Intervals.of("2025-04-02T00:00:00/P1D"), higher);
 
     // Only one greater entry
     higher = tree.higherKey(Intervals.of("2025-09-28T00:00:00/P1D"));
-    Assert.assertEquals("Higher key 4", Intervals.of("2025-10-06T00:00:00/P1M"), higher);
+    Assert.assertEquals("Higher key 5", Intervals.of("2025-10-06T00:00:00/P1M"), higher);
 
     // No greater entry
     higher = tree.higherKey(Intervals.of("2025-11-01T00:00:00/P1D"));
-    Assert.assertNull("Higher key 5", higher);
+    Assert.assertNull("Higher key 6", higher);
   }
 
   private void compareData(List<Pair<Interval, String>> inputData, IntervalTree<String> tree)

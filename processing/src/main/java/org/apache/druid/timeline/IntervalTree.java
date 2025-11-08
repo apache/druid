@@ -278,14 +278,15 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
       return;
     }
 
-    if (condition.apply(node.interval)) {
-      action.accept(node.interval, node.value);
-      //result.put(node.interval, node.value);
-    }
+    // Process in-order
 
     // Search left
     if ((node.left != null) && condition.apply(node.left.range)) {
       forEachMatching(node.left, condition, action);
+    }
+
+    if (condition.apply(node.interval)) {
+      action.accept(node.interval, node.value);
     }
 
     // Search right
@@ -437,7 +438,7 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
     Node<T> node = root;
     while (node != null) {
       // Since we want to return a smaller entry even when there is an exact match, go left in the equality case too
-      if (startComparator.compare(key, node.getKey()) <= 0) {
+      if (compareInterval(key, node.getKey()) <= 0) {
         node = node.left;
       } else {
         lnode = node;
@@ -464,7 +465,7 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
         fnode = node;
         break;
       }
-      if (startComparator.compare(key, node.getKey()) < 0) {
+      if (compareInterval(key, node.getKey()) < 0) {
         node = node.left;
       } else {
         fnode = node;
@@ -491,7 +492,7 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
         cnode = node;
         break;
       }
-      if (startComparator.compare(key, node.getKey()) < 0) {
+      if (compareInterval(key, node.getKey()) < 0) {
         cnode = node;
         node = node.left;
       } else {
@@ -514,7 +515,7 @@ public class IntervalTree<T> extends AbstractMap<Interval, T> implements Navigab
     Node<T> hnode = null;
     Node<T> node = root;
     while (node != null) {
-      if (startComparator.compare(key, node.getKey()) < 0) {
+      if (compareInterval(key, node.getKey()) < 0) {
         hnode = node;
         node = node.left;
       } else {
