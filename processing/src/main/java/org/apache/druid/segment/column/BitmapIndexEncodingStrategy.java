@@ -118,7 +118,7 @@ public abstract class BitmapIndexEncodingStrategy implements Serializer
     @Override
     public String toString()
     {
-      return "DictionaryId{}";
+      return "DictionaryId";
     }
   }
 
@@ -159,7 +159,7 @@ public abstract class BitmapIndexEncodingStrategy implements Serializer
     @Override
     public String toString()
     {
-      return "NullsOnly{}";
+      return "NullsOnly";
     }
   }
 }
