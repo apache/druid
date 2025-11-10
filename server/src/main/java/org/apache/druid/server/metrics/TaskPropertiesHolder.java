@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
 
 /**
  * A holder for task-specific properties applicable to {@code CliPeon} servers.
- * For other server types, the getter methods in this holder will return {@code null}.
+ * For all other servers, the getters in this holder will return {@code null}.
  */
 public class TaskPropertiesHolder
 {
@@ -35,11 +35,11 @@ public class TaskPropertiesHolder
 
   @Named(DATA_SOURCE_BINDING)
   @Inject(optional = true)
-  final String dataSource = null;
+  String dataSource = null;
 
   @Named(TASK_ID_BINDING)
   @Inject(optional = true)
-  final String taskId = null;
+  String taskId = null;
 
   /**
    * @return the taskId for CliPeon servers; {@code null} for all other servers.

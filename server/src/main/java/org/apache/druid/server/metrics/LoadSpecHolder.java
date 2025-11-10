@@ -35,11 +35,11 @@ public class LoadSpecHolder
 
   @Named(LOOKUPS_TO_LOAD_FOR_TASK)
   @Inject(optional = true)
-  final LookupLoadingSpec lookupLoadingSpec = LookupLoadingSpec.ALL;
+  LookupLoadingSpec lookupLoadingSpec = LookupLoadingSpec.ALL;
 
   @Named(BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)
   @Inject(optional = true)
-  final BroadcastDatasourceLoadingSpec broadcastDatasourceLoadingSpec = BroadcastDatasourceLoadingSpec.ALL;
+  BroadcastDatasourceLoadingSpec broadcastDatasourceLoadingSpec = BroadcastDatasourceLoadingSpec.ALL;
 
   public LookupLoadingSpec getLookupLoadingSpec()
   {

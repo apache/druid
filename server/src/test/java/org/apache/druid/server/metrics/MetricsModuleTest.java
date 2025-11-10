@@ -92,10 +92,10 @@ public class MetricsModuleTest
           }
         })
     );
-    final TaskPropertiesHolder dimensionIdHolder = new TaskPropertiesHolder();
-    injector.injectMembers(dimensionIdHolder);
-    Assert.assertNull(dimensionIdHolder.getDataSource());
-    Assert.assertNull(dimensionIdHolder.getTaskId());
+    final TaskPropertiesHolder taskPropsHolder = new TaskPropertiesHolder();
+    injector.injectMembers(taskPropsHolder);
+    Assert.assertNull(taskPropsHolder.getDataSource());
+    Assert.assertNull(taskPropsHolder.getTaskId());
   }
 
   @Test
@@ -122,10 +122,10 @@ public class MetricsModuleTest
           }
         })
     );
-    final TaskPropertiesHolder dimensionIdHolder = new TaskPropertiesHolder();
-    injector.injectMembers(dimensionIdHolder);
-    Assert.assertEquals(dataSource, dimensionIdHolder.getDataSource());
-    Assert.assertEquals(taskId, dimensionIdHolder.getTaskId());
+    final TaskPropertiesHolder taskPropsHolder = new TaskPropertiesHolder();
+    injector.injectMembers(taskPropsHolder);
+    Assert.assertEquals(dataSource, taskPropsHolder.getDataSource());
+    Assert.assertEquals(taskId, taskPropsHolder.getTaskId());
   }
 
   @Test
