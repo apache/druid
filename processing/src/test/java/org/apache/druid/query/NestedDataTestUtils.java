@@ -297,6 +297,7 @@ public class NestedDataTestUtils
   /**
    * @deprecated Use {@link SegmentBuilder} instead.
    */
+  @Deprecated
   public static List<Segment> createSegments(
       TemporaryFolder tempFolder,
       Closer closer,
