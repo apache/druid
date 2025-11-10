@@ -80,11 +80,14 @@ public class CgroupMemoryMonitor extends FeedDefiningMonitor
     if (isRunningOnCgroupsV2) {
       return cgroupV2MemoryMonitor.doMonitor(emitter);
     } else {
-      return doMonitorInternal(emitter, cgroupDiscoverer, dimensions, MEMORY_USAGE_FILE, MEMORY_LIMIT_FILE, this);
+      return parseAndEmit(emitter, cgroupDiscoverer, dimensions, MEMORY_USAGE_FILE, MEMORY_LIMIT_FILE, this);
     }
   }
 
-  public static boolean doMonitorInternal(
+  /**
+   * Common metric parser and emitter for both v1 and v2 cgroupMemory monitors.
+   */
+  public static boolean parseAndEmit(
       ServiceEmitter emitter,
       CgroupDiscoverer cgroupDiscoverer,
       Map<String, String[]> dimensions,

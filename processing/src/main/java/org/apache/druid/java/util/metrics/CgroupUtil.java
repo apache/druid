@@ -25,7 +25,6 @@ import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Objects;
@@ -59,43 +58,6 @@ public class CgroupUtil
       return defaultValue;
     }
   }
-
-  /**
-   * Detects if we're running on cgroups v2 by checking if the discoverer path contains cgroup2 files.
-   * This is a simple heuristic to avoid running v1-specific monitors on v2 systems.
-   * 
-   * @param cgroupDiscoverer the discoverer to check
-   * @return true if running on cgroups v2, false for v1 or unknown
-   */
-  public static boolean isRunningOnCgroupsV2(CgroupDiscoverer cgroupDiscoverer)
-  {
-    try {
-      // Try CPU cgroup first - check if cpu.max file exists (cgroups v2) instead of cpu.cfs_quota_us (cgroups v1)
-      Path cpuCgroupPath = cgroupDiscoverer.discover("cpu");
-      if (cpuCgroupPath != null) {
-        Path cpuMaxFile = cpuCgroupPath.resolve("cpu.max");
-        Path cpuQuotaFile = cpuCgroupPath.resolve("cpu.cfs_quota_us");
-
-        if (Files.exists(cpuMaxFile) && !Files.exists(cpuQuotaFile)) {
-          return true;
-        }
-      }
-
-      // Fallback: Try cpuset cgroup - check if cpuset.cpus.effective exists (v2) vs cpuset.effective_cpus (v1)
-      Path cpusetCgroupPath = cgroupDiscoverer.discover("cpuset");
-      if (cpusetCgroupPath != null) {
-        Path v2EffectiveCpusFile = cpusetCgroupPath.resolve("cpuset.cpus.effective");
-        Path v1EffectiveCpusFile = cpusetCgroupPath.resolve("cpuset.effective_cpus");
-
-        return Files.exists(v2EffectiveCpusFile) && !Files.exists(v1EffectiveCpusFile);
-      }
-    }
-    catch (Exception e) {
-      LOG.debug(e, "Could not determine cgroups version, assuming v1");
-    }
-    return false;
-  }
-
 
   /**
    * Calculates the total cores allocated through quotas. A negative value indicates that no quota has been specified.

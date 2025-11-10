@@ -39,8 +39,7 @@ public class CpuV2
   private static final Logger LOG = new Logger(CpuV2.class);
   private static final String CPU_STAT_FILE = "cpu.stat";
   private static final String CPU_WEIGHT_FILE = "cpu.weight";
-  private static final String
-      CPU_MAX_FILE = "cpu.max";
+  private static final String CPU_MAX_FILE = "cpu.max";
 
   private final CgroupDiscoverer cgroupDiscoverer;
 

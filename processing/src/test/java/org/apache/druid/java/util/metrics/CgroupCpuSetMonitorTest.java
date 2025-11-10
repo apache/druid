@@ -80,6 +80,7 @@ public class CgroupCpuSetMonitorTest
     emitter.verifyValue("cgroup/cpuset/effective_cpu_count", 7);
     emitter.verifyValue("cgroup/cpuset/mems_count", 4);
     emitter.verifyValue("cgroup/cpuset/effective_mems_count", 1);
+    Assert.assertEquals(CgroupVersion.V1.name(), emitter.getEvents().get(0).toMap().get("cgroupversion"));
   }
 
   @Test
@@ -91,7 +92,7 @@ public class CgroupCpuSetMonitorTest
     TestUtils.setUpCgroupsV2(procV2Dir, cgroupV2Dir);
     
     // Create v2 cpuset files in unified hierarchy
-    File cgroupRoot = new File(cgroupV2Dir, "unified");
+    File cgroupRoot = new File(procV2Dir, "unified");
     FileUtils.mkdirp(cgroupRoot);
     Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus.effective"), "0-3\n".getBytes(StandardCharsets.UTF_8));
     Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems.effective"), "0\n".getBytes(StandardCharsets.UTF_8));
@@ -107,6 +108,7 @@ public class CgroupCpuSetMonitorTest
     // doMonitor should return true but skip actual monitoring
     Assert.assertTrue(monitor.doMonitor(emitter));
     Assert.assertEquals(4, emitter.getNumEmittedEvents());
+    Assert.assertEquals(CgroupVersion.V2.name(), emitter.getEvents().get(0).toMap().get("cgroupversion"));
   }
 
 }

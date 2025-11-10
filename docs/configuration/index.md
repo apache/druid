@@ -1946,13 +1946,14 @@ The following table lists available monitors and the respective services where t
 |`org.apache.druid.java.util.metrics.JvmCpuMonitor`|Reports statistics of CPU consumption by the JVM.|Any|
 |`org.apache.druid.java.util.metrics.CpuAcctDeltaMonitor`|Reports consumed CPU as per the cpuacct cgroup.|Any|
 |`org.apache.druid.java.util.metrics.JvmThreadsMonitor`|Reports Thread statistics in the JVM, like numbers of total, daemon, started, died threads.|Any|
-|`org.apache.druid.java.util.metrics.CgroupCpuMonitor`|Reports CPU shares and quotas as per the `cpu` cgroup.|Any|
-|`org.apache.druid.java.util.metrics.CgroupCpuSetMonitor`|Reports CPU core/HT and memory node allocations as per the `cpuset` cgroup.|Any|
-|`org.apache.druid.java.util.metrics.CgroupDiskMonitor`|Reports disk statistic as per the blkio cgroup.|Any|
-|`org.apache.druid.java.util.metrics.CgroupMemoryMonitor`|Reports memory statistic as per the memory cgroup.|Any|
-|`org.apache.druid.java.util.metrics.CgroupV2CpuMonitor`| **EXPERIMENTAL** Reports CPU usage from `cpu.stat` file. Only applicable to `cgroupv2`.|Any|
-|`org.apache.druid.java.util.metrics.CgroupV2DiskMonitor`| **EXPERIMENTAL** Reports disk usage from `io.stat` file. Only applicable to `cgroupv2`.|Any|
-|`org.apache.druid.java.util.metrics.CgroupV2MemoryMonitor`| **EXPERIMENTAL** Reports memory usage from `memory.current` and `memory.max` files. Only applicable to `cgroupv2`.|Any|
+|`org.apache.druid.java.util.metrics.CgroupCpuMonitor`|Reports CPU shares and quotas as per the `cpu` cgroup. Automaticaly switches to `CgroupV2CpuMonitor` in case `cgroupv2` type is detected.|Any|
+|`org.apache.druid.java.util.metrics.CgroupCpuSetMonitor`|Reports CPU core/HT and memory node allocations as per the `cpuset` cgroup. Automaticaly switches to `CgroupV2CpuSetMonitor` in case `cgroupv2` type is detected.|Any|
+|`org.apache.druid.java.util.metrics.CgroupDiskMonitor`|Reports disk statistic as per the blkio cgroup. Automaticaly switches to `CgroupV2DiskMonitor` in case `cgroupv2` type is detected.|Any|
+|`org.apache.druid.java.util.metrics.CgroupMemoryMonitor`|Reports memory statistic as per the memory cgroup. Automaticaly switches to `CgroupV2MemoryMonitor` in case `cgroupv2` type is detected.|Any|
+|`org.apache.druid.java.util.metrics.CgroupV2CpuMonitor`| Reports CPU usage from `cpu.stat` file. Only applicable to `cgroupv2`.|Any|
+|`org.apache.druid.java.util.metrics.CgroupV2CpuSetMonitor`|Reports CPU core/HT and memory node allocations as per the `cpuset` cgroup. Only applicable to `cgroupv2`.|Any|
+|`org.apache.druid.java.util.metrics.CgroupV2DiskMonitor`| Reports disk usage from `io.stat` file. Only applicable to `cgroupv2`.|Any|
+|`org.apache.druid.java.util.metrics.CgroupV2MemoryMonitor`| Reports memory usage from `memory.current` and `memory.max` files. Only applicable to `cgroupv2`.|Any|
 |`org.apache.druid.server.metrics.HistoricalMetricsMonitor`|Reports statistics on Historical services.|Historical|
 |`org.apache.druid.server.metrics.SegmentStatsMonitor` | **EXPERIMENTAL** Reports statistics about segments on Historical services. Not to be used when lazy loading is configured.|Historical|
 |`org.apache.druid.server.metrics.QueryCountStatsMonitor`|Reports how many queries have been successful/failed/interrupted.|Broker, Historical, Router, Indexer, Peon|

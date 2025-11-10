@@ -200,7 +200,7 @@ public class CpuV2Test
   }
 
   @Test
-  public void testMicrosecondToJiffiesConversion() throws IOException
+  public void testV2DoesNotConvertMicroSecondToJiffies() throws IOException
   {
 
     // Test microsecond to jiffies conversion (divide by 10000)
@@ -291,8 +291,6 @@ public class CpuV2Test
   public void testZeroMicrosecondValues() throws IOException
   {
     // Test handling of zero values in cpu.stat
-
-
     Files.write(
         Paths.get(cgroupDir.getAbsolutePath(), "cpu.stat"),
         "user_usec 0\nsystem_usec 0\n".getBytes(StandardCharsets.UTF_8)
@@ -313,6 +311,9 @@ public class CpuV2Test
     Assert.assertEquals("V2 should not provide user jiffies", -1L, metrics.getUserJiffies());
     Assert.assertEquals("V2 should not provide system jiffies", -1L, metrics.getSystemJiffies());
     Assert.assertEquals("V2 should not provide total jiffies", -1L, metrics.getTotalJiffies());
+    Assert.assertEquals(0, metrics.getUserUs());
+    Assert.assertEquals(0, metrics.getSystemUs());
+    Assert.assertEquals(-1, metrics.getTotalUs());
   }
 
   @Test

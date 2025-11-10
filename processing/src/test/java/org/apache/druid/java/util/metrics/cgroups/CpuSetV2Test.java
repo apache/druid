@@ -292,33 +292,4 @@ public class CpuSetV2Test
     Assert.assertArrayEquals("Effective memory data should be parsed correctly", expectedEffectiveMems, metrics.getEffectiveCpuSetMems());
   }
 
-  @Test
-  public void testBackwardsCompatibilityWithV1Parsing() throws IOException
-  {
-    // This test verifies that the v2 parser can handle the same formats as v1
-    File cgroupRoot = cgroupDir;
-    
-    // Use same format as the existing v1 test resources
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus"), 
-        "0-7\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.cpus.effective"), 
-        "0,2,4-6\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems"), 
-        "0-3\n".getBytes(StandardCharsets.UTF_8));
-    Files.write(Paths.get(cgroupRoot.getAbsolutePath(), "cpuset.mems.effective"), 
-        "0\n".getBytes(StandardCharsets.UTF_8));
-
-    CpuSetV2 cpuSetV2 = new CpuSetV2(discoverer);
-    CpuSet.CpuSetMetric metrics = cpuSetV2.snapshot();
-
-    int[] expectedCpus = {0, 1, 2, 3, 4, 5, 6, 7};
-    int[] expectedEffectiveCpus = {0, 2, 4, 5, 6};
-    int[] expectedMems = {0, 1, 2, 3};
-    int[] expectedEffectiveMems = {0};
-
-    Assert.assertArrayEquals("V1-compatible CPU format should work", expectedCpus, metrics.getCpuSetCpus());
-    Assert.assertArrayEquals("V1-compatible effective CPU format should work", expectedEffectiveCpus, metrics.getEffectiveCpuSetCpus());
-    Assert.assertArrayEquals("V1-compatible memory format should work", expectedMems, metrics.getCpuSetMems());
-    Assert.assertArrayEquals("V1-compatible effective memory format should work", expectedEffectiveMems, metrics.getEffectiveCpuSetMems());
-  }
 }

@@ -84,5 +84,4 @@ public class CgroupCpuSetMonitor extends FeedDefiningMonitor
     ));
     return true;
   }
-
 }

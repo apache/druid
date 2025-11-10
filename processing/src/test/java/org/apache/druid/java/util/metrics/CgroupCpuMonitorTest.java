@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
+import org.apache.druid.java.util.metrics.cgroups.CgroupVersion;
 import org.apache.druid.java.util.metrics.cgroups.ProcCgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.TestUtils;
@@ -127,17 +128,18 @@ public class CgroupCpuMonitorTest
     TestUtils.setUpCgroupsV2(procV2Dir, cgroupV2Dir);
 
 
-    CgroupDiscoverer v2Discoverer = ProcSelfCgroupDiscoverer.autoCgroupDiscoverer(cgroupV2Dir.toPath());
+    CgroupDiscoverer v2Discoverer = ProcSelfCgroupDiscoverer.autoCgroupDiscoverer(procV2Dir.toPath());
     
     // Constructor should detect v2 and log warning
     CgroupCpuMonitor monitor = new CgroupCpuMonitor(v2Discoverer, ImmutableMap.of(), "test-feed");
     
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
-    
+
     // doMonitor should return true
     Assert.assertTrue(monitor.doMonitor(emitter));
 
     Assert.assertEquals(2, emitter.getEvents().size());
+    Assert.assertEquals(CgroupVersion.V2.name(), emitter.getEvents().get(0).toMap().get("cgroupversion"));
   }
 
   @Test  
@@ -150,7 +152,7 @@ public class CgroupCpuMonitorTest
     
     Assert.assertTrue(monitor.doMonitor(emitter));
     final List<Event> actualEvents = emitter.getEvents();
-    
+
     // Should emit metrics normally for v1
     Assert.assertEquals(2, actualEvents.size());
     final Map<String, Object> sharesEvent = actualEvents.get(0).toMap();
@@ -159,5 +161,6 @@ public class CgroupCpuMonitorTest
     Assert.assertEquals(1024L, sharesEvent.get("value"));
     Assert.assertEquals("cgroup/cpu/cores_quota", coresEvent.get("metric"));
     Assert.assertEquals(3.0D, coresEvent.get("value"));
+    Assert.assertEquals(CgroupVersion.V1.name(), coresEvent.get("cgroupversion"));
   }
 }

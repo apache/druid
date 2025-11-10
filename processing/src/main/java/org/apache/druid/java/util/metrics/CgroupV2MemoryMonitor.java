@@ -67,7 +67,7 @@ public class CgroupV2MemoryMonitor extends FeedDefiningMonitor
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    return CgroupMemoryMonitor.doMonitorInternal(
+    return CgroupMemoryMonitor.parseAndEmit(
         emitter,
         cgroupDiscoverer,
         dimensions,
