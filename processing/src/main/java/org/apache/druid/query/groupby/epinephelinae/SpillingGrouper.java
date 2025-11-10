@@ -227,7 +227,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
 
   private long getMergeBufferUsage()
   {
-    return grouper.getMergeBufferUsage();
+    return grouper.isInitialized() ? grouper.getMergeBufferUsage() : 0L;
   }
 
   private long getDictionarySizeEstimate()
