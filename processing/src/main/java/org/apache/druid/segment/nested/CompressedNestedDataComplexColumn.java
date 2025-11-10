@@ -1103,7 +1103,6 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
           byteOrder,
           Integer.BYTES
       );
-      final boolean hasNull = localDictionarySupplier.get().get(0) == 0;
       ByteBuffer bb = dataBuffer.asReadOnlyBuffer().order(byteOrder);
       int longsLength = bb.getInt();
       int doublesLength = bb.getInt();
@@ -1152,9 +1151,14 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
         arrayElementDictionarySupplier = null;
         arrayElementBitmaps = null;
       }
-      BitmapIndexEncodingStrategy indexEncoding = (types.getSingleType() != null && types.getSingleType().isNumeric())
+      ColumnType theType = types.getSingleType();
+      BitmapIndexEncodingStrategy indexEncoding = (theType != null && theType.isNumeric())
                                                   ? formatSpec.getNumericFieldsBitmapIndexEncoding()
                                                   : null;
+      columnBuilder.setHasMultipleValues(false)
+                   .setType(theType != null
+                            ? theType
+                            : ColumnType.leastRestrictiveType(FieldTypeInfo.convertToSet(types.getByteValue())));
       if (indexEncoding != null && !(indexEncoding instanceof BitmapIndexEncodingStrategy.DictionaryId)) {
         if (formatSpec.getNumericFieldsBitmapIndexEncoding() instanceof BitmapIndexEncodingStrategy.NullsOnly) {
           Preconditions.checkArgument(
@@ -1183,26 +1187,20 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
         ), true, false);
       }
 
-      Supplier<DictionaryEncodedColumn<?>> columnSupplier = () -> {
-        FixedIndexed<Integer> localDict = localDictionarySupplier.get();
-        return closer.register(new NestedFieldDictionaryEncodedColumn(
-            types,
-            longs.get(),
-            doubles.get(),
-            ints.get(),
-            stringDictionarySupplier.get(),
-            longDictionarySupplier.get(),
-            doubleDictionarySupplier.get(),
-            arrayDictionarySupplier != null ? arrayDictionarySupplier.get() : null,
-            localDict,
-            hasNull
-            ? rBitmaps.get(0)
-            : formatSpec.getBitmapEncoding().getBitmapFactory().makeEmptyImmutableBitmap()
-        ));
-      };
-      columnBuilder.setHasMultipleValues(false)
-                   .setHasNulls(hasNull)
-                   .setDictionaryEncodedColumnSupplier(columnSupplier);
+      final boolean hasNull = localDictionarySupplier.get().get(0) == 0;
+      Supplier<DictionaryEncodedColumn<?>> columnSupplier = () -> closer.register(new NestedFieldDictionaryEncodedColumn(
+          types,
+          longs.get(),
+          doubles.get(),
+          ints.get(),
+          stringDictionarySupplier.get(),
+          longDictionarySupplier.get(),
+          doubleDictionarySupplier.get(),
+          arrayDictionarySupplier != null ? arrayDictionarySupplier.get() : null,
+          localDictionarySupplier.get(),
+          hasNull ? rBitmaps.get(0) : formatSpec.getBitmapEncoding().getBitmapFactory().makeEmptyImmutableBitmap()
+      ));
+      columnBuilder.setHasNulls(hasNull).setDictionaryEncodedColumnSupplier(columnSupplier);
 
       return columnBuilder.build();
     }
