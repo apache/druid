@@ -230,6 +230,7 @@ SDK
 SIGAR
 SNI
 SPNEGO
+SNI
 Splunk
 SqlInputSource
 SQLServer
@@ -250,6 +251,7 @@ TLS
 tls
 TopN
 TopNs
+TTL
 tryParseNumbers
 UI
 UIs

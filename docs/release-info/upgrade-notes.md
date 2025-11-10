@@ -28,15 +28,49 @@ For the full release notes for a specific version, see the [releases page](https
 
 ## Announcements
 
-#### Front-coded dictionaries
+## 35.0.0
 
-Front-coded dictionaries reduce storage and improve performance by optimizing for strings where the front part looks similar.
+### Upgrade notes
 
-Once this feature is on, you cannot easily downgrade to an earlier version that does not support the feature. 
+#### Fallback vectorization on by default
 
-For more information, see [Migration guide: front-coded dictionaries](./migr-front-coded-dict.md).
+The `druid.expressions.allowVectorizeFallback` now defaults to `true`. Additionally, `SAFE_DIVIDE` can now vectorize as a fallback.
 
-If you're already using this feature, you don't need to take any action. 
+[#18549](https://github.com/apache/druid/pull/18549)
+
+#### Java 11 support removed
+
+Upgrade to Java 17 or 21. Note that some versions of Java 21 encountered issues during test, specifically Java 21.05-21.07. If possible, avoid these versions.
+
+[#18424](https://github.com/apache/druid/pull/18424)
+
+#### Jetty 12 
+
+A new server configuration option has been added: `druid.server.http.uriCompliance`. Jetty 12 by default has strict enforcement of `RFC3986` URI format. This is a change from Jetty 9. To retain compatibility with legacy Druid, this config defaults to `LEGACY`, which uses the more permissive URI format enforcement that Jetty 9 used. If the cluster you operate does not require legacy compatibility, we recommend you use the upstream Jetty default of `RFC3986` in your Druid deployment. See the jetty documentation for more info.
+
+[#18424](https://github.com/apache/druid/pull/18424)
+
+#### Kerberos authentication
+
+The `druid.auth.authenticator.kerberos.cookieSignatureSecret` config is now mandatory. 
+
+[#18368](https://github.com/apache/druid/pull/18368)
+
+#### Multi-stage query task engine
+
+The MSQ task engine is now a core capability of Druid rather than an extension. It has been in the default extension load list for several releases. 
+
+Remove `druid-multi-stage-query` from `druid.extensions.loadList` in `common.runtimes.properties` before you upgrade.
+
+Druid 35.0.0 will ignore the extension if it's in the load list. Future versions of Druid will fail to start since it cannot locate the extension.
+
+[#18394](https://github.com/apache/druid/pull/18394)
+
+#### pac4j extension
+
+Due to the upgrade from `pac4j` 4 to 5, session serialization has changed from `pac4j`’s `JavaSerializer` to standard Java serialization. As a result, clients of clusters using the `pac4j` extension may be logged out during rolling upgrades and need to re‑authenticate.
+
+[#18259](https://github.com/apache/druid/pull/18259)
 
 ## 34.0.0
 
@@ -156,7 +190,7 @@ We recommend that you upgrade to Java 17.
 
 ### Deprecations
 
-### Hadoop-based ingestion
+#### Hadoop-based ingestion
 
 Hadoop-based ingestion is now deprecated. We recommend that you migrate to SQL-based ingestion. 
 
