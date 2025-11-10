@@ -18,6 +18,7 @@
 
 // micro-cache
 import { sql, T } from 'druid-query-toolkit';
+import * as JSONBig from 'json-bigint-native';
 
 import { deepGet, queryDruidSql } from '../../../utils';
 
@@ -26,7 +27,7 @@ let lastMaxTimeTable: string | undefined;
 let lastMaxTimeValue: Date | undefined;
 let lastMaxTimeTimestamp = 0;
 
-export async function getMaxTimeForTable(tableName: string): Promise<Date | undefined> {
+export async function getMaxTimeForTable(tableName: string): Promise<Date> {
   // micro-cache get
   if (
     lastMaxTimeTable === tableName &&
@@ -40,8 +41,11 @@ export async function getMaxTimeForTable(tableName: string): Promise<Date | unde
     query: sql`SELECT MAX(__time) AS "maxTime" FROM ${T(tableName)}`,
   });
 
-  const maxTime = new Date(deepGet(d, '0.maxTime'));
-  if (isNaN(maxTime.valueOf())) return;
+  const maxTimeRaw = deepGet(d, '0.maxTime');
+  const maxTime = new Date(maxTimeRaw);
+  if (isNaN(maxTime.valueOf())) {
+    throw new Error(`invalid max data time returned: ${JSONBig.stringify(maxTimeRaw)}`);
+  }
 
   // micro-cache set
   lastMaxTimeTable = tableName;

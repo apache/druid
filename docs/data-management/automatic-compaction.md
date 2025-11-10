@@ -307,7 +307,6 @@ To stop the automatic compaction task, suspend or terminate the supervisor throu
 
 The MSQ task engine is available as a compaction engine if you configure auto-compaction to use compaction supervisors. To use the MSQ task engine for automatic compaction, make sure the following requirements are met:
 
-* [Load the MSQ task engine extension](../multi-stage-query/index.md#load-the-extension).
 * In your Overlord runtime properties, set the following properties:
   *  `druid.supervisor.compaction.enabled` to `true` so that compaction tasks can be run as a supervisor task.
   *  Optionally, set `druid.supervisor.compaction.engine` to `msq` to specify the MSQ task engine as the default compaction engine. If you don't do this, you'll need to set `spec.engine` to `msq` for each compaction supervisor spec where you want to use the MSQ task engine.
