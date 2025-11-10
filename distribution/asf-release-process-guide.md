@@ -475,7 +475,7 @@ provider inserts linebreaks beyond a certain length.
 ##### Subject
 
 ```plaintext
-[VOTE] Release Apache Druid 0.17.0 [RC3]
+[VOTE] Release Apache Druid 35.0.0 [RC1]
 ```
 
 ##### Body
@@ -483,81 +483,67 @@ provider inserts linebreaks beyond a certain length.
 ```plaintext
 Hi all,
 
-I have created a build for Apache Druid 0.17.0, release
-candidate 3.
+I have created a build for Apache Druid 35.0.0, release candidate 1.
 
-Thanks for everyone who has helped contribute to the release! You can read
-the proposed release notes here:
-https://github.com/apache/druid/issues/9066
+Thanks to everyone who has helped contribute to the release! You can read the proposed release notes here:
+https://github.com/apache/druid/issues/18630
 
-The release candidate has been tagged in GitHub as
-druid-0.17.0-rc3 (54d29e438a4df34d75e2385af6cefd1092c4ebb3),
-available here:
-https://github.com/apache/druid/releases/tag/druid-0.17.0-rc3
+The release candidate has been tagged in GitHub as druid-35.0.0-rc1 (f6712c6694a2b95961607c3ceac0123418641d40), 
+available here: https://github.com/apache/druid/releases/tag/druid-35.0.0-rc1
 
 The artifacts to be voted on are located here:
-https://dist.apache.org/repos/dist/dev/druid/0.17.0-rc3/
+https://dist.apache.org/repos/dist/dev/druid/35.0.0-rc1/
 
 A staged Maven repository is available for review at:
-https://repository.apache.org/content/repositories/orgapachedruid-1016/
+https://repository.apache.org/content/repositories/orgapachedruid-1091/
 
 Staged druid.apache.org website documentation is available here:
-https://druid.staged.apache.org/docs/0.17.0/design/index.html
+https://druid.staged.apache.org/docs/35.0.0/design/index.html
 
-A Docker image containing the binary of the release candidate can be
-retrieved via:
-docker pull apache/druid:0.17.0-rc3
+A Docker image containing the binary of the release candidate can be retrieved via:
+docker pull apache/druid:35.0.0-rc1
 
 artifact checksums
 src:
-1f25c55e83069cf7071a97c1e0d56732437dbac4ef373ed1ed72b5b618021b74c107269642226e80081354c8da2e92dc26f1541b01072a4720fd6cfe8dc161a8
+831c273d3c9806d2e73a8f216a29b33a4a10eed12f812258b01d0d1cb063d96806b420cd758dda8641beaf7e813855dafb676bfb1c706391a69ad524a16fe45c
 bin:
-0c4b71f077e28d2f4d3bc3f072543374570b98ec6a1918a5e1828e1da7e3871b5efb04070a8bcdbc172a817e43254640ce28a99757984be7d8dd3d607f1d870e
-docker: df9b900d3726ce123a5c054768da1ea08eba6efe635ced5abc3ad72d6c835e2c
+28d9efef40d3e9e4328694bbb9fb449f19470b77c859d3cf83a0e475b6bd5f0dd0e8c9fe596e0801cf9105f2daf424ed3f136b9209d70a434bc6b43dc4d441cf
+docker: 
+1c48677ee8a8dc633edcc5f2b29393a09b35d0e5f065cf2863872c02c47485b3
 
 Release artifacts are signed with the following key:
-https://people.apache.org/keys/committer/cwylie.asc
+https://people.apache.org/keys/committer/yqm.asc
 
-This key and the key of other committers can also be found in the project's
-KEYS file here:
+This key and the key of other committers can also be found in the project's KEYS file here:
 https://dist.apache.org/repos/dist/release/druid/KEYS
 
-(If you are a committer, please feel free to add your own key to that file
-by following the instructions in the file's header.)
-
+(If you are a committer, please feel free to add your own key to that file by following the instructions in the file's header.)
 
 Verify checksums:
-diff <(shasum -a512 apache-druid-0.17.0-src.tar.gz | \
-cut -d ' ' -f1) \
-<(cat apache-druid-0.17.0-src.tar.gz.sha512 ; echo)
+diff <(shasum -a512 apache-druid-35.0.0-src.tar.gz | cut -d ' ' -f1) \
+<(cat apache-druid-35.0.0-src.tar.gz.sha512 ; echo)
 
-diff <(shasum -a512 apache-druid-0.17.0-bin.tar.gz | \
-cut -d ' ' -f1) \
-<(cat apache-druid-0.17.0-bin.tar.gz.sha512 ; echo)
+diff <(shasum -a512 apache-druid-35.0.0-bin.tar.gz | cut -d ' ' -f1) \
+<(cat apache-druid-35.0.0-bin.tar.gz.sha512 ; echo)
 
 Verify signatures:
-gpg --verify apache-druid-0.17.0-src.tar.gz.asc \
-apache-druid-0.17.0-src.tar.gz
+gpg --verify apache-druid-35.0.0-src.tar.gz.asc apache-druid-35.0.0-src.tar.gz
 
-gpg --verify apache-druid-0.17.0-bin.tar.gz.asc \
-apache-druid-0.17.0-bin.tar.gz
+gpg --verify apache-druid-35.0.0-bin.tar.gz.asc apache-druid-35.0.0-bin.tar.gz
 
-Please review the proposed artifacts and vote. Note that Apache has
-specific requirements that must be met before +1 binding votes can be cast
-by PMC members. Please refer to the policy at
-http://www.apache.org/legal/release-policy.html#policy for more details.
+Please review the proposed artifacts and vote. 
+Note that Apache has specific requirements that must be met before +1 binding votes can be cast by PMC members. 
+Please refer to the policy at https://www.apache.org/legal/release-policy.html#policy for more details.
 
-As part of the validation process, the release artifacts can be generated
-from source by running:
+As part of the validation process, the release artifacts can be generated from source by running:
 mvn clean install -Papache-release,dist -Dgpg.skip
 
 The RAT license check can be run from source by:
 mvn apache-rat:check -Prat
 
-This vote will be open for at least 72 hours. The vote will pass if a
-majority of at least three +1 PMC votes are cast.
+This vote will be open for at least 72 hours. The vote will pass if a majority of at least three +1 PMC votes are cast.
 
-[ ] +1 Release this package as Apache Druid 0.17.0
+[ ] +1 Release this package as Apache Druid 35.0.0
 [ ] 0 I don't feel strongly about it, but I'm okay with the release
 [ ] -1 Do not release this package because...
 
@@ -599,7 +585,7 @@ Once the Druid community vote passes (or fails), close the vote with a thread li
 ##### Subject
 
 ```plaintext
-[RESULT][VOTE] Release Apache Druid 0.17.0 [RC3]
+[RESULT][VOTE] Release Apache Druid 35.0.0 [RC1]
 ```
 
 ##### Body
@@ -607,13 +593,11 @@ Once the Druid community vote passes (or fails), close the vote with a thread li
 ```plaintext
 Thanks to everyone who participated in the vote! The results are as follows:
 
-Clint Wylie: +1 (non-binding)
-Jihoon Son: +1 (binding)
-Furkan KAMACI: +1 (non-binding)
-Julian Hyde: +1 (binding)
-David Lim: +1 (binding)
-Surekha Saharan: +1 (non-binding)
+Lucas Capistrant: +1 (binding)
+Clint Wylie: +1 (binding)
+Kashif Faraz: +1 (binding)
 
+The vote has passed with 3 binding +1 votes!
 ...
 ```
 
@@ -641,9 +625,9 @@ Once a release candidate has passed the Druid PMC vote, you'll need to do the fo
 Tag the rc that passed vote as the release tag and push to github.
 
 ```bash
-$ git checkout druid-0.17.0-rc3
-$ git tag druid-0.17.0
-$ git push origin tag druid-0.17.0
+$ git checkout druid-35.0.0-rc1
+$ git tag druid-35.0.0
+$ git push origin tag druid-35.0.0
 ```
 
 ### Publish release artifacts to SVN
@@ -653,11 +637,11 @@ The final release artifacts are kept in the `https://dist.apache.org/repos/dist/
 Use `svn mv` to publish the release artifacts as below:
 
 ```bash
-$ svn mv https://dist.apache.org/repos/dist/dev/druid/0.17.0-rc3 https://dist.apache.org/repos/dist/release/druid/0.17.0 -m 'add 0.17.0 artifacts'
+$ svn mv https://dist.apache.org/repos/dist/dev/druid/35.0.0-rc1 https://dist.apache.org/repos/dist/release/druid/35.0.0 -m 'add 35.0.0 artifacts'
 ```
 
 Replace the versions of the release candidate and the release with the ones you are currently working on. This command will drop those artifacts from the dev repo but add them to the release repo.
-Once the `svn mv` command succeeds, you should be able to see the release artifacts in `https://dist.apache.org/repos/dist/release/druid/0.17.0`.
+Once the `svn mv` command succeeds, you should be able to see the release artifacts in `https://dist.apache.org/repos/dist/release/druid/35.0.0`.
 
 ### Publish the staged Maven repo
 Returning to the staged repo you created for the Druid PMC vote ( https://repository.apache.org/#stagingRepositories), "Release" the repo to publish the Maven artifacts.
