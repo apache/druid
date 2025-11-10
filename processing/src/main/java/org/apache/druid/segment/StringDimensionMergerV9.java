@@ -147,8 +147,12 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
     builder.setValueType(ValueType.STRING);
     builder.setHasMultipleValues(hasMultiValue);
     DictionaryEncodedColumnPartSerde.SerializerBuilder partBuilder = DictionaryEncodedColumnPartSerde
-        .serializerBuilder(hasMultiValue, compressionStrategy != CompressionStrategy.UNCOMPRESSED, bitmapWriter == null)
-        .withValue(encodedValueSerializer)
+        .serializerBuilder()
+        .withValue(
+            encodedValueSerializer,
+            hasMultiValue,
+            compressionStrategy != CompressionStrategy.UNCOMPRESSED
+        )
         .withBitmapSerdeFactory(bitmapSerdeFactory)
         .withBitmapIndex(bitmapWriter)
         .withSpatialIndex(spatialWriter)

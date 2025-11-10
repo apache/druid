@@ -41,7 +41,7 @@ import org.apache.druid.segment.data.VSizeColumnarIntsSerializer;
 import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
-import org.apache.druid.segment.serde.DictionarySerdeHelper;
+import org.apache.druid.segment.serde.DictionaryEncodedColumnPartSerde;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
@@ -87,9 +87,9 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
   protected final Closer fieldResourceCloser = Closer.create();
 
   protected FixedIndexedIntWriter intermediateValueWriter;
-  // Start with no flags enabled, it can get changed.
-  protected int flags = DictionarySerdeHelper.NO_FLAGS;
-  protected final DictionarySerdeHelper.VERSION version = DictionarySerdeHelper.VERSION.FLAG_BASED;
+  // maybe someday we allow no bitmap indexes or multi-value columns
+  protected int flags = DictionaryEncodedColumnPartSerde.NO_FLAGS;
+  protected DictionaryEncodedColumnPartSerde.VERSION version = null;
   protected SingleValueColumnarIntsSerializer encodedValueSerializer;
 
   protected int cursorPosition;
@@ -107,9 +107,6 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
     this.columnFormatSpec = columnFormatSpec;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.globalDictionaryIdLookup = globalDictionaryIdLookup;
-    if (columnFormatSpec.getDictionaryEncodedColumnCompression() != CompressionStrategy.UNCOMPRESSED) {
-      this.flags |= DictionarySerdeHelper.Feature.COMPRESSED.getMask();
-    }
   }
 
   /**
@@ -311,6 +308,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
   public void openColumnSerializer(SegmentWriteOutMedium medium, int maxId) throws IOException
   {
     if (columnFormatSpec.getDictionaryEncodedColumnCompression() != CompressionStrategy.UNCOMPRESSED) {
+      this.version = DictionaryEncodedColumnPartSerde.VERSION.COMPRESSED;
       encodedValueSerializer = CompressedVSizeColumnarIntsSerializer.create(
           fieldName,
           medium,
@@ -321,6 +319,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
       );
     } else {
       encodedValueSerializer = new VSizeColumnarIntsSerializer(medium, maxId);
+      this.version = DictionaryEncodedColumnPartSerde.VERSION.UNCOMPRESSED_SINGLE_VALUE;
     }
     encodedValueSerializer.open();
   }
