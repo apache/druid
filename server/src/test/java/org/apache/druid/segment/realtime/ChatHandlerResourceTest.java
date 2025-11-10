@@ -22,7 +22,7 @@ package org.apache.druid.segment.realtime;
 
 import com.google.common.base.Optional;
 import org.apache.druid.server.initialization.jetty.ServiceUnavailableException;
-import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
+import org.apache.druid.server.metrics.TaskPropertiesHolder;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
@@ -38,18 +38,18 @@ public class ChatHandlerResourceTest extends EasyMockSupport
   @Mock
   ChatHandlerProvider handlers;
   @Mock
-  DataSourceTaskIdHolder dataSourceTaskIdHolder;
+  TaskPropertiesHolder taskPropsHolder;
   ChatHandlerResource chatHandlerResource;
 
   @Test
   public void test_noHandlerFound()
   {
     String handlerId = "handlerId";
-    EasyMock.expect(dataSourceTaskIdHolder.getTaskId()).andReturn(null);
+    EasyMock.expect(taskPropsHolder.getTaskId()).andReturn(null);
     EasyMock.expect(handlers.get(handlerId)).andReturn(Optional.absent());
 
     replayAll();
-    chatHandlerResource = new ChatHandlerResource(handlers, dataSourceTaskIdHolder);
+    chatHandlerResource = new ChatHandlerResource(handlers, taskPropsHolder);
     Assert.assertThrows(ServiceUnavailableException.class, () -> chatHandlerResource.doTaskChat(handlerId, null));
     verifyAll();
   }

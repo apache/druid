@@ -39,7 +39,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager;
-import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
+import org.apache.druid.server.metrics.LoadSpecHolder;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -82,7 +82,7 @@ public class SegmentCacheBootstrapper
 
   private static final EmittingLogger log = new EmittingLogger(SegmentCacheBootstrapper.class);
 
-  private final DataSourceTaskIdHolder datasourceHolder;
+  private final LoadSpecHolder loadSpecHolder;
 
   @Inject
   public SegmentCacheBootstrapper(
@@ -94,7 +94,7 @@ public class SegmentCacheBootstrapper
       ServerTypeConfig serverTypeConfig,
       CoordinatorClient coordinatorClient,
       ServiceEmitter emitter,
-      DataSourceTaskIdHolder datasourceHolder
+      LoadSpecHolder loadSpecHolder
   )
   {
     this.loadDropHandler = loadDropHandler;
@@ -105,7 +105,7 @@ public class SegmentCacheBootstrapper
     this.serverTypeConfig = serverTypeConfig;
     this.coordinatorClient = coordinatorClient;
     this.emitter = emitter;
-    this.datasourceHolder = datasourceHolder;
+    this.loadSpecHolder = loadSpecHolder;
   }
 
   @LifecycleStart
@@ -270,12 +270,12 @@ public class SegmentCacheBootstrapper
 
   /**
    * @return a list of bootstrap segments. When bootstrap segments cannot be found, an empty list is returned.
-   * The bootstrap segments returned are filtered by the broadcast datasources indicated by {@link DataSourceTaskIdHolder#getBroadcastDatasourceLoadingSpec()}
+   * The bootstrap segments returned are filtered by the broadcast datasources indicated by {@link LoadSpecHolder#getBroadcastDatasourceLoadingSpec()}
    * if applicable.
    */
   private List<DataSegment> getBootstrapSegments()
   {
-    final BroadcastDatasourceLoadingSpec.Mode mode = datasourceHolder.getBroadcastDatasourceLoadingSpec().getMode();
+    final BroadcastDatasourceLoadingSpec.Mode mode = loadSpecHolder.getBroadcastDatasourceLoadingSpec().getMode();
     if (mode == BroadcastDatasourceLoadingSpec.Mode.NONE) {
       log.info("Skipping fetch of bootstrap segments.");
       return ImmutableList.of();
@@ -290,7 +290,7 @@ public class SegmentCacheBootstrapper
       final BootstrapSegmentsResponse response =
           FutureUtils.getUnchecked(coordinatorClient.fetchBootstrapSegments(), true);
       if (mode == BroadcastDatasourceLoadingSpec.Mode.ONLY_REQUIRED) {
-        final Set<String> broadcastDatasourcesToLoad = datasourceHolder.getBroadcastDatasourceLoadingSpec().getBroadcastDatasourcesToLoad();
+        final Set<String> broadcastDatasourcesToLoad = loadSpecHolder.getBroadcastDatasourceLoadingSpec().getBroadcastDatasourcesToLoad();
         final List<DataSegment> filteredBroadcast = new ArrayList<>();
         response.getIterator().forEachRemaining(segment -> {
           if (broadcastDatasourcesToLoad.contains(segment.getDataSource())) {

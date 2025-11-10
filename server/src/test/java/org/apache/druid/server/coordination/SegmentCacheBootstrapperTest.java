@@ -36,7 +36,7 @@ import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
-import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
+import org.apache.druid.server.metrics.LoadSpecHolder;
 import org.apache.druid.test.utils.TestSegmentCacheManager;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
@@ -137,7 +137,7 @@ public class SegmentCacheBootstrapperTest
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        new DataSourceTaskIdHolder()
+        new LoadSpecHolder()
     );
 
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
@@ -196,7 +196,7 @@ public class SegmentCacheBootstrapperTest
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        new DataSourceTaskIdHolder()
+        new LoadSpecHolder()
     );
 
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
@@ -252,7 +252,7 @@ public class SegmentCacheBootstrapperTest
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        new DataSourceTaskIdHolder()
+        new LoadSpecHolder()
     );
 
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
@@ -295,7 +295,7 @@ public class SegmentCacheBootstrapperTest
         binder -> {
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
           final BroadcastDatasourceLoadingSpec broadcastMode = BroadcastDatasourceLoadingSpec.NONE;
-          binder.bind(Key.get(BroadcastDatasourceLoadingSpec.class, Names.named(DataSourceTaskIdHolder.BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)))
+          binder.bind(Key.get(BroadcastDatasourceLoadingSpec.class, Names.named(LoadSpecHolder.BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)))
                 .toInstance(broadcastMode);
         }
     );
@@ -317,7 +317,7 @@ public class SegmentCacheBootstrapperTest
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        injector.getInstance(DataSourceTaskIdHolder.class)
+        injector.getInstance(LoadSpecHolder.class)
     );
 
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
@@ -355,7 +355,8 @@ public class SegmentCacheBootstrapperTest
         binder -> {
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
           final BroadcastDatasourceLoadingSpec broadcastMode = BroadcastDatasourceLoadingSpec.loadOnly(ImmutableSet.of("test1"));
-          binder.bind(Key.get(BroadcastDatasourceLoadingSpec.class, Names.named(DataSourceTaskIdHolder.BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)))
+          binder.bind(Key.get(BroadcastDatasourceLoadingSpec.class, Names.named(
+                    LoadSpecHolder.BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)))
                 .toInstance(broadcastMode);
         }
     );
@@ -377,7 +378,7 @@ public class SegmentCacheBootstrapperTest
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        injector.getInstance(DataSourceTaskIdHolder.class)
+        injector.getInstance(LoadSpecHolder.class)
     );
 
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
@@ -418,7 +419,7 @@ public class SegmentCacheBootstrapperTest
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        new DataSourceTaskIdHolder()
+        new LoadSpecHolder()
     );
 
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());

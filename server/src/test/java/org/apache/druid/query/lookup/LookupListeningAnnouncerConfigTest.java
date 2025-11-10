@@ -33,7 +33,8 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
-import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
+import org.apache.druid.server.metrics.LoadSpecHolder;
+import org.apache.druid.server.metrics.TaskPropertiesHolder;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -59,12 +60,12 @@ public class LookupListeningAnnouncerConfigTest
                   new DruidNode("test-inject", null, false, null, null, true, false)
               );
               binder
-                  .bind(Key.get(String.class, Names.named(DataSourceTaskIdHolder.DATA_SOURCE_BINDING)))
+                  .bind(Key.get(String.class, Names.named(TaskPropertiesHolder.DATA_SOURCE_BINDING)))
                   .toInstance("some_datasource");
 
               final List<String> lookupsToLoad = Arrays.asList("lookupName1", "lookupName2");
               binder.bind(new TypeLiteral<List<String>>() {})
-                    .annotatedWith(Names.named(DataSourceTaskIdHolder.LOOKUPS_TO_LOAD_FOR_TASK))
+                    .annotatedWith(Names.named(LoadSpecHolder.LOOKUPS_TO_LOAD_FOR_TASK))
                     .toInstance(lookupsToLoad);
             }
           },
@@ -139,9 +140,9 @@ public class LookupListeningAnnouncerConfigTest
   @Test
   public void testLookupsToLoadInjection()
   {
-    final DataSourceTaskIdHolder dimensionIdHolder = new DataSourceTaskIdHolder();
-    injector.injectMembers(dimensionIdHolder);
-    Assert.assertEquals(LookupLoadingSpec.Mode.ALL, dimensionIdHolder.getLookupLoadingSpec().getMode());
+    final LoadSpecHolder loadSpecHolder = new LoadSpecHolder();
+    injector.injectMembers(loadSpecHolder);
+    Assert.assertEquals(LookupLoadingSpec.Mode.ALL, loadSpecHolder.getLookupLoadingSpec().getMode());
   }
 
   @Test(expected = IllegalArgumentException.class)

@@ -84,7 +84,7 @@ public class GroupByStatsMonitorTest
   public void testMonitor()
   {
     final GroupByStatsMonitor monitor =
-        new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool, new DataSourceTaskIdHolder());
+        new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool, new TaskPropertiesHolder());
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
     emitter.flush();
@@ -114,16 +114,16 @@ public class GroupByStatsMonitorTest
               Key.get(DruidNode.class, Self.class),
               new DruidNode("test-inject", null, false, null, null, true, false)
           );
-          binder.bind(Key.get(String.class, Names.named(DataSourceTaskIdHolder.DATA_SOURCE_BINDING)))
+          binder.bind(Key.get(String.class, Names.named(TaskPropertiesHolder.DATA_SOURCE_BINDING)))
                 .toInstance(dataSource);
-          binder.bind(Key.get(String.class, Names.named(DataSourceTaskIdHolder.TASK_ID_BINDING)))
+          binder.bind(Key.get(String.class, Names.named(TaskPropertiesHolder.TASK_ID_BINDING)))
                 .toInstance(taskId);
         })
     );
-    final DataSourceTaskIdHolder dsTaskIdHolder = new DataSourceTaskIdHolder();
-    injector.injectMembers(dsTaskIdHolder);
+    final TaskPropertiesHolder taskPropertiesHolder = new TaskPropertiesHolder();
+    injector.injectMembers(taskPropertiesHolder);
     final GroupByStatsMonitor monitor =
-        new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool, dsTaskIdHolder);
+        new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool, taskPropertiesHolder);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
     emitter.flush();
@@ -153,7 +153,7 @@ public class GroupByStatsMonitorTest
     }).get(20, TimeUnit.SECONDS);
 
     final GroupByStatsMonitor monitor =
-        new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool, new DataSourceTaskIdHolder());
+        new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool, new TaskPropertiesHolder());
     final StubServiceEmitter emitter = new StubServiceEmitter("DummyService", "DummyHost");
     boolean ret = monitor.doMonitor(emitter);
     Assert.assertTrue(ret);
@@ -182,7 +182,7 @@ public class GroupByStatsMonitorTest
       }
 
       final GroupByStatsMonitor monitor =
-          new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool, new DataSourceTaskIdHolder());
+          new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool, new TaskPropertiesHolder());
       final StubServiceEmitter emitter = new StubServiceEmitter("DummyService", "DummyHost");
       boolean ret = monitor.doMonitor(emitter);
       Assert.assertTrue(ret);

@@ -35,7 +35,7 @@ import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
-import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
+import org.apache.druid.server.metrics.LoadSpecHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Before;
@@ -143,7 +143,7 @@ public class SegmentCacheBootstrapperCacheTest
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         emitter,
-        new DataSourceTaskIdHolder()
+        new LoadSpecHolder()
     );
 
     bootstrapper.start();
@@ -171,7 +171,7 @@ public class SegmentCacheBootstrapperCacheTest
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         emitter,
-        new DataSourceTaskIdHolder()
+        new LoadSpecHolder()
     );
 
     bootstrapper.start();
@@ -211,7 +211,7 @@ public class SegmentCacheBootstrapperCacheTest
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         emitter,
-        new DataSourceTaskIdHolder()
+        new LoadSpecHolder()
     );
 
     bootstrapper.start();

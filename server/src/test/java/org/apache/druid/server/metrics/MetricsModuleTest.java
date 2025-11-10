@@ -92,7 +92,7 @@ public class MetricsModuleTest
           }
         })
     );
-    final DataSourceTaskIdHolder dimensionIdHolder = new DataSourceTaskIdHolder();
+    final TaskPropertiesHolder dimensionIdHolder = new TaskPropertiesHolder();
     injector.injectMembers(dimensionIdHolder);
     Assert.assertNull(dimensionIdHolder.getDataSource());
     Assert.assertNull(dimensionIdHolder.getTaskId());
@@ -115,14 +115,14 @@ public class MetricsModuleTest
                 Key.get(DruidNode.class, Self.class),
                 new DruidNode("test-inject", null, false, null, null, true, false)
             );
-            binder.bind(Key.get(String.class, Names.named(DataSourceTaskIdHolder.DATA_SOURCE_BINDING)))
+            binder.bind(Key.get(String.class, Names.named(TaskPropertiesHolder.DATA_SOURCE_BINDING)))
                   .toInstance(dataSource);
-            binder.bind(Key.get(String.class, Names.named(DataSourceTaskIdHolder.TASK_ID_BINDING)))
+            binder.bind(Key.get(String.class, Names.named(TaskPropertiesHolder.TASK_ID_BINDING)))
                   .toInstance(taskId);
           }
         })
     );
-    final DataSourceTaskIdHolder dimensionIdHolder = new DataSourceTaskIdHolder();
+    final TaskPropertiesHolder dimensionIdHolder = new TaskPropertiesHolder();
     injector.injectMembers(dimensionIdHolder);
     Assert.assertEquals(dataSource, dimensionIdHolder.getDataSource());
     Assert.assertEquals(taskId, dimensionIdHolder.getTaskId());
