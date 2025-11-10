@@ -59,10 +59,12 @@ public class NestedCommonFormatColumnFormatSpec
 
   /**
    * Create a {@link NestedCommonFormatColumnFormatSpec} with all fields fully populated. Values are populated in the following order:
-   * <li> value in the given column format spec, if non-null </li>
-   * <li> value in {@link IndexSpec#getAutoColumnFormatSpec()}, if non-null </li>
-   * <li> fall back to equivalent fields on {@link IndexSpec} itself if applicable </li>
-   * <li> hard coded defaults in {@link #DEFAULT}</li>
+   * <ul>
+   *   <li> value in the given column format spec, if non-null </li>
+   *   <li> value in {@link IndexSpec#getAutoColumnFormatSpec()}, if non-null </li>
+   *   <li> fall back to equivalent fields on {@link IndexSpec} itself if applicable </li>
+   *   <li> hard coded defaults in {@link #DEFAULT}</li>
+   * </ul>
    */
   public static NestedCommonFormatColumnFormatSpec getEffectiveFormatSpec(
       @Nullable NestedCommonFormatColumnFormatSpec columnFormatSpec,
