@@ -135,8 +135,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * this class is the parent class of both the Kafka and Kinesis supervisor. All the main run loop
- * logic are similar enough so they're grouped together into this class.
+ * This class is the parent class of both the Kafka and Kinesis supervisor. All the main run loop
+ * logic is similar enough, so they're grouped together into this class.
  * <p>
  * Supervisor responsible for managing the SeekableStreamIndexTasks (Kafka/Kinesis) for a single dataSource. At a high level, the class accepts a
  * {@link SeekableStreamSupervisorSpec} which includes the stream name (topic / stream) and configuration as well as an ingestion spec which will
@@ -541,10 +541,20 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   /**
    * This method determines how to do scale actions based on collected lag points.
-   * If scale action is triggered :
-   * First of all, call gracefulShutdownInternal() which will change the state of current datasource ingest tasks from reading to publishing.
-   * Secondly, clear all the stateful data structures: activelyReadingTaskGroups, partitionGroups, partitionOffsets, pendingCompletionTaskGroups, partitionIds. These structures will be rebuiled in the next 'RunNotice'.
-   * Finally, change the taskCount in SeekableStreamSupervisorIOConfig and sync it to MetadataStorage.
+   * If scale action is triggered:
+   * <ul>
+   * <li>First, call <code>gracefulShutdownInternal()</code> which will change the state of current datasource ingest tasks from reading to publishing.
+   * <li>Secondly, clear all the stateful data structures:
+   * <ul>
+   *  <li><code>activelyReadingTaskGroups</code>,
+   *  <li><code>partitionGroups</code>,
+   *  <li><code>partitionOffsets</code>,
+   *  <li><code>pendingCompletionTaskGroups</code>,
+   *  <li><code>partitionIds</code>.
+   * </ul>
+   * These structures will be rebuiled in the next 'RunNotice'.
+   * <li>Finally, change the <code>taskCount</code> in <code>SeekableStreamSupervisorIOConfig</code> and sync it to <code>MetadataStorage</code>.
+   * </ul>
    * After the taskCount is changed in SeekableStreamSupervisorIOConfig, next RunNotice will create scaled number of ingest tasks without resubmitting the supervisor.
    *
    * @param desiredActiveTaskCount desired taskCount computed from AutoScaler
@@ -556,44 +566,52 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private boolean changeTaskCount(int desiredActiveTaskCount)
       throws InterruptedException, ExecutionException
   {
+    if (autoScalerConfig == null) {
+      log.warn("autoScalerConfig is 'null' but dynamic allocation notice is submitted, how can it be ?");
+      return false;
+    }
     int currentActiveTaskCount;
     Collection<TaskGroup> activeTaskGroups = activelyReadingTaskGroups.values();
     currentActiveTaskCount = activeTaskGroups.size();
 
     if (desiredActiveTaskCount < 0 || desiredActiveTaskCount == currentActiveTaskCount) {
       return false;
-    } else {
-      log.info(
-          "Starting scale action, current active task count is [%d] and desired task count is [%d] for supervisor[%s] for dataSource[%s].",
-          currentActiveTaskCount,
-          desiredActiveTaskCount,
-          supervisorId,
-          dataSource
-      );
-      final Stopwatch scaleActionStopwatch = Stopwatch.createStarted();
-      gracefulShutdownInternal();
-      changeTaskCountInIOConfig(desiredActiveTaskCount);
-      clearAllocationInfo();
-      emitter.emit(ServiceMetricEvent.builder()
-                                     .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
-                                     .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                                     .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
-                                     .setDimensionIfNotNull(
-                                         DruidMetrics.TAGS,
-                                         spec.getContextValue(DruidMetrics.TAGS)
-                                     )
-                                     .setMetric(
-                                         AUTOSCALER_SCALING_TIME_METRIC,
-                                         scaleActionStopwatch.millisElapsed()
-                                     ));
-      log.info("Changed taskCount to [%s] for supervisor[%s] for dataSource[%s].", desiredActiveTaskCount, supervisorId, dataSource);
-      return true;
     }
+    log.info(
+      "Starting scale action, current active task count is [%d] and desired task count is [%d] for supervisor[%s] for dataSource[%s].",
+      currentActiveTaskCount,
+      desiredActiveTaskCount,
+      supervisorId,
+      dataSource
+    );
+    final Stopwatch scaleActionStopwatch = Stopwatch.createStarted();
+    gracefulShutdownInternal();
+    changeTaskCountInAutoScalerConfig(desiredActiveTaskCount);
+    clearAllocationInfo();
+    emitter.emit(ServiceMetricEvent.builder()
+                                 .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
+                                 .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                                 .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
+                                 .setDimensionIfNotNull(
+                                     DruidMetrics.TAGS,
+                                     spec.getContextValue(DruidMetrics.TAGS)
+                                 )
+                                 .setMetric(
+                                     AUTOSCALER_SCALING_TIME_METRIC,
+                                     scaleActionStopwatch.millisElapsed()
+                                 ));
+    log.info("Changed taskCount to [%s] for supervisor[%s] for dataSource[%s].", desiredActiveTaskCount, supervisorId, dataSource);
+    return true;
   }
 
-  private void changeTaskCountInIOConfig(int desiredActiveTaskCount)
+  private void changeTaskCountInAutoScalerConfig(int desiredActiveTaskCount)
   {
-    ioConfig.setTaskCount(desiredActiveTaskCount);
+    // Sanity check.
+    if (autoScalerConfig == null) {
+      log.warn("autoScalerConfig is null but scale action is submitted, how can it be ?");
+      return;
+    }
+    autoScalerConfig.setTaskCountStart(desiredActiveTaskCount);
     try {
       Optional<SupervisorManager> supervisorManager = taskMaster.getSupervisorManager();
       if (supervisorManager.isPresent()) {
@@ -916,7 +934,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private volatile boolean lifecycleStarted = false;
   private final ServiceEmitter emitter;
 
-  // snapshots latest sequences from stream to be verified in next run cycle of inactive stream check
+  // snapshots latest sequences from the stream to be verified in the next run cycle of inactive stream check
   private final Map<PartitionIdType, SequenceOffsetType> previousSequencesFromStream = new HashMap<>();
   private long lastActiveTimeMillis;
   private final IdleConfig idleConfig;
