@@ -690,6 +690,52 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertEquals(failedStatus, getTaskStorage().getStatus(task.getId()).get());
   }
 
+  @Test
+  public void testTaskWaitingTimeMetricNotEmittedWhenTaskNotReady() throws Exception
+  {
+    // task1 acquires a lock that will block task2
+    final TestTask task1 = new TestTask("t1", Intervals.of("2021-01/P1M"));
+    prepareTaskForLocking(task1);
+    Assert.assertTrue(task1.isReady(actionClientFactory.create(task1)));
+
+    // task2 will not be ready because of task1's lock
+    final TestTask task2 = new TestTask("t2", Intervals.of("2021-01-31/P1M"));
+    taskQueue.add(task2);
+    taskQueue.manageQueuedTasks();
+
+    Thread.sleep(100);
+
+    // Verify that task/waiting/time was not emitted for task2 since it's not ready
+    serviceEmitter.verifyNotEmitted("task/waiting/time");
+
+    // Now release task1's lock
+    shutdownTask(task1);
+
+    // task2 should now be ready and run
+    taskQueue.manageQueuedTasks();
+    Thread.sleep(100);
+    serviceEmitter.verifyEmitted("task/waiting/time", 1);
+    serviceEmitter.verifyEmitted("task/run/time", 1);
+  }
+
+  @Test
+  public void testTaskWaitingTimeMetricEmittedForMultipleTasks() throws Exception
+  {
+    final TestTask task1 = new TestTask("multi-wait-task-1", Intervals.of("2021-01-01/P1D"));
+    final TestTask task2 = new TestTask("multi-wait-task-2", Intervals.of("2021-01-02/P1D"));
+    final TestTask task3 = new TestTask("multi-wait-task-3", Intervals.of("2021-01-03/P1D"));
+
+    taskQueue.add(task1);
+    taskQueue.add(task2);
+    taskQueue.add(task3);
+    taskQueue.manageQueuedTasks();
+
+    Thread.sleep(100);
+
+    serviceEmitter.verifyEmitted("task/waiting/time", 3);
+    serviceEmitter.verifyEmitted("task/run/time", 3);
+  }
+
   private HttpRemoteTaskRunner createHttpRemoteTaskRunner()
   {
     final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider
