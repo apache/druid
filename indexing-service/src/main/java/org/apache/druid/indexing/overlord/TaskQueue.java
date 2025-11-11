@@ -69,6 +69,7 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -454,6 +455,14 @@ public class TaskQueue
           if (taskIsReady) {
             log.info("Asking taskRunner to run task[%s]", task.getId());
             runnerTaskFuture = taskRunner.run(task);
+
+            // Emit the waiting time for the task
+            final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+            IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+            emitter.emit(metricBuilder.setMetric(
+                "task/waiting/time",
+                new Duration(entry.getCreatedTime(), DateTimes.nowUtc()).getMillis())
+            );
           } else {
             // Task.isReady() can internally lock intervals or segments.
             // We should release them if the task is not ready.
@@ -564,7 +573,7 @@ public class TaskQueue
         prevEntry -> {
           if (prevEntry == null) {
             added.set(true);
-            return new TaskEntry(taskInfo);
+            return new TaskEntry(taskInfo, updateTime);
           } else if (prevEntry.lastUpdatedTime.isBefore(updateTime)) {
             prevEntry.updateStatus(taskInfo.getStatus(), updateTime);
           }
@@ -1163,13 +1172,15 @@ public class TaskQueue
   {
     private TaskInfo taskInfo;
 
+    private final DateTime createdTime;
     private DateTime lastUpdatedTime;
     private ListenableFuture<TaskStatus> future = null;
     private boolean isComplete = false;
 
-    TaskEntry(TaskInfo taskInfo)
+    TaskEntry(TaskInfo taskInfo, DateTime createdTime)
     {
       this.taskInfo = taskInfo;
+      this.createdTime = createdTime;
       this.lastUpdatedTime = DateTimes.nowUtc();
     }
 
@@ -1189,6 +1200,14 @@ public class TaskQueue
     {
       this.taskInfo = this.taskInfo.withStatus(status);
       this.lastUpdatedTime = updateTime;
+    }
+
+    /**
+     * Returns the time this task entry was inserted into the task queue.
+     */
+    DateTime getCreatedTime()
+    {
+      return createdTime;
     }
   }
 
