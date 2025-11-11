@@ -459,10 +459,8 @@ public class TaskQueue
             // Emit the waiting time for the task
             final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
             IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-            emitter.emit(metricBuilder.setMetric(
-                "task/waiting/time",
-                new Duration(entry.getCreatedTime(), DateTimes.nowUtc()).getMillis())
-            );
+            final long waitDurationMillis = new Duration(entry.getTaskSubmittedTime(), DateTimes.nowUtc()).getMillis();
+            emitter.emit(metricBuilder.setMetric("task/waiting/time", waitDurationMillis));
           } else {
             // Task.isReady() can internally lock intervals or segments.
             // We should release them if the task is not ready.
@@ -1172,15 +1170,16 @@ public class TaskQueue
   {
     private TaskInfo taskInfo;
 
-    private final DateTime createdTime;
+    // Approximate time this task was submitted to Overlord
+    private final DateTime taskSubmittedTime;
     private DateTime lastUpdatedTime;
     private ListenableFuture<TaskStatus> future = null;
     private boolean isComplete = false;
 
-    TaskEntry(TaskInfo taskInfo, DateTime createdTime)
+    TaskEntry(TaskInfo taskInfo, DateTime taskSubmittedTime)
     {
       this.taskInfo = taskInfo;
-      this.createdTime = createdTime;
+      this.taskSubmittedTime = taskSubmittedTime;
       this.lastUpdatedTime = DateTimes.nowUtc();
     }
 
@@ -1203,11 +1202,11 @@ public class TaskQueue
     }
 
     /**
-     * Returns the time this task entry was inserted into the task queue.
+     * Returns the approximate time the task referenced by this {@link TaskEntry} was submitted to the Overlord.
      */
-    DateTime getCreatedTime()
+    DateTime getTaskSubmittedTime()
     {
-      return createdTime;
+      return taskSubmittedTime;
     }
   }
 
