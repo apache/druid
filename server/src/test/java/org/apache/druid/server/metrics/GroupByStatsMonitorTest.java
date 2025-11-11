@@ -97,7 +97,7 @@ public class GroupByStatsMonitorTest
     emitter.verifyValue("mergeBuffer/used", 0L);
     emitter.verifyValue("mergeBuffer/queries", 1L);
     emitter.verifyValue("mergeBuffer/acquisitionTimeNs", 100L);
-    emitter.verifyValue("mergeBuffer/totalBytesUsed", 200L);
+    emitter.verifyValue("mergeBuffer/bytesUsed", 200L);
     emitter.verifyValue("groupBy/spilledQueries", 2L);
     emitter.verifyValue("groupBy/spilledBytes", 200L);
     emitter.verifyValue("groupBy/mergeDictionarySize", 300L);
@@ -140,7 +140,7 @@ public class GroupByStatsMonitorTest
     emitter.verifyValue("mergeBuffer/used", dimFilters, 0L);
     emitter.verifyValue("mergeBuffer/queries", dimFilters, 1L);
     emitter.verifyValue("mergeBuffer/acquisitionTimeNs", dimFilters, 100L);
-    emitter.verifyValue("mergeBuffer/totalBytesUsed", 200L);
+    emitter.verifyValue("mergeBuffer/bytesUsed", 200L);
     emitter.verifyValue("groupBy/spilledQueries", dimFilters, 2L);
     emitter.verifyValue("groupBy/spilledBytes", dimFilters, 200L);
     emitter.verifyValue("groupBy/mergeDictionarySize", dimFilters, 300L);
