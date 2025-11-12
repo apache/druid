@@ -63,7 +63,7 @@ public class CgroupV2CpuMonitorTest
     final CgroupV2CpuMonitor monitor = new CgroupV2CpuMonitor(discoverer);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     Assert.assertTrue(monitor.doMonitor(emitter));
-    Assert.assertEquals(0, emitter.getNumEmittedEvents());
+    Assert.assertEquals(2, emitter.getNumEmittedEvents());
 
     emitter.flush();
 
