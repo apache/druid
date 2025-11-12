@@ -48,7 +48,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   public static final String QUERY_SEGMENT_TIME = "query/segment/time";
   public static final String QUERY_SEGMENT_AND_CACHE_TIME = "query/segmentAndCache/time";
   public static final String QUERY_RESULT_CACHE_HIT = "query/resultCache/hit";
-  public static final String QUERY_ON_DEMAND_LOAD_TIME = "query/load/time";
+  public static final String QUERY_ON_DEMAND_LOAD_BATCH_TIME = "query/load/batch/time";
   public static final String QUERY_ON_DEMAND_LOAD_TIME_AVG = "query/load/time/avg";
   public static final String QUERY_ON_DEMAND_LOAD_TIME_MAX = "query/load/time/max";
   public static final String QUERY_ON_DEMAND_WAIT_TIME_AVG = "query/load/wait/avg";
@@ -278,7 +278,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public QueryMetrics<QueryType> reportSegmentOnDemandLoadTime(long timeNs)
   {
-    return reportMillisTimeMetric(QUERY_ON_DEMAND_LOAD_TIME, timeNs);
+    return reportMillisTimeMetric(QUERY_ON_DEMAND_LOAD_BATCH_TIME, timeNs);
   }
 
   @Override

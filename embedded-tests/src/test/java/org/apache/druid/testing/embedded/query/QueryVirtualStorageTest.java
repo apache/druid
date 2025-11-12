@@ -187,7 +187,7 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     }
     boolean hasLoads = countEvents.get(lastIndex).getValue().longValue() > 0;
 
-    List<ServiceMetricEvent> timeEvents = emitter.getMetricEvents(DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_TIME);
+    List<ServiceMetricEvent> timeEvents = emitter.getMetricEvents(DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_BATCH_TIME);
     Assertions.assertEquals(expectedEventCount, timeEvents.size());
     if (hasLoads) {
       Assertions.assertTrue(timeEvents.get(lastIndex).getValue().longValue() > 0);
