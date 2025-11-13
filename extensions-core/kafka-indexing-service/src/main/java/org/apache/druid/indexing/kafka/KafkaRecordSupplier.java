@@ -27,7 +27,7 @@ import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
-import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedInclusionConfig;
+import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedFilterConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
@@ -87,7 +87,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       boolean multiTopic
   )
   {
-    this(getKafkaConsumer(sortingMapper, consumerProperties, configOverrides), multiTopic, (KafkaHeaderBasedInclusionConfig) null);
+    this(getKafkaConsumer(sortingMapper, consumerProperties, configOverrides), multiTopic, (KafkaHeaderBasedFilterConfig) null);
   }
 
   public KafkaRecordSupplier(
@@ -95,30 +95,30 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       ObjectMapper sortingMapper,
       KafkaConfigOverrides configOverrides,
       boolean multiTopic,
-      @Nullable KafkaHeaderBasedInclusionConfig headerBasedInclusionConfig
+      @Nullable KafkaHeaderBasedFilterConfig headerBasedFilterConfig
   )
   {
-    this(getKafkaConsumer(sortingMapper, consumerProperties, configOverrides), multiTopic, headerBasedInclusionConfig);
+    this(getKafkaConsumer(sortingMapper, consumerProperties, configOverrides), multiTopic, headerBasedFilterConfig);
   }
 
   @VisibleForTesting
   public KafkaRecordSupplier(KafkaConsumer<byte[], byte[]> consumer, boolean multiTopic)
   {
-    this(consumer, multiTopic, (KafkaHeaderBasedInclusionConfig) null);
+    this(consumer, multiTopic, (KafkaHeaderBasedFilterConfig) null);
   }
 
   @VisibleForTesting
   public KafkaRecordSupplier(
       KafkaConsumer<byte[], byte[]> consumer,
       boolean multiTopic,
-      @Nullable KafkaHeaderBasedInclusionConfig headerBasedInclusionConfig
+      @Nullable KafkaHeaderBasedFilterConfig headerBasedFilterConfig
   )
   {
     this.consumer = consumer;
     this.multiTopic = multiTopic;
     this.monitor = new KafkaConsumerMonitor(consumer);
-    this.headerFilterEvaluator = headerBasedInclusionConfig != null ?
-        new KafkaHeaderBasedFilterEvaluator(headerBasedInclusionConfig) : null;
+    this.headerFilterEvaluator = headerBasedFilterConfig != null ?
+        new KafkaHeaderBasedFilterEvaluator(headerBasedFilterConfig) : null;
   }
 
   @Override
@@ -200,16 +200,16 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
             Collections.emptyList(), // Empty list for filtered records
             true // Mark as filtered
         ));
-        continue;
+      } else {
+        // Create record for accepted records
+        polledRecords.add(new OrderedPartitionableRecord<>(
+                record.topic(),
+                kafkaPartition,
+                record.offset(),
+                record.value() == null ? null : ImmutableList.of(new KafkaRecordEntity(record)),
+                false
+        ));
       }
-
-      // Create record for accepted records
-      polledRecords.add(new OrderedPartitionableRecord<>(
-          record.topic(),
-          kafkaPartition,
-          record.offset(),
-          record.value() == null ? null : ImmutableList.of(new KafkaRecordEntity(record))
-      ));
     }
 
     return polledRecords;

@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
-import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedInclusionConfig;
+import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedFilterConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
@@ -41,7 +41,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
   private final Map<String, Object> consumerProperties;
   private final long pollTimeout;
   private final KafkaConfigOverrides configOverrides;
-  private final KafkaHeaderBasedInclusionConfig headerBasedInclusionConfig;
+  private final KafkaHeaderBasedFilterConfig headerBasedFilterConfig;
 
   private final boolean multiTopic;
 
@@ -66,7 +66,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
       @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
       @JsonProperty("inputFormat") @Nullable InputFormat inputFormat,
       @JsonProperty("configOverrides") @Nullable KafkaConfigOverrides configOverrides,
-      @JsonProperty("headerBasedInclusionConfig") @Nullable KafkaHeaderBasedInclusionConfig headerBasedInclusionConfig,
+      @JsonProperty("headerBasedFilterConfig") @Nullable KafkaHeaderBasedFilterConfig headerBasedFilterConfig,
       @JsonProperty("multiTopic") @Nullable Boolean multiTopic
   )
   {
@@ -86,7 +86,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
     this.pollTimeout = pollTimeout != null ? pollTimeout : KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS;
     this.configOverrides = configOverrides;
-    this.headerBasedInclusionConfig = headerBasedInclusionConfig;
+    this.headerBasedFilterConfig = headerBasedFilterConfig;
     this.multiTopic = multiTopic != null ? multiTopic : KafkaSupervisorIOConfig.DEFAULT_IS_MULTI_TOPIC;
 
     final SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long> myEndSequenceNumbers = getEndSequenceNumbers();
@@ -113,7 +113,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
       DateTime maximumMessageTime,
       InputFormat inputFormat,
       KafkaConfigOverrides configOverrides,
-      KafkaHeaderBasedInclusionConfig headerBasedInclusionConfig
+      KafkaHeaderBasedFilterConfig headerBasedFilterConfig
   )
   {
     this(
@@ -130,7 +130,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
         maximumMessageTime,
         inputFormat,
         configOverrides,
-        headerBasedInclusionConfig,
+        headerBasedFilterConfig,
         KafkaSupervisorIOConfig.DEFAULT_IS_MULTI_TOPIC
     );
   }
@@ -190,9 +190,9 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
 
   @JsonProperty
   @Nullable
-  public KafkaHeaderBasedInclusionConfig getheaderBasedInclusionConfig()
+  public KafkaHeaderBasedFilterConfig getHeaderBasedFilterConfig()
   {
-    return headerBasedInclusionConfig;
+    return headerBasedFilterConfig;
   }
 
   @Override
@@ -209,7 +209,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
            ", minimumMessageTime=" + getMinimumMessageTime() +
            ", maximumMessageTime=" + getMaximumMessageTime() +
            ", configOverrides=" + getConfigOverrides() +
-           ", headerBasedInclusionConfig=" + getheaderBasedInclusionConfig() +
+           ", headerBasedFilterConfig=" + getHeaderBasedFilterConfig() +
            ", multiTopic=" + multiTopic +
            '}';
   }
