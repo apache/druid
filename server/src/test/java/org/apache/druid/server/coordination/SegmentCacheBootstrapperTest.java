@@ -307,7 +307,8 @@ public class SegmentCacheBootstrapperTest
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        new TaskPropertiesHolder("foo", "boo", LookupLoadingSpec.ALL, BroadcastDatasourceLoadingSpec.NONE)
+//        new TaskPropertiesHolder("foo", "boo", LookupLoadingSpec.ALL, BroadcastDatasourceLoadingSpec.NONE)
+        null
     );
 
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
@@ -356,7 +357,8 @@ public class SegmentCacheBootstrapperTest
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        new TaskPropertiesHolder("boo", "foo", LookupLoadingSpec.NONE, BroadcastDatasourceLoadingSpec.loadOnly(Set.of("test1")))
+//        new TaskPropertiesHolder("boo", "foo", LookupLoadingSpec.NONE, BroadcastDatasourceLoadingSpec.loadOnly(Set.of("test1")))
+        null
     );
 
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());

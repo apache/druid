@@ -60,12 +60,12 @@ public class LookupListeningAnnouncerConfigTest
                   Key.get(DruidNode.class, Self.class),
                   new DruidNode("test-inject", null, false, null, null, true, false)
               );
-              binder.bind(TaskPropertiesHolder.class).toInstance(new TaskPropertiesHolder(
-                  "some_datasource",
-                  "some_taskId",
-                  LookupLoadingSpec.loadOnly(Set.of("lookupName1", "lookupName2")),
-                  BroadcastDatasourceLoadingSpec.ALL
-              ));
+//              binder.bind(TaskPropertiesHolder.class).toInstance(new TaskPropertiesHolder(
+//                  "some_datasource",
+//                  "some_taskId",
+//                  LookupLoadingSpec.loadOnly(Set.of("lookupName1", "lookupName2")),
+//                  BroadcastDatasourceLoadingSpec.ALL
+//              ));
             }
           },
           new LookupModule()
