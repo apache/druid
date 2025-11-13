@@ -355,14 +355,13 @@ public class KinesisSupervisorTest extends EasyMockSupport
     replayAll();
 
     supervisor.start();
-    int taskCountBeforeScale = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(1, taskCountBeforeScale);
+    Assert.assertNull(supervisor.getIoConfig().getAutoScalerConfig().getTaskCountStart());
     autoscaler.start();
 
     supervisor.runInternal();
     verifyAll();
-    Thread.sleep(1 * 1000);
-    int taskCountAfterScale = supervisor.getIoConfig().getTaskCount();
+    Thread.sleep(1000);
+    int taskCountAfterScale = supervisor.getIoConfig().getAutoScalerConfig().getTaskCountStart();
     Assert.assertEquals(2, taskCountAfterScale);
     autoscaler.stop();
   }
@@ -433,14 +432,13 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisor.getIoConfig().setTaskCount(2);
 
     supervisor.start();
-    int taskCountBeforeScale = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(2, taskCountBeforeScale);
+    Assert.assertNull(supervisor.getIoConfig().getAutoScalerConfig().getTaskCountStart());
     autoscaler.start();
 
     supervisor.runInternal();
     verifyAll();
     Thread.sleep(1 * 1000);
-    int taskCountAfterScale = supervisor.getIoConfig().getTaskCount();
+    int taskCountAfterScale = supervisor.getIoConfig().getAutoScalerConfig().getTaskCountStart();
     Assert.assertEquals(1, taskCountAfterScale);
     autoscaler.stop();
   }

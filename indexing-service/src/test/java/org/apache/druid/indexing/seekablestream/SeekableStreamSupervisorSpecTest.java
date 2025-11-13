@@ -1014,7 +1014,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Assert.assertNull(supervisor.getIoConfig().getAutoScalerConfig().getTaskCountStart());
     Thread.sleep(1000);
 
-    int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
+    int taskCountAfterScaleOut = supervisor.getIoConfig().getAutoScalerConfig().getTaskCountStart();
     Assert.assertEquals(2, taskCountAfterScaleOut);
     emitter.verifyEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC, 1);
 
