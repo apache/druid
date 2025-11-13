@@ -63,6 +63,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
@@ -73,6 +74,14 @@ import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthorizationResult;
+import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Escalator;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
@@ -263,6 +272,9 @@ public class MSQCompactionRunner implements CompactionRunner
         query = buildScanQuery(compactionTask, interval, dataSchema, inputColToVirtualCol);
       }
       QueryContext compactionTaskContext = new QueryContext(compactionTask.getContext());
+
+      query = maybeApplyPolicy(dataSchema, query);
+
       DataSourceMSQDestination destination = buildMSQDestination(compactionTask, dataSchema);
 
       boolean isReindex = MSQControllerTask.isReplaceInputDataSourceTask(query, destination);
@@ -291,6 +303,22 @@ public class MSQCompactionRunner implements CompactionRunner
       msqControllerTasks.add(controllerTask);
     }
     return msqControllerTasks;
+  }
+
+  private Query<?> maybeApplyPolicy(DataSchema dataSchema, Query<?> query)
+  {
+    final Escalator escalator = injector.getInstance(Escalator.class);
+    if (escalator != null) {
+      final AuthorizerMapper authorizerMapper = injector.getInstance(AuthorizerMapper.class);
+      final PolicyEnforcer policyEnforcer = injector.getInstance(PolicyEnforcer.class);
+      final AuthorizationResult authResult = AuthorizationUtils.authorizeAllResourceActions(
+          escalator.createEscalatedAuthenticationResult(),
+          List.of(new ResourceAction(new Resource(dataSchema.getDataSource(), ResourceType.DATASOURCE), Action.READ)),
+          authorizerMapper
+      );
+      query = query.withDataSource(query.getDataSource().withPolicies(authResult.getPolicyMap(), policyEnforcer));
+    }
+    return query;
   }
 
   private static DataSourceMSQDestination buildMSQDestination(

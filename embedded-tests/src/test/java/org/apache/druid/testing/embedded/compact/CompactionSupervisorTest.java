@@ -22,6 +22,8 @@ package org.apache.druid.testing.embedded.compact;
 import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.overlord.Segments;
@@ -38,6 +40,7 @@ import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -45,6 +48,7 @@ import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
+import org.apache.druid.testing.embedded.auth.AllowAllWithPolicyAuthResource;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.hamcrest.Matcher;
@@ -54,6 +58,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -87,6 +92,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                                    MSQSqlModule.class,
                                    SqlTaskModule.class
                                )
+                               .addResource(new AllowAllWithPolicyAuthResource())
                                .addServer(coordinator)
                                .addServer(overlord)
                                .addServer(indexer)
@@ -99,7 +105,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   public void enableCompactionSupervisors()
   {
     final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
-        o -> o.updateClusterCompactionConfig(new ClusterCompactionConfig(1.0, 100, null, true, null))
+        o -> o.updateClusterCompactionConfig(new ClusterCompactionConfig(1.0, 100, null, true, CompactionEngine.MSQ))
     );
     Assertions.assertTrue(updateResponse.isSuccess());
   }
@@ -124,6 +130,29 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
             .withSkipOffsetFromLatest(Period.seconds(0))
             .withGranularitySpec(
                 new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null)
+            )
+            .withTuningConfig(
+                new UserCompactionTaskQueryTuningConfig(
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    new DimensionRangePartitionsSpec(null, 5000, List.of("item"), false),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+                )
             )
             .build();
 
