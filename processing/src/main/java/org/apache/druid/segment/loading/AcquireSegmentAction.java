@@ -28,7 +28,6 @@ import org.apache.druid.segment.Segment;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
@@ -53,16 +52,16 @@ public class AcquireSegmentAction implements Closeable
 {
   public static AcquireSegmentAction missingSegment()
   {
-    return new AcquireSegmentAction(() -> Futures.immediateFuture(Optional::empty), null);
+    return new AcquireSegmentAction(() -> Futures.immediateFuture(AcquireSegmentResult.empty()), null);
   }
 
-  private final Supplier<ListenableFuture<ReferenceCountedObjectProvider<Segment>>> segmentFutureSupplier;
+  private final Supplier<ListenableFuture<AcquireSegmentResult>> segmentFutureSupplier;
   @Nullable
   private final Closeable loadCleanup;
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
   public AcquireSegmentAction(
-      Supplier<ListenableFuture<ReferenceCountedObjectProvider<Segment>>> segmentFutureSupplier,
+      Supplier<ListenableFuture<AcquireSegmentResult>> segmentFutureSupplier,
       @Nullable Closeable loadCleanup
   )
   {
@@ -76,7 +75,7 @@ public class AcquireSegmentAction implements Closeable
    * either as an immediate future if the segment already exists in cache. The 'action' to fetch the segment and return
    * the reference provider is not initiated until this method is called.
    */
-  public ListenableFuture<ReferenceCountedObjectProvider<Segment>> getSegmentFuture()
+  public ListenableFuture<AcquireSegmentResult> getSegmentFuture()
   {
     return segmentFutureSupplier.get();
   }
