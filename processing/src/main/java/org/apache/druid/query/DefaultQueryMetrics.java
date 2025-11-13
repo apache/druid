@@ -55,7 +55,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   public static final String QUERY_ON_DEMAND_WAIT_TIME_AVG = "query/load/wait/avg";
   public static final String QUERY_ON_DEMAND_WAIT_TIME_MAX = "query/load/wait/max";
   public static final String QUERY_ON_DEMAND_LOAD_COUNT = "query/load/count";
-  public static final String QUERY_ON_DEMAND_LOAD_BYTES = "query/load/bytes";
+  public static final String QUERY_ON_DEMAND_LOAD_BYTES = "query/load/bytes/total";
 
   protected final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
   protected final Map<String, Number> metrics = new HashMap<>();
