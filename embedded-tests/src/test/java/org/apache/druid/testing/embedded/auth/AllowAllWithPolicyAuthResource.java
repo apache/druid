@@ -77,11 +77,11 @@ public class AllowAllWithPolicyAuthResource implements EmbeddedResource
            .addCommonProperty("druid.auth.authorizers", "[\"test\"]")
            .addCommonProperty("druid.escalator.type", "actually-allow-all")
            .addCommonProperty("druid.auth.authorizer.test.type", "actually-allow-all")
-           .addCommonProperty("druid.policy.enforcer.type", "restrictAllTables")
            .addCommonProperty(
                "druid.policy.enforcer.allowedPolicies",
                "[\"org.apache.druid.query.policy.NoRestrictionPolicy\"]"
-           );
+           )
+           .addCommonProperty("druid.policy.enforcer.type", "restrictAllTables");
   }
 
   @JsonTypeName(AUTH_TYPE)
