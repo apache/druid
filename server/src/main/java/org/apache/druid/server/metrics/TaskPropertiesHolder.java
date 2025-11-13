@@ -21,25 +21,47 @@ package org.apache.druid.server.metrics;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
+import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 
 import javax.annotation.Nullable;
 
 /**
  * A holder for task-specific properties applicable to {@code CliPeon} servers.
- * For all other servers, the getters in this holder will return {@code null}.
+ * For all other servers, the getters in this holder may return {@code null}.
  */
 public class TaskPropertiesHolder
 {
-  public static final String DATA_SOURCE_BINDING = "druidDataSource";
-  public static final String TASK_ID_BINDING = "druidTaskId";
+  @Nullable
+  private final String dataSource;
 
-  @Named(DATA_SOURCE_BINDING)
-  @Inject(optional = true)
-  String dataSource = null;
+  @Nullable
+  private final String taskId;
 
-  @Named(TASK_ID_BINDING)
-  @Inject(optional = true)
-  String taskId = null;
+  private final LookupLoadingSpec lookupLoadingSpec;
+
+  private final BroadcastDatasourceLoadingSpec broadcastDatasourceLoadingSpec;
+
+  public TaskPropertiesHolder()
+  {
+    this.dataSource = null;
+    this.taskId = null;
+    this.lookupLoadingSpec = LookupLoadingSpec.ALL;
+    this.broadcastDatasourceLoadingSpec = BroadcastDatasourceLoadingSpec.ALL;
+  }
+  
+  public TaskPropertiesHolder(
+    final String dataSource,
+    final String taskId,
+    final LookupLoadingSpec lookupLoadingSpec,
+    final BroadcastDatasourceLoadingSpec broadcastDatasourceLoadingSpec
+  )
+  {
+    this.dataSource = dataSource;
+    this.taskId = taskId;
+    this.lookupLoadingSpec = lookupLoadingSpec;
+    this.broadcastDatasourceLoadingSpec = broadcastDatasourceLoadingSpec;
+  }
 
   /**
    * @return the taskId for CliPeon servers; {@code null} for all other servers.
@@ -57,5 +79,21 @@ public class TaskPropertiesHolder
   public String getTaskId()
   {
     return taskId;
+  }
+
+  /**
+   * @return the loading spec for a given task.
+   */
+  public LookupLoadingSpec getLookupLoadingSpec()
+  {
+    return lookupLoadingSpec;
+  }
+
+  /**
+   * @return the broadcast datasource loading spec.
+   */
+  public BroadcastDatasourceLoadingSpec getBroadcastDatasourceLoadingSpec()
+  {
+    return broadcastDatasourceLoadingSpec;
   }
 }

@@ -53,6 +53,8 @@ import org.apache.druid.java.util.metrics.OshiSysMonitor;
 import org.apache.druid.java.util.metrics.OshiSysMonitorConfig;
 import org.apache.druid.java.util.metrics.SysMonitor;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -103,27 +105,7 @@ public class MetricsModuleTest
   {
     final String dataSource = "some datasource";
     final String taskId = "some task";
-    final Injector injector = Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(),
-        ImmutableList.of(new Module()
-        {
-          @Override
-          public void configure(Binder binder)
-          {
-            JsonConfigProvider.bindInstance(
-                binder,
-                Key.get(DruidNode.class, Self.class),
-                new DruidNode("test-inject", null, false, null, null, true, false)
-            );
-            binder.bind(Key.get(String.class, Names.named(TaskPropertiesHolder.DATA_SOURCE_BINDING)))
-                  .toInstance(dataSource);
-            binder.bind(Key.get(String.class, Names.named(TaskPropertiesHolder.TASK_ID_BINDING)))
-                  .toInstance(taskId);
-          }
-        })
-    );
-    final TaskPropertiesHolder taskPropsHolder = new TaskPropertiesHolder();
-    injector.injectMembers(taskPropsHolder);
+    final TaskPropertiesHolder taskPropsHolder = new TaskPropertiesHolder(dataSource, taskId, LookupLoadingSpec.ALL, BroadcastDatasourceLoadingSpec.NONE);
     Assert.assertEquals(dataSource, taskPropsHolder.getDataSource());
     Assert.assertEquals(taskId, taskPropsHolder.getTaskId());
   }

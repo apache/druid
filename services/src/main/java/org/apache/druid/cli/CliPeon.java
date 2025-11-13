@@ -129,8 +129,6 @@ import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.initialization.jetty.ChatHandlerServerModule;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
-import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
-import org.apache.druid.server.metrics.LoadSpecHolder;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
 import org.apache.druid.server.metrics.TaskPropertiesHolder;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
@@ -332,34 +330,14 @@ public class CliPeon extends GuiceRunnable
 
           @Provides
           @LazySingleton
-          @Named(TaskPropertiesHolder.DATA_SOURCE_BINDING)
-          public String getDataSourceFromTask(final Task task)
+          public TaskPropertiesHolder getTaskPropertiesHolder(final Task task)
           {
-            return task.getDataSource();
-          }
-
-          @Provides
-          @LazySingleton
-          @Named(TaskPropertiesHolder.TASK_ID_BINDING)
-          public String getTaskIDFromTask(final Task task)
-          {
-            return task.getId();
-          }
-
-          @Provides
-          @LazySingleton
-          @Named(LoadSpecHolder.LOOKUPS_TO_LOAD_FOR_TASK)
-          public LookupLoadingSpec getLookupsToLoad(final Task task)
-          {
-            return task.getLookupLoadingSpec();
-          }
-
-          @Provides
-          @LazySingleton
-          @Named(LoadSpecHolder.BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)
-          public BroadcastDatasourceLoadingSpec getBroadcastDatasourcesToLoad(final Task task)
-          {
-            return task.getBroadcastDatasourceLoadingSpec();
+            return new TaskPropertiesHolder(
+                task.getDataSource(),
+                task.getId(),
+                task.getLookupLoadingSpec(),
+                task.getBroadcastDatasourceLoadingSpec()
+            );
           }
 
           @Provides

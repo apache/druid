@@ -32,8 +32,8 @@ import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
-import org.apache.druid.server.metrics.LoadSpecHolder;
 import org.apache.druid.server.metrics.TaskPropertiesHolder;
 import org.junit.Assert;
 import org.junit.Before;
@@ -42,6 +42,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 public class LookupListeningAnnouncerConfigTest
 {
@@ -59,14 +60,12 @@ public class LookupListeningAnnouncerConfigTest
                   Key.get(DruidNode.class, Self.class),
                   new DruidNode("test-inject", null, false, null, null, true, false)
               );
-              binder
-                  .bind(Key.get(String.class, Names.named(TaskPropertiesHolder.DATA_SOURCE_BINDING)))
-                  .toInstance("some_datasource");
-
-              final List<String> lookupsToLoad = Arrays.asList("lookupName1", "lookupName2");
-              binder.bind(new TypeLiteral<List<String>>() {})
-                    .annotatedWith(Names.named(LoadSpecHolder.LOOKUPS_TO_LOAD_FOR_TASK))
-                    .toInstance(lookupsToLoad);
+              binder.bind(TaskPropertiesHolder.class).toInstance(new TaskPropertiesHolder(
+                  "some_datasource",
+                  "some_taskId",
+                  LookupLoadingSpec.loadOnly(Set.of("lookupName1", "lookupName2")),
+                  BroadcastDatasourceLoadingSpec.ALL
+              ));
             }
           },
           new LookupModule()
@@ -140,9 +139,9 @@ public class LookupListeningAnnouncerConfigTest
   @Test
   public void testLookupsToLoadInjection()
   {
-    final LoadSpecHolder loadSpecHolder = new LoadSpecHolder();
-    injector.injectMembers(loadSpecHolder);
-    Assert.assertEquals(LookupLoadingSpec.Mode.ALL, loadSpecHolder.getLookupLoadingSpec().getMode());
+    final TaskPropertiesHolder taskPropsHolder = new TaskPropertiesHolder();
+    injector.injectMembers(taskPropsHolder);
+    Assert.assertEquals(LookupLoadingSpec.Mode.ALL, taskPropsHolder.getLookupLoadingSpec().getMode());
   }
 
   @Test(expected = IllegalArgumentException.class)

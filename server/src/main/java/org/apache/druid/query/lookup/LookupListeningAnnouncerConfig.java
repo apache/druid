@@ -25,13 +25,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
-import org.apache.druid.server.metrics.LoadSpecHolder;
 import org.apache.druid.server.metrics.TaskPropertiesHolder;
 
 class LookupListeningAnnouncerConfig
 {
   public static final String DEFAULT_TIER = "__default";
-  private final LoadSpecHolder loadSpecHolder;
   private final TaskPropertiesHolder taskPropsHolder;
 
   @JsonProperty("lookupTier")
@@ -41,11 +39,9 @@ class LookupListeningAnnouncerConfig
 
   @JsonCreator
   public LookupListeningAnnouncerConfig(
-      @JacksonInject LoadSpecHolder loadSpecHolder,
       @JacksonInject TaskPropertiesHolder taskPropsHolder
   )
   {
-    this.loadSpecHolder = loadSpecHolder;
     this.taskPropsHolder = taskPropsHolder;
   }
 
@@ -66,6 +62,6 @@ class LookupListeningAnnouncerConfig
 
   public LookupLoadingSpec getLookupLoadingSpec()
   {
-    return loadSpecHolder.getLookupLoadingSpec();
+    return taskPropsHolder.getLookupLoadingSpec();
   }
 }

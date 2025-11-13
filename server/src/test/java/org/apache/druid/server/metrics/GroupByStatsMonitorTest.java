@@ -31,6 +31,8 @@ import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -106,22 +108,7 @@ public class GroupByStatsMonitorTest
   {
     final String dataSource = "fooDs";
     final String taskId = "taskId1";
-    final Injector injector = Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(),
-        List.of(binder -> {
-          JsonConfigProvider.bindInstance(
-              binder,
-              Key.get(DruidNode.class, Self.class),
-              new DruidNode("test-inject", null, false, null, null, true, false)
-          );
-          binder.bind(Key.get(String.class, Names.named(TaskPropertiesHolder.DATA_SOURCE_BINDING)))
-                .toInstance(dataSource);
-          binder.bind(Key.get(String.class, Names.named(TaskPropertiesHolder.TASK_ID_BINDING)))
-                .toInstance(taskId);
-        })
-    );
-    final TaskPropertiesHolder taskPropertiesHolder = new TaskPropertiesHolder();
-    injector.injectMembers(taskPropertiesHolder);
+    final TaskPropertiesHolder taskPropertiesHolder = new TaskPropertiesHolder(dataSource, taskId, LookupLoadingSpec.ALL, BroadcastDatasourceLoadingSpec.NONE);
     final GroupByStatsMonitor monitor =
         new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool, taskPropertiesHolder);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
