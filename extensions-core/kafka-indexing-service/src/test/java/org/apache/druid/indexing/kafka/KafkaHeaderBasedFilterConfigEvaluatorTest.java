@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.kafka;
 
-import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedInclusionConfig;
+import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedFilterConfig;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -35,7 +35,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 
-public class KafkaHeaderBasedInclusionConfigEvaluatorTest
+public class KafkaHeaderBasedFilterConfigEvaluatorTest
 {
   private KafkaHeaderBasedFilterEvaluator evaluator;
   private ConsumerRecord<byte[], byte[]> record;
@@ -78,7 +78,7 @@ public class KafkaHeaderBasedInclusionConfigEvaluatorTest
   public void testInFilterSingleValueMatch()
   {
     InDimFilter filter = new InDimFilter("environment", Collections.singletonList("production"), null);
-    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedInclusionConfig(filter, null, null));
+    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedFilterConfig(filter, null, null));
 
     Assert.assertTrue(evaluator.shouldIncludeRecord(record));
   }
@@ -87,7 +87,7 @@ public class KafkaHeaderBasedInclusionConfigEvaluatorTest
   public void testInFilterSingleValueNoMatch()
   {
     InDimFilter filter = new InDimFilter("environment", Collections.singletonList("staging"), null);
-    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedInclusionConfig(filter, null, null));
+    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedFilterConfig(filter, null, null));
 
     Assert.assertFalse(evaluator.shouldIncludeRecord(record));
   }
@@ -96,7 +96,7 @@ public class KafkaHeaderBasedInclusionConfigEvaluatorTest
   public void testInFilterMultipleValuesMatch()
   {
     InDimFilter filter = new InDimFilter("environment", Arrays.asList("staging", "production", "development"), null);
-    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedInclusionConfig(filter, null, null));
+    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedFilterConfig(filter, null, null));
 
     Assert.assertTrue(evaluator.shouldIncludeRecord(record));
   }
@@ -105,7 +105,7 @@ public class KafkaHeaderBasedInclusionConfigEvaluatorTest
   public void testInFilterMultipleValuesNoMatch()
   {
     InDimFilter filter = new InDimFilter("environment", Arrays.asList("staging", "development"), null);
-    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedInclusionConfig(filter, null, null));
+    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedFilterConfig(filter, null, null));
 
     Assert.assertFalse(evaluator.shouldIncludeRecord(record));
   }
@@ -114,7 +114,7 @@ public class KafkaHeaderBasedInclusionConfigEvaluatorTest
   public void testInFilterMissingHeader()
   {
     InDimFilter filter = new InDimFilter("missing-header", Collections.singletonList("value"), null);
-    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedInclusionConfig(filter, null, null));
+    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedFilterConfig(filter, null, null));
 
     // With permissive filtering, missing headers should result in inclusion
     Assert.assertTrue("InDimFilter with missing header should include record (permissive)", evaluator.shouldIncludeRecord(record));
@@ -145,7 +145,7 @@ public class KafkaHeaderBasedInclusionConfigEvaluatorTest
     }
 
     InDimFilter filter = new InDimFilter("null-header", Collections.singletonList("value"), null);
-    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedInclusionConfig(filter, null, null));
+    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedFilterConfig(filter, null, null));
 
     Assert.assertTrue(evaluator.shouldIncludeRecord(nullRecord));
   }
@@ -154,7 +154,7 @@ public class KafkaHeaderBasedInclusionConfigEvaluatorTest
   public void testInFilterWithDifferentServices()
   {
     InDimFilter filter = new InDimFilter("service", Arrays.asList("user-service", "payment-service"), null);
-    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedInclusionConfig(filter, null, null));
+    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedFilterConfig(filter, null, null));
 
     Assert.assertTrue(evaluator.shouldIncludeRecord(record)); // matches "user-service"
   }
@@ -163,7 +163,7 @@ public class KafkaHeaderBasedInclusionConfigEvaluatorTest
   public void testInFilterWithDifferentServicesNoMatch()
   {
     InDimFilter filter = new InDimFilter("service", Arrays.asList("payment-service", "notification-service"), null);
-    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedInclusionConfig(filter, null, null));
+    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedFilterConfig(filter, null, null));
 
     Assert.assertFalse(evaluator.shouldIncludeRecord(record)); // doesn't match "user-service"
   }
@@ -172,7 +172,7 @@ public class KafkaHeaderBasedInclusionConfigEvaluatorTest
   public void testRepeatedEvaluations()
   {
     InDimFilter filter = new InDimFilter("environment", Collections.singletonList("production"), null);
-    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedInclusionConfig(filter, null, null));
+    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedFilterConfig(filter, null, null));
 
     // Test multiple evaluations to verify consistent behavior
     boolean result1 = evaluator.shouldIncludeRecord(record); // should match
@@ -210,7 +210,7 @@ public class KafkaHeaderBasedInclusionConfigEvaluatorTest
     }
 
     InDimFilter filter = new InDimFilter("text", Collections.singletonList(testValue), null);
-    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedInclusionConfig(filter, "ISO-8859-1", null));
+    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedFilterConfig(filter, "ISO-8859-1", null));
 
     Assert.assertTrue(evaluator.shouldIncludeRecord(encodedRecord));
   }
@@ -240,7 +240,7 @@ public class KafkaHeaderBasedInclusionConfigEvaluatorTest
     }
 
     InDimFilter filter = new InDimFilter("environment", Collections.singletonList("production"), null);
-    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedInclusionConfig(filter, null, null));
+    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedFilterConfig(filter, null, null));
 
     // Missing header should result in inclusion (permissive behavior)
     Assert.assertTrue(evaluator.shouldIncludeRecord(noHeaderRecord));
@@ -273,12 +273,12 @@ public class KafkaHeaderBasedInclusionConfigEvaluatorTest
 
     // Filter should match "production" (the last value), not "staging" (the first value)
     InDimFilter prodFilter = new InDimFilter("environment", Collections.singletonList("production"), null);
-    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedInclusionConfig(prodFilter, null, null));
+    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedFilterConfig(prodFilter, null, null));
     Assert.assertTrue("Should match last header value 'production'", evaluator.shouldIncludeRecord(multiHeaderRecord));
 
     // Filter should NOT match "staging" (the first value)
     InDimFilter stagingFilter = new InDimFilter("environment", Collections.singletonList("staging"), null);
-    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedInclusionConfig(stagingFilter, null, null));
+    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedFilterConfig(stagingFilter, null, null));
     Assert.assertFalse("Should not match first header value 'staging'", evaluator.shouldIncludeRecord(multiHeaderRecord));
   }
 
@@ -286,7 +286,7 @@ public class KafkaHeaderBasedInclusionConfigEvaluatorTest
   public void testStringDecodingCacheSize()
   {
     InDimFilter filter = new InDimFilter("environment", Collections.singletonList("production"), null);
-    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedInclusionConfig(filter, null, 50_000));
+    evaluator = new KafkaHeaderBasedFilterEvaluator(new KafkaHeaderBasedFilterConfig(filter, null, 50_000));
 
     // Test that the evaluator works with custom cache size
     Assert.assertTrue(evaluator.shouldIncludeRecord(record));

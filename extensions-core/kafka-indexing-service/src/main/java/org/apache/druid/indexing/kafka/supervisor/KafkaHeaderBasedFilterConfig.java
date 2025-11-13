@@ -36,7 +36,7 @@ import java.nio.charset.StandardCharsets;
  * Kafka-specific implementation of header-based filtering.
  * Allows filtering Kafka records based on message headers before deserialization.
  */
-public class KafkaHeaderBasedInclusionConfig
+public class KafkaHeaderBasedFilterConfig
 {
   private static final ImmutableSet<Class<? extends DimFilter>> SUPPORTED_FILTER_TYPES = ImmutableSet.of(
       InDimFilter.class
@@ -47,7 +47,7 @@ public class KafkaHeaderBasedInclusionConfig
   private final int stringDecodingCacheSize;
 
   @JsonCreator
-  public KafkaHeaderBasedInclusionConfig(
+  public KafkaHeaderBasedFilterConfig(
       @JsonProperty("filter") DimFilter filter,
       @JsonProperty("encoding") @Nullable String encoding,
       @JsonProperty("stringDecodingCacheSize") @Nullable Integer stringDecodingCacheSize
@@ -110,7 +110,7 @@ public class KafkaHeaderBasedInclusionConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    KafkaHeaderBasedInclusionConfig that = (KafkaHeaderBasedInclusionConfig) o;
+    KafkaHeaderBasedFilterConfig that = (KafkaHeaderBasedFilterConfig) o;
     return stringDecodingCacheSize == that.stringDecodingCacheSize &&
            filter.equals(that.filter) &&
            encoding.equals(that.encoding);
@@ -128,7 +128,7 @@ public class KafkaHeaderBasedInclusionConfig
   @Override
   public String toString()
   {
-    return "KafkaheaderBasedInclusionConfig{" +
+    return "KafkaheaderBasedFilterConfig{" +
            "filter=" + filter +
            ", encoding='" + encoding + '\'' +
            ", stringDecodingCacheSize=" + stringDecodingCacheSize +
