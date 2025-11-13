@@ -75,8 +75,8 @@ public class AllowAllWithPolicyAuthResource implements EmbeddedResource
            .addCommonProperty("druid.auth.authenticatorChain", "[\"test\"]")
            .addCommonProperty("druid.auth.authenticator.test.type", "actually-allow-all")
            .addCommonProperty("druid.auth.authorizers", "[\"test\"]")
-           .addCommonProperty("druid.escalator.type", "actually-allow-all")
            .addCommonProperty("druid.auth.authorizer.test.type", "actually-allow-all")
+           .addCommonProperty("druid.escalator.type", "actually-allow-all")
            .addCommonProperty(
                "druid.policy.enforcer.allowedPolicies",
                "[\"org.apache.druid.query.policy.NoRestrictionPolicy\"]"
@@ -95,7 +95,7 @@ public class AllowAllWithPolicyAuthResource implements EmbeddedResource
       return new Filter()
       {
         @Override
-        public void init(FilterConfig filterConfig) throws ServletException
+        public void init(FilterConfig filterConfig)
         {
 
         }
