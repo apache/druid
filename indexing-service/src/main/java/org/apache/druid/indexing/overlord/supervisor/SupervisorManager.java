@@ -175,7 +175,6 @@ public class SupervisorManager
       Preconditions.checkState(started, "SupervisorManager not started");
       final boolean shouldUpdateSpec = shouldUpdateSupervisor(spec);
       SupervisorSpec existingSpec = possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
-      System.out.println(existingSpec == null ? "null" : existingSpec.getId());
       if (existingSpec != null) {
         spec.mergeSpecConfigs(existingSpec);
       }
