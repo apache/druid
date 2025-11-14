@@ -462,8 +462,8 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   public Map<String, Object> generateQueryStatsMapFromMetrics()
   {
     Map<String, Object> queryStatsMap = new LinkedHashMap<>();
-    appendMetricsToQueryStatsMap("query/time", queryStatsMap);
-    appendMetricsToQueryStatsMap("query/bytes", queryStatsMap);
+    appendMetricsToQueryStatsMap(QUERY_TIME, queryStatsMap);
+    appendMetricsToQueryStatsMap(QUERY_BYTES, queryStatsMap);
 
     return queryStatsMap;
   }
