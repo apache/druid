@@ -27,6 +27,8 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.FilterBundle;
 
+import java.util.Map;
+
 /**
  * This class is implemented with delegation to another QueryMetrics for compatibility, see "Making subinterfaces of
  * QueryMetrics for emitting custom dimensions and/or metrics for specific query types" section in {@link QueryMetrics}
@@ -383,5 +385,11 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   public void emit(ServiceEmitter emitter)
   {
     delegateQueryMetrics.emit(emitter);
+  }
+
+  @Override
+  public Map<String, Object> generateQueryStatsMapFromMetrics()
+  {
+    return delegateQueryMetrics.generateQueryStatsMapFromMetrics();
   }
 }
