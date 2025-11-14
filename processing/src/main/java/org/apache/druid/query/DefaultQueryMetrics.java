@@ -62,7 +62,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   protected final Map<String, Number> metrics = new HashMap<>();
 
   /**
-   * Non final to give subclasses ability to reassign it.
+   * Non-final to give the subclasses ability to reassign it.
    */
   protected Thread ownerThread = Thread.currentThread();
 
@@ -83,7 +83,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
 
   protected void checkModifiedFromOwnerThread()
   {
-    if (Thread.currentThread() != ownerThread) {
+    if (!Thread.currentThread().equals(ownerThread)) {
       throw new IllegalStateException(
           "DefaultQueryMetrics must not be modified from multiple threads. If it is needed to gather dimension or "
           + "metric information from multiple threads or from an async thread, this information should explicitly be "
@@ -459,15 +459,16 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
-  public Map<String, Object> generateLoggableQueryStats() {
-    Map<String, Object> statsMap = new LinkedHashMap<>();
-    appendMetricsToStatsMap("query/time",statsMap);
-    appendMetricsToStatsMap("query/bytes",statsMap);
+  public Map<String, Object> generateQueryStatsMapFromMetrics()
+  {
+    Map<String, Object> queryStatsMap = new LinkedHashMap<>();
+    appendMetricsToQueryStatsMap("query/time", queryStatsMap);
+    appendMetricsToQueryStatsMap("query/bytes", queryStatsMap);
 
-    return statsMap;
+    return queryStatsMap;
   }
 
-  protected void appendMetricsToStatsMap(String key, Map<String, Object> map) {
+  protected void appendMetricsToQueryStatsMap(String key, Map<String, Object> map) {
     map.put(key, metrics.getOrDefault(key, 0));
   }
 

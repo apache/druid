@@ -64,11 +64,9 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Class that helps a Druid server (broker, historical, etc) manage the lifecycle of a query that it is handling. It
@@ -416,7 +414,7 @@ public class QueryLifecycle
 
       queryMetrics.emit(emitter);
 
-      final Map<String, Object> statsMap = queryMetrics.generateLoggableQueryStats();
+      final Map<String, Object> statsMap = queryMetrics.generateQueryStatsMapFromMetrics();
       statsMap.put("success", success);
       statsMap.put(DruidMetrics.STATUS_CODE, statusCode);
 

@@ -519,5 +519,5 @@ public interface QueryMetrics<QueryType extends Query<?>>
   /**
    * @return A map representation of metrics held by this QueryMetrics object to be sent to the query log.
    */
-  Map<String, Object> generateLoggableQueryStats();
+  Map<String, Object> generateQueryStatsMapFromMetrics();
 }
