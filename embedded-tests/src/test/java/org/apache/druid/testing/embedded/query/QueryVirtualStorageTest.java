@@ -186,7 +186,7 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     sleepForStorageMonitor();
     emitter.waitForAnyEventWithMetricName(StorageMonitor.VSF_LOAD_COUNT);
     long firstLoads = getMetricTotal(emitter, StorageMonitor.VSF_LOAD_COUNT);
-    Assertions.assertTrue(firstLoads >= 24, "expected " +  24 + " but only got " + firstLoads);
+    Assertions.assertTrue(firstLoads >= 24, "expected " + 24 + " but only got " + firstLoads);
 
     long expectedTotalHits = 0;
     long expectedTotalLoad = 0;
@@ -203,10 +203,10 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
 
     emitter.waitForAnyEventWithMetricName(StorageMonitor.VSF_HIT_COUNT);
     long hits = getMetricTotal(emitter, StorageMonitor.VSF_HIT_COUNT);
-    Assertions.assertTrue(hits >= expectedTotalHits, "expected " +  expectedTotalHits + " but only got " + hits);
+    Assertions.assertTrue(hits >= expectedTotalHits, "expected " + expectedTotalHits + " but only got " + hits);
     emitter.waitForAnyEventWithMetricName(StorageMonitor.VSF_LOAD_COUNT);
     long loads = getMetricTotal(emitter, StorageMonitor.VSF_LOAD_COUNT);
-    Assertions.assertTrue(loads >= expectedTotalLoad, "expected " +  expectedTotalLoad + " but only got " + loads);
+    Assertions.assertTrue(loads >= expectedTotalLoad, "expected " + expectedTotalLoad + " but only got " + loads);
     Assertions.assertTrue(getMetricTotal(emitter, StorageMonitor.VSF_LOAD_BYTES) > 0);
     emitter.waitForAnyEventWithMetricName(StorageMonitor.VSF_EVICT_COUNT);
     Assertions.assertTrue(getMetricTotal(emitter, StorageMonitor.VSF_EVICT_COUNT) >= 0);
