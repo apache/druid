@@ -468,7 +468,8 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
     return queryStatsMap;
   }
 
-  protected void appendMetricsToQueryStatsMap(String key, Map<String, Object> map) {
+  protected void appendMetricsToQueryStatsMap(String key, Map<String, Object> map)
+  {
     map.put(key, metrics.getOrDefault(key, 0));
   }
 
