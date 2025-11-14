@@ -19,19 +19,27 @@
 
 package org.apache.druid.cli;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.TypeLiteral;
+import com.google.inject.name.Names;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
+import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
+import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
@@ -39,12 +47,21 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.worker.executor.ExecutorLifecycle;
+import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
+import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.server.metrics.ServiceStatusMonitor;
+import org.apache.druid.server.metrics.TaskHolder;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.joda.time.Duration;
 import org.junit.Assert;
@@ -164,6 +181,43 @@ public class CliPeonTest
         ),
         CliPeon.heartbeatDimensions(new TestStreamingTask(taskId, supervisor, datasource, ImmutableMap.of(DruidMetrics.TAGS, tags), groupId))
     );
+  }
+
+  @Test
+  public void testCliPeonAllBindingsUp() throws IOException
+  {
+    File file = temporaryFolder.newFile("task.json");
+    FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
+
+    CliPeon runnable = new CliPeon();
+    runnable.taskAndStatusFile = ImmutableList.of(file.getParent(), "1");
+    Properties properties = new Properties();
+    runnable.configure(properties);
+    runnable.configure(properties, GuiceInjectors.makeStartupInjector());
+    Injector injector = runnable.makeInjector();
+
+    Assert.assertNotNull(injector.getInstance(ExecutorLifecycle.class));
+    Assert.assertNotNull(injector.getInstance(TaskRunner.class));
+    Assert.assertNotNull(injector.getInstance(QuerySegmentWalker.class));
+    Assert.assertNotNull(injector.getInstance(AppenderatorsManager.class));
+    Assert.assertNotNull(injector.getInstance(ServerTypeConfig.class));
+    Assert.assertNotNull(injector.getInstance(RowIngestionMetersFactory.class));
+    Assert.assertNotNull(injector.getInstance(ChatHandlerProvider.class));
+    Assert.assertNotNull(injector.getInstance(IntermediaryDataManager.class));
+    Assert.assertNotNull(injector.getInstance(ShuffleClient.class));
+    Assert.assertNotNull(injector.getInstance(SegmentHandoffNotifierFactory.class));
+    Assert.assertNotNull(injector.getInstance(TaskReportFileWriter.class));
+
+    String ds = injector.getInstance(Key.get(String.class, Names.named(TaskHolder.DATA_SOURCE_BINDING)));
+    String tId = injector.getInstance(Key.get(String.class, Names.named(TaskHolder.TASK_ID_BINDING)));
+    Assert.assertNotNull(ds);
+    Assert.assertNotNull(tId);
+
+    Supplier<Map<String, Object>> hb = injector.getInstance(
+        Key.get(new TypeLiteral<Supplier<Map<String, Object>>>() {}, Names.named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING))
+    );
+    Assert.assertNotNull(hb);
+    Assert.assertNotNull(hb.get());
   }
 
   @Test
