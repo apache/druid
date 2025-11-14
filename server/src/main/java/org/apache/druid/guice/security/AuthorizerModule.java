@@ -36,11 +36,6 @@ public class AuthorizerModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-//    final MapBinder<String, Authorizer> authorizerMapBinder = PolyBind.optionBinder(
-//        binder,
-//        Key.get(Authorizer.class)
-//    );
-//    authorizerMapBinder.addBinding(AuthConfig.ALLOW_ALL_NAME).to(AllowAllAuthorizer.class).in(LazySingleton.class);
   }
 
   @Override
