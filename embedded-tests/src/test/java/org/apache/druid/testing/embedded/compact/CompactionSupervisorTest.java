@@ -48,15 +48,14 @@ import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
-import org.apache.druid.testing.embedded.auth.AllowAllWithPolicyAuthResource;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
 import java.util.Map;
@@ -83,6 +82,14 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
                                .useDefaultTimeoutForLatchableEmitter(600)
+                               .addCommonProperty("druid.auth.authorizers", "[\"allowAll\"]")
+                               .addCommonProperty("druid.auth.authorizer.allowAll.type", "allowAll")
+                               .addCommonProperty("druid.auth.authorizer.allowAll.policy.type", "noRestriction")
+                               .addCommonProperty(
+                                   "druid.policy.enforcer.allowedPolicies",
+                                   "[\"org.apache.druid.query.policy.NoRestrictionPolicy\"]"
+                               )
+                               .addCommonProperty("druid.policy.enforcer.type", "restrictAllTables")
                                .addExtensions(
                                    CatalogClientModule.class,
                                    CatalogCoordinatorModule.class,
@@ -92,7 +99,6 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                                    MSQSqlModule.class,
                                    SqlTaskModule.class
                                )
-                               .addResource(new AllowAllWithPolicyAuthResource())
                                .addServer(coordinator)
                                .addServer(overlord)
                                .addServer(indexer)
@@ -101,18 +107,21 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
                                .addServer(new EmbeddedRouter());
   }
 
-  @BeforeAll
-  public void enableCompactionSupervisors()
+
+  private void configureCompaction(CompactionEngine compactionEngine)
   {
     final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
-        o -> o.updateClusterCompactionConfig(new ClusterCompactionConfig(1.0, 100, null, true, CompactionEngine.MSQ))
+        o -> o.updateClusterCompactionConfig(new ClusterCompactionConfig(1.0, 100, null, true, compactionEngine))
     );
     Assertions.assertTrue(updateResponse.isSuccess());
   }
 
-  @Test
-  public void test_ingestDayGranularity_andCompactToMonthGranularity_withInlineConfig()
+  @MethodSource("getEngine")
+  @ParameterizedTest(name = "compactionEngine={0}")
+  public void test_ingestDayGranularity_andCompactToMonthGranularity_withInlineConfig(CompactionEngine compactionEngine)
   {
+    configureCompaction(compactionEngine);
+
     // Ingest data at DAY granularity and verify
     runIngestionAtGranularity(
         "DAY",
@@ -221,4 +230,10 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         .withId(IdUtils.getRandomId());
     cluster.callApi().runTask(task, overlord);
   }
+
+  public static List<CompactionEngine> getEngine()
+  {
+    return List.of(CompactionEngine.NATIVE, CompactionEngine.MSQ);
+  }
+
 }

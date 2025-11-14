@@ -305,6 +305,11 @@ public class MSQCompactionRunner implements CompactionRunner
     return msqControllerTasks;
   }
 
+  /**
+   * Creates a system {@link AuthorizationResult} using an {@link Escalator} and applies any resulting
+   * {@link org.apache.druid.query.policy.Policy} to rewrite the query with
+   * {@link org.apache.druid.query.DataSource#withPolicies(Map, PolicyEnforcer)}
+   */
   private Query<?> maybeApplyPolicy(DataSchema dataSchema, Query<?> query)
   {
     final Escalator escalator = injector.getInstance(Escalator.class);

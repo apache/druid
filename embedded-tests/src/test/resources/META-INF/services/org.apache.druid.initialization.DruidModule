@@ -18,4 +18,3 @@
 #
 
 org.apache.druid.testing.embedded.gcs.GoogleStorageTestModule
-org.apache.druid.testing.embedded.auth.AllowAllWithPolicyAuthResource$AllowAllWithPolicyAuthModule
