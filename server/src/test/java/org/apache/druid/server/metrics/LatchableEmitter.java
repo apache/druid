@@ -151,6 +151,13 @@ public class LatchableEmitter extends StubServiceEmitter
     return matcher.matchingEvent.get();
   }
 
+  public ServiceMetricEvent waitForAnyEventWithMetricName(String metricName)
+  {
+    return waitForEvent(
+        eventMatcher -> new LatchableEmitter.EventMatcher().hasMetricName(metricName)
+    );
+  }
+
   /**
    * Waits indefinitely until the overall aggregate of matching events satisfies the given criteria.
    * Use {@link Timeout} on the overall test case to get a timeout.

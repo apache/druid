@@ -138,4 +138,11 @@ public interface SegmentCacheManager
   void shutdownBootstrap();
 
   void shutdown();
+
+  /**
+   * Collect {@link StorageStats}, if available. Calling this method 'resets' the stats values, so that the measurements
+   * returned by this method only includes the events which have happened since the previous call to this method.
+   */
+  @Nullable
+  StorageStats getStorageStats();
 }
