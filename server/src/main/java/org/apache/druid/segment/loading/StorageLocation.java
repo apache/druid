@@ -648,7 +648,7 @@ public class StorageLocation
 
   public StaticStats resetStaticStats()
   {
-    return staticStats.getAndSet(new  StaticStats());
+    return staticStats.getAndSet(new StaticStats());
   }
 
   public WeakStats resetWeakStats()
