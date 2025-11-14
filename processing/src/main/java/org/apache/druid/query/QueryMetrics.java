@@ -28,6 +28,7 @@ import org.apache.druid.query.filter.FilterBundle;
 import org.apache.druid.query.search.SearchQueryMetricsFactory;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Abstraction wrapping {@link org.apache.druid.java.util.emitter.service.ServiceMetricEvent.Builder} and allowing to
@@ -514,4 +515,9 @@ public interface QueryMetrics<QueryType extends Query<?>>
    * Emits all metrics, registered since the last {@code emit()} call on this QueryMetrics object.
    */
   void emit(ServiceEmitter emitter);
+
+  /**
+   * @return A map representation of metrics held by this QueryMetrics object to be sent to the query log.
+   */
+  Map<String, Object> generateLoggableQueryStats();
 }

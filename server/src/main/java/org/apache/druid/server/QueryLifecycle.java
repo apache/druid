@@ -416,9 +416,7 @@ public class QueryLifecycle
 
       queryMetrics.emit(emitter);
 
-      final Map<String, Object> statsMap = new LinkedHashMap<>();
-      statsMap.put("query/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs));
-      statsMap.put("query/bytes", bytesWritten);
+      final Map<String, Object> statsMap = queryMetrics.generateLoggableQueryStats();
       statsMap.put("success", success);
       statsMap.put(DruidMetrics.STATUS_CODE, statusCode);
 

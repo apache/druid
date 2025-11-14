@@ -30,6 +30,7 @@ import org.joda.time.Interval;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -455,6 +456,19 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
       emitter.emit(builder.setMetric(metric.getKey(), metric.getValue()));
     }
     metrics.clear();
+  }
+
+  @Override
+  public Map<String, Object> generateLoggableQueryStats() {
+    Map<String, Object> statsMap = new LinkedHashMap<>();
+    appendMetricsToStatsMap("query/time",statsMap);
+    appendMetricsToStatsMap("query/bytes",statsMap);
+
+    return statsMap;
+  }
+
+  protected void appendMetricsToStatsMap(String key, Map<String, Object> map) {
+    map.put(key, metrics.getOrDefault(key, 0));
   }
 
   protected QueryMetrics<QueryType> reportMetric(String metricName, Number value)
