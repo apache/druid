@@ -387,7 +387,7 @@ public class MSQCompactionRunner implements CompactionRunner
    * {@link AuthorizerMapper} and applies any resulting {@link org.apache.druid.query.policy.Policy} to it using
    * {@link DataSource#withPolicies(Map, PolicyEnforcer)}
    */
-  private DataSource getDataSource(String name)
+  private DataSource getInputDataSource(String name)
   {
     TableDataSource dataSource = new TableDataSource(name);
     final Escalator escalator = injector.getInstance(Escalator.class);
@@ -501,7 +501,7 @@ public class MSQCompactionRunner implements CompactionRunner
     RowSignature rowSignature = getRowSignature(dataSchema);
     VirtualColumns virtualColumns = VirtualColumns.create(new ArrayList<>(inputColToVirtualCol.values()));
     Druids.ScanQueryBuilder scanQueryBuilder = new Druids.ScanQueryBuilder()
-        .dataSource(getDataSource(dataSchema.getDataSource()))
+        .dataSource(getInputDataSource(dataSchema.getDataSource()))
         .columns(rowSignature.getColumnNames())
         .virtualColumns(virtualColumns)
         .columnTypes(rowSignature.getColumnTypes())
@@ -652,7 +652,7 @@ public class MSQCompactionRunner implements CompactionRunner
                             .collect(Collectors.toList());
 
     GroupByQuery.Builder builder = new GroupByQuery.Builder()
-        .setDataSource(getDataSource(compactionTask.getDataSource()))
+        .setDataSource(getInputDataSource(compactionTask.getDataSource()))
         .setVirtualColumns(virtualColumns)
         .setDimFilter(dimFilter)
         .setGranularity(new AllGranularity())

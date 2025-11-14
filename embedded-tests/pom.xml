@@ -547,6 +547,7 @@
       <version>5.5</version>
       <scope>test</scope>
     </dependency>
+
   </dependencies>
 
   <build>
