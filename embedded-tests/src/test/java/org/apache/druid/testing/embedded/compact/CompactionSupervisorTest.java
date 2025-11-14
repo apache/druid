@@ -235,5 +235,4 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   {
     return List.of(CompactionEngine.NATIVE, CompactionEngine.MSQ);
   }
-
 }
