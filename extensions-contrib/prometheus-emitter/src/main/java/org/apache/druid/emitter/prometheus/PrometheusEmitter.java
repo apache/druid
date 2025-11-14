@@ -184,7 +184,7 @@ public class PrometheusEmitter implements Emitter
           ((Counter) metric.getCollector()).labels(labelValues).inc(metricValue);
           metric.resetLastUpdateTime(Arrays.asList(labelValues));
         } else {
-          log.warn("Amount to increment must be non-negative for counter [%s] with value [%f]", name, metricValue);
+          log.warn("Counter increment amount must be non-negative, but got value[%f] for metric[%s]. If this is valid, metric should be defined as a gauge instead of counter.", metricValue, name);
         }
       } else if (metric.getCollector() instanceof Gauge) {
         ((Gauge) metric.getCollector()).labels(labelValues).set(value.doubleValue());
