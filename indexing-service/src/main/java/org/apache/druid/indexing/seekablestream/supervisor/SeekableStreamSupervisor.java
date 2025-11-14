@@ -578,11 +578,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       return false;
     }
     log.info(
-      "Starting scale action, current active task count is [%d] and desired task count is [%d] for supervisor[%s] for dataSource[%s].",
-      currentActiveTaskCount,
-      desiredActiveTaskCount,
-      supervisorId,
-      dataSource
+        "Starting scale action, current active task count is [%d] and desired task count is [%d] for supervisor[%s] for dataSource[%s].",
+        currentActiveTaskCount,
+        desiredActiveTaskCount,
+        supervisorId,
+        dataSource
     );
     final Stopwatch scaleActionStopwatch = Stopwatch.createStarted();
     gracefulShutdownInternal();
@@ -1179,7 +1179,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       catch (Exception e) {
         stateManager.recordThrowableEvent(e);
         log.makeAlert(e, "Exception stopping [%s]", supervisorId)
-           .emit();
+            .emit();
       }
     }
   }
@@ -1357,7 +1357,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         }
         initRetryCounter++;
         log.makeAlert(e, "Exception starting SeekableStreamSupervisor[%s]", supervisorId)
-           .emit();
+            .emit();
 
         throw new RuntimeException(e);
       }
