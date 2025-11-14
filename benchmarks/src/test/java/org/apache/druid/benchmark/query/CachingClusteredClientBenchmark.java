@@ -27,6 +27,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DruidServer;
@@ -324,7 +325,14 @@ public class CachingClusteredClientBenchmark
         },
         forkJoinPool,
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        new BrokerSegmentWatcherConfig() {
+          @Override
+          public boolean detectUnavailableSegments()
+          {
+            return false;
+          }
+        }
     );
   }
 

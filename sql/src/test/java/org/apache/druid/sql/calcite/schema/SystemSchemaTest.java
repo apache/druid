@@ -41,6 +41,7 @@ import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.InternalQueryConfig;
+import org.apache.druid.client.MetadataSegmentView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
@@ -81,6 +82,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.metadata.BrokerSegmentMetadataCacheConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.DruidNode;
@@ -568,11 +570,11 @@ public class SystemSchemaTest extends CalciteTestBase
   {
     final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, MAPPER, authMapper);
     final Set<SegmentStatusInCluster> publishedSegments = new HashSet<>(Arrays.asList(
-        new SegmentStatusInCluster(publishedCompactedSegment1, true, 2, null, false),
-        new SegmentStatusInCluster(publishedCompactedSegment2, false, 0, null, false),
-        new SegmentStatusInCluster(publishedUncompactedSegment3, false, 2, null, false),
-        new SegmentStatusInCluster(segment1, true, 2, null, false),
-        new SegmentStatusInCluster(segment2, false, 0, null, false)
+        new SegmentStatusInCluster(publishedCompactedSegment1, true, 2, null, false, false),
+        new SegmentStatusInCluster(publishedCompactedSegment2, false, 0, null, false, false),
+        new SegmentStatusInCluster(publishedUncompactedSegment3, false, 2, null, false, false),
+        new SegmentStatusInCluster(segment1, true, 2, null, false, false),
+        new SegmentStatusInCluster(segment2, false, 0, null, false, false)
     ));
 
     EasyMock.expect(metadataView.getSegments()).andReturn(publishedSegments.iterator()).once();
@@ -688,11 +690,11 @@ public class SystemSchemaTest extends CalciteTestBase
   {
     final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, MAPPER, authMapper);
     final Set<SegmentStatusInCluster> publishedSegments = new HashSet<>(Arrays.asList(
-        new SegmentStatusInCluster(publishedCompactedSegment1, true, 2, null, false),
-        new SegmentStatusInCluster(publishedCompactedSegment2, false, 0, null, false),
-        new SegmentStatusInCluster(publishedUncompactedSegment3, false, 2, null, false),
-        new SegmentStatusInCluster(segment1, true, 2, null, false),
-        new SegmentStatusInCluster(segment2, false, 0, null, false)
+        new SegmentStatusInCluster(publishedCompactedSegment1, true, 2, null, false,false),
+        new SegmentStatusInCluster(publishedCompactedSegment2, false, 0, null, false, false),
+        new SegmentStatusInCluster(publishedUncompactedSegment3, false, 2, null, false, false),
+        new SegmentStatusInCluster(segment1, true, 2, null, false, false),
+        new SegmentStatusInCluster(segment2, false, 0, null, false, false)
     ));
 
     EasyMock.expect(metadataView.getSegments()).andReturn(publishedSegments.iterator()).once();

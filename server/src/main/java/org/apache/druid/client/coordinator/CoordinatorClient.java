@@ -28,9 +28,12 @@ import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
+import org.apache.druid.server.coordination.ChangeRequestHistory;
+import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegmentChange;
 import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.joda.time.Interval;
 
@@ -135,6 +138,11 @@ public interface CoordinatorClient
   ListenableFuture<CloseableIterator<SegmentStatusInCluster>> fetchAllUsedSegmentsWithOvershadowedStatus(
       @Nullable Set<String> watchedDataSources,
       boolean includeRealtimeSegments
+  );
+
+  ListenableFuture<ChangeRequestsSnapshot<DataSegmentChange>> fetchChangedSegments(
+      @Nullable Set<String> watchedDataSources,
+      ChangeRequestHistory.Counter counter
   );
 
   /**

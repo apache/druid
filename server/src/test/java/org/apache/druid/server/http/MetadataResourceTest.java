@@ -155,11 +155,12 @@ public class MetadataResourceTest
 
     final List<SegmentStatusInCluster> resultList = extractResponseList(response);
     Assert.assertEquals(resultList.size(), 4);
-    Assert.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, null, false), resultList.get(0));
-    Assert.assertEquals(new SegmentStatusInCluster(segments[1], false, null, null, false), resultList.get(1));
-    Assert.assertEquals(new SegmentStatusInCluster(segments[2], false, 1, null, false), resultList.get(2));
+
+    Assert.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, null, false, false), resultList.get(0));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[1], false, null, null, false, false), resultList.get(1));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[2], false, 1, null, false, false), resultList.get(2));
     // Replication factor should be 0 as the segment is overshadowed
-    Assert.assertEquals(new SegmentStatusInCluster(segments[3], true, 0, null, false), resultList.get(3));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[3], true, 0, null, false, false), resultList.get(3));
   }
 
   @Test
@@ -253,13 +254,13 @@ public class MetadataResourceTest
     final List<SegmentStatusInCluster> resultList = extractResponseList(response);
     Assert.assertEquals(resultList.size(), 6);
     Map<SegmentId, SegmentStatusInCluster> resultMap = resultList.stream().collect(Collectors.toMap(segmentStatus -> segmentStatus.getDataSegment().getId(), Function.identity()));
-    Assert.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, 20L, false), resultMap.get(segments[0].getId()));
-    Assert.assertEquals(new SegmentStatusInCluster(segments[1], false, null, 30L, false), resultMap.get(segments[1].getId()));
-    Assert.assertEquals(new SegmentStatusInCluster(segments[2], false, 1, null, false), resultMap.get(segments[2].getId()));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, 20L, false, false), resultMap.get(segments[0].getId()));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[1], false, null, 30L, false, false), resultMap.get(segments[1].getId()));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[2], false, 1, null, false, false), resultMap.get(segments[2].getId()));
     // Replication factor should be 0 as the segment is overshadowed
-    Assert.assertEquals(new SegmentStatusInCluster(segments[3], true, 0, null, false), resultMap.get(segments[3].getId()));
-    Assert.assertEquals(new SegmentStatusInCluster(realTimeSegments[0], false, null, 10L, true), resultMap.get(realTimeSegments[0].getId()));
-    Assert.assertEquals(new SegmentStatusInCluster(realTimeSegments[1], false, null, 40L, true), resultMap.get(realTimeSegments[1].getId()));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[3], true, 0, null, false, false), resultMap.get(segments[3].getId()));
+    Assert.assertEquals(new SegmentStatusInCluster(realTimeSegments[0], false, null, 10L, true, false), resultMap.get(realTimeSegments[0].getId()));
+    Assert.assertEquals(new SegmentStatusInCluster(realTimeSegments[1], false, null, 40L, true, false), resultMap.get(realTimeSegments[1].getId()));
   }
 
 

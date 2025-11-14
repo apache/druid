@@ -20,6 +20,10 @@
 package org.apache.druid.metadata;
 
 import org.apache.druid.client.DataSourcesSnapshot;
+import org.apache.druid.server.coordination.ChangeRequestHistory;
+import org.apache.druid.timeline.DataSegmentChange;
+
+import java.util.List;
 
 /**
  * Polls the metadata store periodically and builds a timeline of used segments
@@ -79,4 +83,6 @@ public interface SegmentsMetadataManager
   void populateUsedFlagLastUpdatedAsync();
 
   void stopAsyncUsedFlagLastUpdatedUpdate();
+
+  ChangeRequestHistory<List<DataSegmentChange>> getChangeRequestHistory();
 }
