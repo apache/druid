@@ -158,4 +158,22 @@ public class DefaultQueryMetricsTest extends InitializedNullHandlingTest
     Assert.assertEquals(0L, actualEvent.get("value"));
     Assert.assertEquals(true, actualEvent.get("vectorized"));
   }
+
+  @Test
+  public void testQueryMetrics()
+  {
+    DefaultQueryMetrics<Query<?>> queryMetrics = new DefaultQueryMetrics<>();
+    Map<String, Object> defaultEmptyMap = queryMetrics.generateQueryStatsMapFromMetrics();
+
+    Assert.assertEquals(0, defaultEmptyMap.get(DefaultQueryMetrics.QUERY_TIME));
+    Assert.assertEquals(0, defaultEmptyMap.get(DefaultQueryMetrics.QUERY_BYTES));
+
+    queryMetrics.reportQueryTime(1000001);
+    queryMetrics.reportQueryBytes(10000);
+
+    Map<String, Object> map = queryMetrics.generateQueryStatsMapFromMetrics();
+
+    Assert.assertEquals(1L, map.get(DefaultQueryMetrics.QUERY_TIME));
+    Assert.assertEquals(10000L, map.get(DefaultQueryMetrics.QUERY_BYTES));
+  }
 }

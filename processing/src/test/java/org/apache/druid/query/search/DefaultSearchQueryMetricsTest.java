@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DefaultQueryMetricsTest;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Druids;
@@ -86,6 +87,11 @@ public class DefaultSearchQueryMetricsTest extends InitializedNullHandlingTest
     // Metric
     Assert.assertEquals("query/time", actualEvent.get("metric"));
     Assert.assertEquals(0L, actualEvent.get("value"));
+
+    // Metric Map
+    Map<String, Object> metrics = queryMetrics.generateQueryStatsMapFromMetrics();
+    Assert.assertEquals(0, metrics.get(DefaultQueryMetrics.QUERY_TIME));
+    Assert.assertEquals(0, metrics.get(DefaultQueryMetrics.QUERY_BYTES));
 
     Assert.assertThrows(ISE.class, () -> queryMetrics.sqlQueryId("dummy"));
   }
