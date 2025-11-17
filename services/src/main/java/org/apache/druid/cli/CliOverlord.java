@@ -466,7 +466,7 @@ public class CliOverlord extends ServerRunnable
                 
             final int threadsForOverlordWork = serverHttpNumThreads - THREADS_RESERVED_FOR_HEALTH_CHECK;
             
-            if (threadsForOverlordWork >= ServerConfig.DEFAULT_NUM_PACKING_THREADS) {
+            if (threadsForOverlordWork >= ServerConfig.DEFAULT_MIN_QOS_THRESHOLD) {
               final String[] overlordPaths = {
                   "/druid-internal/v1/*",
                   "/druid/indexer/v1/*"

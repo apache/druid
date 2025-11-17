@@ -50,5 +50,4 @@ public class CliOverlordTest
         = overlordInjector.getInstance(SegmentsMetadataManager.class);
     Assert.assertTrue(segmentsMetadataManager instanceof SqlSegmentsMetadataManagerV2);
   }
-
 }
