@@ -300,8 +300,7 @@ public class CliOverlord extends ServerRunnable
                     .in(LazySingleton.class);
             }
 
-            addOverlordJerseyResources(binder);
-            configureQosFiltering(binder);
+            configureOverlordWebResources(binder);
 
             binder.bind(AppenderatorsManager.class)
                   .to(DummyForInjectionAppenderatorsManager.class)
@@ -457,21 +456,46 @@ public class CliOverlord extends ServerRunnable
             dutyBinder.addBinding().to(UnusedSegmentsKiller.class).in(LazySingleton.class);
           }
 
-          private void configureQosFiltering(Binder binder)
+          /**
+           * Configures Overlord-specific web resources and QoS filtering.
+           *
+           * <p>This method performs two main tasks:
+           * <ol>
+           *   <li>Registers Jersey resources for Overlord REST endpoints</li>
+           *   <li>Configures QoS (Quality of Service) filtering for request limiting</li>
+           * </ol>
+           *
+           * <p>The Jersey resources handle the following endpoint paths:
+           * <ul>
+           *   <li>/druid/indexer/v1/* - Main indexing and task management endpoints</li>
+           *   <li>/druid-internal/v1/* - Internal Overlord management endpoints</li>
+           * </ul>
+           * Note to developers:
+           * Whenever adding new resources, please check if the root paths are added in the QOS filtering.
+           *
+           * @param binder the Guice binder for registering dependencies
+           */
+          private void configureOverlordWebResources(Binder binder)
           {
+            Jerseys.addResource(binder, OverlordResource.class);
+            Jerseys.addResource(binder, SupervisorResource.class);
+            Jerseys.addResource(binder, HttpRemoteTaskRunnerResource.class);
+            Jerseys.addResource(binder, OverlordCompactionResource.class);
+            Jerseys.addResource(binder, OverlordDataSourcesResource.class);
+
             // Add QoS filtering for overlord-specific endpoints if we have enough threads
             final int serverHttpNumThreads = properties.containsKey("druid.server.http.numThreads")
-                ? Integer.parseInt(properties.getProperty("druid.server.http.numThreads"))
-                : ServerConfig.getDefaultNumThreads();
-                
+                                             ? Integer.parseInt(properties.getProperty("druid.server.http.numThreads"))
+                                             : ServerConfig.getDefaultNumThreads();
+
             final int threadsForOverlordWork = serverHttpNumThreads - THREADS_RESERVED_FOR_HEALTH_CHECK;
-            
+
             if (threadsForOverlordWork >= ServerConfig.DEFAULT_MIN_QOS_THRESHOLD) {
               final String[] overlordPaths = {
                   "/druid-internal/v1/*",
                   "/druid/indexer/v1/*"
               };
-              
+
               JettyBindings.addQosFilter(binder, overlordPaths, threadsForOverlordWork);
             }
           }
@@ -488,25 +512,6 @@ public class CliOverlord extends ServerRunnable
         new MSQDurableStorageModule(),
         new MSQExternalDataSourceModule()
     );
-  }
-
-  /**
-   * Currently, the resource paths of the jersery resources on the overlord start with
-   *  <ol>
-   *    <li>/druid/indexer/v1</li>
-   *    <li>/druid-internal/v1</li>
-   *  </ol>
-   * <p>
-   * As QoS filtering is enabled on overlord requests, we need to update the QoS filter paths in
-   * {@link org.apache.druid.cli.CliOverlord#configureQosFiltering(Binder)} when a new jersey resource is added.
-   **/
-  private void addOverlordJerseyResources(Binder binder)
-  {
-    Jerseys.addResource(binder, OverlordResource.class);
-    Jerseys.addResource(binder, SupervisorResource.class);
-    Jerseys.addResource(binder, HttpRemoteTaskRunnerResource.class);
-    Jerseys.addResource(binder, OverlordCompactionResource.class);
-    Jerseys.addResource(binder, OverlordDataSourcesResource.class);
   }
 
   /**
