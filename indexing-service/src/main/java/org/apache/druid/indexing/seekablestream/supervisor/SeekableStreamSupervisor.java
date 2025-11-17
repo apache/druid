@@ -129,6 +129,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
@@ -176,6 +177,50 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   // Internal data structures
   // --------------------------------------------------------
+
+  protected static class OffsetSnapshot<PartitionIdType, SequenceOffsetType>
+  {
+    private final ImmutableMap<PartitionIdType, SequenceOffsetType> currentOffsets;
+    private final ImmutableMap<PartitionIdType, SequenceOffsetType> endOffsets;
+
+    public OffsetSnapshot(
+        @Nullable Map<PartitionIdType, SequenceOffsetType> currentOffsets,
+        @Nullable Map<PartitionIdType, SequenceOffsetType> endOffsets
+    )
+    {
+      this.currentOffsets = toImmutableOffsetMap(currentOffsets);
+      this.endOffsets = toImmutableOffsetMap(endOffsets);
+    }
+
+    private ImmutableMap<PartitionIdType, SequenceOffsetType> toImmutableOffsetMap(
+        @Nullable Map<PartitionIdType, SequenceOffsetType> input
+    )
+    {
+      if (input == null || input.isEmpty()) {
+        return ImmutableMap.of();
+      }
+
+      return input.entrySet().stream()
+                  .filter(e -> e.getValue() != null)
+                  .collect(ImmutableMap.toImmutableMap(
+                      Map.Entry::getKey,
+                      Map.Entry::getValue
+                  ));
+    }
+
+    public ImmutableMap<PartitionIdType, SequenceOffsetType> getCurrentOffsets()
+    {
+      return currentOffsets;
+    }
+
+    public ImmutableMap<PartitionIdType, SequenceOffsetType> getEndOffsets()
+    {
+      return endOffsets;
+    }
+  }
+
+  protected final AtomicReference<OffsetSnapshot<PartitionIdType, SequenceOffsetType>> offsetSnapshotRef =
+      new AtomicReference<>(new OffsetSnapshot<>(Collections.emptyMap(), Collections.emptyMap()));
 
   /**
    * A TaskGroup is the main data structure used by SeekableStreamSupervisor to organize and monitor stream partitions and
