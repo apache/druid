@@ -472,6 +472,25 @@ public class CliOverlord extends ServerRunnable
   }
 
   /**
+   * Currently, the resource paths of the jersery resources on the overlord start with
+   *  <ol>
+   *    <li>/druid/indexer/v1</li>
+   *    <li>/druid-internal/v1</li>
+   *  </ol>
+   * <p>
+   * As QOS filtering is enabled on overlord requests, we need to update the QOS filter paths in
+   * {@link org.apache.druid.cli.CliOverlord#addQOSFiltering(ServletContextHandler, int)} when a new jersey resource is added.
+   **/
+  private void addOverlordJerseyResources(Binder binder)
+  {
+    Jerseys.addResource(binder, OverlordResource.class);
+    Jerseys.addResource(binder, SupervisorResource.class);
+    Jerseys.addResource(binder, HttpRemoteTaskRunnerResource.class);
+    Jerseys.addResource(binder, OverlordCompactionResource.class);
+    Jerseys.addResource(binder, OverlordDataSourcesResource.class);
+  }
+
+  /**
    */
   protected static class OverlordJettyServerInitializer implements JettyServerInitializer
   {
@@ -551,16 +570,16 @@ public class CliOverlord extends ServerRunnable
     }
   }
 
-  protected static boolean addQOSFiltering(ServletContextHandler root, int threadsForOvelordWork)
+  protected static boolean addQOSFiltering(ServletContextHandler root, int threadsForOverlordWork)
   {
-    if (threadsForOvelordWork >= ServerConfig.DEFAULT_NUM_PACKING_THREADS) {
-      log.info("Enabling QOS filter on overlord requests with limit [%d].", threadsForOvelordWork);
+    if (threadsForOverlordWork >= ServerConfig.DEFAULT_NUM_PACKING_THREADS) {
+      log.info("Enabling QOS filter on overlord requests with limit [%d].", threadsForOverlordWork);
       JettyBindings.QosFilterHolder filterHolder = new JettyBindings.QosFilterHolder(
           new String[]{
               "/druid-internal/v1/*",
               "/druid/indexer/v1/*"
           },
-          threadsForOvelordWork
+          threadsForOverlordWork
       );
       JettyServerInitUtils.addFilters(root, Collections.singleton(filterHolder));
       return true;
