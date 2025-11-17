@@ -195,12 +195,15 @@ public class JettyServerModule extends JerseyServletModule
     // that concurrently handle the requests".
     int numServerThreads = config.getNumThreads() + getMaxJettyAcceptorsSelectorsNum(node);
 
+
+    final QueuedThreadPool threadPool;
+
     if (config.getQueueSize() == Integer.MAX_VALUE) {
-      jettyServerThreadPool = new QueuedThreadPool();
-      jettyServerThreadPool.setMinThreads(numServerThreads);
-      jettyServerThreadPool.setMaxThreads(numServerThreads);
+      threadPool = new QueuedThreadPool();
+      threadPool.setMinThreads(numServerThreads);
+      threadPool.setMaxThreads(numServerThreads);
     } else {
-      jettyServerThreadPool = new QueuedThreadPool(
+      threadPool = new QueuedThreadPool(
           numServerThreads,
           numServerThreads,
           60000, // same default is used in other case when threadPool = new QueuedThreadPool()
@@ -208,8 +211,8 @@ public class JettyServerModule extends JerseyServletModule
       );
     }
 
-    jettyServerThreadPool.setDaemon(true);
-
+    threadPool.setDaemon(true);
+    jettyServerThreadPool = threadPool;
 
     final Server server = new Server(jettyServerThreadPool);
 

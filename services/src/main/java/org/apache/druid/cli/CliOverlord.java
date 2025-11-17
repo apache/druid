@@ -516,7 +516,7 @@ public class CliOverlord extends ServerRunnable
 
   /**
    */
-  protected static class OverlordJettyServerInitializer implements JettyServerInitializer
+  private static class OverlordJettyServerInitializer implements JettyServerInitializer
   {
     private final AuthConfig authConfig;
     private final ServerConfig serverConfig;
@@ -593,5 +593,4 @@ public class CliOverlord extends ServerRunnable
       server.setHandler(handlerList);
     }
   }
-
 }
