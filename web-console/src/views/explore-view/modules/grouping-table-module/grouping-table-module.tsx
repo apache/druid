@@ -274,10 +274,10 @@ ModuleRepository.registerModule<GroupingTableParameterValues>({
 
     const [resultState] = useQueryManager({
       query: queryAndMore,
-      processQuery: async (queryAndMore, cancelToken) => {
+      processQuery: async (queryAndMore, signal) => {
         const { timezone, globalWhere, queryAndHints } = queryAndMore;
         const { query, columnHints } = queryAndHints;
-        let result = await runSqlQuery({ query, timezone }, cancelToken);
+        let result = await runSqlQuery({ query, timezone }, signal);
         if (result.sqlQuery) {
           result = result.attachQuery(
             { query: '' },

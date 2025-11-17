@@ -23,7 +23,6 @@ import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.StringEncodingStrategies;
@@ -34,6 +33,7 @@ import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.VByte;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 import org.apache.druid.segment.serde.StringUtf8ColumnIndexSupplier;
@@ -59,7 +59,7 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
 
     if (version == NestedCommonFormatColumnSerializer.V0) {
       try {
-        final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
+        final SegmentFileMapper mapper = columnBuilder.getFileMapper();
         final Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier;
 
         if (parent != null) {

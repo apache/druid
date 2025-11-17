@@ -20,6 +20,7 @@
 package org.apache.druid.client.cache;
 
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.server.ServerManager;
 
 import java.util.function.Function;
 
@@ -31,7 +32,7 @@ import java.util.function.Function;
  * Consumers of the {@link Sequence} will either be a processing thread (in the case of a historical or task), or
  * an http thread in the case of a broker. See:
  *
- *  historicals:    {@link org.apache.druid.server.coordination.ServerManager} and
+ *  historicals:    {@link ServerManager} and
  *                  {@link org.apache.druid.client.CachingQueryRunner}
  *
  *  realtime tasks: {@link org.apache.druid.segment.realtime.appenderator.SinkQuerySegmentWalker} and

@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
@@ -35,7 +36,6 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.QueryableIndex;
@@ -54,6 +54,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -179,9 +180,14 @@ public class TestHttpClient implements HttpClient
         };
       }
       if (isSegmentDropped) {
-        return new ReportTimelineMissingSegmentQueryRunner<>(
-            new SegmentDescriptor(segment.getInterval(), segment.getVersion(), segment.getId().getPartitionNum())
-        );
+        return (queryPlus, responseContext) -> {
+          responseContext.addMissingSegments(
+              List.of(
+                  new SegmentDescriptor(segment.getInterval(), segment.getVersion(), segment.getId().getPartitionNum())
+              )
+          );
+          return Sequences.empty();
+        };
       } else {
         return new SimpleQueryRunner(conglomerate, segment.getId(), queryableIndex);
       }

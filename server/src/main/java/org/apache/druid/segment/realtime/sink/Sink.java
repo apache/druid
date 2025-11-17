@@ -22,22 +22,19 @@ package org.apache.druid.segment.realtime.sink;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -45,17 +42,16 @@ import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Overshadowable;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -68,7 +64,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 
 public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
 {
@@ -150,14 +145,14 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         throw new ISE("hydrant[%s] not the right count[%s]", hydrant, i);
       }
       maxCount = hydrant.getCount();
-      ReferenceCountingSegment segment = hydrant.getIncrementedSegment();
+      Segment segment = hydrant.acquireSegment();
       try {
         overwriteIndexDimensions(segment);
         QueryableIndex index = segment.as(QueryableIndex.class);
         numRowsExcludingCurrIndex.addAndGet(index.getNumRows());
       }
       finally {
-        segment.decrement();
+        CloseableUtils.closeAndWrapExceptions(segment);
       }
     }
     this.hydrants.addAll(hydrants);
@@ -175,7 +170,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     return currHydrant;
   }
 
-  public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException
+  public IncrementalIndexAddResult add(InputRow row)
   {
     if (currHydrant == null) {
       throw new IAE("No currHydrant but given row[%s]", row);
@@ -191,7 +186,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         return ALREADY_SWAPPED; // the hydrant was swapped without being replaced
       }
 
-      return index.add(row, skipMaxRowsInMemoryCheck);
+      return index.add(row);
     }
   }
 
@@ -254,17 +249,12 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
 
   public DataSegment getSegment()
   {
-    return new DataSegment(
-        schema.getDataSource(),
-        interval,
-        version,
-        ImmutableMap.of(),
-        Collections.emptyList(),
-        Lists.transform(Arrays.asList(schema.getAggregators()), AggregatorFactory::getName),
-        shardSpec,
-        null,
-        0
-    );
+    return DataSegment.builder(SegmentId.of(schema.getDataSource(), interval, version, shardSpec))
+                      .shardSpec(shardSpec)
+                      .dimensions(null)
+                      .metrics(Lists.transform(Arrays.asList(schema.getAggregators()), AggregatorFactory::getName))
+                      .projections(schema.getProjectionNames())
+                      .build();
   }
 
   public int getNumRows()
@@ -307,7 +297,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
    */
   @Nullable
   public List<SinkSegmentReference> acquireSegmentReferences(
-      final Function<SegmentReference, SegmentReference> segmentMapFn,
+      final SegmentMapFunction segmentMapFn,
       final boolean skipIncrementalSegment
   )
   {
@@ -349,7 +339,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
 
           if (lastHydrant.hasSwapped()) {
             oldFormat = new HashMap<>();
-            final ReferenceCountingSegment segment = lastHydrant.getIncrementedSegment();
+            final Segment segment = lastHydrant.acquireSegment();
             try {
               overwriteIndexDimensions(segment);
               if (variableDimensions) {
@@ -361,14 +351,20 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
               }
             }
             finally {
-              segment.decrement();
+              CloseableUtils.closeAndWrapExceptions(segment);
             }
           } else {
-            overwriteIndexDimensions(lastHydrant.getHydrantSegment());
-            if (variableDimensions) {
-              IncrementalIndex oldIndex = lastHydrant.getIndex();
-              dimOrder.addAll(oldIndex.getDimensionOrder());
-              oldFormat = oldIndex.getColumnFormats();
+            final Segment segment = lastHydrant.acquireSegment();
+            try {
+              overwriteIndexDimensions(segment);
+              if (variableDimensions) {
+                IncrementalIndex oldIndex = lastHydrant.getIndex();
+                dimOrder.addAll(oldIndex.getDimensionOrder());
+                oldFormat = oldIndex.getColumnFormats();
+              }
+            }
+            finally {
+              CloseableUtils.closeAndWrapExceptions(segment);
             }
           }
           if (variableDimensions) {
@@ -417,7 +413,10 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       }
 
       // Add columns from the currHydrant that do not yet exist in columnsExcludingCurrIndex.
-      RowSignature currSignature = currHydrant.getHydrantSegment().as(CursorFactory.class).getRowSignature();
+      RowSignature currSignature = currHydrant.getHydrantSegment()
+                                              .getBaseSegment()
+                                              .as(CursorFactory.class)
+                                              .getRowSignature();
 
       for (String dim : currSignature.getColumnNames()) {
         if (!columnsExcludingCurrIndex.contains(dim)) {
@@ -498,13 +497,13 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   }
 
   /**
-   * Helper for {@link #acquireSegmentReferences(Function, boolean)}. Separate method to simplify testing (we test this
-   * method instead of testing {@link #acquireSegmentReferences(Function, boolean)} directly).
+   * Helper for {@link #acquireSegmentReferences(SegmentMapFunction, boolean)}. Separate method to simplify testing (we test this
+   * method instead of testing {@link #acquireSegmentReferences(SegmentMapFunction, boolean)} directly).
    */
   @VisibleForTesting
   static List<SinkSegmentReference> acquireSegmentReferences(
       final List<FireHydrant> hydrants,
-      final Function<SegmentReference, SegmentReference> segmentMapFn,
+      final SegmentMapFunction segmentMapFn,
       final boolean skipIncrementalSegment
   )
   {
@@ -520,10 +519,10 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
           continue;
         }
 
-        final Optional<Pair<SegmentReference, Closeable>> maybeHolder = hydrant.getSegmentForQuery(segmentMapFn);
+        final Optional<Segment> maybeHolder = hydrant.getSegmentForQuery(segmentMapFn);
         if (maybeHolder.isPresent()) {
-          final Pair<SegmentReference, Closeable> holder = maybeHolder.get();
-          retVal.add(new SinkSegmentReference(hydrant.getCount(), holder.lhs, hydrantDefinitelySwapped, holder.rhs));
+          final Segment holder = maybeHolder.get();
+          retVal.add(new SinkSegmentReference(hydrant.getCount(), holder, hydrantDefinitelySwapped));
         } else {
           // Cannot acquire this hydrant. Release all others previously acquired and return null.
           for (final SinkSegmentReference reference : retVal) {

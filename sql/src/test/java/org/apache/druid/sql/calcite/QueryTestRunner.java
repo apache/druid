@@ -217,7 +217,8 @@ public class QueryTestRunner
     {
       final QueryTestBuilder builder = builder();
       final SqlQueryPlus sqlQuery = SqlQueryPlus.builder(builder.sql)
-                                                .context(builder.queryContext)
+                                                .systemDefaultContext(Map.of())
+                                                .queryContext(builder.queryContext)
                                                 .sqlParameters(builder.parameters)
                                                 .auth(builder.authenticationResult)
                                                 .build();
@@ -263,10 +264,6 @@ public class QueryTestRunner
       BaseCalciteQueryTest.log.info("SQL: %s", builder.sql);
 
       final SqlStatementFactory sqlStatementFactory = builder.statementFactory();
-      final SqlQueryPlus sqlQuery = SqlQueryPlus.builder(builder.sql)
-                                                .sqlParameters(builder.parameters)
-                                                .auth(builder.authenticationResult)
-                                                .build();
 
       final List<String> vectorizeValues = new ArrayList<>();
       vectorizeValues.add("false");
@@ -275,7 +272,15 @@ public class QueryTestRunner
       }
 
       for (final String vectorize : vectorizeValues) {
-        final Map<String, Object> theQueryContext = new HashMap<>(builder.queryContext);
+        // Need to create sqlQuery inside the loop, because SqlQueryPlus can only be used once
+        final SqlQueryPlus sqlQuery = SqlQueryPlus.builder(builder.sql)
+                                                  .sqlParameters(builder.parameters)
+                                                  .auth(builder.authenticationResult)
+                                                  .systemDefaultContext(Map.of())
+                                                  .queryContext(builder.queryContext)
+                                                  .build();
+
+        final Map<String, Object> theQueryContext = new HashMap<>(sqlQuery.context());
         theQueryContext.put(QueryContexts.VECTORIZE_KEY, vectorize);
         theQueryContext.put(QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize);
 
@@ -285,7 +290,7 @@ public class QueryTestRunner
 
         results.add(runQuery(
             sqlStatementFactory,
-            sqlQuery.withContext(theQueryContext),
+            sqlQuery.withContext(Map.of(), theQueryContext),
             vectorize
         ));
       }
@@ -664,9 +669,9 @@ public class QueryTestRunner
     if (iqTestInfo != null) {
       QTestCase qt = new QTestCase(iqTestInfo);
       Map<String, Object> queryContext = ImmutableSortedMap.<String, Object>naturalOrder()
-          .putAll(builder.getQueryContext())
-          .putAll(builder.plannerConfig.getNonDefaultAsQueryContext())
-          .build();
+                                                           .putAll(builder.getQueryContext())
+                                                           .putAll(builder.plannerConfig.getNonDefaultAsQueryContext())
+                                                           .build();
       for (Entry<String, Object> entry : queryContext.entrySet()) {
         qt.println(StringUtils.format("!set %s %s", entry.getKey(), entry.getValue()));
       }

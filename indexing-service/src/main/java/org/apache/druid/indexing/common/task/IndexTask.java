@@ -93,12 +93,9 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -311,7 +308,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
            getIngestionSchema().getIOConfig().getInputSource().getTypes()
                .stream()
-               .map(i -> new ResourceAction(new Resource(i, ResourceType.EXTERNAL), Action.READ))
+               .map(AuthorizationUtils::createExternalResourceReadAction)
                .collect(Collectors.toSet()) :
            ImmutableSet.of();
   }
@@ -1185,7 +1182,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
 
   public static class IndexTuningConfig implements AppenderatorConfig
   {
-    private static final IndexSpec DEFAULT_INDEX_SPEC = IndexSpec.DEFAULT;
     private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
     private static final boolean DEFAULT_GUARANTEE_ROLLUP = false;
     private static final boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = false;
@@ -1367,7 +1363,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
                                ? IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE
                                : maxColumnsToMerge;
       this.partitionsSpec = partitionsSpec;
-      this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
+      this.indexSpec = indexSpec == null ? IndexSpec.getDefault() : indexSpec;
       this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
                                               this.indexSpec : indexSpecForIntermediatePersists;
       this.maxPendingPersists = maxPendingPersists == null ? DEFAULT_MAX_PENDING_PERSISTS : maxPendingPersists;

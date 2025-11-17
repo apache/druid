@@ -43,7 +43,7 @@ import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.column.BaseColumn;
-import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -222,7 +222,7 @@ public class FrameBasedIndexedTable implements IndexedTable
     final Set<Closeable> closeables = new HashSet<>();
 
     for (QueryableIndex frameQueryableIndex : frameQueryableIndexes) {
-      ColumnHolder columnHolder = frameQueryableIndex.getColumnHolder(columnName);
+      BaseColumnHolder columnHolder = frameQueryableIndex.getColumnHolder(columnName);
       if (columnHolder == null) {
         columnValueSelectors.add(NilColumnValueSelector.instance());
       } else {
@@ -269,7 +269,7 @@ public class FrameBasedIndexedTable implements IndexedTable
   }
 
   @Override
-  public Optional<Closeable> acquireReferences()
+  public Optional<Closeable> acquireReference()
   {
     return Optional.of(
         () -> {

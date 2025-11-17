@@ -20,7 +20,5 @@ import 'ace-builds/src-noconflict/ace'; // Import Ace editor and all the sub com
 import 'ace-builds/src-noconflict/ext-language_tools';
 import 'ace-builds/src-noconflict/ext-searchbox';
 import 'ace-builds/src-noconflict/theme-solarized_dark';
-import '../ace-modes/dsql';
-import '../ace-modes/hjson';
 
 import './ace.scss';

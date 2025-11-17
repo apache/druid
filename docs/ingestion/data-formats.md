@@ -168,6 +168,28 @@ For example:
 }
 ```
 
+### Lines
+
+Configure the Lines `inputFormat` to load line-oriented data where each line is treated as a single field:
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| type | String | Set value to `lines`. | yes |
+
+The Lines input format reads each line from the input as UTF-8 text, and creates a single column named `line` containing the entire line as a string.
+This is useful for reading line-oriented data in a simple form for later processing.
+
+For example:
+
+```json
+"ioConfig": {
+  "inputFormat": {
+    "type": "lines"
+  },
+  ...
+}
+```
+
 ### ORC
 
 To use the ORC input format, load the Druid Orc extension ( [`druid-orc-extensions`](../development/extensions-core/orc.md)).
@@ -962,11 +984,16 @@ Each line can be further parsed using [`parseSpec`](#parsespec).
 
 ### Avro Hadoop Parser
 
-:::info
- You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Hadoop Parser.
+:::caution[Deprecated]
+
+Hadoop-based ingestion is deprecated. For more information, see the [upgrade notes](../release-info/upgrade-notes.md#hadoop-based-ingestion).
+
 :::
 
+
 :::info
+You need to include [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Hadoop Parser.
+
  See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
 :::
 
@@ -1024,6 +1051,14 @@ For example, using Avro Hadoop parser with custom reader's schema file:
 ```
 
 ### ORC Hadoop Parser
+
+:::caution[Deprecated]
+
+Hadoop-based ingestion is deprecated. For more information, see the [upgrade notes](../release-info/upgrade-notes.md#hadoop-based-ingestion).
+
+
+:::
+
 
 :::info
  You need to include the [`druid-orc-extensions`](../development/extensions-core/orc.md) as an extension to use the ORC Hadoop Parser.
@@ -1270,6 +1305,13 @@ setting `"mapreduce.job.user.classpath.first": "true"`, then this will not be an
 
 ### Parquet Hadoop Parser
 
+:::caution[Deprecated]
+
+Hadoop-based ingestion is deprecated. For more information, see the [upgrade notes](../release-info/upgrade-notes.md#hadoop-based-ingestion).
+
+:::
+
+
 :::info
  You need to include the [`druid-parquet-extensions`](../development/extensions-core/parquet.md) as an extension to use the Parquet Hadoop Parser.
 :::
@@ -1413,6 +1455,13 @@ However, the Parquet Avro Hadoop Parser was the original basis for supporting th
 ```
 
 ### Parquet Avro Hadoop Parser
+
+:::caution[Deprecated]
+
+Hadoop-based ingestion is deprecated. For more information, see the [upgrade notes](../release-info/upgrade-notes.md#hadoop-based-ingestion).
+
+:::
+
 
 :::info
  Consider using the [Parquet Hadoop Parser](#parquet-hadoop-parser) over this parser to ingest

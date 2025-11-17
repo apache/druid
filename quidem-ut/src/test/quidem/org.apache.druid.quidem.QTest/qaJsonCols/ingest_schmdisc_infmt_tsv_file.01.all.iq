@@ -1,6 +1,5 @@
-!set dartQueryId 00000000-0000-0000-0000-000000000000
 !set useApproximateCountDistinct false
-!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaJsonCols/ingest/schmdisc_infmt_tsv_file
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaJsonCols/ingest/schmdisc_infmt_tsv_file
 !set outputformat mysql
 #-------------------------------------------------------------------------
 # TESTCASE: test_schmdisc_infmt_tsv_file TEST_ID: SEL_DATASOURCE
@@ -42,7 +41,7 @@ WHERE json_value(s_str, '$.') = 'A';
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -113,12 +112,12 @@ WHERE json_value(s_null, '$.') IS NULL;
 #-------------------------------------------------------------------------
 SELECT json_query(c_empty_obj, '$.') c
 FROM test_json_cols;
-+------+
-| c    |
-+------+
-| "{}" |
-|      |
-+------+
++----+
+| c  |
++----+
+| {} |
+|    |
++----+
 (2 rows)
 
 !ok
@@ -128,12 +127,12 @@ FROM test_json_cols;
 #-------------------------------------------------------------------------
 SELECT json_query(c_empty_array, '$.') c
 FROM test_json_cols;
-+------+
-| c    |
-+------+
-| "[]" |
-|      |
-+------+
++----+
+| c  |
++----+
+| [] |
+|    |
++----+
 (2 rows)
 
 !ok
@@ -143,12 +142,12 @@ FROM test_json_cols;
 #-------------------------------------------------------------------------
 SELECT json_query(c_empty_obj_nested, '$.') c
 FROM test_json_cols;
-+-------------------------------------+
-| c                                   |
-+-------------------------------------+
-| "{\"o1\":{},\"o2\":[],\"o3\":null}" |
-|                                     |
-+-------------------------------------+
++-----------------------------+
+| c                           |
++-----------------------------+
+| {"o1":{},"o2":[],"o3":null} |
+|                             |
++-----------------------------+
 (2 rows)
 
 !ok
@@ -158,12 +157,12 @@ FROM test_json_cols;
 #-------------------------------------------------------------------------
 SELECT json_query(c_empty_array_nested, '$.') c
 FROM test_json_cols;
-+----------------+
-| c              |
-+----------------+
-| "[{},[],null]" |
-|                |
-+----------------+
++--------------+
+| c            |
++--------------+
+| [{},[],null] |
+|              |
++--------------+
 (2 rows)
 
 !ok
@@ -177,7 +176,7 @@ WHERE s_str = 'A';
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -222,7 +221,7 @@ WHERE s_bool = 1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -312,7 +311,7 @@ WHERE json_value(c1, '$.a_str') = 'A';
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -327,7 +326,7 @@ WHERE json_value(c1, '$.a_num_int') = 1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -342,7 +341,7 @@ WHERE json_value(c1, '$.a_num_float') = 0.1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -357,7 +356,7 @@ WHERE json_value(c1, '$.a_bool') = 1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -383,12 +382,12 @@ WHERE json_value(c1, '$.a_null') IS NULL;
 #-------------------------------------------------------------------------
 SELECT json_query(c1, '$.a_empty_obj') c
 FROM test_json_cols;
-+---+
-| c |
-+---+
-|   |
-|   |
-+---+
++----+
+| c  |
++----+
+| {} |
+|    |
++----+
 (2 rows)
 
 !ok
@@ -398,12 +397,12 @@ FROM test_json_cols;
 #-------------------------------------------------------------------------
 SELECT json_query(c1, '$.a_empty_array') c
 FROM test_json_cols;
-+---+
-| c |
-+---+
-|   |
-|   |
-+---+
++----+
+| c  |
++----+
+| [] |
+|    |
++----+
 (2 rows)
 
 !ok
@@ -413,12 +412,12 @@ FROM test_json_cols;
 #-------------------------------------------------------------------------
 SELECT json_query(c1, '$.a_empty_obj_nested') c
 FROM test_json_cols;
-+---+
-| c |
-+---+
-|   |
-|   |
-+---+
++-----------------------------+
+| c                           |
++-----------------------------+
+| {"o1":{},"o2":[],"o3":null} |
+|                             |
++-----------------------------+
 (2 rows)
 
 !ok
@@ -428,12 +427,12 @@ FROM test_json_cols;
 #-------------------------------------------------------------------------
 SELECT json_query(c1, '$.a_empty_array_nested') c
 FROM test_json_cols;
-+---+
-| c |
-+---+
-|   |
-|   |
-+---+
++--------------+
+| c            |
++--------------+
+| [{},[],null] |
+|              |
++--------------+
 (2 rows)
 
 !ok
@@ -447,7 +446,7 @@ WHERE json_value(c1, '$.a_obj.a_obj.a_str') = 'A';
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -462,7 +461,7 @@ WHERE json_value(c1, '$.a_obj.a_obj.a_num_int') = 1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -477,7 +476,7 @@ WHERE json_value(c1, '$.a_obj.a_obj.a_num_float') = 0.1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -492,7 +491,7 @@ WHERE json_value(c1, '$.a_obj.a_obj.a_bool') = 1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -518,12 +517,12 @@ WHERE json_value(c1, '$.a_obj.a_obj.a_null') IS NULL;
 #-------------------------------------------------------------------------
 SELECT json_query(c1, '$.a_obj.a_obj.a_empty_obj') c
 FROM test_json_cols;
-+---+
-| c |
-+---+
-|   |
-|   |
-+---+
++----+
+| c  |
++----+
+| {} |
+|    |
++----+
 (2 rows)
 
 !ok
@@ -533,12 +532,12 @@ FROM test_json_cols;
 #-------------------------------------------------------------------------
 SELECT json_query(c1, '$.a_obj.a_obj.a_empty_array') c
 FROM test_json_cols;
-+---+
-| c |
-+---+
-|   |
-|   |
-+---+
++----+
+| c  |
++----+
+| [] |
+|    |
++----+
 (2 rows)
 
 !ok
@@ -548,12 +547,12 @@ FROM test_json_cols;
 #-------------------------------------------------------------------------
 SELECT json_query(c1, '$.a_obj.a_obj.a_empty_obj_nested') c
 FROM test_json_cols;
-+---+
-| c |
-+---+
-|   |
-|   |
-+---+
++-----------------------------+
+| c                           |
++-----------------------------+
+| {"o1":{},"o2":[],"o3":null} |
+|                             |
++-----------------------------+
 (2 rows)
 
 !ok
@@ -563,12 +562,12 @@ FROM test_json_cols;
 #-------------------------------------------------------------------------
 SELECT json_query(c1, '$.a_obj.a_obj.a_empty_array_nested') c
 FROM test_json_cols;
-+---+
-| c |
-+---+
-|   |
-|   |
-+---+
++--------------+
+| c            |
++--------------+
+| [{},[],null] |
+|              |
++--------------+
 (2 rows)
 
 !ok
@@ -582,7 +581,7 @@ WHERE json_value(c1, '$.a_obj.a_array[0].a_str') = 'A';
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -597,7 +596,7 @@ WHERE json_value(c1, '$.a_obj.a_array[0].a_num_int') = 1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -612,7 +611,7 @@ WHERE json_value(c1, '$.a_obj.a_array[0].a_num_float') = 0.1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -627,7 +626,7 @@ WHERE json_value(c1, '$.a_obj.a_array[0].a_bool') = 1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -653,12 +652,12 @@ WHERE json_value(c1, '$.a_obj.a_array[0].a_null') IS NULL;
 #-------------------------------------------------------------------------
 SELECT json_query(c1, '$.a_obj.a_array[0].a_empty_obj') c
 FROM test_json_cols;
-+---+
-| c |
-+---+
-|   |
-|   |
-+---+
++----+
+| c  |
++----+
+| {} |
+|    |
++----+
 (2 rows)
 
 !ok
@@ -668,12 +667,12 @@ FROM test_json_cols;
 #-------------------------------------------------------------------------
 SELECT json_query(c1, '$.a_obj.a_array[0].a_empty_array') c
 FROM test_json_cols;
-+---+
-| c |
-+---+
-|   |
-|   |
-+---+
++----+
+| c  |
++----+
+| [] |
+|    |
++----+
 (2 rows)
 
 !ok
@@ -683,12 +682,12 @@ FROM test_json_cols;
 #-------------------------------------------------------------------------
 SELECT json_query(c1, '$.a_obj.a_array[0].a_empty_obj_nested') c
 FROM test_json_cols;
-+---+
-| c |
-+---+
-|   |
-|   |
-+---+
++-----------------------------+
+| c                           |
++-----------------------------+
+| {"o1":{},"o2":[],"o3":null} |
+|                             |
++-----------------------------+
 (2 rows)
 
 !ok
@@ -698,12 +697,12 @@ FROM test_json_cols;
 #-------------------------------------------------------------------------
 SELECT json_query(c1, '$.a_obj.a_array[0].a_empty_array_nested') c
 FROM test_json_cols;
-+---+
-| c |
-+---+
-|   |
-|   |
-+---+
++--------------+
+| c            |
++--------------+
+| [{},[],null] |
+|              |
++--------------+
 (2 rows)
 
 !ok
@@ -717,7 +716,7 @@ WHERE json_value(c2, '$.b_array[1].b_str') = 'A';
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -732,7 +731,7 @@ WHERE json_value(c2, '$.b_array[1].b_num_int') = 1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 
@@ -747,7 +746,7 @@ WHERE json_value(c2, '$.b_array[1].b_num_float') = 0.1;
 +---+
 | c |
 +---+
-| 0 |
+| 1 |
 +---+
 (1 row)
 

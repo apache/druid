@@ -96,6 +96,11 @@ public class S3Utils
         // This can happen sometimes when AWS isn't able to obtain the credentials for some service:
         // https://github.com/aws/aws-sdk-java/issues/2285
         return true;
+      } else if (e instanceof AmazonS3Exception && ((AmazonS3Exception) e).getStatusCode() == 200 &&
+                 (e.getMessage().contains("InternalError") || e.getMessage().contains("SlowDown"))) {
+        // This can happen sometimes when AWS returns a 200 response with internal error message
+        // https://repost.aws/knowledge-center/s3-resolve-200-internalerror
+        return true;
       } else if (e instanceof InterruptedException) {
         Thread.interrupted(); // Clear interrupted state and not retry
         return false;
@@ -213,10 +218,15 @@ public class S3Utils
 
   static String constructSegmentPath(String baseKey, String storageDir)
   {
+    return constructSegmentBasePath(baseKey, storageDir) + "index.zip";
+  }
+
+  static String constructSegmentBasePath(String baseKey, String storageDir)
+  {
     return JOINER.join(
         baseKey.isEmpty() ? null : baseKey,
         storageDir
-    ) + "/index.zip";
+    ) + "/";
   }
 
   static AccessControlList grantFullControlToBucketOwner(ServerSideEncryptingAmazonS3 s3Client, String bucket)

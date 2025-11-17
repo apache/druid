@@ -23,12 +23,14 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorAndSize;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -47,7 +49,6 @@ import org.apache.druid.segment.column.ValueType;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -77,6 +78,8 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
   private final long minTimestamp;
   private final AtomicInteger rowCounter = new AtomicInteger(0);
   private final AtomicInteger numEntries = new AtomicInteger(0);
+  @Nullable
+  private final ValueMatcher valueMatcher;
 
   public OnHeapAggregateProjection(
       AggregateProjectionSpec projectionSpec,
@@ -96,7 +99,7 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
     // always have its time-like column in the grouping columns list, so its position in this array specifies -1
     this.parentDimensionIndex = new int[projectionSpec.getGroupingColumns().size()];
     Arrays.fill(parentDimensionIndex, -1);
-    this.dimensionsMap = new HashMap<>();
+    this.dimensionsMap = new LinkedHashMap<>();
     this.columnFormats = new LinkedHashMap<>();
 
     initializeAndValidateDimensions(projectionSpec, getBaseTableDimensionDesc);
@@ -120,6 +123,12 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
     this.aggregatorsMap = new LinkedHashMap<>();
     this.aggregatorFactories = new AggregatorFactory[projectionSchema.getAggregators().length];
     initializeAndValidateAggregators(projectionSpec, getBaseTableDimensionDesc, getBaseTableAggregatorFactory);
+
+    if (projectionSpec.getFilter() != null) {
+      valueMatcher = projectionSchema.getFilter().toFilter().makeMatcher(virtualSelectorFactory);
+    } else {
+      valueMatcher = null;
+    }
   }
 
   /**
@@ -133,6 +142,9 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
   )
   {
     inputRowHolder.set(inputRow);
+    if (valueMatcher != null && !valueMatcher.matches(false)) {
+      return;
+    }
     final Object[] projectionDims = new Object[dimensions.size()];
     for (int i = 0; i < projectionDims.length; i++) {
       int parentDimIndex = parentDimensionIndex[i];
@@ -149,10 +161,24 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
         projectionDims[i] = key.dims[parentDimensionIndex[i]];
       }
     }
+    final long timestamp;
+
+    if (projectionSchema.getTimeColumnName() != null) {
+      timestamp = projectionSchema.getEffectiveGranularity().bucketStart(DateTimes.utc(key.getTimestamp())).getMillis();
+      if (timestamp < minTimestamp) {
+        throw DruidException.defensive(
+            "Cannot add row[%s] to projection[%s] because projection effective timestamp[%s] is below the minTimestamp[%s]",
+            inputRow,
+            projectionSchema.getName(),
+            DateTimes.utc(timestamp),
+            DateTimes.utc(minTimestamp)
+        );
+      }
+    } else {
+      timestamp = minTimestamp;
+    }
     final IncrementalIndexRow subKey = new IncrementalIndexRow(
-        projectionSchema.getTimeColumnName() != null
-        ? projectionSchema.getGranularity().bucketStart(DateTimes.utc(key.getTimestamp())).getMillis()
-        : minTimestamp,
+        timestamp,
         projectionDims,
         dimensions
     );
@@ -379,6 +405,14 @@ public class OnHeapAggregateProjection implements IncrementalIndexRowSelector
       }
       final IncrementalIndex.DimensionDesc parent = getBaseTableDimensionDesc.apply(dimension.getName());
       if (parent == null) {
+        // ensure that this dimension refers to a virtual column, otherwise it is invalid
+        if (!projectionSpec.getVirtualColumns().exists(dimension.getName())) {
+          throw InvalidInput.exception(
+              "projection[%s] contains dimension[%s] that is not present on the base table or a virtual column",
+              projectionSpec.getName(),
+              dimension.getName()
+          );
+        }
         // this dimension only exists in the child, it needs its own handler
         final IncrementalIndex.DimensionDesc childOnly = new IncrementalIndex.DimensionDesc(
             i++,

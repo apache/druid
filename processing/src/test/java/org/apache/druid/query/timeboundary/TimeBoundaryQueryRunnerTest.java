@@ -43,18 +43,21 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IncrementalIndexSegment;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -68,6 +71,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -157,21 +161,27 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
 
     segment0 = new IncrementalIndexSegment(index0, makeIdentifier(index0, "v1"));
     segment1 = new IncrementalIndexSegment(index1, makeIdentifier(index1, "v1"));
+    final DataSegment dataSegment0 = TestHelper.toSimpleDataSegment(segment0, new NumberedShardSpec(0, 1));
+    final DataSegment dataSegment1 = TestHelper.toSimpleDataSegment(segment1, new NumberedShardSpec(0, 1));
+    Map<DataSegment, ReferenceCountedSegmentProvider> referenceProviders = Map.of(
+        dataSegment0, ReferenceCountedSegmentProvider.of(segment0),
+        dataSegment1, ReferenceCountedSegmentProvider.of(segment1)
+    );
 
-    VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = new VersionedIntervalTimeline<>(
+    VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(
         StringComparators.LEXICOGRAPHIC);
     timeline.add(
         index0.getInterval(),
         "v1",
-        new SingleElementPartitionChunk<>(ReferenceCountingSegment.wrapRootGenerationSegment(segment0))
+        new SingleElementPartitionChunk<>(dataSegment0)
     );
     timeline.add(
         index1.getInterval(),
         "v1",
-        new SingleElementPartitionChunk<>(ReferenceCountingSegment.wrapRootGenerationSegment(segment1))
+        new SingleElementPartitionChunk<>(dataSegment1)
     );
 
-    return QueryRunnerTestHelper.makeFilteringQueryRunner(timeline, FACTORY);
+    return QueryRunnerTestHelper.makeFilteringQueryRunner(timeline, referenceProviders, FACTORY);
   }
 
   @Test

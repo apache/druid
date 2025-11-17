@@ -68,6 +68,7 @@ import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.indexer.HadoopIndexTaskModule;
 import org.apache.druid.indexer.report.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
@@ -94,6 +95,10 @@ import org.apache.druid.indexing.worker.shuffle.LocalIntermediaryDataManager;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.input.InputSourceModule;
+import org.apache.druid.msq.guice.MSQDurableStorageModule;
+import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
+import org.apache.druid.msq.guice.MSQIndexingModule;
+import org.apache.druid.msq.guice.PeonMemoryManagementModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
@@ -117,7 +122,7 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
-import org.apache.druid.server.coordination.SegmentBootstrapper;
+import org.apache.druid.server.coordination.SegmentCacheBootstrapper;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordination.ZkCoordinator;
 import org.apache.druid.server.http.HistoricalResource;
@@ -219,7 +224,7 @@ public class CliPeon extends GuiceRunnable
         new QueryRunnerFactoryModule(),
         new SegmentWranglerModule(),
         new JoinableFactoryModule(),
-        new IndexingServiceTaskLogsModule(),
+        new IndexingServiceTaskLogsModule(properties),
         new Module()
         {
           @SuppressForbidden(reason = "System#out, System#err")
@@ -375,8 +380,13 @@ public class CliPeon extends GuiceRunnable
         new IndexingServiceInputSourceModule(),
         new IndexingServiceTuningConfigModule(),
         new InputSourceModule(),
+        new HadoopIndexTaskModule(),
         new ChatHandlerServerModule(properties),
-        new LookupModule()
+        new LookupModule(),
+        new MSQIndexingModule(),
+        new MSQDurableStorageModule(),
+        new MSQExternalDataSourceModule(),
+        new PeonMemoryManagementModule()
     );
   }
 
@@ -468,12 +478,17 @@ public class CliPeon extends GuiceRunnable
   static void bindPeonDataSegmentHandlers(Binder binder)
   {
     // Build it to make it bind even if nothing binds to it.
-    Binders.dataSegmentKillerBinder(binder);
-    binder.bind(DataSegmentKiller.class).to(OmniDataSegmentKiller.class).in(LazySingleton.class);
+    bindDataSegmentKiller(binder);
     Binders.dataSegmentMoverBinder(binder);
     binder.bind(DataSegmentMover.class).to(OmniDataSegmentMover.class).in(LazySingleton.class);
     Binders.dataSegmentArchiverBinder(binder);
     binder.bind(DataSegmentArchiver.class).to(OmniDataSegmentArchiver.class).in(LazySingleton.class);
+  }
+
+  static void bindDataSegmentKiller(Binder binder)
+  {
+    Binders.dataSegmentKillerBinder(binder);
+    binder.bind(DataSegmentKiller.class).to(OmniDataSegmentKiller.class).in(LazySingleton.class);
   }
 
   private static void configureTaskActionClient(Binder binder)
@@ -583,7 +598,7 @@ public class CliPeon extends GuiceRunnable
       if (isZkEnabled) {
         LifecycleModule.register(binder, ZkCoordinator.class);
       }
-      LifecycleModule.register(binder, SegmentBootstrapper.class);
+      LifecycleModule.register(binder, SegmentCacheBootstrapper.class);
     }
 
     @Provides

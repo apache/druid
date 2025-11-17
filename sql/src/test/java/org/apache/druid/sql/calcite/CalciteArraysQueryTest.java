@@ -72,6 +72,8 @@ import org.apache.druid.sql.calcite.DecoupledTestConfig.IgnoreQueriesReason;
 import org.apache.druid.sql.calcite.DecoupledTestConfig.QuidemTestCaseReason;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.http.SqlParameter;
@@ -1013,8 +1015,14 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayOverlapFilterWithExtractionFn()
   {
+    final Map<String, Object> queryContext = QueryContexts.override(
+        QUERY_CONTEXT_DEFAULT,
+        Map.of(PlannerContext.CTX_SQL_USE_EXTRACTION_FNS, true)
+    );
+
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE ARRAY_OVERLAP(SUBSTRING(dim3, 1, 1), ARRAY['a','b']) LIMIT 5",
+        queryContext,
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE3)
@@ -1026,7 +1034,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .columnTypes(ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(queryContext)
                 .build()
         ),
         ImmutableList.of(
@@ -1292,6 +1300,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayContainsFilterWithExtractionFn()
   {
+    final Map<String, Object> queryContext = QueryContexts.override(
+        QUERY_CONTEXT_DEFAULT,
+        ImmutableMap.of(PlannerContext.CTX_SQL_USE_EXTRACTION_FNS, true)
+    );
+
     Druids.ScanQueryBuilder builder = newScanQueryBuilder()
         .dataSource(CalciteTests.DATASOURCE3)
         .intervals(querySegmentSpec(Filtration.eternity()))
@@ -1309,6 +1322,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         );
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE ARRAY_CONTAINS(SUBSTRING(dim3, 1, 1), ARRAY['a','b']) LIMIT 5",
+        queryContext,
         ImmutableList.of(builder.build()),
         ImmutableList.of(
             new Object[]{"[\"a\",\"b\"]"}
@@ -1598,7 +1612,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     // the Scan query in native reads this makeColumnValueSelector. Behavior of those selectors is inconsistent.
     // The DimensionSelector returns an empty list; the ColumnValueSelector returns a list containing a single null.
     final String expectedValueForEmptyMvd =
-        queryFramework().engine().name().equals("msq-task")
+        isRunningMSQ()
         ? null
         : "not abd";
 
@@ -2650,6 +2664,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.DD_RESULT_MISMATCH_FLOAT_DOUBLE)
   @Test
   public void testArrayAggNumeric()
   {
@@ -3482,9 +3497,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayAggGroupByArrayAggFromSubquery()
   {
+    final Map<String, Object> context =
+        QueryContexts.override(QUERY_CONTEXT_NO_STRINGIFY_ARRAY, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
     testQuery(
         "SELECT dim2, arr, COUNT(*) FROM (SELECT dim2, ARRAY_AGG(DISTINCT dim1) as arr FROM foo WHERE dim1 is not null GROUP BY 1 LIMIT 5) GROUP BY 1,2",
-        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        context,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -3517,7 +3534,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 ))
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .granularity(Granularities.ALL)
-                .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                .context(context)
                 .postAggregators(expressionPostAgg("s0", "1", ColumnType.LONG))
                 .build()
         ),
@@ -3872,7 +3889,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 
   }
 
-  @NotYetSupported(Modes.UNNEST_INLINED)
+  @NotYetSupported({Modes.UNNEST_INLINED, Modes.DD_UNNEST_INLINED})
   @Test
   public void testUnnestInline()
   {
@@ -3906,7 +3923,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.UNNEST_INLINED)
+  @NotYetSupported({Modes.UNNEST_INLINED, Modes.DD_UNNEST_INLINED})
   @Test
   public void testUnnestInlineWithCount()
   {
@@ -3937,7 +3954,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.UNNEST_RESULT_MISMATCH)
+  @NotYetSupported({Modes.UNNEST_RESULT_MISMATCH, Modes.DD_UNNEST_RESULT_MISMATCH})
   @Test
   public void testUnnest()
   {
@@ -4319,7 +4336,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.UNNEST_RESULT_MISMATCH)
+  @NotYetSupported({Modes.UNNEST_RESULT_MISMATCH, Modes.DD_UNNEST_RESULT_MISMATCH})
   @Test
   public void testUnnestTwice()
   {
@@ -4876,7 +4893,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.UNNEST_RESULT_MISMATCH)
+  @NotYetSupported({Modes.UNNEST_RESULT_MISMATCH, Modes.DD_UNNEST_RESULT_MISMATCH})
   @Test
   public void testUnnestWithGroupBy()
   {
@@ -4939,7 +4956,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.UNNEST_RESULT_MISMATCH)
+  @NotYetSupported({Modes.UNNEST_RESULT_MISMATCH, Modes.DD_UNNEST_RESULT_MISMATCH})
   @Test
   public void testUnnestWithGroupByOrderBy()
   {
@@ -4983,13 +5000,15 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.UNNEST_RESULT_MISMATCH)
+  @NotYetSupported({Modes.UNNEST_RESULT_MISMATCH, Modes.DD_UNNEST_RESULT_MISMATCH})
   @Test
   public void testUnnestWithGroupByOrderByWithLimit()
   {
+    final Map<String, Object> context =
+        QueryContexts.override(QUERY_CONTEXT_UNNEST, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
     testQuery(
         "SELECT d3, COUNT(*) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) AS unnested(d3) GROUP BY d3 ORDER BY d3 ASC LIMIT 4 ",
-        QUERY_CONTEXT_UNNEST,
+        context,
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(UnnestDataSource.create(
@@ -5002,7 +5021,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
                 .threshold(4)
                 .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                .context(QUERY_CONTEXT_UNNEST)
+                .context(context)
                 .build()
         ),
         ImmutableList.of(
@@ -5075,7 +5094,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.UNNEST_RESULT_MISMATCH)
+  @NotYetSupported({Modes.UNNEST_RESULT_MISMATCH, Modes.DD_UNNEST_RESULT_MISMATCH})
   @Test
   public void testUnnestFirstQueryOnSelect()
   {
@@ -5431,7 +5450,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.UNNEST_RESULT_MISMATCH)
+  @NotYetSupported({Modes.UNNEST_RESULT_MISMATCH, Modes.DD_UNNEST_RESULT_MISMATCH})
   @Test
   public void testUnnestWithInFilters()
   {
@@ -5549,7 +5568,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.UNNEST_RESULT_MISMATCH)
+  @NotYetSupported({Modes.UNNEST_RESULT_MISMATCH, Modes.DD_UNNEST_RESULT_MISMATCH})
   @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.UNNEST_EXTRA_SCANQUERY)
   @Test
   public void testUnnestWithJoinOnTheLeft()
@@ -5601,7 +5620,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.UNNEST_INLINED)
+  @NotYetSupported({Modes.UNNEST_INLINED, Modes.DD_UNNEST_INLINED})
   @Test
   public void testUnnestWithConstant()
   {
@@ -5659,7 +5678,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.UNNEST_RESULT_MISMATCH)
+  @NotYetSupported({Modes.UNNEST_RESULT_MISMATCH, Modes.DD_UNNEST_RESULT_MISMATCH})
   @Test
   public void testUnnestWithSQLFunctionOnUnnestedColumn()
   {
@@ -6191,7 +6210,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.UNNEST_RESULT_MISMATCH)
+  @NotYetSupported({Modes.UNNEST_RESULT_MISMATCH, Modes.DD_UNNEST_RESULT_MISMATCH})
   @Test
   public void testUnnestWithCountOnColumn()
   {
@@ -7394,5 +7413,62 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             new Object[]{null, 3L}
         )
     );
+  }
+
+
+  @Test
+  public void testSimpleArraysUnnest()
+  {
+    skipVectorize();
+    testBuilder()
+        .sql("SELECT label,l_arr,val from larry,unnest(l_arr) as u(val)")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {"[1]", "[1]", 1L},
+                new Object[] {"[2,3]", "[2,3]", 2L},
+                new Object[] {"[2,3]", "[2,3]", 3L},
+                new Object[] {"[null]", "[null]", null}
+            )
+        )
+        .run();
+  }
+
+  @Test
+  public void testMvToArrayResults()
+  {
+    skipVectorize();
+    testBuilder()
+        .sql("SELECT label,l_arr,mv_to_array(mv) from larry")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{"[1]", "[1]", "[\"1\"]"},
+                new Object[]{"[2,3]", "[2,3]", "[\"2\",\"3\"]"},
+                new Object[]{"[]", "[]", null},
+                new Object[]{"[null]", "[null]", null},
+                new Object[]{"null", null, null}
+            )
+        )
+        .run();
+  }
+
+  @NotYetSupported({Modes.UNNEST_RESULT_MISMATCH, Modes.DD_UNNEST_RESULT_MISMATCH})
+  @Test
+  public void testMvToArrayUnnest()
+  {
+    skipVectorize();
+    testBuilder()
+        .sql("SELECT label,l_arr,mv_to_array(mv),val from larry,unnest(mv_to_array(mv)) as u(val)")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{"[1]", "[1]", "[\"1\"]", "1"},
+                new Object[]{"[2,3]", "[2,3]", "[\"2\",\"3\"]", "2"},
+                new Object[]{"[2,3]", "[2,3]", "[\"2\",\"3\"]", "3"},
+                // below results will be missing in decoupled mode
+                new Object[]{"[]", "[]", null, null},
+                new Object[]{"[null]", "[null]", null, null},
+                new Object[]{"null", null, null, null}
+            )
+        )
+        .run();
   }
 }

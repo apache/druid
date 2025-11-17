@@ -30,6 +30,7 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.AppendableIndexBuilder;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
+import org.apache.druid.utils.JvmUtils;
 import org.apache.druid.utils.RuntimeInfo;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -191,11 +192,13 @@ public class SeekableStreamAppenderatorConfigTest
       super(
           null,
           numThreads,
+          null,
           numMergeBuffers,
           null,
           null,
           new DruidProcessingBufferConfig(HumanReadableBytes.valueOf(bufferSize), null, null),
-          null
+          null,
+          JvmUtils.getRuntimeInfo()
       );
     }
   }

@@ -137,7 +137,7 @@ public class CompactionSupervisorSpecTest
     supervisor.start();
     supervisor.stop(false);
 
-    Mockito.verify(scheduler, Mockito.times(1)).startCompaction(TestDataSource.WIKI, spec);
+    Mockito.verify(scheduler, Mockito.times(1)).startCompaction(TestDataSource.WIKI, supervisor);
     Mockito.verify(scheduler, Mockito.times(1)).stopCompaction(TestDataSource.WIKI);
   }
 
@@ -157,7 +157,7 @@ public class CompactionSupervisorSpecTest
     supervisor.start();
     supervisor.stop(false);
 
-    Mockito.verify(scheduler, Mockito.times(1)).startCompaction(TestDataSource.WIKI, spec);
+    Mockito.verify(scheduler, Mockito.times(1)).startCompaction(TestDataSource.WIKI, supervisor);
     Mockito.verify(scheduler, Mockito.times(1)).stopCompaction(TestDataSource.WIKI);
   }
 
@@ -214,6 +214,17 @@ public class CompactionSupervisorSpecTest
     Assert.assertEquals(activeSpec.getId(), suspendedSpec.getId());
     Assert.assertEquals(activeSpec.getSpec(), suspendedSpec.getSpec());
     Assert.assertEquals(activeSpec.getDataSources(), suspendedSpec.getDataSources());
+  }
+
+  @Test
+  public void test_getInputSourceResources_returnsEmpty()
+  {
+    final CompactionSupervisorSpec supervisorSpec = new CompactionSupervisorSpec(
+        InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        true,
+        scheduler
+    );
+    Assert.assertTrue(supervisorSpec.getInputSourceResources().isEmpty());
   }
 
   private void testSerde(CompactionSupervisorSpec spec)

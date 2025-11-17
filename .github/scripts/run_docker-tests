@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Runs Docker tests
+# Requires environment variable DRUID_DIST_IMAGE_NAME
+
+set -e
+
+DRUID_IMAGE_NAME_ENV="DRUID_DIST_IMAGE_NAME"
+DRUID_IMAGE_NAME=$DRUID_DIST_IMAGE_NAME
+
+DRUID_IMAGE_SYS_PROPERTY="druid.testing.docker.image"
+
+if [ -z "${DRUID_IMAGE_NAME}" ]; then
+  echo "ERROR!! Environment variable [$DRUID_IMAGE_NAME_ENV] not set!"
+  echo "Run 'export $DRUID_IMAGE_NAME_ENV=<druid-image-to-test>' to specify the image to use in the Docker tests."
+  exit 1
+else
+  echo "Running Docker tests with image[$DRUID_IMAGE_NAME]"
+fi
+
+# No snapshot updates
+OPTS+=" -nsu"
+OPTS+=" -pl !integration-tests"
+mvn -B $OPTS verify -Pdocker-tests,skip-static-checks -DskipUTs -D$DRUID_IMAGE_SYS_PROPERTY=$DRUID_IMAGE_NAME "-DjfrProfilerArgLine=$JFR_PROFILER_ARG_LINE" "$@"

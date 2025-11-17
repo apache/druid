@@ -108,6 +108,12 @@ public interface CoordinatorSimulation
     void loadQueuedSegments();
 
     /**
+     * Finishes load of all the segments that were queued in the previous
+     * coordinator run. Does not execute the respective callbacks on the coordinator.
+     */
+    void loadQueuedSegmentsSkipCallbacks();
+
+    /**
      * Removes the specified server from the cluster.
      */
     void removeServer(DruidServer server);
@@ -121,5 +127,10 @@ public interface CoordinatorSimulation
      * Publishes the given segments to the cluster.
      */
     void addSegments(List<DataSegment> segments);
+
+    /**
+     * Deletes the given segments from the cluster.
+     */
+    void deleteSegments(List<DataSegment> segments);
   }
 }

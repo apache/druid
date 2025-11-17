@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.view;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
@@ -77,7 +78,6 @@ public class ViewSqlEngine implements SqlEngine
       case TOPN_QUERY:
       case TIMESERIES_QUERY:
       case TIME_BOUNDARY_QUERY:
-      case SCAN_NEEDS_SIGNATURE:
       case GROUPBY_IMPLICITLY_SORTS:
         return false;
 
@@ -124,6 +124,13 @@ public class ViewSqlEngine implements SqlEngine
   public QueryMaker buildQueryMakerForInsert(IngestDestination destination, RelRoot relRoot, PlannerContext plannerContext)
   {
     // Can't have views of INSERT or REPLACE statements.
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public SqlStatementFactory getSqlStatementFactory()
+  {
+    // View engine does not execute queries.
     throw new UnsupportedOperationException();
   }
 }

@@ -21,7 +21,7 @@ package org.apache.druid.segment.data;
 
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.io.Channels;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
@@ -78,7 +78,7 @@ public final class FixedIndexedIntWriter implements Serializer
   @Override
   public void writeTo(
       WritableByteChannel channel,
-      FileSmoosher smoosher
+      SegmentFileBuilder fileBuilder
   ) throws IOException
   {
     scratch.clear();

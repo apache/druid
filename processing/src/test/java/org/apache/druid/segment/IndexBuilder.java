@@ -40,7 +40,6 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -76,7 +75,7 @@ public class IndexBuilder
   private SegmentWriteOutMediumFactory segmentWriteOutMediumFactory = OffHeapMemorySegmentWriteOutMediumFactory.instance();
   private IndexMerger indexMerger;
   private File tmpDir;
-  private IndexSpec indexSpec = IndexSpec.DEFAULT;
+  private IndexSpec indexSpec = IndexSpec.getDefault();
   private int maxRows = DEFAULT_MAX_ROWS;
   private int intermediatePersistSize = ROWS_PER_INDEX_FOR_MERGING;
   private IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
@@ -449,13 +448,8 @@ public class IndexBuilder
         .build();
 
     while (rows.hasNext()) {
-      try {
-        InputRow row = rows.next();
-        incrementalIndex.add(row);
-      }
-      catch (IndexSizeExceededException e) {
-        throw new RuntimeException(e);
-      }
+      InputRow row = rows.next();
+      incrementalIndex.add(row);
     }
     return incrementalIndex;
   }
@@ -471,10 +465,10 @@ public class IndexBuilder
     Preconditions.checkNotNull(inputSource, "inputSource");
     Preconditions.checkNotNull(inputFormat, "inputFormat");
     Preconditions.checkNotNull(inputSourceTmpDir, "inputSourceTmpDir");
-    TransformSpec tranformer = transformSpec != null ? transformSpec : TransformSpec.NONE;
+    TransformSpec transformer = transformSpec != null ? transformSpec : TransformSpec.NONE;
     InputRowSchema rowSchema = new InputRowSchema(schema.getTimestampSpec(), schema.getDimensionsSpec(), null);
     InputSourceReader reader = inputSource.reader(rowSchema, inputFormat, inputSourceTmpDir);
-    InputSourceReader transformingReader = tranformer.decorate(reader);
+    InputSourceReader transformingReader = transformer.decorate(reader);
     return transformingReader;
   }
 

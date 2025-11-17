@@ -44,6 +44,8 @@ import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.Appenderators;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.segment.realtime.appenderator.TaskDirectory;
+import org.apache.druid.segment.realtime.appenderator.TaskIntervalUnlocker;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.Interval;
 
@@ -57,6 +59,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
+      TaskDirectory taskDirectory,
       SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
@@ -73,7 +76,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       PolicyEnforcer policyEnforcer,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      TaskIntervalUnlocker taskIntervalUnlocker
   )
   {
     realtimeAppenderator = Appenderators.createRealtime(
@@ -96,7 +100,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         policyEnforcer,
         rowIngestionMeters,
         parseExceptionHandler,
-        centralizedDatasourceSchemaConfig
+        centralizedDatasourceSchemaConfig,
+        taskIntervalUnlocker
     );
     return realtimeAppenderator;
   }
@@ -106,6 +111,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
+      TaskDirectory taskDirectory,
       SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,

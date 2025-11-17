@@ -101,7 +101,7 @@ public class IndexerSQLMetadataStorageCoordinatorReadOnlyTest extends IndexerSql
     cachePollExecutor = new BlockingExecutorService("test-cache-poll-exec");
     segmentMetadataCache = new HeapMemorySegmentMetadataCache(
         mapper,
-        () -> new SegmentsMetadataManagerConfig(null, cacheMode),
+        () -> new SegmentsMetadataManagerConfig(null, cacheMode, null),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         new NoopSegmentSchemaCache(),
         derbyConnector,
@@ -203,7 +203,7 @@ public class IndexerSQLMetadataStorageCoordinatorReadOnlyTest extends IndexerSql
         () -> readOnlyStorage.commitSegments(Set.of(defaultSegment), null)
     );
     verifyThrowsDefensiveException(
-        () -> readOnlyStorage.commitSegmentsAndMetadata(Set.of(defaultSegment), null, null, null)
+        () -> readOnlyStorage.commitSegmentsAndMetadata(Set.of(defaultSegment), null, null, null, null)
     );
     verifyThrowsDefensiveException(
         () -> readOnlyStorage.commitAppendSegments(
@@ -219,6 +219,7 @@ public class IndexerSQLMetadataStorageCoordinatorReadOnlyTest extends IndexerSql
             Map.of(),
             null,
             null,
+            null,
             "allocator",
             null
         )
@@ -228,6 +229,7 @@ public class IndexerSQLMetadataStorageCoordinatorReadOnlyTest extends IndexerSql
     );
     verifyThrowsDefensiveException(
         () -> readOnlyStorage.commitMetadataOnly(
+            TestDataSource.WIKI,
             TestDataSource.WIKI,
             new ObjectMetadata("A"),
             new ObjectMetadata("B")

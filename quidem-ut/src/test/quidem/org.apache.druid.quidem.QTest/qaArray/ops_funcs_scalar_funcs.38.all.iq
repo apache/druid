@@ -1,6 +1,5 @@
-!set dartQueryId 00000000-0000-0000-0000-000000000000
 !set useApproximateCountDistinct false
-!use druidtest://?componentSupplier=StandardAndMSQComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
+!use druidtest://?componentSupplier=AllDruidEnginesComponentSupplier&datasets=sql/src/test/quidem/qatests/qaArray/ops_funcs
 !set outputformat mysql
 #-------------------------------------------------------------------------
 # TESTCASE: test_scalar_funcs TEST_ID: A3_B16_C23_D1
@@ -23,7 +22,7 @@ Cannot apply 'TIMESTAMPDIFF' to arguments of type 'TIMESTAMPDIFF(
 #-------------------------------------------------------------------------
 SELECT greatest(a_bool, a_bool) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'GREATEST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -31,7 +30,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT greatest(json_value(a_nested, '$[0]' RETURNING boolean array), json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'GREATEST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -39,7 +38,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT greatest(json_value(a_nested, '$[7][0]' RETURNING boolean array), json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'GREATEST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -47,7 +46,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT greatest(a_int, a_int) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'GREATEST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -55,7 +54,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT greatest(json_value(a_nested, '$[1]' RETURNING bigint array), json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'GREATEST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -63,7 +62,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT greatest(json_value(a_nested, '$[7][1]' RETURNING bigint array), json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'GREATEST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -71,7 +70,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT greatest(a_float, a_float) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'GREATEST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -79,7 +78,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT greatest(json_value(a_nested, '$[2]' RETURNING decimal array), json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'GREATEST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -87,7 +86,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT greatest(json_value(a_nested, '$[7][2]' RETURNING decimal array), json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'GREATEST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -95,7 +94,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT greatest(a_str, a_str) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'GREATEST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -103,7 +102,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT greatest(json_value(a_nested, '$[3]' RETURNING varchar array), json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'GREATEST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -111,7 +110,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT greatest(json_value(a_nested, '$[7][3]' RETURNING varchar array), json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'GREATEST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -119,7 +118,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT greatest(a_null, a_null) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'GREATEST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -127,7 +126,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT greatest(json_value(a_nested, '$[4]' RETURNING varchar array), json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'GREATEST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -135,7 +134,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT greatest(json_value(a_nested, '$[7][4]' RETURNING varchar array), json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'GREATEST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -143,7 +142,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT greatest(a_empty, a_empty) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'GREATEST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -151,7 +150,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT greatest(json_value(a_nested, '$[5]' RETURNING varchar array), json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'GREATEST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -159,7 +158,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT greatest(json_value(a_nested, '$[7][5]' RETURNING varchar array), json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'GREATEST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -167,7 +166,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT greatest(a_mixed, a_mixed) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'GREATEST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -175,7 +174,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT greatest(json_value(a_nested, '$[6]' RETURNING varchar array), json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'GREATEST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -183,7 +182,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT greatest(json_value(a_nested, '$[7][6]' RETURNING varchar array), json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'GREATEST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -191,7 +190,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT greatest(a_nested, a_nested) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'GREATEST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -199,7 +198,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT least(a_bool, a_bool) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'LEAST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -207,7 +206,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT least(json_value(a_nested, '$[0]' RETURNING boolean array), json_value(a_nested, '$[0]' RETURNING boolean array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'LEAST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -215,7 +214,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT least(json_value(a_nested, '$[7][0]' RETURNING boolean array), json_value(a_nested, '$[7][0]' RETURNING boolean array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'LEAST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -223,7 +222,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT least(a_int, a_int) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'LEAST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -231,7 +230,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT least(json_value(a_nested, '$[1]' RETURNING bigint array), json_value(a_nested, '$[1]' RETURNING bigint array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'LEAST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -239,7 +238,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT least(json_value(a_nested, '$[7][1]' RETURNING bigint array), json_value(a_nested, '$[7][1]' RETURNING bigint array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'LEAST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -247,7 +246,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT least(a_float, a_float) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'LEAST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -255,7 +254,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT least(json_value(a_nested, '$[2]' RETURNING decimal array), json_value(a_nested, '$[2]' RETURNING decimal array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'LEAST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -263,7 +262,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT least(json_value(a_nested, '$[7][2]' RETURNING decimal array), json_value(a_nested, '$[7][2]' RETURNING decimal array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'LEAST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -271,7 +270,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT least(a_str, a_str) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'LEAST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -279,7 +278,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT least(json_value(a_nested, '$[3]' RETURNING varchar array), json_value(a_nested, '$[3]' RETURNING varchar array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'LEAST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -287,7 +286,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT least(json_value(a_nested, '$[7][3]' RETURNING varchar array), json_value(a_nested, '$[7][3]' RETURNING varchar array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'LEAST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -295,7 +294,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT least(a_null, a_null) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'LEAST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -303,7 +302,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT least(json_value(a_nested, '$[4]' RETURNING varchar array), json_value(a_nested, '$[4]' RETURNING varchar array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'LEAST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -311,7 +310,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT least(json_value(a_nested, '$[7][4]' RETURNING varchar array), json_value(a_nested, '$[7][4]' RETURNING varchar array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'LEAST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -319,7 +318,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT least(a_empty, a_empty) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'LEAST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -327,7 +326,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT least(json_value(a_nested, '$[5]' RETURNING varchar array), json_value(a_nested, '$[5]' RETURNING varchar array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'LEAST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -335,7 +334,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT least(json_value(a_nested, '$[7][5]' RETURNING varchar array), json_value(a_nested, '$[7][5]' RETURNING varchar array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'LEAST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -343,7 +342,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT least(a_mixed, a_mixed) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'LEAST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -351,7 +350,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT least(json_value(a_nested, '$[6]' RETURNING varchar array), json_value(a_nested, '$[6]' RETURNING varchar array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'LEAST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -359,7 +358,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT least(json_value(a_nested, '$[7][6]' RETURNING varchar array), json_value(a_nested, '$[7][6]' RETURNING varchar array)) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'LEAST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------
@@ -367,7 +366,7 @@ AvaticaSqlException
 #-------------------------------------------------------------------------
 SELECT least(a_nested, a_nested) AS col
 FROM test_array;
-AvaticaSqlException
+Cannot apply 'LEAST' to arguments of type
 !error
 
 #-------------------------------------------------------------------------

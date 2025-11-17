@@ -24,9 +24,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.indexing.kafka.KafkaIndexTask;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskClientFactory;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
@@ -40,14 +42,10 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
@@ -57,6 +55,7 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
 
   @JsonCreator
   public KafkaSupervisorSpec(
+      @JsonProperty("id") @Nullable String id,
       @JsonProperty("spec") @Nullable KafkaSupervisorIngestionSpec ingestionSchema,
       @JsonProperty("dataSchema") @Nullable DataSchema dataSchema,
       @JsonProperty("tuningConfig") @Nullable KafkaSupervisorTuningConfig tuningConfig,
@@ -75,14 +74,10 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
   )
   {
     super(
-        ingestionSchema != null
-        ? ingestionSchema
-        : new KafkaSupervisorIngestionSpec(
-            dataSchema,
-            ioConfig,
-            tuningConfig != null
-            ? tuningConfig
-            : KafkaSupervisorTuningConfig.defaultConfig()
+        id,
+        Configs.valueOrDefault(
+            ingestionSchema,
+            new KafkaSupervisorIngestionSpec(dataSchema, ioConfig, tuningConfig)
         ),
         context,
         suspended,
@@ -109,10 +104,7 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
   @Override
   public Set<ResourceAction> getInputSourceResources()
   {
-    return Collections.singleton(new ResourceAction(
-        new Resource(TASK_TYPE, ResourceType.EXTERNAL),
-        Action.READ
-    ));
+    return KafkaIndexTask.INPUT_SOURCE_RESOURCES;
   }
 
   @Override
@@ -162,6 +154,7 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
   protected KafkaSupervisorSpec toggleSuspend(boolean suspend)
   {
     return new KafkaSupervisorSpec(
+        getId(),
         getSpec(),
         getDataSchema(),
         getTuningConfig(),

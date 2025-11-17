@@ -54,9 +54,7 @@ import org.apache.druid.query.aggregation.firstlast.first.StringFirstAggregatorF
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -77,6 +75,7 @@ import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactor
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.timeline.DataSegment;
@@ -129,13 +128,15 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
       cannotVectorize();
     }
+    final Map<String, Object> contextWithLexicographicTopN =
+        QueryContexts.override(queryContext, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
     testQuery(
         "SELECT\n"
         + "  SUM(cnt),\n"
         + "  COUNT(*)\n"
         + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2 LIMIT 1)\n"
         + "WHERE cnt > 0",
-        queryContext,
+        contextWithLexicographicTopN,
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(
@@ -158,7 +159,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                             new LongSumAggregatorFactory("_a0", "a0"),
                             new CountAggregatorFactory("_a1")
                         ))
-                        .setContext(queryContext)
+                        .setContext(contextWithLexicographicTopN)
                         .build()
         ),
         ImmutableList.of(
@@ -250,14 +251,17 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                                             .setDataSource(CalciteTests.DATASOURCE1)
                                                             .setInterval(querySegmentSpec(Filtration.eternity()))
                                                             .setGranularity(Granularities.ALL)
+                                                            .setVirtualColumns(
+                                                                expressionVirtualColumn(
+                                                                    "v0",
+                                                                    "substring(\"dim1\", 0, 1)",
+                                                                    ColumnType.STRING
+                                                                )
+                                                            )
                                                             .setDimFilter(not(equality("dim1", "", ColumnType.STRING)))
                                                             .setDimensions(
                                                                 dimensions(
-                                                                    new ExtractionDimensionSpec(
-                                                                        "dim1",
-                                                                        "d0",
-                                                                        new SubstringDimExtractionFn(0, 1)
-                                                                    )
+                                                                    new DefaultDimensionSpec("v0", "d0")
                                                                 )
                                                             )
                                                             .setContext(QUERY_CONTEXT_DEFAULT)
@@ -737,6 +741,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   {
     Map<String, Object> modifiedQueryContext = new HashMap<>(queryContext);
     modifiedQueryContext.put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, 1);
+    modifiedQueryContext.put(PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
 
     testQueryThrows(
         "SELECT\n"
@@ -764,6 +769,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     // row limit for the subquery
     Map<String, Object> modifiedQueryContext = new HashMap<>(queryContext);
     modifiedQueryContext.put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, 1);
+    modifiedQueryContext.put(PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
 
     testQuery(
         "SELECT\n"
@@ -784,6 +790,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                     .aggregators(new LongSumAggregatorFactory("a0", "cnt"))
                                     .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
                                     .threshold(1)
+                                    .context(modifiedQueryContext)
                                     .build()
                             )
                         )
@@ -794,7 +801,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                             new LongSumAggregatorFactory("_a0", "a0"),
                             new CountAggregatorFactory("_a1")
                         ))
-                        .setContext(queryContext)
+                        .setContext(modifiedQueryContext)
                         .build()
         ),
         ImmutableList.of(
@@ -1444,6 +1451,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
         new Object[]{"def", "abc", "def"}
     );
 
+    final Map<String, Object> contextWithTopN =
+        QueryContexts.override(queryContext, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
     testQuery(
         "SELECT a.dim1, a.e_dim2, b.dim1 "
         + "FROM ("
@@ -1453,7 +1462,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
         + " LIMIT 100"
         + ") a "
         + "INNER JOIN foo b ON a.dim1 = b.dim1",
-        queryContext,
+        contextWithTopN,
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(
@@ -1491,7 +1500,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Intervals.ETERNITY))
                 .columns("d0", "a0", "j0.dim1")
                 .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(contextWithTopN)
                 .build()
         ),
         expectedResults

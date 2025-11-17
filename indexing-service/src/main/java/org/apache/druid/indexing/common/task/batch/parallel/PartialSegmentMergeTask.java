@@ -45,7 +45,6 @@ import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
-import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.SegmentSchemaMapping;
@@ -55,6 +54,7 @@ import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.realtime.appenderator.TaskSegmentSchemaUtil;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
@@ -143,8 +143,8 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     final Map<Interval, Int2ObjectMap<List<PartitionLocation>>> intervalToBuckets = new HashMap<>();
     for (PartitionLocation location : ioConfig.getPartitionLocations()) {
       intervalToBuckets.computeIfAbsent(location.getInterval(), k -> new Int2ObjectOpenHashMap<>())
-                         .computeIfAbsent(location.getBucketId(), k -> new ArrayList<>())
-                         .add(location);
+                       .computeIfAbsent(location.getBucketId(), k -> new ArrayList<>())
+                       .add(location);
     }
 
     final List<TaskLock> locks = toolbox.getTaskActionClient().submit(
@@ -232,8 +232,8 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         for (PartitionLocation location : entryPerBucketId.getValue()) {
           final File unzippedDir = toolbox.getShuffleClient().fetchSegmentFile(partitionDir, getSupervisorTaskId(), location);
           intervalToUnzippedFiles.computeIfAbsent(interval, k -> new Int2ObjectOpenHashMap<>())
-              .computeIfAbsent(bucketId, k -> new ArrayList<>())
-              .add(unzippedDir);
+                                 .computeIfAbsent(bucketId, k -> new ArrayList<>())
+                                 .add(unzippedDir);
         }
       }
     }
@@ -270,7 +270,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
             dataSchema,
             tuningConfig,
             toolbox.getIndexIO(),
-            toolbox.getIndexMergerV9(),
+            toolbox.getIndexMerger(),
             segmentFilesToMerge,
             tuningConfig.getMaxNumSegmentsToMerge(),
             persistDir,
@@ -286,24 +286,24 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         final List<String> metricNames = Arrays.stream(dataSchema.getAggregators())
                                                .map(AggregatorFactory::getName)
                                                .collect(Collectors.toList());
+        SegmentId segmentId = SegmentId.of(
+            getDataSource(),
+            interval,
+            Preconditions.checkNotNull(AbstractBatchIndexTask.findVersion(
+                intervalToVersion,
+                interval
+            ), "version for interval[%s]", interval),
+            0
+        );
 
         final DataSegment segment = segmentPusher.push(
             mergedFileAndDimensionNames.lhs,
-            new DataSegment(
-                getDataSource(),
-                interval,
-                Preconditions.checkNotNull(
-                    AbstractBatchIndexTask.findVersion(intervalToVersion, interval),
-                    "version for interval[%s]",
-                    interval
-                ),
-                null, // will be filled in the segmentPusher
-                mergedFileAndDimensionNames.rhs,
-                metricNames,
-                createShardSpec(toolbox, interval, bucketId),
-                null, // will be filled in the segmentPusher
-                0     // will be filled in the segmentPusher
-            ),
+            DataSegment.builder(segmentId)
+                       .shardSpec(createShardSpec(toolbox, interval, bucketId))
+                       .dimensions(mergedFileAndDimensionNames.rhs)
+                       .metrics(metricNames)
+                       .projections(dataSchema.getProjectionNames())
+                       .build(),
             false
         );
         long pushFinishTime = System.nanoTime();
@@ -345,7 +345,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
       DataSchema dataSchema,
       ParallelIndexTuningConfig tuningConfig,
       IndexIO indexIO,
-      IndexMergerV9 merger,
+      IndexMerger merger,
       List<File> indexes,
       int maxNumSegmentsToMerge,
       File baseOutDir,

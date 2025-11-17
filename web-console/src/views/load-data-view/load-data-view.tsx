@@ -204,6 +204,7 @@ import {
   TransformMessage,
   TuningMessage,
 } from './info-messages';
+import { INGESTION_SPEC_COMPLETIONS } from './ingestion-spec-completions';
 import { ParseDataTable } from './parse-data-table/parse-data-table';
 import {
   ParseTimeTable,
@@ -1181,7 +1182,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         </p>
         <p>
           For more information please refer to the{' '}
-          <ExternalLink href={`${getLink('DOCS')}/operations/including-extensions`}>
+          <ExternalLink href={`${getLink('DOCS')}/configuration/extensions#loading-extensions`}>
             documentation on loading extensions
           </ExternalLink>
           .
@@ -3598,6 +3599,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               this.updateSpec(s);
             }}
             height="100%"
+            jsonCompletions={INGESTION_SPEC_COMPLETIONS}
           />
         </div>
         <div className="control">

@@ -145,7 +145,7 @@ public class SeekableStreamIndexTaskRunnerAuthTest
         .taskReportFileWriter(new NoopTestTaskReportFileWriter())
         .authorizerMapper(authorizerMapper)
         .rowIngestionMetersFactory(NoopRowIngestionMeters::new)
-        .indexMergerV9(new IndexMergerV9(mapper, indexIO, TmpFileSegmentWriteOutMediumFactory.instance(), false))
+        .indexMerger(new IndexMergerV9(mapper, indexIO, TmpFileSegmentWriteOutMediumFactory.instance(), false))
         .build();
     taskRunner.run(toolbox);
   }
@@ -375,13 +375,13 @@ public class SeekableStreamIndexTaskRunnerAuthTest
         SeekableStreamIndexTaskIOConfig<String, String> ioConfig
     )
     {
-      super(id, null, dataSchema, tuningConfig, ioConfig, null, null);
+      super(id, null, null, dataSchema, tuningConfig, ioConfig, null, null);
     }
 
     @Override
     public String getType()
     {
-      return null;
+      return "test";
     }
 
     @Override

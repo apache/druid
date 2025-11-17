@@ -25,6 +25,11 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
+import org.apache.druid.math.expr.vector.ExprEvalObjectVector;
+import org.apache.druid.math.expr.vector.ExprEvalVector;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.UnivariateObjectFunctionVectorProcessor;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
@@ -87,7 +92,7 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public ExprEval eval(final ObjectBinding bindings)
       {
-        return ExprEval.of(extractionFn.apply(arg.eval(bindings).asString()));
+        return ExprEval.ofString(extractionFn.apply(arg.eval(bindings).asString()));
       }
 
       @Nullable
@@ -95,6 +100,46 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
       public ExpressionType getOutputType(InputBindingInspector inspector)
       {
         return ExpressionType.STRING;
+      }
+      @Override
+      public boolean canVectorize(InputBindingInspector inspector)
+      {
+        return true;
+      }
+
+      @Override
+      public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
+      {
+        final Object[] outputs = new Object[inspector.getMaxVectorSize()];
+        final ExprVectorProcessor<Object[]> processor =
+            new UnivariateObjectFunctionVectorProcessor<Object[], Object[]>(
+                CastToTypeVectorProcessor.cast(arg.asVectorProcessor(inspector), ExpressionType.STRING),
+                outputs
+            )
+            {
+              @Override
+              public ExpressionType getOutputType()
+              {
+                return ExpressionType.STRING;
+              }
+              @Override
+              public int maxVectorSize()
+              {
+                return inspector.getMaxVectorSize();
+              }
+              @Override
+              public void processIndex(Object[] input, Object[] output, boolean[] outputNulls, int i)
+              {
+                final String extracted = extractionFn.apply(input[i]);
+                outputs[i] = extracted;
+              }
+              @Override
+              public ExprEvalVector asEval()
+              {
+                return new ExprEvalObjectVector(outputs, ExpressionType.STRING);
+              }
+            };
+        return (ExprVectorProcessor<T>) processor;
       }
 
       @Override

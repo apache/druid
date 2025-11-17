@@ -19,26 +19,20 @@
 
 package org.apache.druid.server.compaction;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CreateDataSegments;
-import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
-import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Collections;
+import java.util.List;
 
 public class CompactionStatusTrackerTest
 {
-  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   private static final DataSegment WIKI_SEGMENT
       = CreateDataSegments.ofDatasource(TestDataSource.WIKI).eachOfSizeInMb(100).get(0);
 
@@ -47,15 +41,15 @@ public class CompactionStatusTrackerTest
   @Before
   public void setup()
   {
-    statusTracker = new CompactionStatusTracker(MAPPER);
+    statusTracker = new CompactionStatusTracker();
   }
 
   @Test
   public void testGetLatestTaskStatusForSubmittedTask()
   {
     final CompactionCandidate candidateSegments
-        = CompactionCandidate.from(Collections.singletonList(WIKI_SEGMENT));
-    statusTracker.onTaskSubmitted(createCompactionTask("task1"), candidateSegments);
+        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null);
+    statusTracker.onTaskSubmitted("task1", candidateSegments);
 
     CompactionTaskStatus status = statusTracker.getLatestTaskStatus(candidateSegments);
     Assert.assertEquals(TaskState.RUNNING, status.getState());
@@ -65,8 +59,8 @@ public class CompactionStatusTrackerTest
   public void testGetLatestTaskStatusForSuccessfulTask()
   {
     final CompactionCandidate candidateSegments
-        = CompactionCandidate.from(Collections.singletonList(WIKI_SEGMENT));
-    statusTracker.onTaskSubmitted(createCompactionTask("task1"), candidateSegments);
+        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null);
+    statusTracker.onTaskSubmitted("task1", candidateSegments);
     statusTracker.onTaskFinished("task1", TaskStatus.success("task1"));
 
     CompactionTaskStatus status = statusTracker.getLatestTaskStatus(candidateSegments);
@@ -77,8 +71,8 @@ public class CompactionStatusTrackerTest
   public void testGetLatestTaskStatusForFailedTask()
   {
     final CompactionCandidate candidateSegments
-        = CompactionCandidate.from(Collections.singletonList(WIKI_SEGMENT));
-    statusTracker.onTaskSubmitted(createCompactionTask("task1"), candidateSegments);
+        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null);
+    statusTracker.onTaskSubmitted("task1", candidateSegments);
     statusTracker.onTaskFinished("task1", TaskStatus.failure("task1", "some failure"));
 
     CompactionTaskStatus status = statusTracker.getLatestTaskStatus(candidateSegments);
@@ -90,12 +84,12 @@ public class CompactionStatusTrackerTest
   public void testGetLatestTaskStatusForRepeatedlyFailingTask()
   {
     final CompactionCandidate candidateSegments
-        = CompactionCandidate.from(Collections.singletonList(WIKI_SEGMENT));
+        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null);
 
-    statusTracker.onTaskSubmitted(createCompactionTask("task1"), candidateSegments);
+    statusTracker.onTaskSubmitted("task1", candidateSegments);
     statusTracker.onTaskFinished("task1", TaskStatus.failure("task1", "some failure"));
 
-    statusTracker.onTaskSubmitted(createCompactionTask("task2"), candidateSegments);
+    statusTracker.onTaskSubmitted("task2", candidateSegments);
     CompactionTaskStatus status = statusTracker.getLatestTaskStatus(candidateSegments);
     Assert.assertEquals(TaskState.RUNNING, status.getState());
     Assert.assertEquals(1, status.getNumConsecutiveFailures());
@@ -110,25 +104,23 @@ public class CompactionStatusTrackerTest
   @Test
   public void testComputeCompactionStatusForSuccessfulTask()
   {
-    final DataSourceCompactionConfig compactionConfig
-        = InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
     final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(null);
     final CompactionCandidate candidateSegments
-        = CompactionCandidate.from(Collections.singletonList(WIKI_SEGMENT));
+        = CompactionCandidate.from(List.of(WIKI_SEGMENT), null);
 
     // Verify that interval is originally eligible for compaction
     CompactionStatus status
-        = statusTracker.computeCompactionStatus(candidateSegments, compactionConfig, policy);
+        = statusTracker.computeCompactionStatus(candidateSegments, policy);
     Assert.assertEquals(CompactionStatus.State.PENDING, status.getState());
-    Assert.assertEquals("not compacted yet", status.getReason());
+    Assert.assertEquals("Not compacted yet", status.getReason());
 
     // Verify that interval is skipped for compaction after task has finished
     statusTracker.onSegmentTimelineUpdated(DateTimes.nowUtc().minusMinutes(1));
-    statusTracker.onTaskSubmitted(createCompactionTask("task1"), candidateSegments);
+    statusTracker.onTaskSubmitted("task1", candidateSegments);
     statusTracker.onTaskFinished("task1", TaskStatus.success("task1"));
 
-    status = statusTracker.computeCompactionStatus(candidateSegments, compactionConfig, policy);
-    Assert.assertEquals(CompactionStatus.State.SKIPPED, status.getState());
+    status = statusTracker.computeCompactionStatus(candidateSegments, policy);
+    Assert.assertEquals(CompactionStatus.State.COMPLETE, status.getState());
     Assert.assertEquals(
         "Segment timeline not updated since last compaction task succeeded",
         status.getReason()
@@ -136,26 +128,7 @@ public class CompactionStatusTrackerTest
 
     // Verify that interval becomes eligible again after timeline has been updated
     statusTracker.onSegmentTimelineUpdated(DateTimes.nowUtc());
-    status = statusTracker.computeCompactionStatus(candidateSegments, compactionConfig, policy);
+    status = statusTracker.computeCompactionStatus(candidateSegments, policy);
     Assert.assertEquals(CompactionStatus.State.PENDING, status.getState());
-  }
-
-  private ClientCompactionTaskQuery createCompactionTask(
-      String taskId
-  )
-  {
-    return new ClientCompactionTaskQuery(
-        taskId,
-        TestDataSource.WIKI,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
   }
 }

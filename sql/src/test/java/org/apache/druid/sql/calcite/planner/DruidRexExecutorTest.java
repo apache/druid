@@ -112,7 +112,9 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
   private static final PlannerContext PLANNER_CONTEXT = PlannerContext.create(
       PLANNER_TOOLBOX,
       "SELECT 1", // The actual query isn't important for this test
+      null, /* Don't need a SQL node */
       null, /* Don't need an engine */
+      Collections.emptySet(),
       Collections.emptyMap(),
       null
   );

@@ -54,17 +54,17 @@ public class HdfsFileTimestampVersionFinder extends HdfsDataSegmentPuller implem
     };
     long modifiedTime = Long.MIN_VALUE;
     URI mostRecentURI = null;
-    final FileSystem fs = dir.getFileSystem(config);
-    for (FileStatus status : fs.listStatus(dir, filter)) {
-      if (status.isFile()) {
-        final long thisModifiedTime = status.getModificationTime();
-        if (thisModifiedTime >= modifiedTime) {
-          modifiedTime = thisModifiedTime;
-          mostRecentURI = status.getPath().toUri();
+    try (final FileSystem fs = dir.getFileSystem(config)) {
+      for (FileStatus status : fs.listStatus(dir, filter)) {
+        if (status.isFile()) {
+          final long thisModifiedTime = status.getModificationTime();
+          if (thisModifiedTime >= modifiedTime) {
+            modifiedTime = thisModifiedTime;
+            mostRecentURI = status.getPath().toUri();
+          }
         }
       }
     }
-
     return mostRecentURI;
   }
 
@@ -84,10 +84,13 @@ public class HdfsFileTimestampVersionFinder extends HdfsDataSegmentPuller implem
       return RetryUtils.retry(
           () -> {
             final FileSystem fs = path.getFileSystem(config);
-            if (!fs.exists(path)) {
+
+            if (fs.exists(path)) {
+              FileStatus fileStatus = fs.getFileStatus(path);
+              return mostRecentInDir(fileStatus.isDirectory() ? path : path.getParent(), pattern);
+            } else {
               return null;
             }
-            return mostRecentInDir(fs.isDirectory(path) ? path : path.getParent(), pattern);
           },
           shouldRetryPredicate(),
           DEFAULT_RETRY_COUNT
@@ -97,5 +100,4 @@ public class HdfsFileTimestampVersionFinder extends HdfsDataSegmentPuller implem
       throw new RuntimeException(e);
     }
   }
-
 }

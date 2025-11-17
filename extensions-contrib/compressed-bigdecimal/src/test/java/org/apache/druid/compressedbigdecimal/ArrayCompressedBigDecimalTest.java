@@ -19,6 +19,7 @@
 
 package org.apache.druid.compressedbigdecimal;
 
+import org.apache.druid.compressedbigdecimal.aggregator.CompressedBigDecimalAggregatorFactoryBase;
 import org.apache.druid.java.util.common.IAE;
 import org.junit.Assert;
 import org.junit.Test;
@@ -492,8 +493,8 @@ public class ArrayCompressedBigDecimalTest
     CompressedBigDecimal cbd = new ByteBufferCompressedBigDecimal(buf, 0, d);
     assertEquals(0, cbd.getScale());
     assertEquals(8388607, cbd.intValue());
-    assertEquals(new Long(8388607L).doubleValue(), cbd.floatValue(), 0.001);
-    assertEquals(new Long(8388607L).doubleValue(), cbd.doubleValue(), 0.001);
+    assertEquals(Long.valueOf(8388607L).doubleValue(), cbd.floatValue(), 0.001);
+    assertEquals(Long.valueOf(8388607L).doubleValue(), cbd.doubleValue(), 0.001);
   }
 
   /**

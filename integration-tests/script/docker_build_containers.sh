@@ -19,6 +19,11 @@ set -e
 # Build Druid Cluster Image
 set -e
 
+if [ -z "$MYSQL_DRIVER_CLASSNAME" ]
+then
+  export MYSQL_DRIVER_CLASSNAME="com.mysql.jdbc.Driver"
+fi
+
 if [ -z "$DRUID_INTEGRATION_TEST_JVM_RUNTIME" ]
 then
   echo "\$DRUID_INTEGRATION_TEST_JVM_RUNTIME is not set. Building druid-cluster with default Java version"
@@ -29,7 +34,7 @@ else
   11 | 17 | 21)
     echo "Build druid-cluster with Java $DRUID_INTEGRATION_TEST_JVM_RUNTIME"
     docker build -t druid/cluster \
-      --build-arg JDK_VERSION=$DRUID_INTEGRATION_TEST_JVM_RUNTIME-slim-buster \
+      --build-arg JDK_VERSION=$DRUID_INTEGRATION_TEST_JVM_RUNTIME-jre-jammy \
       --build-arg ZK_VERSION \
       --build-arg KAFKA_VERSION \
       --build-arg CONFLUENT_VERSION \

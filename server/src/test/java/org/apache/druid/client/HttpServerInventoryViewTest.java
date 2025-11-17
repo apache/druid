@@ -92,6 +92,7 @@ public class HttpServerInventoryViewTest
 
   private Map<DruidServerMetadata, Set<DataSegment>> segmentsAddedToView;
   private Map<DruidServerMetadata, Set<DataSegment>> segmentsRemovedFromView;
+  private Set<DruidServerMetadata> addedServers;
   private Set<DruidServerMetadata> removedServers;
 
   private AtomicBoolean inventoryInitialized;
@@ -114,6 +115,7 @@ public class HttpServerInventoryViewTest
 
     segmentsAddedToView = new HashMap<>();
     segmentsRemovedFromView = new HashMap<>();
+    addedServers = new HashSet<>();
     removedServers = new HashSet<>();
 
     createInventoryView(
@@ -170,6 +172,7 @@ public class HttpServerInventoryViewTest
     Collection<DruidServer> inventory = httpServerInventoryView.getInventory();
     Assert.assertEquals(1, inventory.size());
     Assert.assertTrue(inventory.contains(server));
+    Assert.assertTrue(addedServers.contains(server.getMetadata()));
 
     execHelper.emitMetrics();
     serviceEmitter.verifyValue(METRIC_SUCCESS, 1);
@@ -211,6 +214,22 @@ public class HttpServerInventoryViewTest
     httpServerInventoryView.stop();
   }
 
+  @Test
+  public void testAddNodeTriggersServerAddedCallback()
+  {
+    httpServerInventoryView.start();
+    druidNodeDiscovery.markNodeViewInitialized();
+    execHelper.finishInventoryInitialization();
+
+    final DiscoveryDruidNode druidNode = druidNodeDiscovery
+        .addNodeAndNotifyListeners("localhost");
+    final DruidServer server = druidNode.toDruidServer();
+
+    Assert.assertTrue(addedServers.contains(server.getMetadata()));
+
+    httpServerInventoryView.stop();
+  }
+
   @Test(timeout = 60_000L)
   public void testSyncSegmentLoadAndDrop()
   {
@@ -221,6 +240,8 @@ public class HttpServerInventoryViewTest
     final DiscoveryDruidNode druidNode = druidNodeDiscovery
         .addNodeAndNotifyListeners("localhost");
     final DruidServer server = druidNode.toDruidServer();
+
+    Assert.assertTrue(addedServers.contains(server.getMetadata()));
 
     final DataSegment[] segments =
         CreateDataSegments.ofDatasource("wiki")
@@ -318,7 +339,8 @@ public class HttpServerInventoryViewTest
     druidNodeDiscovery.markNodeViewInitialized();
     execHelper.finishInventoryInitialization();
 
-    druidNodeDiscovery.addNodeAndNotifyListeners("localhost");
+    final DiscoveryDruidNode druidNode = druidNodeDiscovery.addNodeAndNotifyListeners("localhost");
+    Assert.assertTrue(addedServers.contains(druidNode.toDruidServer().getMetadata()));
 
     httpClient.failToSendNextRequestWith(new ISE("Could not send request to server"));
     execHelper.sendSyncRequest();
@@ -361,7 +383,8 @@ public class HttpServerInventoryViewTest
     druidNodeDiscovery.markNodeViewInitialized();
     execHelper.finishInventoryInitialization();
 
-    druidNodeDiscovery.addNodeAndNotifyListeners("localhost");
+    final DiscoveryDruidNode druidNode = druidNodeDiscovery.addNodeAndNotifyListeners("localhost");
+    Assert.assertTrue(addedServers.contains(druidNode.toDruidServer().getMetadata()));
 
     serviceEmitter.flush();
     httpClient.completeNextRequestWith(InvalidInput.exception("failure on server"));
@@ -384,7 +407,10 @@ public class HttpServerInventoryViewTest
   {
     httpServerInventoryView.start();
     druidNodeDiscovery.markNodeViewInitialized();
-    druidNodeDiscovery.addNodeAndNotifyListeners("localhost");
+    final DiscoveryDruidNode druidNode = druidNodeDiscovery.addNodeAndNotifyListeners("localhost");
+    final DruidServer server = druidNode.toDruidServer();
+
+    Assert.assertTrue(addedServers.contains(server.getMetadata()));
 
     ExecutorService initExecutor = Execs.singleThreaded(EXEC_NAME_PREFIX + "-init");
 
@@ -417,6 +443,7 @@ public class HttpServerInventoryViewTest
     httpServerInventoryView.start();
     druidNodeDiscovery.markNodeViewInitialized();
     DiscoveryDruidNode node = druidNodeDiscovery.addNodeAndNotifyListeners("localhost");
+    Assert.assertTrue(addedServers.contains(node.toDruidServer().getMetadata()));
 
     ExecutorService initExecutor = Execs.singleThreaded(EXEC_NAME_PREFIX + "-init");
 
@@ -488,11 +515,22 @@ public class HttpServerInventoryViewTest
         }
     );
 
-    httpServerInventoryView.registerServerRemovedCallback(
+    httpServerInventoryView.registerServerCallback(
         Execs.directExecutor(),
-        server -> {
-          removedServers.add(server.getMetadata());
-          return ServerView.CallbackAction.CONTINUE;
+        new ServerView.ServerCallback() {
+          @Override
+          public ServerView.CallbackAction serverAdded(DruidServer server)
+          {
+            addedServers.add(server.getMetadata());
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction serverRemoved(DruidServer server)
+          {
+            removedServers.add(server.getMetadata());
+            return ServerView.CallbackAction.CONTINUE;
+          }
         }
     );
   }

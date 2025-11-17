@@ -196,7 +196,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
   }
 
-  private static final IndexSpec INDEX_SPEC = IndexSpec.DEFAULT;
+  private static final IndexSpec INDEX_SPEC = IndexSpec.getDefault();
   private final ObjectMapper jsonMapper;
   private final IndexIO indexIO;
   private final LockGranularity lockGranularity;
@@ -503,6 +503,7 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertEquals(1, segments.size());
     DataSegment segment = segments.get(0);
+    segmentCacheManager.load(segment);
     final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
 
     final WindowedCursorFactory windowed = new WindowedCursorFactory(
@@ -732,6 +733,7 @@ public class IndexTaskTest extends IngestionTestBase
       final HashBasedNumberedShardSpec hashBasedNumberedShardSpec = (HashBasedNumberedShardSpec) segment.getShardSpec();
       Assert.assertEquals(HashPartitionFunction.MURMUR3_32_ABS, hashBasedNumberedShardSpec.getPartitionFunction());
 
+      segmentCacheManager.load(segment);
       final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
 
       final WindowedCursorFactory windowed = new WindowedCursorFactory(
@@ -2723,7 +2725,7 @@ public class IndexTaskTest extends IngestionTestBase
     EqualsVerifier.forClass(IndexTuningConfig.class)
                   .withPrefabValues(
                       IndexSpec.class,
-                      IndexSpec.DEFAULT,
+                      IndexSpec.getDefault(),
                       IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build()
                   )
                   .usingGetClass()

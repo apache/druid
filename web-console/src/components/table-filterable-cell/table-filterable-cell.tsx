@@ -22,7 +22,7 @@ import React from 'react';
 import type { Filter } from 'react-table';
 
 import type { FilterMode } from '../../react-table';
-import { addFilter, filterModeToIcon } from '../../react-table';
+import { addOrUpdateFilter, combineModeAndNeedle, filterModeToIcon } from '../../react-table';
 import { Deferred } from '../deferred/deferred';
 
 import './table-filterable-cell.scss';
@@ -37,12 +37,14 @@ export interface TableFilterableCellProps {
   onFiltersChange(filters: Filter[]): void;
   enableComparisons?: boolean;
   children?: ReactNode;
+  displayValue?: string;
 }
 
 export const TableFilterableCell = React.memo(function TableFilterableCell(
   props: TableFilterableCellProps,
 ) {
-  const { field, value, children, filters, enableComparisons, onFiltersChange } = props;
+  const { field, value, children, filters, enableComparisons, onFiltersChange, displayValue } =
+    props;
 
   return (
     <Popover
@@ -56,8 +58,15 @@ export const TableFilterableCell = React.memo(function TableFilterableCell(
                 <MenuItem
                   key={i}
                   icon={filterModeToIcon(mode)}
-                  text={value}
-                  onClick={() => onFiltersChange(addFilter(filters, field, mode, value))}
+                  text={displayValue ?? value}
+                  onClick={() =>
+                    onFiltersChange(
+                      addOrUpdateFilter(filters, {
+                        id: field,
+                        value: combineModeAndNeedle(mode, value),
+                      }),
+                    )
+                  }
                 />
               ))}
             </Menu>
@@ -65,7 +74,7 @@ export const TableFilterableCell = React.memo(function TableFilterableCell(
         />
       }
     >
-      {children}
+      {children ?? value}
     </Popover>
   );
 });

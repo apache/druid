@@ -30,7 +30,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.filter.SelectorPredicateFactory;
 import org.apache.druid.segment.AutoTypeColumnIndexer;
@@ -44,6 +43,7 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
@@ -126,12 +126,12 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
     try (final FileSmoosher smoosher = new FileSmoosher(tmpFile)) {
       ScalarLongColumnSerializer serializer = new ScalarLongColumnSerializer(
           fileNameBase,
-          IndexSpec.DEFAULT,
+          NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(null, IndexSpec.getDefault().getEffectiveSpec()),
           writeOutMediumFactory.makeSegmentWriteOutMedium(tempFolder.newFolder()),
           closer
       );
 
-      AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
+      AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null, null);
       for (Object o : data) {
         indexer.processRowValsToUnsortedEncodedKeyComponent(o, false);
       }
@@ -167,7 +167,7 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
         serializer.serialize(valueSelector);
       }
 
-      try (SmooshedWriter writer = smoosher.addWithSmooshedWriter(fileNameBase, serializer.getSerializedSize())) {
+      try (SegmentFileChannel writer = smoosher.addWithChannel(fileNameBase, serializer.getSerializedSize())) {
         serializer.writeTo(writer, smoosher);
       }
       smoosher.close();

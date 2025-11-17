@@ -30,16 +30,19 @@ public class KubernetesPeonLifecycleFactory implements PeonLifecycleFactory
   private final KubernetesPeonClient client;
   private final TaskLogs taskLogs;
   private final ObjectMapper mapper;
+  private final long logSaveTimeoutMs;
 
   public KubernetesPeonLifecycleFactory(
       KubernetesPeonClient client,
       TaskLogs taskLogs,
-      ObjectMapper mapper
+      ObjectMapper mapper,
+      long logSaveTimeoutMs
   )
   {
     this.client = client;
     this.taskLogs = taskLogs;
     this.mapper = mapper;
+    this.logSaveTimeoutMs = logSaveTimeoutMs;
   }
 
   @Override
@@ -51,7 +54,8 @@ public class KubernetesPeonLifecycleFactory implements PeonLifecycleFactory
         client,
         taskLogs,
         mapper,
-        stateListener
+        stateListener,
+        logSaveTimeoutMs
     );
   }
 }

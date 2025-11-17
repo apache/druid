@@ -44,6 +44,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -134,7 +135,7 @@ public class FrameProcessorExecutor
           logProcessorStatusString(processor, finished, allWritabilityFutures);
 
           if (!writabilityFuturesToWaitFor.isEmpty()) {
-            runProcessorAfterFutureResolves(Futures.allAsList(writabilityFuturesToWaitFor));
+            runProcessorAfterFutureResolves(Futures.allAsList(writabilityFuturesToWaitFor), false);
             return;
           }
 
@@ -150,13 +151,17 @@ public class FrameProcessorExecutor
 
           if (result.isReturn()) {
             succeed(result.value());
+          } else if (result.hasAwaitableFutures()) {
+            runProcessorAfterFutureResolves(Futures.allAsList(result.awaitableFutures()), true);
           } else {
+            assert result.hasAwaitableChannels();
+
             // Don't retain a reference to this set: it may be mutated the next time the processor runs.
-            final IntSet await = result.awaitSet();
+            final IntSet await = result.awaitableChannels();
 
             if (await.isEmpty()) {
               exec.execute(ExecutorRunnable.this);
-            } else if (result.isAwaitAll() || await.size() == 1) {
+            } else if (result.isAwaitAllChannels() || await.size() == 1) {
               final List<ListenableFuture<?>> readabilityFutures = new ArrayList<>();
 
               for (final int channelNumber : await) {
@@ -169,11 +174,11 @@ public class FrameProcessorExecutor
               if (readabilityFutures.isEmpty()) {
                 exec.execute(ExecutorRunnable.this);
               } else {
-                runProcessorAfterFutureResolves(Futures.allAsList(readabilityFutures));
+                runProcessorAfterFutureResolves(Futures.allAsList(readabilityFutures), false);
               }
             } else {
               // Await any.
-              runProcessorAfterFutureResolves(awaitAnyWidget.awaitAny(await));
+              runProcessorAfterFutureResolves(awaitAnyWidget.awaitAny(await), false);
             }
           }
         }
@@ -272,7 +277,17 @@ public class FrameProcessorExecutor
         }
       }
 
-      private <V> void runProcessorAfterFutureResolves(final ListenableFuture<V> future)
+      /**
+       * Schedule this processor to run after the provided future resolves.
+       *
+       * @param future       the future
+       * @param failOnCancel whether the processor should be {@link #fail(Throwable)} if the future is itself canceled.
+       *                     This is true for futures provided by {@link ReturnOrAwait#awaitAllFutures(Collection)},
+       *                     because the processor has declared it wants to wait for them; if they are canceled
+       *                     the processor must fail. It is false for other futures, which the processor was not
+       *                     directly waiting for.
+       */
+      private <V> void runProcessorAfterFutureResolves(final ListenableFuture<V> future, final boolean failOnCancel)
       {
         final ListenableFuture<V> cancelableFuture = registerCancelableFuture(future, false, cancellationId);
 
@@ -294,8 +309,7 @@ public class FrameProcessorExecutor
               @Override
               public void onFailure(Throwable t)
               {
-                // Ignore cancellation.
-                if (!cancelableFuture.isCancelled()) {
+                if (failOnCancel || !cancelableFuture.isCancelled()) {
                   fail(t);
                 }
               }
@@ -388,12 +402,7 @@ public class FrameProcessorExecutor
             }
 
             if (didRemoveFromCancelableProcessors) {
-              try {
-                cancel(Collections.singleton(processor));
-              }
-              catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-              }
+              cancel(Collections.singleton(processor));
             }
           }
         },
@@ -450,7 +459,7 @@ public class FrameProcessorExecutor
    * Deregisters a cancellationId and cancels any currently-running processors associated with that cancellationId.
    * Waits for any canceled processors to exit before returning.
    */
-  public void cancel(final String cancellationId) throws InterruptedException
+  public void cancel(final String cancellationId)
   {
     Preconditions.checkNotNull(cancellationId, "cancellationId");
 
@@ -563,8 +572,9 @@ public class FrameProcessorExecutor
    * Logs (but does not throw) exceptions encountered while running {@link FrameProcessor#cleanup()}.
    */
   private void cancel(final Set<FrameProcessor<?>> processorsToCancel)
-      throws InterruptedException
   {
+    boolean interrupted = false;
+
     synchronized (lock) {
       for (final FrameProcessor<?> processor : processorsToCancel) {
         final Thread processorThread = runningProcessors.get(processor);
@@ -577,7 +587,14 @@ public class FrameProcessorExecutor
 
       // Wait for all running processors to stop running. Then clean them up outside the critical section.
       while (anyIsRunning(processorsToCancel)) {
-        lock.wait();
+        // If lock.wait() is interrupted, remember that but keep waiting. This method needs to proceed onwards
+        // even when interrupted, to ensure processor cleanup happens.
+        try {
+          lock.wait();
+        }
+        catch (InterruptedException e) {
+          interrupted = true;
+        }
       }
     }
 
@@ -601,6 +618,10 @@ public class FrameProcessorExecutor
       catch (Throwable e) {
         log.noStackTrace().warn(e, "Exception encountered while canceling processor [%s]", processor);
       }
+    }
+
+    if (interrupted) {
+      Thread.currentThread().interrupt();
     }
   }
 

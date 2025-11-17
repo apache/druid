@@ -23,6 +23,7 @@ import { T } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
 import type { Execution, QueryWithContext } from '../../../druid-models';
+import { getConsoleViewIcon } from '../../../druid-models';
 import { executionBackgroundStatusCheck, reattachTaskExecution } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { ExecutionProgressBarPane } from '../../workbench-view/execution-progress-bar-pane/execution-progress-bar-pane';
@@ -47,10 +48,10 @@ export const IngestionProgressDialog = React.memo(function IngestionProgressDial
 
   const [insertResultState, ingestQueryManager] = useQueryManager<string, Execution, Execution>({
     initQuery: taskId,
-    processQuery: async (id, cancelToken) => {
+    processQuery: async (id, signal) => {
       return await reattachTaskExecution({
         id,
-        cancelToken,
+        signal,
         preserveOnTermination: true,
       });
     },
@@ -100,7 +101,7 @@ export const IngestionProgressDialog = React.memo(function IngestionProgressDial
                 onClick={onReset}
               />
               <Button
-                icon={IconNames.GANTT_CHART}
+                icon={getConsoleViewIcon('tasks')}
                 text="Go to Ingestion view"
                 rightIcon={IconNames.ARROW_TOP_RIGHT}
                 onClick={() => {
@@ -115,7 +116,7 @@ export const IngestionProgressDialog = React.memo(function IngestionProgressDial
             <>
               <Button icon={IconNames.RESET} text="Reset data loader" onClick={onReset} />
               <Button
-                icon={IconNames.APPLICATION}
+                icon={getConsoleViewIcon('workbench')}
                 text={`Query: ${insertResultState.data.getIngestDatasource()}`}
                 rightIcon={IconNames.ARROW_TOP_RIGHT}
                 intent={Intent.PRIMARY}

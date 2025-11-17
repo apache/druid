@@ -9,10 +9,10 @@ FROM test_array;
 +-----+
 | col |
 +-----+
-|   1 |
-|   1 |
 |     |
 |     |
+| 1   |
+| 1   |
 +-----+
 (4 rows)
 
@@ -26,10 +26,10 @@ FROM test_array;
 +-----+
 | col |
 +-----+
-|   1 |
-|   1 |
 |     |
 |     |
+| 1   |
+| 1   |
 +-----+
 (4 rows)
 
@@ -43,10 +43,10 @@ FROM test_array;
 +-----+
 | col |
 +-----+
-|   1 |
-|   1 |
 |     |
 |     |
+| 1   |
+| 1   |
 +-----+
 (4 rows)
 
@@ -719,14 +719,14 @@ Cannot apply 'MV_CONTAINS' to arguments of type 'MV_CONTAINS(
 #-------------------------------------------------------------------------
 SELECT mv_contains(json_value(a_nested, '$[7]' RETURNING varchar array), 1) AS col
 FROM test_array;
-+-----+
-| col |
-+-----+
-|     |
-|     |
-|     |
-|     |
-+-----+
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
++-------+
 (4 rows)
 
 !ok
@@ -736,14 +736,14 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT mv_contains(json_value(a_nested, '$[7][7]' RETURNING varchar array), 1) AS col
 FROM test_array;
-+-----+
-| col |
-+-----+
-|     |
-|     |
-|     |
-|     |
-+-----+
++-------+
+| col   |
++-------+
+| false |
+| false |
+| false |
+| false |
++-------+
 (4 rows)
 
 !ok

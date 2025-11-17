@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -63,14 +64,15 @@ import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -81,6 +83,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -559,14 +562,15 @@ public class QueryRunnerTestHelper
   )
   {
     ExecutionVertex ev = ExecutionVertex.of(query);
-    final SegmentReference segmentReference = ev.createSegmentMapFunction(NoopPolicyEnforcer.instance())
-        .apply(ReferenceCountingSegment.wrapRootGenerationSegment(adapter));
-    return makeQueryRunner(factory, segmentReference, runnerName);
+    final Optional<Segment> segmentReference = ev.createSegmentMapFunction(NoopPolicyEnforcer.instance())
+                                                 .apply(Optional.of(adapter));
+    return makeQueryRunner(factory, segmentReference.orElseThrow(), runnerName);
   }
 
   @SuppressWarnings({"rawtypes", "unchecked"})
   public static <T> QueryRunner<T> makeFilteringQueryRunner(
-      final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline,
+      final VersionedIntervalTimeline<String, DataSegment> timeline,
+      final Map<DataSegment, ReferenceCountedSegmentProvider> referenceProviders,
       final QueryRunnerFactory<T, Query<T>> factory
   )
   {
@@ -580,25 +584,36 @@ public class QueryRunnerTestHelper
                 segments.addAll(timeline.lookup(interval));
               }
               List<Sequence<T>> sequences = new ArrayList<>();
-              for (TimelineObjectHolder<String, ReferenceCountingSegment> holder : toolChest.filterSegments(
-                  query,
-                  segments
-              )) {
-                Segment segment = holder.getObject().getChunk(0).getObject();
-                QueryPlus queryPlusRunning = queryPlus.withQuery(
-                    queryPlus.getQuery().withQuerySegmentSpec(
-                        new SpecificSegmentSpec(
-                            new SegmentDescriptor(
-                                holder.getInterval(),
-                                holder.getVersion(),
-                                0
-                            )
-                        )
-                    )
+              final Closer closer = Closer.create();
+              try {
+                for (TimelineObjectHolder<String, DataSegment> holder : toolChest.filterSegments(
+                    query,
+                    segments
+                )) {
+                  final SegmentDescriptor descriptor = new SegmentDescriptor(
+                      holder.getInterval(),
+                      holder.getVersion(),
+                      0
+                  );
+                  final QueryPlus queryPlusRunning = queryPlus.withQuery(
+                      queryPlus.getQuery().withQuerySegmentSpec(new SpecificSegmentSpec(descriptor))
+                  );
+                  final ReferenceCountedSegmentProvider referenceProvider = referenceProviders.get(
+                      holder.getObject().getChunk(0).getObject()
+                  );
+                  final QueryRunner<?> runner = factory.createRunner(
+                      closer.register(referenceProvider.acquireReference().orElseThrow())
+                  );
+                  sequences.add(runner.run(queryPlusRunning, responseContext));
+                }
+                return Sequences.withBaggage(
+                    new MergeSequence<>(query.getResultOrdering(), Sequences.simple(sequences)),
+                    closer
                 );
-                sequences.add(factory.createRunner(segment).run(queryPlusRunning, responseContext));
               }
-              return new MergeSequence<>(query.getResultOrdering(), Sequences.simple(sequences));
+              catch (Throwable t) {
+                throw CloseableUtils.closeAndWrapInCatch(t, closer);
+              }
             },
             toolChest
         )

@@ -38,7 +38,7 @@ import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -152,10 +152,11 @@ public class JoinAndLookupBenchmark
         );
 
     hashJoinLookupStringKeySegment = new HashJoinSegment(
-        ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
+        ReferenceCountedSegmentProvider.unmanaged(baseSegment).orElseThrow(),
         null,
         joinableClausesLookupStringKey,
-        preAnalysisLookupStringKey
+        preAnalysisLookupStringKey,
+        () -> {}
     );
 
     List<JoinableClause> joinableClausesLookupLongKey = ImmutableList.of(
@@ -188,10 +189,11 @@ public class JoinAndLookupBenchmark
         );
 
     hashJoinLookupLongKeySegment = new HashJoinSegment(
-        ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
+        ReferenceCountedSegmentProvider.unmanaged(baseSegment).orElseThrow(),
         null,
         joinableClausesLookupLongKey,
-        preAnalysisLookupLongKey
+        preAnalysisLookupLongKey,
+        () -> {}
     );
 
     List<JoinableClause> joinableClausesIndexedTableStringKey = ImmutableList.of(
@@ -224,10 +226,11 @@ public class JoinAndLookupBenchmark
         );
 
     hashJoinIndexedTableStringKeySegment = new HashJoinSegment(
-        ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
+        ReferenceCountedSegmentProvider.unmanaged(baseSegment).orElseThrow(),
         null,
         joinableClausesIndexedTableStringKey,
-        preAnalysisIndexedStringKey
+        preAnalysisIndexedStringKey,
+        () -> {}
     );
 
     List<JoinableClause> joinableClausesIndexedTableLongKey = ImmutableList.of(
@@ -260,10 +263,11 @@ public class JoinAndLookupBenchmark
         );
 
     hashJoinIndexedTableLongKeySegment = new HashJoinSegment(
-        ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
+        ReferenceCountedSegmentProvider.unmanaged(baseSegment).orElseThrow(),
         null,
         joinableClausesIndexedTableLongKey,
-        preAnalysisIndexedLongKey
+        preAnalysisIndexedLongKey,
+        () -> {}
     );
 
     final Map<String, String> countryCodeToNameMap = JoinTestHelper.createCountryIsoCodeToNameLookup().getMap();

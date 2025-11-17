@@ -243,13 +243,14 @@ export function groupByAsMap<T, Q>(
   return mapRecord(buckets, aggregateFn);
 }
 
-export function uniq(array: readonly string[]): string[] {
+export function uniq<T>(array: readonly T[], by: (t: T) => string = String): T[] {
   const seen: Record<string, boolean> = {};
   return array.filter(s => {
-    if (Object.hasOwn(seen, s)) {
+    const key = by(s);
+    if (Object.hasOwn(seen, key)) {
       return false;
     } else {
-      seen[s] = true;
+      seen[key] = true;
       return true;
     }
   });
@@ -276,7 +277,7 @@ export function formatInteger(n: NumberLike): string {
 }
 
 export function formatNumber(n: NumberLike): string {
-  return (n || 0).toLocaleString('en-US', { maximumFractionDigits: 20 });
+  return (n || 0).toLocaleString('en-US', { maximumFractionDigits: 3 });
 }
 
 export function formatNumberAbbreviated(n: NumberLike): string {

@@ -149,6 +149,7 @@ public class KafkaEmitterTest
         "clusterName",
         ImmutableMap.of("clusterId", "cluster-101"),
         null,
+        null,
         null
     );
 
@@ -173,6 +174,14 @@ public class KafkaEmitterTest
     Assert.assertEquals(0, kafkaEmitter.getRequestLostCount());
     Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
     Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
+
+    kafkaEmitter.logLostMessagesStatus();
+
+    Assert.assertEquals(0, kafkaEmitter.getPreviousMetricLostCount());
+    Assert.assertEquals(0, kafkaEmitter.getPreviousAlertLostCount());
+    Assert.assertEquals(0, kafkaEmitter.getPreviousRequestLostCount());
+    Assert.assertEquals(0, kafkaEmitter.getPreviousSegmentMetadataLostCount());
+    Assert.assertEquals(0, kafkaEmitter.getPreviousInvalidLostCount());
   }
 
   /**
@@ -193,6 +202,7 @@ public class KafkaEmitterTest
         "segments",
         null,
         ImmutableMap.of("clusterId", "cluster-101", "env", "staging"),
+        null,
         null,
         null
     );
@@ -223,7 +233,6 @@ public class KafkaEmitterTest
     Assert.assertEquals(0, kafkaEmitter.getRequestLostCount());
     Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
     Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
-
   }
 
   /**
@@ -242,6 +251,7 @@ public class KafkaEmitterTest
         "requests",
         "segment_metadata",
         "clusterName",
+        null,
         null,
         null,
         null
@@ -292,6 +302,7 @@ public class KafkaEmitterTest
         "clusterName",
         null,
         null,
+        null,
         null
     );
 
@@ -321,10 +332,27 @@ public class KafkaEmitterTest
     Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());
     Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
 
+    Assert.assertEquals(0, kafkaEmitter.getPreviousAlertLostCount());
+    Assert.assertEquals(0, kafkaEmitter.getPreviousInvalidLostCount());
+    Assert.assertEquals(0, kafkaEmitter.getPreviousMetricLostCount());
+    Assert.assertEquals(0, kafkaEmitter.getPreviousSegmentMetadataLostCount());
+    Assert.assertEquals(0, kafkaEmitter.getPreviousRequestLostCount());
+
     // Others would be dropped as we've only subscribed to alert events.
     Assert.assertEquals(SERVICE_METRIC_EVENTS.size(), kafkaEmitter.getMetricLostCount());
+    Assert.assertNotEquals(kafkaEmitter.getMetricLostCount(), kafkaEmitter.getPreviousMetricLostCount());
     Assert.assertEquals(SEGMENT_METADATA_EVENTS.size(), kafkaEmitter.getSegmentMetadataLostCount());
+    Assert.assertNotEquals(kafkaEmitter.getSegmentMetadataLostCount(), kafkaEmitter.getPreviousSegmentMetadataLostCount());
     Assert.assertEquals(REQUEST_LOG_EVENTS.size(), kafkaEmitter.getRequestLostCount());
+    Assert.assertNotEquals(kafkaEmitter.getRequestLostCount(), kafkaEmitter.getPreviousRequestLostCount());
+
+    kafkaEmitter.logLostMessagesStatus();
+
+    Assert.assertEquals(kafkaEmitter.getMetricLostCount(), kafkaEmitter.getPreviousMetricLostCount());
+    Assert.assertEquals(kafkaEmitter.getAlertLostCount(), kafkaEmitter.getPreviousAlertLostCount());
+    Assert.assertEquals(kafkaEmitter.getRequestLostCount(), kafkaEmitter.getPreviousRequestLostCount());
+    Assert.assertEquals(kafkaEmitter.getSegmentMetadataLostCount(), kafkaEmitter.getPreviousSegmentMetadataLostCount());
+    Assert.assertEquals(kafkaEmitter.getInvalidLostCount(), kafkaEmitter.getPreviousInvalidLostCount());
   }
 
   /**
@@ -346,6 +374,7 @@ public class KafkaEmitterTest
         "topic",
         "topic",
         "topic",
+        null,
         null,
         null,
         null,
@@ -399,6 +428,7 @@ public class KafkaEmitterTest
         null,
         "cluster-102",
         ImmutableMap.of("clusterName", "cluster-101", "env", "staging"), // clusterName again, extraDimensions should take precedence
+        null,
         null,
         null
     );
@@ -493,6 +523,7 @@ public class KafkaEmitterTest
         null,
         extraDimensions,
         ImmutableMap.of(ProducerConfig.BUFFER_MEMORY_CONFIG, String.valueOf(totalBufferSize)),
+        null,
         null
     );
 

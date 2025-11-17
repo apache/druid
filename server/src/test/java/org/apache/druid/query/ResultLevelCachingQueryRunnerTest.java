@@ -97,6 +97,8 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     Assert.assertEquals(0, cache.getStats().getNumHits());
     Assert.assertEquals(0, cache.getStats().getNumEntries());
     Assert.assertEquals(0, cache.getStats().getNumMisses());
+
+    emitter.verifyNotEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT);
   }
 
   @Test
@@ -118,6 +120,9 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     Assert.assertEquals(1, cache.getStats().getNumEntries());
     Assert.assertEquals(0, cache.getStats().getNumMisses());
 
+    emitter.verifyNotEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT);
+    emitter.flush();
+
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner2 = createQueryRunner(
         newCacheConfig(true, false, DEFAULT_CACHE_ENTRY_MAX_SIZE),
         query
@@ -132,6 +137,8 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     Assert.assertEquals(0, cache.getStats().getNumHits());
     Assert.assertEquals(1, cache.getStats().getNumEntries());
     Assert.assertEquals(0, cache.getStats().getNumMisses());
+
+    emitter.verifyNotEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT);
   }
 
   @Test
@@ -153,6 +160,9 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     Assert.assertEquals(0, cache.getStats().getNumEntries());
     Assert.assertEquals(0, cache.getStats().getNumMisses());
 
+    emitter.verifyNotEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT);
+    emitter.flush();
+
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner2 = createQueryRunner(
         newCacheConfig(false, true, DEFAULT_CACHE_ENTRY_MAX_SIZE),
         query
@@ -167,6 +177,9 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     Assert.assertEquals(0, cache.getStats().getNumHits());
     Assert.assertEquals(0, cache.getStats().getNumEntries());
     Assert.assertEquals(1, cache.getStats().getNumMisses());
+
+    emitter.verifyEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
+    emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 0);
   }
 
   @Test
@@ -188,6 +201,10 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     Assert.assertEquals(1, cache.getStats().getNumEntries());
     Assert.assertEquals(1, cache.getStats().getNumMisses());
 
+    emitter.verifyEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
+    emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 0);
+    emitter.flush();
+
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner2 = createQueryRunner(
         newCacheConfig(true, true, DEFAULT_CACHE_ENTRY_MAX_SIZE),
         query
@@ -202,6 +219,9 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     Assert.assertEquals(1, cache.getStats().getNumHits());
     Assert.assertEquals(1, cache.getStats().getNumEntries());
     Assert.assertEquals(1, cache.getStats().getNumMisses());
+
+    emitter.verifyEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
+    emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
   }
 
   @Test
@@ -223,6 +243,10 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     Assert.assertEquals(0, cache.getStats().getNumEntries());
     Assert.assertEquals(1, cache.getStats().getNumMisses());
 
+    emitter.verifyEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
+    emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 0);
+    emitter.flush();
+
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner2 = createQueryRunner(
         newCacheConfig(true, true, DEFAULT_CACHE_ENTRY_MAX_SIZE),
         query
@@ -237,6 +261,9 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     Assert.assertEquals(0, cache.getStats().getNumHits());
     Assert.assertEquals(1, cache.getStats().getNumEntries());
     Assert.assertEquals(2, cache.getStats().getNumMisses());
+
+    emitter.verifyEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
+    emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 0);
   }
 
   @Test
@@ -272,6 +299,8 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
       Assert.assertEquals(0, cache.getStats().getNumHits());
       Assert.assertEquals(0, cache.getStats().getNumEntries());
       Assert.assertEquals(0, cache.getStats().getNumMisses());
+
+      emitter.verifyNotEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT);
     }
   }
 
@@ -290,13 +319,13 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         objectMapper
     ));
     Mockito.doAnswer((Answer<Object>) invocation -> {
-      List<ReferenceCountingResourceHolder<ByteBuffer>> resoruce = mergePool.takeBatch(1, 1);
-      if (resoruce.isEmpty()) {
+      List<ReferenceCountingResourceHolder<ByteBuffer>> resource = mergePool.takeBatch(1, 1);
+      if (resource.isEmpty()) {
         fail("Resource should not be empty");
       }
       Sequence<Result<TimeseriesResultValue>> realSequence = (Sequence<Result<TimeseriesResultValue>>) invocation.callRealMethod();
       Closer closer = Closer.create();
-      closer.register(() -> resoruce.forEach(ReferenceCountingResourceHolder::close));
+      closer.register(() -> resource.forEach(ReferenceCountingResourceHolder::close));
       return Sequences.withBaggage(realSequence, closer);
     }).when(spyRunner).run(ArgumentMatchers.any(), ArgumentMatchers.any());
 
@@ -306,7 +335,8 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         query,
         objectMapper,
         cache,
-        cacheConfig
+        cacheConfig,
+        emitter
     );
 
     final Sequence<Result<TimeseriesResultValue>> sequence1 = queryRunner1.run(
@@ -317,6 +347,10 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     Assert.assertEquals(0, cache.getStats().getNumHits());
     Assert.assertEquals(1, cache.getStats().getNumEntries());
     Assert.assertEquals(1, cache.getStats().getNumMisses());
+
+    emitter.verifyEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
+    emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 0);
+    emitter.flush();
 
 
     final Sequence<Result<TimeseriesResultValue>> sequence2 = queryRunner1.run(
@@ -329,6 +363,10 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     Assert.assertEquals(1, cache.getStats().getNumEntries());
     Assert.assertEquals(1, cache.getStats().getNumMisses());
 
+    emitter.verifyEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
+    emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
+    emitter.flush();
+
     final Sequence<Result<TimeseriesResultValue>> sequence3 = queryRunner1.run(
         QueryPlus.wrap(query),
         responseContext()
@@ -338,6 +376,34 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     Assert.assertEquals(2, cache.getStats().getNumHits());
     Assert.assertEquals(1, cache.getStats().getNumEntries());
     Assert.assertEquals(1, cache.getStats().getNumMisses());
+
+    emitter.verifyEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
+    emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
+  }
+
+  @Test
+  public void testPopulateCacheThrowsException()
+  {
+    cache = Mockito.spy(cache);
+    Mockito.doThrow(new RuntimeException("some error")).when(cache).put(ArgumentMatchers.any(), ArgumentMatchers.any());
+
+    prepareCluster(10);
+    final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
+    final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner1 = createQueryRunner(
+        newCacheConfig(true, true, DEFAULT_CACHE_ENTRY_MAX_SIZE),
+        query
+    );
+
+    queryRunner1.run(
+        QueryPlus.wrap(query),
+        responseContext()
+    ).toList();
+    Assert.assertEquals(0, cache.getStats().getNumHits());
+    Assert.assertEquals(0, cache.getStats().getNumEntries());
+    Assert.assertEquals(1, cache.getStats().getNumMisses());
+
+    emitter.verifyEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
+    emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 0);
   }
 
   private <T> ResultLevelCachingQueryRunner<T> createQueryRunner(
@@ -357,7 +423,8 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         query,
         objectMapper,
         cache,
-        cacheConfig
+        cacheConfig,
+        emitter
     );
   }
 

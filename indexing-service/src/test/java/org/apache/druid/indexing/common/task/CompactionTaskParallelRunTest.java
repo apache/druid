@@ -63,7 +63,6 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.SegmentUtils;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
@@ -118,22 +117,20 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   private static final String DATA_SOURCE = "test";
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("2014-01-01/2014-01-02");
 
-  private static final AggregateProjectionSpec PROJECTION_SPEC = new AggregateProjectionSpec(
-      "projection1",
-      VirtualColumns.create(
-          Granularities.toVirtualColumn(
-              Granularities.HOUR,
-              Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
-          )
-      ),
-      ImmutableList.of(
-          new LongDimensionSchema(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
-          new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
-      ),
-      new AggregatorFactory[]{
-          new LongSumAggregatorFactory("val", "val")
-      }
-  );
+  private static final AggregateProjectionSpec PROJECTION_SPEC =
+      AggregateProjectionSpec.builder("projection1")
+                             .virtualColumns(
+                                 Granularities.toVirtualColumn(
+                                     Granularities.HOUR,
+                                     Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                                 )
+                             )
+                             .groupingColumns(
+                                 new LongDimensionSchema(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
+                                 new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+                             )
+                             .aggregators(new LongSumAggregatorFactory("val", "val"))
+                             .build();
 
   private final LockGranularity lockGranularity;
 
@@ -206,7 +203,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ),
           ImmutableList.of(expectedLongSumMetric),
           null,
-          compactionTask.getTuningConfig().getIndexSpec(),
+          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
           new UniformGranularitySpec(
               Granularities.HOUR,
               Granularities.MINUTE,
@@ -254,7 +251,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ),
           ImmutableList.of(expectedLongSumMetric),
           null,
-          compactionTask.getTuningConfig().getIndexSpec(),
+          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
           new UniformGranularitySpec(
               Granularities.HOUR,
               Granularities.MINUTE,
@@ -317,7 +314,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ),
           ImmutableList.of(expectedLongSumMetric),
           null,
-          compactionTask.getTuningConfig().getIndexSpec(),
+          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
           new UniformGranularitySpec(
               Granularities.HOUR,
               Granularities.MINUTE,
@@ -370,7 +367,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
           ImmutableList.of(expectedLongSumMetric),
           null,
-          compactionTask.getTuningConfig().getIndexSpec(),
+          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
           new UniformGranularitySpec(
               Granularities.HOUR,
               Granularities.MINUTE,
@@ -423,7 +420,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ),
           ImmutableList.of(expectedLongSumMetric),
           null,
-          compactionTask.getTuningConfig().getIndexSpec(),
+          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
           new UniformGranularitySpec(
               Granularities.HOUR,
               Granularities.MINUTE,
@@ -471,7 +468,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ),
           ImmutableList.of(expectedLongSumMetric),
           null,
-          compactionTask.getTuningConfig().getIndexSpec(),
+          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
           new UniformGranularitySpec(
               Granularities.HOUR,
               Granularities.MINUTE,
@@ -522,7 +519,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ),
           ImmutableList.of(expectedLongSumMetric),
           null,
-          compactionTask.getTuningConfig().getIndexSpec(),
+          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
           new UniformGranularitySpec(
               Granularities.HOUR,
               Granularities.MINUTE,
@@ -603,7 +600,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ),
           ImmutableList.of(expectedLongSumMetric),
           compactionTask.getTransformSpec(),
-          compactionTask.getTuningConfig().getIndexSpec(),
+          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
           new UniformGranularitySpec(
               Granularities.HOUR,
               Granularities.MINUTE,
@@ -658,7 +655,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ),
           ImmutableList.of(expectedCountMetric, expectedLongSumMetric),
           compactionTask.getTransformSpec(),
-          compactionTask.getTuningConfig().getIndexSpec(),
+          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
           new UniformGranularitySpec(
               Granularities.HOUR,
               Granularities.MINUTE,
@@ -934,7 +931,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ),
           Collections.emptyList(),
           null,
-          compactionTask.getTuningConfig().getIndexSpec(),
+          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
           new UniformGranularitySpec(
               Granularities.HOUR,
               Granularities.MINUTE,
@@ -957,14 +954,10 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         DATA_SOURCE,
         getSegmentCacheManagerFactory()
     );
-    final AggregateProjectionSpec addProjection = new AggregateProjectionSpec(
-        "projection2",
-        VirtualColumns.EMPTY,
-        null,
-        new AggregatorFactory[]{
-            new LongSumAggregatorFactory("val", "val")
-        }
-    );
+    final AggregateProjectionSpec addProjection =
+        AggregateProjectionSpec.builder("projection2")
+                               .aggregators(new LongSumAggregatorFactory("val", "val"))
+                               .build();
     final CompactionTask compactionTask = builder
         .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
         .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
@@ -997,7 +990,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
           ),
           Collections.emptyList(),
           null,
-          compactionTask.getTuningConfig().getIndexSpec(),
+          compactionTask.getTuningConfig().getIndexSpec().getEffectiveSpec(),
           new UniformGranularitySpec(
               Granularities.HOUR,
               Granularities.MINUTE,

@@ -43,7 +43,9 @@ import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
+import org.apache.druid.timeline.partition.ShardSpec;
 import org.junit.Assert;
 
 import java.io.IOException;
@@ -395,7 +397,9 @@ public class TestHelper
 
       final Object actualValue = actualMap.get(key);
 
-      if (expectedValue != null && expectedValue.getClass().isArray()) {
+      if ((expectedValue != null && actualValue == null) || (expectedValue == null && actualValue != null)) {
+        Assert.assertEquals(StringUtils.format("%s: key[%s]", msg, key), expectedValue, actualValue);
+      } else if (expectedValue != null && expectedValue.getClass().isArray()) {
         Assert.assertArrayEquals((Object[]) expectedValue, (Object[]) actualValue);
       } else if (expectedValue instanceof Float || expectedValue instanceof Double) {
         Assert.assertEquals(
@@ -510,5 +514,13 @@ public class TestHelper
     catch (IOException e) {
       throw new UncheckedIOException(e);
     }
+  }
+
+  public static DataSegment toSimpleDataSegment(Segment segment, ShardSpec shardSpec)
+  {
+    return DataSegment.builder(segment.getId())
+                      .shardSpec(shardSpec)
+                      .size(0)
+                      .build();
   }
 }

@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import { IconNames } from '@blueprintjs/icons';
 import { sum } from 'd3-array';
 import React from 'react';
 
+import { getConsoleViewIcon } from '../../../druid-models';
 import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
@@ -40,7 +40,7 @@ export interface SegmentsCardProps {
 export const SegmentsCard = React.memo(function SegmentsCard(props: SegmentsCardProps) {
   const [segmentCountState] = useQueryManager<Capabilities, SegmentCounts>({
     initQuery: props.capabilities,
-    processQuery: async (capabilities, cancelToken) => {
+    processQuery: async (capabilities, signal) => {
       if (capabilities.hasSql()) {
         const segments = await queryDruidSql(
           {
@@ -52,19 +52,19 @@ export const SegmentsCard = React.memo(function SegmentsCard(props: SegmentsCard
 FROM sys.segments
 WHERE is_active = 1`,
           },
-          cancelToken,
+          signal,
         );
         return segments.length === 1 ? segments[0] : null;
       } else if (capabilities.hasCoordinatorAccess()) {
         const loadstatusResp = await Api.instance.get('/druid/coordinator/v1/loadstatus?simple', {
-          cancelToken,
+          signal,
         });
         const loadstatus = loadstatusResp.data;
         const unavailableSegmentNum = sum(Object.keys(loadstatus), key => loadstatus[key]);
 
         const datasourcesMeta = await getApiArray(
           '/druid/coordinator/v1/datasources?simple',
-          cancelToken,
+          signal,
         );
         const availableSegmentNum = sum(datasourcesMeta, (curr: any) =>
           deepGet(curr, 'properties.segments.count'),
@@ -92,7 +92,7 @@ WHERE is_active = 1`,
     <HomeViewCard
       className="segments-card"
       href="#segments"
-      icon={IconNames.STACKED_CHART}
+      icon={getConsoleViewIcon('segments')}
       title="Segments"
       loading={segmentCountState.loading}
       error={segmentCountState.error}

@@ -41,8 +41,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Use JDK 21.0.4 to work around https://github.com/apache/druid/issues/17429
-        java: [ '11', '17', '21.0.4' ]
+        java: [ '17', '21' ]
     runs-on: ubuntu-latest
     steps:
       - name: checkout branch
@@ -66,12 +65,6 @@ jobs:
         # who watches the watchers?
         if: ${{ matrix.java == '17' }}
         run: ./check_test_suite_test.py
-
-      - name: (openjdk17) strict compilation
-        if: ${{ matrix.java == '17' }}
-        # errorprone requires JDK 11+
-        # Strict compilation requires more than 2 GB
-        run: ${MVN} clean -DstrictCompile compile test-compile --fail-at-end ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C
 
       - name: maven install
         if: ${{ matrix.java == '17' }}
@@ -112,6 +105,23 @@ jobs:
       - name: spotbugs checks
         if: ${{ matrix.java == '17' }}
         run: ${MVN} spotbugs:check --fail-at-end -pl '!benchmarks'
+
+  strict-compilation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout branch
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'maven'
+
+      - name: (openjdk17) strict compilation
+        # errorprone requires JDK 11+
+        # Strict compilation requires more than 2 GB
+        run: ${MVN} clean -DstrictCompile compile test-compile --fail-at-end ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C
 
   openrewrite:
     runs-on: ubuntu-latest

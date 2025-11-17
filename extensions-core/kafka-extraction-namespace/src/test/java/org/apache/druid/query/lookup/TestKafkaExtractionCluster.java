@@ -40,8 +40,11 @@ import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.utils.Time;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -58,6 +61,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ThreadLocalRandom;
+
+import static org.junit.Assert.assertThrows;
 
 /**
  *
@@ -219,6 +224,39 @@ public class TestKafkaExtractionCluster
         throw new ISE("server is not active!");
       }
     }
+  }
+
+  @Test
+  public void test_defaultRejectAllUrlsForSaslOauthBearerUrlConsumerProperty()
+  {
+    Map<String, String> properties = getConsumerProperties();
+    properties.put("sasl.mechanism", "OAUTHBEARER");
+    properties.put("security.protocol", "SASL_SSL");
+    properties.put("sasl.jaas.config", "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required;");
+    properties.put("sasl.login.callback.handler.class", "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginCallbackHandler");
+
+    properties.put("sasl.oauthbearer.token.endpoint.url", "http://localhost:8080/token");
+    KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
+        null,
+        TOPIC_NAME,
+        properties
+    );
+    MatcherAssert.assertThat(
+        assertThrows(KafkaException.class, factory::getConsumer),
+        CoreMatchers.instanceOf(KafkaException.class)
+    );
+
+    properties.remove("sasl.oauthbearer.token.endpoint.url");
+    properties.put("sasl.oauthbearer.jwks.endpoint.url", "http://localhost:8080/jwks");
+    factory = new KafkaLookupExtractorFactory(
+        null,
+        TOPIC_NAME,
+        properties
+    );
+    MatcherAssert.assertThat(
+        assertThrows(KafkaException.class, factory::getConsumer),
+        CoreMatchers.instanceOf(KafkaException.class)
+    );
   }
 
   @Test(timeout = 60_000L)

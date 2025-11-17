@@ -49,8 +49,8 @@ export const StatusDialog = React.memo(function StatusDialog(props: StatusDialog
 
   const [responseState] = useQueryManager<null, StatusResponse>({
     initQuery: null,
-    processQuery: async (_, cancelToken) => {
-      return (await Api.instance.get(`/status`, { cancelToken })).data;
+    processQuery: async (_, signal) => {
+      return (await Api.instance.get(`/status`, { signal })).data;
     },
   });
 
@@ -72,9 +72,7 @@ export const StatusDialog = React.memo(function StatusDialog(props: StatusDialog
             value={row.value}
             filters={moduleFilter}
             onFiltersChange={setModuleFilter}
-          >
-            {row.value}
-          </TableFilterableCell>
+          />
         );
       };
     };

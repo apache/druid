@@ -69,7 +69,7 @@ public class SerializablePairLongStringComplexMetricSerdeTest
     assertExpected(ImmutableList.of(new SerializablePairLongString(
         100L,
         randomStringUtils.randomAlphanumeric(2 * 1024 * 1024)
-    )), 2097182, 2103140);
+    )), 2097182, 2103139);
   }
 
   @Test
@@ -86,7 +86,7 @@ public class SerializablePairLongStringComplexMetricSerdeTest
       valueList.add(new SerializablePairLongString(Integer.MAX_VALUE + (long) i, stringList.get(i % numStrings)));
     }
 
-    assertExpected(valueList, 10440010, 1746026);
+    assertExpected(valueList, 10440010, 1746198);
   }
 
   @Test
@@ -111,7 +111,7 @@ public class SerializablePairLongStringComplexMetricSerdeTest
       valueList.add(new SerializablePairLongString(random.nextLong(), randomStringUtils.randomAlphanumeric(1024)));
     }
 
-    assertExpected(valueList, 10440010, 10428975);
+    assertExpected(valueList, 10440010, 10429009);
   }
 
   @Test
@@ -148,12 +148,12 @@ public class SerializablePairLongStringComplexMetricSerdeTest
     SegmentWriteOutMedium writeOutMedium = new OnHeapMemorySegmentWriteOutMedium();
     ByteBuffer legacyBuffer = serializeAllValuesToByteBuffer(
         expected,
-        LEGACY_SERDE.getSerializer(writeOutMedium, "not-used", IndexSpec.DEFAULT),
+        LEGACY_SERDE.getSerializer(writeOutMedium, "not-used", IndexSpec.getDefault()),
         expectedLegacySize
     ).asReadOnlyBuffer();
     ByteBuffer compressedBuffer = serializeAllValuesToByteBuffer(
         expected,
-        COMPRESSED_SERDE.getSerializer(writeOutMedium, "not-used", IndexSpec.DEFAULT),
+        COMPRESSED_SERDE.getSerializer(writeOutMedium, "not-used", IndexSpec.getDefault()),
         expectedCompressedSize
     ).asReadOnlyBuffer();
 

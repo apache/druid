@@ -32,7 +32,7 @@ import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
@@ -265,10 +265,11 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     HashJoinSegment hashJoinSegment = new HashJoinSegment(
-        ReferenceCountingSegment.wrapRootGenerationSegment(infiniteFactSegment),
+        ReferenceCountedSegmentProvider.unmanaged(infiniteFactSegment).orElseThrow(),
         null,
         joinableClauses,
-        joinFilterPreAnalysis
+        joinFilterPreAnalysis,
+        () -> {}
     );
 
     try (final CursorHolder cursorHolder = Objects.requireNonNull(hashJoinSegment.as(CursorFactory.class))

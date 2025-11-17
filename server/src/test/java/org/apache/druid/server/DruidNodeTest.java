@@ -21,10 +21,13 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Map;
 
 public class DruidNodeTest
 {
@@ -53,6 +56,7 @@ public class DruidNodeTest
     // Hosts which report only ipv6 will have getDefaultHost() report something like fe80::6e40:8ff:fe93:9230
     // but getHostAndPort() reports [fe80::6e40:8ff:fe93:9230]
     Assert.assertEquals(HostAndPort.fromString(DruidNode.getDefaultHost()).toString(), node.getHostAndPort());
+    Assert.assertEquals(DruidNode.UNKNOWN_VERSION, node.getVersion()); // unknown because not compiled with version
 
     node = new DruidNode(service, "2001:db8:85a3::8a2e:370:7334", false, -1, null, true, false);
     Assert.assertEquals("2001:db8:85a3::8a2e:370:7334", node.getHost());
@@ -160,20 +164,23 @@ public class DruidNodeTest
     Assert.assertEquals(-1, node.getPlaintextPort());
     Assert.assertEquals(123, node.getTlsPort());
 
-    node = new DruidNode("test", "host", false, -1, 123, false, true);
+    node = new DruidNode("test", "host", false, -1, null, 123, false, true, ImmutableMap.of("labelKey1", "labelValue1"));
     Assert.assertEquals("host", node.getHost());
     Assert.assertEquals(-1, node.getPlaintextPort());
     Assert.assertEquals(123, node.getTlsPort());
+    Assert.assertEquals(ImmutableMap.of("labelKey1", "labelValue1"), node.getLabels());
 
-    node = new DruidNode("test", "host", false, -1, 123, true, false);
+    node = new DruidNode("test", "host", false, -1, null, 123, true, false, ImmutableMap.of("labelKey1", "labelValue1", "labelKey2", "labelValue2"));
     Assert.assertEquals("host", node.getHost());
     Assert.assertEquals(-1, node.getPlaintextPort());
     Assert.assertEquals(-1, node.getTlsPort());
+    Assert.assertEquals(ImmutableMap.of("labelKey1", "labelValue1", "labelKey2", "labelValue2"), node.getLabels());
 
     node = new DruidNode("test", "host:123", false, 123, null, true, false);
     Assert.assertEquals("host", node.getHost());
     Assert.assertEquals(123, node.getPlaintextPort());
     Assert.assertEquals(-1, node.getTlsPort());
+    Assert.assertNull(node.getLabels());
 
     node = new DruidNode("test", "host:123", false, null, 123, true, false);
     Assert.assertEquals("host", node.getHost());
@@ -259,7 +266,9 @@ public class DruidNodeTest
     final String serviceName = "serviceName";
     final String host = "some.host";
     final int port = 9898;
-    Assert.assertEquals(new DruidNode(serviceName, host, false, port, null, true, false), new DruidNode(serviceName, host, false, port, null, true, false));
+    final Map<String, String> labels = ImmutableMap.of("key1", "value1");
+    Assert.assertEquals(new DruidNode(serviceName, host, false, port, null, null, true, false, labels), new DruidNode(serviceName, host, false, port, null, null, true, false, labels));
+    Assert.assertEquals(new DruidNode(serviceName, host, false, port, null, null, true, false, labels), new DruidNode(serviceName, host, false, port, null, null, true, false, ImmutableMap.of("key1", "value1")));
     Assert.assertNotEquals(new DruidNode(serviceName, host, false, port, null, true, false), new DruidNode(serviceName, host, false, -1, null, true, false));
     Assert.assertNotEquals(new DruidNode(serviceName, host, false, port, null, true, false), new DruidNode(serviceName, "other.host", false, port, null, true, false));
     Assert.assertNotEquals(new DruidNode(serviceName, host, false, port, null, true, false), new DruidNode("otherServiceName", host, false, port, null, true, false));
@@ -272,7 +281,11 @@ public class DruidNodeTest
     final String serviceName = "serviceName";
     final String host = "some.host";
     final int port = 9898;
-    Assert.assertEquals(new DruidNode(serviceName, host, false, port, null, true, false).hashCode(), new DruidNode(serviceName, host, false, port, null, true, false).hashCode());
+    final Map<String, String> labels = ImmutableMap.of("key1", "value1");
+    Assert.assertEquals(
+        new DruidNode(serviceName, host, false, port, null, null, true, false, labels).hashCode(),
+        new DruidNode(serviceName, host, false, port, null, null, true, false, labels).hashCode()
+    );
     // Potential hash collision if hashCode method ever changes
     Assert.assertNotEquals(new DruidNode(serviceName, host, false, port, null, true, false).hashCode(), new DruidNode(serviceName, host, false, -1, null, true, false).hashCode());
     Assert.assertNotEquals(new DruidNode(serviceName, host, false, port, null, true, false).hashCode(), new DruidNode(serviceName, "other.host", false, port, null, true, false).hashCode());
@@ -284,7 +297,7 @@ public class DruidNodeTest
   public void testSerde1() throws Exception
   {
     DruidNode actual = mapper.readValue(
-        mapper.writeValueAsString(new DruidNode("service", "host", true, 1234, null, 5678, true, true)),
+        mapper.writeValueAsString(new DruidNode("service", "host", true, 1234, null, 5678, true, true, ImmutableMap.of("key1", "value1"))),
         DruidNode.class
     );
     Assert.assertEquals("service", actual.getServiceName());
@@ -294,13 +307,14 @@ public class DruidNodeTest
     Assert.assertTrue(actual.isEnableTlsPort());
     Assert.assertEquals(1234, actual.getPlaintextPort());
     Assert.assertEquals(5678, actual.getTlsPort());
+    Assert.assertEquals(ImmutableMap.of("key1", "value1"), actual.getLabels());
   }
 
   @Test
   public void testSerde2() throws Exception
   {
     DruidNode actual = mapper.readValue(
-        mapper.writeValueAsString(new DruidNode("service", "host", false, 1234, null, 5678, null, false)),
+        mapper.writeValueAsString(new DruidNode("service", "host", false, 1234, null, 5678, null, false, null)),
         DruidNode.class
     );
     Assert.assertEquals("service", actual.getServiceName());
@@ -310,13 +324,14 @@ public class DruidNodeTest
     Assert.assertFalse(actual.isEnableTlsPort());
     Assert.assertEquals(1234, actual.getPlaintextPort());
     Assert.assertEquals(-1, actual.getTlsPort());
+    Assert.assertNull(actual.getLabels());
   }
 
   @Test
   public void testSerde3() throws Exception
   {
     DruidNode actual = mapper.readValue(
-        mapper.writeValueAsString(new DruidNode("service", "host", true, 1234, null, 5678, false, true)),
+        mapper.writeValueAsString(new DruidNode("service", "host", true, 1234, null, 5678, false, true, ImmutableMap.of("key1", "value1", "key2", "value2"))),
         DruidNode.class
     );
     Assert.assertEquals("service", actual.getServiceName());
@@ -326,6 +341,7 @@ public class DruidNodeTest
     Assert.assertTrue(actual.isEnableTlsPort());
     Assert.assertEquals(-1, actual.getPlaintextPort());
     Assert.assertEquals(5678, actual.getTlsPort());
+    Assert.assertEquals(ImmutableMap.of("key1", "value1", "key2", "value2"), actual.getLabels());
   }
 
   @Test
@@ -338,12 +354,13 @@ public class DruidNodeTest
                   + "  \"plaintextPort\":1234,\n"
                   + "  \"tlsPort\":5678,\n"
                   + "  \"enablePlaintextPort\":true,\n"
-                  + "  \"enableTlsPort\":true\n"
+                  + "  \"enableTlsPort\":true,\n"
+                  + "  \"labels\":{\"key1\":\"value1\"}"
                   + "}\n";
 
 
     DruidNode actual = mapper.readValue(json, DruidNode.class);
-    Assert.assertEquals(new DruidNode("service", "host", true, 1234, null, 5678, true, true), actual);
+    Assert.assertEquals(new DruidNode("service", "host", true, 1234, null, 5678, true, true, ImmutableMap.of("key1", "value1")), actual);
 
     Assert.assertEquals("https", actual.getServiceScheme());
     Assert.assertEquals("host:1234", actual.getHostAndPort());
@@ -364,7 +381,7 @@ public class DruidNodeTest
 
 
     DruidNode actual = mapper.readValue(json, DruidNode.class);
-    Assert.assertEquals(new DruidNode("service", "host", false, 1234, null, 5678, true, false), actual);
+    Assert.assertEquals(new DruidNode("service", "host", false, 1234, null, 5678, true, false, null), actual);
 
     Assert.assertEquals("http", actual.getServiceScheme());
     Assert.assertEquals("host:1234", actual.getHostAndPort());
@@ -384,7 +401,7 @@ public class DruidNodeTest
 
 
     DruidNode actual = mapper.readValue(json, DruidNode.class);
-    Assert.assertEquals(new DruidNode("service", "host", false, 1234, null, 5678, null, false), actual);
+    Assert.assertEquals(new DruidNode("service", "host", false, 1234, null, 5678, null, false, null), actual);
 
     Assert.assertEquals("http", actual.getServiceScheme());
     Assert.assertEquals("host:1234", actual.getHostAndPort());
@@ -404,7 +421,7 @@ public class DruidNodeTest
 
 
     DruidNode actual = mapper.readValue(json, DruidNode.class);
-    Assert.assertEquals(new DruidNode("service", "host", false, null, 1234, 5678, null, false), actual);
+    Assert.assertEquals(new DruidNode("service", "host", false, null, 1234, 5678, null, false, null), actual);
 
     Assert.assertEquals("http", actual.getServiceScheme());
     Assert.assertEquals("host:1234", actual.getHostAndPort());

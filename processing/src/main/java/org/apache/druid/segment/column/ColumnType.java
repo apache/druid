@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import org.apache.druid.java.util.common.Cacheable;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 
 import javax.annotation.Nullable;
@@ -34,7 +36,7 @@ import java.util.Objects;
  * @see TypeSignature
  */
 @JsonSerialize(using = ToStringSerializer.class)
-public class ColumnType extends BaseTypeSignature<ValueType>
+public class ColumnType extends BaseTypeSignature<ValueType> implements Cacheable
 {
   /**
    * Druid string type. Values will be represented as {@link String} or {@link java.util.List<String>} in the case
@@ -235,4 +237,19 @@ public class ColumnType extends BaseTypeSignature<ValueType>
     return ColumnType.DOUBLE;
   }
 
+  @Nullable
+  public static ColumnType leastRestrictiveType(Iterable<ColumnType> types)
+  {
+    ColumnType leastRestrictiveType = null;
+    for (ColumnType type : types) {
+      leastRestrictiveType = leastRestrictiveType(leastRestrictiveType, type);
+    }
+    return leastRestrictiveType;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return StringUtils.toUtf8(toString());
+  }
 }

@@ -32,8 +32,8 @@ import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -471,6 +471,15 @@ public class QueryContext
     return getLong(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
   }
 
+  public String getEngine()
+  {
+    return QueryContexts.parseString(
+        context,
+        QueryContexts.ENGINE,
+        QueryContexts.DEFAULT_ENGINE
+    );
+  }
+
   public boolean hasTimeout()
   {
     return getTimeout() != QueryContexts.NO_TIMEOUT;
@@ -494,6 +503,15 @@ public class QueryContext
             timeout
         )
     );
+  }
+
+  @Nullable
+  public Duration getTimeoutDuration()
+  {
+    if (hasTimeout()) {
+      return Duration.ofMillis(getTimeout());
+    }
+    return null;
   }
 
   public long getDefaultTimeout()
@@ -524,6 +542,32 @@ public class QueryContext
           )
       );
     }
+  }
+
+  public long getPerSegmentTimeout()
+  {
+    return getPerSegmentTimeout(QueryContexts.NO_TIMEOUT);
+  }
+
+  public long getPerSegmentTimeout(long defaultPerSegmentTimeout)
+  {
+    final long timeout = getLong(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, defaultPerSegmentTimeout);
+    if (timeout >= 0) {
+      return timeout;
+    }
+
+    throw new BadQueryContextException(
+        StringUtils.format(
+            "Per-segment timeout [%s] must be a non negative value, but was [%d]",
+            QueryContexts.PER_SEGMENT_TIMEOUT_KEY,
+            timeout
+        )
+    );
+  }
+
+  public boolean usePerSegmentTimeout()
+  {
+    return getPerSegmentTimeout() != QueryContexts.NO_TIMEOUT;
   }
 
   public void verifyMaxScatterGatherBytes(long maxScatterGatherBytesLimit)
@@ -727,5 +771,10 @@ public class QueryContext
   public boolean isPrePlanned()
   {
     return getBoolean(QueryContexts.CTX_PREPLANNED, QueryContexts.DEFAULT_PREPLANNED);
+  }
+
+  public boolean isRealtimeSegmentsOnly()
+  {
+    return getBoolean(QueryContexts.REALTIME_SEGMENTS_ONLY, QueryContexts.DEFAULT_REALTIME_SEGMENTS_ONLY);
   }
 }

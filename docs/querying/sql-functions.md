@@ -285,7 +285,7 @@ Returns the following:
 
 ## APPROX_COUNT_DISTINCT_DS_THETA
 
-Returns the approximate number of distinct values in a Theta sketch column or a regular column. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta#aggregator) for a description of optional parameters.
+Returns the approximate number of distinct values in a Theta sketch column or a regular column. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta.md#aggregator) for a description of optional parameters.
 
 * **Syntax:** `APPROX_COUNT_DISTINCT_DS_THETA(expr, [size])`
 * **Function type:** Aggregation
@@ -2305,7 +2305,7 @@ Returns a result similar to the following:
 
 ## DS_THETA
 
-Creates a Theta sketch on a column containing Theta sketches or a regular column. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta#aggregator) for a description of optional parameters.
+Creates a Theta sketch on a column containing Theta sketches or a regular column. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta.md#aggregator) for a description of optional parameters.
 
 * **Syntax:** `DS_THETA(expr, [size])`
 * **Function type:** Aggregation
@@ -3304,7 +3304,7 @@ Returns the following:
 
 ## JSON_PATHS
 
-Returns an array of all paths which refer to literal values in an expression, in JSONPath format.
+Returns an array of all paths which refer to primitive values in an expression, in JSONPath format.
 
 * **Syntax:** `JSON_PATHS(expr)`  
 * **Function type:** JSON
@@ -3397,11 +3397,11 @@ Returns the following:
 
 ## JSON_VALUE
 
-Extracts a literal value from an expression at a specified path.
+Extracts a primitive value from an expression at a specified path.
 
 If you include `RETURNING` and specify a SQL type (such as `VARCHAR`, `BIGINT`, `DOUBLE`) the function plans the query using the suggested type.
 If `RETURNING` isn't included, the function attempts to infer the type based on the context.
-If the function can't infer the type, it defaults to `VARCHAR`.
+If the function can't infer the type, it defaults to `VARCHAR`.  Primitive arrays can also be returned, but only if `RETURNING` is specified as an `ARRAY` type, e.g. `RETURNING VARCHAR ARRAY`.
 
 * **Syntax:** `JSON_VALUE(expr, path [RETURNING sqlType])`
 * **Function type:** JSON
@@ -4156,6 +4156,70 @@ Returns the following:
 </details>
 
 [Learn more](sql-multivalue-string-functions.md)
+
+## MV_FILTER_REGEX
+
+Filters a multi-value expression to include only values matching the specified regular expression pattern.
+
+* **Syntax:** `MV_FILTER_REGEX(expr, pattern)`
+* **Function type:** Multi-value string
+
+<details>
+<summary>Example</summary>
+
+The following example filters the `tags` multi-value string from the `mvd-example` datasource to include only values starting with the letter `t`:
+
+```sql
+SELECT MV_FILTER_REGEX("tags", '^t.*') AS regex_filtered
+FROM "mvd-example"
+LIMIT 4
+```
+
+Returns the following:
+
+| `regex_filtered` |
+| -- |
+| `["t1","t2","t3"]` |
+| `["t3","t4","t5"]` |
+| `["t5","t6","t7"]` |
+| `[]` |
+
+</details>
+
+Filters multi-value `expr` to include values that match `pattern`.
+
+---
+
+## MV_FILTER_PREFIX
+
+Filters a multi-value expression to include only values that start with the specified prefix.
+
+* **Syntax:** `MV_FILTER_PREFIX(expr, prefix)`
+* **Function type:** Multi-value string
+
+<details>
+<summary>Example</summary>
+
+The following example filters the `tags` multi-value string from the `mvd-example` datasource to include only values starting with `t3`:
+
+```sql
+SELECT MV_FILTER_PREFIX("tags", 't3') AS prefix_filtered
+FROM "mvd-example"
+LIMIT 4
+```
+
+Returns the following:
+
+| `prefix_filtered` |
+| -- |
+| `[]` |
+| `["t3"]` |
+| `[]` |
+| `[]` |
+
+</details>
+
+Filters multi-value `expr` to include values that have prefix `prefix`.
 
 ## MV_LENGTH
 
@@ -5551,7 +5615,7 @@ Returns the following:
 
 ## THETA_SKETCH_INTERSECT
 
-Returns an intersection of Theta sketches. Each input expression must return a Theta sketch. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta#aggregator) for a description of optional parameters. 
+Returns an intersection of Theta sketches. Each input expression must return a Theta sketch. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta.md#aggregator) for a description of optional parameters. 
 
 * **Syntax:** `THETA_SKETCH_INTERSECT([size], expr0, expr1, ...)`
 * **Function type:** Scalar, sketch
@@ -5585,7 +5649,7 @@ Returns the following:
 
 ## THETA_SKETCH_NOT
 
-Returns a set difference of Theta sketches. Each input expression must return a Theta sketch. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta#aggregator) for a description of optional parameters.
+Returns a set difference of Theta sketches. Each input expression must return a Theta sketch. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta.md#aggregator) for a description of optional parameters.
 
 * **Syntax:** `THETA_SKETCH_NOT([size], expr0, expr1, ...)`
 * **Function type:** Scalar, sketch
@@ -5620,7 +5684,7 @@ Returns the following:
 
 ## THETA_SKETCH_UNION
 
-Returns a union of Theta sketches. Each input expression must return a Theta sketch. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta#aggregator) for a description of optional parameters.
+Returns a union of Theta sketches. Each input expression must return a Theta sketch. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta.md#aggregator) for a description of optional parameters.
 
 * **Syntax:**`THETA_SKETCH_UNION([size], expr0, expr1, ...)`
 * **Function type:** Scalar, sketch

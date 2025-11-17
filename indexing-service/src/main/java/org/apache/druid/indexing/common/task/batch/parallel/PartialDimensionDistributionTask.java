@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnels;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.HandlingInputRowIterator;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
@@ -51,10 +52,8 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
@@ -74,6 +73,11 @@ import java.util.stream.Collectors;
 public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
 {
   public static final String TYPE = "partial_dimension_distribution";
+
+  /**
+   * Used in tests to reduce the memory consumption of the dedup bloom filter.
+   */
+  public static final String CTX_BLOOM_FILTER_EXPECTED_INSERTIONS = "bloomFilterExpectedInsertions";
 
   // Do not skip nulls as StringDistribution can handle null values.
   // This behavior is different from hadoop indexing.
@@ -110,7 +114,9 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
         ingestionSchema,
         context,
         () -> new DedupInputRowFilter(
-            ingestionSchema.getDataSchema().getGranularitySpec().getQueryGranularity()
+            ingestionSchema.getDataSchema().getGranularitySpec().getQueryGranularity(),
+            (Integer) context.get(CTX_BLOOM_FILTER_EXPECTED_INSERTIONS),
+            null
         )
     );
   }
@@ -183,7 +189,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
            getIngestionSchema().getIOConfig().getInputSource().getTypes()
                                .stream()
-                               .map(i -> new ResourceAction(new Resource(i, ResourceType.EXTERNAL), Action.READ))
+                               .map(AuthorizationUtils::createExternalResourceReadAction)
                                .collect(Collectors.toSet()) :
            ImmutableSet.of();
   }
@@ -358,25 +364,24 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     private final Granularity queryGranularity;
     private final BloomFilter<CharSequence> groupingBloomFilter;
 
-    DedupInputRowFilter(Granularity queryGranularity)
-    {
-      this(queryGranularity, BLOOM_FILTER_EXPECTED_INSERTIONS, BLOOM_FILTER_EXPECTED_FALSE_POSITIVE_PROBABILTY);
-    }
-
-    @VisibleForTesting
-      // to allow controlling false positive rate of bloom filter
     DedupInputRowFilter(
         Granularity queryGranularity,
-        int bloomFilterExpectedInsertions,
-        double bloomFilterFalsePositiveProbability
+        @Nullable Integer bloomFilterExpectedInsertions,
+        @Nullable Double bloomFilterFalsePositiveProbability
     )
     {
       delegate = new PassthroughInputRowFilter();
       this.queryGranularity = queryGranularity;
       groupingBloomFilter = BloomFilter.create(
           Funnels.unencodedCharsFunnel(),
-          bloomFilterExpectedInsertions,
-          bloomFilterFalsePositiveProbability
+          Configs.valueOrDefault(
+              bloomFilterExpectedInsertions,
+              BLOOM_FILTER_EXPECTED_INSERTIONS
+          ),
+          Configs.valueOrDefault(
+              bloomFilterFalsePositiveProbability,
+              BLOOM_FILTER_EXPECTED_FALSE_POSITIVE_PROBABILTY
+          )
       );
     }
 

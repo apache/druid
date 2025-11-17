@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
 import type { IngestionSpec } from '../../../druid-models';
+import { getConsoleViewIcon } from '../../../druid-models';
 import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { getApiArray, partition, pluralIfNeeded, queryDruidSql } from '../../../utils';
@@ -36,7 +36,7 @@ export interface SupervisorsCardProps {
 
 export const SupervisorsCard = React.memo(function SupervisorsCard(props: SupervisorsCardProps) {
   const [supervisorCountState] = useQueryManager<Capabilities, SupervisorCounts>({
-    processQuery: async (capabilities, cancelToken) => {
+    processQuery: async (capabilities, signal) => {
       if (capabilities.hasSql()) {
         return (
           await queryDruidSql(
@@ -46,13 +46,13 @@ export const SupervisorsCard = React.memo(function SupervisorsCard(props: Superv
   COUNT(*) FILTER (WHERE "suspended" = 1) AS "suspended"
 FROM sys.supervisors`,
             },
-            cancelToken,
+            signal,
           )
         )[0];
       } else if (capabilities.hasOverlordAccess()) {
         const supervisors = await getApiArray<{ spec: IngestionSpec }>(
           '/druid/indexer/v1/supervisor?full',
-          cancelToken,
+          signal,
         );
         const [running, suspended] = partition(supervisors, d => !d.spec.suspended);
         return {
@@ -75,7 +75,7 @@ FROM sys.supervisors`,
     <HomeViewCard
       className="supervisors-card"
       href="#supervisors"
-      icon={IconNames.EYE_OPEN}
+      icon={getConsoleViewIcon('supervisors')}
       title="Supervisors"
       loading={supervisorCountState.loading}
       error={supervisorCountState.error}

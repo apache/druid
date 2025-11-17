@@ -21,13 +21,19 @@ package org.apache.druid.k8s.overlord.common;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
+import io.fabric8.kubernetes.api.model.Event;
+import io.fabric8.kubernetes.api.model.ObjectReference;
+import io.fabric8.kubernetes.api.model.ObjectReferenceBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
+import io.vertx.core.http.HttpClosedException;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -80,22 +86,23 @@ public class KubernetesPeonClient
     long start = System.currentTimeMillis();
     // launch job
     return clientApi.executeRequest(client -> {
-      client.batch().v1().jobs().inNamespace(namespace).resource(job).create();
       String jobName = job.getMetadata().getName();
-      log.info("Successfully submitted job: %s ... waiting for job to launch", jobName);
-      // wait until the pod is running or complete or failed, any of those is fine
+
+      log.info("Submitting job[%s] for task[%s].", jobName, task.getId());
+      createK8sJobWithRetries(job);
+      log.info("Submitted job[%s] for task[%s]. Waiting for POD to launch.", jobName, task.getId());
+
+      // Wait for the pod to be available
       Pod mainPod = getPeonPodWithRetries(jobName);
-      Pod result = client.pods().inNamespace(namespace).withName(mainPod.getMetadata().getName())
-                         .waitUntilCondition(pod -> {
-                           if (pod == null) {
-                             return true;
-                           }
-                           return pod.getStatus() != null && pod.getStatus().getPodIP() != null;
-                         }, howLong, timeUnit);
-      
+      log.info("Pod for job[%s] launched for task[%s]. Waiting for pod to be in running state.", jobName, task.getId());
+
+      // Wait for the pod to be in state running, completed, or failed.
+      Pod result = waitForPodResultWithRetries(mainPod, howLong, timeUnit);
+
       if (result == null) {
-        throw new IllegalStateException("K8s pod for the task [%s] appeared and disappeared. It can happen if the task was canceled");
+        throw new ISE("K8s pod for the task [%s] appeared and disappeared. It can happen if the task was canceled", task.getId());
       }
+      log.info("Pod for job[%s] is in state [%s] for task[%s].", jobName, result.getStatus().getPhase(), task.getId());
       long duration = System.currentTimeMillis() - start;
       emitK8sPodMetrics(task, "k8s/peon/startup/time", duration);
       return result;
@@ -275,11 +282,136 @@ public class KubernetesPeonClient
     return pods.isEmpty() ? Optional.absent() : Optional.of(pods.get(0));
   }
 
+  public Pod waitForPodResultWithRetries(final Pod pod, long howLong, TimeUnit timeUnit)
+  {
+    return clientApi.executeRequest(client -> waitForPodResultWithRetries(client, pod, howLong, timeUnit, 5, RetryUtils.DEFAULT_MAX_TRIES));
+  }
+
   public Pod getPeonPodWithRetries(String jobName)
   {
     return clientApi.executeRequest(client -> getPeonPodWithRetries(client, jobName, 5, RetryUtils.DEFAULT_MAX_TRIES));
   }
 
+  public void createK8sJobWithRetries(Job job)
+  {
+    clientApi.executeRequest(client -> {
+      createK8sJobWithRetries(client, job, 5, RetryUtils.DEFAULT_MAX_TRIES);
+      return null;
+    });
+  }
+
+  /**
+   * Creates a Kubernetes job with retry logic for transient connection pool exceptions.
+   * <p>
+   * This method attempts to create the specified job in Kubernetes with built-in retry logic
+   * for transient connection pool issues. If the job already exists (HTTP 409 conflict),
+   * the method returns successfully without throwing an exception, assuming the job was
+   * already submitted by a previous request.
+   * <p>
+   * The retry logic only applies to transient connection pool exceptions. Other exceptions will cause the method to
+   * fail immediately.
+   *
+   * @param client the Kubernetes client to use for job creation
+   * @param job the Kubernetes job to create
+   * @param quietTries number of initial retry attempts without logging warnings
+   * @param maxTries maximum total number of retry attempts
+   * @throws DruidException if job creation fails after all retry attempts or encounters non-retryable errors
+   */
+  @VisibleForTesting
+  void createK8sJobWithRetries(KubernetesClient client, Job job, int quietTries, int maxTries)
+  {
+    try {
+      RetryUtils.retry(
+          () -> {
+            try {
+              client.batch()
+                    .v1()
+                    .jobs()
+                    .inNamespace(namespace)
+                    .resource(job)
+                    .create();
+              return null;
+            }
+            catch (KubernetesClientException e) {
+              if (e.getCode() == 409) {
+                // Job already exists, return successfully
+                log.info("K8s job[%s] already exists, skipping creation", job.getMetadata().getName());
+                return null;
+              }
+              throw e;
+            }
+          },
+          this::isRetryableTransientConnectionPoolException, quietTries, maxTries
+      );
+    }
+    catch (Exception e) {
+      throw DruidException.defensive(e, "Error when creating K8s job[%s]", job.getMetadata().getName());
+    }
+  }
+
+  /**
+   * Waits for a Kubernetes pod to reach a ready state with retry logic for transient connection pool exceptions.
+   * <p>
+   * This method waits for the specified pod to have a valid status with a pod IP assigned, indicating
+   * it has been scheduled and is in a ready state. The method includes retry logic to handle transient
+   * connection pool exceptions that may occur during the wait operation.
+   * <p>
+   * The method will wait up to the specified timeout for the pod to become ready, and retry the entire wait operation
+   * if transient connection issues are encountered.
+   *
+   * @param client the Kubernetes client to use for pod operations
+   * @param pod the pod to wait for
+   * @param howLong the maximum time to wait for the pod to become ready
+   * @param timeUnit the time unit for the wait timeout
+   * @param quietTries number of initial retry attempts without logging warnings
+   * @param maxTries maximum total number of retry attempts
+   * @return the pod in its ready state, or null if the pod disappeared or wait operation failed
+   * @throws DruidException if waiting fails after all retry attempts or encounters non-retryable errors
+   */
+  @VisibleForTesting
+  Pod waitForPodResultWithRetries(KubernetesClient client, Pod pod, long howLong, TimeUnit timeUnit, int quietTries, int maxTries)
+  {
+    try {
+      return RetryUtils.retry(
+          () -> client.pods()
+                    .inNamespace(namespace)
+                    .withName(pod.getMetadata().getName())
+                    .waitUntilCondition(
+                        p -> {
+                          if (p == null) {
+                            return true;
+                          }
+                          return p.getStatus() != null && p.getStatus().getPodIP() != null;
+                        }, howLong, timeUnit),
+          this::isRetryableTransientConnectionPoolException, quietTries, maxTries);
+    }
+    catch (Exception e) {
+      throw DruidException.defensive(e, "Error when waiting for pod[%s] to start", pod.getMetadata().getName());
+    }
+  }
+
+  /**
+   * Retrieves the pod associated with a Kubernetes job with retry logic for transient failures.
+   * <p>
+   * This method searches for a pod with the specified job name label and includes retry logic
+   * to handle both transient connection pool exceptions and cases where the pod may not be
+   * immediately available after job creation. If no pod is found, the method examines job
+   * events to provide detailed error information about pod creation failures.
+   * <p>
+   * The retry logic applies to:
+   * <ul>
+   *   <li>Transient connection pool exceptions</li>
+   *   <li>Pod not found scenarios, except when blacklisted error messages from {@link DruidK8sConstants#BLACKLISTED_PEON_POD_ERROR_MESSAGES} are encountered</li>
+   * </ul>
+   *
+   * @param client the Kubernetes client to use for pod and event operations
+   * @param jobName the name of the job whose pod should be retrieved
+   * @param quietTries number of initial retry attempts without logging warnings
+   * @param maxTries maximum total number of retry attempts
+   * @return the pod associated with the job
+   * @throws KubernetesResourceNotFoundException if the pod cannot be found after all retry attempts
+   * @throws DruidException if retrieval fails due to other errors
+   */
   @VisibleForTesting
   Pod getPeonPodWithRetries(KubernetesClient client, String jobName, int quietTries, int maxTries)
   {
@@ -290,16 +422,95 @@ public class KubernetesPeonClient
             if (maybePod.isPresent()) {
               return maybePod.get();
             }
-            throw new KubernetesResourceNotFoundException(
-                "K8s pod with label: job-name="
-                + jobName
-                + " not found");
+
+            // If the pod is missing, we can take a look at job events to discover potential problems with pod creation.
+            List<Event> events = getPeonEvents(client, jobName);
+
+            if (events.isEmpty()) {
+              throw new KubernetesResourceNotFoundException("K8s pod with label[job-name=%s] not found", jobName);
+            } else {
+              Event latestEvent = events.get(events.size() - 1);
+              throw new KubernetesResourceNotFoundException(
+                  "Job[%s] failed to create pods. Message[%s]", jobName, latestEvent.getMessage());
+            }
           },
-          DruidK8sConstants.IS_TRANSIENT, quietTries, maxTries
+          this::shouldRetryWaitForStartingPeonPod, quietTries, maxTries
       );
+    }
+    catch (KubernetesResourceNotFoundException e) {
+      throw e;
     }
     catch (Exception e) {
       throw DruidException.defensive(e, "Error when looking for K8s pod with label[job-name=%s]", jobName);
+    }
+  }
+
+  /**
+   * Determines if this exception, specifically when containing Kubernetes job event messages, permits a retry attempt.
+   * <p>
+   * The method checks the exception message against a predefined list of Kubernetes event messages.
+   * These substrings, found in {@link DruidK8sConstants#BLACKLISTED_PEON_POD_ERROR_MESSAGES},
+   * represent Kubernetes event that indicate a retry for starting the Peon Pod would likely be futile.
+   */
+  private boolean shouldRetryWaitForStartingPeonPod(Throwable e)
+  {
+    if (isRetryableTransientConnectionPoolException(e)) {
+      return true;
+    }
+
+    if (!(e instanceof KubernetesResourceNotFoundException)) {
+      return false;
+    }
+
+    String errorMessage = e.getMessage();
+    for (String blacklistedMessage : DruidK8sConstants.BLACKLISTED_PEON_POD_ERROR_MESSAGES) {
+      if (errorMessage.contains(blacklistedMessage)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Checks if the exception is a potentially transient connection pool exception.
+   * <p>
+   * This method checks if the exception is one of the known transient connection pool exceptions
+   * and whether it contains a specific message substring, if applicable.
+   * <p>
+   * We have experienced connections in the pool being closed by the server-side but remaining in the pool. These issues
+   * should be safe to retry in many cases.
+   */
+  private boolean isRetryableTransientConnectionPoolException(Throwable e)
+  {
+    if (e instanceof KubernetesClientException) {
+      return e.getMessage() != null && e.getMessage().contains("Connection was closed");
+    } else if (e instanceof HttpClosedException) {
+      return true;
+    }
+    return false;
+  }
+
+  private List<Event> getPeonEvents(KubernetesClient client, String jobName)
+  {
+    ObjectReference objectReference = new ObjectReferenceBuilder()
+        .withApiVersion("batch/v1")
+        .withKind("Job")
+        .withName(jobName)
+        .withNamespace(this.namespace)
+        .build();
+
+    try {
+      return client.v1()
+                   .events()
+                   .inNamespace(this.namespace)
+                   .withInvolvedObject(objectReference)
+                   .list()
+                   .getItems();
+    }
+    catch (KubernetesClientException e) {
+      log.warn("Failed to get events for job[%s]; %s", jobName, e.getMessage());
+      return List.of();
     }
   }
 

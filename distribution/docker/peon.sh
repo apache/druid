@@ -37,13 +37,17 @@
 #
 # - DRUID_CONFIG_COMMON -- full path to a file for druid 'common' properties
 # - DRUID_CONFIG_${service} -- full path to a file for druid 'service' properties
+# - DRUID_ADDITIONAL_CLASSPATH -- a list of colon-separated paths that will be added to the classpath of druid processes.
+#                                 These paths can include jars, additional configuration folders (such as HDFS config), etc.
+#                                 It is important to ensure that these paths must exist in the environment druid runs in if they are not part of the distribution.
 
 # This script is very similar to druid.sh, used exclusively for the kubernetes-overlord-extension.
+# Specifically, it is used by K8sTaskAdapter and PodTemplateTaskAdapter to start up Peon tasks.
 
 set -e
 SERVICE="overlord"
 
-echo "$(date -Is) startup service $SERVICE"
+echo "$(date -Is) startup service peon"
 
 # We put all the config in /tmp/conf to allow for a
 # read-only root filesystem
@@ -161,8 +165,10 @@ fi
 # If TASK_JSON is not set, CliPeon will pull the task.json file from deep storage.
 mkdir -p ${TASK_DIR}; [ -n "$TASK_JSON" ] && echo ${TASK_JSON} | base64 -d | gzip -d > ${TASK_DIR}/task.json;
 
+# Start peon using CliPeon, with variables `Main internal peon TASK_DIR ATTEMPT_ID`
 if [ -n "$TASK_ID" ]; then
-    exec bin/run-java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*: org.apache.druid.cli.Main internal peon --taskId "${TASK_ID}" "$@"
+    # TASK_ID is only set from PodTemplateTaskAdapter
+    exec bin/run-java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*:$DRUID_ADDITIONAL_CLASSPATH org.apache.druid.cli.Main internal peon "${TASK_DIR}" 1 --taskId "${TASK_ID}" "$@"
 else
-    exec bin/run-java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*: org.apache.druid.cli.Main internal peon "$@"
+    exec bin/run-java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*:$DRUID_ADDITIONAL_CLASSPATH org.apache.druid.cli.Main internal peon "${TASK_DIR}" 1 "$@"
 fi

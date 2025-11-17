@@ -21,7 +21,10 @@ package org.apache.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
+import com.amazonaws.services.s3.model.ListObjectsV2Request;
+import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
@@ -88,6 +91,8 @@ public class S3DataSegmentKiller implements DataSegmentKiller
       return;
     }
 
+    final ServerSideEncryptingAmazonS3 s3Client = this.s3ClientSupplier.get();
+
     // create a map of bucket to keys to delete
     Map<String, List<DeleteObjectsRequest.KeyVersion>> bucketToKeysToDelete = new HashMap<>();
     for (DataSegment segment : segments) {
@@ -97,11 +102,20 @@ public class S3DataSegmentKiller implements DataSegmentKiller
           s3Bucket,
           k -> new ArrayList<>()
       );
-      keysToDelete.add(new DeleteObjectsRequest.KeyVersion(path));
-      keysToDelete.add(new DeleteObjectsRequest.KeyVersion(DataSegmentKiller.descriptorPath(path)));
+      if (path.endsWith("/")) {
+        // segment is not compressed, list objects and add them all to delete list
+        final ListObjectsV2Result list = s3Client.listObjectsV2(
+            new ListObjectsV2Request().withBucketName(s3Bucket).withPrefix(path)
+        );
+        for (S3ObjectSummary objectSummary : list.getObjectSummaries()) {
+          keysToDelete.add(new DeleteObjectsRequest.KeyVersion(objectSummary.getKey()));
+        }
+      } else {
+        keysToDelete.add(new DeleteObjectsRequest.KeyVersion(path));
+        keysToDelete.add(new DeleteObjectsRequest.KeyVersion(DataSegmentKiller.descriptorPath(path)));
+      }
     }
 
-    final ServerSideEncryptingAmazonS3 s3Client = this.s3ClientSupplier.get();
     boolean shouldThrowException = false;
     for (Map.Entry<String, List<DeleteObjectsRequest.KeyVersion>> bucketToKeys : bucketToKeysToDelete.entrySet()) {
       String s3Bucket = bucketToKeys.getKey();
@@ -149,7 +163,7 @@ public class S3DataSegmentKiller implements DataSegmentKiller
       try {
         deleteObjectsRequest.setKeys(chunkOfKeys);
         log.info(
-            "Removing from bucket: [%s] the following index files: [%s] from s3!",
+            "Deleting the following segment files from S3 bucket[%s]: [%s]",
             s3Bucket,
             keysToDeleteStrings
         );
@@ -205,18 +219,29 @@ public class S3DataSegmentKiller implements DataSegmentKiller
       Map<String, Object> loadSpec = segment.getLoadSpec();
       String s3Bucket = MapUtils.getString(loadSpec, S3DataSegmentPuller.BUCKET);
       String s3Path = MapUtils.getString(loadSpec, S3DataSegmentPuller.KEY);
-      String s3DescriptorPath = DataSegmentKiller.descriptorPath(s3Path);
-
       final ServerSideEncryptingAmazonS3 s3Client = this.s3ClientSupplier.get();
-      if (s3Client.doesObjectExist(s3Bucket, s3Path)) {
-        log.info("Removing index file[s3://%s/%s] from s3!", s3Bucket, s3Path);
-        s3Client.deleteObject(s3Bucket, s3Path);
-      }
-      // descriptor.json is a file to store segment metadata in deep storage. This file is deprecated and not stored
-      // anymore, but we still delete them if exists.
-      if (s3Client.doesObjectExist(s3Bucket, s3DescriptorPath)) {
-        log.info("Removing descriptor file[s3://%s/%s] from s3!", s3Bucket, s3DescriptorPath);
-        s3Client.deleteObject(s3Bucket, s3DescriptorPath);
+
+      if (s3Path.endsWith("/")) {
+        // segment is not compressed, list objects and delete them all
+        final ListObjectsV2Result list = s3Client.listObjectsV2(
+            new ListObjectsV2Request().withBucketName(s3Bucket).withPrefix(s3Path)
+        );
+        for (S3ObjectSummary objectSummary : list.getObjectSummaries()) {
+          log.info("Removing index file[s3://%s/%s] from s3!", s3Bucket, objectSummary.getKey());
+          s3Client.deleteObject(s3Bucket, objectSummary.getKey());
+        }
+      } else {
+        String s3DescriptorPath = DataSegmentKiller.descriptorPath(s3Path);
+        if (s3Client.doesObjectExist(s3Bucket, s3Path)) {
+          log.info("Removing index file[s3://%s/%s] from s3!", s3Bucket, s3Path);
+          s3Client.deleteObject(s3Bucket, s3Path);
+        }
+        // descriptor.json is a file to store segment metadata in deep storage. This file is deprecated and not stored
+        // anymore, but we still delete them if exists.
+        if (s3Client.doesObjectExist(s3Bucket, s3DescriptorPath)) {
+          log.info("Removing descriptor file[s3://%s/%s] from s3!", s3Bucket, s3DescriptorPath);
+          s3Client.deleteObject(s3Bucket, s3DescriptorPath);
+        }
       }
     }
     catch (AmazonServiceException e) {

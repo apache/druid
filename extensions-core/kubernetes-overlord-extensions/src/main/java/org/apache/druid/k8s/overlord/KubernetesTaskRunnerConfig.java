@@ -106,6 +106,11 @@ public class KubernetesTaskRunnerConfig
   private Period k8sjobLaunchTimeout = new Period("PT1H");
 
   @JsonProperty
+  @NotNull
+  // how long to wait for log saving operations to complete
+  private Period logSaveTimeout = new Period("PT300S");
+
+  @JsonProperty
   // ForkingTaskRunner inherits the monitors from the MM, in k8s mode
   // the peon inherits the monitors from the overlord, so if someone specifies
   // a TaskCountStatsMonitor in the overlord for example, the peon process
@@ -152,6 +157,7 @@ public class KubernetesTaskRunnerConfig
       Period taskCleanupDelay,
       Period taskCleanupInterval,
       Period k8sjobLaunchTimeout,
+      Period logSaveTimeout,
       List<String> peonMonitors,
       List<String> javaOptsArray,
       int cpuCoreInMicro,
@@ -162,73 +168,77 @@ public class KubernetesTaskRunnerConfig
   )
   {
     this.namespace = namespace;
-    this.overlordNamespace = ObjectUtils.defaultIfNull(
+    this.overlordNamespace = ObjectUtils.getIfNull(
         overlordNamespace,
         this.overlordNamespace
     );
     this.k8sTaskPodNamePrefix = k8sTaskPodNamePrefix;
-    this.debugJobs = ObjectUtils.defaultIfNull(
+    this.debugJobs = ObjectUtils.getIfNull(
         debugJobs,
         this.debugJobs
     );
-    this.sidecarSupport = ObjectUtils.defaultIfNull(
+    this.sidecarSupport = ObjectUtils.getIfNull(
         sidecarSupport,
         this.sidecarSupport
     );
-    this.primaryContainerName = ObjectUtils.defaultIfNull(
+    this.primaryContainerName = ObjectUtils.getIfNull(
         primaryContainerName,
         this.primaryContainerName
     );
-    this.kubexitImage = ObjectUtils.defaultIfNull(
+    this.kubexitImage = ObjectUtils.getIfNull(
         kubexitImage,
         this.kubexitImage
     );
-    this.graceTerminationPeriodSeconds = ObjectUtils.defaultIfNull(
+    this.graceTerminationPeriodSeconds = ObjectUtils.getIfNull(
         graceTerminationPeriodSeconds,
         this.graceTerminationPeriodSeconds
     );
     this.disableClientProxy = disableClientProxy;
-    this.maxTaskDuration = ObjectUtils.defaultIfNull(
+    this.maxTaskDuration = ObjectUtils.getIfNull(
         maxTaskDuration,
         this.maxTaskDuration
     );
-    this.taskCleanupDelay = ObjectUtils.defaultIfNull(
+    this.taskCleanupDelay = ObjectUtils.getIfNull(
         taskCleanupDelay,
         this.taskCleanupDelay
     );
-    this.taskCleanupInterval = ObjectUtils.defaultIfNull(
+    this.taskCleanupInterval = ObjectUtils.getIfNull(
         taskCleanupInterval,
         this.taskCleanupInterval
     );
-    this.k8sjobLaunchTimeout = ObjectUtils.defaultIfNull(
+    this.k8sjobLaunchTimeout = ObjectUtils.getIfNull(
         k8sjobLaunchTimeout,
         this.k8sjobLaunchTimeout
     );
-    this.taskJoinTimeout = ObjectUtils.defaultIfNull(
+    this.taskJoinTimeout = ObjectUtils.getIfNull(
         taskJoinTimeout,
         this.taskJoinTimeout
     );
-    this.peonMonitors = ObjectUtils.defaultIfNull(
+    this.logSaveTimeout = ObjectUtils.getIfNull(
+        logSaveTimeout,
+        this.logSaveTimeout
+    );
+    this.peonMonitors = ObjectUtils.getIfNull(
         peonMonitors,
         this.peonMonitors
     );
-    this.javaOptsArray = ObjectUtils.defaultIfNull(
+    this.javaOptsArray = ObjectUtils.getIfNull(
         javaOptsArray,
         this.javaOptsArray
     );
-    this.cpuCoreInMicro = ObjectUtils.defaultIfNull(
+    this.cpuCoreInMicro = ObjectUtils.getIfNull(
         cpuCoreInMicro,
         this.cpuCoreInMicro
     );
-    this.labels = ObjectUtils.defaultIfNull(
+    this.labels = ObjectUtils.getIfNull(
         labels,
         this.labels
     );
-    this.annotations = ObjectUtils.defaultIfNull(
+    this.annotations = ObjectUtils.getIfNull(
         annotations,
         this.annotations
     );
-    this.capacity = ObjectUtils.defaultIfNull(
+    this.capacity = ObjectUtils.getIfNull(
         capacity,
         this.capacity
     );
@@ -306,6 +316,11 @@ public class KubernetesTaskRunnerConfig
     return k8sjobLaunchTimeout;
   }
 
+  public Period getLogSaveTimeout()
+  {
+    return logSaveTimeout;
+  }
+
   public List<String> getPeonMonitors()
   {
     return peonMonitors;
@@ -363,6 +378,7 @@ public class KubernetesTaskRunnerConfig
     private Map<String, String> annotations;
     private Integer capacity;
     private Period taskJoinTimeout;
+    private Period logSaveTimeout;
 
     public Builder()
     {
@@ -489,6 +505,12 @@ public class KubernetesTaskRunnerConfig
       return this;
     }
 
+    public Builder withLogSaveTimeout(Period logSaveTimeout)
+    {
+      this.logSaveTimeout = logSaveTimeout;
+      return this;
+    }
+
     public KubernetesTaskRunnerConfig build()
     {
       return new KubernetesTaskRunnerConfig(
@@ -505,6 +527,7 @@ public class KubernetesTaskRunnerConfig
           this.taskCleanupDelay,
           this.taskCleanupInterval,
           this.k8sjobLaunchTimeout,
+          this.logSaveTimeout,
           this.peonMonitors,
           this.javaOptsArray,
           this.cpuCoreInMicro,

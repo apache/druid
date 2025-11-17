@@ -23,9 +23,8 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.FunctionTest;
 import org.apache.druid.math.expr.InputBindings;
-import org.apache.druid.math.expr.Parser;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -222,15 +221,6 @@ public class ExprMacroTest
 
   private void assertExpr(final String expression, final Object expectedResult)
   {
-    final Expr expr = Parser.parse(expression, TestExprMacroTable.INSTANCE);
-    Assert.assertEquals(expression, expectedResult, expr.eval(BINDINGS).value());
-
-    final Expr exprNotFlattened = Parser.parse(expression, TestExprMacroTable.INSTANCE, false);
-    final Expr roundTripNotFlattened =
-        Parser.parse(exprNotFlattened.stringify(), TestExprMacroTable.INSTANCE);
-    Assert.assertEquals(exprNotFlattened.stringify(), expectedResult, roundTripNotFlattened.eval(BINDINGS).value());
-
-    final Expr roundTrip = Parser.parse(expr.stringify(), TestExprMacroTable.INSTANCE);
-    Assert.assertEquals(exprNotFlattened.stringify(), expectedResult, roundTrip.eval(BINDINGS).value());
+    FunctionTest.assertExpr(expression, expectedResult, BINDINGS, TestExprMacroTable.INSTANCE);
   }
 }

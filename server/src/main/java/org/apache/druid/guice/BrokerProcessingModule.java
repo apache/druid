@@ -44,7 +44,7 @@ import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
-import org.apache.druid.utils.JvmUtils;
+import org.apache.druid.utils.RuntimeInfo;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.ForkJoinPool;
@@ -84,15 +84,15 @@ public class BrokerProcessingModule implements Module
       DruidProcessingConfig config
   )
   {
-    return new ForwardingQueryProcessingPool(Execs.dummy());
+    return new ForwardingQueryProcessingPool(Execs.dummy(), null);
   }
 
   @Provides
   @LazySingleton
   @Global
-  public NonBlockingPool<ByteBuffer> getIntermediateResultsPool(DruidProcessingConfig config)
+  public NonBlockingPool<ByteBuffer> getIntermediateResultsPool(DruidProcessingConfig config, RuntimeInfo runtimeInfo)
   {
-    verifyDirectMemory(config);
+    verifyDirectMemory(config, runtimeInfo);
     return new StupidPool<>(
         "intermediate processing pool",
         new OffheapBufferGenerator("intermediate processing", config.intermediateComputeSizeBytes()),
@@ -104,9 +104,9 @@ public class BrokerProcessingModule implements Module
   @Provides
   @LazySingleton
   @Merging
-  public BlockingPool<ByteBuffer> getMergeBufferPool(DruidProcessingConfig config)
+  public BlockingPool<ByteBuffer> getMergeBufferPool(DruidProcessingConfig config, RuntimeInfo runtimeInfo)
   {
-    verifyDirectMemory(config);
+    verifyDirectMemory(config, runtimeInfo);
     return new DefaultBlockingPool<>(
         new OffheapBufferGenerator("result merging", config.intermediateComputeSizeBytes()),
         config.getNumMergeBuffers()
@@ -144,13 +144,13 @@ public class BrokerProcessingModule implements Module
     return poolProvider.getPool();
   }
 
-  private void verifyDirectMemory(DruidProcessingConfig config)
+  private void verifyDirectMemory(DruidProcessingConfig config, RuntimeInfo runtimeInfo)
   {
     final long memoryNeeded = (long) config.intermediateComputeSizeBytes() *
                               (config.getNumMergeBuffers() + 1);
 
     try {
-      final long maxDirectMemory = JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
+      final long maxDirectMemory = runtimeInfo.getDirectMemorySizeBytes();
 
       if (maxDirectMemory < memoryNeeded) {
         throw new ProvisionException(

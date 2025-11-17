@@ -23,8 +23,11 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
-import org.apache.druid.math.expr.vector.FallbackVectorProcessor;
+import org.apache.druid.query.filter.ColumnIndexSelector;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.Types;
+import org.apache.druid.segment.index.BitmapColumnIndex;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -78,8 +81,8 @@ class FunctionExpr implements Expr
     try {
       return function.apply(args, bindings);
     }
-    catch (ExpressionValidationException e) {
-      // ExpressionValidationException already contain function name
+    catch (ExpressionValidationException | ExpressionProcessingException e) {
+      // Already contain function name
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(e, e.getMessage());
@@ -100,17 +103,40 @@ class FunctionExpr implements Expr
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
-    return function.canVectorize(inspector, args) || canFallbackVectorize(inspector, args);
+    return function.canVectorize(inspector, args);
   }
 
   @Override
   public ExprVectorProcessor<?> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    if (function.canVectorize(inspector, args)) {
-      return function.asVectorProcessor(inspector, args);
-    } else {
-      return FallbackVectorProcessor.create(function, args, inspector);
+    return function.asVectorProcessor(inspector, args);
+  }
+
+  @Nullable
+  @Override
+  public ColumnIndexSupplier asColumnIndexSupplier(
+      ColumnIndexSelector columnIndexSelector,
+      @Nullable ColumnType outputType
+  )
+  {
+    final ColumnIndexSupplier indexSupplier = function.asSingleThreaded(args, columnIndexSelector)
+                                                      .asColumnIndexSupplier(columnIndexSelector, outputType, args);
+    if (indexSupplier != null) {
+      return indexSupplier;
     }
+    return Expr.super.asColumnIndexSupplier(columnIndexSelector, outputType);
+  }
+
+  @Nullable
+  @Override
+  public BitmapColumnIndex asBitmapColumnIndex(ColumnIndexSelector selector)
+  {
+    final BitmapColumnIndex functionIndex = function.asSingleThreaded(args, selector)
+                                                    .asBitmapColumnIndex(selector, args);
+    if (functionIndex != null) {
+      return functionIndex;
+    }
+    return Expr.super.asBitmapColumnIndex(selector);
   }
 
   @Override
@@ -217,25 +243,13 @@ class ApplyFunctionExpr implements Expr
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
-    return canVectorizeNative(inspector) ||
-           (canFallbackVectorize(inspector, argsExpr) && lambdaExpr.canVectorize(inspector));
+    return function.canVectorize(inspector, lambdaExpr, argsExpr);
   }
 
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    if (canVectorizeNative(inspector)) {
-      return function.asVectorProcessor(inspector, lambdaExpr, argsExpr);
-    } else {
-      return FallbackVectorProcessor.create(function, lambdaExpr, argsExpr, inspector);
-    }
-  }
-
-  private boolean canVectorizeNative(InputBindingInspector inspector)
-  {
-    return function.canVectorize(inspector, lambdaExpr, argsExpr) &&
-           lambdaExpr.canVectorize(inspector) &&
-           argsExpr.stream().allMatch(expr -> expr.canVectorize(inspector));
+    return function.asVectorProcessor(inspector, lambdaExpr, argsExpr);
   }
 
   @Override

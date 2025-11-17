@@ -40,6 +40,7 @@ import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
 import org.apache.druid.server.lookup.namespace.JdbcCacheGenerator;
 import org.apache.druid.server.lookup.namespace.NamespaceExtractionConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -181,7 +182,7 @@ public class JdbcExtractionNamespaceTest
                   new CacheGenerator<JdbcExtractionNamespace>()
                   {
                     private final JdbcCacheGenerator delegate =
-                        new JdbcCacheGenerator();
+                        new JdbcCacheGenerator(JvmUtils.getRuntimeInfo());
 
                     @Override
                     public String generateCache(

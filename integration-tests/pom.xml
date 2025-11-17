@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>34.0.0-SNAPSHOT</version>
+        <version>36.0.0-SNAPSHOT</version>
     </parent>
 
     <repositories>
@@ -43,40 +43,11 @@
         <hadoop.s3.impl>org.apache.hadoop.fs.s3a.S3AFileSystem</hadoop.s3.impl>
     </properties>
 
-    <dependencyManagement>
-        <dependencies>
-             <!-- snakeyaml explicitly pinned to version 1.33 as it is
-             a transitive dependency of com.fasterxml.jackson.dataformat:jackson-dataformat-yaml 2.12.7
-             please remove this pin, after updating jackson-dataform-yaml to version > 2.14.3  / 2.15.0 -->
-            <dependency>
-                <groupId>org.yaml</groupId>
-                <artifactId>snakeyaml</artifactId>
-                <version>1.33</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
     <dependencies>
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>amazon-kinesis-producer</artifactId>
-            <version>0.13.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.avro</groupId>
-            <artifactId>avro</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.opencsv</groupId>
-            <artifactId>opencsv</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.github.rvesse</groupId>
-            <artifactId>airline</artifactId>
+            <groupId>org.apache.druid.integration-tests</groupId>
+            <artifactId>druid-it-tools</artifactId>
+            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
@@ -94,10 +65,6 @@
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-core</artifactId>
             <version>${aws.sdk.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>commons-codec</groupId>
-            <artifactId>commons-codec</artifactId>
         </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
@@ -227,11 +194,6 @@
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>druid-basic-security</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-lookups-cached-global</artifactId>
             <version>${project.parent.version}</version>
             <scope>provided</scope>
@@ -248,13 +210,8 @@
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>druid-multi-stage-query</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
             <groupId>org.apache.druid</groupId>
-            <artifactId>druid-services</artifactId>
+            <artifactId>druid-multi-stage-query</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
@@ -297,10 +254,6 @@
             <artifactId>netty</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-common</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
         </dependency>
@@ -318,7 +271,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
+            <artifactId>log4j-slf4j2-impl</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -360,63 +313,10 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>jetty-servlet</artifactId>
-            <version>${jetty.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>jetty-server</artifactId>
-            <version>${jetty.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.google.inject.extensions</groupId>
-            <artifactId>guice-servlet</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.confluent</groupId>
-            <artifactId>kafka-schema-registry-client</artifactId>
-            <version>6.2.12</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-log4j12</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.apache.avro</groupId>
-                    <artifactId>avro</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.fasterxml.jackson.core</groupId>
-                    <artifactId>jackson-databind</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>javax.ws.rs</groupId>
-                    <artifactId>javax.ws.rs-api</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>javax.ws.rs</groupId>
-                    <artifactId>javax.ws.rs-api</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>javax.ws.rs</groupId>
-                    <artifactId>jsr311-api</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>jakarta.ws.rs</groupId>
-                    <artifactId>jakarta.ws.rs-api</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
             <groupId>io.confluent</groupId>
             <artifactId>kafka-protobuf-provider</artifactId>
             <version>6.2.12</version>
             <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.google.protobuf</groupId>
-            <artifactId>protobuf-java</artifactId>
         </dependency>
 
         <!-- Tests -->
@@ -443,12 +343,6 @@
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.github.os72</groupId>
-            <artifactId>protobuf-dynamic</artifactId>
-            <version>0.9.3</version>
-            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
@@ -582,6 +476,7 @@
                 <start.hadoop.docker>false</start.hadoop.docker>
                 <docker.run.skip>false</docker.run.skip>
                 <docker.build.skip>false</docker.build.skip>
+                <docker.build.skipMavenBuild>false</docker.build.skipMavenBuild>
                 <docker.build.hadoop>false</docker.build.hadoop>
                 <it.indexer>middleManager</it.indexer>
                 <override.config.path />
@@ -611,6 +506,7 @@
                                         <DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>${override.config.path}</DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>
                                         <DRUID_INTEGRATION_TEST_RESOURCE_FILE_DIR_PATH>${resource.file.dir.path}</DRUID_INTEGRATION_TEST_RESOURCE_FILE_DIR_PATH>
                                         <DRUID_INTEGRATION_TEST_SKIP_BUILD_DOCKER>${docker.build.skip}</DRUID_INTEGRATION_TEST_SKIP_BUILD_DOCKER>
+                                        <DRUID_INTEGRATION_TEST_SKIP_MAVEN_BUILD_DOCKER>${docker.build.skipMavenBuild}</DRUID_INTEGRATION_TEST_SKIP_MAVEN_BUILD_DOCKER>
                                         <DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER>${docker.run.skip}</DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER>
                                         <DRUID_INTEGRATION_TEST_INDEXER>${it.indexer}</DRUID_INTEGRATION_TEST_INDEXER>
                                         <MYSQL_VERSION>${mysql.version}</MYSQL_VERSION>

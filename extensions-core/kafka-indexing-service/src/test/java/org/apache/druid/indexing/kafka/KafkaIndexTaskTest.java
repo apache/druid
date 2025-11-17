@@ -2911,6 +2911,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         maxParseExceptions,
         maxSavedParseExceptions,
         null,
+        null,
         null
     );
     if (!context.containsKey(SeekableStreamSupervisor.CHECKPOINTS_CTX_KEY)) {
@@ -2924,6 +2925,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final KafkaIndexTask task = new KafkaIndexTask(
         taskId,
+        null,
         null,
         cloneDataSchema(dataSchema),
         tuningConfig,

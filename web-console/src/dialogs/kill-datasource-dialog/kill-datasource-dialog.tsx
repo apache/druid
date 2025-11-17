@@ -60,7 +60,7 @@ export const KillDatasourceDialog = function KillDatasourceDialog(
         const resp = await Api.instance.delete(
           `/druid/coordinator/v1/datasources/${Api.encodePath(
             datasource,
-          )}?kill=true&interval=${Api.encodePath(interval)}`,
+          )}/intervals/${Api.encodePath(interval.replace(/\//g, '_'))}`,
           {},
         );
         return resp.data;

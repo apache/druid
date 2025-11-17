@@ -24,7 +24,7 @@
   - changed-files:
     - any-glob-to-any-file:
       - 'indexing-hadoop/**'
-      - 'extensions-core/multi-stage-query/**'
+      - 'multi-stage-query/**'
 
 'Area - Dependencies':
   - changed-files:
@@ -61,13 +61,13 @@
 'Area - MSQ':
   - changed-files:
     - any-glob-to-any-file:
-      - 'extensions-core/multi-stage-query/**'
+      - 'multi-stage-query/**'
 
 'Area - Querying':
   - changed-files:
     - any-glob-to-any-file:
       - 'sql/**'
-      - 'extensions-core/multi-stage-query/src/main/java/org/apache/druid/msq/sql/**'
+      - 'multi-stage-query/src/main/java/org/apache/druid/msq/sql/**'
 
 'Area - Segment Format and Ser/De':
   - changed-files:
@@ -94,3 +94,6 @@
   - changed-files:
       - any-glob-to-any-file:
           - '.github/**'
+
+'Backport':
+  - head-branch: ['^backport']

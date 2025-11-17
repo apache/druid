@@ -35,6 +35,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.guice.BuiltInTypesModule;
+import org.apache.druid.guice.CatalogCoreModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.LazySingleton;
@@ -57,6 +58,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -408,6 +410,7 @@ public class SqlTestFramework
           new LookylooModule(),
           new SegmentWranglerModule(),
           new ExpressionModule(),
+          new CatalogCoreModule(),
           DruidModule.override(
               new QueryRunnerFactoryModule(),
               new Module()
@@ -1045,15 +1048,18 @@ public class SqlTestFramework
     @Provides
     @LazySingleton
     public SpecificSegmentsQuerySegmentWalker specificSegmentsQuerySegmentWalker(
-        @Named("empty") SpecificSegmentsQuerySegmentWalker walker, Builder builder,
-        List<TestDataSet> testDataSets)
+        @Named("empty") SpecificSegmentsQuerySegmentWalker walker,
+        Builder builder,
+        List<TestDataSet> testDataSets,
+        ObjectMapper jsonMapper
+    )
     {
       builder.resourceCloser.register(walker);
       if (testDataSets.isEmpty()) {
         builder.componentSupplier.addSegmentsToWalker(walker);
       } else {
         for (TestDataSet testDataSet : testDataSets) {
-          walker.add(testDataSet, builder.componentSupplier.getTempDirProducer().newTempFolder());
+          walker.add(testDataSet, jsonMapper, builder.componentSupplier.getTempDirProducer().newTempFolder());
         }
       }
 
@@ -1122,6 +1128,7 @@ public class SqlTestFramework
     {
       return new SpecificSegmentsQuerySegmentWalker(
           testSegmentsBroker.timelines,
+          testSegmentsBroker.referenceProviders,
           clientQuerySegmentWalker
       );
     }
@@ -1145,7 +1152,8 @@ public class SqlTestFramework
           injector.getInstance(Cache.class),
           injector.getInstance(CacheConfig.class),
           new SubqueryGuardrailHelper(null, JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(), 1),
-          new SubqueryCountStatsProvider()
+          new SubqueryCountStatsProvider(),
+          new DefaultGenericQueryMetricsFactory()
       );
     }
 

@@ -20,8 +20,9 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
+import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.IngestionTestBase;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -59,6 +60,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
   private TaskQueue taskQueue;
 
   private Map<String, UpdateAction> threadToUpdateAction;
+  private CountDownLatch taskRunnerShutdownLatch;
 
   @Override
   public void setUpIngestionTestBase() throws IOException
@@ -77,7 +79,14 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
           @Override
           public ListenableFuture<TaskStatus> run(Task task)
           {
-            return Futures.immediateFuture(TaskStatus.success(task.getId()));
+            return SettableFuture.create();
+          }
+
+          @Override
+          public void shutdown(String taskid, String reason)
+          {
+            awaitTaskRunnerShutdown();
+            super.shutdown(taskid, reason);
           }
         },
         createActionClientFactory(),
@@ -98,7 +107,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
                ? super.addOrUpdateTaskEntry(taskId, updateOperation)
                : super.addOrUpdateTaskEntry(
                    taskId,
-                   existing -> updateAction.critical.perform(() -> updateOperation.apply(existing))
+                   existing -> updateAction.runCritical(() -> updateOperation.apply(existing))
                );
       }
 
@@ -112,7 +121,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
         if (updateAction == null) {
           super.setActive(active);
         } else {
-          updateAction.critical.perform(() -> {
+          updateAction.runCritical(() -> {
             super.setActive(active);
             return 0;
           });
@@ -121,7 +130,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     };
   }
 
-  @Test
+  @Test(timeout = 20_000L)
   public void test_start_blocks_add_forAnyTaskId()
   {
     // Add task1 to storage and mark it as running
@@ -145,7 +154,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     );
   }
 
-  @Test
+  @Test(timeout = 20_000L)
   public void test_add_blocks_stop()
   {
     taskQueue.setActive(true);
@@ -166,7 +175,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     );
   }
 
-  @Test
+  @Test(timeout = 20_000L)
   public void test_add_blocks_syncFromStorage_forSameTaskId()
   {
     taskQueue.setActive(true);
@@ -189,7 +198,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     );
   }
 
-  @Test
+  @Test(timeout = 20_000L)
   public void test_syncFromStorage_blocks_add_forSameTaskId()
   {
     final String taskId = "t2";
@@ -309,6 +318,230 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     );
   }
 
+  @Test(timeout = 20_000L)
+  public void test_add_doesNotBlock_add_forDifferentTaskId()
+  {
+    taskQueue.setActive(true);
+
+    final Task task1 = createTask("t1");
+    final Task task2 = createTask("t2");
+
+    ActionVerifier.verifyThat(
+        update(
+            () -> taskQueue.add(task1)
+        ).withEndState(
+            () -> Assert.assertEquals(
+                Optional.of(task1),
+                taskQueue.getActiveTask(task1.getId())
+            )
+        )
+    ).doesNotBlock(
+        update(
+            () -> taskQueue.add(task2)
+        ).withEndState(
+            () -> Assert.assertEquals(
+                Optional.of(task2),
+                taskQueue.getActiveTask(task2.getId())
+            )
+        )
+    );
+  }
+
+  @Test(timeout = 20_000L)
+  public void test_add_doesNotBlock_shutdown_forDifferentTaskId()
+  {
+    taskQueue.setActive(true);
+
+    final Task task1 = createTask("t1");
+    taskQueue.add(task1);
+
+    final Task task2 = createTask("t2");
+
+    ActionVerifier.verifyThat(
+        update(
+            () -> taskQueue.add(task2)
+        ).withEndState(
+            () -> Assert.assertEquals(
+                Optional.of(task2),
+                taskQueue.getActiveTask(task2.getId())
+            )
+        )
+    ).doesNotBlock(
+        update(
+            () -> taskQueue.shutdown(task1.getId(), "killed")
+        ).withEndState(
+            () -> Assert.assertEquals(
+                Optional.of(TaskStatus.failure(task1.getId(), "killed")),
+                taskQueue.getTaskStatus(task1.getId())
+            )
+        )
+    );
+  }
+
+  @Test(timeout = 20_000L)
+  public void test_shutdown_doesNotBlock_add_forDifferentTaskId()
+  {
+    taskQueue.setActive(true);
+
+    final Task task1 = createTask("t1");
+    taskQueue.add(task1);
+
+    final Task task2 = createTask("t2");
+
+    ActionVerifier.verifyThat(
+        update(
+            () -> taskQueue.shutdown(task1.getId(), "killed")
+        ).withEndState(
+            () -> Assert.assertEquals(
+                Optional.of(TaskStatus.failure(task1.getId(), "killed")),
+                taskQueue.getTaskStatus(task1.getId())
+            )
+        )
+    ).doesNotBlock(
+        update(
+            () -> taskQueue.add(task2)
+        ).withEndState(
+            () -> Assert.assertEquals(
+                Optional.of(task2),
+                taskQueue.getActiveTask(task2.getId())
+            )
+        )
+    );
+  }
+
+  @Test(timeout = 20_000L)
+  public void test_shutdown_then_manageQueuedTasks_blocks_syncFromStorage_and_forcesTaskRemoval()
+  {
+    taskQueue.setActive(true);
+
+    final Task task1 = createTask("t1");
+    taskQueue.add(task1);
+
+    // shutdown the task ahead of time to mark it as isComplete
+    taskQueue.shutdown(task1.getId(), "shutdown");
+
+    // verify that managedQueuedTasks() called before syncFromStorage() forces the sync to block
+    // but ensures that syncFromStorage() is able to remove the task
+    ActionVerifier.verifyThat(
+        update(
+            () -> taskQueue.manageQueuedTasks()
+        ).withEndState(
+            () -> Assert.assertEquals(
+                Optional.of(TaskStatus.failure(task1.getId(), "shutdown")),
+                taskQueue.getTaskStatus(task1.getId())
+            )
+        )
+    ).blocks(
+        update(
+            () -> taskQueue.syncFromStorage()
+        ).withEndState(
+            () -> Assert.assertEquals(
+                Optional.absent(),
+                taskQueue.getActiveTask(task1.getId())
+            )
+        )
+    );
+
+    Assert.assertEquals(Optional.absent(), taskQueue.getActiveTask(task1.getId()));
+  }
+
+  @Test(timeout = 20_000L)
+  public void test_shutdown_then_syncFromStorage_blocks_manageQueuedTasks_and_forcesTaskRemoval()
+  {
+    taskQueue.setActive(true);
+
+    final Task task1 = createTask("t1");
+    taskQueue.add(task1);
+
+    // shutdown the task ahead of time to mark it as isComplete
+    taskQueue.shutdown(task1.getId(), "shutdown");
+
+    // verify that syncFromStorage() called before managedQueuedTasks() forces the sync to block
+    // but ensures that syncFromStorage() is able to remove the task
+    ActionVerifier.verifyThat(
+        update(
+            () -> taskQueue.syncFromStorage()
+        ).withEndState(
+            () -> Assert.assertEquals(
+                Optional.absent(),
+                taskQueue.getActiveTask(task1.getId())
+            )
+        )
+    ).blocks(
+        update(
+            () -> taskQueue.manageQueuedTasks()
+        ).withEndState(
+            () -> Assert.assertEquals(
+                Optional.absent(),
+                taskQueue.getActiveTask(task1.getId())
+            )
+        )
+    );
+
+    Assert.assertEquals(Optional.absent(), taskQueue.getActiveTask(task1.getId()));
+  }
+
+  @Test
+  public void test_shutdown_blocks_syncFromStorage_forSameTaskId()
+  {
+    taskQueue.setActive(true);
+
+    final Task task1 = createTask("t1");
+    taskQueue.add(task1);
+
+    // Remove the task from storage so that sync tries to remove it from the queue
+    getTaskStorage().setStatus(TaskStatus.success(task1.getId()));
+    getTaskStorage().removeTasksOlderThan(DateTimes.nowUtc().plusDays(1).getMillis());
+
+    ActionVerifier.verifyThat(
+        update(
+            () -> taskQueue.shutdown(task1.getId(), "killed")
+        ).withEndState(
+            () -> Assert.assertEquals(List.of(task1), taskQueue.getTasks())
+        )
+    ).blocks(
+        update(
+            () -> taskQueue.syncFromStorage()
+        ).withEndState(
+            () -> Assert.assertTrue(taskQueue.getTasks().isEmpty())
+        )
+    );
+  }
+
+  @Test
+  public void test_shutdown_doesNotWait_forTaskToShutdownOnRunner()
+  {
+    taskQueue.setActive(true);
+
+    final Task task1 = createTask("t1");
+    taskQueue.add(task1);
+    Assert.assertEquals(List.of(task1), taskQueue.getTasks());
+
+    // Keep the task shutdown blocked on the TaskRunner
+    taskRunnerShutdownLatch = new CountDownLatch(1);
+
+    // Verify that shutdown on TaskQueue finishes immediately
+    taskQueue.shutdown(task1.getId(), "killed");
+
+    Optional<TaskInfo> taskInfo = taskQueue.getActiveTaskInfo(task1.getId());
+    Assert.assertTrue(taskInfo.isPresent());
+    Assert.assertEquals(TaskStatus.failure(task1.getId(), "killed"), taskInfo.get().getStatus());
+
+    taskRunnerShutdownLatch.countDown();
+  }
+
+  private void awaitTaskRunnerShutdown()
+  {
+    if (taskRunnerShutdownLatch != null) {
+      try {
+        taskRunnerShutdownLatch.await();
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
   private UpdateAction update(Action action)
   {
     return new UpdateAction(action, threadToUpdateAction::put);
@@ -419,6 +652,9 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
       return this;
     }
 
+    /**
+     * Starts this update action and returns when it is finished.
+     */
     void perform()
     {
       startNotifier.onUpdateStart(Thread.currentThread().getName(), this);
@@ -432,15 +668,58 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
       }
     }
 
+    /**
+     * Runs the given computation in the critical section of this update action.
+     *
+     * @return When the critical computation is complete.
+     */
+    <V> V runCritical(Supplier<V> updateComputation)
+    {
+      return critical.perform(updateComputation);
+    }
+
+    void startCritical()
+    {
+      critical.start.countDown();
+    }
+
+    void startAndFinishCritical()
+    {
+      startCritical();
+      waitUntilCriticalIsReadyToFinish();
+      finishCritical();
+    }
+
+    void finishCritical()
+    {
+      critical.finish.countDown();
+    }
+
     void waitToFinishAndVerify()
     {
       waitFor(finished);
       verifyAction.perform();
     }
+
+    boolean isReadyToStartCritical()
+    {
+      return critical.isReadyToStart.getCount() == 0;
+    }
+
+    void waitUntilCriticalIsReadyToStart()
+    {
+      waitFor(critical.isReadyToStart);
+    }
+
+    void waitUntilCriticalIsReadyToFinish()
+    {
+      waitFor(critical.isReadyToFinish);
+    }
   }
 
   /**
-   * Verifies thread-safety between two actions.
+   * Ensures thread-safety between two update actions by verifying that an action
+   * {@link #update1} blocks or does not block another action {@code update2}.
    */
   private static class ActionVerifier
   {
@@ -454,8 +733,8 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     }
 
     /**
-     * Verifies that the critical update section of {@code operation1} completely
-     * blocks the critical update in {@code operation2}.
+     * Verifies that the critical part of {@code update1} completely blocks the
+     * critical part of {@code update2}.
      */
     void blocks(UpdateAction update2)
     {
@@ -463,37 +742,65 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
 
       // Start update 1 and wait for it to enter critical section
       executor.submit(update1::perform);
-      waitFor(update1.critical.isReadyToStart);
+      update1.waitUntilCriticalIsReadyToStart();
 
+      // Start update 2 and wait for some time
       executor.submit(update2::perform);
-
-      // Wait for some time and verify that update 2 critical has not started yet
       try {
         Thread.sleep(1000);
       }
       catch (Exception e) {
         throw new RuntimeException(e);
       }
-      Assert.assertEquals(1, update2.critical.isReadyToStart.getCount());
 
-      update1.critical.start.countDown();
+      // Verify that update 2 is not ready to start critical section yet
+      Assert.assertFalse(update2.isReadyToStartCritical());
+
+      update1.startCritical();
 
       // Wait for update 1 critical to reach finish
-      // and verify that update 2 critical has not started yet
-      waitFor(update1.critical.isReadyToFinish);
-      Assert.assertEquals(1, update2.critical.isReadyToStart.getCount());
+      // and verify that update 2 critical is not ready to start yet
+      update1.waitUntilCriticalIsReadyToFinish();
+      Assert.assertFalse(update2.isReadyToStartCritical());
 
-      // Finish update 1 and verify that update 2 critical has now started
-      update1.critical.finish.countDown();
-      waitFor(update2.critical.isReadyToStart);
+      // Finish update 1 critical and verify that update 2 is now ready to start
+      update1.finishCritical();
+      update2.waitUntilCriticalIsReadyToStart();
+      Assert.assertTrue(update2.isReadyToStartCritical());
 
+      // Finish update 1
       update1.waitToFinishAndVerify();
 
-      update2.critical.start.countDown();
-      waitFor(update2.critical.isReadyToFinish);
-      update2.critical.finish.countDown();
-
+      // Start and finish update2
+      update2.startAndFinishCritical();
       update2.waitToFinishAndVerify();
+
+      executor.shutdownNow();
+    }
+
+    /**
+     * Verifies that the critical part of {@code update1} does not
+     * block the critical part of {@code update2}.
+     */
+    void doesNotBlock(UpdateAction update2)
+    {
+      final ExecutorService executor = Execs.multiThreaded(2, "TaskQueueConcurrencyTest-%s");
+
+      // Start update 1 and wait for it to enter critical section
+      executor.submit(update1::perform);
+      update1.waitUntilCriticalIsReadyToStart();
+
+      // Start update2 and verify that it has also entered critical section
+      executor.submit(update2::perform);
+      update2.waitUntilCriticalIsReadyToStart();
+
+      // Finish update2 to prove that it is not blocked by update1
+      update2.startAndFinishCritical();
+      update2.waitToFinishAndVerify();
+
+      // Start and finish update1
+      update1.startAndFinishCritical();
+      update1.waitToFinishAndVerify();
 
       executor.shutdownNow();
     }

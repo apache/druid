@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.inject.Inject;
-
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -194,9 +193,18 @@ public class ExtensionsLoader
     if (toLoad == null) {
       extensionsToLoad = rootExtensionsDir.listFiles();
     } else {
+      final LinkedHashSet<String> validExtensionsToLoad = new LinkedHashSet<>(toLoad);
+      if (validExtensionsToLoad.remove("druid-multi-stage-query")) {
+        log.warn(
+            "Skipping extension[druid-multi-stage-query] as it is now a core"
+            + " capability of Druid. Please remove this extension from your"
+            + " configs as it will cause services to fail in future Druid versions."
+        );
+      }
+
       int i = 0;
-      extensionsToLoad = new File[toLoad.size()];
-      for (final String extensionName : toLoad) {
+      extensionsToLoad = new File[validExtensionsToLoad.size()];
+      for (final String extensionName : validExtensionsToLoad) {
         File extensionDir = new File(extensionName);
         if (!extensionDir.isAbsolute()) {
           extensionDir = new File(rootExtensionsDir, extensionName);
@@ -404,12 +412,23 @@ public class ExtensionsLoader
 
   private class ServiceLoadingFromExtensions<T>
   {
+    private final boolean isEmbeddedTest;
     private final Class<T> serviceClass;
     private final List<T> implsToLoad = new ArrayList<>();
     private final Set<String> implClassNamesToLoad = new HashSet<>();
 
     private ServiceLoadingFromExtensions(Class<T> serviceClass)
     {
+      this.isEmbeddedTest = extensionsConfig.getModulesForEmbeddedTest() != null;
+      if (isEmbeddedTest) {
+        log.warn(
+            "Running service in embedded testing mode with allowed modules[%s]."
+            + " This is an unsafe test-only mode and must never be used in a production cluster."
+            + " Remove property 'druid.extensions.modulesForEmbeddedTest' to disable embedded testing mode.",
+            extensionsConfig.getModulesForEmbeddedTest()
+        );
+      }
+
       this.serviceClass = serviceClass;
       if (extensionsConfig.searchCurrentClassloader()) {
         addAllFromCurrentClassLoader();
@@ -458,6 +477,11 @@ public class ExtensionsLoader
             "Implementation %s was ignored because it doesn't have a canonical name, "
             + "is it a local or anonymous class?",
             serviceImpl.getClass().getName()
+        );
+      } else if (isEmbeddedTest && !extensionsConfig.getModulesForEmbeddedTest().contains(serviceImplName)) {
+        log.debug(
+            "Skipping extension[%s] as it is not listed in config[%s]",
+            serviceImplName, extensionsConfig.getModulesForEmbeddedTest()
         );
       } else if (!implClassNamesToLoad.contains(serviceImplName)) {
         log.debug(

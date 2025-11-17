@@ -49,7 +49,6 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.policy.PolicyEnforcer;
-import org.apache.druid.server.QueryResource.ResourceIOReaderWriter;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -402,6 +401,9 @@ public class QueryLifecycle
           StringUtils.nullToEmptyNonDruidDataString(remoteAddress)
       );
       queryMetrics.success(success);
+
+      final int statusCode = DruidMetrics.computeStatusCode(e);
+      queryMetrics.statusCode(statusCode);
       queryMetrics.reportQueryTime(queryTimeNs);
 
       if (bytesWritten >= 0) {
@@ -418,6 +420,7 @@ public class QueryLifecycle
       statsMap.put("query/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs));
       statsMap.put("query/bytes", bytesWritten);
       statsMap.put("success", success);
+      statsMap.put(DruidMetrics.STATUS_CODE, statusCode);
 
       if (authenticationResult != null) {
         statsMap.put("identity", authenticationResult.getIdentity());
@@ -481,7 +484,7 @@ public class QueryLifecycle
            || (!shouldFinalize && queryContext.isSerializeDateTimeAsLongInner(false));
   }
 
-  public ObjectMapper newOutputWriter(ResourceIOReaderWriter ioReaderWriter)
+  public ObjectMapper newOutputWriter(ResourceIOReaderWriterFactory.ResourceIOReaderWriter ioReaderWriter)
   {
     return ioReaderWriter.getResponseWriter().newOutputWriter(
         getToolChest(),

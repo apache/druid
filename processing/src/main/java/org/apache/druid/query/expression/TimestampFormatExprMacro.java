@@ -82,9 +82,9 @@ public class TimestampFormatExprMacro implements ExprMacroTable.ExprMacro
         ExprEval eval = arg.eval(bindings);
         if (eval.isNumericNull()) {
           // Return null if the argument if null.
-          return ExprEval.of(null);
+          return ExprEval.ofString(null);
         }
-        return ExprEval.of(formatter.print(arg.eval(bindings).asLong()));
+        return ExprEval.ofString(formatter.print(arg.eval(bindings).asLong()));
       }
 
       @Nullable

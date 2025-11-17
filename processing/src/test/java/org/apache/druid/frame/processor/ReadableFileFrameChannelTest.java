@@ -58,7 +58,7 @@ public class ReadableFileFrameChannelTest extends InitializedNullHandlingTest
     final CursorFactory cursorFactory = new QueryableIndexCursorFactory(TestIndex.getNoRollupMMappedTestIndex());
     final File file = FrameTestUtil.writeFrameFile(
         FrameSequenceBuilder.fromCursorFactory(cursorFactory)
-                            .frameType(FrameType.ROW_BASED)
+                            .frameType(FrameType.latestRowBased())
                             .maxRowsPerFrame(ROWS_PER_FRAME)
                             .frames(),
         temporaryFolder.newFile()

@@ -26,6 +26,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
@@ -91,7 +92,6 @@ public class IngestionTestSqlEngine implements SqlEngine
       case TIMESERIES_QUERY:
       case TOPN_QUERY:
       case TIME_BOUNDARY_QUERY:
-      case SCAN_NEEDS_SIGNATURE:
       case UNNEST:
       case GROUPBY_IMPLICITLY_SORTS:
       case WINDOW_FUNCTIONS:
@@ -125,5 +125,11 @@ public class IngestionTestSqlEngine implements SqlEngine
     );
 
     return new TestInsertQueryMaker(destination, signature);
+  }
+
+  @Override
+  public SqlStatementFactory getSqlStatementFactory()
+  {
+    throw new UnsupportedOperationException();
   }
 }

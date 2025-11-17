@@ -22,38 +22,39 @@ import type { Timezone } from 'chronoshift';
 import { day, Duration, minute, second } from 'chronoshift';
 import classNames from 'classnames';
 import { max, sort, sum } from 'd3-array';
-import { axisBottom, axisLeft, axisRight } from 'd3-axis';
-import { scaleLinear, scaleOrdinal, scaleUtc } from 'd3-scale';
+import { axisBottom } from 'd3-axis';
+import { scaleLinear, scaleUtc } from 'd3-scale';
 import { select } from 'd3-selection';
-import type { Area, Line } from 'd3-shape';
-import { area, curveLinear, curveMonotoneX, curveStep, line } from 'd3-shape';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import { useMemo, useRef, useState } from 'react';
 
 import type { PortalBubbleOpenOn } from '../../../../components';
 import { PortalBubble } from '../../../../components';
 import { useClock, useGlobalEventListener } from '../../../../hooks';
-import type { Margin, Stage } from '../../../../utils';
+import type { Margin } from '../../../../utils';
 import {
   clamp,
-  filterMap,
   formatIsoDateRange,
   formatNumber,
   formatStartDuration,
-  groupBy,
   lookupBy,
   minBy,
+  Stage,
   tickFormatWithTimezone,
   timezoneAwareTicks,
 } from '../../../../utils';
+import type { ExpressionMeta } from '../../models';
+
+import { ContinuousChartSingleRender } from './continuous-chart-single-render';
 
 import './continuous-chart-render.scss';
 
 const Y_AXIS_WIDTH = 60;
+const MEASURE_GAP = 6;
 
 function getDefaultChartMargin(yAxis: undefined | 'left' | 'right') {
   return {
-    top: 20,
+    top: 10,
     right: 10 + (yAxis === 'right' ? Y_AXIS_WIDTH : 0),
     bottom: 25,
     left: 10 + (yAxis === 'left' ? Y_AXIS_WIDTH : 0),
@@ -62,10 +63,6 @@ function getDefaultChartMargin(yAxis: undefined | 'left' | 'right') {
 
 const EXTEND_X_SCALE_DOMAIN_BY = 1;
 
-export const OTHER_VALUE = 'Other';
-const OTHER_COLOR = '#666666';
-const COLORS = ['#00BD84', '#F78228', '#8A81F3', '#EB57A3', '#7CCE21', '#FFC213', '#B97800'];
-
 // ---------------------------------------
 
 export type Range = [number, number];
@@ -73,7 +70,7 @@ export type Range = [number, number];
 export interface RangeDatum {
   start: number;
   end: number;
-  measure: number;
+  measures: number[];
   facet: string | undefined;
 }
 
@@ -102,24 +99,11 @@ interface SelectionRange {
   end: number;
   finalized?: boolean;
   selectedDatum?: StackedRangeDatum;
+  measureIndex?: number;
 }
 
 export type ContinuousChartMarkType = 'bar' | 'area' | 'line';
 export type ContinuousChartCurveType = 'smooth' | 'linear' | 'step';
-
-function getCurveFactory(curveType: ContinuousChartCurveType | undefined) {
-  switch (curveType) {
-    case 'linear':
-      return curveLinear;
-
-    case 'step':
-      return curveStep;
-
-    case 'smooth':
-    default:
-      return curveMonotoneX;
-  }
-}
 
 export interface ContinuousChartRenderProps {
   /**
@@ -128,6 +112,7 @@ export interface ContinuousChartRenderProps {
    */
   data: RangeDatum[];
   facets: string[] | undefined;
+  facetColorizer: (facet: string) => string;
 
   /**
    * The granularity that was used for bucketing.
@@ -139,6 +124,11 @@ export interface ContinuousChartRenderProps {
    * Defines how to render the curve in case 'area' or 'line' is selected as the mark type
    */
   curveType?: ContinuousChartCurveType;
+
+  /**
+   * The measures being displayed
+   */
+  measures: readonly ExpressionMeta[];
 
   /**
    * The width x height to render
@@ -163,10 +153,12 @@ export const ContinuousChartRender = function ContinuousChartRender(
   const {
     data,
     facets,
+    facetColorizer,
     granularity,
 
     markType,
     curveType,
+    measures,
 
     stage,
     margin,
@@ -176,6 +168,8 @@ export const ContinuousChartRender = function ContinuousChartRender(
     domainRange,
     onChangeRange,
   } = props;
+
+  const numMeasures = measures.length;
   const [mouseDownAt, setMouseDownAt] = useState<
     { time: number; action: 'select' | 'shift' } | undefined
   >();
@@ -199,7 +193,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
   const now = useClock(minute.canonicalLength);
   const svgRef = useRef<SVGSVGElement | null>(null);
 
-  const stackedData: StackedRangeDatum[] = useMemo(() => {
+  const stackedDataByMeasure: StackedRangeDatum[][] = useMemo(() => {
     const effectiveFacet = facets || ['undefined'];
     const facetToIndex = lookupBy(
       effectiveFacet,
@@ -215,53 +209,72 @@ export const ContinuousChartRender = function ContinuousChartRender(
       return facetToIndex[String(a.facet)] - facetToIndex[String(b.facet)];
     });
 
-    if (markType === 'line') {
-      // No need to stack
-      return sortedData.map(d => ({ ...d, offset: 0 }));
-    } else {
-      let lastStart: number | undefined;
-      let offset: number;
-      return sortedData.map(d => {
-        if (lastStart !== d.start) {
-          offset = 0;
-          lastStart = d.start;
-        }
-        const withOffset = { ...d, offset };
-        offset += d.measure;
-        return withOffset;
-      });
-    }
-  }, [data, facets, markType]);
+    // Create stacked data for each measure
+    return Array.from({ length: numMeasures }, (_, measureIndex) => {
+      if (markType === 'line') {
+        // No need to stack
+        return sortedData.map(d => ({ ...d, offset: 0 }));
+      } else {
+        let lastStart: number | undefined;
+        let offset: number;
+        return sortedData.map(d => {
+          if (lastStart !== d.start) {
+            offset = 0;
+            lastStart = d.start;
+          }
+          const withOffset = { ...d, offset };
+          offset += d.measures[measureIndex];
+          return withOffset;
+        });
+      }
+    });
+  }, [data, facets, markType, numMeasures]);
 
   function findStackedDatum(
     time: number,
     measure: number,
+    measureIndex: number,
     isStacked: boolean,
   ): StackedRangeDatum | undefined {
+    const stackedData = stackedDataByMeasure[measureIndex];
+    if (!stackedData) return undefined;
+
     const dataInRange = stackedData.filter(d => d.start <= time && time < d.end);
     if (!dataInRange.length) return;
     if (isStacked) {
       return (
-        dataInRange.find(r => r.offset <= measure && measure < r.measure + r.offset) ||
-        dataInRange[dataInRange.length - 1]
+        dataInRange.find(
+          r => r.offset <= measure && measure < r.measures[measureIndex] + r.offset,
+        ) || dataInRange[dataInRange.length - 1]
       );
     } else {
-      return minBy(dataInRange, r => Math.abs(r.measure - measure));
+      return minBy(dataInRange, r => Math.abs(r.measures[measureIndex] - measure));
     }
   }
 
-  const facetColorizer = useMemo(() => {
-    const s = scaleOrdinal(COLORS);
-    return (v: string) => (v === OTHER_VALUE ? OTHER_COLOR : s(v));
-  }, []);
-
   const chartMargin = { ...margin, ...getDefaultChartMargin(yAxisPosition) };
-  const innerStage = stage.applyMargin(chartMargin);
 
+  // Calculate height for each chart based on number of measures
+  const totalGapHeight = Math.max(0, (numMeasures - 1) * MEASURE_GAP);
+  const chartHeight =
+    numMeasures > 0
+      ? Math.floor(
+          (stage.height - chartMargin.top - chartMargin.bottom - totalGapHeight) / numMeasures,
+        )
+      : 0;
+  const singleChartStage = new Stage(stage.width, chartHeight);
+  const innerStage = singleChartStage.applyMargin({
+    top: 0,
+    right: chartMargin.right,
+    bottom: 0,
+    left: chartMargin.left,
+  });
+
+  const allStackedData = stackedDataByMeasure.flat();
   const effectiveDomainRange =
     domainRange ||
-    (stackedData.length
-      ? [stackedData[stackedData.length - 1].start, stackedData[0].end]
+    (allStackedData.length
+      ? [allStackedData[allStackedData.length - 1].start, allStackedData[0].end]
       : getTodayRange(timezone));
 
   const baseTimeScale = scaleUtc()
@@ -271,10 +284,25 @@ export const ContinuousChartRender = function ContinuousChartRender(
     ? baseTimeScale.copy().domain(offsetRange(effectiveDomainRange, shiftOffset))
     : baseTimeScale;
 
-  const maxMeasure = max(stackedData, d => d.measure + d.offset);
-  const measureScale = scaleLinear()
-    .rangeRound([innerStage.height, 0])
-    .domain([0, (maxMeasure ?? 100) * 1.05]);
+  // Create a scale for each measure
+  const measureScales = useMemo(
+    () =>
+      stackedDataByMeasure.map((stackedData, measureIndex) => {
+        const maxMeasure = max(stackedData, d => d.measures[measureIndex] + d.offset);
+        return scaleLinear()
+          .rangeRound([innerStage.height, 0])
+          .domain([0, (maxMeasure ?? 100) * 1.05]);
+      }),
+    [stackedDataByMeasure, innerStage.height],
+  );
+
+  function getMeasureIndexFromY(y: number): number {
+    if (numMeasures === 0) return 0;
+    const totalChartsHeight = chartHeight * numMeasures + totalGapHeight;
+    if (y < 0 || y > totalChartsHeight) return 0;
+    const index = Math.floor(y / (chartHeight + MEASURE_GAP));
+    return Math.min(index, numMeasures - 1);
+  }
 
   function handleMouseDown(e: ReactMouseEvent) {
     const svg = svgRef.current;
@@ -289,7 +317,8 @@ export const ContinuousChartRender = function ContinuousChartRender(
     );
     const y = e.clientY - rect.y - chartMargin.top;
     const time = baseTimeScale.invert(x).valueOf();
-    const action = y > innerStage.height || e.shiftKey ? 'shift' : 'select';
+    const totalChartsHeight = chartHeight * numMeasures + totalGapHeight;
+    const action = y > totalChartsHeight || e.shiftKey ? 'shift' : 'select';
     setMouseDownAt({
       time,
       action,
@@ -299,6 +328,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
       setSelectionIfNeeded({
         start: start.valueOf(),
         end: granularity.shift(start, timezone, 1).valueOf(),
+        measureIndex: getMeasureIndexFromY(y),
       });
     } else {
       setSelection(undefined);
@@ -322,28 +352,41 @@ export const ContinuousChartRender = function ContinuousChartRender(
         const b = baseTimeScale
           .invert(clamp(x, EXTEND_X_SCALE_DOMAIN_BY, innerStage.width - EXTEND_X_SCALE_DOMAIN_BY))
           .valueOf();
+        const measureIndex = getMeasureIndexFromY(y);
         if (mouseDownAt.time < b) {
           setSelectionIfNeeded({
             start: granularity.floor(new Date(mouseDownAt.time), timezone).valueOf(),
             end: granularity.ceil(new Date(b), timezone).valueOf(),
+            measureIndex,
           });
         } else {
           setSelectionIfNeeded({
             start: granularity.floor(new Date(b), timezone).valueOf(),
             end: granularity.ceil(new Date(mouseDownAt.time), timezone).valueOf(),
+            measureIndex,
           });
         }
       }
     } else if (!selection?.finalized) {
+      const totalChartsHeight = chartHeight * numMeasures + totalGapHeight;
       if (
         0 <= x &&
         x <= innerStage.width &&
         0 <= y &&
-        y <= innerStage.height &&
+        y <= totalChartsHeight &&
         svg.contains(e.target as any)
       ) {
         const time = baseTimeScale.invert(x).valueOf();
-        const measure = measureScale.invert(y);
+        const measureIndex = getMeasureIndexFromY(y);
+        const measureScale = measureScales[measureIndex];
+
+        if (!measureScale) {
+          setSelection(undefined);
+          return;
+        }
+
+        const yInChart = y - measureIndex * (chartHeight + MEASURE_GAP);
+        const measure = measureScale.invert(yInChart);
 
         const start = granularity.floor(new Date(time), timezone);
         const end = granularity.shift(start, timezone, 1);
@@ -351,7 +394,8 @@ export const ContinuousChartRender = function ContinuousChartRender(
         setSelectionIfNeeded({
           start: start.valueOf(),
           end: end.valueOf(),
-          selectedDatum: findStackedDatum(time, measure, markType !== 'line'),
+          selectedDatum: findStackedDatum(time, measure, measureIndex, markType !== 'line'),
+          measureIndex,
         });
       } else {
         setSelection(undefined);
@@ -398,64 +442,6 @@ export const ContinuousChartRender = function ContinuousChartRender(
     }
   });
 
-  const byFacet = useMemo(() => {
-    if (markType === 'bar' || !stackedData.length) return [];
-    const isStacked = markType !== 'line';
-
-    const effectiveFacets = facets || ['undefined'];
-    const numFacets = effectiveFacets.length;
-
-    // Fill in 0s and make sure that the facets are in the same order
-    const fullTimeIntervals = groupBy(
-      stackedData,
-      d => String(d.start),
-      dataForStart => {
-        if (numFacets === 1) return [dataForStart[0]];
-        const facetToDatum = lookupBy(dataForStart, d => d.facet!);
-        return effectiveFacets.map(
-          (facet, facetIndex) =>
-            facetToDatum[facet] || {
-              ...dataForStart[0],
-              facet,
-              measure: 0,
-              offset: isStacked
-                ? Math.max(
-                    0,
-                    ...filterMap(effectiveFacets.slice(0, facetIndex), s => facetToDatum[s]).map(
-                      d => d.offset + d.measure,
-                    ),
-                  )
-                : 0,
-            },
-        );
-      },
-    );
-
-    // Add nulls to mark gaps in data
-    const seriesForFacet: Record<string, (StackedRangeDatum | null)[]> = {};
-    for (const stack of effectiveFacets) {
-      seriesForFacet[stack] = [];
-    }
-
-    let lastDatum: StackedRangeDatum | undefined;
-    for (const fullTimeInterval of fullTimeIntervals) {
-      const datum = fullTimeInterval[0];
-
-      if (lastDatum && lastDatum.start !== datum.end) {
-        for (const facet of effectiveFacets) {
-          seriesForFacet[facet].push(null);
-        }
-      }
-
-      for (let i = 0; i < numFacets; i++) {
-        seriesForFacet[effectiveFacets[i]].push(fullTimeInterval[i]);
-      }
-      lastDatum = datum;
-    }
-
-    return Object.values(seriesForFacet);
-  }, [markType, stackedData, facets]);
-
   if (innerStage.isInvalid()) return;
 
   function startEndToXWidth({ start, end }: { start: number; end: number }) {
@@ -469,59 +455,15 @@ export const ContinuousChartRender = function ContinuousChartRender(
     };
   }
 
-  function datumToYHeight({ measure, offset }: StackedRangeDatum) {
-    const y0 = measureScale(offset);
-    const y = measureScale(measure + offset);
-
-    return {
-      y: y,
-      height: y0 - y,
-    };
-  }
-
-  function datumToRect(d: StackedRangeDatum) {
-    const xWidth = startEndToXWidth(d);
-    if (!xWidth) return;
-    return {
-      ...xWidth,
-      ...datumToYHeight(d),
-    };
-  }
-
-  function datumToCxCy(d: StackedRangeDatum) {
-    const cx = timeScale((d.start + d.end) / 2);
-    if (cx < 0 || innerStage.width < cx) return;
-
-    return {
-      cx,
-      cy: measureScale(d.measure + d.offset),
-    };
-  }
-
-  const curve = getCurveFactory(curveType);
-
-  const areaFn = area<StackedRangeDatum>()
-    .curve(curve)
-    .defined(Boolean)
-    .x(d => timeScale((d.start + d.end) / 2))
-    .y0(d => measureScale(d.offset))
-    .y1(d => measureScale(d.measure + d.offset)) as Area<StackedRangeDatum | null>;
-
-  const lineFn = line<StackedRangeDatum>()
-    .curve(curve)
-    .defined(Boolean)
-    .x(d => timeScale((d.start + d.end) / 2))
-    .y(d => measureScale(d.measure + d.offset)) as Line<StackedRangeDatum | null>;
-
   let hoveredOpenOn: PortalBubbleOpenOn | undefined;
   if (selection) {
-    const { start, end, selectedDatum } = selection;
+    const { start, end, selectedDatum, measureIndex = 0 } = selection;
 
     let title: string;
     let info: string;
     if (selectedDatum) {
       title = formatStartDuration(new Date(selectedDatum.start), granularity);
-      info = formatNumber(selectedDatum.measure);
+      info = formatNumber(selectedDatum.measures[measureIndex]);
     } else {
       if (granularity.shift(new Date(start), timezone).valueOf() === end) {
         title = formatStartDuration(new Date(start), granularity);
@@ -529,9 +471,11 @@ export const ContinuousChartRender = function ContinuousChartRender(
         title = formatIsoDateRange(new Date(start), new Date(end), timezone);
       }
 
-      const selectedData = stackedData.filter(d => start <= d.start && d.start < end);
+      const selectedData = stackedDataByMeasure[measureIndex].filter(
+        d => start <= d.start && d.start < end,
+      );
       if (selectedData.length) {
-        info = formatNumber(sum(selectedData, b => b.measure));
+        info = formatNumber(sum(selectedData, b => b.measures[measureIndex]));
       } else {
         info = 'No data';
       }
@@ -539,7 +483,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
 
     hoveredOpenOn = {
       x: chartMargin.left + timeScale((selection.start + selection.end) / 2),
-      y: chartMargin.top,
+      y: chartMargin.top + measureIndex * (chartHeight + MEASURE_GAP),
       title,
       text: (
         <>
@@ -579,6 +523,19 @@ export const ContinuousChartRender = function ContinuousChartRender(
   ];
 
   const nowX = timeScale(now);
+  const totalChartsHeight = chartHeight * numMeasures + totalGapHeight;
+  const xAxisHeight = 25;
+
+  if (numMeasures === 0) {
+    return (
+      <div className="continuous-chart-render">
+        <div className="empty-placeholder">
+          <div className="no-data-text">No measures configured</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="continuous-chart-render">
       <svg
@@ -590,132 +547,49 @@ export const ContinuousChartRender = function ContinuousChartRender(
         onMouseDown={handleMouseDown}
       >
         <g transform={`translate(${chartMargin.left},${chartMargin.top})`}>
-          {gridlinesVisible && (
-            <g className="h-gridline" transform="translate(0,0)">
-              {filterMap(measureScale.ticks(3), (v, i) => {
-                if (v === 0) return;
-                const y = measureScale(v);
-                return <line key={i} x1={0} y1={y} x2={innerStage.width} y2={y} />;
-              })}
-            </g>
-          )}
-          <g clipPath={`xywh(0px 0px ${innerStage.width}px ${innerStage.height}px) view-box`}>
+          {/* Render each measure's chart */}
+          {stackedDataByMeasure.map((stackedData, measureIndex) => (
+            <ContinuousChartSingleRender
+              key={measureIndex}
+              data={stackedData}
+              measureIndex={measureIndex}
+              facets={facets}
+              facetColorizer={facetColorizer}
+              markType={markType}
+              curveType={curveType}
+              timeScale={timeScale}
+              measureScale={measureScales[measureIndex]}
+              innerStage={innerStage}
+              yAxisPosition={yAxisPosition}
+              showHorizontalGridlines={gridlinesVisible}
+              selectedDatum={
+                selection?.measureIndex === measureIndex ? selection.selectedDatum : undefined
+              }
+              selectionFinalized={selection?.finalized}
+              transform={`translate(0,${measureIndex * (chartHeight + MEASURE_GAP)})`}
+              title={numMeasures > 1 ? measures[measureIndex].name : undefined}
+            />
+          ))}
+
+          {/* Selection overlay across all charts */}
+          <g clipPath={`xywh(0px 0px ${innerStage.width}px ${totalChartsHeight}px) view-box`}>
             {selection && (
               <rect
                 className={classNames('selection', { finalized: selection.finalized })}
                 {...startEndToXWidth(selection)}
                 y={0}
-                height={innerStage.height}
+                height={totalChartsHeight}
               />
             )}
             {0 < nowX && nowX < innerStage.width && (
-              <line className="now-line" x1={nowX} x2={nowX} y1={0} y2={innerStage.height + 8} />
-            )}
-            {markType === 'bar' &&
-              filterMap(stackedData, stackedRow => {
-                const r = datumToRect(stackedRow);
-                if (!r) return;
-                return (
-                  <rect
-                    key={`${stackedRow.start}/${stackedRow.end}/${stackedRow.facet}`}
-                    className="mark-bar"
-                    {...r}
-                    style={
-                      typeof stackedRow.facet !== 'undefined'
-                        ? {
-                            fill: facetColorizer(stackedRow.facet),
-                          }
-                        : undefined
-                    }
-                  />
-                );
-              })}
-            {markType === 'bar' && selection?.selectedDatum && (
-              <rect
-                className={classNames('selected-bar', { finalized: selection.finalized })}
-                {...datumToRect(selection.selectedDatum)}
-              />
-            )}
-            {markType === 'area' &&
-              byFacet.map(ds => {
-                const facet = ds[0]!.facet;
-                return (
-                  <path
-                    key={String(facet)}
-                    className="mark-area"
-                    d={areaFn(ds)!}
-                    style={
-                      typeof facet !== 'undefined'
-                        ? {
-                            fill: facetColorizer(facet),
-                          }
-                        : undefined
-                    }
-                  />
-                );
-              })}
-            {(markType === 'area' || markType === 'line') &&
-              byFacet.map(ds => {
-                const facet = ds[0]!.facet;
-                return (
-                  <path
-                    key={String(facet)}
-                    className="mark-line"
-                    d={lineFn(ds)!}
-                    style={
-                      typeof facet !== 'undefined'
-                        ? {
-                            stroke: facetColorizer(facet),
-                          }
-                        : undefined
-                    }
-                  />
-                );
-              })}
-            {(markType === 'area' || markType === 'line') &&
-              byFacet.flatMap(ds =>
-                filterMap(ds, (d, i) => {
-                  if (!d || ds[i - 1] || ds[i + 1]) return; // Not a single point
-                  const x = timeScale((d.start + d.end) / 2);
-                  return (
-                    <line
-                      key={`single_${i}_${d.facet}`}
-                      className="single-point"
-                      x1={x}
-                      x2={x}
-                      y1={measureScale(d.measure + d.offset)}
-                      y2={measureScale(d.offset)}
-                      style={
-                        typeof d.facet !== 'undefined'
-                          ? {
-                              stroke: facetColorizer(d.facet),
-                            }
-                          : undefined
-                      }
-                    />
-                  );
-                }),
-              )}
-            {(markType === 'area' || markType === 'line') && selection?.selectedDatum && (
-              <circle
-                className={classNames('selected-point', { finalized: selection.finalized })}
-                {...datumToCxCy(selection.selectedDatum)}
-                r={3}
-                style={
-                  typeof selection.selectedDatum.facet !== 'undefined'
-                    ? {
-                        fill: facetColorizer(selection.selectedDatum.facet),
-                      }
-                    : undefined
-                }
-              />
+              <line className="now-line" x1={nowX} x2={nowX} y1={0} y2={totalChartsHeight + 8} />
             )}
             {!!shiftOffset && (
               <rect
                 className="shifter"
                 x={shiftOffset > 0 ? timeScale(effectiveDomainRange[1]) : 0}
                 y={0}
-                height={innerStage.height}
+                height={totalChartsHeight}
                 width={
                   shiftOffset > 0
                     ? innerStage.width - timeScale(effectiveDomainRange[1])
@@ -724,9 +598,11 @@ export const ContinuousChartRender = function ContinuousChartRender(
               />
             )}
           </g>
+
+          {/* X-axis at the bottom */}
           <g
             className="axis-x"
-            transform={`translate(0,${innerStage.height + 1})`}
+            transform={`translate(0,${totalChartsHeight + 1})`}
             ref={(node: any) =>
               select(node).call(
                 axisBottom(timeScale)
@@ -747,36 +623,10 @@ export const ContinuousChartRender = function ContinuousChartRender(
               shifting: typeof shiftOffset === 'number',
             })}
             x={0}
-            y={innerStage.height}
+            y={totalChartsHeight}
             width={innerStage.width}
-            height={chartMargin.bottom}
+            height={xAxisHeight}
           />
-          {yAxisPosition === 'left' && (
-            <g
-              className="axis-y"
-              ref={(node: any) =>
-                select(node).call(
-                  axisLeft(measureScale)
-                    .ticks(3)
-                    .tickSizeOuter(0)
-                    .tickFormat(e => formatNumber(e.valueOf())),
-                )
-              }
-            />
-          )}
-          {yAxisPosition === 'right' && (
-            <g
-              className="axis-y"
-              transform={`translate(${innerStage.width},0)`}
-              ref={(node: any) =>
-                select(node).call(
-                  axisRight(measureScale)
-                    .ticks(3)
-                    .tickFormat(e => formatNumber(e.valueOf())),
-                )
-              }
-            />
-          )}
         </g>
       </svg>
       {!data.length && (

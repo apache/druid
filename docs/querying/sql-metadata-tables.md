@@ -236,6 +236,8 @@ Servers table lists all discovered servers in the cluster.
 |max_size|BIGINT|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](../configuration/index.md#historical-general-configuration). Only valid for HISTORICAL type, for other types it's 0|
 |is_leader|BIGINT|1 if the server is currently the 'leader' (for services which have the concept of leadership), otherwise 0 if the server is not the leader, or null if the server type does not have the concept of leadership|
 |start_time|STRING|Timestamp in ISO8601 format when the server was announced in the cluster|
+|version|VARCHAR|Druid version running on the server|
+|labels|VARCHAR|Labels for the server configured using the property [`druid.labels`](../configuration/index.md)|
 To retrieve information about all servers, use the query:
 
 ```sql
@@ -299,6 +301,7 @@ The supervisors table provides information about supervisors.
 |Column|Type|Notes|
 |------|-----|-----|
 |supervisor_id|VARCHAR|Supervisor task identifier|
+|datasource|VARCHAR|Datasource the supervisor operates on|
 |state|VARCHAR|Basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. See [Supervisor reference](../ingestion/supervisor.md) for more information.|
 |detailed_state|VARCHAR|Supervisor specific state. See documentation of the specific supervisor for details: [Kafka](../ingestion/kafka-ingestion.md) or [Kinesis](../ingestion/kinesis-ingestion.md).|
 |healthy|BIGINT|Boolean represented as long type where 1 = true, 0 = false. 1 indicates a healthy supervisor|

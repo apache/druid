@@ -31,12 +31,14 @@ import org.apache.druid.client.indexing.IndexingWorker;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.report.KillTaskReport;
 import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -44,10 +46,14 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.metadata.LockFilterPolicy;
+import org.apache.druid.metadata.TestSupervisorSpec;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
+import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.segment.TestDataSource;
+import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.timeline.DataSegment;
 import org.hamcrest.CoreMatchers;
@@ -267,6 +273,26 @@ public class OverlordClientImplTest
   }
 
   @Test
+  public void test_postSupervisor() throws Exception
+  {
+    final String supervisorId = "wiki_supervisor";
+    final SupervisorSpec supervisorSpec = new TestSupervisorSpec(supervisorId, "data");
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/supervisor?skipRestartIfUnmodified=true")
+            .jsonContent(jsonMapper, supervisorSpec),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(Map.of("id", supervisorId))
+    );
+
+    Assert.assertEquals(
+        Map.of("id", supervisorId),
+        overlordClient.postSupervisor(supervisorSpec).get()
+    );
+  }
+
+  @Test
   public void test_supervisorStatuses() throws Exception
   {
     final List<SupervisorStatus> statuses = ImmutableList.of(
@@ -467,6 +493,48 @@ public class OverlordClientImplTest
     );
 
     Assert.assertFalse(overlordClient.isCompactionSupervisorEnabled().get());
+  }
+
+  @Test
+  public void test_getClusterCompactionConfig()
+      throws JsonProcessingException, ExecutionException, InterruptedException
+  {
+    final ClusterCompactionConfig config = new ClusterCompactionConfig(
+        0.2,
+        101,
+        new NewestSegmentFirstPolicy(null),
+        true,
+        CompactionEngine.MSQ
+    );
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/compaction/config/cluster"),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(config)
+    );
+
+    Assert.assertEquals(
+        config,
+        overlordClient.getClusterCompactionConfig().get()
+    );
+  }
+
+  @Test
+  public void test_updateClusterCompactionConfig()
+      throws ExecutionException, InterruptedException, JsonProcessingException
+  {
+    final ClusterCompactionConfig config = new ClusterCompactionConfig(null, null, null, null, null);
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/compaction/config/cluster")
+            .jsonContent(jsonMapper, config),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(new UpdateResponse(true))
+    );
+
+    Assert.assertTrue(
+        overlordClient.updateClusterCompactionConfig(config).get().isSuccess()
+    );
   }
 
   @Test

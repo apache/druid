@@ -26,7 +26,6 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
@@ -44,6 +43,7 @@ import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.VByte;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleBitmapColumnIndex;
@@ -67,7 +67,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
       ByteBuffer bb,
-      SmooshedFileMapper fileMapper,
+      SegmentFileMapper fileMapper,
       @Nullable VariantColumnAndIndexSupplier parent
   )
   {

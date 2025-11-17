@@ -56,8 +56,8 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnConfig;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -127,10 +127,10 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
             .addValue(ObjectMapper.class.getName(), mapper)
-            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null))
+            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null, null))
     );
     Mockito.when(injector.getInstance(Key.get(ObjectMapper.class, Json.class))).thenReturn(mapper);
-    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null));
+    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null, null));
 
     List<Segment> segments = createSegments(tempFolder, closer);
     QueryableIndex queryableIndex = segments.get(0).as(QueryableIndex.class);
@@ -162,8 +162,8 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     QueryableIndex queryableIndex = Mockito.mock(QueryableIndex.class);
     ObjectMapper mapper = new DefaultObjectMapper();
     BitmapFactory bitmapFactory = new RoaringBitmapFactory();
-    ColumnHolder xHolder = Mockito.mock(ColumnHolder.class);
-    ColumnHolder yHolder = Mockito.mock(ColumnHolder.class);
+    BaseColumnHolder xHolder = Mockito.mock(BaseColumnHolder.class);
+    BaseColumnHolder yHolder = Mockito.mock(BaseColumnHolder.class);
     ColumnIndexSupplier indexSupplier = Mockito.mock(ColumnIndexSupplier.class);
     DictionaryEncodedStringValueIndex valueIndex = Mockito.mock(DictionaryEncodedStringValueIndex.class);
 
@@ -201,10 +201,10 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
             .addValue(ObjectMapper.class.getName(), mapper)
-            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null))
+            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null, null))
     );
     Mockito.when(injector.getInstance(Key.get(ObjectMapper.class, Json.class))).thenReturn(mapper);
-    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null));
+    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null, null));
 
     List<Segment> segments = createSegments(tempFolder, closer);
     QueryableIndex queryableIndex = segments.get(0).as(QueryableIndex.class);
@@ -234,10 +234,10 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
             .addValue(ObjectMapper.class.getName(), mapper)
-            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null))
+            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null, null))
     );
     Mockito.when(injector.getInstance(Key.get(ObjectMapper.class, Json.class))).thenReturn(mapper);
-    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null));
+    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null, null));
 
     List<Segment> segments = createSegments(tempFolder, closer);
     QueryableIndex queryableIndex = segments.get(0).as(QueryableIndex.class);
@@ -292,7 +292,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
         },
         Granularities.HOUR,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
   }
 }

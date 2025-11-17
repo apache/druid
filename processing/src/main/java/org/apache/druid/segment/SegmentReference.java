@@ -19,31 +19,56 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.query.policy.NoopPolicyEnforcer;
-import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.loading.AcquireSegmentAction;
+
+import javax.annotation.Nullable;
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.Optional;
 
 /**
- * A {@link Segment} with an associated references, such as {@link ReferenceCountingSegment} where the reference is
- * the segment itself, and {@link org.apache.druid.segment.join.HashJoinSegment} which wraps a
- * {@link ReferenceCountingSegment} and also includes the associated list of
- * {@link org.apache.druid.segment.join.JoinableClause}
+ * Wrapper for a {@link SegmentDescriptor} and {@link Optional<Segment>}, the latter being created by a
+ * {@link SegmentMapFunction} being applied to a {@link ReferenceCountedSegmentProvider}. Closing this object closes
+ * both the {@link #segmentReference} and any closeables attached from the process of creating this object, such as
+ * from {@link AcquireSegmentAction}
  */
-public interface SegmentReference extends Segment, ReferenceCountedObject
+public class SegmentReference implements Closeable
 {
-
-  /**
-   * Validates if the segment complies with the policy restrictions on tables.
-   * <p>
-   * This should be called right before the segment is about to be processed by the query stack, and after
-   * {@link org.apache.druid.query.planning.ExecutionVertex#createSegmentMapFunction(PolicyEnforcer)}.
-   */
-  default void validateOrElseThrow(PolicyEnforcer policyEnforcer)
+  public static SegmentReference missing(SegmentDescriptor segmentDescriptor)
   {
-    // For testing purposes, we allow the NoopPolicyEnforcer to pass through.
-    if (policyEnforcer instanceof NoopPolicyEnforcer) {
-      return;
-    }
-    throw new UnsupportedOperationException("validateOrElseThrow is not supported");
+    return new SegmentReference(segmentDescriptor, Optional.empty(), null);
   }
 
+  private final SegmentDescriptor segmentDescriptor;
+  private final Optional<Segment> segmentReference;
+  private final Closer closer = Closer.create();
+
+  public SegmentReference(
+      SegmentDescriptor segmentDescriptor,
+      Optional<Segment> segmentReference,
+      @Nullable Closeable cleanupHold
+  )
+  {
+    this.segmentDescriptor = segmentDescriptor;
+    closer.register(cleanupHold);
+    this.segmentReference = segmentReference.map(closer::register);
+  }
+
+  public SegmentDescriptor getSegmentDescriptor()
+  {
+    return segmentDescriptor;
+  }
+
+  public Optional<Segment> getSegmentReference()
+  {
+    return segmentReference;
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    closer.close();
+  }
 }

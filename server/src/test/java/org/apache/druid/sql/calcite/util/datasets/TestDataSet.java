@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.util.datasets;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.timeline.DataSegment;
 
@@ -26,16 +27,18 @@ import java.io.File;
 
 public interface TestDataSet
 {
-  public static final String TIMESTAMP_COLUMN = "t";
+  String TIMESTAMP_COLUMN = "t";
 
-  public static final MapBasedTestDataset NUMFOO = new NumFoo();
-  public static final MapBasedTestDataset BROADCAST = new NumFoo("broadcast");
+  MapBasedTestDataset NUMFOO = new NumFoo();
+  MapBasedTestDataset LARRY = new Larry();
+  MapBasedTestDataset BROADCAST = new NumFoo("broadcast");
+  MapBasedTestDataset RESTRICTED_BROADCAST = new NumFoo("restrictedBroadcastDatasource_m1_is_6");
 
-  public static final MapBasedTestDataset NUMBERS = new Numbers();
+  MapBasedTestDataset NUMBERS = new Numbers();
 
   String getName();
 
-  QueryableIndex makeIndex(File tmpDir);
+  QueryableIndex makeIndex(ObjectMapper jsonMapper, File tmpDir);
 
   DataSegment makeSegment(QueryableIndex index);
 }

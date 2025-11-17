@@ -22,6 +22,9 @@ package org.apache.druid.query.scan;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
+import junitparams.naming.TestCaseName;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.Intervals;
@@ -46,6 +49,8 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
+import org.apache.druid.segment.nested.ObjectStorageEncoding;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -54,11 +59,13 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
+@RunWith(JUnitParamsRunner.class)
 public class NestedDataScanQueryTest extends InitializedNullHandlingTest
 {
   private static final Logger LOG = new Logger(NestedDataScanQueryTest.class);
@@ -68,6 +75,18 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
 
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
+
+  public static Object[] getNestedColumnFormatSpec()
+  {
+    return new Object[]{
+        new Object[]{"default", null},
+        new Object[]{
+            "noneObjectStorageEncoding",
+            NestedCommonFormatColumnFormatSpec.builder()
+                                              .setObjectStorageEncoding(ObjectStorageEncoding.NONE).build()
+        }
+    };
+  }
 
   @After
   public void teardown() throws IOException
@@ -141,7 +160,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
             NestedDataTestUtils.COUNT,
             Granularities.YEAR,
             true,
-            IndexSpec.DEFAULT
+            IndexSpec.getDefault()
         )
     ).build();
 
@@ -267,7 +286,9 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testIngestAndScanSegmentsTsvV4() throws Exception
+  @Parameters(method = "getNestedColumnFormatSpec")
+  @TestCaseName("{0}")
+  public void testIngestAndScanSegmentsTsvV4(String name, NestedCommonFormatColumnFormatSpec spec) throws Exception
   {
     Query<ScanResultValue> scanQuery = Druids.newScanQueryBuilder()
                                              .dataSource("test_datasource")
@@ -285,7 +306,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                              .limit(100)
                                              .context(ImmutableMap.of())
                                              .build();
-    List<Segment> segs = NestedDataTestUtils.createSimpleSegmentsTsvNested(tempFolder, closer);
+    List<Segment> segs = NestedDataTestUtils.createSimpleSegmentsTsvNested(tempFolder, spec, closer);
 
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 
@@ -295,9 +316,10 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     logResults(results);
   }
 
-
   @Test
-  public void testIngestAndScanSegmentsTsv() throws Exception
+  @Parameters(method = "getNestedColumnFormatSpec")
+  @TestCaseName("{0}")
+  public void testIngestAndScanSegmentsTsv(String name, NestedCommonFormatColumnFormatSpec spec) throws Exception
   {
     Query<ScanResultValue> scanQuery = Druids.newScanQueryBuilder()
                                              .dataSource("test_datasource")
@@ -315,7 +337,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                              .limit(100)
                                              .context(ImmutableMap.of())
                                              .build();
-    List<Segment> segs = NestedDataTestUtils.createSimpleSegmentsTsv(tempFolder, closer);
+    List<Segment> segs = NestedDataTestUtils.createSimpleSegmentsTsv(tempFolder, spec, closer);
 
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 
@@ -345,7 +367,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.SIMPLE_DATA_FILE,
         Granularities.HOUR,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 
@@ -529,7 +551,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.COUNT,
         Granularities.DAY,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
 
@@ -551,9 +573,9 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     DimensionsSpec spec = DimensionsSpec.builder()
                                         .setDimensions(
                                             ImmutableList.of(
-                                                new AutoTypeColumnSchema("str", ColumnType.STRING),
-                                                new AutoTypeColumnSchema("long", ColumnType.LONG),
-                                                new AutoTypeColumnSchema("double", ColumnType.FLOAT)
+                                                new AutoTypeColumnSchema("str", ColumnType.STRING, null),
+                                                new AutoTypeColumnSchema("long", ColumnType.LONG, null),
+                                                new AutoTypeColumnSchema("double", ColumnType.FLOAT, null)
                                             )
                                         )
                                         .build();
@@ -592,7 +614,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.COUNT,
         Granularities.DAY,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
 
@@ -648,7 +670,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         aggs,
         Granularities.NONE,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
 
@@ -703,7 +725,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         aggs,
         Granularities.NONE,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
 
@@ -766,7 +788,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         aggs,
         Granularities.NONE,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
 
@@ -780,7 +802,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     Assert.assertEquals(1, resultsRealtime.size());
     Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
     Assert.assertEquals(
-        "[[1672531200000, null, null, null, 1, 51, -0.13, 1, [], [51, -35], {a=700, b={x=g, y=1.1, z=[9, null, 9, 9]}, v=[]}, {x=400, y=[{l=[null], m=100, n=5}, {l=[a, b, c], m=a, n=1}], z={}}, null, [a, b], null, [2, 3], null, [null], null, [1, 0, 1], null, [{x=1}, {x=2}], null, hello, 1234, 1.234, {x=1, y=hello, z={a=1.1, b=1234, c=[a, b, c], d=[]}}, [a, b, c], [1, 2, 3], [1.1, 2.2, 3.3], [], {}, [null, null], [{}, {}, {}], [{a=b, x=1, y=1.3}], 1], [1672531200000, , 2, null, 0, b, 1.1, b, 2, b, {a=200, b={x=b, y=1.1, z=[2, 4, 6]}, v=[]}, {x=10, y=[{l=[b, b, c], m=b, n=2}, [1, 2, 3]], z={a=[5.5], b=false}}, [a, b, c], [null, b], [2, 3], null, [3.3, 4.4, 5.5], [999.0, null, 5.5], [null, null, 2.2], [1, 1], [null, [null], []], [{x=3}, {x=4}], null, hello, 1234, 1.234, {x=1, y=hello, z={a=1.1, b=1234, c=[a, b, c], d=[]}}, [a, b, c], [1, 2, 3], [1.1, 2.2, 3.3], [], {}, [null, null], [{}, {}, {}], [{a=b, x=1, y=1.3}], 1], [1672531200000, a, 1, 1.0, 1, 1, 1, 1, 1, 1, {a=100, b={x=a, y=1.1, z=[1, 2, 3, 4]}, v=[]}, {x=1234, y=[{l=[a, b, c], m=a, n=1}, {l=[a, b, c], m=a, n=1}], z={a=[1.1, 2.2, 3.3], b=true}}, [a, b], [a, b], [1, 2, 3], [1, null, 3], [1.1, 2.2, 3.3], [1.1, 2.2, null], [a, 1, 2.2], [1, 0, 1], [[1, 2, null], [3, 4]], [{x=1}, {x=2}], null, hello, 1234, 1.234, {x=1, y=hello, z={a=1.1, b=1234, c=[a, b, c], d=[]}}, [a, b, c], [1, 2, 3], [1.1, 2.2, 3.3], [], {}, [null, null], [{}, {}, {}], [{a=b, x=1, y=1.3}], 1], [1672531200000, b, 4, 3.3, 1, 1, null, {}, 4, 1, {a=400, b={x=d, y=1.1, z=[3, 4]}, v=[]}, {x=1234, z={a=[1.1, 2.2, 3.3], b=true}}, [d, e], [b, b], [1, 4], [1], [2.2, 3.3, 4.0], null, [a, b, c], [null, 0, 1], [[1, 2], [3, 4], [5, 6, 7]], [{x=null}, {x=2}], null, hello, 1234, 1.234, {x=1, y=hello, z={a=1.1, b=1234, c=[a, b, c], d=[]}}, [a, b, c], [1, 2, 3], [1.1, 2.2, 3.3], [], {}, [null, null], [{}, {}, {}], [{a=b, x=1, y=1.3}], 1], [1672531200000, c, null, 4.4, 1, hello, -1000, {}, [], hello, {a=500, b={x=e, z=[1, 2, 3, 4]}, v=a}, {x=11, y=[], z={a=[null], b=false}}, null, null, [1, 2, 3], [], [1.1, 2.2, 3.3], null, null, [0], null, [{x=1000}, {y=2000}], null, hello, 1234, 1.234, {x=1, y=hello, z={a=1.1, b=1234, c=[a, b, c], d=[]}}, [a, b, c], [1, 2, 3], [1.1, 2.2, 3.3], [], {}, [null, null], [{}, {}, {}], [{a=b, x=1, y=1.3}], 1], [1672531200000, d, 5, 5.9, 0, null, 3.33, a, 6, null, {a=600, b={x=f, y=1.1, z=[6, 7, 8, 9]}, v=b}, null, [a, b], null, null, [null, 2, 9], null, [999.0, 5.5, null], [a, 1, 2.2], [], [[1], [1, 2, null]], [{a=1}, {b=2}], null, hello, 1234, 1.234, {x=1, y=hello, z={a=1.1, b=1234, c=[a, b, c], d=[]}}, [a, b, c], [1, 2, 3], [1.1, 2.2, 3.3], [], {}, [null, null], [{}, {}, {}], [{a=b, x=1, y=1.3}], 1], [1672531200000, null, 3, 2.0, null, 3.0, 1.0, 3.3, 3, 3.0, {a=300}, {x=4.4, y=[{l=[], m=100, n=3}, {l=[a]}, {l=[b], n=[]}], z={a=[], b=true}}, [b, c], [d, null, b], [1, 2, 3, 4], [1, 2, 3], [1.1, 3.3], [null, 2.2, null], [1, null, 1], [1, null, 1], [[1], null, [1, 2, 3]], [null, {x=2}], null, hello, 1234, 1.234, {x=1, y=hello, z={a=1.1, b=1234, c=[a, b, c], d=[]}}, [a, b, c], [1, 2, 3], [1.1, 2.2, 3.3], [], {}, [null, null], [{}, {}, {}], [{a=b, x=1, y=1.3}], 1]]",
+        "[[1672531200000, null, null, null, 1, 51, -0.13, 1, [], [51, -35], {a=700, b={x=g, y=1.1, z=[9, null, 9, 9]}, c=null, v=[]}, {x=400, y=[{l=[null], m=100, n=5}, {l=[a, b, c], m=a, n=1}], z={}}, null, [a, b], null, [2, 3], null, [null], null, [1, 0, 1], null, [{x=1}, {x=2}], null, hello, 1234, 1.234, {x=1, y=hello, z={a=1.1, b=1234, c=[a, b, c], d=[]}}, [a, b, c], [1, 2, 3], [1.1, 2.2, 3.3], [], {}, [null, null], [{}, {}, {}], [{a=b, x=1, y=1.3}], 1], [1672531200000, , 2, null, 0, b, 1.1, b, 2, b, {a=200, b={x=b, y=1.1, z=[2, 4, 6]}, c=[a, b], v=[]}, {x=10, y=[{l=[b, b, c], m=b, n=2}, [1, 2, 3]], z={a=[5.5], b=false}}, [a, b, c], [null, b], [2, 3], null, [3.3, 4.4, 5.5], [999.0, null, 5.5], [null, null, 2.2], [1, 1], [null, [null], []], [{x=3}, {x=4}], null, hello, 1234, 1.234, {x=1, y=hello, z={a=1.1, b=1234, c=[a, b, c], d=[]}}, [a, b, c], [1, 2, 3], [1.1, 2.2, 3.3], [], {}, [null, null], [{}, {}, {}], [{a=b, x=1, y=1.3}], 1], [1672531200000, a, 1, 1.0, 1, 1, 1, 1, 1, 1, {a=100, b={x=a, y=1.1, z=[1, 2, 3, 4]}, c=[100], v=[]}, {x=1234, y=[{l=[a, b, c], m=a, n=1}, {l=[a, b, c], m=a, n=1}], z={a=[1.1, 2.2, 3.3], b=true}}, [a, b], [a, b], [1, 2, 3], [1, null, 3], [1.1, 2.2, 3.3], [1.1, 2.2, null], [a, 1, 2.2], [1, 0, 1], [[1, 2, null], [3, 4]], [{x=1}, {x=2}], null, hello, 1234, 1.234, {x=1, y=hello, z={a=1.1, b=1234, c=[a, b, c], d=[]}}, [a, b, c], [1, 2, 3], [1.1, 2.2, 3.3], [], {}, [null, null], [{}, {}, {}], [{a=b, x=1, y=1.3}], 1], [1672531200000, b, 4, 3.3, 1, 1, null, {}, 4, 1, {a=400, b={x=d, y=1.1, z=[3, 4]}, c={a=1}, v=[]}, {x=1234, z={a=[1.1, 2.2, 3.3], b=true}}, [d, e], [b, b], [1, 4], [1], [2.2, 3.3, 4.0], null, [a, b, c], [null, 0, 1], [[1, 2], [3, 4], [5, 6, 7]], [{x=null}, {x=2}], null, hello, 1234, 1.234, {x=1, y=hello, z={a=1.1, b=1234, c=[a, b, c], d=[]}}, [a, b, c], [1, 2, 3], [1.1, 2.2, 3.3], [], {}, [null, null], [{}, {}, {}], [{a=b, x=1, y=1.3}], 1], [1672531200000, c, null, 4.4, 1, hello, -1000, {}, [], hello, {a=500, b={x=e, z=[1, 2, 3, 4]}, c=hello, v=a}, {x=11, y=[], z={a=[null], b=false}}, null, null, [1, 2, 3], [], [1.1, 2.2, 3.3], null, null, [0], null, [{x=1000}, {y=2000}], null, hello, 1234, 1.234, {x=1, y=hello, z={a=1.1, b=1234, c=[a, b, c], d=[]}}, [a, b, c], [1, 2, 3], [1.1, 2.2, 3.3], [], {}, [null, null], [{}, {}, {}], [{a=b, x=1, y=1.3}], 1], [1672531200000, d, 5, 5.9, 0, null, 3.33, a, 6, null, {a=600, b={x=f, y=1.1, z=[6, 7, 8, 9]}, c=12.3, v=b}, null, [a, b], null, null, [null, 2, 9], null, [999.0, 5.5, null], [a, 1, 2.2], [], [[1], [1, 2, null]], [{a=1}, {b=2}], null, hello, 1234, 1.234, {x=1, y=hello, z={a=1.1, b=1234, c=[a, b, c], d=[]}}, [a, b, c], [1, 2, 3], [1.1, 2.2, 3.3], [], {}, [null, null], [{}, {}, {}], [{a=b, x=1, y=1.3}], 1], [1672531200000, null, 3, 2.0, null, 3.0, 1.0, 3.3, 3, 3.0, {a=300}, {x=4.4, y=[{l=[], m=100, n=3}, {l=[a]}, {l=[b], n=[]}], z={a=[], b=true}}, [b, c], [d, null, b], [1, 2, 3, 4], [1, 2, 3], [1.1, 3.3], [null, 2.2, null], [1, null, 1], [1, null, 1], [[1], null, [1, 2, 3]], [null, {x=2}], null, hello, 1234, 1.234, {x=1, y=hello, z={a=1.1, b=1234, c=[a, b, c], d=[]}}, [a, b, c], [1, 2, 3], [1.1, 2.2, 3.3], [], {}, [null, null], [{}, {}, {}], [{a=b, x=1, y=1.3}], 1]]",
         resultsSegments.get(0).getEvents().toString()
     );
     Assert.assertEquals(resultsSegments.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
@@ -820,7 +842,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE,
         Granularities.HOUR,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
     List<Segment> realtimeSegs = ImmutableList.of(
@@ -878,7 +900,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE,
         Granularities.HOUR,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
     List<Segment> realtimeSegs = ImmutableList.of(
@@ -943,7 +965,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         aggs,
         Granularities.NONE,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
 
 

@@ -1548,22 +1548,22 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "upfront",
                         "rows", 1L,
-                        "index", new Float(1447.341160).doubleValue(),
-                        "addRowsIndexConstant", new Float(1449.341160).doubleValue(),
+                        "index", 1447.341160F,
+                        "addRowsIndexConstant", 1449.341160F,
                         "uniques", QueryRunnerTestHelper.UNIQUES_1
                     ),
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "total_market",
                         "rows", 1L,
-                        "index", new Float(1314.839715).doubleValue(),
-                        "addRowsIndexConstant", new Float(1316.839715).doubleValue(),
+                        "index", 1314.839715F,
+                        "addRowsIndexConstant", 1316.839715F,
                         "uniques", QueryRunnerTestHelper.UNIQUES_1
                     ),
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "spot",
                         "rows", 1L,
-                        "index", new Float(109.705815).doubleValue(),
-                        "addRowsIndexConstant", new Float(111.705815).doubleValue(),
+                        "index", 109.705815F,
+                        "addRowsIndexConstant", 111.705815F,
                         "uniques", QueryRunnerTestHelper.UNIQUES_1
                     )
                 )

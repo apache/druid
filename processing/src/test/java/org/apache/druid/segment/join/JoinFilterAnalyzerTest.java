@@ -2246,13 +2246,13 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
       expectedVirtualColumns = ImmutableSet.of(
           new ExpressionVirtualColumn(
               rewrittenRegionIsoCodeColumnName,
-              "(upper [(lower [regionIsoCode])])",
+              "upper(lower(\"regionIsoCode\"))",
               ColumnType.STRING,
               ExprMacroTable.nil()
           ),
           new ExpressionVirtualColumn(
               rewrittenCountryIsoCodeColumnName,
-              "(upper [(lower [countryIsoCode])])",
+              "upper(lower(\"countryIsoCode\"))",
               ColumnType.STRING,
               ExprMacroTable.nil()
           )

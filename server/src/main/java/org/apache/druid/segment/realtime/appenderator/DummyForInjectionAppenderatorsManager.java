@@ -62,6 +62,7 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
+      TaskDirectory taskDirectory,
       SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
@@ -78,7 +79,8 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
       PolicyEnforcer policyEnforcer,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      TaskIntervalUnlocker taskIntervalUnlocker
   )
   {
     throw new UOE(ERROR_MSG);
@@ -89,6 +91,7 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
+      TaskDirectory taskDirectory,
       SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,

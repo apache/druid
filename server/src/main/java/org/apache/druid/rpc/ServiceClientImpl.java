@@ -206,6 +206,7 @@ public class ServiceClientImpl implements ServiceClient
                   }
                   catch (Throwable t) {
                     // It's a bug if this happens. The purpose of this line is to help us debug what went wrong.
+                    log.error(t, "Service[%s] handler exited unexpected", serviceName);
                     retVal.setException(new RpcException(t, "Service [%s] handler exited unexpectedly", serviceName));
                   }
                 }
@@ -487,7 +488,7 @@ public class ServiceClientImpl implements ServiceClient
   }
 
   @VisibleForTesting
-  static long computeBackoffMs(final ServiceRetryPolicy retryPolicy, final long attemptNumber)
+  public static long computeBackoffMs(final ServiceRetryPolicy retryPolicy, final long attemptNumber)
   {
     return Math.max(
         retryPolicy.minWaitMillis(),

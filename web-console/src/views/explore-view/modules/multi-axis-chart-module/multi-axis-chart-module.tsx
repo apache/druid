@@ -109,12 +109,12 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
 
     const [sourceDataState, queryManager] = useQueryManager({
       query: dataQuery,
-      processQuery: async (query, cancelToken) => {
+      processQuery: async (query, signal) => {
         if (!timeColumnName) {
           throw new Error(`Must have a column of type TIMESTAMP for the multi-axis chart to work`);
         }
 
-        return (await runSqlQuery(query, cancelToken)).toObjectArray();
+        return (await runSqlQuery(query, signal)).toObjectArray();
       },
     });
 

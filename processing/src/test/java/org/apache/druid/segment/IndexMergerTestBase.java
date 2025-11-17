@@ -94,6 +94,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
@@ -1939,7 +1940,7 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
     Assert.assertEquals(Collections.singletonList(2L), rowList.get(2).metricValues());
   }
 
-  private IncrementalIndex getIndexWithNumericDims() throws Exception
+  private IncrementalIndex getIndexWithNumericDims()
   {
     IncrementalIndex index = getIndexWithDimsFromSchemata(
         Arrays.asList(
@@ -2036,7 +2037,7 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
   }
 
 
-  private IncrementalIndex getIndexD3() throws Exception
+  private IncrementalIndex getIndexD3()
   {
     IncrementalIndex toPersist1 = new OnheapIncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
@@ -2070,7 +2071,7 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
     return toPersist1;
   }
 
-  private IncrementalIndex getSingleDimIndex(String dimName, List<String> values) throws Exception
+  private IncrementalIndex getSingleDimIndex(String dimName, List<String> values)
   {
     IncrementalIndex toPersist1 = new OnheapIncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
@@ -2081,7 +2082,7 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
     return toPersist1;
   }
 
-  private void addDimValuesToIndex(IncrementalIndex index, String dimName, List<String> values) throws Exception
+  private void addDimValuesToIndex(IncrementalIndex index, String dimName, List<String> values)
   {
     for (String val : values) {
       index.add(new MapBasedInputRow(1, Collections.singletonList(dimName), ImmutableMap.of(dimName, val)));
@@ -3011,29 +3012,18 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
                       );
 
     List<AggregateProjectionSpec> projections = Arrays.asList(
-        new AggregateProjectionSpec(
-            "a_hourly_c_sum",
-            VirtualColumns.create(
-                Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
-            ),
-            Arrays.asList(
-                new StringDimensionSchema("a"),
-                new LongDimensionSchema("__gran")
-            ),
-            new AggregatorFactory[]{
-                new LongSumAggregatorFactory("c_sum", "c")
-            }
-        ),
-        new AggregateProjectionSpec(
-            "a_c_sum",
-            VirtualColumns.EMPTY,
-            Collections.singletonList(
-                new StringDimensionSchema("a")
-            ),
-            new AggregatorFactory[]{
-                new LongSumAggregatorFactory("c_sum", "c")
-            }
-        )
+        AggregateProjectionSpec.builder("a_hourly_c_sum")
+                               .virtualColumns(Granularities.toVirtualColumn(Granularities.HOUR, "__gran"))
+                               .groupingColumns(
+                                   new StringDimensionSchema("a"),
+                                   new LongDimensionSchema("__gran")
+                               )
+                               .aggregators(new LongSumAggregatorFactory("c_sum", "c"))
+                               .build(),
+        AggregateProjectionSpec.builder("a_c_sum")
+                               .groupingColumns(new StringDimensionSchema("a"))
+                               .aggregators(new LongSumAggregatorFactory("c_sum", "c"))
+                               .build()
     );
 
     IndexBuilder bob = IndexBuilder.create()
@@ -3071,7 +3061,7 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
             new AggregatorFactory[0],
             temporaryFolder.newFolder(),
             dimensionsBuilder.build(),
-            IndexSpec.DEFAULT,
+            IndexSpec.getDefault(),
             -1
         )
     );
@@ -3082,6 +3072,7 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
                                                     ImmutableMap.of(QueryContexts.USE_PROJECTION, "a_hourly_c_sum")
                                                 )
                                             )
+                                            .setPhysicalColumns(Set.of("c", ColumnHolder.TIME_COLUMN_NAME))
                                             .setVirtualColumns(
                                                 VirtualColumns.create(
                                                     Granularities.toVirtualColumn(Granularities.HOUR, "gran")
@@ -3100,6 +3091,7 @@ public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
                                                     ImmutableMap.of(QueryContexts.USE_PROJECTION, "a_c_sum")
                                                 )
                                             )
+                                            .setPhysicalColumns(Set.of("a", "c"))
                                             .setAggregators(
                                                 Collections.singletonList(
                                                     new LongSumAggregatorFactory("c", "c")

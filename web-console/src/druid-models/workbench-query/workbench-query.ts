@@ -286,13 +286,19 @@ export class WorkbenchQuery {
   }
 
   public changeQueryStringContext(queryContext: QueryContext): WorkbenchQuery {
-    const { queryString } = this;
-    return this.changeQueryString(SqlSetStatement.setContextInText(queryString, queryContext));
+    if (this.isJsonLike()) {
+      // JSON query: set the inner context instead of modifying the query string
+      return this.changeQueryContext(queryContext);
+    }
+    return this.changeQueryString(SqlSetStatement.setContextInText(this.queryString, queryContext));
   }
 
   public getQueryStringContext(): QueryContext {
-    const { queryString } = this;
-    return SqlSetStatement.getContextFromText(queryString);
+    if (this.isJsonLike()) {
+      // JSON query: return the inner context for symmetry with changeQueryStringContext
+      return this.queryContext;
+    }
+    return SqlSetStatement.getContextFromText(this.queryString);
   }
 
   public changeQueryContext(queryContext: QueryContext): WorkbenchQuery {
@@ -448,11 +454,13 @@ export class WorkbenchQuery {
     return ret.changeQueryString(newQueryString);
   }
 
-  public setMaxNumTasksIfUnset(maxNumTasks: number | undefined): WorkbenchQuery {
-    const { queryContext } = this;
-    if (typeof queryContext.maxNumTasks === 'number' || !maxNumTasks) return this;
+  public getMaxNumTasks(): number | undefined {
+    return this.getQueryStringContext().maxNumTasks ?? this.queryContext.maxNumTasks;
+  }
 
-    return this.changeQueryContext({ ...queryContext, maxNumTasks: Math.max(maxNumTasks, 2) });
+  public setMaxNumTasksIfUnset(maxNumTasks: number | undefined): WorkbenchQuery {
+    if (!maxNumTasks || typeof this.getMaxNumTasks() === 'number') return this;
+    return this.changeQueryContext({ ...this.queryContext, maxNumTasks: Math.max(maxNumTasks, 2) });
   }
 
   public getApiQuery(makeQueryId: () => string = uuidv4): {
@@ -560,6 +568,7 @@ export class WorkbenchQuery {
     }
 
     if (engine === 'sql-msq-dart') {
+      apiQuery.context.engine = 'msq-dart';
       apiQuery.context.fullReport ??= true;
     }
 

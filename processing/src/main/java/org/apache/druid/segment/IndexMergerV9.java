@@ -38,7 +38,6 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.ColumnDescriptor;
@@ -47,6 +46,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.GenericIndexed;
+import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAdapter;
 import org.apache.druid.segment.loading.MMappedQueryableSegmentizerFactory;
@@ -130,7 +130,7 @@ public class IndexMergerV9 implements IndexMerger
 
   private File makeIndexFiles(
       final List<IndexableAdapter> adapters,
-      final @Nullable AggregatorFactory[] metricAggs,
+      final @Nullable Metadata segmentMetadata,
       final File outDir,
       final ProgressIndicator progress,
       final List<String> mergedDimensionsWithTime, // has both explicit and implicit dimensions, as well as __time
@@ -144,43 +144,11 @@ public class IndexMergerV9 implements IndexMerger
     progress.start();
     progress.progress();
 
-    List<Metadata> metadataList = Lists.transform(adapters, IndexableAdapter::getMetadata);
-
     // Merged dimensions without __time.
     List<String> mergedDimensions =
         mergedDimensionsWithTime.stream()
                                 .filter(dim -> !ColumnHolder.TIME_COLUMN_NAME.equals(dim))
                                 .collect(Collectors.toList());
-
-    Metadata segmentMetadata;
-    if (metricAggs != null) {
-      AggregatorFactory[] combiningMetricAggs = new AggregatorFactory[metricAggs.length];
-      for (int i = 0; i < metricAggs.length; i++) {
-        combiningMetricAggs[i] = metricAggs[i].getCombiningFactory();
-      }
-      segmentMetadata = Metadata.merge(
-          metadataList,
-          combiningMetricAggs
-      );
-    } else {
-      segmentMetadata = Metadata.merge(
-          metadataList,
-          null
-      );
-    }
-
-    if (segmentMetadata != null
-        && segmentMetadata.getOrdering() != null
-        && segmentMetadata.getOrdering()
-                          .stream()
-                          .noneMatch(orderBy -> ColumnHolder.TIME_COLUMN_NAME.equals(orderBy.getColumnName()))) {
-      throw DruidException.defensive(
-          "sortOrder[%s] must include[%s]",
-          segmentMetadata.getOrdering(),
-          ColumnHolder.TIME_COLUMN_NAME
-      );
-    }
-
     Closer closer = Closer.create();
     try {
       final FileSmoosher v9Smoosher = new FileSmoosher(outDir);
@@ -302,8 +270,12 @@ public class IndexMergerV9 implements IndexMerger
 
       progress.stopSection(section);
 
-      if (segmentMetadata != null && !CollectionUtils.isNullOrEmpty(segmentMetadata.getProjections())) {
-        segmentMetadata = makeProjections(
+      // Recompute the projections.
+      final Metadata finalMetadata;
+      if (segmentMetadata == null || CollectionUtils.isNullOrEmpty(segmentMetadata.getProjections())) {
+        finalMetadata = segmentMetadata;
+      } else {
+        finalMetadata = makeProjections(
             v9Smoosher,
             segmentMetadata.getProjections(),
             adapters,
@@ -330,7 +302,7 @@ public class IndexMergerV9 implements IndexMerger
           mergers,
           dimensionsSpecInspector
       );
-      makeMetadataBinary(v9Smoosher, progress, segmentMetadata);
+      makeMetadataBinary(v9Smoosher, progress, finalMetadata);
 
       v9Smoosher.close();
       progress.stop();
@@ -635,7 +607,7 @@ public class IndexMergerV9 implements IndexMerger
                           + 16
                           + SERIALIZER_UTILS.getSerializedStringByteSize(bitmapSerdeFactoryType);
 
-    try (final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes)) {
+    try (final SegmentFileChannel writer = v9Smoosher.addWithChannel("index.drd", numBytes)) {
       nonNullCols.writeTo(writer, v9Smoosher);
       nonNullDims.writeTo(writer, v9Smoosher);
 
@@ -677,6 +649,7 @@ public class IndexMergerV9 implements IndexMerger
   {
     makeMetricsColumns(v9Smoosher, progress, mergedMetrics, metricsTypes, metWriters, indexSpec, "");
   }
+
   private void makeMetricsColumns(
       final FileSmoosher v9Smoosher,
       final ProgressIndicator progress,
@@ -800,7 +773,7 @@ public class IndexMergerV9 implements IndexMerger
   {
     ZeroCopyByteArrayOutputStream specBytes = new ZeroCopyByteArrayOutputStream();
     SERIALIZER_UTILS.writeString(specBytes, mapper.writeValueAsString(serdeficator));
-    try (SmooshedWriter channel = v9Smoosher.addWithSmooshedWriter(
+    try (SegmentFileChannel channel = v9Smoosher.addWithChannel(
         columnName,
         specBytes.size() + serdeficator.getSerializedSize()
     )) {
@@ -1079,6 +1052,10 @@ public class IndexMergerV9 implements IndexMerger
       throw new IAE("Trying to persist an empty index!");
     }
 
+    // need to call this here even though multiphaseMerge also calls this because we need to ensure the bitmap factory
+    // is populated when creating the IncrementalIndexAdapter
+    indexSpec = indexSpec.getEffectiveSpec();
+
     final DateTime firstTimestamp = index.getMinTime();
     final DateTime lastTimestamp = index.getMaxTime();
     if (!(dataInterval.contains(firstTimestamp) && dataInterval.contains(lastTimestamp))) {
@@ -1145,6 +1122,9 @@ public class IndexMergerV9 implements IndexMerger
     );
   }
 
+  /**
+   * The indexes here must have the same {@link Metadata}, otherwise an error would be thrown.
+   */
   @Override
   public File merge(
       List<IndexableAdapter> indexes,
@@ -1187,6 +1167,10 @@ public class IndexMergerV9 implements IndexMerger
     FileUtils.mkdirp(outDir);
 
     List<File> tempDirs = new ArrayList<>();
+
+    indexSpec = indexSpec.getEffectiveSpec();
+    indexSpecForIntermediatePersists = indexSpecForIntermediatePersists.getEffectiveSpec();
+    log.info("Building segment with IndexSpec[%s]", indexSpec);
 
     if (maxColumnsToMerge == IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE) {
       return merge(
@@ -1377,9 +1361,28 @@ public class IndexMergerV9 implements IndexMerger
       rowMergerFn = MergingRowIterator::new;
     }
 
+    List<Metadata> metadataList = Lists.transform(indexes, IndexableAdapter::getMetadata);
+    AggregatorFactory[] combiningMetricAggs = new AggregatorFactory[sortedMetricAggs.length];
+    for (int i = 0; i < sortedMetricAggs.length; i++) {
+      combiningMetricAggs[i] = sortedMetricAggs[i].getCombiningFactory();
+    }
+    final Metadata segmentMetadata = Metadata.merge(metadataList, combiningMetricAggs);
+
+    if (segmentMetadata != null
+        && segmentMetadata.getOrdering() != null
+        && segmentMetadata.getOrdering()
+                          .stream()
+                          .noneMatch(orderBy -> ColumnHolder.TIME_COLUMN_NAME.equals(orderBy.getColumnName()))) {
+      throw DruidException.defensive(
+          "sortOrder[%s] must include[%s]",
+          segmentMetadata.getOrdering(),
+          ColumnHolder.TIME_COLUMN_NAME
+      );
+    }
+
     return makeIndexFiles(
         indexes,
-        sortedMetricAggs,
+        segmentMetadata,
         outDir,
         progress,
         mergedDimensionsWithTime,

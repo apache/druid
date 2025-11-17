@@ -28,7 +28,7 @@ import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.NullFilter;
-import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
@@ -84,8 +84,7 @@ public class RestrictAllTablesPolicyEnforcerTest
     );
     policyEnforcer.validateOrElseThrow(restricted.getBase(), restricted.getPolicy());
     // Test validate segment, fail for ReferenceCountingSegment not wrapped with any policy, success when wrapped with a policy
-    Segment baseSegment = new SegmentForTesting("table", Intervals.ETERNITY, "1");
-    ReferenceCountingSegment segment = ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment);
+    Segment segment = new SegmentForTesting("table", Intervals.ETERNITY, "1");
     Assert.assertFalse(policyEnforcer.validate(null));
     Assert.assertTrue(policyEnforcer.validate(policy));
     final DruidException e2 = Assert.assertThrows(
@@ -114,20 +113,7 @@ public class RestrictAllTablesPolicyEnforcerTest
         inlineDataSource.rowAdapter(),
         inlineDataSource.getRowSignature()
     );
-    ReferenceCountingSegment segment = ReferenceCountingSegment.wrapRootGenerationSegment(inlineSegment);
-
-    policyEnforcer.validateOrElseThrow(segment, null);
-  }
-
-  @Test
-  public void test_validate_closedSegment() throws Exception
-  {
-    final RestrictAllTablesPolicyEnforcer policyEnforcer = new RestrictAllTablesPolicyEnforcer(null);
-    Segment baseSegment = new SegmentForTesting("table", Intervals.ETERNITY, "1");
-    ReferenceCountingSegment segment = ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment);
-    segment.close();
-
-    policyEnforcer.validateOrElseThrow(segment, null);
+    policyEnforcer.validateOrElseThrow(ReferenceCountedSegmentProvider.unmanaged(inlineSegment).orElseThrow(), null);
   }
 
   @Test
@@ -146,8 +132,7 @@ public class RestrictAllTablesPolicyEnforcerTest
     );
     policyEnforcer.validateOrElseThrow(table, NoRestrictionPolicy.instance());
 
-    Segment baseSegment = new SegmentForTesting("table", Intervals.ETERNITY, "1");
-    ReferenceCountingSegment segment = ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment);
+    Segment segment = new SegmentForTesting("table", Intervals.ETERNITY, "1");
     Assert.assertThrows(DruidException.class, () -> policyEnforcer.validateOrElseThrow(segment, null));
     Assert.assertThrows(DruidException.class, () -> policyEnforcer.validateOrElseThrow(segment, policy));
     policyEnforcer.validateOrElseThrow(segment, NoRestrictionPolicy.instance());

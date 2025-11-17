@@ -22,7 +22,6 @@ package org.apache.druid.segment.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import org.apache.druid.client.BrokerServerView;
 import org.apache.druid.client.CoordinatorSegmentWatcherConfig;
@@ -62,7 +61,6 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
@@ -495,21 +493,13 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
     );
   }
 
-  private DataSegment newSegment(int partitionId)
+  private static DataSegment newSegment(int partitionId)
   {
-    return new DataSegment(
-        DATASOURCE,
-        Intervals.of("2012/2013"),
-        "version1",
-        null,
-        ImmutableList.of(),
-        ImmutableList.of(),
-        new NumberedShardSpec(partitionId, 0),
-        null,
-        1,
-        100L,
-        PruneSpecsHolder.DEFAULT
-    );
+    return DataSegment.builder(SegmentId.of(DATASOURCE, Intervals.of("2012/2013"), "version1", partitionId))
+                      .shardSpec(new NumberedShardSpec(partitionId, 0))
+                      .binaryVersion(1)
+                      .size(100L)
+                      .build();
   }
 
   private QueryableIndex newQueryableIndex(int partitionId)
@@ -535,7 +525,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
     private final Map<String, DruidServer> serverMap = new HashMap<>();
     private final Map<String, Set<DataSegment>> segmentsMap = new HashMap<>();
     private final List<NonnullPair<SegmentCallback, Executor>> segmentCallbacks = new ArrayList<>();
-    private final List<NonnullPair<ServerRemovedCallback, Executor>> serverRemovedCallbacks = new ArrayList<>();
+    private final List<NonnullPair<ServerCallback, Executor>> serverRemovedCallbacks = new ArrayList<>();
 
     private void init()
     {
@@ -573,7 +563,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
     }
 
     @Override
-    public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
+    public void registerServerCallback(Executor exec, ServerCallback callback)
     {
       serverRemovedCallbacks.add(new NonnullPair<>(callback, exec));
     }

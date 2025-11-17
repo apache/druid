@@ -84,6 +84,7 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.calcite.DrillWindowQueryTest.ArrayRowCmp;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -206,6 +207,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
   );
+
+  public static final Map<String, Object> QUERY_CONTEXT_LEXICOGRAPHIC_TOPN =
+      QueryContexts.override(QUERY_CONTEXT_DEFAULT, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
 
   public static final Map<String, Object> QUERY_CONTEXT_NO_TOPN = ImmutableMap.of(
       QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
@@ -1016,7 +1020,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
   }
 
-  public void assertResultsValid(final ResultMatchMode matchMode, final List<Object[]> expected, final QueryResults queryResults)
+  public static void assertResultsValid(final ResultMatchMode matchMode, final List<Object[]> expected, final QueryResults queryResults)
   {
     final List<Object[]> results = queryResults.results;
     Assert.assertEquals("Result count mismatch", expected.size(), results.size());
@@ -1047,7 +1051,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
             i,
             types.get(i),
             expectedCell,
-            resultCell);
+            resultCell
+        );
       }
     }
   }
@@ -1384,7 +1389,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new DefaultResultsVerifier(expectedResults, expectedResultMatchMode, expectedSignature);
   }
 
-  public class DefaultResultsVerifier implements ResultsVerifier
+  public static class DefaultResultsVerifier implements ResultsVerifier
   {
     protected final List<Object[]> expectedResults;
     @Nullable
@@ -1424,7 +1429,22 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         throw e;
       }
     }
+  }
 
+  public static class UnorderedResultsVerifier extends DefaultResultsVerifier
+  {
+    public UnorderedResultsVerifier(List<Object[]> expectedResults, ResultMatchMode expectedResultMatchMode,
+        RowSignature expectedSignature)
+    {
+      super(ImmutableList.sortedCopyOf(new ArrayRowCmp(), expectedResults), expectedResultMatchMode, expectedSignature);
+    }
+
+    @Override
+    public void verify(String sql, QueryResults queryResults)
+    {
+      queryResults.results.sort(new ArrayRowCmp());
+      super.verify(sql, queryResults);
+    }
   }
 
   /**
@@ -1498,7 +1518,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
           outprint(col);
           outprint("F");
         } else if (col instanceof Object[]) {
-          printArray(array);
+          printArray((Object[]) col);
         } else if (col instanceof List) {
           printList((List<?>) col);
         } else {

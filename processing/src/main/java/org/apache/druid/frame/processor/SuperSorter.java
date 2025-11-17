@@ -38,6 +38,7 @@ import it.unimi.dsi.fastutil.longs.LongSortedSet;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
@@ -135,6 +136,7 @@ public class SuperSorter
   private final FrameProcessorDecorator processorDecorator;
   private final OutputChannelFactory outputChannelFactory;
   private final OutputChannelFactory intermediateOutputChannelFactory;
+  private final FrameType outputFrameType;
   private final int maxChannelsPerMerger;
   private final int maxActiveProcessors;
   private final String cancellationId;
@@ -209,6 +211,7 @@ public class SuperSorter
    * @param exec                             executor to perform work in
    * @param outputChannelFactory             factory for partitioned, sorted output channels
    * @param intermediateOutputChannelFactory factory for intermediate data produced by sorting levels
+   * @param outputFrameType                  frame type for all output channels (intermediate and final)
    * @param maxActiveProcessors              maximum number of merging processors to execute at once in the provided
    *                                         {@link FrameProcessorExecutor}
    * @param maxChannelsPerMerger             maximum number of channels to merge at once, for regular mergers
@@ -230,6 +233,7 @@ public class SuperSorter
       final FrameProcessorDecorator processorDecorator,
       final OutputChannelFactory outputChannelFactory,
       final OutputChannelFactory intermediateOutputChannelFactory,
+      final FrameType outputFrameType,
       final int maxActiveProcessors,
       final int maxChannelsPerMerger,
       final long rowLimit,
@@ -246,6 +250,7 @@ public class SuperSorter
     this.processorDecorator = processorDecorator;
     this.outputChannelFactory = outputChannelFactory;
     this.intermediateOutputChannelFactory = intermediateOutputChannelFactory;
+    this.outputFrameType = outputFrameType;
     this.maxChannelsPerMerger = maxChannelsPerMerger;
     this.maxActiveProcessors = maxActiveProcessors;
     this.rowLimit = rowLimit;
@@ -739,8 +744,8 @@ public class SuperSorter
               in,
               frameReader,
               writableChannel,
-              FrameWriters.makeRowBasedFrameWriterFactory(
-                  // Row-based frames are generally preferred as inputs to mergers
+              FrameWriters.makeFrameWriterFactory(
+                  outputFrameType,
                   frameAllocatorFactory,
                   frameReader.signature(),
                   // No sortColumns, because FrameChannelMerger generates frames that are sorted all on its own

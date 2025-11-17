@@ -20,6 +20,7 @@ import type { DartQueryEntry } from './dart-query-entry';
 
 export const DART_QUERIES: DartQueryEntry[] = [
   {
+    engine: 'msq-dart',
     sqlQueryId: '77b2344c-0a1f-4aa0-b127-de6fbc0c2b57',
     dartQueryId: '99cdba0d-ed77-433d-9adc-0562d816e105',
     sql: 'SELECT\n  "URL",\n  COUNT(*)\nFROM "c"\nGROUP BY 1\nORDER BY 2 DESC\nLIMIT 50\n',
@@ -29,6 +30,7 @@ export const DART_QUERIES: DartQueryEntry[] = [
     state: 'RUNNING',
   },
   {
+    engine: 'msq-dart',
     sqlQueryId: '45441cf5-d8b7-46cb-b6d8-682334f056ef',
     dartQueryId: '25af9bff-004d-494e-b562-2752dc3779c8',
     sql: 'SELECT\n  "URL",\n  COUNT(*)\nFROM "c"\nGROUP BY 1\nORDER BY 2 DESC\nLIMIT 50\n',
@@ -38,6 +40,7 @@ export const DART_QUERIES: DartQueryEntry[] = [
     state: 'CANCELED',
   },
   {
+    engine: 'msq-dart',
     sqlQueryId: 'f7257c78-6bbe-439d-99ba-f4998b300770',
     dartQueryId: 'f7c2d644-9c40-4d61-9fdb-7b0e15219886',
     sql: 'SELECT\n  "URL",\n  COUNT(*)\nFROM "c"\nGROUP BY 1\nORDER BY 2 DESC\nLIMIT 50\n',

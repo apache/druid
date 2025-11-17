@@ -22,6 +22,7 @@ package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.AggregateFunction;
@@ -30,7 +31,9 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class LagBasedAutoScalerConfig implements AutoScalerConfig
 {
   private final long lagCollectionIntervalMillis;
@@ -43,12 +46,13 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
   private final double triggerScaleInFractionThreshold;
   private int taskCountMax;
   private int taskCountMin;
-  @Nullable private Integer taskCountStart;
+  private Integer taskCountStart;
   private final int scaleInStep;
   private final int scaleOutStep;
   private final boolean enableTaskAutoScaler;
   private final long minTriggerScaleActionFrequencyMillis;
   private final AggregateFunction lagAggregate;
+  private final Double stopTaskCountRatio;
 
   @JsonCreator
   public LagBasedAutoScalerConfig(
@@ -67,7 +71,8 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
           @Nullable @JsonProperty("scaleOutStep") Integer scaleOutStep,
           @Nullable @JsonProperty("enableTaskAutoScaler") Boolean enableTaskAutoScaler,
           @Nullable @JsonProperty("minTriggerScaleActionFrequencyMillis") Long minTriggerScaleActionFrequencyMillis,
-          @Nullable @JsonProperty("lagAggregate") AggregateFunction lagAggregate
+          @Nullable @JsonProperty("lagAggregate") AggregateFunction lagAggregate,
+          @Nullable @JsonProperty("stopTaskCountRatio") Double stopTaskCountRatio
   )
   {
     this.enableTaskAutoScaler = enableTaskAutoScaler != null ? enableTaskAutoScaler : false;
@@ -100,6 +105,12 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
     this.scaleOutStep = scaleOutStep != null ? scaleOutStep : 2;
     this.minTriggerScaleActionFrequencyMillis = minTriggerScaleActionFrequencyMillis
         != null ? minTriggerScaleActionFrequencyMillis : 600000;
+
+    Preconditions.checkArgument(
+        stopTaskCountRatio == null || (stopTaskCountRatio > 0.0 && stopTaskCountRatio <= 1.0),
+        "0.0 < stopTaskCountRatio <= 1.0"
+    );
+    this.stopTaskCountRatio = stopTaskCountRatio;
   }
 
   @JsonProperty
@@ -167,7 +178,6 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
   @Override
   @JsonProperty
   @Nullable
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   public Integer getTaskCountStart()
   {
     return taskCountStart;
@@ -213,6 +223,14 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
   }
 
   @Override
+  @JsonProperty
+  @Nullable
+  public Double getStopTaskCountRatio()
+  {
+    return stopTaskCountRatio;
+  }
+
+  @Override
   public String toString()
   {
     return "autoScalerConfig{" +
@@ -232,6 +250,63 @@ public class LagBasedAutoScalerConfig implements AutoScalerConfig
             ", scaleInStep=" + scaleInStep +
             ", scaleOutStep=" + scaleOutStep +
             ", lagAggregate=" + lagAggregate +
+            ", stopTaskCountRatio=" + stopTaskCountRatio +
             '}';
+  }
+
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    LagBasedAutoScalerConfig that = (LagBasedAutoScalerConfig) o;
+
+    return lagCollectionIntervalMillis == that.lagCollectionIntervalMillis &&
+           lagCollectionRangeMillis == that.lagCollectionRangeMillis &&
+           scaleActionStartDelayMillis == that.scaleActionStartDelayMillis &&
+           scaleActionPeriodMillis == that.scaleActionPeriodMillis &&
+           scaleOutThreshold == that.scaleOutThreshold &&
+           scaleInThreshold == that.scaleInThreshold &&
+           Double.compare(that.triggerScaleOutFractionThreshold, triggerScaleOutFractionThreshold) == 0 &&
+           Double.compare(that.triggerScaleInFractionThreshold, triggerScaleInFractionThreshold) == 0 &&
+           taskCountMax == that.taskCountMax &&
+           taskCountMin == that.taskCountMin &&
+           scaleInStep == that.scaleInStep &&
+           scaleOutStep == that.scaleOutStep &&
+           enableTaskAutoScaler == that.enableTaskAutoScaler &&
+           minTriggerScaleActionFrequencyMillis == that.minTriggerScaleActionFrequencyMillis &&
+           Objects.equals(taskCountStart, that.taskCountStart) &&
+           lagAggregate == that.lagAggregate &&
+           Objects.equals(stopTaskCountRatio, that.stopTaskCountRatio);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        lagCollectionIntervalMillis,
+        lagCollectionRangeMillis,
+        scaleActionStartDelayMillis,
+        scaleActionPeriodMillis,
+        scaleOutThreshold,
+        scaleInThreshold,
+        triggerScaleOutFractionThreshold,
+        triggerScaleInFractionThreshold,
+        taskCountMax,
+        taskCountMin,
+        taskCountStart,
+        scaleInStep,
+        scaleOutStep,
+        enableTaskAutoScaler,
+        minTriggerScaleActionFrequencyMillis,
+        lagAggregate,
+        stopTaskCountRatio
+    );
   }
 }

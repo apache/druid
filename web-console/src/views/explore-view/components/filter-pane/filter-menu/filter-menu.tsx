@@ -29,7 +29,6 @@ import {
   Position,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { CancelToken } from 'axios';
 import { Timezone } from 'chronoshift';
 import type {
   Column,
@@ -113,7 +112,7 @@ export interface FilterMenuProps {
   initPattern?: FilterPattern;
   onPatternChange(newPattern: FilterPattern): void;
   onClose(): void;
-  runSqlQuery(query: string | SqlQuery, cancelToken?: CancelToken): Promise<QueryResult>;
+  runSqlQuery(query: string | SqlQuery, signal?: AbortSignal): Promise<QueryResult>;
   timeBounds?: [Date, Date];
   onAddToSourceQueryAsColumn?(expression: SqlExpression): void;
   onMoveToSourceQueryAsClause?(expression: SqlExpression): void;
@@ -433,7 +432,7 @@ export const FilterMenu = React.memo(function FilterMenu(props: FilterMenuProps)
             intent={Intent.PRIMARY}
             text="Apply"
             disabled={tab === 'sql' && formula === ''}
-            data-tooltip={issue ? `Issue: ${issue}` : undefined}
+            data-tooltip={issue}
             onClick={() => {
               if (tab === 'compose') {
                 if (issue) {

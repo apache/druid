@@ -16,12 +16,11 @@
  * limitations under the License.
  */
 
-import { IconNames } from '@blueprintjs/icons';
-import type { CancelToken } from 'axios';
 import React from 'react';
 
 import { PluralPairIfNeeded } from '../../../components';
 import type { CapacityInfo } from '../../../druid-models';
+import { getConsoleViewIcon } from '../../../druid-models';
 import type { Capabilities } from '../../../helpers';
 import { getClusterCapacity } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
@@ -40,10 +39,7 @@ export interface TaskCounts {
   waiting?: number;
 }
 
-async function getTaskCounts(
-  capabilities: Capabilities,
-  cancelToken: CancelToken,
-): Promise<TaskCounts> {
+async function getTaskCounts(capabilities: Capabilities, signal: AbortSignal): Promise<TaskCounts> {
   if (capabilities.hasSql()) {
     const taskCountsFromQuery = await queryDruidSql<{ status: string; count: number }>(
       {
@@ -53,7 +49,7 @@ async function getTaskCounts(
 FROM sys.tasks
 GROUP BY 1`,
       },
-      cancelToken,
+      signal,
     );
     return lookupBy(
       taskCountsFromQuery,
@@ -61,7 +57,7 @@ GROUP BY 1`,
       x => x.count,
     );
   } else if (capabilities.hasOverlordAccess()) {
-    const tasks: any[] = await getApiArray('/druid/indexer/v1/tasks', cancelToken);
+    const tasks: any[] = await getApiArray('/druid/indexer/v1/tasks', signal);
     return groupByAsMap(
       tasks,
       d => getTaskStatus(d).toLowerCase(),
@@ -81,8 +77,8 @@ export interface TasksCardProps {
 export const TasksCard = React.memo(function TasksCard(props: TasksCardProps) {
   const [cardState] = useQueryManager<Capabilities, TaskCountsAndCapacity>({
     initQuery: props.capabilities,
-    processQuery: async (capabilities, cancelToken) => {
-      const taskCounts = await getTaskCounts(capabilities, cancelToken);
+    processQuery: async (capabilities, signal) => {
+      const taskCounts = await getTaskCounts(capabilities, signal);
       if (!capabilities.hasOverlordAccess()) return taskCounts;
 
       const capacity = await getClusterCapacity();
@@ -96,7 +92,7 @@ export const TasksCard = React.memo(function TasksCard(props: TasksCardProps) {
     <HomeViewCard
       className="tasks-card"
       href="#tasks"
-      icon={IconNames.GANTT_CHART}
+      icon={getConsoleViewIcon('tasks')}
       title="Tasks"
       loading={cardState.loading}
       error={cardState.error}

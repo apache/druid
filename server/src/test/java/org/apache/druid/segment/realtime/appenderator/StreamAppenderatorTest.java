@@ -63,6 +63,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
+import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -162,7 +163,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       ).get();
       Assert.assertEquals(
           ImmutableMap.of("x", "3"),
-          (Map<String, String>) segmentsAndCommitMetadata.getCommitMetadata()
+          segmentsAndCommitMetadata.getCommitMetadata()
       );
       Assert.assertEquals(
           IDENTIFIERS.subList(0, 2),
@@ -2278,17 +2279,15 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
   private void verifySinkMetrics(StubServiceEmitter emitter, Set<String> segmentIds)
   {
-    Map<String, List<StubServiceEmitter.ServiceMetricEventSnapshot>> events = emitter.getMetricEvents();
     int segments = segmentIds.size();
-    Assert.assertEquals(4, events.size());
-    Assert.assertTrue(events.containsKey("query/cpu/time"));
-    Assert.assertEquals(segments, events.get("query/segment/time").size());
-    Assert.assertEquals(segments, events.get("query/segmentAndCache/time").size());
-    Assert.assertEquals(segments, events.get("query/wait/time").size());
+    emitter.verifyEmitted("query/cpu/time", 1);
+    Assert.assertEquals(segments, emitter.getMetricEvents("query/segment/time").size());
+    Assert.assertEquals(segments, emitter.getMetricEvents("query/segmentAndCache/time").size());
+    Assert.assertEquals(segments, emitter.getMetricEvents("query/wait/time").size());
     for (String id : segmentIds) {
-      Assert.assertTrue(events.get("query/segment/time").stream().anyMatch(value -> value.getUserDims().containsValue(id)));
-      Assert.assertTrue(events.get("query/segmentAndCache/time").stream().anyMatch(value -> value.getUserDims().containsValue(id)));
-      Assert.assertTrue(events.get("query/wait/time").stream().anyMatch(value -> value.getUserDims().containsValue(id)));
+      Assert.assertTrue(emitter.getMetricEvents("query/segment/time").stream().anyMatch(value -> value.getUserDims().containsValue(id)));
+      Assert.assertTrue(emitter.getMetricEvents("query/segmentAndCache/time").stream().anyMatch(value -> value.getUserDims().containsValue(id)));
+      Assert.assertTrue(emitter.getMetricEvents("query/wait/time").stream().anyMatch(value -> value.getUserDims().containsValue(id)));
     }
   }
 
@@ -2448,6 +2447,102 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       Assert.assertEquals(
           ImmutableMap.of("__time", ColumnType.LONG, "count", ColumnType.LONG, "dim", ColumnType.STRING, "met", ColumnType.LONG),
           deltaSchemaId2Row1.getColumnTypeMap());
+    }
+  }
+
+
+  @Test
+  public void test_dropSegment_unlocksInterval() throws Exception
+  {
+    final List<Interval> unlockedIntervals = Collections.synchronizedList(new ArrayList<>());
+    final TaskIntervalUnlocker intervalUnlocker = unlockedIntervals::add;
+
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester.Builder()
+        .basePersistDirectory(temporaryFolder.newFolder())
+        .maxRowsInMemory(2)
+        .releaseLocksOnHandoff(true)
+        .taskIntervalUnlocker(intervalUnlocker)
+        .build()) {
+      final Appenderator appenderator = tester.getAppenderator();
+
+      appenderator.startJob();
+
+      final SegmentIdWithShardSpec segmentId1 = si("2000-01-01T00:00/2000-01-01T01:00", "version1", 0);
+      final SegmentIdWithShardSpec segmentId2 = si("2000-01-01T01:00/2000-01-01T02:00", "version1", 0);
+
+      final InputRow row1 = new MapBasedInputRow(
+          DateTimes.of("2000"),
+          List.of("dim1"),
+          Map.of("dim1", "bar", "met1", 1)
+      );
+
+      final InputRow row2 = new MapBasedInputRow(
+          DateTimes.of("2000-01-01T02:30"),
+          List.of("dim1"),
+          Map.of("dim1", "baz", "met1", 1)
+      );
+
+      appenderator.add(segmentId1, row1, Suppliers.ofInstance(Committers.nil()), false);
+      appenderator.add(segmentId2, row2, Suppliers.ofInstance(Committers.nil()), false);
+
+      Assert.assertEquals(2, appenderator.getSegments().size());
+
+      appenderator.drop(segmentId1).get();
+
+      synchronized (unlockedIntervals) {
+        Assert.assertEquals(1, unlockedIntervals.size());
+        Assert.assertEquals(segmentId1.getInterval(), unlockedIntervals.get(0));
+      }
+
+      Assert.assertEquals(1, appenderator.getSegments().size());
+      Assert.assertTrue(appenderator.getSegments().contains(segmentId2));
+    }
+  }
+
+  @Test
+  public void test_dropSegment_skipsUnlockInterval_ifOverlappingSinkIsActive() throws Exception
+  {
+    final List<Interval> unlockedIntervals = Collections.synchronizedList(new ArrayList<>());
+    final TaskIntervalUnlocker intervalUnlocker = unlockedIntervals::add;
+
+    try (final StreamAppenderatorTester tester = new StreamAppenderatorTester.Builder()
+        .basePersistDirectory(temporaryFolder.newFolder())
+        .maxRowsInMemory(2)
+        .releaseLocksOnHandoff(true)
+        .taskIntervalUnlocker(intervalUnlocker)
+        .build()) {
+      final Appenderator appenderator = tester.getAppenderator();
+
+      appenderator.startJob();
+
+      final SegmentIdWithShardSpec segmentId1 = si("2000-01-01T00:00/2000-01-01T01:00", "version1", 0);
+      final SegmentIdWithShardSpec segmentId2 = si("2000-01-01T00:30/2000-01-01T01:30", "version2", 0);
+
+      final InputRow row1 = new MapBasedInputRow(
+          DateTimes.of("2000"),
+          List.of("dim1"),
+          Map.of("dim1", "bar", "met1", 1)
+      );
+
+      final InputRow row2 = new MapBasedInputRow(
+          DateTimes.of("2000-01-01T02:30"),
+          List.of("dim1"),
+          Map.of("dim1", "baz", "met1", 1)
+      );
+
+      appenderator.add(segmentId1, row1, Suppliers.ofInstance(Committers.nil()), false);
+      appenderator.add(segmentId2, row2, Suppliers.ofInstance(Committers.nil()), false);
+
+      Assert.assertEquals(2, appenderator.getSegments().size());
+
+      appenderator.drop(segmentId1).get();
+
+      synchronized (unlockedIntervals) {
+        Assert.assertEquals(0, unlockedIntervals.size());
+      }
+
+      Assert.assertEquals(1, appenderator.getSegments().size());
+      Assert.assertTrue(appenderator.getSegments().contains(segmentId2));
     }
   }
 
