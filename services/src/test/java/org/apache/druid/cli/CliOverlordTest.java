@@ -26,7 +26,6 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.segment.SqlSegmentsMetadataManagerV2;
 import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
-import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -52,31 +51,4 @@ public class CliOverlordTest
     Assert.assertTrue(segmentsMetadataManager instanceof SqlSegmentsMetadataManagerV2);
   }
 
-  @Test
-  public void testQosFilteringEnabled()
-  {
-    ServletContextHandler handler = new ServletContextHandler();
-    final int threadsForOverlordWork = 30;
-
-    Assert.assertTrue(CliOverlord.addQOSFiltering(handler, threadsForOverlordWork));
-
-    Assert.assertEquals(
-        threadsForOverlordWork,
-        Integer.parseInt(handler.getServletHandler().getFilters()[0].getInitParameters().get("maxRequests"))
-    );
-  }
-
-  @Test
-  public void testQosFilteringDisabled()
-  {
-    ServletContextHandler handler = new ServletContextHandler();
-    final int threadsForOverlordWork = 29;
-
-    Assert.assertFalse(CliOverlord.addQOSFiltering(handler, threadsForOverlordWork));
-
-    Assert.assertEquals(
-        0,
-        handler.getServletHandler().getFilters().length
-    );
-  }
 }

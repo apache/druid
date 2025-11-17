@@ -150,7 +150,6 @@ import org.eclipse.jetty.rewrite.handler.RewriteHandler;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -302,6 +301,7 @@ public class CliOverlord extends ServerRunnable
             }
 
             addOverlordJerseyResources(binder);
+            configureQosFiltering(binder);
 
             binder.bind(AppenderatorsManager.class)
                   .to(DummyForInjectionAppenderatorsManager.class)
@@ -456,6 +456,25 @@ public class CliOverlord extends ServerRunnable
             dutyBinder.addBinding().to(TaskLogAutoCleaner.class);
             dutyBinder.addBinding().to(UnusedSegmentsKiller.class).in(LazySingleton.class);
           }
+
+          private void configureQosFiltering(Binder binder)
+          {
+            // Add QoS filtering for overlord-specific endpoints if we have enough threads
+            final int serverHttpNumThreads = properties.containsKey("druid.server.http.numThreads")
+                ? Integer.parseInt(properties.getProperty("druid.server.http.numThreads"))
+                : ServerConfig.getDefaultNumThreads();
+                
+            final int threadsForOverlordWork = serverHttpNumThreads - THREADS_RESERVED_FOR_HEALTH_CHECK;
+            
+            if (threadsForOverlordWork >= ServerConfig.DEFAULT_NUM_PACKING_THREADS) {
+              final String[] overlordPaths = {
+                  "/druid-internal/v1/*",
+                  "/druid/indexer/v1/*"
+              };
+              
+              JettyBindings.addQosFilter(binder, overlordPaths, threadsForOverlordWork);
+            }
+          }
         },
         new IndexingServiceInputSourceModule(),
         new IndexingServiceTaskLogsModule(properties),
@@ -478,8 +497,8 @@ public class CliOverlord extends ServerRunnable
    *    <li>/druid-internal/v1</li>
    *  </ol>
    * <p>
-   * As QOS filtering is enabled on overlord requests, we need to update the QOS filter paths in
-   * {@link org.apache.druid.cli.CliOverlord#addQOSFiltering(ServletContextHandler, int)} when a new jersey resource is added.
+   * As QoS filtering is enabled on overlord requests, we need to update the QoS filter paths in
+   * {@link org.apache.druid.cli.CliOverlord#configureQosFiltering(Binder)} when a new jersey resource is added.
    **/
   private void addOverlordJerseyResources(Binder binder)
   {
@@ -570,26 +589,4 @@ public class CliOverlord extends ServerRunnable
     }
   }
 
-  protected static boolean addQOSFiltering(ServletContextHandler root, int threadsForOverlordWork)
-  {
-    if (threadsForOverlordWork >= ServerConfig.DEFAULT_NUM_PACKING_THREADS) {
-      log.info("Enabling QOS filter on overlord requests with limit [%d].", threadsForOverlordWork);
-      JettyBindings.QosFilterHolder filterHolder = new JettyBindings.QosFilterHolder(
-          new String[]{
-              "/druid-internal/v1/*",
-              "/druid/indexer/v1/*"
-          },
-          threadsForOverlordWork
-      );
-      JettyServerInitUtils.addFilters(root, Collections.singleton(filterHolder));
-      return true;
-    } else {
-      log.info(
-          "QOS filter is disabled for the overlord requests." +
-          "Set `druid.server.http.numThread` to a value greater than %d to enable QoSFilter.",
-          ServerConfig.DEFAULT_NUM_PACKING_THREADS
-      );
-      return false;
-    }
-  }
 }
