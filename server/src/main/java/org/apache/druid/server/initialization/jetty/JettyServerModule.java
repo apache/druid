@@ -195,9 +195,7 @@ public class JettyServerModule extends JerseyServletModule
     // that concurrently handle the requests".
     int numServerThreads = config.getNumThreads() + getMaxJettyAcceptorsSelectorsNum(node);
 
-
     final QueuedThreadPool threadPool;
-
     if (config.getQueueSize() == Integer.MAX_VALUE) {
       threadPool = new QueuedThreadPool();
       threadPool.setMinThreads(numServerThreads);
