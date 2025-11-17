@@ -458,22 +458,19 @@ public class CliOverlord extends ServerRunnable
 
           /**
            * Configures Overlord-specific web resources and QoS filtering.
-           *
-           * <p>This method performs two main tasks:
+           * This method performs two main tasks:
            * <ol>
            *   <li>Registers Jersey resources for Overlord REST endpoints</li>
            *   <li>Configures QoS (Quality of Service) filtering for request limiting</li>
            * </ol>
-           *
-           * <p>The Jersey resources handle the following endpoint paths:
+           * <p>
+           * The Jersey resources handle the following endpoint paths:
            * <ul>
-           *   <li>/druid/indexer/v1/* - Main indexing and task management endpoints</li>
-           *   <li>/druid-internal/v1/* - Internal Overlord management endpoints</li>
+           *   <li>/druid/indexer/v1 - Main indexing and task management endpoints</li>
+           *   <li>/druid-internal/v1 - Internal Overlord management endpoints</li>
            * </ul>
            * Note to developers:
            * Whenever adding new resources, please check if the root paths are added in the QOS filtering.
-           *
-           * @param binder the Guice binder for registering dependencies
            */
           private void configureOverlordWebResources(Binder binder)
           {
