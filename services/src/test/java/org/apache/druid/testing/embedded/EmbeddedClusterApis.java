@@ -151,6 +151,28 @@ public class EmbeddedClusterApis implements EmbeddedResource
     }
   }
 
+  public String runSqlWithParams(String sql, Object... args)
+  {
+    try {
+      return onAnyBroker(
+          b -> b.submitSqlQuery(
+              new ClientSqlQuery(
+                  StringUtils.format(sql, args),
+                  ResultFormat.CSV.name(),
+                  false,
+                  false,
+                  false,
+                  null,
+                  null
+              )
+          )
+      ).trim();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   /**
    * Runs the given SQL query for a datasource and verifies the result.
    *

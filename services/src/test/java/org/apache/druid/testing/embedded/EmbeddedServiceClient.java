@@ -173,6 +173,8 @@ public class EmbeddedServiceClient
     return makeRequest(request, resultType, brokerServiceClient, getMapper(EmbeddedBroker.class));
   }
 
+  // TODO: add onAnyRouter(...) method when needed
+
   @Nullable
   private <T> T makeRequest(
       Function<ObjectMapper, RequestBuilder> request,
