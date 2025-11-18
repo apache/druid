@@ -66,7 +66,7 @@ public class AuthorizationUtilsTest
     };
 
     Map<String, Authorizer> authorizerMap = new HashMap<>();
-    authorizerMap.put(authorizerName, new AllowAllAuthorizer());
+    authorizerMap.put(authorizerName, new AllowAllAuthorizer(null));
 
     AuthorizerMapper mapper = new AuthorizerMapper(authorizerMap);
 
