@@ -170,7 +170,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                       @Override
                       public Authorizer getAuthorizer(String name)
                       {
-                        return new AllowAllAuthorizer();
+                        return new AllowAllAuthorizer(null);
                       }
                     }
                 );
