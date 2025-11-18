@@ -513,6 +513,7 @@ public interface QueryMetrics<QueryType extends Query<?>>
 
   /**
    * Emits all metrics, registered since the last {@code emit()} call on this QueryMetrics object.
+   * The default implementation of this method clears all metrics registered.
    */
   void emit(ServiceEmitter emitter);
 

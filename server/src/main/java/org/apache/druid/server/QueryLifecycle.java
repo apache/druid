@@ -412,9 +412,9 @@ public class QueryLifecycle
         queryMetrics.identity(authenticationResult.getIdentity());
       }
 
+      final Map<String, Object> statsMap = queryMetrics.generateQueryStatsMapFromMetrics();
       queryMetrics.emit(emitter);
 
-      final Map<String, Object> statsMap = queryMetrics.generateQueryStatsMapFromMetrics();
       statsMap.put("success", success);
       statsMap.put(DruidMetrics.STATUS_CODE, statusCode);
 
