@@ -21,15 +21,39 @@ package org.apache.druid.segment.loading;
 
 public interface VirtualStorageLocationStats
 {
+  /**
+   * Current number of bytes stored which are managed as virtual storage at the time this measurement collection was
+   * created.
+   */
+  long getUsedBytes();
+
+  /**
+   * Number of operations for which an entry was already present during the measurement period
+   */
   long getHitCount();
 
+  /**
+   * Number of operations for which an entry was missing and was loaded into the cache during the measurement period
+   */
   long getLoadCount();
 
+  /**
+   * Number of bytes loaded for entries missing from the cache during the measurement period
+   */
   long getLoadBytes();
 
+  /**
+   * Number of cache entries removed during the measurement period
+   */
   long getEvictionCount();
 
+  /**
+   * Number of bytes removed from the cache during the measurement period
+   */
   long getEvictionBytes();
 
+  /**
+   * Number of operations which could not be loaded due to insufficient space during the measurement period
+   */
   long getRejectCount();
 }

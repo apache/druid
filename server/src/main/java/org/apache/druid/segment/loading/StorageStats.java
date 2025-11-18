@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment.loading;
 
+import org.apache.druid.guice.annotations.UnstableApi;
+
 import java.util.Map;
 
 /**
@@ -29,6 +31,7 @@ import java.util.Map;
  * Note that the stats are not tied explicitly to the {@link StorageLocation} implementation used by
  * {@link SegmentLocalCacheManager}, but it does implement this stuff.
  */
+@UnstableApi
 public class StorageStats
 {
   private final Map<String, StorageLocationStats> stats;

@@ -114,7 +114,7 @@ public class StorageLocation
    * Current total size of files in bytes, including weak entries.
    */
   private final AtomicLong currSizeBytes = new AtomicLong(0);
-
+  private final AtomicLong currStaticSizeBytes = new AtomicLong(0);
   private final AtomicLong currWeakSizeBytes = new AtomicLong(0);
 
   private final AtomicReference<StaticStats> staticStats = new AtomicReference<>();
@@ -261,6 +261,7 @@ public class StorageLocation
       if (reclaimResult.isSuccess()) {
         staticCacheEntries.put(entry.getId(), entry);
         currSizeBytes.getAndAdd(entry.getSize());
+        currStaticSizeBytes.getAndAdd(entry.getSize());
         staticStats.getAndUpdate(s -> s.load(entry.getSize()));
       }
       return reclaimResult.isSuccess();
@@ -434,6 +435,7 @@ public class StorageLocation
         final CacheEntry toRemove = staticCacheEntries.remove(entry.getId());
         toRemove.unmount();
         currSizeBytes.getAndAdd(-entry.getSize());
+        currStaticSizeBytes.getAndAdd(-entry.getSize());
         staticStats.getAndUpdate(s -> s.drop(entry.getSize()));
       }
     }
@@ -637,6 +639,7 @@ public class StorageLocation
     }
     currSizeBytes.set(0);
     currWeakSizeBytes.set(0);
+    currStaticSizeBytes.set(0);
     resetStaticStats();
     resetWeakStats();
   }
@@ -648,12 +651,12 @@ public class StorageLocation
 
   public StaticStats resetStaticStats()
   {
-    return staticStats.getAndSet(new StaticStats());
+    return staticStats.getAndSet(new StaticStats(currStaticSizeBytes));
   }
 
   public WeakStats resetWeakStats()
   {
-    return weakStats.getAndSet(new WeakStats());
+    return weakStats.getAndSet(new WeakStats(currWeakSizeBytes));
   }
 
   /**
@@ -909,10 +912,16 @@ public class StorageLocation
 
   public static final class StaticStats implements StorageLocationStats
   {
+    private final AtomicLong sizeUsed;
     private final AtomicLong loadCount = new AtomicLong(0);
     private final AtomicLong loadBytes = new AtomicLong(0);
     private final AtomicLong dropCount = new AtomicLong(0);
     private final AtomicLong dropBytes = new AtomicLong(0);
+
+    public StaticStats(AtomicLong sizeUsed)
+    {
+      this.sizeUsed = sizeUsed;
+    }
 
     public StaticStats load(long size)
     {
@@ -926,6 +935,12 @@ public class StorageLocation
       dropCount.getAndIncrement();
       dropBytes.getAndAdd(size);
       return this;
+    }
+
+    @Override
+    public long getUsedBytes()
+    {
+      return sizeUsed.get();
     }
 
     @Override
@@ -955,6 +970,7 @@ public class StorageLocation
 
   public static final class WeakStats implements VirtualStorageLocationStats
   {
+    private final AtomicLong sizeUsed;
     private final AtomicLong loadCount = new AtomicLong(0);
     private final AtomicLong loadBytes = new AtomicLong(0);
     private final AtomicLong rejectionCount = new AtomicLong(0);
@@ -962,6 +978,11 @@ public class StorageLocation
     private final AtomicLong evictionCount = new AtomicLong(0);
     private final AtomicLong evictionBytes = new AtomicLong(0);
     private final AtomicLong unmountCount = new AtomicLong(0);
+
+    public WeakStats(AtomicLong sizeUsed)
+    {
+      this.sizeUsed = sizeUsed;
+    }
 
     public WeakStats hit()
     {
@@ -993,6 +1014,12 @@ public class StorageLocation
     {
       rejectionCount.getAndIncrement();
       return this;
+    }
+
+    @Override
+    public long getUsedBytes()
+    {
+      return sizeUsed.get();
     }
 
     @Override

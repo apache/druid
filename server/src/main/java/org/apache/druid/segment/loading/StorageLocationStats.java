@@ -21,11 +21,28 @@ package org.apache.druid.segment.loading;
 
 public interface StorageLocationStats
 {
+  /**
+   * Current number of bytes stored at the time this measurement collection was created.
+   */
+  long getUsedBytes();
+
+  /**
+   * Number of load operations during the measurement period
+   */
   long getLoadCount();
 
+  /**
+   * Number of bytes loaded during the measurement period
+   */
   long getLoadBytes();
 
+  /**
+   * Number of drop operations during the measurement period
+   */
   long getDropCount();
 
+  /**
+   * Number of bytes dropped during the measurement period
+   */
   long getDropBytes();
 }

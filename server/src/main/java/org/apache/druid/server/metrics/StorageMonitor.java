@@ -32,6 +32,9 @@ import org.apache.druid.segment.loading.VirtualStorageLocationStats;
 
 import java.util.Map;
 
+/**
+ * Monitor to emit output of {@link SegmentCacheManager#getStorageStats()}
+ */
 @LoadScope(roles = {
     NodeRole.BROKER_JSON_NAME,
     NodeRole.HISTORICAL_JSON_NAME,
@@ -41,10 +44,12 @@ import java.util.Map;
 public class StorageMonitor extends AbstractMonitor
 {
   public static final String LOCATION_DIMENSION = "location";
-  public static final String LOAD_COUNT = "storage/static/count";
-  public static final String LOAD_BYTES = "storage/static/bytes";
+  public static final String USED_BYTES = "storage/used/bytes";
+  public static final String LOAD_COUNT = "storage/load/count";
+  public static final String LOAD_BYTES = "storage/load/bytes";
   public static final String DROP_COUNT = "storage/drop/count";
   public static final String DROP_BYTES = "storage/drop/bytes";
+  public static final String VSF_USED_BYTES = "storage/virtual/used/bytes";
   public static final String VSF_HIT_COUNT = "storage/virtual/hit/count";
   public static final String VSF_LOAD_COUNT = "storage/virtual/load/count";
   public static final String VSF_LOAD_BYTES = "storage/virtual/load/bytes";
@@ -72,14 +77,11 @@ public class StorageMonitor extends AbstractMonitor
         final StorageLocationStats staticStats = location.getValue();
         final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
             .setDimension(LOCATION_DIMENSION, location.getKey());
-        builder.setMetric(LOAD_COUNT, staticStats.getLoadCount());
-        emitter.emit(builder);
-        builder.setMetric(LOAD_BYTES, staticStats.getLoadBytes());
-        emitter.emit(builder);
-        builder.setMetric(DROP_COUNT, staticStats.getDropCount());
-        emitter.emit(builder);
-        builder.setMetric(DROP_BYTES, staticStats.getDropBytes());
-        emitter.emit(builder);
+        emitter.emit(builder.setMetric(USED_BYTES, staticStats.getUsedBytes()));
+        emitter.emit(builder.setMetric(LOAD_COUNT, staticStats.getLoadCount()));
+        emitter.emit(builder.setMetric(LOAD_BYTES, staticStats.getLoadBytes()));
+        emitter.emit(builder.setMetric(DROP_COUNT, staticStats.getDropCount()));
+        emitter.emit(builder.setMetric(DROP_BYTES, staticStats.getDropBytes()));
       }
 
       for (Map.Entry<String, VirtualStorageLocationStats> location : stats.getVirtualLocationStats().entrySet()) {
@@ -88,18 +90,13 @@ public class StorageMonitor extends AbstractMonitor
             LOCATION_DIMENSION,
             location.getKey()
         );
-        builder.setMetric(VSF_HIT_COUNT, weakStats.getHitCount());
-        emitter.emit(builder);
-        builder.setMetric(VSF_LOAD_COUNT, weakStats.getLoadCount());
-        emitter.emit(builder);
-        builder.setMetric(VSF_LOAD_BYTES, weakStats.getLoadBytes());
-        emitter.emit(builder);
-        builder.setMetric(VSF_EVICT_COUNT, weakStats.getEvictionCount());
-        emitter.emit(builder);
-        builder.setMetric(VSF_EVICT_BYTES, weakStats.getEvictionBytes());
-        emitter.emit(builder);
-        builder.setMetric(VSF_REJECT_COUNT, weakStats.getRejectCount());
-        emitter.emit(builder);
+        emitter.emit(builder.setMetric(VSF_USED_BYTES, weakStats.getUsedBytes()));
+        emitter.emit(builder.setMetric(VSF_HIT_COUNT, weakStats.getHitCount()));
+        emitter.emit(builder.setMetric(VSF_LOAD_COUNT, weakStats.getLoadCount()));
+        emitter.emit(builder.setMetric(VSF_LOAD_BYTES, weakStats.getLoadBytes()));
+        emitter.emit(builder.setMetric(VSF_EVICT_COUNT, weakStats.getEvictionCount()));
+        emitter.emit(builder.setMetric(VSF_EVICT_BYTES, weakStats.getEvictionBytes()));
+        emitter.emit(builder.setMetric(VSF_REJECT_COUNT, weakStats.getRejectCount()));
       }
     }
     return true;

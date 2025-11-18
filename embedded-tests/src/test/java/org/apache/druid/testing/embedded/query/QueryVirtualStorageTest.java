@@ -52,7 +52,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -163,13 +162,16 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
 
 
     LatchableEmitter emitter = historical.latchableEmitter();
-    // sleep to clear out the pipe to get zerod out storage monitor metrics and then flush (which clears out the
-    // internal events stores in test emitter)
-    sleepForStorageMonitor();
+    // clear out the pipe to get zerod out storage monitor metrics
+    ServiceMetricEvent monitorEvent = emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
+    while (monitorEvent != null && monitorEvent.getValue().longValue() > 0) {
+      monitorEvent = emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
+    }
+    // then flush (which clears out the internal events stores in test emitter) so we can do clean sums across them
     emitter.flush();
 
-    emitter.waitForAnyEventWithMetricName(StorageMonitor.VSF_LOAD_COUNT);
-    long beforeLoads = getMetricTotal(emitter, StorageMonitor.VSF_LOAD_COUNT);
+    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
+    long beforeLoads = emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_COUNT);
     // confirm flushed
     Assertions.assertEquals(0, beforeLoads);
 
@@ -183,9 +185,8 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(expectedResults[3], Long.parseLong(cluster.runSql(queries[3], dataSource)));
     assertQueryMetrics(4, expectedLoads[3]);
 
-    sleepForStorageMonitor();
-    emitter.waitForAnyEventWithMetricName(StorageMonitor.VSF_LOAD_COUNT);
-    long firstLoads = getMetricTotal(emitter, StorageMonitor.VSF_LOAD_COUNT);
+    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
+    long firstLoads = emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_COUNT);
     Assertions.assertTrue(firstLoads >= 24, "expected " + 24 + " but only got " + firstLoads);
 
     long expectedTotalHits = 0;
@@ -194,82 +195,72 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
       int nextQuery = ThreadLocalRandom.current().nextInt(queries.length);
       Assertions.assertEquals(expectedResults[nextQuery], Long.parseLong(cluster.runSql(queries[nextQuery], dataSource)));
       assertQueryMetrics(i + 5, null);
-      long actualLoads = getMetricLatestEvent(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_COUNT, i + 5);
+      long actualLoads = getMetricLatestValue(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_COUNT, i + 5);
       expectedTotalLoad += actualLoads;
       expectedTotalHits += (expectedLoads[nextQuery] - actualLoads);
     }
 
-    sleepForStorageMonitor();
-
-    emitter.waitForAnyEventWithMetricName(StorageMonitor.VSF_HIT_COUNT);
-    long hits = getMetricTotal(emitter, StorageMonitor.VSF_HIT_COUNT);
+    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_HIT_COUNT));
+    long hits = emitter.getMetricEventLongSum(StorageMonitor.VSF_HIT_COUNT);
     Assertions.assertTrue(hits >= expectedTotalHits, "expected " + expectedTotalHits + " but only got " + hits);
-    emitter.waitForAnyEventWithMetricName(StorageMonitor.VSF_LOAD_COUNT);
-    long loads = getMetricTotal(emitter, StorageMonitor.VSF_LOAD_COUNT);
+    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_LOAD_COUNT));
+    long loads = emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_COUNT);
     Assertions.assertTrue(loads >= expectedTotalLoad, "expected " + expectedTotalLoad + " but only got " + loads);
-    Assertions.assertTrue(getMetricTotal(emitter, StorageMonitor.VSF_LOAD_BYTES) > 0);
-    emitter.waitForAnyEventWithMetricName(StorageMonitor.VSF_EVICT_COUNT);
-    Assertions.assertTrue(getMetricTotal(emitter, StorageMonitor.VSF_EVICT_COUNT) >= 0);
-    Assertions.assertTrue(getMetricTotal(emitter, StorageMonitor.VSF_EVICT_BYTES) > 0);
-    Assertions.assertEquals(0, getMetricTotal(emitter, StorageMonitor.VSF_REJECT_COUNT));
+    Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_BYTES) > 0);
+    emitter.waitForNextEvent(event -> event.hasMetricName(StorageMonitor.VSF_EVICT_COUNT));
+    Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_EVICT_COUNT) >= 0);
+    Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_EVICT_BYTES) > 0);
+    Assertions.assertEquals(0, emitter.getMetricEventLongSum(StorageMonitor.VSF_REJECT_COUNT));
+    Assertions.assertTrue(emitter.getLatestMetricEventValue(StorageMonitor.VSF_USED_BYTES).longValue() > 0);
   }
 
-  private void sleepForStorageMonitor()
-  {
-    try {
-      Thread.sleep(1100);
-    }
-    catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-  }
 
   private void assertQueryMetrics(int expectedEventCount, @Nullable Long expectedLoadCount)
   {
     LatchableEmitter emitter = historical.latchableEmitter();
 
-    long loadCount = getMetricLatestEvent(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_COUNT, expectedEventCount);
+    long loadCount = getMetricLatestValue(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_COUNT, expectedEventCount);
     if (expectedLoadCount != null) {
       Assertions.assertEquals(expectedLoadCount, loadCount);
     }
     boolean hasLoads = loadCount > 0;
 
-    long time = getMetricLatestEvent(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_BATCH_TIME, expectedEventCount);
+    long time = getMetricLatestValue(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_BATCH_TIME, expectedEventCount);
     if (hasLoads) {
       Assertions.assertTrue(time > 0);
     } else {
       Assertions.assertEquals(0, time);
     }
 
-    long maxTime = getMetricLatestEvent(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_TIME_MAX, expectedEventCount);
+    long maxTime = getMetricLatestValue(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_TIME_MAX, expectedEventCount);
     if (hasLoads) {
       Assertions.assertTrue(maxTime > 0);
     } else {
       Assertions.assertEquals(0, maxTime);
     }
 
-    long avgTime = getMetricLatestEvent(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_TIME_AVG, expectedEventCount);
+    long avgTime = getMetricLatestValue(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_TIME_AVG, expectedEventCount);
     if (hasLoads) {
       Assertions.assertTrue(avgTime > 0);
     } else {
       Assertions.assertEquals(0, avgTime);
     }
 
-    long maxWait = getMetricLatestEvent(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_WAIT_TIME_MAX, expectedEventCount);
+    long maxWait = getMetricLatestValue(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_WAIT_TIME_MAX, expectedEventCount);
     if (hasLoads) {
       Assertions.assertTrue(maxWait >= 0);
     } else {
       Assertions.assertEquals(0, maxWait);
     }
 
-    long avgWait = getMetricLatestEvent(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_WAIT_TIME_AVG, expectedEventCount);
+    long avgWait = getMetricLatestValue(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_WAIT_TIME_AVG, expectedEventCount);
     if (hasLoads) {
       Assertions.assertTrue(avgWait >= 0);
     } else {
       Assertions.assertEquals(0, avgWait);
     }
 
-    long bytes = getMetricLatestEvent(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_BYTES, expectedEventCount);
+    long bytes = getMetricLatestValue(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_BYTES, expectedEventCount);
     if (hasLoads) {
       Assertions.assertTrue(bytes > 0);
     } else {
@@ -277,22 +268,10 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     }
   }
 
-  private long getMetricLatestEvent(LatchableEmitter emitter, String metricName, int expectedCount)
+  private long getMetricLatestValue(LatchableEmitter emitter, String metricName, int expectedCount)
   {
-    final int lastIndex = expectedCount - 1;
-    List<ServiceMetricEvent> events = emitter.getMetricEvents(metricName);
-    Assertions.assertEquals(expectedCount, events.size());
-    return events.get(lastIndex).getValue().longValue();
-  }
-
-  private long getMetricTotal(LatchableEmitter emitter, String metricName)
-  {
-    List<ServiceMetricEvent> events = emitter.getMetricEvents(metricName);
-    long val = 0;
-    for (ServiceMetricEvent event : events) {
-      val += event.getValue().longValue();
-    }
-    return val;
+    Assertions.assertEquals(expectedCount, emitter.getMetricEventCount(metricName));
+    return emitter.getLatestMetricEventValue(metricName).longValue();
   }
 
   private String createTestDatasourceName()
