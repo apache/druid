@@ -38,7 +38,6 @@ import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -48,7 +47,6 @@ import org.apache.druid.sql.avatica.DruidAvaticaJsonHandler;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.embedded.EmbeddedDruidServer;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
@@ -1016,16 +1014,6 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
   protected String getBrokerUrl()
   {
     return getServerUrl(broker);
-  }
-  
-  private static String getServerUrl(EmbeddedDruidServer<?> server)
-  {
-    final DruidNode node = server.bindings().selfNode();
-    return StringUtils.format(
-        "http://%s:%s",
-        node.getHost(),
-        node.getPlaintextPort()
-    );
   }
 
   /**

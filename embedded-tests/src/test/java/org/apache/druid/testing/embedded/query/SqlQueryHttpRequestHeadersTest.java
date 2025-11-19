@@ -19,24 +19,20 @@
 
 package org.apache.druid.testing.embedded.query;
 
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
-import org.apache.druid.server.DruidNode;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.embedded.EmbeddedDruidServer;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -49,9 +45,14 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import java.util.function.Function;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
-public class ITSqlQueryTest extends EmbeddedClusterTestBase
+/**
+ * Suite to test various Content-Type headers attached
+ * to SQL query HTTP requests to brokers and routers.
+ */
+public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
 {
   private static final String SQL_QUERY_ROUTE = "%s/druid/v2/sql/";
 
@@ -63,16 +64,6 @@ public class ITSqlQueryTest extends EmbeddedClusterTestBase
   private HttpClient httpClientRef;
   private String brokerEndpoint;
   private String routerEndpoint;
-
-  interface OnRequest
-  {
-    void on(Request request);
-  }
-
-  interface OnResponse
-  {
-    void on(int statusCode, String response);
-  }
 
   @Override
   protected EmbeddedDruidCluster createCluster()
@@ -90,33 +81,16 @@ public class ITSqlQueryTest extends EmbeddedClusterTestBase
   void setUp()
   {
     httpClientRef = router.bindings().globalHttpClient();
-    brokerEndpoint = String.format(SQL_QUERY_ROUTE, getServerUrl(broker));
-    routerEndpoint = String.format(SQL_QUERY_ROUTE, getServerUrl(router));
-  }
-
-  protected void assertStringCompare(String expected, String actual, Function<String, Boolean> predicate)
-  {
-    if (!predicate.apply(expected)) {
-      throw new ISE("Expected: [%s] but got [%s]", expected, actual);
-    }
-  }
-
-  private static String getServerUrl(EmbeddedDruidServer<?> server)
-  {
-    final DruidNode node = server.bindings().selfNode();
-    return StringUtils.format(
-        "http://%s:%s",
-        node.getHost(),
-        node.getPlaintextPort()
-    );
+    brokerEndpoint = StringUtils.format(SQL_QUERY_ROUTE, getServerUrl(broker));
+    routerEndpoint = StringUtils.format(SQL_QUERY_ROUTE, getServerUrl(router));
   }
 
   private void executeQuery(
       String endpoint,
       String contentType,
       String query,
-      OnRequest onRequest,
-      OnResponse onResponse
+      Consumer<Request> onRequest,
+      BiConsumer<Integer, String> onResponse
   )
   {
     URL url;
@@ -127,7 +101,6 @@ public class ITSqlQueryTest extends EmbeddedClusterTestBase
       throw new AssertionError("Malformed URL");
     }
 
-    // TODO: instead of pure use of HttpClient, try to use onAnyBroker and create onAnyRouter instead.
     Request request = new Request(HttpMethod.POST, url);
     if (contentType != null) {
       request.addHeader("Content-Type", contentType);
@@ -138,7 +111,7 @@ public class ITSqlQueryTest extends EmbeddedClusterTestBase
     }
 
     if (onRequest != null) {
-      onRequest.on(request);
+      onRequest.accept(request);
     }
 
     StatusResponseHolder response;
@@ -152,7 +125,7 @@ public class ITSqlQueryTest extends EmbeddedClusterTestBase
 
     Assertions.assertNotNull(response);
 
-    onResponse.on(
+    onResponse.accept(
         response.getStatus().getCode(),
         response.getContent().trim()
     );
@@ -218,8 +191,8 @@ public class ITSqlQueryTest extends EmbeddedClusterTestBase
         (request) -> {
         },
         (statusCode, responseBody) -> {
-          Assert.assertEquals(200, statusCode);
-          Assert.assertEquals("[{\"EXPR$0\":\"x % y\"}]", responseBody);
+          Assertions.assertEquals(200, statusCode);
+          Assertions.assertEquals("[{\"EXPR$0\":\"x % y\"}]", responseBody);
         }
     );
   }
@@ -236,7 +209,7 @@ public class ITSqlQueryTest extends EmbeddedClusterTestBase
         },
         (statusCode, responseBody) -> {
           Assertions.assertEquals(400, statusCode);
-          assertStringCompare("Unable to decode", responseBody, responseBody::contains);
+          Assertions.assertTrue(responseBody.contains("Unable to decode"));
         }
     );
   }
@@ -282,7 +255,7 @@ public class ITSqlQueryTest extends EmbeddedClusterTestBase
         },
         (statusCode, responseBody) -> {
           Assertions.assertEquals(400, statusCode);
-          assertStringCompare("Malformed SQL query", responseBody, responseBody::contains);
+          Assertions.assertTrue(responseBody.contains("Malformed SQL query"));
         }
     );
   }
@@ -299,7 +272,7 @@ public class ITSqlQueryTest extends EmbeddedClusterTestBase
         },
         (statusCode, responseBody) -> {
           Assertions.assertEquals(400, statusCode);
-          assertStringCompare("Empty query", responseBody, responseBody::contains);
+          Assertions.assertTrue(responseBody.contains("Empty query"));
         }
     );
   }
@@ -316,7 +289,7 @@ public class ITSqlQueryTest extends EmbeddedClusterTestBase
         },
         (statusCode, responseBody) -> {
           Assertions.assertEquals(400, statusCode);
-          assertStringCompare("Empty query", responseBody, responseBody::contains);
+          Assertions.assertTrue(responseBody.contains("Empty query"));
         }
     );
   }
@@ -333,7 +306,7 @@ public class ITSqlQueryTest extends EmbeddedClusterTestBase
         },
         (statusCode, responseBody) -> {
           Assertions.assertEquals(400, statusCode);
-          assertStringCompare("Empty query", responseBody, responseBody::contains);
+          Assertions.assertTrue(responseBody.contains("Empty query"));
         }
     );
   }
@@ -350,17 +323,14 @@ public class ITSqlQueryTest extends EmbeddedClusterTestBase
         },
         (statusCode, responseBody) -> {
           Assertions.assertEquals(400, statusCode);
-          assertStringCompare("Empty query", responseBody, responseBody::contains);
+          Assertions.assertTrue(responseBody.contains("Empty query"));
         }
     );
   }
 
-  /**
-   * When multiple Content-Type headers are set, the first one (in this case, it's the text format) should be used.
-   */
   @ParameterizedTest
   @FieldSource("flags")
-  public void testMultipleContentType(boolean shouldQueryBroker)
+  public void testMultipleContentType_usesFirstOne(boolean shouldQueryBroker)
   {
     executeQuery(
         shouldQueryBroker ? brokerEndpoint : routerEndpoint,
