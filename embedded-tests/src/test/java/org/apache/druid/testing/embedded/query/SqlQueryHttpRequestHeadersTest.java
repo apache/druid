@@ -56,7 +56,7 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
 {
   private static final String SQL_QUERY_ROUTE = "%s/druid/v2/sql/";
 
-  public static List<Boolean> flags = List.of(true, false);
+  public static List<Boolean> shouldUseQueryBroker = List.of(true, false);
 
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedRouter router = new EmbeddedRouter();
@@ -132,7 +132,7 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
   }
 
   @ParameterizedTest
-  @FieldSource("flags")
+  @FieldSource("shouldUseQueryBroker")
   public void testNullContentType(boolean shouldQueryBroker)
   {
     executeQuery(
@@ -148,7 +148,7 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
   }
 
   @ParameterizedTest
-  @FieldSource("flags")
+  @FieldSource("shouldUseQueryBroker")
   public void testUnsupportedContentType(boolean shouldQueryBroker)
   {
     executeQuery(
@@ -164,7 +164,7 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
   }
 
   @ParameterizedTest
-  @FieldSource("flags")
+  @FieldSource("shouldUseQueryBroker")
   public void testTextPlain(boolean shouldQueryBroker)
   {
     executeQuery(
@@ -181,7 +181,7 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
   }
 
   @ParameterizedTest
-  @FieldSource("flags")
+  @FieldSource("shouldUseQueryBroker")
   public void testFormURLEncoded(boolean shouldQueryBroker)
   {
     executeQuery(
@@ -198,7 +198,7 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
   }
 
   @ParameterizedTest
-  @FieldSource("flags")
+  @FieldSource("shouldUseQueryBroker")
   public void testFormURLEncoded_InvalidEncoding(boolean shouldQueryBroker)
   {
     executeQuery(
@@ -215,7 +215,7 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
   }
 
   @ParameterizedTest
-  @FieldSource("flags")
+  @FieldSource("shouldUseQueryBroker")
   public void testJSON(boolean shouldQueryBroker)
   {
     executeQuery(
@@ -244,7 +244,7 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
   }
 
   @ParameterizedTest
-  @FieldSource("flags")
+  @FieldSource("shouldUseQueryBroker")
   public void testInvalidJSONFormat(boolean shouldQueryBroker)
   {
     executeQuery(
@@ -261,7 +261,7 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
   }
 
   @ParameterizedTest
-  @FieldSource("flags")
+  @FieldSource("shouldUseQueryBroker")
   public void testEmptyQuery_TextPlain(boolean shouldQueryBroker)
   {
     executeQuery(
@@ -278,7 +278,7 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
   }
 
   @ParameterizedTest
-  @FieldSource("flags")
+  @FieldSource("shouldUseQueryBroker")
   public void testEmptyQuery_UrlEncoded(boolean shouldQueryBroker)
   {
     executeQuery(
@@ -295,7 +295,7 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
   }
 
   @ParameterizedTest
-  @FieldSource("flags")
+  @FieldSource("shouldUseQueryBroker")
   public void testBlankQuery_TextPlain(boolean shouldQueryBroker)
   {
     executeQuery(
@@ -312,7 +312,7 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
   }
 
   @ParameterizedTest
-  @FieldSource("flags")
+  @FieldSource("shouldUseQueryBroker")
   public void testEmptyQuery_JSON(boolean shouldQueryBroker)
   {
     executeQuery(
@@ -329,7 +329,7 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
   }
 
   @ParameterizedTest
-  @FieldSource("flags")
+  @FieldSource("shouldUseQueryBroker")
   public void testMultipleContentType_usesFirstOne(boolean shouldQueryBroker)
   {
     executeQuery(
