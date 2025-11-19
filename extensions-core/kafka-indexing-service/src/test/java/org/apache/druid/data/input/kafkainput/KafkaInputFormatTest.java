@@ -658,6 +658,7 @@ public class KafkaInputFormatTest
                 "jq_omg",
                 "jq_omg2",
                 "baz",
+                "kafka.new.offset",
                 "root_baz2",
                 "kafka.newheader.encoding",
                 "path_omg2"
@@ -923,6 +924,7 @@ public class KafkaInputFormatTest
                 "jq_omg",
                 "jq_omg2",
                 "baz",
+                "kafka.new.offset",
                 "root_baz2",
                 "kafka.newheader.encoding",
                 "path_omg2"
