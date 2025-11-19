@@ -177,6 +177,12 @@ public abstract class DimensionSchema
   public abstract ColumnType getColumnType();
 
   @JsonIgnore
+  public boolean canBeMultiValued()
+  {
+    return false;
+  }
+
+  @JsonIgnore
   public DimensionHandler getDimensionHandler()
   {
     // default implementation for backwards compatibility

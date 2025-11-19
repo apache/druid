@@ -84,7 +84,6 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -466,13 +465,13 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
    * Checks if multi-valued string dimensions need to be analyzed by downloading the segments.
    * This method returns true only for MSQ engine when either of the following holds true:
    * <ul>
-   * <li> Range partitioning is done on a string dimension or an unknown dimension
+   * <li> Range partitioning is done on a possibly multi-valued string dimension or an unknown dimension
    * (since MSQ does not support partitioning on a multi-valued string dimension) </li>
    * <li> Rollup is done on a string dimension or an unknown dimension
    * (since MSQ requires multi-valued string dimensions to be converted to arrays for rollup) </li>
    * </ul>
-   * @return false for native engine, true for MSQ engine only when partitioning or rollup is done on a string
-   * or unknown dimension.
+   * @return false for native engine, true for MSQ engine only when partitioning or rollup is done on a multi-valued
+   * string or unknown dimension.
    */
   boolean identifyMultiValuedDimensions()
   {
@@ -481,28 +480,31 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
     // Rollup can be true even when granularitySpec is not known since rollup is then decided based on segment analysis
     final boolean isPossiblyRollup = granularitySpec == null || !Boolean.FALSE.equals(granularitySpec.isRollup());
-    boolean isRangePartitioned = tuningConfig != null
-                                 && tuningConfig.getPartitionsSpec() instanceof DimensionRangePartitionsSpec;
+    final DimensionRangePartitionsSpec rangeSpec;
+    if (tuningConfig != null && tuningConfig.getPartitionsSpec() instanceof DimensionRangePartitionsSpec) {
+      rangeSpec = (DimensionRangePartitionsSpec) tuningConfig.getPartitionsSpec();
+    } else {
+      rangeSpec = null;
+    }
+    final boolean isRangePartitioned = rangeSpec != null;
 
     if (dimensionsSpec == null || dimensionsSpec.getDimensions().isEmpty()) {
       return isPossiblyRollup || isRangePartitioned;
     } else {
-      boolean isRollupOnStringDimension = isPossiblyRollup &&
-                                          dimensionsSpec.getDimensions()
-                                                        .stream()
-                                                        .anyMatch(dim -> ColumnType.STRING.equals(dim.getColumnType()));
+      boolean isRollupOnMultiValueStringDimension = isPossiblyRollup &&
+                                                    dimensionsSpec.getDimensions()
+                                                                  .stream()
+                                                                  .anyMatch(DimensionSchema::canBeMultiValued);
 
-      boolean isPartitionedOnStringDimension =
+      boolean isPartitionedOnMultiValueStringDimension =
           isRangePartitioned &&
           dimensionsSpec.getDimensions()
                         .stream()
                         .anyMatch(
-                            dim -> ColumnType.STRING.equals(dim.getColumnType())
-                                   && ((DimensionRangePartitionsSpec) tuningConfig.getPartitionsSpec())
-                                       .getPartitionDimensions()
-                                       .contains(dim.getName())
+                            dim -> dim.canBeMultiValued()
+                                   && rangeSpec.getPartitionDimensions().contains(dim.getName())
                         );
-      return isRollupOnStringDimension || isPartitionedOnStringDimension;
+      return isRollupOnMultiValueStringDimension || isPartitionedOnMultiValueStringDimension;
     }
   }
 
