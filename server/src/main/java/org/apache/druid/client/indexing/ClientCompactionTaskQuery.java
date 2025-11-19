@@ -20,7 +20,6 @@
 package org.apache.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
@@ -166,7 +165,6 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   /**
    * @return true if this is an MSQ compaction task.
    */
-  @JsonIgnore
   public boolean isMsq()
   {
     return compactionRunner != null && compactionRunner.getType() == CompactionEngine.MSQ;
