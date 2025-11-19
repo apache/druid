@@ -145,6 +145,7 @@ public class KafkaInputFormatTest
         "kafka.newkey.key",
         "kafka.newts.timestamp",
         "kafka.newtopic.topic",
+        "kafka.new.partition",
         "kafka.new.offset"
     );
   }
@@ -185,6 +186,7 @@ public class KafkaInputFormatTest
         "kafka.newkey.key",
         "kafka.newts.timestamp",
         "kafka.newtopic.topic",
+        "kafka.new.partition",
         "kafka.new.offset"
     );
     Assert.assertEquals(format, kif);
@@ -421,7 +423,8 @@ public class KafkaInputFormatTest
             false,
             false
         ),
-        "kafka.newheader.", "kafka.newkey.", "kafka.newts.", "kafka.newtopic.", "kafka.new.offset"
+        "kafka.newheader.", "kafka.newkey.", "kafka.newts.", "kafka.newtopic.",
+        "kafka.new.partition", "kafka.new.offset"
     );
 
     final InputEntityReader reader = localFormat.createReader(
@@ -650,6 +653,7 @@ public class KafkaInputFormatTest
                 "foo",
                 "kafka.newts.timestamp",
                 "kafka.newkey.key",
+                "kafka.new.partition",
                 "root_baz",
                 "o",
                 "bar",
@@ -718,6 +722,7 @@ public class KafkaInputFormatTest
         "kafka.newkey.key",
         "kafka.newts.timestamp",
         "kafka.newtopic.topic",
+        "kafka.new.partition",
         "kafka.new.offset"
     );
 
@@ -817,6 +822,7 @@ public class KafkaInputFormatTest
         "kafka.newkey.key",
         "kafka.newts.timestamp",
         "kafka.newtopic.topic",
+        "kafka.new.partition",
         "kafka.new.offset"
     );
 
@@ -918,6 +924,7 @@ public class KafkaInputFormatTest
                 "foo",
                 "kafka.newts.timestamp",
                 "kafka.newkey.key",
+                "kafka.new.partition",
                 "root_baz",
                 "o",
                 "path_omg",

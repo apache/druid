@@ -56,6 +56,7 @@ public class KafkaInputReader implements InputEntityReader
   private final String keyColumnName;
   private final String timestampColumnName;
   private final String topicColumnName;
+  private final String partitionColumnName;
   private final String offsetColumnName;
 
   /**
@@ -76,6 +77,7 @@ public class KafkaInputReader implements InputEntityReader
       String keyColumnName,
       String timestampColumnName,
       String topicColumnName,
+      String partitionColumnName,
       String offsetColumnName
   )
   {
@@ -87,6 +89,7 @@ public class KafkaInputReader implements InputEntityReader
     this.keyColumnName = keyColumnName;
     this.timestampColumnName = timestampColumnName;
     this.topicColumnName = topicColumnName;
+    this.partitionColumnName = partitionColumnName;
     this.offsetColumnName = offsetColumnName;
   }
 
@@ -134,7 +137,7 @@ public class KafkaInputReader implements InputEntityReader
 
     // Add kafka record topic to the mergelist, only if the key doesn't already exist
     mergedHeaderMap.putIfAbsent(topicColumnName, record.getRecord().topic());
-
+    mergedHeaderMap.putIfAbsent(partitionColumnName, record.getRecord().partition());
     mergedHeaderMap.putIfAbsent(offsetColumnName, record.getRecord().offset());
 
     return mergedHeaderMap;

@@ -44,6 +44,7 @@ public class KafkaInputFormat implements InputFormat
   private static final String DEFAULT_HEADER_COLUMN_PREFIX = "kafka.header.";
   private static final String DEFAULT_TIMESTAMP_COLUMN_NAME = "kafka.timestamp";
   private static final String DEFAULT_TOPIC_COLUMN_NAME = "kafka.topic";
+  private static final String DEFAULT_PARTITION_COLUMN_NAME = "kafka.partition";
   private static final String DEFAULT_OFFSET_COLUMN_NAME = "kafka.offset";
   private static final String DEFAULT_KEY_COLUMN_NAME = "kafka.key";
   public static final String DEFAULT_AUTO_TIMESTAMP_STRING = "__kif_auto_timestamp";
@@ -60,6 +61,7 @@ public class KafkaInputFormat implements InputFormat
   private final String keyColumnName;
   private final String timestampColumnName;
   private final String topicColumnName;
+  private final String partitionColumnName;
   private final String offsetColumnName;
 
   public KafkaInputFormat(
@@ -70,6 +72,7 @@ public class KafkaInputFormat implements InputFormat
       @JsonProperty("keyColumnName") @Nullable String keyColumnName,
       @JsonProperty("timestampColumnName") @Nullable String timestampColumnName,
       @JsonProperty("topicColumnName") @Nullable String topicColumnName,
+      @JsonProperty("partitionColumnName") @Nullable String partitionColumnName,
       @JsonProperty("offsetColumnName") @Nullable String offsetColumnName
   )
   {
@@ -80,6 +83,7 @@ public class KafkaInputFormat implements InputFormat
     this.keyColumnName = keyColumnName != null ? keyColumnName : DEFAULT_KEY_COLUMN_NAME;
     this.timestampColumnName = timestampColumnName != null ? timestampColumnName : DEFAULT_TIMESTAMP_COLUMN_NAME;
     this.topicColumnName = topicColumnName != null ? topicColumnName : DEFAULT_TOPIC_COLUMN_NAME;
+    this.partitionColumnName = Configs.valueOrDefault(partitionColumnName, DEFAULT_PARTITION_COLUMN_NAME);
     this.offsetColumnName = Configs.valueOrDefault(offsetColumnName, DEFAULT_OFFSET_COLUMN_NAME);
   }
 
@@ -134,6 +138,7 @@ public class KafkaInputFormat implements InputFormat
         keyColumnName,
         timestampColumnName,
         topicColumnName,
+        partitionColumnName,
         offsetColumnName
     );
   }
@@ -188,6 +193,13 @@ public class KafkaInputFormat implements InputFormat
 
   @Nullable
   @JsonProperty
+  public String getPartitionColumnName()
+  {
+    return partitionColumnName;
+  }
+
+  @Nullable
+  @JsonProperty
   public String getOffsetColumnName()
   {
     return offsetColumnName;
@@ -210,6 +222,7 @@ public class KafkaInputFormat implements InputFormat
            && Objects.equals(keyColumnName, that.keyColumnName)
            && Objects.equals(timestampColumnName, that.timestampColumnName)
            && Objects.equals(topicColumnName, that.topicColumnName)
+           && Objects.equals(partitionColumnName, that.partitionColumnName)
            && Objects.equals(offsetColumnName, that.offsetColumnName);
   }
 
@@ -224,6 +237,7 @@ public class KafkaInputFormat implements InputFormat
         keyColumnName,
         timestampColumnName,
         topicColumnName,
+        partitionColumnName,
         offsetColumnName
     );
   }
