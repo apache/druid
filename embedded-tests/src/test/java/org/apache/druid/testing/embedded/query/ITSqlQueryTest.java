@@ -26,7 +26,6 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.server.DruidNode;
-
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -52,7 +51,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 
-public class HttpHeadersSqlRequestTest extends EmbeddedClusterTestBase
+public class ITSqlQueryTest extends EmbeddedClusterTestBase
 {
   private static final String SQL_QUERY_ROUTE = "%s/druid/v2/sql/";
 
