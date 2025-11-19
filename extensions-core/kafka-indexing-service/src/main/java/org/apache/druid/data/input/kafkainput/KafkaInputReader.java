@@ -56,6 +56,7 @@ public class KafkaInputReader implements InputEntityReader
   private final String keyColumnName;
   private final String timestampColumnName;
   private final String topicColumnName;
+  private final String offsetColumnName;
 
   /**
    * @param inputRowSchema       Actual schema from the ingestion spec
@@ -74,7 +75,8 @@ public class KafkaInputReader implements InputEntityReader
       InputEntityReader valueParser,
       String keyColumnName,
       String timestampColumnName,
-      String topicColumnName
+      String topicColumnName,
+      String offsetColumnName
   )
   {
     this.inputRowSchema = inputRowSchema;
@@ -85,6 +87,7 @@ public class KafkaInputReader implements InputEntityReader
     this.keyColumnName = keyColumnName;
     this.timestampColumnName = timestampColumnName;
     this.topicColumnName = topicColumnName;
+    this.offsetColumnName = offsetColumnName;
   }
 
   @Override
@@ -131,6 +134,8 @@ public class KafkaInputReader implements InputEntityReader
 
     // Add kafka record topic to the mergelist, only if the key doesn't already exist
     mergedHeaderMap.putIfAbsent(topicColumnName, record.getRecord().topic());
+
+    mergedHeaderMap.putIfAbsent(offsetColumnName, record.getRecord().offset());
 
     return mergedHeaderMap;
   }

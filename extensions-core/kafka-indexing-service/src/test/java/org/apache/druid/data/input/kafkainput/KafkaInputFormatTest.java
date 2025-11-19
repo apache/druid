@@ -144,7 +144,8 @@ public class KafkaInputFormatTest
         "kafka.newheader.",
         "kafka.newkey.key",
         "kafka.newts.timestamp",
-        "kafka.newtopic.topic"
+        "kafka.newtopic.topic",
+        "kafka.new.offset"
     );
   }
 
@@ -183,7 +184,8 @@ public class KafkaInputFormatTest
         "kafka.newheader.",
         "kafka.newkey.key",
         "kafka.newts.timestamp",
-        "kafka.newtopic.topic"
+        "kafka.newtopic.topic",
+        "kafka.new.offset"
     );
     Assert.assertEquals(format, kif);
 
@@ -419,7 +421,7 @@ public class KafkaInputFormatTest
             false,
             false
         ),
-        "kafka.newheader.", "kafka.newkey.", "kafka.newts.", "kafka.newtopic."
+        "kafka.newheader.", "kafka.newkey.", "kafka.newts.", "kafka.newtopic.", "kafka.new.offset"
     );
 
     final InputEntityReader reader = localFormat.createReader(
@@ -714,7 +716,8 @@ public class KafkaInputFormatTest
         "kafka.newheader.",
         "kafka.newkey.key",
         "kafka.newts.timestamp",
-        "kafka.newtopic.topic"
+        "kafka.newtopic.topic",
+        "kafka.new.offset"
     );
 
     Headers headers = new RecordHeaders(SAMPLE_HEADERS);
@@ -812,7 +815,8 @@ public class KafkaInputFormatTest
         "kafka.newheader.",
         "kafka.newkey.key",
         "kafka.newts.timestamp",
-        "kafka.newtopic.topic"
+        "kafka.newtopic.topic",
+        "kafka.new.offset"
     );
 
     Headers headers = new RecordHeaders(SAMPLE_HEADERS);

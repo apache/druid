@@ -61,6 +61,7 @@ public class KafkaIOConfigBuilder extends SupervisorIOConfigBuilder<KafkaIOConfi
         null,
         null,
         null,
+        null,
         null
     );
     return this;
