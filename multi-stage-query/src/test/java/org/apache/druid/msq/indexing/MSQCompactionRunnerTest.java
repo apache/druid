@@ -32,6 +32,9 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.guice.security.EscalatorModule;
+import org.apache.druid.guice.security.PolicyModule;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
@@ -41,6 +44,7 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.task.CompactionIntervalSpec;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.TuningConfigBuilder;
+import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -74,6 +78,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
+import org.apache.druid.server.initialization.AuthorizerMapperModule;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -143,19 +148,6 @@ public class MSQCompactionRunnerTest
           ImmutableSet.of(MV_STRING_DIMENSION.getName())
       )
   );
-  private static final Map<Interval, DataSchema> INTERVAL_DATASCHEMAS_WITH_PROJECTION = ImmutableMap.of(
-      COMPACTION_INTERVAL,
-      new CombinedDataSchema(
-          DATA_SOURCE,
-          new TimestampSpec(TIMESTAMP_COLUMN, null, null),
-          new DimensionsSpec(DIMENSIONS),
-          null,
-          null,
-          null,
-          ImmutableList.of(PROJECTION_SPEC),
-          ImmutableSet.of(MV_STRING_DIMENSION.getName())
-      )
-  );
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
   private static final AggregatorFactory AGG1 = new CountAggregatorFactory("agg_0");
   private static final AggregatorFactory AGG2 = new LongSumAggregatorFactory("sum_added", "sum_added");
@@ -163,7 +155,11 @@ public class MSQCompactionRunnerTest
   private static final MSQCompactionRunner MSQ_COMPACTION_RUNNER = new MSQCompactionRunner(
       JSON_MAPPER,
       TestExprMacroTable.INSTANCE,
-      null
+      new CoreInjectorBuilder(new StartupInjectorBuilder().forTests().build()).addModules(
+          new EscalatorModule(),
+          new AuthorizerMapperModule(),
+          new PolicyModule()
+      ).build()
   );
   private static final List<String> PARTITION_DIMENSIONS = Collections.singletonList(STRING_DIMENSION.getName());
 

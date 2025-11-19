@@ -99,7 +99,7 @@ public class OverlordCompactionResourceTest
 
     httpRequest = EasyMock.createStrictMock(HttpServletRequest.class);
     authorizerMapper = EasyMock.createStrictMock(AuthorizerMapper.class);
-    EasyMock.expect(authorizerMapper.getAuthorizer("druid")).andReturn(new AllowAllAuthorizer()).anyTimes();
+    EasyMock.expect(authorizerMapper.getAuthorizer("druid")).andReturn(new AllowAllAuthorizer(null)).anyTimes();
 
     taskMaster = EasyMock.createStrictMock(TaskMaster.class);
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).anyTimes();

@@ -175,9 +175,9 @@ export const ExploreView = React.memo(function ExploreView({ capabilities }: Exp
     [exploreState, querySourceState.data],
   );
 
-  const { source, parseError, where, showSourceQuery, hideResources, hideHelpers } =
-    effectiveExploreState;
+  const { source, parseError, showSourceQuery, hideResources, hideHelpers } = effectiveExploreState;
   const timezone = effectiveExploreState.getEffectiveTimezone();
+  const where = effectiveExploreState.getEffectiveWhere();
 
   function setModuleState(index: number, moduleState: ModuleState) {
     setExploreState(effectiveExploreState.changeModuleState(index, moduleState));

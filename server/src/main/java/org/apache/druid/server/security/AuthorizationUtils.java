@@ -46,7 +46,7 @@ import java.util.Set;
  */
 public class AuthorizationUtils
 {
-  static final ImmutableSet<String> RESTRICTION_APPLICABLE_RESOURCE_TYPES = ImmutableSet.of(
+  public static final ImmutableSet<String> RESTRICTION_APPLICABLE_RESOURCE_TYPES = ImmutableSet.of(
       ResourceType.DATASOURCE
   );
 
@@ -204,8 +204,7 @@ public class AuthorizationUtils
         return AuthorizationResult.deny(access.getMessage());
       } else {
         resultCache.add(resourceAction);
-        if (resourceAction.getAction().equals(Action.READ)
-            && RESTRICTION_APPLICABLE_RESOURCE_TYPES.contains(resourceAction.getResource().getType())) {
+        if (shouldApplyPolicy(resourceAction.getResource(), resourceAction.getAction())) {
           // For every table read, we check on the policy returned from authorizer and add it to the map.
           policyFilters.put(resourceAction.getResource().getName(), access.getPolicy());
         } else if (access.getPolicy().isPresent()) {
@@ -220,6 +219,11 @@ public class AuthorizationUtils
     }
 
     return AuthorizationResult.allowWithRestriction(policyFilters);
+  }
+
+  public static boolean shouldApplyPolicy(Resource resource, Action action)
+  {
+    return Action.READ.equals(action) || RESTRICTION_APPLICABLE_RESOURCE_TYPES.contains(resource.getType());
   }
 
 

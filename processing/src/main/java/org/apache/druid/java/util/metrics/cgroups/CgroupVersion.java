@@ -17,15 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.cli;
+package org.apache.druid.java.util.metrics.cgroups;
 
-import com.github.rvesse.airline.builder.CliBuilder;
-
-public class QueryRetryTestCommandCreator implements CliCommandCreator
+/**
+ * Enumeration of supported cgroups versions
+ */
+public enum CgroupVersion
 {
-  @Override
-  public void addCommands(CliBuilder builder)
-  {
-    builder.withGroup("server").withCommands(CliHistoricalForQueryErrorTest.class);
-  }
+  V1,
+  V2,
+  UNKNOWN
 }

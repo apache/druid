@@ -63,7 +63,7 @@ export const TimeIntervalFilterControl = React.memo(function TimeIntervalFilterC
               setFilterPatternOrIssue(newPattern, undefined);
             }
           }}
-          onIssue={() => onIssue('Bad start date')}
+          onIssue={issue => onIssue(`Bad start date: ${issue}`)}
         />
       </FormGroup>
       <FormGroup label="End">
@@ -79,7 +79,7 @@ export const TimeIntervalFilterControl = React.memo(function TimeIntervalFilterC
               setFilterPatternOrIssue(newPattern, undefined);
             }
           }}
-          onIssue={() => onIssue('Bad end date')}
+          onIssue={issue => onIssue(`Bad end date: ${issue}`)}
         />
       </FormGroup>
     </div>

@@ -223,7 +223,7 @@ public class CoordinatorSimulationBuilder
         env.leaderSelector,
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        new CompactionStatusTracker(OBJECT_MAPPER),
+        new CompactionStatusTracker(),
         env.configSyncer,
         env.cloneStatusManager
     );

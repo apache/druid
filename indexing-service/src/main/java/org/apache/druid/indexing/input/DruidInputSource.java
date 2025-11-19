@@ -291,6 +291,25 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     );
   }
 
+  /**
+   * Creates a new {@link DruidInputSource} with the given interval.
+   */
+  public DruidInputSource withInterval(Interval interval)
+  {
+    return new DruidInputSource(
+        this.dataSource,
+        interval,
+        null,
+        this.dimFilter,
+        this.dimensions,
+        this.metrics,
+        this.indexIO,
+        this.coordinatorClient,
+        this.segmentCacheManagerFactory,
+        this.taskConfig
+    );
+  }
+
   @Override
   protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
   {
