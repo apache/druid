@@ -51,7 +51,7 @@ public class RemoteTaskActionClientFactory implements TaskActionClientFactory
         NodeRole.OVERLORD.toString(),
         serviceLocator,
         StandardRetryPolicy.builder()
-            .maxAttempts(retryPolicyConfig.getMaxRetryCount() - 1)
+            .maxAttempts(retryPolicyConfig.getMaxRetryCount() + 1)
             .minWaitMillis(retryPolicyConfig.getMinWait().toStandardDuration().getMillis())
             .maxWaitMillis(retryPolicyConfig.getMaxWait().toStandardDuration().getMillis())
             .build()
