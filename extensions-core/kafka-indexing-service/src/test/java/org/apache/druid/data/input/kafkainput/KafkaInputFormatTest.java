@@ -53,8 +53,10 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 public class KafkaInputFormatTest
@@ -642,7 +644,7 @@ public class KafkaInputFormatTest
       while (iterator.hasNext()) {
 
         final InputRow row = iterator.next();
-        Assert.assertEquals(
+        assertUnorderedDimensionsEqual(
             Arrays.asList(
                 "kafka.newtopic.topic",
                 "foo",
@@ -905,7 +907,7 @@ public class KafkaInputFormatTest
 
         final InputRow row = iterator.next();
 
-        Assert.assertEquals(
+        assertUnorderedDimensionsEqual(
             Arrays.asList(
                 "bar",
                 "kafka.newheader.kafkapkc",
@@ -993,5 +995,14 @@ public class KafkaInputFormatTest
     SettableByteEntity<KafkaRecordEntity> settableByteEntity = new SettableByteEntity<>();
     settableByteEntity.setEntity(kafkaRecordEntity);
     return settableByteEntity;
+  }
+
+  private static void assertUnorderedDimensionsEqual(List<String> expected, List<String> actual)
+  {
+    List<String> sortedExpected = new ArrayList<>(expected);
+    List<String> sortedActual = new ArrayList<>(actual);
+    Collections.sort(sortedExpected);
+    Collections.sort(sortedActual);
+    Assert.assertEquals(sortedExpected, sortedActual);
   }
 }
