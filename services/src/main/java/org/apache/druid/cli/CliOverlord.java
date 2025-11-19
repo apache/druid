@@ -129,6 +129,7 @@ import org.apache.druid.server.http.RedirectFilter;
 import org.apache.druid.server.http.RedirectInfo;
 import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.initialization.jetty.CliIndexerServerModule;
 import org.apache.druid.server.initialization.jetty.JettyBindings;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
@@ -166,7 +167,6 @@ public class CliOverlord extends ServerRunnable
 {
   private static final Logger log = new Logger(CliOverlord.class);
   private static final String DEFAULT_SERVICE_NAME = "druid/overlord";
-  private static final int THREADS_RESERVED_FOR_HEALTH_CHECK = 1;
 
   protected static final List<String> UNSECURED_PATHS = ImmutableList.of(
       "/druid/indexer/v1/isLeader",
@@ -461,16 +461,11 @@ public class CliOverlord extends ServerRunnable
            * This method performs two main tasks:
            * <ol>
            *   <li>Registers Jersey resources for Overlord REST endpoints</li>
-           *   <li>Configures QoS (Quality of Service) filtering for request limiting</li>
+           *   <li>Configures QoS (Quality of Service) filtering for action APIs only</li>
            * </ol>
            * <p>
-           * The Jersey resources handle the following endpoint paths:
-           * <ul>
-           *   <li>/druid/indexer/v1 - Main indexing and task management endpoints</li>
-           *   <li>/druid-internal/v1 - Internal Overlord management endpoints</li>
-           * </ul>
-           * Note to developers:
-           * Whenever adding new resources, please check if the root paths are added in the QOS filtering.
+           * QoS filtering is applied to action APIs to prevent the Overlord from becoming
+           * unresponsive to health checks
            */
           private void configureOverlordWebResources(Binder binder)
           {
@@ -480,20 +475,28 @@ public class CliOverlord extends ServerRunnable
             Jerseys.addResource(binder, OverlordCompactionResource.class);
             Jerseys.addResource(binder, OverlordDataSourcesResource.class);
 
-            // Add QoS filtering for overlord-specific endpoints if we have enough threads
-            final int serverHttpNumThreads = properties.containsKey("druid.server.http.numThreads")
-                                             ? Integer.parseInt(properties.getProperty("druid.server.http.numThreads"))
+
+            final int serverHttpNumThreads = properties.containsKey(CliIndexerServerModule.SERVER_HTTP_NUM_THREADS_PROPERTY)
+                                             ? Integer.parseInt(properties.getProperty(CliIndexerServerModule.SERVER_HTTP_NUM_THREADS_PROPERTY))
                                              : ServerConfig.getDefaultNumThreads();
 
-            final int threadsForOverlordWork = serverHttpNumThreads - THREADS_RESERVED_FOR_HEALTH_CHECK;
+            final int maxConcurrentActions;
+            if (properties.containsKey("druid.indexer.server.maxConcurrentActions")) {
+              maxConcurrentActions = Integer.parseInt(properties.getProperty("druid.indexer.server.maxConcurrentActions"));
+            } else {
+              maxConcurrentActions = getDefaultMaxConcurrentActions(serverHttpNumThreads);
+            }
 
-            if (threadsForOverlordWork >= ServerConfig.DEFAULT_MIN_QOS_THRESHOLD) {
-              final String[] overlordPaths = {
-                  "/druid-internal/v1/*",
-                  "/druid/indexer/v1/*"
+            if (maxConcurrentActions > 0) {
+              // Add QoS filtering for action endpoints only
+              final String[] actionPaths = {
+                  "/druid/indexer/v1/action",
               };
 
-              JettyBindings.addQosFilter(binder, overlordPaths, threadsForOverlordWork);
+              log.info("Overlord QoS filtering enabled for action endpoints. Max concurrent actions: [%d]", maxConcurrentActions);
+              JettyBindings.addQosFilter(binder, actionPaths, maxConcurrentActions);
+            } else {
+              log.info("Overlord QoS filtering disabled for action endpoints. Max concurrent actions: [%d]", serverHttpNumThreads);
             }
           }
         },
@@ -509,6 +512,11 @@ public class CliOverlord extends ServerRunnable
         new MSQDurableStorageModule(),
         new MSQExternalDataSourceModule()
     );
+  }
+
+  public static int getDefaultMaxConcurrentActions(int serverHttpNumThreads)
+  {
+    return Math.max(1, Math.max(serverHttpNumThreads - 4, (int) (serverHttpNumThreads * 0.8)));
   }
 
   /**

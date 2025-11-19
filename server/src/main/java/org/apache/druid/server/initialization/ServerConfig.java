@@ -56,7 +56,6 @@ import java.util.zip.Deflater;
 public class ServerConfig
 {
   public static final int DEFAULT_GZIP_INFLATE_BUFFER_SIZE = 4096;
-  public static final int DEFAULT_MIN_QOS_THRESHOLD = 30;
 
   /**
    * The ServerConfig is normally created using {@link org.apache.druid.guice.JsonConfigProvider} binding.
@@ -439,7 +438,7 @@ public class ServerConfig
 
   public static int getDefaultNumThreads()
   {
-    return Math.max(10, (JvmUtils.getRuntimeInfo().getAvailableProcessors() * 17) / 16 + 2) + DEFAULT_MIN_QOS_THRESHOLD;
+    return Math.max(10, (JvmUtils.getRuntimeInfo().getAvailableProcessors() * 17) / 16 + 2) + 30;
   }
 
   public static class UriComplianceDeserializer extends JsonDeserializer<UriCompliance>
