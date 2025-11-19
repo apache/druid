@@ -20,10 +20,12 @@
 package org.apache.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 
@@ -159,6 +161,15 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   public ClientCompactionRunnerInfo getCompactionRunner()
   {
     return compactionRunner;
+  }
+
+  /**
+   * @return true if this is an MSQ compaction task.
+   */
+  @JsonIgnore
+  public boolean isMsq()
+  {
+    return compactionRunner != null && compactionRunner.getType() == CompactionEngine.MSQ;
   }
 
   @Override

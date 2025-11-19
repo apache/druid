@@ -25,7 +25,6 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientMSQContext;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
@@ -100,18 +99,7 @@ public class CompactionSlotManager
    */
   public void reserveTaskSlots(ClientCompactionTaskQuery compactionTaskQuery)
   {
-    // Note: The default compactionRunnerType used here should match the default runner used in CompactionTask when
-    // no runner is provided there.
-    CompactionEngine compactionRunnerType = compactionTaskQuery.getCompactionRunner() == null
-                                            ? CompactionEngine.NATIVE
-                                            : compactionTaskQuery.getCompactionRunner().getType();
-    if (compactionRunnerType == CompactionEngine.NATIVE) {
-      numAvailableTaskSlots -=
-          getMaxTaskSlotsForNativeCompactionTask(compactionTaskQuery.getTuningConfig());
-    } else {
-      numAvailableTaskSlots -=
-          getMaxTaskSlotsForMSQCompactionTask(compactionTaskQuery.getContext());
-    }
+    numAvailableTaskSlots -= computeSlotsRequiredForTask(compactionTaskQuery);
   }
 
   /**
@@ -311,7 +299,7 @@ public class CompactionSlotManager
   }
 
   /**
-   * @return Maximum number of task slots used by an MSQ compaction task at any
+   * Maximum number of task slots used by an MSQ compaction task at any
    * time when the task is run with the given context.
    */
   public static int getMaxTaskSlotsForMSQCompactionTask(@Nullable Map<String, Object> context)
@@ -344,12 +332,22 @@ public class CompactionSlotManager
     return tuningConfig.getPartitionsSpec() instanceof DimensionRangePartitionsSpec;
   }
 
+  /**
+   * Computes the maximum number of slots required for a compaction task. This
+   * is the legacy method used by the Coordinator compaction duty.
+   * <p>
+   * MSQ-based Compaction tasks launched by the Coordinator use up all available
+   * task slots if {@code maxNumTasks} is not specified in the context. However,
+   * {@link #computeSlotsRequiredForTask(ClientCompactionTaskQuery)}, used by
+   * compaction supervisors uses {@link ClientMSQContext#DEFAULT_MAX_NUM_TASKS}
+   * instead.
+   */
   public int computeSlotsRequiredForTask(
       ClientCompactionTaskQuery task,
       DataSourceCompactionConfig config
   )
   {
-    if (task.getCompactionRunner().getType() == CompactionEngine.MSQ) {
+    if (task.isMsq()) {
       final Map<String, Object> autoCompactionContext = task.getContext();
       if (autoCompactionContext.containsKey(ClientMSQContext.CTX_MAX_NUM_TASKS)) {
         return (int) autoCompactionContext.get(ClientMSQContext.CTX_MAX_NUM_TASKS);
@@ -371,6 +369,18 @@ public class CompactionSlotManager
       return CompactionSlotManager.getMaxTaskSlotsForNativeCompactionTask(
           config.getTuningConfig()
       );
+    }
+  }
+
+  /**
+   * Computes the number of task slots required to run this compaction task.
+   */
+  public static int computeSlotsRequiredForTask(ClientCompactionTaskQuery task)
+  {
+    if (task.isMsq()) {
+      return getMaxTaskSlotsForMSQCompactionTask(task.getContext());
+    } else {
+      return getMaxTaskSlotsForNativeCompactionTask(task.getTuningConfig());
     }
   }
 }
