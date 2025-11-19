@@ -47,7 +47,7 @@ import java.util.Properties;
  */
 public class CliIndexerServerModule implements Module
 {
-  private static final String SERVER_HTTP_NUM_THREADS_PROPERTY = "druid.server.http.numThreads";
+  public static final String SERVER_HTTP_NUM_THREADS_PROPERTY = "druid.server.http.numThreads";
   private final Properties properties;
 
   public CliIndexerServerModule(Properties properties)
