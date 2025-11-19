@@ -206,7 +206,19 @@ public class AuthorizationUtils
         resultCache.add(resourceAction);
         if (shouldApplyPolicy(resourceAction.getResource(), resourceAction.getAction())) {
           // For every table read, we check on the policy returned from authorizer and add it to the map.
-          policyFilters.put(resourceAction.getResource().getName(), access.getPolicy());
+          final String resourceName = resourceAction.getResource().getName();
+          final Optional<Policy> prevPolicy =
+              policyFilters.put(resourceName, access.getPolicy());
+          if (prevPolicy != null) {
+            // Shouldn't have two policies for the same resource name, because only tables have policies and
+            // each table should only be processed one time. If it does happen, throw a defensive exception.
+            throw DruidException.defensive(
+                "Cannot have two policies on the same resourceName[%s]: policyA[%s], policyB[%s]",
+                resourceName,
+                prevPolicy,
+                access.getPolicy()
+            );
+          }
         } else if (access.getPolicy().isPresent()) {
           throw DruidException.defensive(
               "Policy should only present when reading a table, but was present for a different kind of resource action [%s]",
@@ -221,9 +233,13 @@ public class AuthorizationUtils
     return AuthorizationResult.allowWithRestriction(policyFilters);
   }
 
+  /**
+   * Whether a {@link Policy} from {@link Access#getPolicy()} should apply to the provided resource-action pair.
+   * As mentioned in the javadoc for {@link Access#getPolicy()}, policies only apply to reading tables.
+   */
   public static boolean shouldApplyPolicy(Resource resource, Action action)
   {
-    return Action.READ.equals(action) || RESTRICTION_APPLICABLE_RESOURCE_TYPES.contains(resource.getType());
+    return Action.READ.equals(action) && RESTRICTION_APPLICABLE_RESOURCE_TYPES.contains(resource.getType());
   }
 
 
