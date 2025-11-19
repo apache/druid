@@ -37,10 +37,19 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * A Kafka container for use in embedded tests.
+ * <p>
+ * {@link #KAFKA_IMAGE} can be overriden via system property to use a different Kafka Docker image.
+ * </p>
  */
 public class KafkaResource extends TestcontainerResource<KafkaContainer>
 {
-  private static final String KAFKA_IMAGE = "apache/kafka:4.0.0";
+  /**
+   * Kafka Docker image used in embedded tests. The image name is
+   * read from the system property {@code druid.testing.kafka.image} and
+   * defaults to {@code apache/kafka}. Environments that cannot run that
+   * image should set the system property to {@code apache/kafka-native}.
+   */
+  private static final String KAFKA_IMAGE = System.getProperty("druid.testing.kafka.image", "apache/kafka:4.0.0");
 
   private EmbeddedDruidCluster cluster;
 

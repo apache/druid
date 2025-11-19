@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.easymock.EasyMock;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -49,7 +50,6 @@ public class PrometheusEmitterTest
   @Test
   public void testEmitterWithServiceLabel()
   {
-    CollectorRegistry.defaultRegistry.clear();
     PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, true, 60, null, false, null);
     PrometheusEmitterModule prometheusEmitterModule = new PrometheusEmitterModule();
     Emitter emitter = prometheusEmitterModule.getEmitter(config);
@@ -70,7 +70,6 @@ public class PrometheusEmitterTest
   @Test
   public void testEmitterWithServiceAndHostLabel()
   {
-    CollectorRegistry.defaultRegistry.clear();
     PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, true, true, 60, null, false, null);
     PrometheusEmitterModule prometheusEmitterModule = new PrometheusEmitterModule();
     Emitter emitter = prometheusEmitterModule.getEmitter(config);
@@ -91,7 +90,6 @@ public class PrometheusEmitterTest
   @Test
   public void testEmitterWithExtraLabels()
   {
-    CollectorRegistry.defaultRegistry.clear();
     Map<String, String> extraLabels = new HashMap<>();
     extraLabels.put("labelName", "labelValue");
     PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, false, 60, extraLabels, false, null);
@@ -113,7 +111,6 @@ public class PrometheusEmitterTest
   @Test
   public void testEmitterWithServiceLabelAndExtraLabel()
   {
-    CollectorRegistry.defaultRegistry.clear();
     Map<String, String> extraLabels = new HashMap<>();
     extraLabels.put("labelName", "labelValue");
     PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, true, 60, extraLabels, false, null);
@@ -135,7 +132,6 @@ public class PrometheusEmitterTest
   @Test
   public void testEmitterWithEmptyExtraLabels()
   {
-    CollectorRegistry.defaultRegistry.clear();
     Map<String, String> extraLabels = new HashMap<>();
     PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, true, 60, extraLabels, false, null);
     PrometheusEmitterModule prometheusEmitterModule = new PrometheusEmitterModule();
@@ -156,7 +152,6 @@ public class PrometheusEmitterTest
   @Test
   public void testEmitterWithMultipleExtraLabels()
   {
-    CollectorRegistry.defaultRegistry.clear();
     Map<String, String> extraLabels = new HashMap<>();
     extraLabels.put("labelName1", "labelValue1");
     extraLabels.put("labelName2", "labelValue2");
@@ -179,7 +174,6 @@ public class PrometheusEmitterTest
   @Test
   public void testEmitterWithLabelCollision()
   {
-    CollectorRegistry.defaultRegistry.clear();
     // ExtraLabels contains a label that collides with a service label
     Map<String, String> extraLabels = new HashMap<>();
     extraLabels.put("server", "collisionLabelValue");
@@ -209,7 +203,6 @@ public class PrometheusEmitterTest
   @Test
   public void testEmitterMetric()
   {
-    CollectorRegistry.defaultRegistry.clear();
     PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace", null, 0, "pushgateway", true, true, 60, null, false, null);
     PrometheusEmitterModule prometheusEmitterModule = new PrometheusEmitterModule();
     Emitter emitter = prometheusEmitterModule.getEmitter(config);
@@ -597,5 +590,24 @@ public class PrometheusEmitterTest
     metric = emitter.getMetrics().getRegisteredMetrics().get("segment/loadQueue/count");
     Assert.assertEquals(1, metric.getLabelValuesToStopwatch().size());
     emitter.close();
+  }
+
+  @Test
+  public void testCounterWithNegativeValue()
+  {
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "test", null, 0, null, true, true, null, null, false, null);
+    PrometheusEmitter emitter = new PrometheusEmitter(config);
+    ServiceMetricEvent event = ServiceMetricEvent.builder()
+            .setMetric("segment/moveSkipped/count", -1)
+            .setDimension("server", "historical1")
+            .build(ImmutableMap.of("service", "historical", "host", "druid.test.cn"));
+    emitter.emit(event);
+    emitter.close();
+  }
+
+  @After
+  public void tearDown()
+  {
+    CollectorRegistry.defaultRegistry.clear();
   }
 }

@@ -35,14 +35,13 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.ReferenceCountedObjectProvider;
-import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.TestSegmentUtils;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
+import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalLoadSpec;
@@ -475,8 +474,10 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
     );
 
     final AcquireSegmentAction action = virtualSegmentManager.acquireSegment(toLoad);
-    ReferenceCountedObjectProvider<Segment> segmentProvider = action.getSegmentFuture().get();
-    Assert.assertNotNull(segmentProvider);
+    AcquireSegmentResult result = action.getSegmentFuture().get();
+    Assert.assertNotNull(result);
+    Assert.assertEquals(1L, result.getLoadSizeBytes());
+    Assert.assertTrue(result.getLoadTimeNanos() > 0);
 
     DataSegmentAndDescriptor d1 = new DataSegmentAndDescriptor(SEGMENTS.get(0), SEGMENTS.get(0).toDescriptor());
     DataSegmentAndDescriptor d2 = new DataSegmentAndDescriptor(toLoad, toLoad.toDescriptor());

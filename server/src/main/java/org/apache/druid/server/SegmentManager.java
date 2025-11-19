@@ -426,6 +426,11 @@ public class SegmentManager
     return cacheManager.canHandleSegments();
   }
 
+  public boolean canLoadSegmentsOnDemand()
+  {
+    return cacheManager.canLoadSegmentsOnDemand();
+  }
+
   public boolean canLoadSegmentOnDemand(DataSegment dataSegment)
   {
     return cacheManager.canLoadSegmentOnDemand(dataSegment);

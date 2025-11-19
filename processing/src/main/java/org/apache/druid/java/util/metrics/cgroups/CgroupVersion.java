@@ -17,27 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.server.security;
+package org.apache.druid.java.util.metrics.cgroups;
 
-import java.util.HashMap;
-import java.util.Map;
-
-public class AuthTestUtils
+/**
+ * Enumeration of supported cgroups versions
+ */
+public enum CgroupVersion
 {
-  public static final AuthenticatorMapper TEST_AUTHENTICATOR_MAPPER;
-  public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER;
-
-  static {
-    final Map<String, Authenticator> defaultMap = new HashMap<>();
-    defaultMap.put(AuthConfig.ALLOW_ALL_NAME, new AllowAllAuthenticator());
-    TEST_AUTHENTICATOR_MAPPER = new AuthenticatorMapper(defaultMap);
-
-    TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null) {
-      @Override
-      public Authorizer getAuthorizer(String name)
-      {
-        return new AllowAllAuthorizer(null);
-      }
-    };
-  }
+  V1,
+  V2,
+  UNKNOWN
 }

@@ -43,10 +43,9 @@ public interface SegmentCacheManager
    */
   boolean canHandleSegments();
 
-  default boolean canLoadSegmentOnDemand(DataSegment segment)
-  {
-    return false;
-  }
+  boolean canLoadSegmentsOnDemand();
+
+  boolean canLoadSegmentOnDemand(DataSegment segment);
 
   /**
    * Return a list of cached segments from local disk, if any. This should be called only when

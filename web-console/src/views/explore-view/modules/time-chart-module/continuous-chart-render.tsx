@@ -255,10 +255,13 @@ export const ContinuousChartRender = function ContinuousChartRender(
   const chartMargin = { ...margin, ...getDefaultChartMargin(yAxisPosition) };
 
   // Calculate height for each chart based on number of measures
-  const totalGapHeight = (numMeasures - 1) * MEASURE_GAP;
-  const chartHeight = Math.floor(
-    (stage.height - chartMargin.top - chartMargin.bottom - totalGapHeight) / numMeasures,
-  );
+  const totalGapHeight = Math.max(0, (numMeasures - 1) * MEASURE_GAP);
+  const chartHeight =
+    numMeasures > 0
+      ? Math.floor(
+          (stage.height - chartMargin.top - chartMargin.bottom - totalGapHeight) / numMeasures,
+        )
+      : 0;
   const singleChartStage = new Stage(stage.width, chartHeight);
   const innerStage = singleChartStage.applyMargin({
     top: 0,
@@ -294,6 +297,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
   );
 
   function getMeasureIndexFromY(y: number): number {
+    if (numMeasures === 0) return 0;
     const totalChartsHeight = chartHeight * numMeasures + totalGapHeight;
     if (y < 0 || y > totalChartsHeight) return 0;
     const index = Math.floor(y / (chartHeight + MEASURE_GAP));
@@ -521,6 +525,16 @@ export const ContinuousChartRender = function ContinuousChartRender(
   const nowX = timeScale(now);
   const totalChartsHeight = chartHeight * numMeasures + totalGapHeight;
   const xAxisHeight = 25;
+
+  if (numMeasures === 0) {
+    return (
+      <div className="continuous-chart-render">
+        <div className="empty-placeholder">
+          <div className="no-data-text">No measures configured</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="continuous-chart-render">
