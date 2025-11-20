@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.jackson.StringObjectPairList;
@@ -32,6 +33,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.utils.JvmUtils;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -50,10 +52,13 @@ import java.util.Objects;
 public class DiscoveryDruidNode
 {
   private static final Logger LOG = new Logger(DiscoveryDruidNode.class);
+  private static final int UNKNOWN_VALUE = -1;
 
   private final DruidNode druidNode;
   private final NodeRole nodeRole;
   private final DateTime startTime;
+  private final Integer availableProcessors;
+  private final Long totalMemory;
 
   /**
    * Map of service name -> DruidServices.
@@ -65,20 +70,36 @@ public class DiscoveryDruidNode
    */
   private final Map<String, DruidService> services = new HashMap<>();
 
+  /**
+   * Constructor for tests. In production, the @Inject constructor is used instead.
+   */
+  @VisibleForTesting
+  public DiscoveryDruidNode(
+      DruidNode druidNode,
+      NodeRole nodeRole,
+      Map<String, DruidService> services,
+      DateTime startTime
+  )
+  {
+    this(druidNode, nodeRole, services, startTime, Runtime.getRuntime().availableProcessors(), JvmUtils.getTotalMemory());
+  }
+
   public DiscoveryDruidNode(
       DruidNode druidNode,
       NodeRole nodeRole,
       Map<String, DruidService> services
   )
   {
-    this(druidNode, nodeRole, services, DateTimes.nowUtc());
+    this(druidNode, nodeRole, services, DateTimes.nowUtc(), Runtime.getRuntime().availableProcessors(), JvmUtils.getTotalMemory());
   }
 
   public DiscoveryDruidNode(
       DruidNode druidNode,
       NodeRole nodeRole,
       Map<String, DruidService> services,
-      DateTime startTime
+      DateTime startTime,
+      Integer availableProcessors,
+      Long totalMemory
   )
   {
     this.druidNode = druidNode;
@@ -88,6 +109,10 @@ public class DiscoveryDruidNode
       this.services.putAll(services);
     }
     this.startTime = startTime;
+
+    // Happens if service is running older version of Druid
+    this.availableProcessors = availableProcessors != null ? availableProcessors : UNKNOWN_VALUE;
+    this.totalMemory = totalMemory != null ? totalMemory : UNKNOWN_VALUE;
   }
 
   @JsonCreator
@@ -96,6 +121,8 @@ public class DiscoveryDruidNode
       @JsonProperty("nodeType") NodeRole nodeRole,
       @JsonProperty("services") Map<String, StringObjectPairList> rawServices,
       @JsonProperty("startTime") DateTime startTime,
+      @JsonProperty("availableProcessors") Integer availableProcessors,
+      @JsonProperty("totalMemory") Long totalMemory,
       @JacksonInject ObjectMapper jsonMapper
   )
   {
@@ -111,7 +138,7 @@ public class DiscoveryDruidNode
         }
       }
     }
-    return new DiscoveryDruidNode(druidNode, nodeRole, services, startTime);
+    return new DiscoveryDruidNode(druidNode, nodeRole, services, startTime, availableProcessors, totalMemory);
   }
 
   /**
@@ -188,6 +215,18 @@ public class DiscoveryDruidNode
     return startTime;
   }
 
+  @JsonProperty
+  public Integer getAvailableProcessors()
+  {
+    return availableProcessors;
+  }
+
+  @JsonProperty
+  public Long getTotalMemory()
+  {
+    return totalMemory;
+  }
+
   @Nullable
   @JsonIgnore
   public <T extends DruidService> T getService(String key, Class<T> clazz)
@@ -235,13 +274,15 @@ public class DiscoveryDruidNode
     DiscoveryDruidNode that = (DiscoveryDruidNode) o;
     return Objects.equals(druidNode, that.druidNode) &&
            Objects.equals(nodeRole, that.nodeRole) &&
-           Objects.equals(services, that.services);
+           Objects.equals(services, that.services) &&
+           Objects.equals(availableProcessors, that.availableProcessors) &&
+           Objects.equals(totalMemory, that.totalMemory);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(druidNode, nodeRole, services);
+    return Objects.hash(druidNode, nodeRole, services, availableProcessors, totalMemory);
   }
 
   @Override
@@ -252,6 +293,8 @@ public class DiscoveryDruidNode
            ", nodeRole='" + nodeRole + '\'' +
            ", services=" + services + '\'' +
            ", startTime=" + startTime +
+           ", availableProcessors=" + availableProcessors +
+           ", totalMemory=" + totalMemory +
            '}';
   }
 }
