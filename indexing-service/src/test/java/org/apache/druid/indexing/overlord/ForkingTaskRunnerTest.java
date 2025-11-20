@@ -538,9 +538,11 @@ public class ForkingTaskRunnerTest
   @Test
   public void testTaskStatusWhenTaskLogUploadFails() throws Exception
   {
-    class ExceptionTaskLogs extends NoopTaskLogs {
+    class ExceptionTaskLogs extends NoopTaskLogs
+    {
       @Override
-      public void pushTaskLog(String taskid, File logFile) {
+      public void pushTaskLog(String taskid, File logFile)
+      {
         throw new RuntimeException("Exception occurred while pushing task logs");
       }
     }
@@ -563,7 +565,8 @@ public class ForkingTaskRunnerTest
     )
     {
       @Override
-      ProcessHolder runTaskProcess(List<String> command, File logFile, TaskLocation taskLocation) throws IOException {
+      ProcessHolder runTaskProcess(List<String> command, File logFile, TaskLocation taskLocation) throws IOException
+      {
         for (String param : command) {
           if (param.endsWith(task.getId())) {
             final String basePath = getTracker().pickStorageSlot(task.getId()).getDirectory().getAbsolutePath();
