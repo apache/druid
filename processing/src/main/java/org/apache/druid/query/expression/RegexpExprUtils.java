@@ -40,7 +40,7 @@ public class RegexpExprUtils
       throw InvalidInput.exception(
           e,
           StringUtils.format(
-              "An invalid pattern [%s] was provided for the %s function, error: [%s]",
+              "An invalid pattern [%s] was provided for the [%s] function, error: [%s]",
               e.getPattern(),
               functionName,
               e.getMessage()

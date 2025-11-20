@@ -51,7 +51,7 @@ public class RegexpReplaceExprMacroTest extends MacroTestBase
             DruidException.class,
             () -> eval("regexp_replace(a, '[Ab-cd-0]', 'xyz')", InputBindings.nilBindings())),
         DruidExceptionMatcher.invalidInput().expectMessageContains(
-            "An invalid pattern [[Ab-cd-0]] was provided for the regexp_replace function,"
+            "An invalid pattern [[Ab-cd-0]] was provided for the [regexp_replace] function,"
             + " error: [Illegal character range near index 7"
         )
     );

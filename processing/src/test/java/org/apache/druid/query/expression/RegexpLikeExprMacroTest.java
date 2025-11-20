@@ -57,7 +57,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
             DruidException.class,
             () -> eval("regexp_like('a', '[Ab-C]')", InputBindings.nilBindings())),
         DruidExceptionMatcher.invalidInput().expectMessageContains(
-            "An invalid pattern [[Ab-C]] was provided for the regexp_like function,"
+            "An invalid pattern [[Ab-C]] was provided for the [regexp_like] function,"
             + " error: [Illegal character range near index 4"
         )
     );

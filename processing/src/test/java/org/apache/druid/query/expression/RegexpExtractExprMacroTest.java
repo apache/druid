@@ -60,7 +60,7 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
             )
         ),
         DruidExceptionMatcher.invalidInput().expectMessageContains(
-            "An invalid pattern [[ab-0-9]] was provided for the regexp_extract function,"
+            "An invalid pattern [[ab-0-9]] was provided for the [regexp_extract] function,"
             + " error: [Illegal character range near index 4"
         )
     );
