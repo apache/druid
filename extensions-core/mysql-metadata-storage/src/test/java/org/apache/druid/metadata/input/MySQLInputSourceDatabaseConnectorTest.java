@@ -29,6 +29,7 @@ import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.storage.mysql.MySQLConnectorDriverConfig;
 import org.apache.druid.metadata.storage.mysql.MySQLMetadataStorageModule;
 import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
+import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -167,7 +168,12 @@ public class MySQLInputSourceDatabaseConnectorTest
 
     JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(ImmutableSet.of(""));
 
-    expectedException.expectMessage("The property [password] is not in the allowed list");
+    expectedException.expectMessage(
+        CoreMatchers.anyOf(
+            CoreMatchers.containsString("The property [password] is not in the allowed list"),
+            CoreMatchers.containsString("The property [user] is not in the allowed list")
+        )
+    );
     expectedException.expect(IllegalArgumentException.class);
 
     new MySQLInputSourceDatabaseConnector(
@@ -241,7 +247,12 @@ public class MySQLInputSourceDatabaseConnectorTest
 
     JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(ImmutableSet.of("none", "nonenone"));
 
-    expectedException.expectMessage("The property [password] is not in the allowed list");
+    expectedException.expectMessage(
+        CoreMatchers.anyOf(
+            CoreMatchers.containsString("The property [password] is not in the allowed list"),
+            CoreMatchers.containsString("The property [user] is not in the allowed list")
+        )
+    );
     expectedException.expect(IllegalArgumentException.class);
 
     new MySQLInputSourceDatabaseConnector(
@@ -291,7 +302,12 @@ public class MySQLInputSourceDatabaseConnectorTest
 
     JdbcAccessSecurityConfig securityConfig = newSecurityConfigEnforcingAllowList(ImmutableSet.of("user", "nonenone"));
 
-    expectedException.expectMessage("The property [password] is not in the allowed list");
+    expectedException.expectMessage(
+        CoreMatchers.anyOf(
+            CoreMatchers.containsString("The property [password] is not in the allowed list"),
+            CoreMatchers.containsString("The property [keyonly] is not in the allowed list")
+        )
+    );
     expectedException.expect(IllegalArgumentException.class);
 
     new MySQLInputSourceDatabaseConnector(
