@@ -608,13 +608,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
+  /**
+   * Clears allocation information including active task groups, partition groups, partition offsets, and partition IDs.
+   * <p>
+   * Note: Does not clear {@link #pendingCompletionTaskGroups} so that the supervisor remembers that these
+   * tasks are publishing and auto-scaler does not repeatedly attempt a scale down until these tasks
+   * complete. If this is cleared, the next {@link #discoverTasks()} might add these tasks to
+   * {@link #activelyReadingTaskGroups}.
+   */
   private void clearAllocationInfo()
   {
     activelyReadingTaskGroups.clear();
     partitionGroups.clear();
     partitionOffsets.clear();
-
-    pendingCompletionTaskGroups.clear();
     partitionIds.clear();
   }
 

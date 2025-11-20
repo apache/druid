@@ -47,6 +47,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
@@ -63,6 +64,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
+import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
@@ -73,6 +75,14 @@ import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthorizationResult;
+import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Escalator;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
@@ -262,7 +272,9 @@ public class MSQCompactionRunner implements CompactionRunner
       } else {
         query = buildScanQuery(compactionTask, interval, dataSchema, inputColToVirtualCol);
       }
+
       QueryContext compactionTaskContext = new QueryContext(compactionTask.getContext());
+
       DataSourceMSQDestination destination = buildMSQDestination(compactionTask, dataSchema);
 
       boolean isReindex = MSQControllerTask.isReplaceInputDataSourceTask(query, destination);
@@ -370,6 +382,28 @@ public class MSQCompactionRunner implements CompactionRunner
     return rowSignatureBuilder.build();
   }
 
+  /**
+   * Creates a {@link DataSource} and uses 'system' {@link AuthorizationResult} using an {@link Escalator} and
+   * {@link AuthorizerMapper} and applies any resulting {@link org.apache.druid.query.policy.Policy} to it using
+   * {@link DataSource#withPolicies(Map, PolicyEnforcer)}
+   */
+  private DataSource getInputDataSource(String name)
+  {
+    TableDataSource dataSource = new TableDataSource(name);
+    final Escalator escalator = injector.getInstance(Escalator.class);
+    if (escalator != null) {
+      final AuthorizerMapper authorizerMapper = injector.getInstance(AuthorizerMapper.class);
+      final PolicyEnforcer policyEnforcer = injector.getInstance(PolicyEnforcer.class);
+      final AuthorizationResult authResult = AuthorizationUtils.authorizeAllResourceActions(
+          escalator.createEscalatedAuthenticationResult(),
+          List.of(new ResourceAction(new Resource(name, ResourceType.DATASOURCE), Action.READ)),
+          authorizerMapper
+      );
+      return dataSource.withPolicies(authResult.getPolicyMap(), policyEnforcer);
+    }
+    return dataSource;
+  }
+
   private static List<DimensionSpec> getAggregateDimensions(
       DataSchema dataSchema,
       Map<String, VirtualColumn> inputColToVirtualCol
@@ -457,7 +491,7 @@ public class MSQCompactionRunner implements CompactionRunner
     return queryContext;
   }
 
-  private static Query<?> buildScanQuery(
+  private Query<?> buildScanQuery(
       CompactionTask compactionTask,
       Interval interval,
       DataSchema dataSchema,
@@ -467,7 +501,7 @@ public class MSQCompactionRunner implements CompactionRunner
     RowSignature rowSignature = getRowSignature(dataSchema);
     VirtualColumns virtualColumns = VirtualColumns.create(new ArrayList<>(inputColToVirtualCol.values()));
     Druids.ScanQueryBuilder scanQueryBuilder = new Druids.ScanQueryBuilder()
-        .dataSource(dataSchema.getDataSource())
+        .dataSource(getInputDataSource(dataSchema.getDataSource()))
         .columns(rowSignature.getColumnNames())
         .virtualColumns(virtualColumns)
         .columnTypes(rowSignature.getColumnTypes())
@@ -618,7 +652,7 @@ public class MSQCompactionRunner implements CompactionRunner
                             .collect(Collectors.toList());
 
     GroupByQuery.Builder builder = new GroupByQuery.Builder()
-        .setDataSource(new TableDataSource(compactionTask.getDataSource()))
+        .setDataSource(getInputDataSource(compactionTask.getDataSource()))
         .setVirtualColumns(virtualColumns)
         .setDimFilter(dimFilter)
         .setGranularity(new AllGranularity())

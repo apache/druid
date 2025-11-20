@@ -17,100 +17,70 @@
  * under the License.
  */
 
-package org.apache.druid.tests.security;
+package org.apache.druid.testing.embedded.auth;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.tools.ITRetryUtil;
-import org.apache.druid.testing.tools.IntegrationTestingConfig;
-import org.apache.druid.testing.utils.HttpUtil;
-import org.apache.druid.tests.TestNGGroup;
+import org.apache.druid.testing.embedded.EmbeddedResource;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Guice;
-import org.testng.annotations.Test;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.junit.jupiter.api.Test;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-@Test(groups = TestNGGroup.LDAP_SECURITY)
-@Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationTest
+public class BasicAuthLdapConfigurationTest extends AbstractAuthConfigurationTest
 {
-  private static final Logger LOG = new Logger(ITBasicAuthLdapConfigurationTest.class);
-
   private static final String LDAP_AUTHENTICATOR = "ldap";
   private static final String LDAP_AUTHORIZER = "ldapauth";
 
   private static final String EXPECTED_AVATICA_AUTH_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: " + Access.DEFAULT_ERROR_MESSAGE;
   private static final String EXPECTED_AVATICA_AUTHZ_ERROR = "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: " + Access.DEFAULT_ERROR_MESSAGE;
 
-  @Inject
-  IntegrationTestingConfig config;
-
-  @Inject
-  ObjectMapper jsonMapper;
-
-
   private HttpClient druidUserClient;
   private HttpClient stateOnlyNoLdapGroupUserClient;
 
-  @BeforeClass
-  public void before() throws Exception
+  @Override
+  protected EmbeddedResource getAuthResource()
   {
-    // ensure that auth_test segments are loaded completely, we use them for testing system schema tables
-    ITRetryUtil.retryUntilTrue(
-        () -> coordinatorClient.areSegmentsLoaded("auth_test"), "auth_test segment load"
-    );
-
-    setupHttpClientsAndUsers();
-    setExpectedSystemSchemaObjects();
+    return new LdapAuthResource();
   }
 
   @Test
-  public void test_systemSchemaAccess_stateOnlyNoLdapGroupUser() throws Exception
+  public void test_systemSchemaAccess_stateOnlyNoLdapGroupUser()
   {
-    HttpUtil.makeRequest(getHttpClient(User.STATE_ONLY_USER), HttpMethod.GET, config.getBrokerUrl() + "/status", null);
+    HttpUtil.makeRequest(getHttpClient(User.STATE_ONLY_USER), HttpMethod.GET, getBrokerUrl() + "/status");
 
     // as user that can only read STATE
-    LOG.info("Checking sys.segments query as stateOnlyNoLdapGroupUser...");
     verifySystemSchemaQuery(
         stateOnlyNoLdapGroupUserClient,
         SYS_SCHEMA_SEGMENTS_QUERY,
-        Collections.emptyList()
+        "segment_id,num_rows,size"
     );
 
-    LOG.info("Checking sys.servers query as stateOnlyNoLdapGroupUser...");
     verifySystemSchemaServerQuery(
         stateOnlyNoLdapGroupUserClient,
         SYS_SCHEMA_SERVERS_QUERY,
         adminServers
     );
 
-    LOG.info("Checking sys.server_segments query as stateOnlyNoLdapGroupUser...");
     verifySystemSchemaQuery(
         stateOnlyNoLdapGroupUserClient,
         SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
-        Collections.emptyList()
+        "server,segment_id"
     );
 
-    LOG.info("Checking sys.tasks query as stateOnlyNoLdapGroupUser...");
     verifySystemSchemaQuery(
         stateOnlyNoLdapGroupUserClient,
         SYS_SCHEMA_TASKS_QUERY,
-        Collections.emptyList()
+        "task_id,group_id,type,datasource,status,location"
     );
   }
 
@@ -122,7 +92,7 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
 
 
   @Override
-  protected void setupDatasourceOnlyUser() throws Exception
+  protected void setupDatasourceOnlyUser()
   {
     createRoleWithPermissionsAndGroupMapping(
         "datasourceOnlyGroup",
@@ -131,7 +101,7 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   }
 
   @Override
-  protected void setupDatasourceAndContextParamsUser() throws Exception
+  protected void setupDatasourceAndContextParamsUser()
   {
     createRoleWithPermissionsAndGroupMapping(
         "datasourceAndContextParamsGroup",
@@ -140,7 +110,7 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   }
 
   @Override
-  protected void setupDatasourceAndSysTableUser() throws Exception
+  protected void setupDatasourceAndSysTableUser()
   {
     createRoleWithPermissionsAndGroupMapping(
         "datasourceWithSysGroup",
@@ -149,7 +119,7 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   }
 
   @Override
-  protected void setupDatasourceAndSysAndStateUser() throws Exception
+  protected void setupDatasourceAndSysAndStateUser()
   {
     createRoleWithPermissionsAndGroupMapping(
         "datasourceWithStateGroup",
@@ -158,7 +128,7 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   }
 
   @Override
-  protected void setupSysTableAndStateOnlyUser() throws Exception
+  protected void setupSysTableAndStateOnlyUser()
   {
     createRoleWithPermissionsAndGroupMapping(
         "stateOnlyGroup",
@@ -233,7 +203,7 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
   private void createRoleWithPermissionsAndGroupMapping(
       String group,
       Map<String, List<ResourceAction>> roleTopermissions
-  ) throws Exception
+  )
   {
     final HttpClient adminClient = getHttpClient(User.ADMIN);
     roleTopermissions.keySet().forEach(role -> HttpUtil.makeRequest(
@@ -241,25 +211,24 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
         HttpMethod.POST,
         StringUtils.format(
             "%s/druid-ext/basic-security/authorization/db/ldapauth/roles/%s",
-            config.getCoordinatorUrl(),
+            getCoordinatorUrl(),
             role
-        ),
-        null
+        )
     ));
 
     for (Map.Entry<String, List<ResourceAction>> entry : roleTopermissions.entrySet()) {
       String role = entry.getKey();
       List<ResourceAction> permissions = entry.getValue();
-      byte[] permissionsBytes = jsonMapper.writeValueAsBytes(permissions);
       HttpUtil.makeRequest(
           adminClient,
           HttpMethod.POST,
           StringUtils.format(
               "%s/druid-ext/basic-security/authorization/db/ldapauth/roles/%s/permissions",
-              config.getCoordinatorUrl(),
+              getCoordinatorUrl(),
               role
           ),
-          permissionsBytes
+          permissions,
+          HttpResponseStatus.OK
       );
     }
 
@@ -269,16 +238,16 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
         StringUtils.format("cn=%s,ou=Groups,dc=example,dc=org", group),
         roleTopermissions.keySet()
     );
-    byte[] groupMappingBytes = jsonMapper.writeValueAsBytes(groupMapping);
     HttpUtil.makeRequest(
         adminClient,
         HttpMethod.POST,
         StringUtils.format(
             "%s/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/%s",
-            config.getCoordinatorUrl(),
+            getCoordinatorUrl(),
             groupMappingName
         ),
-        groupMappingBytes
+        groupMapping,
+        HttpResponseStatus.OK
     );
   }
 
@@ -293,10 +262,9 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
         HttpMethod.POST,
         StringUtils.format(
             "%s/druid-ext/basic-security/authorization/db/ldapauth/users/%s",
-            config.getCoordinatorUrl(),
+            getCoordinatorUrl(),
             user
-        ),
-        null
+        )
     );
 
     HttpUtil.makeRequest(
@@ -304,11 +272,10 @@ public class ITBasicAuthLdapConfigurationTest extends AbstractAuthConfigurationT
         HttpMethod.POST,
         StringUtils.format(
             "%s/druid-ext/basic-security/authorization/db/ldapauth/users/%s/roles/%s",
-            config.getCoordinatorUrl(),
+            getCoordinatorUrl(),
             user,
             role
-        ),
-        null
+        )
     );
   }
 }

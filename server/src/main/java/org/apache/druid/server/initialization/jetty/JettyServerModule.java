@@ -212,7 +212,7 @@ public class JettyServerModule extends JerseyServletModule
     threadPool.setDaemon(true);
     jettyServerThreadPool = threadPool;
 
-    final Server server = new Server(threadPool);
+    final Server server = new Server(jettyServerThreadPool);
 
     // Without this bean set, the default ScheduledExecutorScheduler runs as non-daemon, causing lifecycle hooks to fail
     // to fire on main exit. Related bug: https://github.com/apache/druid/pull/1627
@@ -519,16 +519,20 @@ public class JettyServerModule extends JerseyServletModule
   @LazySingleton
   public JettyMonitor getJettyMonitor(DataSourceTaskIdHolder dataSourceTaskIdHolder)
   {
-    return new JettyMonitor(dataSourceTaskIdHolder.getDataSource(), dataSourceTaskIdHolder.getTaskId());
+    return new JettyMonitor(
+        MonitorsConfig.mapOfDatasourceAndTaskID(
+            dataSourceTaskIdHolder.getDataSource(), dataSourceTaskIdHolder.getTaskId()
+        )
+    );
   }
 
   public static class JettyMonitor extends AbstractMonitor
   {
     private final Map<String, String[]> dimensions;
 
-    public JettyMonitor(String dataSource, String taskId)
+    public JettyMonitor(Map<String, String[]> dimensions)
     {
-      this.dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(dataSource, taskId);
+      this.dimensions = dimensions;
     }
 
     @Override

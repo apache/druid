@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.query.DruidMetrics;
 
+import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -79,13 +80,23 @@ public class MonitorsConfig
            '}';
   }
 
-  public static Map<String, String[]> mapOfDatasourceAndTaskID(final String datasource, final String taskId)
+  /**
+   * @return a map of {@code datasource} and {@code taskId} dimensions if provided; otherwise, returns an empty map.
+   * When {@code taskId} is provided, both {@link DruidMetrics#ID} and {@link DruidMetrics#TASK_ID} dimensions are added
+   * to the map for backward compatibility. {@link DruidMetrics#ID} is deprecated because it's ambiguous and will be
+   * removed in a future release.
+   */
+  public static Map<String, String[]> mapOfDatasourceAndTaskID(
+      @Nullable final String datasource,
+      @Nullable final String taskId
+  )
   {
     final ImmutableMap.Builder<String, String[]> builder = ImmutableMap.builder();
     if (datasource != null) {
       builder.put(DruidMetrics.DATASOURCE, new String[]{datasource});
     }
     if (taskId != null) {
+      builder.put(DruidMetrics.TASK_ID, new String[]{taskId});
       builder.put(DruidMetrics.ID, new String[]{taskId});
     }
     return builder.build();

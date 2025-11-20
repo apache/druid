@@ -193,4 +193,22 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
       this.path = path;
     }
   }
+
+  @Override
+  public Cpu.CpuMetrics getCpuMetrics()
+  {
+    return new Cpu(this).snapshot();
+  }
+
+  @Override
+  public CpuSet.CpuSetMetric getCpuSetMetrics()
+  {
+    return new CpuSet(this).snapshot();
+  }
+
+  @Override
+  public CgroupVersion getCgroupVersion()
+  {
+    return CgroupVersion.V1;
+  }
 }

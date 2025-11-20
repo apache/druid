@@ -29,7 +29,7 @@ getComposeArgs()
   if [ "$DRUID_INTEGRATION_TEST_INDEXER" = "indexer" ]
   then
     # Sanity check: cannot combine CliIndexer tests with security, query-retry tests
-    if [ "$DRUID_INTEGRATION_TEST_GROUP" = "security" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "ldap-security" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-retry" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-error" ]
+    if [ "$DRUID_INTEGRATION_TEST_GROUP" = "security" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-retry" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-error" ]
     then
       echo "Cannot run test group '$DRUID_INTEGRATION_TEST_GROUP' with CliIndexer"
       exit 1
@@ -41,10 +41,6 @@ getComposeArgs()
   then
     # default + additional druid router (custom-check-tls, permissive-tls, no-client-auth-tls)
     echo "-f ${DOCKERDIR}/docker-compose.yml -f ${DOCKERDIR}/docker-compose.security.yml"
-  elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "ldap-security" ]
-  then
-    # default + additional druid router (custom-check-tls, permissive-tls, no-client-auth-tls)
-    echo "-f ${DOCKERDIR}/docker-compose.yml -f ${DOCKERDIR}/docker-compose.ldap-security.yml"
   elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-retry" ]
   then
     # default + additional historical modified for query retry test
