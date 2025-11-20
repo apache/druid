@@ -667,13 +667,13 @@ name: Apache Commons Lang
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.18.0
+version: 3.19.0
 libraries:
   - org.apache.commons: commons-lang3
 notices:
   - commons-lang3: |
       Apache Commons Lang
-      Copyright 2001-2021 The Apache Software Foundation
+      Copyright 2001-2025 The Apache Software Foundation
 
       This product includes software developed at
       The Apache Software Foundation (https://www.apache.org/).
@@ -1016,6 +1016,15 @@ version: 2.2.1
 libraries:
   - org.joda: joda-convert
 
+---
+
+name: org.jooq joou-java-6
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 0.9.4
+libraries:
+  - org.jooq: joou-java-6
 
 ---
 
@@ -1303,12 +1312,16 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.122.Final
+version: 4.2.6.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
+  - io.netty: netty-codec-base
+  - io.netty: netty-codec-compression
   - io.netty: netty-codec-dns
   - io.netty: netty-codec-http
+  - io.netty: netty-codec-marshalling
+  - io.netty: netty-codec-protobuf
   - io.netty: netty-codec-socks
   - io.netty: netty-common
   - io.netty: netty-handler
@@ -1688,7 +1701,7 @@ name: Apache Calcite Avatica
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.26.0
+version: 1.27.0
 libraries:
   - org.apache.calcite.avatica: avatica-core
   - org.apache.calcite.avatica: avatica-metrics
@@ -3603,7 +3616,7 @@ name: ICU4J
 license_category: binary
 module: java-core
 license_name: Unicode/ICU License
-version: 73.2
+version: 77.1
 copyright: International Business Machines Corporation and others
 license_file_path: licenses/bin/icu4j.ICU
 libraries:
@@ -4449,7 +4462,7 @@ name: Netty
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 2.0.72.Final
+version: 2.0.73.Final
 libraries:
   - io.netty: netty-tcnative-boringssl-static
   - io.netty: netty-tcnative-classes
@@ -4680,9 +4693,19 @@ notice: |
 
 ---
 
-name: org.apache.ranger ranger-plugins-audit
+name: org.apache.ranger ranger-plugins-audit-dest-es
 license_category: binary
-version: 2.4.0
+version: 2.7.0
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.ranger: ranger-plugins-audit
+
+---
+
+name: org.apache.ranger ranger-plugins-audit-dest-hdfs
+license_category: binary
+version: 2.7.0
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -4692,7 +4715,7 @@ libraries:
 
 name: org.apache.ranger ranger-plugins-common
 license_category: binary
-version: 2.4.0
+version: 2.7.0
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -5099,7 +5122,7 @@ name: Docker Java
 license_category: binary
 module: extensions-core/druid-testcontainers
 license_name: Apache License version 2.0
-version: 3.3.4
+version: 3.6.0
 libraries:
   - com.github.docker-java: docker-java-api
   - com.github.docker-java: docker-java-transport
@@ -5761,6 +5784,16 @@ license_file_path: licenses/bin/date-fns.MIT
 
 ---
 
+name: "dayjs"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: iamkun
+version: 1.11.15
+license_file_path: licenses/bin/dayjs.MIT
+
+---
+
 name: "delayed-stream"
 license_category: binary
 module: web-console
@@ -5815,7 +5848,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 1.2.0
+version: 1.2.1
 
 ---
 

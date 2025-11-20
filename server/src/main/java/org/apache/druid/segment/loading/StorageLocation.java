@@ -419,23 +419,18 @@ public class StorageLocation
   }
 
   /**
-   * Removes an item from {@link #staticCacheEntries} or {@link #weakCacheEntries}, reducing {@link #currSizeBytes}
-   * by {@link CacheEntry#getSize()}
+   * Removes an item from {@link #staticCacheEntries}, reducing {@link #currSizeBytes} by {@link CacheEntry#getSize()}.
+   * If the cache entry exists in {@link #weakCacheEntries}, it is left in place to be removed by
+   * {@link #reclaim(long)} instead.
    */
   public void release(CacheEntry entry)
   {
     lock.writeLock().lock();
     try {
-
       if (staticCacheEntries.containsKey(entry.getId())) {
         final CacheEntry toRemove = staticCacheEntries.remove(entry.getId());
         toRemove.unmount();
         currSizeBytes.getAndAdd(-entry.getSize());
-      } else if (weakCacheEntries.containsKey(entry.getId())) {
-        final WeakCacheEntry toRemove = weakCacheEntries.remove(entry.getId());
-        unlinkWeakEntry(toRemove);
-        toRemove.unmount();
-        stats.get().unmount();
       }
     }
     finally {
@@ -613,6 +608,32 @@ public class StorageLocation
     finally {
       lock.readLock().unlock();
     }
+  }
+
+  /**
+   * Unmounts all static and weakly held cache entries and resets stats and size tracking. Currently only for testing.
+   */
+  @VisibleForTesting
+  public void reset()
+  {
+    lock.writeLock().lock();
+    try {
+      for (CacheEntry entry : staticCacheEntries.values()) {
+        entry.unmount();
+      }
+      staticCacheEntries.clear();
+      while (head != null) {
+        head.unmount();
+        head = head.next;
+      }
+      weakCacheEntries.clear();
+    }
+    finally {
+      lock.writeLock().unlock();
+    }
+    currSizeBytes.set(0);
+    currWeakSizeBytes.set(0);
+    resetStats();
   }
 
   public Stats getStats()

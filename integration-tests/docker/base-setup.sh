@@ -27,8 +27,8 @@ apt-get update
 # wget
 apt-get install -y wget
 
-# MySQL (Metadata store), modern Debian-based systems install mariadb-server
-apt-get install -y default-mysql-server
+# MariaDB metadata store
+apt-get install -y mariadb-server
 
 # Supervisor
 apt-get install -y supervisor

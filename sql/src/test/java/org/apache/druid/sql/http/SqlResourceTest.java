@@ -406,7 +406,7 @@ public class SqlResourceTest extends CalciteTestBase
     checkSqlRequestLog(true);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
     stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
-    Assert.assertEquals(200, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.CODE));
+    Assert.assertEquals(200, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -494,7 +494,7 @@ public class SqlResourceTest extends CalciteTestBase
     stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
     stubServiceEmitter.verifyValue("sqlQuery/bytes", 27L);
     stubServiceEmitter.verifyEmitted("sqlQuery/planningTimeMs", 1);
-    Assert.assertEquals(200, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.CODE));
+    Assert.assertEquals(200, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
 
@@ -1547,7 +1547,7 @@ public class SqlResourceTest extends CalciteTestBase
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
     stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
-    Assert.assertEquals(400, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.CODE));
+    Assert.assertEquals(400, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -1570,7 +1570,7 @@ public class SqlResourceTest extends CalciteTestBase
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
     stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
-    Assert.assertEquals(400, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.CODE));
+    Assert.assertEquals(400, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   /**
@@ -1594,7 +1594,7 @@ public class SqlResourceTest extends CalciteTestBase
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
     stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
-    Assert.assertEquals(400, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.CODE));
+    Assert.assertEquals(400, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -1787,7 +1787,7 @@ public class SqlResourceTest extends CalciteTestBase
     );
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
     stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
-    Assert.assertEquals(400, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.CODE));
+    Assert.assertEquals(400, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -1887,7 +1887,7 @@ public class SqlResourceTest extends CalciteTestBase
     stubServiceEmitter.verifyEmitted("sqlQuery/time", 3);
     Map<Integer, Long> codeFrequencies = stubServiceEmitter.getMetricEvents("sqlQuery/time").stream()
                                                            .map(event -> event.toMap())
-                                                           .map(map -> (int) map.get(DruidMetrics.CODE))
+                                                           .map(map -> (int) map.get(DruidMetrics.STATUS_CODE))
                                                            .collect(Collectors.groupingBy(
                                                                code -> code,
                                                                Collectors.counting()
@@ -1927,7 +1927,7 @@ public class SqlResourceTest extends CalciteTestBase
     );
     Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
     stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
-    Assert.assertEquals(504, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.CODE));
+    Assert.assertEquals(504, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -1964,7 +1964,7 @@ public class SqlResourceTest extends CalciteTestBase
         ""
     );
     stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
-    Assert.assertEquals(500, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.CODE));
+    Assert.assertEquals(500, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -1994,7 +1994,7 @@ public class SqlResourceTest extends CalciteTestBase
     ErrorResponse exception = deserializeResponse(queryResponse, ErrorResponse.class);
     validateLegacyQueryExceptionErrorResponse(exception, "Query cancelled", null, "");
     stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
-    Assert.assertEquals(500, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.CODE));
+    Assert.assertEquals(500, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -2078,7 +2078,7 @@ public class SqlResourceTest extends CalciteTestBase
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
     stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
-    Assert.assertEquals(400, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.CODE));
+    Assert.assertEquals(400, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   @Test
@@ -2096,7 +2096,7 @@ public class SqlResourceTest extends CalciteTestBase
     );
     checkSqlRequestLog(false);
     stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
-    Assert.assertEquals(400, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.CODE));
+    Assert.assertEquals(400, stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
   }
 
   private void checkSqlRequestLog(boolean success)

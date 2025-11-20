@@ -449,33 +449,33 @@
     "dimensions": [
       "fsDevName"
     ],
-    "type": "counter"
+    "type": "gauge"
   },
   "sys/disk/read/count": {
     "dimensions": [
       "fsDevName"
     ],
-    "type": "counter"
+    "type": "gauge"
   },
   "sys/disk/write/size": {
     "dimensions": [
       "fsDevName"
     ],
-    "type": "counter"
+    "type": "gauge"
   },
   "sys/disk/read/size": {
     "dimensions": [
       "fsDevName"
     ],
-    "type": "counter"
+    "type": "gauge"
   },
   "sys/net/write/size": {
     "dimensions": [],
-    "type": "counter"
+    "type": "gauge"
   },
   "sys/net/read/size": {
     "dimensions": [],
-    "type": "counter"
+    "type": "gauge"
   },
   "sys/fs/used": {
     "dimensions": [

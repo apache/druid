@@ -27,8 +27,6 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.FilterBundle;
 
-import javax.annotation.Nullable;
-
 /**
  * This class is implemented with delegation to another QueryMetrics for compatibility, see "Making subinterfaces of
  * QueryMetrics for emitting custom dimensions and/or metrics for specific query types" section in {@link QueryMetrics}
@@ -148,9 +146,9 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
-  public void code(@Nullable Throwable error)
+  public void statusCode(int code)
   {
-    delegateQueryMetrics.code(error);
+    delegateQueryMetrics.statusCode(code);
   }
 
   @Override
@@ -223,6 +221,48 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   public QueryMetrics reportSegmentAndCacheTime(long timeNs)
   {
     return delegateQueryMetrics.reportSegmentAndCacheTime(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportSegmentOnDemandLoadTime(long timeNs)
+  {
+    return delegateQueryMetrics.reportSegmentOnDemandLoadTime(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportSegmentOnDemandLoadTimeAvg(long timeNs)
+  {
+    return delegateQueryMetrics.reportSegmentOnDemandLoadTimeAvg(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportSegmentOnDemandLoadWaitTimeMax(long timeNs)
+  {
+    return delegateQueryMetrics.reportSegmentOnDemandLoadWaitTimeMax(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportSegmentOnDemandLoadWaitTimeAvg(long timeNs)
+  {
+    return delegateQueryMetrics.reportSegmentOnDemandLoadWaitTimeAvg(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportSegmentOnDemandLoadTimeMax(long timeNs)
+  {
+    return delegateQueryMetrics.reportSegmentOnDemandLoadTimeMax(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportSegmentOnDemandLoadBytes(long byteCount)
+  {
+    return delegateQueryMetrics.reportSegmentOnDemandLoadBytes(byteCount);
+  }
+
+  @Override
+  public QueryMetrics reportSegmentOnDemandLoadCount(long count)
+  {
+    return delegateQueryMetrics.reportSegmentOnDemandLoadCount(count);
   }
 
   @Override

@@ -106,10 +106,11 @@ class StorageLocationTest
     location.release(entry2);
     location.release(entry3);
     location.release(entry4);
-    Assertions.assertFalse(location.isWeakReserved(entry1.getId()));
-    Assertions.assertFalse(location.isWeakReserved(entry2.getId()));
-    Assertions.assertFalse(location.isWeakReserved(entry3.getId()));
-    Assertions.assertFalse(location.isWeakReserved(entry4.getId()));
+    // release does not remove weak entries
+    Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry4.getId()));
   }
 
   @Test
@@ -133,10 +134,11 @@ class StorageLocationTest
     location.release(entry3);
     location.release(entry2);
     location.release(entry1);
-    Assertions.assertFalse(location.isWeakReserved(entry1.getId()));
-    Assertions.assertFalse(location.isWeakReserved(entry2.getId()));
-    Assertions.assertFalse(location.isWeakReserved(entry3.getId()));
-    Assertions.assertFalse(location.isWeakReserved(entry4.getId()));
+    // release does not remove weak entries
+    Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry4.getId()));
   }
 
   @Test
@@ -167,12 +169,13 @@ class StorageLocationTest
       location.release(entry);
       entries.remove(toRemove);
     }
-    Assertions.assertFalse(location.isWeakReserved(entry1.getId()));
-    Assertions.assertFalse(location.isWeakReserved(entry2.getId()));
-    Assertions.assertFalse(location.isWeakReserved(entry3.getId()));
-    Assertions.assertFalse(location.isWeakReserved(entry4.getId()));
-    Assertions.assertEquals(0, location.currentSizeBytes());
-    Assertions.assertEquals(0, location.currentWeakSizeBytes());
+    // release does not remove weak entries
+    Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
+    Assertions.assertTrue(location.isWeakReserved(entry4.getId()));
+    Assertions.assertEquals(100, location.currentSizeBytes());
+    Assertions.assertEquals(100, location.currentWeakSizeBytes());
   }
 
   @Test

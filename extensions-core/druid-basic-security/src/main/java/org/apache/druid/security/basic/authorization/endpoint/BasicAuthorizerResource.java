@@ -610,7 +610,6 @@ public class BasicAuthorizerResource
     return resourceHandler.getCachedGroupMappingMaps(authorizerName);
   }
 
-
   /**
    * Listen for update notifications for the user auth storage
    * @deprecated  path /listen/{authorizerName} is to replaced by /listen/users/{authorizerName}
@@ -630,10 +629,7 @@ public class BasicAuthorizerResource
   {
     authValidator.validateAuthorizerName(authorizerName);
 
-    final Response response = resourceHandler.authorizerUserUpdateListener(authorizerName, serializedUserAndRoleMap);
-    performAuditIfSuccess(authorizerName, req, response, "Update user authorization for authorizer[%s]", authorizerName);
-
-    return response;
+    return resourceHandler.authorizerUserUpdateListener(authorizerName, serializedUserAndRoleMap);
   }
 
   /**
@@ -652,10 +648,7 @@ public class BasicAuthorizerResource
   {
     authValidator.validateAuthorizerName(authorizerName);
 
-    final Response response = resourceHandler.authorizerUserUpdateListener(authorizerName, serializedUserAndRoleMap);
-    performAuditIfSuccess(authorizerName, req, response, "Update authorization for authorizer[%s]", authorizerName);
-
-    return response;
+    return resourceHandler.authorizerUserUpdateListener(authorizerName, serializedUserAndRoleMap);
   }
 
   /**
@@ -674,10 +667,7 @@ public class BasicAuthorizerResource
   {
     authValidator.validateAuthorizerName(authorizerName);
 
-    final Response response = resourceHandler.authorizerGroupMappingUpdateListener(authorizerName, serializedGroupMappingAndRoleMap);
-    performAuditIfSuccess(authorizerName, req, response, "Update group mappings for authorizer[%s]", authorizerName);
-
-    return response;
+    return resourceHandler.authorizerGroupMappingUpdateListener(authorizerName, serializedGroupMappingAndRoleMap);
   }
 
   private boolean isSuccess(Response response)

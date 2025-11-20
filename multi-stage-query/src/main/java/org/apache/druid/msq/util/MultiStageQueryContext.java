@@ -189,11 +189,10 @@ public class MultiStageQueryContext
    * {@link ControllerResource#httpPostCounters} would throw errors when encountering new counter types that they do
    * not yet recognize. This causes problems during rolling updates.
    *
-   * Once all servers are on Druid 31 or later, this can safely be flipped to "true". At that point, unknown counters
-   * are represented on the deserialization side using {@link NilQueryCounterSnapshot}.
+   * For a rolling update from a version prior to Druid 31, this must be set to "false" by the job submitter.
    */
   public static final String CTX_INCLUDE_ALL_COUNTERS = "includeAllCounters";
-  public static final boolean DEFAULT_INCLUDE_ALL_COUNTERS = false;
+  public static final boolean DEFAULT_INCLUDE_ALL_COUNTERS = true;
 
   public static final String CTX_FORCE_TIME_SORT = DimensionsSpec.PARAMETER_FORCE_TIME_SORT;
   private static final boolean DEFAULT_FORCE_TIME_SORT = DimensionsSpec.DEFAULT_FORCE_TIME_SORT;

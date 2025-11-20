@@ -317,7 +317,7 @@ public class DimensionCardinalityReportTest
     Map<Interval, Union> intervalToUnion = ImmutableMap.of(interval, negativeUnion);
     Map<Interval, Integer> intervalToNumShards =
         ParallelIndexSupervisorTask.computeIntervalToNumShards(10, intervalToUnion);
-    Assert.assertEquals(new Integer(7), intervalToNumShards.get(interval));
+    Assert.assertEquals(Integer.valueOf(7), intervalToNumShards.get(interval));
 
     List<LogEvent> loggingEvents = logger.getLogEvents();
     String expectedLogMessage =
@@ -343,7 +343,7 @@ public class DimensionCardinalityReportTest
     Map<Interval, Union> intervalToUnion = ImmutableMap.of(interval, union);
     Map<Interval, Integer> intervalToNumShards =
         ParallelIndexSupervisorTask.computeIntervalToNumShards(6, intervalToUnion);
-    Assert.assertEquals(new Integer(4), intervalToNumShards.get(interval));
+    Assert.assertEquals(Integer.valueOf(4), intervalToNumShards.get(interval));
   }
 
   @Test
@@ -356,7 +356,7 @@ public class DimensionCardinalityReportTest
     Map<Interval, Union> intervalToUnion = ImmutableMap.of(interval, union);
     Map<Interval, Integer> intervalToNumShards =
         ParallelIndexSupervisorTask.computeIntervalToNumShards(24, intervalToUnion);
-    Assert.assertEquals(new Integer(1), intervalToNumShards.get(interval));
+    Assert.assertEquals(Integer.valueOf(1), intervalToNumShards.get(interval));
 
     List<LogEvent> loggingEvents = logger.getLogEvents();
     String expectedLogMessage =

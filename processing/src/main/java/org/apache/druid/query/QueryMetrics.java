@@ -27,7 +27,6 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterBundle;
 import org.apache.druid.query.search.SearchQueryMetricsFactory;
 
-import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -243,10 +242,10 @@ public interface QueryMetrics<QueryType extends Query<?>>
   void success(boolean success);
 
   /**
-   * Translates the given query exception into the appropriate failure status code.
+   * Sets the query status code
    * See {@link DruidMetrics#computeStatusCode}.
    */
-  void code(@Nullable Throwable error);
+  void statusCode(int code);
 
   void segment(String segmentIdentifier);
 
@@ -361,6 +360,52 @@ public interface QueryMetrics<QueryType extends Query<?>>
    * Emitted once per segment.
    */
   QueryMetrics<QueryType> reportSegmentAndCacheTime(long timeNs);
+
+
+  /**
+   * Registers the apparent time spent loading segments on demand, before queing up for processing. This measurement is
+   * wall-clock time to when the last segment is finished loading and ready for processing.
+   * <p>
+   * Emitted once per query
+   */
+  QueryMetrics<QueryType> reportSegmentOnDemandLoadTime(long timeNs);
+  /**
+   * Registers the average time spent loading segments on demand across threads.
+   * <p>
+   * Emitted once per query
+   */
+  QueryMetrics<QueryType> reportSegmentOnDemandLoadTimeAvg(long timeNs);
+  /**
+   * Registers the maximum time spent loading segments on demand across all load threads.
+   * <p>
+   * Emitted once per query
+   */
+  QueryMetrics<QueryType> reportSegmentOnDemandLoadWaitTimeMax(long timeNs);
+  /**
+   * Registers the average time spent waiting for a thread to start loading segments on demand across threads.
+   * <p>
+   * Emitted once per query
+   */
+  QueryMetrics<QueryType> reportSegmentOnDemandLoadWaitTimeAvg(long timeNs);
+  /**
+   * Registers the maximum time spent waiting for a thread to start loading segments on demand across all load threads.
+   * <p>
+   * Emitted once per query
+   */
+  QueryMetrics<QueryType> reportSegmentOnDemandLoadTimeMax(long timeNs);
+  /**
+   * Registers the total number of bytes added to the cache when loading segments on demand, summing the sizes loaded by
+   * individual segement load threads.
+   * <p>
+   * Emitted once per query
+   */
+  QueryMetrics<QueryType> reportSegmentOnDemandLoadBytes(long byteCount);
+  /**
+   * Registers the total numer of segments loaded on demand.
+   * <p>
+   * Emitted once per query
+   */
+  QueryMetrics<QueryType> reportSegmentOnDemandLoadCount(long count);
 
   /**
    * Emits iff a given query polled the result-level cache and the success of that operation.

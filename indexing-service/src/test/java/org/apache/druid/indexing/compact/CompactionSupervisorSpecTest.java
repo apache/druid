@@ -137,7 +137,7 @@ public class CompactionSupervisorSpecTest
     supervisor.start();
     supervisor.stop(false);
 
-    Mockito.verify(scheduler, Mockito.times(1)).startCompaction(TestDataSource.WIKI, spec);
+    Mockito.verify(scheduler, Mockito.times(1)).startCompaction(TestDataSource.WIKI, supervisor);
     Mockito.verify(scheduler, Mockito.times(1)).stopCompaction(TestDataSource.WIKI);
   }
 
@@ -157,7 +157,7 @@ public class CompactionSupervisorSpecTest
     supervisor.start();
     supervisor.stop(false);
 
-    Mockito.verify(scheduler, Mockito.times(1)).startCompaction(TestDataSource.WIKI, spec);
+    Mockito.verify(scheduler, Mockito.times(1)).startCompaction(TestDataSource.WIKI, supervisor);
     Mockito.verify(scheduler, Mockito.times(1)).stopCompaction(TestDataSource.WIKI);
   }
 

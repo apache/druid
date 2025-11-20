@@ -30,7 +30,7 @@ import org.apache.druid.query.QuerySegmentWalker;
 import java.util.Properties;
 
 @Command(
-    name = "historical-for-query-error-test-ex",
+    name = "historical-for-query-error-test",
     description = "Runs a Historical node modified for query error test"
 )
 public class CliHistoricalForQueryErrorTest extends CliHistorical

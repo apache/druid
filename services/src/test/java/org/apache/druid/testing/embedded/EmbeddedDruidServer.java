@@ -162,19 +162,21 @@ public abstract class EmbeddedDruidServer<T extends EmbeddedDruidServer<T>> impl
   /**
    * Sets the amount of heap memory visible to the server through {@link RuntimeInfo}.
    */
-  public final EmbeddedDruidServer<T> setServerMemory(long serverMemory)
+  @SuppressWarnings("unchecked")
+  public final T setServerMemory(long serverMemory)
   {
     this.serverMemory = serverMemory;
-    return this;
+    return (T) this;
   }
 
   /**
    * Sets the amount of direct (off-heap) memory visible to the server through {@link RuntimeInfo}.
    */
-  public final EmbeddedDruidServer<T> setServerDirectMemory(long serverDirectMemory)
+  @SuppressWarnings("unchecked")
+  public final T setServerDirectMemory(long serverDirectMemory)
   {
     this.serverDirectMemory = serverDirectMemory;
-    return this;
+    return (T) this;
   }
 
   /**

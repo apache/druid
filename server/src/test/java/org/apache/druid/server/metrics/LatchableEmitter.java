@@ -24,6 +24,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.hamcrest.Matcher;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
@@ -245,8 +247,8 @@ public class LatchableEmitter extends StubServiceEmitter
     private String host;
     private String service;
     private String metricName;
-    private Long metricValue;
-    private final Map<String, Object> dimensions = new HashMap<>();
+    private Matcher<Long> valueMatcher;
+    private final Map<String, Matcher<Object>> dimensionMatchers = new HashMap<>();
 
     private final AtomicReference<ServiceMetricEvent> matchingEvent = new AtomicReference<>();
 
@@ -260,12 +262,11 @@ public class LatchableEmitter extends StubServiceEmitter
     }
 
     /**
-     * Matches an event only if it has a metric value equal to or greater than
-     * the given value.
+     * Matches an event only if the metric value satisfies the given matcher.
      */
-    public EventMatcher hasValueAtLeast(long metricValue)
+    public EventMatcher hasValueMatching(Matcher<Long> valueMatcher)
     {
-      this.metricValue = metricValue;
+      this.valueMatcher = valueMatcher;
       return this;
     }
 
@@ -274,7 +275,16 @@ public class LatchableEmitter extends StubServiceEmitter
      */
     public EventMatcher hasDimension(String dimension, Object value)
     {
-      dimensions.put(dimension, value);
+      dimensionMatchers.put(dimension, Matchers.equalTo(value));
+      return this;
+    }
+
+    /**
+     * Matches an event if the value of the given dimension satisfies the matcher.
+     */
+    public EventMatcher hasDimensionMatching(String dimension, Matcher<Object> matcher)
+    {
+      dimensionMatchers.put(dimension, matcher);
       return this;
     }
 
@@ -301,7 +311,7 @@ public class LatchableEmitter extends StubServiceEmitter
     {
       if (metricName != null && !event.getMetric().equals(metricName)) {
         return false;
-      } else if (metricValue != null && event.getValue().longValue() < metricValue) {
+      } else if (valueMatcher != null && !valueMatcher.matches(event.getValue())) {
         return false;
       } else if (service != null && !service.equals(event.getService())) {
         return false;
@@ -309,10 +319,8 @@ public class LatchableEmitter extends StubServiceEmitter
         return false;
       }
 
-      final boolean matches = dimensions.entrySet().stream().allMatch(
-          dimValue -> event.getUserDims()
-                           .getOrDefault(dimValue.getKey(), "")
-                           .equals(dimValue.getValue())
+      final boolean matches = dimensionMatchers.entrySet().stream().allMatch(
+          dimValue -> dimValue.getValue().matches(event.getUserDims().get(dimValue.getKey()))
       );
 
       if (matches) {

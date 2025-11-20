@@ -608,13 +608,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
+  /**
+   * Clears allocation information including active task groups, partition groups, partition offsets, and partition IDs.
+   * <p>
+   * Note: Does not clear {@link #pendingCompletionTaskGroups} so that the supervisor remembers that these
+   * tasks are publishing and auto-scaler does not repeatedly attempt a scale down until these tasks
+   * complete. If this is cleared, the next {@link #discoverTasks()} might add these tasks to
+   * {@link #activelyReadingTaskGroups}.
+   */
   private void clearAllocationInfo()
   {
     activelyReadingTaskGroups.clear();
     partitionGroups.clear();
     partitionOffsets.clear();
-
-    pendingCompletionTaskGroups.clear();
     partitionIds.clear();
   }
 
@@ -3282,8 +3288,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       // Ignore return value; but kill tasks that failed to return anything at all.
       if (results.get(i).isError()) {
         String taskId = futureTaskIds.get(i);
-        log.noStackTrace().warn(results.get(i).error(), "Task [%s] failed to return start time, killing task", taskId);
-        killTask(taskId, "Task [%s] failed to return start time, killing task", taskId);
+        log.noStackTrace().warn(results.get(i).error(), "Killing task[%s] as it failed to return start time.", taskId);
+        killTask(taskId, "Failed to return start time: %s", results.get(i).error().getMessage());
       }
     }
   }
