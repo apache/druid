@@ -1,0 +1,72 @@
+name: Flaky Avro Schemaless (NonDex demo)
+
+on:
+  workflow_dispatch: {}   # run by hand from the Actions tab
+
+jobs:
+  avro-flaky-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+          cache: maven
+
+      - name: Warm build (skip heavy plugins)
+        run: |
+          mvn -q -pl extensions-core/avro-extensions -am clean install \
+            -DskipTests \
+            -Drat.skip=true -Dlicense.skip=true -Dcheckstyle.skip \
+            -Denforcer.skip=true -Dspotbugs.skip=true -DskipITs \
+            -Dmaven.remote.resources.skip=true
+
+      - name: Run regular test
+        run: |
+          mvn -pl extensions-core/avro-extensions \
+            -Dtest="org.apache.druid.data.input.AvroStreamInputFormatTest#testParseSchemaless" \
+            -Dmaven.remote.resources.skip=true -Djacoco.skip=true -DargLine='' \
+            test | tee regular.log
+
+      - name: Run NonDex (expect failure = flakiness)
+        run: |
+          set +e
+          mvn -pl extensions-core/avro-extensions \
+            edu.illinois:nondex-maven-plugin:2.1.1:nondex \
+            -Dtest="org.apache.druid.data.input.AvroStreamInputFormatTest#testParseSchemaless" \
+            -DnondexRuns=10 \
+            -Dmaven.remote.resources.skip=true -Djacoco.skip=true -DargLine='' \
+            | tee nondex.log
+          echo "NonDex exit code: ${PIPESTATUS[0]}" | tee -a nondex.log
+          # keep the job going so artifacts upload
+          true
+
+      - name: Combine logs
+        if: always()
+        run: |
+          { echo "==== REGULAR ===="; cat regular.log; \
+            echo; echo "==== NONDEX ===="; cat nondex.log; } > ci-build.log
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs
+          path: |
+            regular.log
+            nondex.log
+            ci-build.log
+
+      - name: Upload NonDex report (optional)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nondex-report
+          path: extensions-core/avro-extensions/.nondex/**
