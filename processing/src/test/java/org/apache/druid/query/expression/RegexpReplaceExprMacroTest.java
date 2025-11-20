@@ -20,9 +20,12 @@
 package org.apache.druid.query.expression;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -38,6 +41,20 @@ public class RegexpReplaceExprMacroTest extends MacroTestBase
   {
     expectException(IllegalArgumentException.class, "Function[regexp_replace] requires 3 arguments");
     eval("regexp_replace()", InputBindings.nilBindings());
+  }
+
+  @Test
+  public void testInvalidRegexpReplacePattern()
+  {
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> eval("regexp_replace(a, '[Ab-cd-0]', 'xyz')", InputBindings.nilBindings())),
+        DruidExceptionMatcher.invalidInput().expectMessageContains(
+            "An invalid pattern [[Ab-cd-0]] was provided for the regexp_replace function,"
+            + " error: [Illegal character range near index 7"
+        )
+    );
   }
 
   @Test

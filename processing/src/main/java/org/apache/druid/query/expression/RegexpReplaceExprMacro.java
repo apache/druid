@@ -96,7 +96,7 @@ public class RegexpReplaceExprMacro implements ExprMacroTable.ExprMacro
       final String patternString = (String) patternExpr.getLiteralValue();
 
       this.arg = args.get(0);
-      this.pattern = patternString != null ? Pattern.compile(patternString) : null;
+      this.pattern = RegexpExprUtils.compilePattern(patternString, FN_NAME);
       this.replacement = (String) replacementExpr.getLiteralValue();
     }
 
