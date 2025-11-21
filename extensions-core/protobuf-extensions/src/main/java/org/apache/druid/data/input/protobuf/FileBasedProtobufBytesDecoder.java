@@ -59,6 +59,7 @@ public class FileBasedProtobufBytesDecoder extends DescriptorBasedProtobufBytesD
   protected DescriptorProtos.FileDescriptorSet loadFileDescriptorSet()
   {
     InputStream fin;
+    DescriptorProtos.FileDescriptorSet descriptorSet;
     try {
       fin = this.getClass().getClassLoader().getResourceAsStream(descriptorFilePath);
       if (fin == null) {
@@ -73,15 +74,19 @@ public class FileBasedProtobufBytesDecoder extends DescriptorBasedProtobufBytesD
               "Descriptor not found in class path or malformed URL: [%s]", descriptorFilePath
               );
         }
-        try {
-          fin = url.openConnection().getInputStream();
+        try (InputStream urlIn = url.openConnection().getInputStream()) {
+          if (urlIn == null) {
+            throw new ParseException(
+                descriptorFilePath,
+                "Descriptor not found at URL: [%s]", descriptorFilePath
+            );
+          }
+          descriptorSet = DescriptorProtos.FileDescriptorSet.parseFrom(urlIn);
         }
-        catch (IOException e) {
-          throw new ParseException(url.toString(), e, "Cannot read descriptor file: [%s]", url);
-        }
+      } else {
+        descriptorSet = DescriptorProtos.FileDescriptorSet.parseFrom(fin);
       }
 
-      final var descriptorSet = DescriptorProtos.FileDescriptorSet.parseFrom(fin);
       if (descriptorSet.getFileCount() == 0) {
         throw new ParseException(null, "No file descriptors found in the descriptor set");
       }
@@ -89,7 +94,7 @@ public class FileBasedProtobufBytesDecoder extends DescriptorBasedProtobufBytesD
       return descriptorSet;
     }
     catch (IOException e) {
-      throw new ParseException(descriptorFilePath, e, "Failed to initialize descriptor");
+      throw new ParseException(descriptorFilePath, e, "Failed to initialize descriptor at [%s]", descriptorFilePath);
     }
   }
 

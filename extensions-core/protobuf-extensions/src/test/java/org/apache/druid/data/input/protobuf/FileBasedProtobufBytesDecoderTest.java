@@ -70,7 +70,7 @@ public class FileBasedProtobufBytesDecoderTest
   }
 
   @Test
-  public void tesDescriptorUrl()
+  public void testDescriptorUrl()
   {
     File descFile = new File("src/test/resources/proto_test_event.desc");
     String path = descFile.getAbsoluteFile().toString();
@@ -134,7 +134,7 @@ public class FileBasedProtobufBytesDecoderTest
     );
 
     assertEquals(
-        "Cannot read descriptor file: [file:/nonexist.desc]",
+        "Failed to initialize descriptor at [file:/nonexist.desc]",
         ex.getMessage()
     );
   }
