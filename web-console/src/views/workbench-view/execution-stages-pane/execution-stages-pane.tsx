@@ -917,6 +917,22 @@ ${title} uncompressed size: ${formatBytesCompact(
           accessor: 'workerCount',
           className: 'padded',
           width: 75,
+          Cell({ value, original }) {
+            const inactiveWorkers = stages.getInactiveWorkerCount(original);
+            if (inactiveWorkers) {
+              return (
+                <div>
+                  <div>{formatInteger(value)}</div>
+                  <div
+                    className="detail-line"
+                    data-tooltip="Workers are counted as inactive until they reprot starting to read rows from their input."
+                  >{`${formatInteger(inactiveWorkers)} inactive`}</div>
+                </div>
+              );
+            } else {
+              return formatInteger(value);
+            }
+          },
         },
         {
           Header: 'Output',
