@@ -27,6 +27,8 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Objects;
 
 public class FileBasedProtobufBytesDecoder extends DescriptorBasedProtobufBytesDecoder
@@ -56,9 +58,27 @@ public class FileBasedProtobufBytesDecoder extends DescriptorBasedProtobufBytesD
   @Override
   protected DescriptorProtos.FileDescriptorSet loadFileDescriptorSet()
   {
-    try (InputStream fin = this.getClass().getClassLoader().getResourceAsStream(descriptorFilePath)) {
+    InputStream fin;
+    try {
+      fin = this.getClass().getClassLoader().getResourceAsStream(descriptorFilePath);
       if (fin == null) {
-        throw new ParseException(descriptorFilePath, "Descriptor not found in class path [%s]", descriptorFilePath);
+        URL url;
+        try {
+          url = new URL(descriptorFilePath);
+        }
+        catch (MalformedURLException e) {
+          throw new ParseException(
+              descriptorFilePath,
+              e,
+              "Descriptor not found in class path or malformed URL: [%s]", descriptorFilePath
+              );
+        }
+        try {
+          fin = url.openConnection().getInputStream();
+        }
+        catch (IOException e) {
+          throw new ParseException(url.toString(), e, "Cannot read descriptor file: [%s]", url);
+        }
       }
 
       final var descriptorSet = DescriptorProtos.FileDescriptorSet.parseFrom(fin);
