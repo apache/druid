@@ -2131,7 +2131,7 @@ notices:
 name: Jetty
 license_category: binary
 module: java-core
-license_name: Eclipse Public License 2.0
+license_name: EPL-2.0
 version: 12.0.30
 libraries:
   - org.eclipse.jetty: jetty-alpn-client
