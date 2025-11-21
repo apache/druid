@@ -129,7 +129,7 @@ public class SupervisorStateManager
   {
     if (BasicState.STOPPING.equals(this.supervisorState) || BasicState.STOPPING.equals(proposedState)) {
       // STOPPING takes precedence over all other states
-      supervisorState = proposedState;
+      supervisorState = BasicState.STOPPING;
       return;
     }
 
