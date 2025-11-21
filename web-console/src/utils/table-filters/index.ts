@@ -16,21 +16,5 @@
  * limitations under the License.
  */
 
-import { Capabilities } from '../../helpers';
-import { shallow } from '../../utils/shallow-renderer';
-import { TableFilters } from '../../utils/table-filters';
-import { SegmentsView } from '../segments-view/segments-view';
-
-describe('SegmentsView', () => {
-  it('matches snapshot', () => {
-    const segmentsView = shallow(
-      <SegmentsView
-        filters={TableFilters.empty()}
-        onFiltersChange={() => {}}
-        goToQuery={() => {}}
-        capabilities={Capabilities.FULL}
-      />,
-    );
-    expect(segmentsView).toMatchSnapshot();
-  });
-});
+export * from './table-filter';
+export * from './table-filters';

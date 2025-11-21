@@ -59,6 +59,7 @@ import {
 import { AlertDialog, AsyncActionDialog, DiffDialog } from '../../dialogs';
 import type {
   ArrayIngestMode,
+  ConsoleViewId,
   DimensionSpec,
   DruidFilter,
   FlattenField,
@@ -186,6 +187,7 @@ import {
   sampleForTimestamp,
   sampleForTransform,
 } from '../../utils/sampler';
+import { TableFilters } from '../../utils/table-filters';
 
 import { ExamplePicker } from './example-picker/example-picker';
 import { EXAMPLE_SPECS } from './example-specs';
@@ -389,9 +391,8 @@ export interface LoadDataViewProps {
   mode: LoadDataViewMode;
   initSupervisorId?: string;
   initTaskId?: string;
-  goToSupervisor: (supervisorId: string) => void;
+  goToView: (tab: ConsoleViewId, filters?: TableFilters) => void;
   openSupervisorSubmit: () => void;
-  goToTasks: (taskGroupId: string) => void;
   openTaskSubmit: () => void;
 }
 
@@ -3704,7 +3705,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   private readonly handleSubmitSupervisor = async () => {
-    const { goToSupervisor } = this.props;
+    const { goToView } = this.props;
     const { spec, submitting } = this.state;
     if (submitting) return;
 
@@ -3728,13 +3729,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const supervisorId = getSpecDatasourceName(spec);
     if (supervisorId) {
       setTimeout(() => {
-        goToSupervisor(supervisorId);
+        goToView('supervisors', TableFilters.eq({ supervisor_id: supervisorId }));
       }, 1000);
     }
   };
 
   private readonly handleSubmitTask = async () => {
-    const { goToTasks } = this.props;
+    const { goToView } = this.props;
     const { spec, submitting } = this.state;
     if (submitting) return;
 
@@ -3757,7 +3758,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     });
 
     setTimeout(() => {
-      goToTasks(taskResp.data.task);
+      goToView('tasks', TableFilters.eq({ task_id: taskResp.data.task }));
     }, 1000);
   };
 }

@@ -16,21 +16,10 @@
  * limitations under the License.
  */
 
-import { Capabilities } from '../../helpers';
-import { shallow } from '../../utils/shallow-renderer';
-import { TableFilters } from '../../utils/table-filters';
-import { SegmentsView } from '../segments-view/segments-view';
+export const DEFAULT_TABLE_CLASS_NAME = '-striped -highlight padded-header';
 
-describe('SegmentsView', () => {
-  it('matches snapshot', () => {
-    const segmentsView = shallow(
-      <SegmentsView
-        filters={TableFilters.empty()}
-        onFiltersChange={() => {}}
-        goToQuery={() => {}}
-        capabilities={Capabilities.FULL}
-      />,
-    );
-    expect(segmentsView).toMatchSnapshot();
-  });
-});
+export const STANDARD_TABLE_PAGE_SIZE = 50;
+export const STANDARD_TABLE_PAGE_SIZE_OPTIONS = [50, 100, 200];
+
+export const SMALL_TABLE_PAGE_SIZE = 25;
+export const SMALL_TABLE_PAGE_SIZE_OPTIONS = [25, 50, 100];
