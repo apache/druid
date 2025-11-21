@@ -467,7 +467,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
    * <ul>
    * <li> Range partitioning is done on a possibly multi-valued string dimension or an unknown dimension
    * (since MSQ does not support partitioning on a multi-valued string dimension) </li>
-   * <li> Rollup is done on a string dimension or an unknown dimension
+   * <li> Rollup is done on a multi-valued string dimension or an unknown dimension
    * (since MSQ requires multi-valued string dimensions to be converted to arrays for rollup) </li>
    * </ul>
    * @return false for native engine, true for MSQ engine only when partitioning or rollup is done on a multi-valued
