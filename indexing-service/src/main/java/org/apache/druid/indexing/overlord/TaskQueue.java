@@ -449,7 +449,6 @@ public class TaskQueue
             }
             final TaskStatus taskStatus = TaskStatus.failure(task.getId(), errorMessage);
             notifyStatus(entry, taskStatus, taskStatus.getErrorMsg());
-            emitTaskCompletionLogsAndMetrics(task, taskStatus);
             return;
           }
           if (taskIsReady) {
@@ -749,8 +748,8 @@ public class TaskQueue
     }
 
     shutdownTaskOnRunner(task.getId(), reasonFormat, args);
-
     removeTaskLock(task);
+    emitTaskCompletionLogsAndMetrics(task, taskStatus);
     requestManagement();
 
     log.info("Completed notifyStatus for task[%s] with status[%s]", task.getId(), taskStatus);
@@ -811,9 +810,6 @@ public class TaskQueue
                   task.getId(),
                   entry -> notifyStatus(entry, status, "notified status change from task")
               );
-
-              // Emit event and log, if the task is done
-              emitTaskCompletionLogsAndMetrics(task, status);
             }
             catch (Exception e) {
               log.makeAlert(e, "Failed to handle task status")
@@ -1073,24 +1069,22 @@ public class TaskQueue
 
   private void emitTaskCompletionLogsAndMetrics(final Task task, final TaskStatus status)
   {
-    if (status.isComplete()) {
-      final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
-      IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-      IndexTaskUtils.setTaskStatusDimensions(metricBuilder, status);
+    final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
+    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+    IndexTaskUtils.setTaskStatusDimensions(metricBuilder, status);
 
-      emitter.emit(metricBuilder.setMetric("task/run/time", status.getDuration()));
+    emitter.emit(metricBuilder.setMetric("task/run/time", status.getDuration()));
 
-      if (status.isSuccess()) {
-        Counters.incrementAndGetLong(totalSuccessfulTaskCount, getMetricKey(task));
-      } else {
-        Counters.incrementAndGetLong(totalFailedTaskCount, getMetricKey(task));
-      }
-
-      log.info(
-          "Completed task[%s] with status[%s] in [%d]ms.",
-          task.getId(), status, status.getDuration()
-      );
+    if (status.isSuccess()) {
+      Counters.incrementAndGetLong(totalSuccessfulTaskCount, getMetricKey(task));
+    } else {
+      Counters.incrementAndGetLong(totalFailedTaskCount, getMetricKey(task));
     }
+
+    log.info(
+        "Completed task[%s] with status[%s] in [%d]ms.",
+        task.getId(), status, status.getDuration()
+    );
   }
 
   private void validateTaskPayload(Task task)
