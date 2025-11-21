@@ -340,6 +340,22 @@ public class CoordinatorSimulationBuilder
       loadSegments(true);
     }
 
+    @Override
+    public void firePendingLoadCallbacks()
+    {
+      verifySimulationRunning();
+      Preconditions.checkState(
+          !env.loadImmediately,
+          "Cannot invoke firePendingLoadCallbacks as simulation is running in immediate loading mode."
+      );
+
+      // Fire any pending callbacks without processing new loads
+      final BlockingExecutorService loadCallbackExecutor = env.executorFactory.loadCallbackExecutor;
+      if (loadCallbackExecutor.hasPendingTasks()) {
+        loadCallbackExecutor.finishAllPendingTasks();
+      }
+    }
+
     private void loadSegments(boolean executeCallbacks)
     {
       verifySimulationRunning();

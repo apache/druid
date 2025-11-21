@@ -133,6 +133,12 @@ public abstract class CoordinatorSimulationBaseTest implements
   }
 
   @Override
+  public void firePendingLoadCallbacks()
+  {
+    sim.cluster().firePendingLoadCallbacks();
+  }
+
+  @Override
   public void removeServer(DruidServer server)
   {
     sim.cluster().removeServer(server);
