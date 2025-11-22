@@ -114,6 +114,13 @@ public interface CoordinatorSimulation
     void loadQueuedSegmentsSkipCallbacks();
 
     /**
+     * Fires any pending load/drop callbacks without waiting for new loads to complete.
+     * This allows callbacks to be triggered asynchronously during a coordinator run
+     * to simulate race conditions where callbacks fire mid-execution.
+     */
+    void firePendingLoadCallbacks();
+
+    /**
      * Removes the specified server from the cluster.
      */
     void removeServer(DruidServer server);

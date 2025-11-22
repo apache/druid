@@ -308,4 +308,47 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     verifyNotEmitted(Metric.MOVE_SKIPPED);
   }
 
+  /**
+   * Test for https://github.com/apache/druid/issues/18764
+   *
+   */
+  @Test
+  public void testSegmentMoveDoesNotCauseIncorrectDrop()
+  {
+    // Setup: 2 historicals, 1x replication, all segments on server A
+    final CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(segments)
+                             .withServers(historicalT11, historicalT12)
+                             .withRules(datasource, Load.on(Tier.T1, 1).forever())
+                             .build();
+
+    segments.forEach(historicalT11::addDataSegment);
+    startSimulation(sim);
+
+    // Run 1: Initiate moves from A to B
+    runCoordinatorCycle();
+    verifyValue(Metric.MOVED_COUNT, 5L);
+
+    // Physically load segments on B, but don't fire callbacks yet
+    loadQueuedSegmentsSkipCallbacks();
+    Assert.assertEquals(10, historicalT11.getTotalSegments());
+    Assert.assertEquals(5, historicalT12.getTotalSegments());
+
+    // Fire callbacks asynchronously BEFORE next coordinator run
+    // This simulates the race: callbacks fire after first build() but state is stale
+    firePendingLoadCallbacks();
+    runCoordinatorCycle();
+
+    verifyValue(Metric.DROP_QUEUE_COUNT, filterByServer(historicalT11), 5L);
+    verifyEmitted(Metric.DROP_QUEUE_COUNT, filterByServer(historicalT12), 0);
+    verifyValue(Metric.DROP_QUEUE_COUNT, 5L);
+
+    // Complete drops
+    loadQueuedSegments();
+
+    Assert.assertEquals(5, historicalT11.getTotalSegments());
+    Assert.assertEquals(5, historicalT12.getTotalSegments());
+    verifyDatasourceIsFullyLoaded(datasource);
+  }
 }
