@@ -63,6 +63,7 @@ public class GroupByStatsMonitorTest
         return new AggregateStats(
             1L,
             100L,
+            200L,
             2L,
             200L,
             300L
@@ -70,7 +71,7 @@ public class GroupByStatsMonitorTest
       }
     };
 
-    mergeBufferPool = new DefaultBlockingPool(() -> ByteBuffer.allocate(1024), 5);
+    mergeBufferPool = new DefaultBlockingPool<>(() -> ByteBuffer.allocate(1024), 5);
     executorService = Executors.newSingleThreadExecutor();
   }
 
@@ -91,11 +92,12 @@ public class GroupByStatsMonitorTest
     // Trigger metric emission
     monitor.doMonitor(emitter);
 
-    Assert.assertEquals(7, emitter.getNumEmittedEvents());
+    Assert.assertEquals(8, emitter.getNumEmittedEvents());
     emitter.verifyValue("mergeBuffer/pendingRequests", 0L);
     emitter.verifyValue("mergeBuffer/used", 0L);
     emitter.verifyValue("mergeBuffer/queries", 1L);
     emitter.verifyValue("mergeBuffer/acquisitionTimeNs", 100L);
+    emitter.verifyValue("mergeBuffer/bytesUsed", 200L);
     emitter.verifyValue("groupBy/spilledQueries", 2L);
     emitter.verifyValue("groupBy/spilledBytes", 200L);
     emitter.verifyValue("groupBy/mergeDictionarySize", 300L);
@@ -133,11 +135,12 @@ public class GroupByStatsMonitorTest
     final Map<String, Object> dimFilters = Map.of(
         "taskId", List.of(taskId), "dataSource", List.of(dataSource), "id", List.of(taskId)
     );
-    Assert.assertEquals(7, emitter.getNumEmittedEvents());
+    Assert.assertEquals(8, emitter.getNumEmittedEvents());
     emitter.verifyValue("mergeBuffer/pendingRequests", dimFilters, 0L);
     emitter.verifyValue("mergeBuffer/used", dimFilters, 0L);
     emitter.verifyValue("mergeBuffer/queries", dimFilters, 1L);
     emitter.verifyValue("mergeBuffer/acquisitionTimeNs", dimFilters, 100L);
+    emitter.verifyValue("mergeBuffer/bytesUsed", 200L);
     emitter.verifyValue("groupBy/spilledQueries", dimFilters, 2L);
     emitter.verifyValue("groupBy/spilledBytes", dimFilters, 200L);
     emitter.verifyValue("groupBy/mergeDictionarySize", dimFilters, 300L);

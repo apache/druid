@@ -332,7 +332,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       throw new ISE("Grouper is closed");
     }
 
-    groupers.forEach(Grouper::reset);
+    groupers.forEach(SpillingGrouper::reset);
   }
 
   @Override
@@ -496,7 +496,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   {
     if (!closed) {
       closed = true;
-      groupers.forEach(Grouper::close);
+      groupers.forEach(SpillingGrouper::close);
     }
   }
 
