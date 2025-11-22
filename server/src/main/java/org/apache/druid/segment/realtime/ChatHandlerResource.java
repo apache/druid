@@ -25,7 +25,7 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.server.initialization.jetty.ServiceUnavailableException;
-import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
+import org.apache.druid.server.metrics.TaskPropertiesHolder;
 
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -42,10 +42,10 @@ public class ChatHandlerResource
   private final String taskId;
 
   @Inject
-  public ChatHandlerResource(final ChatHandlerProvider handlers, final DataSourceTaskIdHolder taskIdHolder)
+  public ChatHandlerResource(final ChatHandlerProvider handlers, final TaskPropertiesHolder taskPropsHolder)
   {
     this.handlers = handlers;
-    this.taskId = taskIdHolder.getTaskId();
+    this.taskId = taskPropsHolder.getTaskId();
   }
 
   @Path("/{id}")

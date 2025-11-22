@@ -130,8 +130,9 @@ import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.initialization.jetty.ChatHandlerServerModule;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
-import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
+import org.apache.druid.server.metrics.LoadSpecHolder;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
+import org.apache.druid.server.metrics.TaskPropertiesHolder;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.apache.druid.tasklogs.TaskPayloadManager;
 import org.eclipse.jetty.server.Server;
@@ -331,7 +332,7 @@ public class CliPeon extends GuiceRunnable
 
           @Provides
           @LazySingleton
-          @Named(DataSourceTaskIdHolder.DATA_SOURCE_BINDING)
+          @Named(TaskPropertiesHolder.DATA_SOURCE_BINDING)
           public String getDataSourceFromTask(final Task task)
           {
             return task.getDataSource();
@@ -339,7 +340,7 @@ public class CliPeon extends GuiceRunnable
 
           @Provides
           @LazySingleton
-          @Named(DataSourceTaskIdHolder.TASK_ID_BINDING)
+          @Named(TaskPropertiesHolder.TASK_ID_BINDING)
           public String getTaskIDFromTask(final Task task)
           {
             return task.getId();
@@ -347,7 +348,7 @@ public class CliPeon extends GuiceRunnable
 
           @Provides
           @LazySingleton
-          @Named(DataSourceTaskIdHolder.LOOKUPS_TO_LOAD_FOR_TASK)
+          @Named(LoadSpecHolder.LOOKUPS_TO_LOAD_FOR_TASK)
           public LookupLoadingSpec getLookupsToLoad(final Task task)
           {
             return task.getLookupLoadingSpec();
@@ -355,7 +356,7 @@ public class CliPeon extends GuiceRunnable
 
           @Provides
           @LazySingleton
-          @Named(DataSourceTaskIdHolder.BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)
+          @Named(LoadSpecHolder.BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)
           public BroadcastDatasourceLoadingSpec getBroadcastDatasourcesToLoad(final Task task)
           {
             return task.getBroadcastDatasourceLoadingSpec();

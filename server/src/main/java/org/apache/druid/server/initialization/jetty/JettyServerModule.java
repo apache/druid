@@ -53,9 +53,9 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.StatusResource;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.TLSServerConfig;
-import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.server.metrics.MonitorsConfig;
+import org.apache.druid.server.metrics.TaskPropertiesHolder;
 import org.apache.druid.server.security.CustomCheckX509TrustManager;
 import org.apache.druid.server.security.TLSCertificateChecker;
 import org.eclipse.jetty.server.ConnectionFactory;
@@ -517,11 +517,11 @@ public class JettyServerModule extends JerseyServletModule
 
   @Provides
   @LazySingleton
-  public JettyMonitor getJettyMonitor(DataSourceTaskIdHolder dataSourceTaskIdHolder)
+  public JettyMonitor getJettyMonitor(TaskPropertiesHolder taskPropsHolder)
   {
     return new JettyMonitor(
         MonitorsConfig.mapOfDatasourceAndTaskID(
-            dataSourceTaskIdHolder.getDataSource(), dataSourceTaskIdHolder.getTaskId()
+            taskPropsHolder.getDataSource(), taskPropsHolder.getTaskId()
         )
     );
   }
