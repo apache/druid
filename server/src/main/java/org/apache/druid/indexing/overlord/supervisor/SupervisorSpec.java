@@ -27,6 +27,7 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAu
 import org.apache.druid.server.security.ResourceAction;
 
 import javax.annotation.Nonnull;
+import javax.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Set;
 
@@ -112,5 +113,16 @@ public interface SupervisorSpec
   default void validateSpecUpdateTo(SupervisorSpec proposedSpec) throws DruidException
   {
     // The default implementation does not do any validation checks.
+  }
+
+  /**
+   * Perform any merging of spec configurations needed after deserialization.
+   *
+   * @param existingSpec used spec to merge values from
+   * @throws DruidException if the spec update is not allowed
+   */
+  default void mergeSpecConfigs(@NotNull SupervisorSpec existingSpec)
+  {
+    // No-op by default
   }
 }

@@ -190,16 +190,22 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     };
   }
 
-  /**
-   * This method determines whether to do scale actions based on collected lag points.
-   * Current algorithm of scale is simple:
-   * First of all, compute the proportion of lag points higher/lower than scaleOutThreshold/scaleInThreshold, getting scaleOutThreshold/scaleInThreshold.
-   * Secondly, compare scaleOutThreshold/scaleInThreshold with triggerScaleOutFractionThreshold/triggerScaleInFractionThreshold. P.S. Scale out action has higher priority than scale in action.
-   * Finaly, if scaleOutThreshold/scaleInThreshold is higher than triggerScaleOutFractionThreshold/triggerScaleInFractionThreshold, scale out/in action would be triggered.
-   *
-   * @param lags the lag metrics of Stream(Kafka/Kinesis)
-   * @return Integer. target number of tasksCount, -1 means skip scale action.
-   */
+    /**
+     * This method determines whether to do scale actions based on collected lag points.
+     * The current algorithm of scale is straightforward:
+     * <ul>
+     * <li>First, compute the proportion of lag points higher/lower than <code>scaleOutThreshold</code>/<code>scaleInThreshold</code>,
+     * getting <code>scaleOutThreshold</code>/<code>scaleInThreshold</code>.
+     * <li>Secondly, compare <code>scaleOutThreshold</code>/<code>scaleInThreshold</code> with
+     * <code>triggerScaleOutFractionThreshold</code>/<code>triggerScaleInFractionThreshold</code>.
+     * <ul><li>P.S. Scale out action has a higher priority than scale in action.</ul>
+     * <li>Finally, if <code>scaleOutThreshold</code>/<code>scaleInThreshold</code> is higher than
+     * <code>triggerScaleOutFractionThreshold</code>/<code>triggerScaleInFractionThreshold</code>, scale out/in action would be triggered.
+     * </ul>
+     *
+     * @param lags the lag metrics of Stream (Kafka/Kinesis)
+     * @return Integer, target number of tasksCount. -1 means skip scale action.
+     */
   private int computeDesiredTaskCount(List<Long> lags)
   {
     // if supervisor is not suspended, ensure required tasks are running
