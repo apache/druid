@@ -141,7 +141,8 @@ public class StandardRetryPolicy implements ServiceRetryPolicy
     return code == HttpResponseStatus.BAD_GATEWAY.getCode()
            || code == HttpResponseStatus.SERVICE_UNAVAILABLE.getCode()
            || code == HttpResponseStatus.GATEWAY_TIMEOUT.getCode()
-
+           // 401 can happen from things like expiration and might be retryable
+           || code == HttpResponseStatus.UNAUTHORIZED.getCode()
            // Technically shouldn't retry this last one, but servers sometimes return HTTP 500 for retryable errors.
            || code == HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode();
   }
