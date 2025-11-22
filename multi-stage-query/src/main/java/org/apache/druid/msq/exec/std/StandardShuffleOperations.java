@@ -364,6 +364,7 @@ public class StandardShuffleOperations
             nextFuture = Futures.transformAsync(
                 nextFuture,
                 ignored -> {
+                  final WorkerMemoryParameters memoryParameters = executionContext.frameContext().memoryParameters();
                   final SuperSorter sorter = new SuperSorter(
                       Collections.singletonList(channel.getReadableChannel()),
                       stageDefinition.getFrameReader(),
@@ -382,8 +383,18 @@ public class StandardShuffleOperations
                       executionContext.makeIntermediateOutputChannelFactory(
                           StringUtils.format("hash-parts-super-sort-%06d", channel.getPartitionNumber())),
                       executionContext.frameContext().frameWriterSpec().getRowBasedFrameType(),
-                      1,
-                      2,
+
+                      // Use full parallelism, since at the time this sorter runs, it is the only sorter running.
+                      //
+                      // Typically, nothing else is running at all. Whenever there is more than one output partition,
+                      // the step prior to this localSort (typically hashPartition) should use buffered output channels
+                      // and therefore would have exited.
+                      //
+                      // In the case where there is one output partition, the step prior to this localSort may run
+                      // concurrently with the sorter, but in that case it will only have one output channel so won't
+                      // have many frames buffered.
+                      memoryParameters.getSuperSorterConcurrentProcessors(),
+                      memoryParameters.getSuperSorterMaxChannelsPerMerger(),
                       ShuffleSpec.UNLIMITED,
                       executionContext.cancellationId(),
 
