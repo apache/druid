@@ -653,7 +653,7 @@ public class StreamAppenderator implements Appenderator
       numPersistedRows += sink.getNumRowsInMemory();
       bytesPersisted += sink.getBytesInMemory();
 
-      final int limit = sink.isWritable() ? hydrants.size() - 1 : hydrants.size();
+      final int limit = sink.isWritable() ? Integer.max(0, hydrants.size() - 1) : hydrants.size();
 
       // gather hydrants that have not been persisted:
       for (FireHydrant hydrant : hydrants.subList(0, limit)) {
