@@ -178,7 +178,8 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
 
   /**
    * Add a single partition chunk entry to this timeline. Avoid calling this in a loop, since it
-   * is O(objects in holder) and can therefore creates O(N^2) situations. Instead use {@link #addAll(Iterator)}
+   * is O(objects in holder), and can therefore creates O(N^2) situations. This happens due to calling
+   * {@link PartitionHolder#isComplete()} on each addition. Instead use {@link #addAll(Iterator)}
    * if you have many objects to add.
    */
   public void add(final Interval interval, VersionType version, PartitionChunk<ObjectType> object)
