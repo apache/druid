@@ -35,7 +35,7 @@ import org.apache.druid.segment.realtime.ChatHandlerResource;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.TLSServerConfig;
-import org.apache.druid.server.metrics.TaskPropertiesHolder;
+import org.apache.druid.server.metrics.TaskHolder;
 import org.apache.druid.server.security.TLSCertificateChecker;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
@@ -83,7 +83,7 @@ public class ChatHandlerServerModule implements Module
   @Provides
   @LazySingleton
   public TaskIdResponseHeaderFilterHolder taskIdResponseHeaderFilterHolderBuilder(
-      final TaskPropertiesHolder taskPropsHolder
+      final TaskHolder taskPropsHolder
   )
   {
     return new TaskIdResponseHeaderFilterHolder("/druid/worker/v1/chat/*", taskPropsHolder.getTaskId());

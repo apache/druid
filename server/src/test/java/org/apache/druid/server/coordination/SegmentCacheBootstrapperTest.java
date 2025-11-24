@@ -21,15 +21,7 @@ package org.apache.druid.server.coordination;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.Scopes;
-import com.google.inject.name.Names;
-import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ServerTypeConfig;
-import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
@@ -37,7 +29,8 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
-import org.apache.druid.server.metrics.TaskPropertiesHolder;
+import org.apache.druid.server.metrics.LoadSpecHolder;
+import org.apache.druid.server.metrics.NonPeonLoadSpecHolder;
 import org.apache.druid.test.utils.TestSegmentCacheManager;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
@@ -138,7 +131,7 @@ public class SegmentCacheBootstrapperTest
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        new TaskPropertiesHolder()
+        new NonPeonLoadSpecHolder()
     );
 
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
@@ -197,7 +190,7 @@ public class SegmentCacheBootstrapperTest
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        new TaskPropertiesHolder()
+        new NonPeonLoadSpecHolder()
     );
 
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
@@ -253,7 +246,7 @@ public class SegmentCacheBootstrapperTest
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        new TaskPropertiesHolder()
+        new NonPeonLoadSpecHolder()
     );
 
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
@@ -308,7 +301,20 @@ public class SegmentCacheBootstrapperTest
         coordinatorClient,
         serviceEmitter,
 //        new TaskPropertiesHolder("foo", "boo", LookupLoadingSpec.ALL, BroadcastDatasourceLoadingSpec.NONE)
-        null
+        new LoadSpecHolder()
+        {
+          @Override
+          public LookupLoadingSpec getLookupLoadingSpec()
+          {
+            return LookupLoadingSpec.ALL;
+          }
+
+          @Override
+          public BroadcastDatasourceLoadingSpec getBroadcastDatasourceLoadingSpec()
+          {
+            return BroadcastDatasourceLoadingSpec.NONE;
+          }
+        }
     );
 
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
@@ -357,8 +363,20 @@ public class SegmentCacheBootstrapperTest
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-//        new TaskPropertiesHolder("boo", "foo", LookupLoadingSpec.NONE, BroadcastDatasourceLoadingSpec.loadOnly(Set.of("test1")))
-        null
+        new LoadSpecHolder()
+        {
+          @Override
+          public LookupLoadingSpec getLookupLoadingSpec()
+          {
+            return LookupLoadingSpec.NONE;
+          }
+
+          @Override
+          public BroadcastDatasourceLoadingSpec getBroadcastDatasourceLoadingSpec()
+          {
+            return BroadcastDatasourceLoadingSpec.loadOnly(Set.of("test1"));
+          }
+        }
     );
 
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
@@ -399,7 +417,7 @@ public class SegmentCacheBootstrapperTest
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        new TaskPropertiesHolder()
+        new NonPeonLoadSpecHolder()
     );
 
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());

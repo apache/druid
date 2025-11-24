@@ -42,7 +42,6 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
-import org.apache.druid.server.metrics.TaskPropertiesHolder;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -119,6 +118,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   )
   {
     this(lookupConfig, objectMapper, coordinatorClient, lookupListeningAnnouncerConfig, false);
+    LOG.info("Umm Initializing LookupReferencesManager");
   }
 
   @VisibleForTesting

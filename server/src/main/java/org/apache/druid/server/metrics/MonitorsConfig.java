@@ -80,6 +80,25 @@ public class MonitorsConfig
            '}';
   }
 
+  public static Map<String, String[]> mapOfDatasourceAndTaskID(TaskHolder taskHolder)
+  {
+    if (taskHolder instanceof NoopTaskHolder) {
+      return Map.of();
+    }
+    final String datasource = taskHolder.getDataSource();
+    final String taskId = taskHolder.getTaskId();
+
+    final ImmutableMap.Builder<String, String[]> builder = ImmutableMap.builder();
+    if (datasource != null) {
+      builder.put(DruidMetrics.DATASOURCE, new String[]{datasource});
+    }
+    if (taskId != null) {
+      builder.put(DruidMetrics.TASK_ID, new String[]{taskId});
+      builder.put(DruidMetrics.ID, new String[]{taskId});
+    }
+    return builder.build();
+  }
+
   /**
    * @return a map of {@code datasource} and {@code taskId} dimensions if provided; otherwise, returns an empty map.
    * When {@code taskId} is provided, both {@link DruidMetrics#ID} and {@link DruidMetrics#TASK_ID} dimensions are added

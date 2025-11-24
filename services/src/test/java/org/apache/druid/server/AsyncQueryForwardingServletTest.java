@@ -33,6 +33,7 @@ import com.google.inject.Module;
 import com.google.inject.servlet.GuiceFilter;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.remote.Service;
+import org.apache.druid.cli.CliRouter;
 import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.utils.SocketUtil;
@@ -70,7 +71,11 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.log.NoopRequestLogger;
+import org.apache.druid.server.metrics.LoadSpecHolder;
+import org.apache.druid.server.metrics.NonPeonLoadSpecHolder;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.metrics.NoopTaskHolder;
+import org.apache.druid.server.metrics.TaskHolder;
 import org.apache.druid.server.router.QueryHostFinder;
 import org.apache.druid.server.router.RendezvousHashAvaticaConnectionBalancer;
 import org.apache.druid.server.security.AllowAllAuthorizer;
@@ -163,6 +168,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                     new DruidNode("test", "localhost", false, null, null, true, false)
                 );
                 binder.bind(JettyServerInitializer.class).to(ProxyJettyServerInit.class).in(LazySingleton.class);
+                binder.bind(TaskHolder.class).to(NoopTaskHolder.class).in(LazySingleton.class);
+                binder.bind(LoadSpecHolder.class).to(NonPeonLoadSpecHolder.class).in(LazySingleton.class);
                 binder.bind(AuthorizerMapper.class).toInstance(
                     new AuthorizerMapper(null)
                     {

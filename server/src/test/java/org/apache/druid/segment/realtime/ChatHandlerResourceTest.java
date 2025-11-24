@@ -22,7 +22,7 @@ package org.apache.druid.segment.realtime;
 
 import com.google.common.base.Optional;
 import org.apache.druid.server.initialization.jetty.ServiceUnavailableException;
-import org.apache.druid.server.metrics.TaskPropertiesHolder;
+import org.apache.druid.server.metrics.TaskHolder;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
@@ -38,7 +38,7 @@ public class ChatHandlerResourceTest extends EasyMockSupport
   @Mock
   ChatHandlerProvider handlers;
   @Mock
-  TaskPropertiesHolder taskPropsHolder;
+  TaskHolder taskPropsHolder;
   ChatHandlerResource chatHandlerResource;
 
   @Test

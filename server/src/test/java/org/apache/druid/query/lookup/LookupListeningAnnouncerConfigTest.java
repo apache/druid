@@ -24,8 +24,6 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import com.google.inject.TypeLiteral;
-import com.google.inject.name.Names;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
@@ -34,13 +32,13 @@ import org.apache.druid.initialization.Initialization;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
-import org.apache.druid.server.metrics.TaskPropertiesHolder;
+import org.apache.druid.server.metrics.LoadSpecHolder;
+import org.apache.druid.server.metrics.NonPeonLoadSpecHolder;
+import org.apache.druid.server.metrics.TaskHolder;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
@@ -60,12 +58,34 @@ public class LookupListeningAnnouncerConfigTest
                   Key.get(DruidNode.class, Self.class),
                   new DruidNode("test-inject", null, false, null, null, true, false)
               );
-//              binder.bind(TaskPropertiesHolder.class).toInstance(new TaskPropertiesHolder(
-//                  "some_datasource",
-//                  "some_taskId",
-//                  LookupLoadingSpec.loadOnly(Set.of("lookupName1", "lookupName2")),
-//                  BroadcastDatasourceLoadingSpec.ALL
-//              ));
+              binder.bind(TaskHolder.class).toInstance(new TaskHolder()
+              {
+                @Override
+                public String getDataSource()
+                {
+                  return "some_datasource";
+                }
+
+                @Override
+                public String getTaskId()
+                {
+                  return "some_taskid";
+                }
+              });
+              binder.bind(LoadSpecHolder.class).toInstance(new LoadSpecHolder()
+              {
+                @Override
+                public LookupLoadingSpec getLookupLoadingSpec()
+                {
+                  return LookupLoadingSpec.loadOnly(Set.of("lookupName1", "lookupName2"));
+                }
+
+                @Override
+                public BroadcastDatasourceLoadingSpec getBroadcastDatasourceLoadingSpec()
+                {
+                  return BroadcastDatasourceLoadingSpec.ALL;
+                }
+              });
             }
           },
           new LookupModule()
@@ -139,7 +159,7 @@ public class LookupListeningAnnouncerConfigTest
   @Test
   public void testLookupsToLoadInjection()
   {
-    final TaskPropertiesHolder taskPropsHolder = new TaskPropertiesHolder();
+    final LoadSpecHolder taskPropsHolder = new NonPeonLoadSpecHolder();
     injector.injectMembers(taskPropsHolder);
     Assert.assertEquals(LookupLoadingSpec.Mode.ALL, taskPropsHolder.getLookupLoadingSpec().getMode());
   }

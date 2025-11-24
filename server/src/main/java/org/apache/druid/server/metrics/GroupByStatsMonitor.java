@@ -49,14 +49,13 @@ public class GroupByStatsMonitor extends AbstractMonitor
   public GroupByStatsMonitor(
       GroupByStatsProvider groupByStatsProvider,
       @Merging BlockingPool<ByteBuffer> mergeBufferPool,
-      TaskPropertiesHolder taskPropsHolder
+      TaskHolder taskPropsHolder
   )
   {
     this.groupByStatsProvider = groupByStatsProvider;
     this.mergeBufferPool = mergeBufferPool;
     this.dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
-        taskPropsHolder.getDataSource(),
-        taskPropsHolder.getTaskId()
+        taskPropsHolder
     );
   }
 

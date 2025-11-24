@@ -28,7 +28,6 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Scopes;
-import com.google.inject.name.Names;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -53,8 +52,6 @@ import org.apache.druid.java.util.metrics.OshiSysMonitor;
 import org.apache.druid.java.util.metrics.OshiSysMonitorConfig;
 import org.apache.druid.java.util.metrics.SysMonitor;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
-import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -94,7 +91,7 @@ public class MetricsModuleTest
           }
         })
     );
-    final TaskPropertiesHolder taskPropsHolder = new TaskPropertiesHolder();
+    final TaskHolder taskPropsHolder = new NoopTaskHolder();
     injector.injectMembers(taskPropsHolder);
     Assert.assertNull(taskPropsHolder.getDataSource());
     Assert.assertNull(taskPropsHolder.getTaskId());

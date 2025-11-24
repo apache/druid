@@ -63,7 +63,11 @@ import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
+import org.apache.druid.server.metrics.NonPeonLoadSpecHolder;
+import org.apache.druid.server.metrics.LoadSpecHolder;
+import org.apache.druid.server.metrics.NoopTaskHolder;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
+import org.apache.druid.server.metrics.TaskHolder;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.apache.druid.timeline.PruneLastCompactionState;
 import org.eclipse.jetty.server.Server;
@@ -121,6 +125,8 @@ public class CliHistorical extends ServerRunnable
           binder.bind(ServerManager.class).in(LazySingleton.class);
           binder.bind(SegmentManager.class).in(LazySingleton.class);
           binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
+          binder.bind(TaskHolder.class).to(NoopTaskHolder.class).in(LazySingleton.class);
+          binder.bind(LoadSpecHolder.class).to(NonPeonLoadSpecHolder.class).in(LazySingleton.class);
           bindQuerySegmentWalker(binder);
 
           binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.HISTORICAL));
