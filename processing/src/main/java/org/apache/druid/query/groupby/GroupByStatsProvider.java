@@ -179,15 +179,12 @@ public class GroupByStatsProvider
       if (perQueryStats.getMergeBufferAcquisitionTimeNs() > 0) {
         mergeBufferQueries++;
         mergeBufferAcquisitionTimeNs += perQueryStats.getMergeBufferAcquisitionTimeNs();
-        mergeBufferTotalUsage += perQueryStats.getMergeBufferTotalUsage();
         maxMergeBufferAcquisitionTimeNs = Math.max(
             maxMergeBufferAcquisitionTimeNs,
             perQueryStats.getMergeBufferAcquisitionTimeNs()
         );
-        maxMergeBufferUsage = Math.max(
-            maxMergeBufferUsage,
-            perQueryStats.getMergeBufferTotalUsage()
-        );
+        mergeBufferTotalUsage += perQueryStats.getMergeBufferTotalUsage();
+        maxMergeBufferUsage = Math.max(maxMergeBufferUsage, perQueryStats.getMergeBufferTotalUsage());
       }
 
       if (perQueryStats.getSpilledBytes() > 0) {
