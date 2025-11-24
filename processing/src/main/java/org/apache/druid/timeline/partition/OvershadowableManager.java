@@ -65,7 +65,7 @@ import java.util.TreeMap;
  *
  * This class is not thread-safe.
  */
-class OvershadowableManager<T extends Overshadowable<T>>
+class OvershadowableManager<T extends Overshadowable<T>> implements PartitionHolderContents<T>
 {
   /**
    * There are 3 states for atomicUpdateGroups.
@@ -105,10 +105,23 @@ class OvershadowableManager<T extends Overshadowable<T>>
     this.overshadowedGroups = new TreeMap<>();
   }
 
-  public static <T extends Overshadowable<T>> OvershadowableManager<T> copyVisible(OvershadowableManager<T> original)
+  public static <T extends Overshadowable<T>> OvershadowableManager<T> fromSimple(
+      final SimplePartitionHolderContents<T> contents
+  )
+  {
+    final OvershadowableManager<T> retVal = new OvershadowableManager<>();
+    final Iterator<PartitionChunk<T>> iter = contents.visibleChunksIterator();
+    while (iter.hasNext()) {
+      retVal.addChunk(iter.next());
+    }
+    return retVal;
+  }
+
+  @Override
+  public OvershadowableManager<T> copyVisible()
   {
     final OvershadowableManager<T> copy = new OvershadowableManager<>();
-    original.visibleGroupPerRange.forEach((partitionRange, versionToGroups) -> {
+    visibleGroupPerRange.forEach((partitionRange, versionToGroups) -> {
       // There should be only one group per partition range
       final AtomicUpdateGroup<T> group = versionToGroups.values().iterator().next();
       group.getChunks().forEach(chunk -> copy.knownPartitionChunks.put(chunk.getChunkNumber(), chunk));
@@ -121,10 +134,11 @@ class OvershadowableManager<T extends Overshadowable<T>>
     return copy;
   }
 
-  public static <T extends Overshadowable<T>> OvershadowableManager<T> deepCopy(OvershadowableManager<T> original)
+  @Override
+  public OvershadowableManager<T> deepCopy()
   {
-    final OvershadowableManager<T> copy = copyVisible(original);
-    original.overshadowedGroups.forEach((partitionRange, versionToGroups) -> {
+    final OvershadowableManager<T> copy = copyVisible();
+    overshadowedGroups.forEach((partitionRange, versionToGroups) -> {
       // There should be only one group per partition range
       final AtomicUpdateGroup<T> group = versionToGroups.values().iterator().next();
       group.getChunks().forEach(chunk -> copy.knownPartitionChunks.put(chunk.getChunkNumber(), chunk));
@@ -134,7 +148,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
           new SingleEntryShort2ObjectSortedMap<>(group.getMinorVersion(), AtomicUpdateGroup.copy(group))
       );
     });
-    original.standbyGroups.forEach((partitionRange, versionToGroups) -> {
+    standbyGroups.forEach((partitionRange, versionToGroups) -> {
       // There should be only one group per partition range
       final AtomicUpdateGroup<T> group = versionToGroups.values().iterator().next();
       group.getChunks().forEach(chunk -> copy.knownPartitionChunks.put(chunk.getChunkNumber(), chunk));
@@ -635,7 +649,8 @@ class OvershadowableManager<T extends Overshadowable<T>>
     }
   }
 
-  boolean addChunk(PartitionChunk<T> chunk)
+  @Override
+  public boolean addChunk(PartitionChunk<T> chunk)
   {
     // Sanity check. ExistingChunk should be usually null.
     final PartitionChunk<T> existingChunk = knownPartitionChunks.put(chunk.getChunkNumber(), chunk);
@@ -894,8 +909,9 @@ class OvershadowableManager<T extends Overshadowable<T>>
     }
   }
 
+  @Override
   @Nullable
-  PartitionChunk<T> removeChunk(PartitionChunk<T> partitionChunk)
+  public PartitionChunk<T> removeChunk(PartitionChunk<T> partitionChunk)
   {
     final PartitionChunk<T> knownChunk = knownPartitionChunks.get(partitionChunk.getChunkNumber());
     if (knownChunk == null) {
@@ -926,12 +942,14 @@ class OvershadowableManager<T extends Overshadowable<T>>
     return knownPartitionChunks.remove(partitionChunk.getChunkNumber());
   }
 
+  @Override
   public boolean isEmpty()
   {
     return visibleGroupPerRange.isEmpty();
   }
 
-  public boolean isComplete()
+  @Override
+  public boolean visibleChunksAreConsistent()
   {
     return Iterators.all(
         visibleGroupPerRange.values().iterator(),
@@ -945,7 +963,8 @@ class OvershadowableManager<T extends Overshadowable<T>>
   }
 
   @Nullable
-  PartitionChunk<T> getChunk(int partitionId)
+  @Override
+  public PartitionChunk<T> getChunk(int partitionId)
   {
     final PartitionChunk<T> chunk = knownPartitionChunks.get(partitionId);
     if (chunk == null) {
@@ -964,7 +983,8 @@ class OvershadowableManager<T extends Overshadowable<T>>
     }
   }
 
-  Iterator<PartitionChunk<T>> visibleChunksIterator()
+  @Override
+  public Iterator<PartitionChunk<T>> visibleChunksIterator()
   {
     final FluentIterable<Short2ObjectSortedMap<AtomicUpdateGroup<T>>> versionToGroupIterable = FluentIterable.from(
         visibleGroupPerRange.values()
@@ -978,7 +998,8 @@ class OvershadowableManager<T extends Overshadowable<T>>
         }).iterator();
   }
 
-  List<PartitionChunk<T>> getOvershadowedChunks()
+  @Override
+  public List<PartitionChunk<T>> getOvershadowedChunks()
   {
     return getAllChunks(overshadowedGroups);
   }

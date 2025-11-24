@@ -1648,4 +1648,25 @@ public class VersionedIntervalTimelineTest extends VersionedIntervalTimelineTest
         timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2019-01-01/2019-01-04"), Partitions.INCOMPLETE_OK)
     );
   }
+
+  @Test
+  public void testLargePartitionNumbers()
+  {
+    add("2011-01-01/2011-01-10", "1", makeNumbered("1", 1, 1));
+    add("2011-01-01/2011-01-10", "1", makeNumbered("1", 100000, 2));
+    add("2011-01-01/2011-01-10", "1", makeNumbered("1", Integer.MAX_VALUE, 3));
+
+    final Iterable<OvershadowableInteger> allObjects = ImmutableList.copyOf(
+        VersionedIntervalTimeline.getAllObjects(timeline.lookup(Intervals.of("2011-01-02T02/2011-01-04")))
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            new OvershadowableInteger("1", 1, 1),
+            new OvershadowableInteger("1", 100000, 2),
+            new OvershadowableInteger("1", Integer.MAX_VALUE, 3)
+        ),
+        allObjects
+    );
+  }
 }
