@@ -50,7 +50,6 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
   // to get a comparator that uses the ordering defined by the OrderByColumnSpec of a query.
   private final boolean useDefaultSorting;
 
-  @Nullable
   private ByteBufferIntList offsetList;
 
   public BufferHashGrouper(
@@ -152,6 +151,18 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
     hashTable.reset();
     keySerde.reset();
     aggregators.reset();
+  }
+
+  @Override
+  public long getMergeBufferUsage()
+  {
+    if (!initialized) {
+      return 0L;
+    }
+
+    long hashTableUsage = hashTable.getMaxTableBufferUsage();
+    long offSetListUsage = offsetList.getMaxMergeBufferUsageBytes();
+    return hashTableUsage + offSetListUsage;
   }
 
   @Override

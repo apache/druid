@@ -461,6 +461,10 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
   @Override
   public long getMergeBufferUsage()
   {
+    if (!initialized) {
+      return 0L;
+    }
+
     long hashTableUsage = super.getMergeBufferUsage();
     long offSetHeapUsage = offsetHeap.getMaxMergeBufferUsageBytes();
     return hashTableUsage + offSetHeapUsage;
