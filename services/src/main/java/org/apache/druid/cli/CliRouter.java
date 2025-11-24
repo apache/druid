@@ -46,7 +46,7 @@ import org.apache.druid.server.NoopQuerySegmentWalker;
 import org.apache.druid.server.http.RouterResource;
 import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
-import org.apache.druid.server.metrics.NonPeonLoadSpecHolder;
+import org.apache.druid.server.metrics.DefaultLoadSpecHolder;
 import org.apache.druid.server.metrics.LoadSpecHolder;
 import org.apache.druid.server.metrics.NoopTaskHolder;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
@@ -113,7 +113,7 @@ public class CliRouter extends ServerRunnable
           LifecycleModule.register(binder, CoordinatorRuleManager.class);
 
           binder.bind(TaskHolder.class).to(NoopTaskHolder.class).in(LazySingleton.class);
-          binder.bind(LoadSpecHolder.class).to(NonPeonLoadSpecHolder.class).in(LazySingleton.class);
+          binder.bind(LoadSpecHolder.class).to(DefaultLoadSpecHolder.class).in(LazySingleton.class);
 
           binder.bind(TieredBrokerHostSelector.class).in(ManageLifecycle.class);
           binder.bind(QueryHostFinder.class).in(LazySingleton.class);

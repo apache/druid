@@ -88,13 +88,13 @@ public class MetricsModuleTest
                 Key.get(DruidNode.class, Self.class),
                 new DruidNode("test-inject", null, false, null, null, true, false)
             );
+            binder.bind(TaskHolder.class).to(NoopTaskHolder.class).in(LazySingleton.class);
+            binder.bind(LoadSpecHolder.class).to(DefaultLoadSpecHolder.class).in(LazySingleton.class);
           }
         })
     );
-    final TaskHolder taskPropsHolder = new NoopTaskHolder();
-    injector.injectMembers(taskPropsHolder);
-    Assert.assertNull(taskPropsHolder.getDataSource());
-    Assert.assertNull(taskPropsHolder.getTaskId());
+    Assert.assertTrue(injector.getInstance(TaskHolder.class) instanceof NoopTaskHolder);
+    Assert.assertTrue(injector.getInstance(LoadSpecHolder.class) instanceof DefaultLoadSpecHolder);
   }
 
   @Test
@@ -102,9 +102,39 @@ public class MetricsModuleTest
   {
     final String dataSource = "some datasource";
     final String taskId = "some task";
-//    final TaskPropertiesHolder taskPropsHolder = new TaskPropertiesHolder(dataSource, taskId, LookupLoadingSpec.ALL, BroadcastDatasourceLoadingSpec.NONE);
-//    Assert.assertEquals(dataSource, taskPropsHolder.getDataSource());
-//    Assert.assertEquals(taskId, taskPropsHolder.getTaskId());
+    final Injector injector = Initialization.makeInjectorWithModules(
+        GuiceInjectors.makeStartupInjector(),
+        ImmutableList.of(new Module()
+        {
+          @Override
+          public void configure(Binder binder)
+          {
+            JsonConfigProvider.bindInstance(
+                binder,
+                Key.get(DruidNode.class, Self.class),
+                new DruidNode("test-inject", null, false, null, null, true, false)
+            );
+            binder.bind(TaskHolder.class).toInstance(new TaskHolder()
+            {
+              @Override
+              public String getDataSource()
+              {
+                return dataSource;
+              }
+
+              @Override
+              public String getTaskId()
+              {
+                return taskId;
+              }
+            });
+            binder.bind(LoadSpecHolder.class).to(DefaultLoadSpecHolder.class).in(LazySingleton.class);
+          }
+        })
+    );
+    TaskHolder taskHolder = injector.getInstance(TaskHolder.class);
+    Assert.assertEquals(dataSource, taskHolder.getDataSource());
+    Assert.assertEquals(taskId, taskHolder.getTaskId());
   }
 
   @Test
@@ -286,6 +316,8 @@ public class MetricsModuleTest
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
           binder.bind(ServiceEmitter.class).toInstance(new NoopServiceEmitter());
           binder.bind(Properties.class).toInstance(properties);
+          binder.bind(LoadSpecHolder.class).to(DefaultLoadSpecHolder.class).in(LazySingleton.class);
+          binder.bind(TaskHolder.class).to(NoopTaskHolder.class).in(LazySingleton.class);
         },
         ServerInjectorBuilder.registerNodeRoleModule(nodeRoles),
         new MetricsModule()

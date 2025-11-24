@@ -32,8 +32,8 @@ import org.apache.druid.initialization.Initialization;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
+import org.apache.druid.server.metrics.DefaultLoadSpecHolder;
 import org.apache.druid.server.metrics.LoadSpecHolder;
-import org.apache.druid.server.metrics.NonPeonLoadSpecHolder;
 import org.apache.druid.server.metrics.TaskHolder;
 import org.junit.Assert;
 import org.junit.Before;
@@ -159,7 +159,7 @@ public class LookupListeningAnnouncerConfigTest
   @Test
   public void testLookupsToLoadInjection()
   {
-    final LoadSpecHolder taskPropsHolder = new NonPeonLoadSpecHolder();
+    final LoadSpecHolder taskPropsHolder = new DefaultLoadSpecHolder();
     injector.injectMembers(taskPropsHolder);
     Assert.assertEquals(LookupLoadingSpec.Mode.ALL, taskPropsHolder.getLookupLoadingSpec().getMode());
   }

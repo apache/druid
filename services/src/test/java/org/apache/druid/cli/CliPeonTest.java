@@ -54,7 +54,6 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbe
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.worker.executor.ExecutorLifecycle;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
-import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
@@ -71,7 +70,6 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
-import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.LoadSpecHolder;
@@ -102,6 +100,8 @@ public class CliPeonTest
 
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
   @Test
   public void testCliPeonK8sMode() throws IOException
@@ -265,10 +265,8 @@ public class CliPeonTest
   {
     File file = temporaryFolder.newFile("task.json");
     Task noopTask = new NoopTask("noopId", null, "noopDs", 0, 0, Map.of());
-    final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
 
-    OBJECT_MAPPER.writeValueAsString(noopTask);
-    FileUtils.write(file, OBJECT_MAPPER.writeValueAsString(noopTask), StandardCharsets.UTF_8);
+    FileUtils.write(file, mapper.writeValueAsString(noopTask), StandardCharsets.UTF_8);
 
     CliPeon runnable = new CliPeon();
     runnable.taskAndStatusFile = ImmutableList.of(file.getParent(), "1");
@@ -292,56 +290,6 @@ public class CliPeonTest
     Assert.assertNotNull(hb.get());
   }
 
-
-@Test
-public void testCompactTaskWithTuningConfig() throws IOException
-{
-  File file = temporaryFolder.newFile("task.json");
-  String s = "{"
-             + "\"type\":\"compact\","
-             + "\"id\":\"taskid\","
-             + "\"dataSource\":\"test_ds\","
-             + "\"ioConfig\":{"
-             + "  \"type\":\"compact\","
-             + "  \"inputSpec\":{"
-             + "    \"type\":\"interval\","
-             + "    \"interval\":\"2020-01-01/2020-01-02\""
-             + "  },"
-             + "  \"allowNonAlignedInterval\":false,"
-             + "  \"dropExisting\":true"
-             + "},"
-             + "\"transformSpec\":{"
-             + "  \"filter\":{"
-             + "    \"type\":\"selector\","
-             + "    \"dimension\":\"dim1\","
-             + "    \"value\":\"b\""
-             + "  }"
-             + "},"
-             + "\"tuningConfig\":{"
-             + "  \"type\":\"compaction\","
-             + "  \"maxRowsInMemory\":1000"
-             + "}"
-             + "}";
-  FileUtils.write(file, s, StandardCharsets.UTF_8);
-
-  CliPeon runnable = new CliPeon();
-  runnable.taskAndStatusFile = ImmutableList.of(file.getParent(), "1");
-  Properties properties = new Properties();
-  runnable.configure(properties);
-  runnable.configure(properties, GuiceInjectors.makeStartupInjector());
-  Injector injector = runnable.makeInjector();
-
-  Assert.assertNotNull(injector);
-  LoadSpecHolder loadSpecHolder = injector.getInstance(LoadSpecHolder.class);
-  Assert.assertTrue(loadSpecHolder instanceof NewTaskLoadSpecHolder);
-  Assert.assertEquals(LookupLoadingSpec.ALL, loadSpecHolder.getLookupLoadingSpec());
-  Assert.assertEquals(BroadcastDatasourceLoadingSpec.ALL, loadSpecHolder.getBroadcastDatasourceLoadingSpec());
-  TaskHolder taskHolder = injector.getInstance(TaskHolder.class);
-  Assert.assertTrue(taskHolder instanceof NewTaskPropertiesHolder);
-  Assert.assertEquals("taskid", taskHolder.getTaskId());
-  Assert.assertEquals("test_ds", taskHolder.getDataSource());
-}
-
   @Test
   public void testCliPeonLookupAndExpressionModulesDoNotCycle() throws IOException
   {
@@ -364,20 +312,18 @@ public void testCompactTaskWithTuningConfig() throws IOException
   @Test
   public void testCliPeonLookupAndExpressionModulesDoNotCycleDefaultsFinal() throws IOException
   {
-    ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     File file = temporaryFolder.newFile("task.json");
 
     final CompactionTask.Builder builder = new CompactionTask.Builder(
         "test_ds",
-        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, objectMapper)
+        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, mapper)
     );
     final CompactionTask compactionTask = builder
         .id("compact_test_taskid")
         .inputSpec(new CompactionIntervalSpec(Intervals.of("2020/2021"), null))
         .build();
 
-    String s1 = objectMapper.writeValueAsString(compactionTask);
-    FileUtils.write(file, s1, StandardCharsets.UTF_8);
+    FileUtils.write(file, mapper.writeValueAsString(compactionTask), StandardCharsets.UTF_8);
 
     CliPeon runnable = new CliPeon();
     runnable.taskAndStatusFile = ImmutableList.of(file.getParent(), "1");
@@ -388,12 +334,12 @@ public void testCompactTaskWithTuningConfig() throws IOException
 
     // Also ensure LoadSpecHolder is accessible and returns non-null specs.
     LoadSpecHolder loadSpecHolder = injector.getInstance(LoadSpecHolder.class);
-    Assert.assertTrue(loadSpecHolder instanceof NewTaskLoadSpecHolder);
+    Assert.assertTrue(loadSpecHolder instanceof CliPeonLoadSpecHolder);
     Assert.assertEquals(LookupLoadingSpec.NONE, loadSpecHolder.getLookupLoadingSpec());
     Assert.assertEquals(BroadcastDatasourceLoadingSpec.ALL, loadSpecHolder.getBroadcastDatasourceLoadingSpec());
 
     TaskHolder taskHolder = injector.getInstance(TaskHolder.class);
-    Assert.assertTrue(taskHolder instanceof NewTaskPropertiesHolder);
+    Assert.assertTrue(taskHolder instanceof CliPeonTaskHolder);
     Assert.assertEquals("compact_test_taskid", taskHolder.getTaskId());
     Assert.assertEquals("test_ds", taskHolder.getDataSource());
   }
@@ -401,12 +347,11 @@ public void testCompactTaskWithTuningConfig() throws IOException
   @Test
   public void testCliPeonLookupAndExpressionModulesDoNotCycleContextOverrides() throws IOException
   {
-    ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     File file = temporaryFolder.newFile("task.json");
 
     final CompactionTask.Builder builder = new CompactionTask.Builder(
         "test_ds",
-        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, objectMapper)
+        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, mapper)
     );
     final CompactionTask compactionTask = builder
         .id("compact_test_taskid")
@@ -417,8 +362,7 @@ public void testCompactTaskWithTuningConfig() throws IOException
         ))
         .build();
 
-    String s1 = objectMapper.writeValueAsString(compactionTask);
-    FileUtils.write(file, s1, StandardCharsets.UTF_8);
+    FileUtils.write(file, mapper.writeValueAsString(compactionTask), StandardCharsets.UTF_8);
 
     CliPeon runnable = new CliPeon();
     runnable.taskAndStatusFile = ImmutableList.of(file.getParent(), "1");
@@ -429,12 +373,12 @@ public void testCompactTaskWithTuningConfig() throws IOException
 
     // Also ensure LoadSpecHolder is accessible and returns non-null specs.
     LoadSpecHolder loadSpecHolder = injector.getInstance(LoadSpecHolder.class);
-    Assert.assertTrue(loadSpecHolder instanceof NewTaskLoadSpecHolder);
+    Assert.assertTrue(loadSpecHolder instanceof CliPeonLoadSpecHolder);
     Assert.assertEquals(LookupLoadingSpec.NONE, loadSpecHolder.getLookupLoadingSpec());
     Assert.assertEquals(BroadcastDatasourceLoadingSpec.NONE, loadSpecHolder.getBroadcastDatasourceLoadingSpec());
 
     TaskHolder taskHolder = injector.getInstance(TaskHolder.class);
-    Assert.assertTrue(taskHolder instanceof NewTaskPropertiesHolder);
+    Assert.assertTrue(taskHolder instanceof CliPeonTaskHolder);
     Assert.assertEquals("compact_test_taskid", taskHolder.getTaskId());
     Assert.assertEquals("test_ds", taskHolder.getDataSource());
   }
@@ -442,12 +386,11 @@ public void testCompactTaskWithTuningConfig() throws IOException
   @Test
   public void testCliPeonLookupAndExpressionModulesDoNotCycleContextOverrides3() throws IOException
   {
-    ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     File file = temporaryFolder.newFile("task.json");
 
     final CompactionTask.Builder builder = new CompactionTask.Builder(
         "test_ds",
-        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, objectMapper)
+        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, mapper)
     );
     final CompactionTask compactionTask = builder
         .id("compact_test_taskid")
@@ -459,34 +402,23 @@ public void testCompactTaskWithTuningConfig() throws IOException
         ))
         .build();
 
-    String s1 = objectMapper.writeValueAsString(compactionTask);
-    FileUtils.write(file, s1, StandardCharsets.UTF_8);
+    FileUtils.write(file, mapper.writeValueAsString(compactionTask), StandardCharsets.UTF_8);
 
     CliPeon runnable = new CliPeon();
     runnable.taskAndStatusFile = ImmutableList.of(file.getParent(), "1");
     Properties properties = new Properties();
     runnable.configure(properties);
     runnable.configure(properties, GuiceInjectors.makeStartupInjector());
-//    Injector injector1 = GuiceInjectors.makeStartupInjectorWithModules(List.of(new LookupModule()));
-//    runnable.configure(properties, injector);
     Injector injector = runnable.makeInjector();
-
-//        Injector injectorfluff = Initialization.makeInjectorWithModules(
-//        GuiceInjectors.makeStartupInjector(),
-//        List.of()
-//    );
-//    Injector injectorfluff = GuiceInjectors.makeStartupInjector();
     runnable.configure(properties, injector);
 
-
-    // Also ensure LoadSpecHolder is accessible and returns non-null specs.
     LoadSpecHolder loadSpecHolder = injector.getInstance(LoadSpecHolder.class);
-    Assert.assertTrue(loadSpecHolder instanceof NewTaskLoadSpecHolder);
+    Assert.assertTrue(loadSpecHolder instanceof CliPeonLoadSpecHolder);
     Assert.assertEquals(LookupLoadingSpec.NONE, loadSpecHolder.getLookupLoadingSpec());
     Assert.assertEquals(BroadcastDatasourceLoadingSpec.NONE, loadSpecHolder.getBroadcastDatasourceLoadingSpec());
 
     TaskHolder taskHolder = injector.getInstance(TaskHolder.class);
-    Assert.assertTrue(taskHolder instanceof NewTaskPropertiesHolder);
+    Assert.assertTrue(taskHolder instanceof CliPeonTaskHolder);
     Assert.assertEquals("compact_test_taskid", taskHolder.getTaskId());
     Assert.assertEquals("test_ds", taskHolder.getDataSource());
   }

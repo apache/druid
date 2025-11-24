@@ -105,7 +105,7 @@ import org.apache.druid.server.http.TiersResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManagerConfig;
-import org.apache.druid.server.metrics.NonPeonLoadSpecHolder;
+import org.apache.druid.server.metrics.DefaultLoadSpecHolder;
 import org.apache.druid.server.metrics.LoadSpecHolder;
 import org.apache.druid.server.metrics.NoopTaskHolder;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
@@ -204,7 +204,7 @@ public class CliCoordinator extends ServerRunnable
             binder.bind(DruidCoordinatorConfig.class);
 
             binder.bind(TaskHolder.class).to(NoopTaskHolder.class).in(LazySingleton.class);
-            binder.bind(LoadSpecHolder.class).to(NonPeonLoadSpecHolder.class).in(LazySingleton.class);
+            binder.bind(LoadSpecHolder.class).to(DefaultLoadSpecHolder.class).in(LazySingleton.class);
 
             binder.bind(RedirectFilter.class).in(LazySingleton.class);
             binder.bind(CoordinatorDynamicConfigSyncer.class).in(ManageLifecycle.class);

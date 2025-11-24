@@ -19,6 +19,14 @@
 
 package org.apache.druid.server.metrics;
 
+/**
+ * A TaskHolder implementation for all servers that are not CliPeon.
+ *
+ * <p>This holder does not provide task information; calls to its methods will
+ * throw {@link UnsupportedOperationException}. It serves as a safe default for
+ * non-task server processes. Callers should check the implementation type and
+ * avoid invoking task-specific methods when using a {@link NoopTaskHolder}.</p>
+ */
 public class NoopTaskHolder implements TaskHolder
 {
   @Override

@@ -1270,7 +1270,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       this.segmentCacheManagerFactory = segmentCacheManagerFactory;
     }
 
-    public Builder id(String id) {
+    public Builder id(String id)
+    {
       this.id = id;
       return this;
     }

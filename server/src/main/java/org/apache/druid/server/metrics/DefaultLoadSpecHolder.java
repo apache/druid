@@ -22,7 +22,13 @@ package org.apache.druid.server.metrics;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 
-public class NonPeonLoadSpecHolder implements LoadSpecHolder
+/**
+ * LoadSpecHolder implementation for all servers that are not CliPeon.
+ *
+ <p>This holder provides default loading specifications applicable to all
+ non-task server processes.</p>
+ */
+public class DefaultLoadSpecHolder implements LoadSpecHolder
 {
   @Override
   public LookupLoadingSpec getLookupLoadingSpec()

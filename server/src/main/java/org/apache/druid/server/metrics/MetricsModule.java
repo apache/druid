@@ -87,9 +87,6 @@ public class MetricsModule implements Module
 
     DruidBinders.metricMonitorBinder(binder); // get the binder so that it will inject the empty set at a minimum.
 
-    binder.bind(TaskHolder.class).in(LazySingleton.class);
-    binder.bind(LoadSpecHolder.class).in(LazySingleton.class);
-
     binder.bind(ExecutorServiceMonitor.class).in(LazySingleton.class);
 
     // Instantiate eagerly so that we get everything registered and put into the Lifecycle

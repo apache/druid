@@ -19,10 +19,19 @@
 
 package org.apache.druid.server.metrics;
 
+/**
+ * Provides identifying information for a running task. Implementations may throw an exception in
+ * non-task contexts, so callers must check the implementation type before invoking its methods.
+ */
 public interface TaskHolder
 {
-
+  /**
+   * @return the datasource name for the task.
+   */
   String getDataSource();
 
+  /**
+   * @return the unique task ID.
+   */
   String getTaskId();
 }

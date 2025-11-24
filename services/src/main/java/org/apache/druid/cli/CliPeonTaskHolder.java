@@ -21,50 +21,50 @@ package org.apache.druid.cli;
 
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import com.google.inject.Provides;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
-import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
-import org.apache.druid.server.metrics.LoadSpecHolder;
+import org.apache.druid.server.metrics.TaskHolder;
 
-public class NewTaskLoadSpecHolder implements LoadSpecHolder
+/**
+ * TaskHolder implementation for peon processes.
+ *
+ * <p>This holder retrieves task information lazily via a {@link Provider} to avoid
+ * circular dependencies during Guice initialization.</p>
+ */
+public class CliPeonTaskHolder implements TaskHolder
 {
-  private static final Logger log = new Logger(NewTaskLoadSpecHolder.class);
-
+  private static final Logger log = new Logger(CliPeonTaskHolder.class);
   private Provider<Task> taskProvider;
 
   @Inject
-  public NewTaskLoadSpecHolder(
+  public CliPeonTaskHolder(
       Provider<Task> taskProvider
   )
   {
-    log.info("GRRRONCE NewTaskLoadSpecHolder with [%s]", taskProvider);
+    log.info("GRRRONCE NewTaskPropertiesHolder with [%s]", taskProvider);
     this.taskProvider = taskProvider;
   }
 
-
   @Override
-  public LookupLoadingSpec getLookupLoadingSpec()
+  public String getDataSource()
   {
     final Task task = taskProvider.get();
-    log.info("GRRR NewTaskLoadSpecHolder.getLookupLoadingSpec() task[%s]", task);
+    log.info("GRRR NewTaskPropertiesHolder.getDataSource() task[%s]", task);
     if (task == null) {
       throw DruidException.defensive("blah");
     }
-    return task.getLookupLoadingSpec();
+    return task.getDataSource();
   }
 
   @Override
-  public BroadcastDatasourceLoadingSpec getBroadcastDatasourceLoadingSpec()
+  public String getTaskId()
   {
     final Task task = taskProvider.get();
-    log.info("GRRR NewTaskLoadSpecHolder.getBroadcastDatasourceLoadingSpec() task[%s]", task);
+    log.info("GRRR NewTaskPropertiesHolder.getDataSource() task[%s]", task);
     if (task == null) {
       throw DruidException.defensive("blah");
     }
-    return task.getBroadcastDatasourceLoadingSpec();
+    return task.getId();
   }
 }

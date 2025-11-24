@@ -98,9 +98,22 @@ public class GroupByStatsMonitorTest
   {
     final String dataSource = "fooDs";
     final String taskId = "taskId1";
-//    final TaskPropertiesHolder taskPropertiesHolder = new TaskPropertiesHolder(dataSource, taskId, LookupLoadingSpec.ALL, BroadcastDatasourceLoadingSpec.NONE);
-    final GroupByStatsMonitor monitor =
-        new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool, null);
+    final GroupByStatsMonitor monitor = new GroupByStatsMonitor(
+        groupByStatsProvider,
+        mergeBufferPool,
+        new TaskHolder() {
+          @Override
+          public String getDataSource()
+          {
+            return dataSource;
+          }
+
+          @Override
+          public String getTaskId()
+          {
+            return taskId;
+          }
+        });
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
     emitter.flush();

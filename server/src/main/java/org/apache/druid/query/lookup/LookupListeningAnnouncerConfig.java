@@ -43,7 +43,7 @@ class LookupListeningAnnouncerConfig
   public LookupListeningAnnouncerConfig(
       @JacksonInject TaskHolder taskPropsHolder,
       @JacksonInject LoadSpecHolder loadSpecHolder
-      )
+  )
   {
     this.taskPropsHolder = taskPropsHolder;
     this.loadSpecHolder = loadSpecHolder;

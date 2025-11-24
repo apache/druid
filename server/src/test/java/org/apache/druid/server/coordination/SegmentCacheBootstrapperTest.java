@@ -29,8 +29,8 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
+import org.apache.druid.server.metrics.DefaultLoadSpecHolder;
 import org.apache.druid.server.metrics.LoadSpecHolder;
-import org.apache.druid.server.metrics.NonPeonLoadSpecHolder;
 import org.apache.druid.test.utils.TestSegmentCacheManager;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
@@ -131,7 +131,7 @@ public class SegmentCacheBootstrapperTest
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        new NonPeonLoadSpecHolder()
+        new DefaultLoadSpecHolder()
     );
 
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
@@ -190,7 +190,7 @@ public class SegmentCacheBootstrapperTest
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        new NonPeonLoadSpecHolder()
+        new DefaultLoadSpecHolder()
     );
 
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
@@ -246,7 +246,7 @@ public class SegmentCacheBootstrapperTest
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        new NonPeonLoadSpecHolder()
+        new DefaultLoadSpecHolder()
     );
 
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
@@ -300,7 +300,6 @@ public class SegmentCacheBootstrapperTest
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-//        new TaskPropertiesHolder("foo", "boo", LookupLoadingSpec.ALL, BroadcastDatasourceLoadingSpec.NONE)
         new LoadSpecHolder()
         {
           @Override
@@ -417,7 +416,7 @@ public class SegmentCacheBootstrapperTest
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        new NonPeonLoadSpecHolder()
+        new DefaultLoadSpecHolder()
     );
 
     Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
