@@ -31,7 +31,7 @@ import org.apache.druid.server.metrics.TaskHolder;
 class LookupListeningAnnouncerConfig
 {
   public static final String DEFAULT_TIER = "__default";
-  private final TaskHolder taskPropsHolder;
+  private final TaskHolder taskHolder;
   private final LoadSpecHolder loadSpecHolder;
 
   @JsonProperty("lookupTier")
@@ -41,11 +41,11 @@ class LookupListeningAnnouncerConfig
 
   @JsonCreator
   public LookupListeningAnnouncerConfig(
-      @JacksonInject TaskHolder taskPropsHolder,
+      @JacksonInject TaskHolder taskHolder,
       @JacksonInject LoadSpecHolder loadSpecHolder
   )
   {
-    this.taskPropsHolder = taskPropsHolder;
+    this.taskHolder = taskHolder;
     this.loadSpecHolder = loadSpecHolder;
   }
 
@@ -55,7 +55,7 @@ class LookupListeningAnnouncerConfig
         !(lookupTierIsDatasource && null != lookupTier),
         "Cannot specify both `lookupTier` and `lookupTierIsDatasource`"
     );
-    final String lookupTier = lookupTierIsDatasource ? taskPropsHolder.getDataSource() : this.lookupTier;
+    final String lookupTier = lookupTierIsDatasource ? taskHolder.getDataSource() : this.lookupTier;
 
     return Preconditions.checkNotNull(
         lookupTier == null ? DEFAULT_TIER : StringUtils.emptyToNullNonDruidDataString(lookupTier),
