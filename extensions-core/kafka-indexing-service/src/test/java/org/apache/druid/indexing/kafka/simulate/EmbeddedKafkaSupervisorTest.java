@@ -35,15 +35,11 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.segment.transform.ExpressionTransform;
-import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
-import org.apache.druid.testing.embedded.EmbeddedMiddleManager;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -53,7 +49,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
@@ -61,8 +56,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
 {
   private final EmbeddedBroker broker = new EmbeddedBroker();
-//  private final EmbeddedIndexer indexer = new EmbeddedIndexer();
-  private final EmbeddedMiddleManager indexer = new EmbeddedMiddleManager();
+  private final EmbeddedIndexer indexer = new EmbeddedIndexer();
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedHistorical historical = new EmbeddedHistorical();
   private KafkaResource kafkaServer;
@@ -150,13 +144,11 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
 
   private KafkaSupervisorSpec createKafkaSupervisor(String supervisorId, String topic)
   {
-    ExpressionTransform time = new ExpressionTransform("__time", "__time + 3600000", TestExprMacroTable.INSTANCE);
     return new KafkaSupervisorSpecBuilder()
         .withDataSchema(
             schema -> schema
                 .withTimestamp(new TimestampSpec("timestamp", null, null))
                 .withDimensions(DimensionsSpec.EMPTY)
-                .withTransform(new TransformSpec(null, List.of(time)))
         )
         .withTuningConfig(
             tuningConfig -> tuningConfig
