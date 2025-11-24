@@ -64,8 +64,12 @@ public class GroupByStatsMonitorTest
             1L,
             100L,
             200L,
+            100L,
+            200L,
             2L,
             200L,
+            200L,
+            300L,
             300L
         );
       }
@@ -92,15 +96,19 @@ public class GroupByStatsMonitorTest
     // Trigger metric emission
     monitor.doMonitor(emitter);
 
-    Assert.assertEquals(8, emitter.getNumEmittedEvents());
+    Assert.assertEquals(12, emitter.getNumEmittedEvents());
     emitter.verifyValue("mergeBuffer/pendingRequests", 0L);
     emitter.verifyValue("mergeBuffer/used", 0L);
     emitter.verifyValue("mergeBuffer/queries", 1L);
     emitter.verifyValue("mergeBuffer/acquisitionTimeNs", 100L);
     emitter.verifyValue("mergeBuffer/bytesUsed", 200L);
+    emitter.verifyValue("mergeBuffer/maxAcquisitionTimeNs", 100L);
+    emitter.verifyValue("mergeBuffer/maxBytesUsed", 200L);
     emitter.verifyValue("groupBy/spilledQueries", 2L);
     emitter.verifyValue("groupBy/spilledBytes", 200L);
+    emitter.verifyValue("groupBy/maxSpilledBytes", 200L);
     emitter.verifyValue("groupBy/mergeDictionarySize", 300L);
+    emitter.verifyValue("groupBy/maxMergeDictionarySize", 300L);
   }
 
   @Test
@@ -135,15 +143,19 @@ public class GroupByStatsMonitorTest
     final Map<String, Object> dimFilters = Map.of(
         "taskId", List.of(taskId), "dataSource", List.of(dataSource), "id", List.of(taskId)
     );
-    Assert.assertEquals(8, emitter.getNumEmittedEvents());
+    Assert.assertEquals(12, emitter.getNumEmittedEvents());
     emitter.verifyValue("mergeBuffer/pendingRequests", dimFilters, 0L);
     emitter.verifyValue("mergeBuffer/used", dimFilters, 0L);
     emitter.verifyValue("mergeBuffer/queries", dimFilters, 1L);
     emitter.verifyValue("mergeBuffer/acquisitionTimeNs", dimFilters, 100L);
-    emitter.verifyValue("mergeBuffer/bytesUsed", 200L);
+    emitter.verifyValue("mergeBuffer/bytesUsed", dimFilters, 200L);
+    emitter.verifyValue("mergeBuffer/maxAcquisitionTimeNs", dimFilters, 100L);
+    emitter.verifyValue("mergeBuffer/maxBytesUsed", dimFilters, 200L);
     emitter.verifyValue("groupBy/spilledQueries", dimFilters, 2L);
     emitter.verifyValue("groupBy/spilledBytes", dimFilters, 200L);
+    emitter.verifyValue("groupBy/maxSpilledBytes", dimFilters, 200L);
     emitter.verifyValue("groupBy/mergeDictionarySize", dimFilters, 300L);
+    emitter.verifyValue("groupBy/maxMergeDictionarySize", dimFilters, 300L);
   }
 
 
