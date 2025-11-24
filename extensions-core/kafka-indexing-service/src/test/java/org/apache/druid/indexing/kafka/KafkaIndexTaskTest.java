@@ -172,7 +172,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
       new KafkaStringHeaderFormat(null),
       INPUT_FORMAT,
       INPUT_FORMAT,
-      "kafka.testheader.", "kafka.key", "kafka.timestamp", "kafka.topic"
+      "kafka.testheader.", "kafka.key", "kafka.timestamp", "kafka.topic", "kafka.partition", "kafka.offset"
   );
 
   private static TestingCluster zkServer;

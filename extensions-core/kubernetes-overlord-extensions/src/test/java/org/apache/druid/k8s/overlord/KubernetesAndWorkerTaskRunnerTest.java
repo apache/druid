@@ -202,6 +202,29 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
   }
 
   @Test
+  public void test_streamTaskReports_kubernetes() throws IOException
+  {
+    InputStream inputStream = IOUtils.toInputStream("reports", Charset.defaultCharset());
+    EasyMock.expect(kubernetesTaskRunner.streamTaskReports(ID)).andReturn(Optional.of(inputStream));
+
+    replayAll();
+    Assert.assertEquals(inputStream, runner.streamTaskReports(ID).get());
+    verifyAll();
+  }
+
+  @Test
+  public void test_streamTaskReports_worker() throws IOException
+  {
+    InputStream inputStream = IOUtils.toInputStream("reports", Charset.defaultCharset());
+    EasyMock.expect(kubernetesTaskRunner.streamTaskReports(ID)).andReturn(Optional.absent());
+    EasyMock.expect(workerTaskRunner.streamTaskReports(ID)).andReturn(Optional.of(inputStream));
+
+    replayAll();
+    Assert.assertEquals(inputStream, runner.streamTaskReports(ID).get());
+    verifyAll();
+  }
+
+  @Test
   public void test_getBlacklistedTaskSlotCount()
   {
     Map<String, Long> kubernetesTaskSlots = ImmutableMap.of("category", 1L);

@@ -50,14 +50,6 @@
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.github.rvesse</groupId>
-            <artifactId>airline</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-kinesis</artifactId>
             <version>${aws.sdk.version}</version>
@@ -72,12 +64,10 @@
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-core</artifactId>
-            <version>${aws.sdk.version}</version>
         </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-s3</artifactId>
-            <version>${aws.sdk.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -202,11 +192,6 @@
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>druid-basic-security</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-lookups-cached-global</artifactId>
             <version>${project.parent.version}</version>
             <scope>provided</scope>
@@ -225,11 +210,6 @@
         <dependency>
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-multi-stage-query</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid</groupId>
-            <artifactId>druid-services</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
@@ -350,7 +330,7 @@
         </dependency>
         <dependency>
             <groupId>org.hamcrest</groupId>
-            <artifactId>hamcrest-all</artifactId>
+            <artifactId>hamcrest</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -365,7 +345,6 @@
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-sts</artifactId>
-            <version>${aws.sdk.version}</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>

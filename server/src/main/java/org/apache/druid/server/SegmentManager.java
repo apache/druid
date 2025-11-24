@@ -27,11 +27,15 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.query.DataSegmentAndDescriptor;
+import org.apache.druid.query.LeafSegmentsBundle;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountedIndexedTableProvider;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
@@ -46,6 +50,7 @@ import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -123,6 +128,52 @@ public class SegmentManager
   public Optional<VersionedIntervalTimeline<String, DataSegment>> getTimeline(TableDataSource dataSource)
   {
     return Optional.ofNullable(dataSources.get(dataSource.getName())).map(DataSourceState::getTimeline);
+  }
+
+  /**
+   * Given a list of {@link DataSegmentAndDescriptor} produce a {@link LeafSegmentsBundle} which partitions segments
+   * into cached, loadable, or missing segments. This gives callers the flexibilty to decide to perform operations
+   * on segments which are already cached prior to or alongside the operation to load any segments which are not already
+   * present in the cache on demand.
+   * <p>
+   * What this means mechanically, is that for each {@link DataSegmentAndDescriptor} we check if it is already cached
+   * with {@link #acquireCachedSegment(DataSegment)} to add to {@link LeafSegmentsBundle#cachedSegments}, else if
+   * {@link #canLoadSegmentOnDemand(DataSegment)} is true it is added to {@link LeafSegmentsBundle#loadableSegments} or
+   * {@link LeafSegmentsBundle#missingSegments} if not.
+   * <p>
+   * The segments in {@link LeafSegmentsBundle#loadableSegments} can be retrieved with
+   * {@link #acquireSegment(DataSegment)} to ensure they are loaded from deep storage.
+   */
+  public LeafSegmentsBundle getSegmentsBundle(
+      List<DataSegmentAndDescriptor> segments,
+      SegmentMapFunction segmentMapFunction
+  )
+  {
+    final ArrayList<SegmentReference> segmentReferences = new ArrayList<>();
+    final ArrayList<SegmentDescriptor> missingSegments = new ArrayList<>();
+    final ArrayList<DataSegmentAndDescriptor> loadableSegments = new ArrayList<>();
+    for (DataSegmentAndDescriptor segment : segments) {
+      final DataSegment dataSegment = segment.getDataSegment();
+      if (dataSegment == null) {
+        missingSegments.add(segment.getDescriptor());
+        continue;
+      }
+      Optional<Segment> ref = acquireCachedSegment(dataSegment);
+      if (ref.isPresent()) {
+        segmentReferences.add(
+            new SegmentReference(
+                segment.getDescriptor(),
+                segmentMapFunction.apply(ref),
+                null
+            )
+        );
+      } else if (canLoadSegmentOnDemand(dataSegment)) {
+        loadableSegments.add(segment);
+      } else {
+        missingSegments.add(segment.getDescriptor());
+      }
+    }
+    return new LeafSegmentsBundle(segmentReferences, loadableSegments, missingSegments);
   }
 
   /**
@@ -373,6 +424,16 @@ public class SegmentManager
   public boolean canHandleSegments()
   {
     return cacheManager.canHandleSegments();
+  }
+
+  public boolean canLoadSegmentsOnDemand()
+  {
+    return cacheManager.canLoadSegmentsOnDemand();
+  }
+
+  public boolean canLoadSegmentOnDemand(DataSegment dataSegment)
+  {
+    return cacheManager.canLoadSegmentOnDemand(dataSegment);
   }
 
   /**

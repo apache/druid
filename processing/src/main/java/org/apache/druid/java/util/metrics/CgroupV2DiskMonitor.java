@@ -87,6 +87,7 @@ public class CgroupV2DiskMonitor extends FeedDefiningMonitor
         final ServiceMetricEvent.Builder builder = builder()
             .setDimension("diskName", entry.getDiskName());
         MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+        builder.setDimension("cgroupversion", cgroupDiscoverer.getCgroupVersion());
         for (Map.Entry<String, Long> stat : stats.entrySet()) {
           emitter.emit(builder.setMetric(stat.getKey(), stat.getValue()));
         }

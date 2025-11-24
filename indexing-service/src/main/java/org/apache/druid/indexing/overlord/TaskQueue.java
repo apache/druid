@@ -69,6 +69,7 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -378,7 +379,9 @@ public class TaskQueue
   {
     startStopLock.readLock().lock();
     try {
-      startPendingTasksOnRunner();
+      if (isActive()) {
+        startPendingTasksOnRunner();
+      }
     }
     finally {
       startStopLock.readLock().unlock();
@@ -454,6 +457,12 @@ public class TaskQueue
           if (taskIsReady) {
             log.info("Asking taskRunner to run task[%s]", task.getId());
             runnerTaskFuture = taskRunner.run(task);
+
+            // Emit the waiting time for the task
+            final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+            IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+            final long waitDurationMillis = new Duration(entry.getTaskSubmittedTime(), DateTimes.nowUtc()).getMillis();
+            emitter.emit(metricBuilder.setMetric("task/waiting/time", waitDurationMillis));
           } else {
             // Task.isReady() can internally lock intervals or segments.
             // We should release them if the task is not ready.
@@ -564,7 +573,7 @@ public class TaskQueue
         prevEntry -> {
           if (prevEntry == null) {
             added.set(true);
-            return new TaskEntry(taskInfo);
+            return new TaskEntry(taskInfo, updateTime);
           } else if (prevEntry.lastUpdatedTime.isBefore(updateTime)) {
             prevEntry.updateStatus(taskInfo.getStatus(), updateTime);
           }
@@ -1023,6 +1032,19 @@ public class TaskQueue
   }
 
   /**
+   * List of all active tasks currently being managed by this TaskQueue.
+   */
+  public List<Task> getActiveTasks()
+  {
+    return activeTasks.values()
+                      .stream()
+                      .filter(entry -> !entry.isComplete)
+                      .map(TaskEntry::getTask)
+                      .collect(Collectors.toList());
+  }
+
+  /**
+   * Returns the list of currently active tasks for the given datasource.
    * List of all active and completed task infos currently being managed by this TaskQueue.
    */
   public List<TaskInfo> getTaskInfos()
@@ -1150,13 +1172,16 @@ public class TaskQueue
   {
     private TaskInfo taskInfo;
 
+    // Approximate time this task was submitted to Overlord
+    private final DateTime taskSubmittedTime;
     private DateTime lastUpdatedTime;
     private ListenableFuture<TaskStatus> future = null;
     private boolean isComplete = false;
 
-    TaskEntry(TaskInfo taskInfo)
+    TaskEntry(TaskInfo taskInfo, DateTime taskSubmittedTime)
     {
       this.taskInfo = taskInfo;
+      this.taskSubmittedTime = taskSubmittedTime;
       this.lastUpdatedTime = DateTimes.nowUtc();
     }
 
@@ -1176,6 +1201,14 @@ public class TaskQueue
     {
       this.taskInfo = this.taskInfo.withStatus(status);
       this.lastUpdatedTime = updateTime;
+    }
+
+    /**
+     * Returns the approximate time the task referenced by this {@link TaskEntry} was submitted to the Overlord.
+     */
+    DateTime getTaskSubmittedTime()
+    {
+      return taskSubmittedTime;
     }
   }
 

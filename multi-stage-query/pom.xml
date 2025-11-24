@@ -219,7 +219,6 @@
         <dependency>
             <groupId>org.apache.calcite</groupId>
             <artifactId>calcite-testkit</artifactId>
-            <version>${calcite.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.junit.jupiter</groupId>
@@ -264,7 +263,7 @@
         </dependency>
         <dependency>
             <groupId>org.hamcrest</groupId>
-            <artifactId>hamcrest-all</artifactId>
+            <artifactId>hamcrest</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

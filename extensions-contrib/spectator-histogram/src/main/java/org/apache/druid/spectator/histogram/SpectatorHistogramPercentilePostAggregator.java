@@ -90,6 +90,9 @@ public class SpectatorHistogramPercentilePostAggregator implements PostAggregato
   public Object compute(final Map<String, Object> combinedAggregators)
   {
     final SpectatorHistogram sketch = (SpectatorHistogram) field.compute(combinedAggregators);
+    if (sketch == null) {
+      return null;
+    }
     return sketch.getPercentileValue(percentile);
   }
 

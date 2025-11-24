@@ -208,6 +208,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                      .add(new Object[]{"lookup", "lookyloo-chain", "TABLE", "YES", "YES"})
                      .add(new Object[]{"lookup", "lookyloo121", "TABLE", "YES", "YES"})
                      .add(new Object[]{"sys", "segments", "SYSTEM_TABLE", "NO", "NO"})
+                     .add(new Object[]{"sys", "server_properties", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"sys", "servers", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"sys", "supervisors", "SYSTEM_TABLE", "NO", "NO"})
@@ -253,6 +254,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                      .add(new Object[]{"lookup", "lookyloo-chain", "TABLE", "YES", "YES"})
                      .add(new Object[]{"lookup", "lookyloo121", "TABLE", "YES", "YES"})
                      .add(new Object[]{"sys", "segments", "SYSTEM_TABLE", "NO", "NO"})
+                     .add(new Object[]{"sys", "server_properties", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"sys", "servers", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"sys", "supervisors", "SYSTEM_TABLE", "NO", "NO"})
@@ -751,7 +753,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupingOnStringSerializablePairLongString()
   {
-    cannotVectorize();
     testQuery(
         "SELECT COUNT(*) FROM (SELECT string_first_added FROM druid.wikipedia_first_last GROUP BY 1)",
         ImmutableList.of(
@@ -783,7 +784,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupingOnStringSerializablePairLongLong()
   {
-    cannotVectorize();
     testQuery(
         "SELECT COUNT(*) FROM (SELECT long_first_added FROM druid.wikipedia_first_last GROUP BY 1)",
         ImmutableList.of(
@@ -815,7 +815,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupingOnStringSerializablePairLongDouble()
   {
-    cannotVectorize();
     testQuery(
         "SELECT COUNT(*) FROM (SELECT double_first_added FROM druid.wikipedia_first_last GROUP BY 1)",
         ImmutableList.of(
@@ -847,7 +846,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupingOnStringSerializablePairLongFloat()
   {
-    cannotVectorize();
     testQuery(
         "SELECT COUNT(*) FROM (SELECT float_first_added FROM druid.wikipedia_first_last GROUP BY 1)",
         ImmutableList.of(
@@ -8415,7 +8413,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "  REGEXP_EXTRACT(dim1, '^(.))', 1)\n"
         + "FROM foo",
         DruidExceptionMatcher.invalidInput().expectMessageContains(
-            "An invalid pattern [^(.))] was provided for the regexp_extract function, " +
+            "An invalid pattern [^(.))] was provided for the [regexp_extract] function, " +
             "error: [Unmatched closing ')' near index 3\n^(.))\n   ^]"
         )
     );

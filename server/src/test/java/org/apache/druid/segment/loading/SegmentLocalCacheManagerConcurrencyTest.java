@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -34,7 +35,6 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.PhysicalSegmentInspector;
-import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
@@ -78,6 +78,8 @@ class SegmentLocalCacheManagerConcurrencyTest
 
   private File localSegmentCacheFolder;
   private File otherLocalSegmentCacheFolder;
+  private SegmentLoaderConfig loaderConfig;
+  private SegmentLoaderConfig vsfLoaderConfig;
   private SegmentLocalCacheManager manager;
   private SegmentLocalCacheManager virtualStorageManager;
   private StorageLocation location;
@@ -127,8 +129,21 @@ class SegmentLocalCacheManagerConcurrencyTest
     locations.add(locationConfig);
     locations.add(locationConfig2);
 
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().withLocations(locations);
-    final SegmentLoaderConfig vsfLoaderConfig = new SegmentLoaderConfig()
+    loaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public List<StorageLocationConfig> getLocations()
+      {
+        return locations;
+      }
+
+      @Override
+      public File getInfoDir()
+      {
+        return new File(tempDir, "info");
+      }
+    };
+    vsfLoaderConfig = new SegmentLoaderConfig()
     {
       @Override
       public List<StorageLocationConfig> getLocations()
@@ -146,6 +161,12 @@ class SegmentLocalCacheManagerConcurrencyTest
       public int getVirtualStorageLoadThreads()
       {
         return Runtime.getRuntime().availableProcessors();
+      }
+
+      @Override
+      public File getInfoDir()
+      {
+        return new File(tempDir, "info");
       }
     };
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
@@ -165,6 +186,8 @@ class SegmentLocalCacheManagerConcurrencyTest
         TestIndex.INDEX_IO,
         jsonMapper
     );
+    manager.getCachedSegments();
+    virtualStorageManager.getCachedSegments();
     executorService = Execs.multiThreaded(
         10,
         "segment-loader-local-cache-manager-concurrency-test-%d"
@@ -346,10 +369,10 @@ class SegmentLocalCacheManagerConcurrencyTest
     final File localStorageFolder = new File(tempDir, "local_storage_folder");
 
     final Interval interval = Intervals.of("2019-01-01/P1D");
-
     makeSegmentsToLoad(segmentCount, localStorageFolder, interval, segmentsToWeakLoad);
 
     for (boolean sleepy : new boolean[]{true, false}) {
+      // use different segments for each run, otherwise the 2nd run is all cache hits
       testWeakLoad(iterations, segmentCount, concurrentReads, true, sleepy, true);
     }
   }
@@ -404,8 +427,9 @@ class SegmentLocalCacheManagerConcurrencyTest
     Assertions.assertEquals(0, location2.getActiveWeakHolds());
     Assertions.assertTrue(4 >= location.getWeakEntryCount());
     Assertions.assertTrue(4 >= location2.getWeakEntryCount());
-    Assertions.assertTrue(4 >= location.getPath().listFiles().length);
-    Assertions.assertTrue(4 >= location2.getPath().listFiles().length);
+    // 5 because __drop path
+    Assertions.assertTrue(5 >= location.getPath().listFiles().length);
+    Assertions.assertTrue(5 >= location2.getPath().listFiles().length);
     Assertions.assertEquals(location.getStats().getEvictionCount(), location.getStats().getUnmountCount());
     Assertions.assertEquals(location2.getStats().getEvictionCount(), location2.getStats().getUnmountCount());
   }
@@ -562,8 +586,8 @@ class SegmentLocalCacheManagerConcurrencyTest
     for (DataSegment segment : segmentsToWeakLoad) {
       virtualStorageManager.drop(segment);
     }
-    location.resetStats();
-    location2.resetStats();
+    location.reset();
+    location2.reset();
     for (int i = 0; i < iterations; i++) {
       int segment = random ? ThreadLocalRandom.current().nextInt(segmentCount) : i % segmentCount;
       currentBatch.add(segmentsToWeakLoad.get(segment));
@@ -619,6 +643,14 @@ class SegmentLocalCacheManagerConcurrencyTest
     }
 
     assertNoLooseEnds();
+
+    try {
+      FileUtils.deleteDirectory(location.getPath());
+      FileUtils.deleteDirectory(location2.getPath());
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private BatchResult testWeakBatch(int iteration, List<DataSegment> currentBatch, boolean sleepy)
@@ -684,8 +716,9 @@ class SegmentLocalCacheManagerConcurrencyTest
     Assertions.assertEquals(0, location2.getActiveWeakHolds());
     Assertions.assertTrue(4 >= location.getWeakEntryCount());
     Assertions.assertTrue(4 >= location2.getWeakEntryCount());
-    Assertions.assertTrue(4 >= location.getPath().listFiles().length);
-    Assertions.assertTrue(4 >= location2.getPath().listFiles().length);
+    // 5 because __drop path
+    Assertions.assertTrue(5 >= location.getPath().listFiles().length);
+    Assertions.assertTrue(5 >= location2.getPath().listFiles().length);
     Assertions.assertTrue(location.getStats().getLoadCount() >= 4);
     Assertions.assertTrue(location2.getStats().getLoadCount() >= 4);
     Assertions.assertEquals(location.getStats().getEvictionCount(), location.getStats().getUnmountCount());
@@ -822,12 +855,12 @@ class SegmentLocalCacheManagerConcurrencyTest
           segmentManager.acquireSegment(segment)
       );
       try {
-        final ReferenceCountedObjectProvider<Segment> referenceProvider =
+        final AcquireSegmentResult result =
             action.getSegmentFuture().get(timeout, TimeUnit.MILLISECONDS);
-        if (referenceProvider == null) {
+        if (result == null) {
           Assertions.fail("this shouldn't happen");
         }
-        final Optional<Segment> segment = referenceProvider.acquireReference().map(closer::register);
+        final Optional<Segment> segment = result.getReferenceProvider().acquireReference().map(closer::register);
         if (segment.isPresent()) {
           PhysicalSegmentInspector gadget = segment.get().as(PhysicalSegmentInspector.class);
           if (delayMin >= 0 && delayMax > 0) {

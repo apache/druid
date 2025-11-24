@@ -43,6 +43,10 @@ public interface SegmentCacheManager
    */
   boolean canHandleSegments();
 
+  boolean canLoadSegmentsOnDemand();
+
+  boolean canLoadSegmentOnDemand(DataSegment segment);
+
   /**
    * Return a list of cached segments from local disk, if any. This should be called only when
    * {@link #canHandleSegments()} is true.

@@ -37,7 +37,6 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestHelper;
@@ -893,6 +892,17 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
       {
         return true;
       }
+
+      @Override
+      public File getInfoDir()
+      {
+        try {
+          return tmpFolder.newFolder();
+        }
+        catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
     };
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
@@ -910,8 +920,8 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     Assert.assertNull(manager.getSegmentFiles(segmentToLoad));
     Assert.assertFalse(manager.acquireCachedSegment(segmentToLoad).isPresent());
     AcquireSegmentAction segmentAction = manager.acquireSegment(segmentToLoad);
-    ReferenceCountedObjectProvider<Segment> referenceProvider = segmentAction.getSegmentFuture().get();
-    Optional<Segment> theSegment = referenceProvider.acquireReference();
+    AcquireSegmentResult result = segmentAction.getSegmentFuture().get();
+    Optional<Segment> theSegment = result.getReferenceProvider().acquireReference();
     Assert.assertTrue(theSegment.isPresent());
     Assert.assertNotNull(manager.getSegmentFiles(segmentToLoad));
     Assert.assertEquals(segmentToLoad.getId(), theSegment.get().getId());
@@ -920,12 +930,13 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     segmentAction.close();
 
     manager.drop(segmentToLoad);
-    Assert.assertNull(manager.getSegmentFiles(segmentToLoad));
+    // drop doesn't really drop, segments hang out until evicted
+    Assert.assertNotNull(manager.getSegmentFiles(segmentToLoad));
 
     // can actually load them again because load doesn't really do anything
     AcquireSegmentAction segmentActionAfterDrop = manager.acquireSegment(segmentToLoad);
-    ReferenceCountedObjectProvider<Segment> referenceProviderAfterDrop = segmentActionAfterDrop.getSegmentFuture().get();
-    Optional<Segment> theSegmentAfterDrop = referenceProviderAfterDrop.acquireReference();
+    AcquireSegmentResult resultAfterDrop = segmentActionAfterDrop.getSegmentFuture().get();
+    Optional<Segment> theSegmentAfterDrop = resultAfterDrop.getReferenceProvider().acquireReference();
     Assert.assertTrue(theSegmentAfterDrop.isPresent());
     Assert.assertNotNull(manager.getSegmentFiles(segmentToLoad));
     Assert.assertEquals(segmentToLoad.getId(), theSegmentAfterDrop.get().getId());
@@ -952,6 +963,17 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
       {
         return true;
       }
+
+      @Override
+      public File getInfoDir()
+      {
+        try {
+          return tmpFolder.newFolder();
+        }
+        catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
     };
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
@@ -968,8 +990,8 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     Assert.assertNull(manager.getSegmentFiles(segmentToBootstrap));
     Assert.assertFalse(manager.acquireCachedSegment(segmentToBootstrap).isPresent());
     AcquireSegmentAction segmentAction = manager.acquireSegment(segmentToBootstrap);
-    ReferenceCountedObjectProvider<Segment> referenceProvider = segmentAction.getSegmentFuture().get();
-    Optional<Segment> theSegment = referenceProvider.acquireReference();
+    AcquireSegmentResult result = segmentAction.getSegmentFuture().get();
+    Optional<Segment> theSegment = result.getReferenceProvider().acquireReference();
     Assert.assertTrue(theSegment.isPresent());
     Assert.assertNotNull(manager.getSegmentFiles(segmentToBootstrap));
     Assert.assertEquals(segmentToBootstrap.getId(), theSegment.get().getId());
@@ -979,13 +1001,14 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     segmentAction.close();
 
     manager.drop(segmentToBootstrap);
-    Assert.assertNull(manager.getSegmentFiles(segmentToBootstrap));
+    // drop doesn't really drop, segments hang out until evicted
+    Assert.assertNotNull(manager.getSegmentFiles(segmentToBootstrap));
 
     // can actually load them again because bootstrap doesn't really do anything unless the segment is already
     // present in the cache
     AcquireSegmentAction segmentActionAfterDrop = manager.acquireSegment(segmentToBootstrap);
-    ReferenceCountedObjectProvider<Segment> referenceProviderDrop = segmentActionAfterDrop.getSegmentFuture().get();
-    Optional<Segment> theSegmentAfterDrop = referenceProviderDrop.acquireReference();
+    AcquireSegmentResult resultAfterDrop = segmentActionAfterDrop.getSegmentFuture().get();
+    Optional<Segment> theSegmentAfterDrop = resultAfterDrop.getReferenceProvider().acquireReference();
     Assert.assertTrue(theSegmentAfterDrop.isPresent());
     Assert.assertNotNull(manager.getSegmentFiles(segmentToBootstrap));
     Assert.assertEquals(segmentToBootstrap.getId(), theSegmentAfterDrop.get().getId());
@@ -1064,12 +1087,94 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     // reference which was originally cached and then dropped before attempting to acquire a segment. if virtual storage
     // is not enabled, this should return a missing segment instead of downloading
     AcquireSegmentAction segmentAction = manager.acquireSegment(segmentToLoad);
-    ReferenceCountedObjectProvider<Segment> referenceProvider = segmentAction.getSegmentFuture().get();
-    Optional<Segment> theSegment = referenceProvider.acquireReference();
+    AcquireSegmentResult result = segmentAction.getSegmentFuture().get();
+    Optional<Segment> theSegment = result.getReferenceProvider().acquireReference();
     Assert.assertFalse(theSegment.isPresent());
     segmentAction.close();
 
     Assert.assertNull(manager.getSegmentFiles(segmentToLoad));
+  }
+
+  @Test
+  public void testGetSegmentVirtualStorageMountAfterDrop() throws Exception
+  {
+    final StorageLocationConfig locationConfig = new StorageLocationConfig(localSegmentCacheDir, 10L, null);
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public List<StorageLocationConfig> getLocations()
+      {
+        return ImmutableList.of(locationConfig);
+      }
+
+      @Override
+      public boolean isVirtualStorage()
+      {
+        return true;
+      }
+
+      @Override
+      public File getInfoDir()
+      {
+        try {
+          return tmpFolder.newFolder();
+        }
+        catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    };
+    final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
+    SegmentLocalCacheManager manager = new SegmentLocalCacheManager(
+        storageLocations,
+        loaderConfig,
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
+        TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
+        jsonMapper
+    );
+
+    final DataSegment segmentToLoad = makeTestDataSegment(segmentDeepStorageDir);
+    createSegmentZipInLocation(segmentDeepStorageDir, TEST_DATA_RELATIVE_PATH);
+
+    manager.load(segmentToLoad);
+    Assert.assertNull(manager.getSegmentFiles(segmentToLoad));
+    Assert.assertFalse(manager.acquireCachedSegment(segmentToLoad).isPresent());
+    AcquireSegmentAction segmentAction = manager.acquireSegment(segmentToLoad);
+
+    // now drop it before we actually load it, but dropping a weakly held reference does not remove the entry from the
+    // cache, deferring it until eviction
+    manager.drop(segmentToLoad);
+
+    // however, we also have a hold, so it will not be evicted
+    final DataSegment cannotLoad = makeTestDataSegment(segmentDeepStorageDir, 1, TEST_DATA_RELATIVE_PATH_2);
+    Assert.assertThrows(DruidException.class, () -> manager.acquireSegment(cannotLoad));
+
+    // and we can still mount and use the segment we are holding
+    AcquireSegmentResult result = segmentAction.getSegmentFuture().get();
+    Assert.assertNotNull(result);
+    Optional<Segment> theSegment = result.getReferenceProvider().acquireReference();
+    Assert.assertTrue(theSegment.isPresent());
+    Assert.assertNotNull(manager.getSegmentFiles(segmentToLoad));
+    Assert.assertEquals(segmentToLoad.getId(), theSegment.get().getId());
+    Assert.assertEquals(segmentToLoad.getInterval(), theSegment.get().getDataInterval());
+    theSegment.get().close();
+    segmentAction.close();
+    Assert.assertNotNull(manager.getSegmentFiles(segmentToLoad));
+
+    // now that the hold has been released, we can load the other segment and evict the one that was held
+    createSegmentZipInLocation(segmentDeepStorageDir, TEST_DATA_RELATIVE_PATH_2);
+    manager.load(cannotLoad);
+    AcquireSegmentAction segmentActionAfterDrop = manager.acquireSegment(cannotLoad);
+    AcquireSegmentResult resultDrop = segmentActionAfterDrop.getSegmentFuture().get();
+    Optional<Segment> theSegmentAfterDrop = resultDrop.getReferenceProvider().acquireReference();
+    Assert.assertTrue(theSegmentAfterDrop.isPresent());
+    Assert.assertNotNull(manager.getSegmentFiles(cannotLoad));
+    Assert.assertEquals(cannotLoad.getId(), theSegmentAfterDrop.get().getId());
+    Assert.assertEquals(cannotLoad.getInterval(), theSegmentAfterDrop.get().getDataInterval());
+    Assert.assertNull(manager.getSegmentFiles(segmentToLoad));
+
+    theSegmentAfterDrop.get().close();
+    segmentActionAfterDrop.close();
   }
 
   @Test

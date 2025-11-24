@@ -333,8 +333,8 @@ The `partitionsSpec` types have different characteristics.
 |Property|Description|Default|Required|
 |--------|-----------|-------|---------|
 |`type`|Set the value to `dynamic`.|none|yes|
-|`maxRowsPerSegment`|Used in sharding. Determines how many rows are in each segment.|5000000|no|
-|`maxTotalRows`|Total number of rows across all segments waiting for being pushed. Used in determining when intermediate segment push should occur.|20000000|no|
+|`maxRowsPerSegment`|Used in sharding. Determines how many rows are in each segment. Value must be greater than 0.|5000000|no|
+|`maxTotalRows`|Total number of rows across all segments waiting for being pushed. Used in determining when intermediate segment push should occur. Value must be greater than 0.|20000000|no|
 
 With the dynamic partitioning, the parallel index task runs in a single phase spawning multiple worker tasks (type `single_phase_sub_task`), each of which creates segments.
 
@@ -458,7 +458,7 @@ Range partitioning is not possible on multi-value dimensions. If one of the prov
 |`type`|Set the value to `range`.|none|yes|
 |`partitionDimensions`|An array of dimensions to partition on. Order the dimensions from most frequently queried to least frequently queried. For best results, limit your number of dimensions to between three and five dimensions.|none|yes|
 |`targetRowsPerSegment`|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|none|either this or `maxRowsPerSegment`|
-|maxRowsPerSegment|Soft max for the number of rows to include in a partition.|none|either this or `targetRowsPerSegment`|
+|`maxRowsPerSegment`|Soft max for the number of rows to include in a partition.|none|either this or `targetRowsPerSegment`|
 |`assumeGrouped`|Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.|false|no|
 
 #### Benefits of range partitioning

@@ -119,6 +119,11 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 
 ### Real-time
 
+:::info
+Monitors on peons that previously emitted the `id` dimension from `JettyMonitor`, `OshiSysMonitor`, `JvmMonitor`, `JvmCpuMonitor`, `JvmThreadsMonitor` and `SysMonitor` 
+to represent the task ID are deprecated and will be removed in a future release. Use the `taskId` dimension instead.
+:::
+
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
 |`query/time`|Milliseconds taken to complete a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`, `statusCode`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|< 1s|
@@ -131,13 +136,13 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`query/failed/count`|Number of failed queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
 |`query/interrupted/count`|Number of queries interrupted due to cancellation.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
 |`query/timeout/count`|Number of timed out queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
-|`mergeBuffer/pendingRequests`|Number of requests waiting to acquire a batch of buffers from the merge buffer pool.|This metric is only available if the `GroupByStatsMonitor` module is included.|Should be ideally 0, though a higher number isn't representative of a problem.|
-|`mergeBuffer/used`|Number of merge buffers used from the merge buffer pool.|This metric is only available if the `GroupByStatsMonitor` module is included.|Depends on the number of groupBy queries needing merge buffers.|
-|`mergeBuffer/queries`|Number of groupBy queries that acquired a batch of buffers from the merge buffer pool.|This metric is only available if the `GroupByStatsMonitor` module is included.|Depends on the number of groupBy queries needing merge buffers.|
-|`mergeBuffer/acquisitionTimeNs`|Total time in nanoseconds to acquire merge buffer for groupBy queries.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
-|`groupBy/spilledQueries`|Number of groupBy queries that have spilled onto the disk.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
-|`groupBy/spilledBytes`|Number of bytes spilled on the disk by the groupBy queries.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
-|`groupBy/mergeDictionarySize`|Size of on-heap merge dictionary in bytes.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
+|`mergeBuffer/pendingRequests`|Number of requests waiting to acquire a batch of buffers from the merge buffer pool. This metric is only available if the `GroupByStatsMonitor` module is included.|`dataSource`, `taskId`|Should be ideally 0, though a higher number isn't representative of a problem.|
+|`mergeBuffer/used`|Number of merge buffers used from the merge buffer pool. This metric is only available if the `GroupByStatsMonitor` module is included.|`dataSource`, `taskId`|Depends on the number of groupBy queries needing merge buffers.|
+|`mergeBuffer/queries`|Number of groupBy queries that acquired a batch of buffers from the merge buffer pool. This metric is only available if the `GroupByStatsMonitor` module is included.|`dataSource`, `taskId`|Depends on the number of groupBy queries needing merge buffers.|
+|`mergeBuffer/acquisitionTimeNs`|Total time in nanoseconds to acquire merge buffer for groupBy queries. This metric is only available if the `GroupByStatsMonitor` module is included.|`dataSource`, `taskId`|Varies|
+|`groupBy/spilledQueries`|Number of groupBy queries that have spilled onto the disk. This metric is only available if the `GroupByStatsMonitor` module is included.|`dataSource`, `taskId`|Varies|
+|`groupBy/spilledBytes`|Number of bytes spilled on the disk by the groupBy queries. This metric is only available if the `GroupByStatsMonitor` module is included.|`dataSource`, `taskId`|Varies|
+|`groupBy/mergeDictionarySize`|Size of on-heap merge dictionary in bytes. This metric is only available if the `GroupByStatsMonitor` module is included.|`dataSource`, `taskId`|Varies|
 
 ### Jetty
 
@@ -297,7 +302,8 @@ If the JVM does not support CPU time measurement for the current thread, `ingest
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
 |`task/run/time`|Milliseconds taken to run a task.| `dataSource`, `taskId`, `taskType`, `groupId`, `taskStatus`, `description`, `tags`|Varies|
-|`task/pending/time`|Milliseconds taken for a task to wait for running.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Varies|
+|`task/pending/time`|Milliseconds taken for a task to start running after being scheduled by the Overlord.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Varies|
+|`task/waiting/time`|Milliseconds taken for a task to be scheduled to run after being submitted to the Overlord.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Varies|
 |`task/action/run/time`|Milliseconds taken to execute a task action.| `dataSource`, `taskId`, `taskType`, `groupId`, `taskActionType`, `tags`|Varies from subsecond to a few seconds, based on action type.|
 |`task/action/success/count`|Number of task actions that were executed successfully during the emission period. Currently only being emitted for [batched `segmentAllocate` actions](../ingestion/tasks.md#batching-segmentallocate-actions).| `dataSource`, `taskId`, `taskType`, `groupId`, `taskActionType`, `tags`|Varies|
 |`task/action/failed/count`|Number of task actions that failed during the emission period. Currently only being emitted for [batched `segmentAllocate` actions](../ingestion/tasks.md#batching-segmentallocate-actions).| `dataSource`, `taskId`, `taskType`, `groupId`, `taskActionType`, `tags`|Varies|
@@ -413,7 +419,7 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`tier/total/capacity`|Total capacity in bytes available in each tier.|`tier`|Varies|
 |`compact/task/count`|Number of tasks issued in the auto compaction run.| |Varies|
 |`compactTask/maxSlot/count`|Maximum number of task slots available for auto compaction tasks in the auto compaction run.| |Varies|
-|`compactTask/availableSlot/count`|Number of available task slots that can be used for auto compaction tasks in the auto compaction run. This is the max number of task slots minus any currently running compaction tasks.| |Varies|
+|`compactTask/availableSlot/count`|Number of currently vacant task slots out of the total slots allocated for auto compaction tasks. This value is computed as the difference between the total number of task slots allocated for auto compaction and the estimated number of task slots currently occupied by running compaction tasks. The number of sub-tasks of each compaction task is estimated to be `maxNumConcurrentSubTasks`.| |Varies|
 |`killTask/availableSlot/count`| Number of available task slots that can be used for auto kill tasks in the auto kill run. This is the max number of task slots minus any currently running auto kill tasks.                                                                                                                                                                                                                                                                                                                     | |Varies|
 |`killTask/maxSlot/count`| Maximum number of task slots available for auto kill tasks in the auto kill run.                                                                                                                                                                                                                                                                                                                                                                                                                | |Varies|
 |`kill/task/count`| Number of tasks issued in the auto kill run.                                                                                                                                                                                                                                                                                                                                                                                                                                                    | |Varies|
