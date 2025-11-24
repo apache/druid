@@ -325,7 +325,6 @@ public class CliPeon extends GuiceRunnable
                 // write the remote task.json to the task file location for ExecutorLifecycle to pickup
                 FileUtils.write(config.getTaskFile(), task, Charset.defaultCharset());
               }
-              log.info("Grrr read task from config.getTaskFile() [%s]", config.getTaskFile());
               return mapper.readValue(config.getTaskFile(), Task.class);
             }
             catch (IOException e) {

@@ -118,7 +118,6 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   )
   {
     this(lookupConfig, objectMapper, coordinatorClient, lookupListeningAnnouncerConfig, false);
-    LOG.info("Umm Initializing LookupReferencesManager");
   }
 
   @VisibleForTesting

@@ -23,7 +23,6 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.metrics.TaskHolder;
 
 /**
@@ -34,7 +33,6 @@ import org.apache.druid.server.metrics.TaskHolder;
  */
 public class CliPeonTaskHolder implements TaskHolder
 {
-  private static final Logger log = new Logger(CliPeonTaskHolder.class);
   private Provider<Task> taskProvider;
 
   @Inject
@@ -42,7 +40,6 @@ public class CliPeonTaskHolder implements TaskHolder
       Provider<Task> taskProvider
   )
   {
-    log.info("GRRRONCE NewTaskPropertiesHolder with [%s]", taskProvider);
     this.taskProvider = taskProvider;
   }
 
@@ -50,7 +47,6 @@ public class CliPeonTaskHolder implements TaskHolder
   public String getDataSource()
   {
     final Task task = taskProvider.get();
-    log.info("GRRR NewTaskPropertiesHolder.getDataSource() task[%s]", task);
     if (task == null) {
       throw DruidException.defensive("blah");
     }
@@ -61,7 +57,6 @@ public class CliPeonTaskHolder implements TaskHolder
   public String getTaskId()
   {
     final Task task = taskProvider.get();
-    log.info("GRRR NewTaskPropertiesHolder.getDataSource() task[%s]", task);
     if (task == null) {
       throw DruidException.defensive("blah");
     }

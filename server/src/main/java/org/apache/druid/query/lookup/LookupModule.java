@@ -32,7 +32,6 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.dimension.LookupDimensionSpec;
 import org.apache.druid.query.expression.LookupExprMacro;
 import org.apache.druid.server.initialization.jetty.JettyBindings;
@@ -43,7 +42,6 @@ import java.util.List;
 
 public class LookupModule implements DruidModule
 {
-  private static final Logger log = new Logger(LookupModule.class);
   static final String PROPERTY_BASE = "druid.lookup";
   public static final String FAILED_UPDATES_KEY = "failedUpdates";
   public static final int LOOKUP_LISTENER_QOS_MAX_REQUESTS = 2;
@@ -51,7 +49,6 @@ public class LookupModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    log.info("Umm yes LookupModule.getJacksonModules()");
     return ImmutableList.<Module>of(
         new SimpleModule("DruidLookupModule").registerSubtypes(MapLookupExtractorFactory.class),
         new SimpleModule().registerSubtypes(
@@ -64,7 +61,6 @@ public class LookupModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    log.info("Umm yes LookupModule.configure()");
     JsonConfigProvider.bind(binder, PROPERTY_BASE, LookupConfig.class);
     binder.bind(LookupExtractorFactoryContainerProvider.class).to(LookupReferencesManager.class);
     LifecycleModule.register(binder, LookupReferencesManager.class);
@@ -83,7 +79,6 @@ public class LookupModule implements DruidModule
   @LazySingleton
   public LookupNodeService getLookupNodeService(LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig)
   {
-    log.info("Umm yes LookupModule.getLookupNodeService()");
     return new LookupNodeService(lookupListeningAnnouncerConfig.getLookupTier());
   }
 }

@@ -23,7 +23,6 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.LoadSpecHolder;
@@ -36,8 +35,6 @@ import org.apache.druid.server.metrics.LoadSpecHolder;
  */
 public class CliPeonLoadSpecHolder implements LoadSpecHolder
 {
-  private static final Logger log = new Logger(CliPeonLoadSpecHolder.class);
-
   private Provider<Task> taskProvider;
 
   @Inject
@@ -45,7 +42,6 @@ public class CliPeonLoadSpecHolder implements LoadSpecHolder
       Provider<Task> taskProvider
   )
   {
-    log.info("GRRRONCE NewTaskLoadSpecHolder with [%s]", taskProvider);
     this.taskProvider = taskProvider;
   }
 
@@ -54,7 +50,6 @@ public class CliPeonLoadSpecHolder implements LoadSpecHolder
   public LookupLoadingSpec getLookupLoadingSpec()
   {
     final Task task = taskProvider.get();
-    log.info("GRRR NewTaskLoadSpecHolder.getLookupLoadingSpec() task[%s]", task);
     if (task == null) {
       throw DruidException.defensive("blah");
     }
@@ -65,7 +60,6 @@ public class CliPeonLoadSpecHolder implements LoadSpecHolder
   public BroadcastDatasourceLoadingSpec getBroadcastDatasourceLoadingSpec()
   {
     final Task task = taskProvider.get();
-    log.info("GRRR NewTaskLoadSpecHolder.getBroadcastDatasourceLoadingSpec() task[%s]", task);
     if (task == null) {
       throw DruidException.defensive("blah");
     }
