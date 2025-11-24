@@ -57,6 +57,7 @@ import { ExecutionStateCache } from '../../singletons/execution-state-cache';
 import { WorkbenchRunningPromises } from '../../singletons/workbench-running-promises';
 import type { ColumnMetadata } from '../../utils';
 import {
+  assemble,
   deepSet,
   generate8HexId,
   localStorageGet,
@@ -552,7 +553,9 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
             <div
               key={i}
               className={classNames('tab-button', { active })}
-              data-tooltip={tabEntry.tabName}
+              data-tooltip={assemble(tabEntry.tabName, tabEntry.query.formatLastExecution()).join(
+                '\n',
+              )}
             >
               {active ? (
                 <Popover
