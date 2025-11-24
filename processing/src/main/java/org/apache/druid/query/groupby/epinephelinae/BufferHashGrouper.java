@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.AbstractList;
 import java.util.Collections;
@@ -210,18 +209,15 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
       }
 
       // Sort offsets in-place.
-      Collections.sort(
-          wrappedOffsets,
-          (lhs, rhs) -> {
-            final ByteBuffer tableBuffer = hashTable.getTableBuffer();
-            return comparator.compare(
-                tableBuffer,
-                tableBuffer,
-                lhs + HASH_SIZE,
-                rhs + HASH_SIZE
-            );
-          }
-      );
+      wrappedOffsets.sort((lhs, rhs) -> {
+        final ByteBuffer tableBuffer = hashTable.getTableBuffer();
+        return comparator.compare(
+            tableBuffer,
+            tableBuffer,
+            lhs + HASH_SIZE,
+            rhs + HASH_SIZE
+        );
+      });
 
       return new CloseableIterator<>()
       {
