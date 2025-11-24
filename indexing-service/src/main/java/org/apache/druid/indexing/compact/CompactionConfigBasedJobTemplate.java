@@ -80,7 +80,7 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
           new CompactionJob(
               taskPayload,
               candidate,
-              CompactionSlotManager.getMaxTaskSlotsForNativeCompactionTask(taskPayload.getTuningConfig())
+              CompactionSlotManager.computeSlotsRequiredForTask(taskPayload)
           )
       );
     }

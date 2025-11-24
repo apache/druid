@@ -418,7 +418,8 @@ public class CalciteTests
         coordinatorClient,
         overlordClient,
         provider,
-        getJsonMapper()
+        getJsonMapper(),
+        new FakeHttpClient()
     );
   }
 

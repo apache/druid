@@ -39,6 +39,9 @@ public class ClientSqlQuery
   @JsonProperty
   private final String resultFormat;
 
+  /**
+   * Indicates whether the query result should include a header.
+   */
   @JsonProperty
   private final boolean header;
 
