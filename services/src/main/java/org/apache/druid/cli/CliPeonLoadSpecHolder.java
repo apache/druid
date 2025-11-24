@@ -51,7 +51,7 @@ public class CliPeonLoadSpecHolder implements LoadSpecHolder
   {
     final Task task = taskProvider.get();
     if (task == null) {
-      throw DruidException.defensive("blah");
+      throw DruidException.defensive("task is null for taskProvider[%s]?!", taskProvider);
     }
     return task.getLookupLoadingSpec();
   }
@@ -61,7 +61,7 @@ public class CliPeonLoadSpecHolder implements LoadSpecHolder
   {
     final Task task = taskProvider.get();
     if (task == null) {
-      throw DruidException.defensive("blah");
+      throw DruidException.defensive("task is null for taskProvider[%s]?!", taskProvider);
     }
     return task.getBroadcastDatasourceLoadingSpec();
   }

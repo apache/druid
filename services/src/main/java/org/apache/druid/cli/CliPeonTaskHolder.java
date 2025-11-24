@@ -48,7 +48,7 @@ public class CliPeonTaskHolder implements TaskHolder
   {
     final Task task = taskProvider.get();
     if (task == null) {
-      throw DruidException.defensive("blah");
+      throw DruidException.defensive("task is null for taskProvider[%s]?!", taskProvider);
     }
     return task.getDataSource();
   }
@@ -58,7 +58,7 @@ public class CliPeonTaskHolder implements TaskHolder
   {
     final Task task = taskProvider.get();
     if (task == null) {
-      throw DruidException.defensive("blah");
+      throw DruidException.defensive("task is null for taskProvider[%s]?!", taskProvider);
     }
     return task.getId();
   }
