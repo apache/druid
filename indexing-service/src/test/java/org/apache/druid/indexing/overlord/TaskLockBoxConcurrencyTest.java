@@ -44,7 +44,6 @@ import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.apache.druid.timeline.partition.PartitionIds;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -313,8 +312,7 @@ public class TaskLockBoxConcurrencyTest
             interval,
             false,
             LockGranularity.TIME_CHUNK,
-            false,
-            PartitionIds.ROOT_GEN_START_PARTITION_ID
+            false
         );
         allocationResultRef.set(results.get(0));
       }
@@ -364,8 +362,7 @@ public class TaskLockBoxConcurrencyTest
           interval,
           false,
           LockGranularity.TIME_CHUNK,
-          false,
-          PartitionIds.ROOT_GEN_START_PARTITION_ID
+          false
       );
       SegmentAllocateResult result2 = results2.get(0);
       Assert.assertNull("Subsequent allocation after removal must fail", result2.getSegmentId());

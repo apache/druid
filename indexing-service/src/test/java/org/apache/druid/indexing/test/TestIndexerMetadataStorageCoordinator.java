@@ -218,8 +218,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       Interval interval,
       boolean skipSegmentLineageCheck,
       List<SegmentCreateRequest> requests,
-      boolean isTimeChunk,
-      int initialAllocationPartitionNumber
+      boolean isTimeChunk
   )
   {
     return Map.of();

@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.overlord.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.timeline.partition.PartitionIds;
 
 /**
  * Global configurations for task lock. Used by the overlord.
@@ -42,13 +41,6 @@ public class TaskLockConfig
 
   @JsonProperty
   private int batchAllocationNumThreads = 5;
-
-  /**
-   * Undocumented parameter, used for embedded tests that create high partition numbers without needing to
-   * individually create each segment. Controls the initial partition number to be used for segment allocation.
-   */
-  @JsonProperty
-  private int initialAllocationPartitionNumber = PartitionIds.ROOT_GEN_START_PARTITION_ID;
 
   public boolean isForceTimeChunkLock()
   {
@@ -73,10 +65,5 @@ public class TaskLockConfig
   public int getBatchAllocationNumThreads()
   {
     return Math.max(1, batchAllocationNumThreads);
-  }
-
-  public int getInitialAllocationPartitionNumber()
-  {
-    return initialAllocationPartitionNumber;
   }
 }

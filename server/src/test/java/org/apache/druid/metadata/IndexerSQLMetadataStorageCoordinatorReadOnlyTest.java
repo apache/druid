@@ -41,7 +41,6 @@ import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
-import org.apache.druid.timeline.partition.PartitionIds;
 import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.Assert;
@@ -274,8 +273,7 @@ public class IndexerSQLMetadataStorageCoordinatorReadOnlyTest extends IndexerSql
             Intervals.ETERNITY,
             false,
             List.of(createRequest),
-            true,
-            PartitionIds.ROOT_GEN_START_PARTITION_ID
+            true
         )
     );
   }

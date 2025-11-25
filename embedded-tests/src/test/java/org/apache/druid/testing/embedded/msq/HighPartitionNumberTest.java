@@ -19,10 +19,11 @@
 
 package org.apache.druid.testing.embedded.msq;
 
+import com.google.common.collect.Iterables;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -33,12 +34,15 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.indexing.Resources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Test to verify that high partition numbers (above the limit of {@link PartitionIds#ROOT_GEN_END_PARTITION_ID})
@@ -47,9 +51,9 @@ import java.util.Map;
 public class HighPartitionNumberTest extends EmbeddedClusterTestBase
 {
   /**
-   * Expected number of rows for {@link Resources.DataFile#tinyWiki1Json()}.
+   * Expected number of rows for three copies of {@link Resources.DataFile#tinyWiki1Json()}.
    */
-  private static final int EXPECTED_TOTAL_ROWS = 3;
+  private static final int EXPECTED_TOTAL_ROWS = 9;
 
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
@@ -71,11 +75,7 @@ public class HighPartitionNumberTest extends EmbeddedClusterTestBase
         .addServer(coordinator)
         .addServer(indexer)
         .addServer(broker)
-        .addServer(new EmbeddedHistorical())
-        .addCommonProperty( // Start at a high number so we don't need to individually create 30k+ segments
-                            "druid.indexer.tasklock.initialAllocationPartitionNumber",
-                            String.valueOf(PartitionIds.ROOT_GEN_END_PARTITION_ID - 1)
-        );
+        .addServer(new EmbeddedHistorical());
   }
 
   @BeforeAll
@@ -87,7 +87,83 @@ public class HighPartitionNumberTest extends EmbeddedClusterTestBase
   @Test
   public void testHighPartitionNumbers()
   {
-    // Insert tinyWiki1Json in 3 segments (it's a 3 line file).
+    insertFirstSegment();
+    insertSecondSegment();
+    insertLastSegments();
+
+
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    // Verify that we have segments with partition numbers above the old limit
+    final int maxPartitionNum = Integer.parseInt(cluster.runSql(
+        "SELECT MAX(partition_num) FROM sys.segments WHERE datasource=%s",
+        Calcites.escapeStringLiteral(dataSource)
+    ).trim());
+
+    Assertions.assertEquals(32769 /* larger than Short.MAX_VALUE */, maxPartitionNum);
+
+    // Verify that all data is queryable
+    cluster.callApi().verifySqlQuery(
+        "SELECT COUNT(*) FROM %s",
+        dataSource,
+        String.valueOf(EXPECTED_TOTAL_ROWS)
+    );
+  }
+
+  /**
+   * Inserts {@link Resources.DataFile#tinyWiki1Json()} with partition number zero, using SQL.
+   */
+  private void insertFirstSegment()
+  {
+    // Insert tinyWiki1Json in 1 segment (it's a 3 line file).
+    String queryLocal = StringUtils.format(
+        MoreResources.MSQ.INSERT_TINY_WIKI_JSON,
+        dataSource,
+        Resources.DataFile.tinyWiki1Json()
+    );
+
+    Map<String, Object> context = Map.of(
+        MultiStageQueryContext.CTX_CLUSTER_STATISTICS_MERGE_MODE,
+        ClusterStatisticsMergeMode.PARALLEL
+    );
+
+    cluster.callApi().waitForTaskToSucceed(msqApis.submitTaskSql(context, queryLocal).getTaskId(), overlord);
+  }
+
+  /**
+   * Reinserts the segment from {@link #insertFirstSegment()} directly into metadata storage,
+   * with partition number 32767.
+   */
+  private void insertSecondSegment()
+  {
+    // Get the segment and reinsert it with a higher partition number.
+    final DataSegment firstSegment =
+        Iterables.getOnlyElement(
+            overlord.bindings()
+                    .segmentsMetadataStorage()
+                    .retrieveAllUsedSegments(dataSource, Segments.ONLY_VISIBLE)
+        );
+
+    overlord.bindings().segmentsMetadataStorage().commitSegments(
+        Set.of(
+            firstSegment.withShardSpec(
+                new NumberedShardSpec(
+                    Short.MAX_VALUE - 1,
+                    firstSegment.getShardSpec().getNumCorePartitions()
+                )
+            )
+        ),
+        null
+    );
+  }
+
+  /**
+   * Inserts {@link Resources.DataFile#tinyWiki1Json()} with SQL into three segments, starting at
+   * {@link Short#MAX_VALUE} and going to {@link Short#MAX_VALUE} + 2.
+   */
+  private void insertLastSegments()
+  {
+    // Insert tinyWiki1Json in 3 segment (it's a 3 line file).
     String queryLocal = StringUtils.format(
         MoreResources.MSQ.INSERT_TINY_WIKI_JSON,
         dataSource,
@@ -101,29 +177,6 @@ public class HighPartitionNumberTest extends EmbeddedClusterTestBase
         1
     );
 
-    final SqlTaskStatus sqlTaskStatus = msqApis.submitTaskSql(context, queryLocal);
-    cluster.callApi().waitForTaskToSucceed(sqlTaskStatus.getTaskId(), overlord);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-
-    // Verify that we have segments with partition numbers slightly above and below the old limit
-    final int minPartitionNum = Integer.parseInt(cluster.runSql(
-        "SELECT MIN(partition_num) FROM sys.segments WHERE datasource=%s",
-        Calcites.escapeStringLiteral(dataSource)
-    ).trim());
-
-    final int maxPartitionNum = Integer.parseInt(cluster.runSql(
-        "SELECT MAX(partition_num) FROM sys.segments WHERE datasource=%s",
-        Calcites.escapeStringLiteral(dataSource)
-    ).trim());
-
-    Assertions.assertEquals(32767, minPartitionNum);
-    Assertions.assertEquals(32769 /* larger than Short.MAX_VALUE */, maxPartitionNum);
-
-    // Verify that all data is queryable
-    cluster.callApi().verifySqlQuery(
-        "SELECT COUNT(*) FROM %s",
-        dataSource,
-        String.valueOf(EXPECTED_TOTAL_ROWS)
-    );
+    cluster.callApi().waitForTaskToSucceed(msqApis.submitTaskSql(context, queryLocal).getTaskId(), overlord);
   }
 }

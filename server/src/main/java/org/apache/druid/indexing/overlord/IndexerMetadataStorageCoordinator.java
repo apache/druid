@@ -228,16 +228,14 @@ public interface IndexerMetadataStorageCoordinator
    * The segment id allocated for a request will not be given out again unless a
    * request is made with the same {@link SegmentCreateRequest}.
    *
-   * @param dataSource                       dataSource for which to allocate a segment
-   * @param interval                         interval for which to allocate a segment
-   * @param skipSegmentLineageCheck          if true, perform lineage validation using previousSegmentId for this sequence.
-   *                                         Should be set to false if replica tasks would index events in same order
-   * @param requests                         Requests for which to allocate segments. All
-   *                                         the requests must share the same partition space.
-   * @param reduceMetadataIO                 If true, try to use the segment ids instead of fetching every segment
-   *                                         payload from the metadata store
-   * @param initialAllocationPartitionNumber initial partition number to be used for segment allocation
-   *
+   * @param dataSource              dataSource for which to allocate a segment
+   * @param interval                interval for which to allocate a segment
+   * @param skipSegmentLineageCheck if true, perform lineage validation using previousSegmentId for this sequence.
+   *                                Should be set to false if replica tasks would index events in same order
+   * @param requests                Requests for which to allocate segments. All
+   *                                the requests must share the same partition space.
+   * @param reduceMetadataIO        If true, try to use the segment ids instead of fetching every segment
+   *                                payload from the metadata store
    * @return Map from request to allocated segment id. The map does not contain
    * entries for failed requests.
    */
@@ -246,8 +244,7 @@ public interface IndexerMetadataStorageCoordinator
       Interval interval,
       boolean skipSegmentLineageCheck,
       List<SegmentCreateRequest> requests,
-      boolean reduceMetadataIO,
-      int initialAllocationPartitionNumber
+      boolean reduceMetadataIO
   );
 
   /**

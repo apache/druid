@@ -611,8 +611,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       Interval allocateInterval,
       boolean skipSegmentLineageCheck,
       List<SegmentCreateRequest> requests,
-      boolean reduceMetadataIO,
-      int initialAllocationPartitionNumber
+      boolean reduceMetadataIO
   )
   {
     Preconditions.checkNotNull(dataSource, "dataSource");
@@ -627,8 +626,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             interval,
             skipSegmentLineageCheck,
             requests,
-            reduceMetadataIO,
-            initialAllocationPartitionNumber
+            reduceMetadataIO
         )
     );
   }
@@ -890,8 +888,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Interval interval,
       final boolean skipSegmentLineageCheck,
       final List<SegmentCreateRequest> requests,
-      final boolean reduceMetadataIO,
-      final int initialAllocationPartitionNumber
+      final boolean reduceMetadataIO
   )
   {
     // Get the time chunk and associated data segments for the given interval, if any
@@ -937,8 +934,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         interval,
         skipSegmentLineageCheck,
         existingChunks,
-        requestsForNewSegments,
-        initialAllocationPartitionNumber
+        requestsForNewSegments
     );
 
     // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
@@ -1270,8 +1266,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       Interval interval,
       boolean skipSegmentLineageCheck,
       List<TimelineObjectHolder<String, DataSegment>> existingChunks,
-      List<SegmentCreateRequest> requests,
-      int initialAllocationPartitionNumber
+      List<SegmentCreateRequest> requests
   )
   {
     if (requests.isEmpty()) {
@@ -1338,8 +1333,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             interval,
             versionOfExistingChunk,
             committedMaxId,
-            pendingSegments,
-            initialAllocationPartitionNumber
+            pendingSegments
         );
 
         // Add to pendingSegments to consider for partitionId
@@ -1366,8 +1360,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       Interval interval,
       String versionOfExistingChunk,
       SegmentIdWithShardSpec committedMaxId,
-      Set<SegmentIdWithShardSpec> pendingSegments,
-      int initialAllocationPartitionNumber
+      Set<SegmentIdWithShardSpec> pendingSegments
   )
   {
     final PartialShardSpec partialShardSpec = request.getPartialShardSpec();
@@ -1409,12 +1402,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       // or you use segment lock. Since the core partitions set is not determined for appended segments, we set
       // it 0. When you use segment lock, the core partitions set doesn't work with it. We simply set it 0 so that the
       // OvershadowableManager handles the atomic segment update.
-      final int newPartitionId;
-      if (partialShardSpec.useNonRootGenerationPartitionSpace()) {
-        newPartitionId = PartitionIds.NON_ROOT_GEN_START_PARTITION_ID;
-      } else {
-        newPartitionId = initialAllocationPartitionNumber;
-      }
+      final int newPartitionId = partialShardSpec.useNonRootGenerationPartitionSpace()
+                                 ? PartitionIds.NON_ROOT_GEN_START_PARTITION_ID
+                                 : PartitionIds.ROOT_GEN_START_PARTITION_ID;
 
       String version = newSegmentVersion == null ? existingVersion : newSegmentVersion;
       SegmentIdWithShardSpec pendingSegmentId = new SegmentIdWithShardSpec(

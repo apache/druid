@@ -39,7 +39,6 @@ import org.apache.druid.indexing.common.actions.SegmentAllocateResult;
 import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
-import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -473,15 +472,14 @@ public class TaskLockbox
    * successfully and others failed. In that case, only the failed ones should be
    * retried.
    *
-   * @param requests                         List of allocation requests
-   * @param dataSource                       Datasource for which segment is to be allocated.
-   * @param interval                         Interval for which segment is to be allocated.
-   * @param skipSegmentLineageCheck          Whether lineage check is to be skipped
-   *                                         (this is true for streaming ingestion)
-   * @param lockGranularity                  Granularity of task lock
-   * @param reduceMetadataIO                 Whether to skip fetching payloads for all used
-   *                                         segments and rely on their IDs instead.
-   * @param initialAllocationPartitionNumber from {@link TaskLockConfig#getInitialAllocationPartitionNumber()}
+   * @param requests                List of allocation requests
+   * @param dataSource              Datasource for which segment is to be allocated.
+   * @param interval                Interval for which segment is to be allocated.
+   * @param skipSegmentLineageCheck Whether lineage check is to be skipped
+   *                                (this is true for streaming ingestion)
+   * @param lockGranularity         Granularity of task lock
+   * @param reduceMetadataIO        Whether to skip fetching payloads for all used
+   *                                segments and rely on their IDs instead.
    * @return List of allocation results in the same order as the requests.
    */
   public List<SegmentAllocateResult> allocateSegments(
@@ -490,8 +488,7 @@ public class TaskLockbox
       Interval interval,
       boolean skipSegmentLineageCheck,
       LockGranularity lockGranularity,
-      boolean reduceMetadataIO,
-      int initialAllocationPartitionNumber
+      boolean reduceMetadataIO
   )
   {
     log.debug("Allocating [%d] segments for datasource[%s], interval[%s]", requests.size(), dataSource, interval);
@@ -509,18 +506,10 @@ public class TaskLockbox
             interval,
             skipSegmentLineageCheck,
             holderList.getPending(),
-            reduceMetadataIO,
-            initialAllocationPartitionNumber
+            reduceMetadataIO
         );
       } else {
-        allocateSegmentIds(
-            dataSource,
-            interval,
-            skipSegmentLineageCheck,
-            holderList.getPending(),
-            false,
-            initialAllocationPartitionNumber
-        );
+        allocateSegmentIds(dataSource, interval, skipSegmentLineageCheck, holderList.getPending(), false);
         holderList.getPending().forEach(holder -> acquireTaskLock(holder, false));
       }
       holderList.getPending().forEach(SegmentAllocationHolder::markSucceeded);
@@ -741,8 +730,7 @@ public class TaskLockbox
       Interval interval,
       boolean skipSegmentLineageCheck,
       Collection<SegmentAllocationHolder> holders,
-      boolean reduceMetadataIO,
-      int initialAllocationPartitionNumber
+      boolean reduceMetadataIO
   )
   {
     if (holders.isEmpty()) {
@@ -760,8 +748,7 @@ public class TaskLockbox
             interval,
             skipSegmentLineageCheck,
             createRequests,
-            reduceMetadataIO,
-            initialAllocationPartitionNumber
+            reduceMetadataIO
         );
 
     for (SegmentAllocationHolder holder : holders) {

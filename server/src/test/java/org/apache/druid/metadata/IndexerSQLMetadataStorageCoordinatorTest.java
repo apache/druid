@@ -2963,8 +2963,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         interval,
         false,
         Collections.singletonList(request),
-        true,
-        PartitionIds.ROOT_GEN_START_PARTITION_ID
+        true
     ).get(request);
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1", segmentId0.toString());
@@ -2976,8 +2975,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         interval,
         false,
         Collections.singletonList(request1),
-        true,
-        PartitionIds.ROOT_GEN_START_PARTITION_ID
+        true
     ).get(request1);
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1_1", segmentId1.toString());
@@ -2989,8 +2987,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         interval,
         false,
         Collections.singletonList(request2),
-        true,
-        PartitionIds.ROOT_GEN_START_PARTITION_ID
+        true
     ).get(request2);
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1_2", segmentId2.toString());
@@ -3002,8 +2999,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         interval,
         false,
         Collections.singletonList(request3),
-        true,
-        PartitionIds.ROOT_GEN_START_PARTITION_ID
+        true
     ).get(request3);
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1_2", segmentId3.toString());
@@ -3016,8 +3012,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         interval,
         false,
         Collections.singletonList(request4),
-        true,
-        PartitionIds.ROOT_GEN_START_PARTITION_ID
+        true
     ).get(request4);
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1_3", segmentId4.toString());
@@ -3037,8 +3032,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         interval,
         false,
         Collections.singletonList(request),
-        false,
-        PartitionIds.ROOT_GEN_START_PARTITION_ID
+        false
     ).get(request);
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1", segmentId0.toString());
@@ -3050,8 +3044,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         interval,
         false,
         Collections.singletonList(request1),
-        false,
-        PartitionIds.ROOT_GEN_START_PARTITION_ID
+        false
     ).get(request1);
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1_1", segmentId1.toString());
@@ -3063,8 +3056,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         interval,
         false,
         Collections.singletonList(request2),
-        false,
-        PartitionIds.ROOT_GEN_START_PARTITION_ID
+        false
     ).get(request2);
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1_2", segmentId2.toString());
@@ -3076,8 +3068,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         interval,
         false,
         Collections.singletonList(request3),
-        false,
-        PartitionIds.ROOT_GEN_START_PARTITION_ID
+        false
     ).get(request3);
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1_2", segmentId3.toString());
@@ -3090,8 +3081,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         interval,
         false,
         Collections.singletonList(request4),
-        false,
-        PartitionIds.ROOT_GEN_START_PARTITION_ID
+        false
     ).get(request4);
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1_3", segmentId4.toString());
