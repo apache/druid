@@ -520,7 +520,7 @@ public class JettyServerModule extends JerseyServletModule
   public JettyMonitor getJettyMonitor(TaskHolder taskHolder)
   {
     return new JettyMonitor(
-        MonitorsConfig.mapOfDatasourceAndTaskID(taskHolder)
+        MonitorsConfig.mapOfTaskHolderDimensions(taskHolder)
     );
   }
 

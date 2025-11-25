@@ -152,7 +152,7 @@ public class MetricsModule implements Module
       TaskHolder taskHolder
   )
   {
-    Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
+    Map<String, String[]> dimensions = MonitorsConfig.mapOfTaskHolderDimensions(
         taskHolder
     );
     return new JvmMonitor(dimensions);
@@ -164,7 +164,7 @@ public class MetricsModule implements Module
       TaskHolder taskHolder
   )
   {
-    Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
+    Map<String, String[]> dimensions = MonitorsConfig.mapOfTaskHolderDimensions(
         taskHolder
     );
     return new JvmCpuMonitor(dimensions);
@@ -174,7 +174,7 @@ public class MetricsModule implements Module
   @ManageLifecycle
   public JvmThreadsMonitor getJvmThreadsMonitor(TaskHolder taskHolder)
   {
-    Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
+    Map<String, String[]> dimensions = MonitorsConfig.mapOfTaskHolderDimensions(
         taskHolder
     );
     return new JvmThreadsMonitor(dimensions);
@@ -187,7 +187,7 @@ public class MetricsModule implements Module
     if (nodeRoles.contains(NodeRole.PEON)) {
       return new NoopSysMonitor();
     } else {
-      Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
+      Map<String, String[]> dimensions = MonitorsConfig.mapOfTaskHolderDimensions(
           taskHolder
       );
       return new SysMonitor(dimensions);
@@ -205,7 +205,7 @@ public class MetricsModule implements Module
     if (nodeRoles.contains(NodeRole.PEON)) {
       return new NoopOshiSysMonitor();
     } else {
-      Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
+      Map<String, String[]> dimensions = MonitorsConfig.mapOfTaskHolderDimensions(
           taskHolder
       );
       return new OshiSysMonitor(dimensions, oshiSysConfig);
