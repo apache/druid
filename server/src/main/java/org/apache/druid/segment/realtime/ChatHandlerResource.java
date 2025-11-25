@@ -25,8 +25,10 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.initialization.jetty.BadRequestException;
 import org.apache.druid.server.initialization.jetty.ServiceUnavailableException;
+import org.apache.druid.server.metrics.NoopTaskHolder;
 import org.apache.druid.server.metrics.TaskHolder;
 
+import javax.annotation.Nullable;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Context;
@@ -39,13 +41,18 @@ public class ChatHandlerResource
   public static final String TASK_ID_HEADER = "X-Druid-Task-Id";
 
   private final ChatHandlerProvider handlers;
+  @Nullable
   private final String taskId;
 
   @Inject
   public ChatHandlerResource(final ChatHandlerProvider handlers, final TaskHolder taskHolder)
   {
     this.handlers = handlers;
-    this.taskId = taskHolder.getTaskId();
+    if (taskHolder instanceof NoopTaskHolder) {
+      this.taskId = null;
+    } else {
+      this.taskId = taskHolder.getTaskId();
+    }
   }
 
   @Path("/{id}")
