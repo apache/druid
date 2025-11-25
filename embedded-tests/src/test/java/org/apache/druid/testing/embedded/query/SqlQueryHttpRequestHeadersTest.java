@@ -19,22 +19,12 @@
 
 package org.apache.druid.testing.embedded.query;
 
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
-import org.apache.druid.testing.embedded.EmbeddedBroker;
-import org.apache.druid.testing.embedded.EmbeddedCoordinator;
-import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.embedded.EmbeddedIndexer;
-import org.apache.druid.testing.embedded.EmbeddedOverlord;
-import org.apache.druid.testing.embedded.EmbeddedRouter;
-import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.FieldSource;
 
@@ -43,7 +33,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -52,39 +41,8 @@ import java.util.function.Consumer;
  * Suite to test various Content-Type headers attached
  * to SQL query HTTP requests to brokers and routers.
  */
-public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
+public class SqlQueryHttpRequestHeadersTest extends QueryTestBase
 {
-  private static final String SQL_QUERY_ROUTE = "%s/druid/v2/sql/";
-
-  public static List<Boolean> shouldUseQueryBroker = List.of(true, false);
-
-  private final EmbeddedBroker broker = new EmbeddedBroker();
-  private final EmbeddedRouter router = new EmbeddedRouter();
-
-  private HttpClient httpClientRef;
-  private String brokerEndpoint;
-  private String routerEndpoint;
-
-  @Override
-  protected EmbeddedDruidCluster createCluster()
-  {
-    return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
-                               .useLatchableEmitter()
-                               .addServer(new EmbeddedOverlord())
-                               .addServer(new EmbeddedCoordinator())
-                               .addServer(broker)
-                               .addServer(router)
-                               .addServer(new EmbeddedIndexer());
-  }
-
-  @BeforeEach
-  void setUp()
-  {
-    httpClientRef = router.bindings().globalHttpClient();
-    brokerEndpoint = StringUtils.format(SQL_QUERY_ROUTE, getServerUrl(broker));
-    routerEndpoint = StringUtils.format(SQL_QUERY_ROUTE, getServerUrl(router));
-  }
-
   private void executeQuery(
       String endpoint,
       String contentType,
@@ -132,7 +90,7 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
   }
 
   @ParameterizedTest
-  @FieldSource("shouldUseQueryBroker")
+  @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testNullContentType(boolean shouldQueryBroker)
   {
     executeQuery(
@@ -141,14 +99,12 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
         "select 1",
         (request) -> {
         },
-        (statusCode, responseBody) -> {
-          Assertions.assertEquals(statusCode, HttpResponseStatus.BAD_REQUEST.getCode());
-        }
+        (statusCode, responseBody) -> Assertions.assertEquals(statusCode, HttpResponseStatus.BAD_REQUEST.getCode())
     );
   }
 
   @ParameterizedTest
-  @FieldSource("shouldUseQueryBroker")
+  @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testUnsupportedContentType(boolean shouldQueryBroker)
   {
     executeQuery(
@@ -157,14 +113,15 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
         "select 1",
         (request) -> {
         },
-        (statusCode, responseBody) -> {
-          Assertions.assertEquals(statusCode, HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE.getCode());
-        }
+        (statusCode, responseBody) -> Assertions.assertEquals(
+            statusCode,
+            HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE.getCode()
+        )
     );
   }
 
   @ParameterizedTest
-  @FieldSource("shouldUseQueryBroker")
+  @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testTextPlain(boolean shouldQueryBroker)
   {
     executeQuery(
@@ -181,7 +138,7 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
   }
 
   @ParameterizedTest
-  @FieldSource("shouldUseQueryBroker")
+  @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testFormURLEncoded(boolean shouldQueryBroker)
   {
     executeQuery(
@@ -198,7 +155,7 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
   }
 
   @ParameterizedTest
-  @FieldSource("shouldUseQueryBroker")
+  @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testFormURLEncoded_InvalidEncoding(boolean shouldQueryBroker)
   {
     executeQuery(
@@ -215,7 +172,7 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
   }
 
   @ParameterizedTest
-  @FieldSource("shouldUseQueryBroker")
+  @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testJSON(boolean shouldQueryBroker)
   {
     executeQuery(
@@ -244,7 +201,7 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
   }
 
   @ParameterizedTest
-  @FieldSource("shouldUseQueryBroker")
+  @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testInvalidJSONFormat(boolean shouldQueryBroker)
   {
     executeQuery(
@@ -261,7 +218,7 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
   }
 
   @ParameterizedTest
-  @FieldSource("shouldUseQueryBroker")
+  @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testEmptyQuery_TextPlain(boolean shouldQueryBroker)
   {
     executeQuery(
@@ -278,7 +235,7 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
   }
 
   @ParameterizedTest
-  @FieldSource("shouldUseQueryBroker")
+  @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testEmptyQuery_UrlEncoded(boolean shouldQueryBroker)
   {
     executeQuery(
@@ -295,7 +252,7 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
   }
 
   @ParameterizedTest
-  @FieldSource("shouldUseQueryBroker")
+  @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testBlankQuery_TextPlain(boolean shouldQueryBroker)
   {
     executeQuery(
@@ -312,7 +269,7 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
   }
 
   @ParameterizedTest
-  @FieldSource("shouldUseQueryBroker")
+  @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testEmptyQuery_JSON(boolean shouldQueryBroker)
   {
     executeQuery(
@@ -329,7 +286,7 @@ public class SqlQueryHttpRequestHeadersTest extends EmbeddedClusterTestBase
   }
 
   @ParameterizedTest
-  @FieldSource("shouldUseQueryBroker")
+  @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testMultipleContentType_usesFirstOne(boolean shouldQueryBroker)
   {
     executeQuery(

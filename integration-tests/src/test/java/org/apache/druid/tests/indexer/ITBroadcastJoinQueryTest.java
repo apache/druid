@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.tests.query;
+package org.apache.druid.tests.indexer;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
@@ -35,7 +35,6 @@ import org.apache.druid.testing.tools.IntegrationTestingConfig;
 import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
-import org.apache.druid.tests.indexer.AbstractIndexerTest;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
@@ -49,7 +48,7 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
   private static final String BROADCAST_JOIN_METADATA_QUERIES_AFTER_DROP_RESOURCE = "/queries/broadcast_join_after_drop_metadata_queries.json";
   private static final String BROADCAST_JOIN_QUERIES_RESOURCE = "/queries/broadcast_join_queries.json";
   private static final String BROADCAST_JOIN_DATASOURCE = "broadcast_join_wikipedia_test";
-
+  public static final String WIKIPEDIA_DATA_SOURCE = "wikipedia_editstream";
 
   @Inject
   ServerDiscoveryFactory factory;
@@ -160,7 +159,7 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
     return StringUtils.replace(
         StringUtils.replace(template, "%%JOIN_DATASOURCE%%", joinDataSource),
         "%%REGULAR_DATASOURCE%%",
-        ITWikipediaQueryTest.WIKIPEDIA_DATA_SOURCE
+        WIKIPEDIA_DATA_SOURCE
     );
   }
 }

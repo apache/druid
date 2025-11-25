@@ -31,7 +31,6 @@ import org.apache.druid.testing.clients.QueryResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.tools.ITRetryUtil;
 import org.apache.druid.testing.tools.IntegrationTestingConfig;
-import org.apache.druid.testing.tools.ServerManagerForQueryErrorTest;
 import org.apache.druid.testing.utils.QueryResultVerifier;
 import org.apache.druid.testing.utils.QueryWithResults;
 import org.apache.druid.testing.utils.TestQueryHelper;
@@ -52,12 +51,11 @@ import java.util.Map;
  * This class tests the query retry on missing segments. A segment can be missing in a historical during a query if
  * the historical drops the segment after the broker issues the query to the historical. To mimic this case, this
  * test spawns a historical modified for testing. This historical announces all segments assigned, but doesn't serve
- * all of them always. Instead, it can report missing segments for some
- * segments. See {@link ServerManagerForQueryErrorTest} for more details.
+ * all of them always. Instead, it can report missing segments for some segments.
  * <p>
  * To run this test properly, the test group must be specified as {@link TestNGGroup#QUERY_RETRY}.
  */
-@Test(groups = TestNGGroup.QUERY_RETRY)
+@Test(groups = TestNGGroup.QUERY_RETRY, enabled = false) // TODO: Temporarily disabled due to migration to embedded suite.
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITQueryRetryTestOnMissingSegments
 {
@@ -140,7 +138,9 @@ public class ITQueryRetryTestOnMissingSegments
   {
     final List<QueryWithResults> queries = jsonMapper.readValue(
         queryWithResultsStr,
-        new TypeReference<>() {}
+        new TypeReference<>()
+        {
+        }
     );
     testQueries(queries, expectation);
   }
@@ -162,7 +162,9 @@ public class ITQueryRetryTestOnMissingSegments
 
         List<Map<String, Object>> result = jsonMapper.readValue(
             responseHolder.getContent(),
-            new TypeReference<>() {}
+            new TypeReference<>()
+            {
+            }
         );
         if (!QueryResultVerifier.compareResults(
             result,
@@ -227,16 +229,25 @@ public class ITQueryRetryTestOnMissingSegments
     return buildQuery(numRetriesOnMissingSegments, allowPartialResults, -1);
   }
 
-  private String buildQuery(int numRetriesOnMissingSegments, boolean allowPartialResults, int unavailableSegmentIdx) throws IOException
+  private String buildQuery(int numRetriesOnMissingSegments, boolean allowPartialResults, int unavailableSegmentIdx)
+      throws IOException
   {
     return StringUtils.replace(
         AbstractIndexerTest.getResourceAsString(QUERIES_RESOURCE),
         "%%CONTEXT%%",
-        jsonMapper.writeValueAsString(buildContext(numRetriesOnMissingSegments, allowPartialResults, unavailableSegmentIdx))
+        jsonMapper.writeValueAsString(buildContext(
+            numRetriesOnMissingSegments,
+            allowPartialResults,
+            unavailableSegmentIdx
+        ))
     );
   }
 
-  private static Map<String, Object> buildContext(int numRetriesOnMissingSegments, boolean allowPartialResults, int unavailableSegmentIdx)
+  private static Map<String, Object> buildContext(
+      int numRetriesOnMissingSegments,
+      boolean allowPartialResults,
+      int unavailableSegmentIdx
+  )
   {
     final Map<String, Object> context = new HashMap<>();
     // Disable cache so that each run hits historical.
@@ -244,8 +255,8 @@ public class ITQueryRetryTestOnMissingSegments
     context.put(QueryContexts.USE_RESULT_LEVEL_CACHE_KEY, false);
     context.put(QueryContexts.NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, numRetriesOnMissingSegments);
     context.put(QueryContexts.RETURN_PARTIAL_RESULTS_KEY, allowPartialResults);
-    context.put(ServerManagerForQueryErrorTest.QUERY_RETRY_TEST_CONTEXT_KEY, true);
-    context.put(ServerManagerForQueryErrorTest.QUERY_RETRY_UNAVAILABLE_SEGMENT_IDX_KEY, unavailableSegmentIdx);
+    // context.put(ServerManagerForQueryErrorTest.QUERY_RETRY_TEST_CONTEXT_KEY, true);
+    // context.put(ServerManagerForQueryErrorTest.QUERY_RETRY_UNAVAILABLE_SEGMENT_IDX_KEY, unavailableSegmentIdx);
     return context;
   }
 }

@@ -17,17 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.testing.tools;
+package org.apache.druid.testing.embedded.query;
 
-import com.github.rvesse.airline.builder.CliBuilder;
-import org.apache.druid.cli.CliCommandCreator;
+import com.google.inject.Binder;
+import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.annotations.LoadScope;
+import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.server.ServerManager;
 
-public class QueryRetryTestCommandCreator implements CliCommandCreator
+@LoadScope(roles = NodeRole.HISTORICAL_JSON_NAME)
+public class ServerManagerForQueryErrorTestModule implements DruidModule
 {
-  @SuppressWarnings({ "rawtypes", "unchecked" })
   @Override
-  public void addCommands(CliBuilder builder)
+  public void configure(Binder binder)
   {
-    builder.withGroup("server").withCommands(CliHistoricalForQueryErrorTest.class);
+    binder.bind(ServerManager.class).to(ServerManagerForQueryErrorTest.class).in(LazySingleton.class);
   }
 }
