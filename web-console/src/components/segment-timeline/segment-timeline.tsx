@@ -141,7 +141,12 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
           return getDateRange(DEFAULT_SHOWN_DURATION);
         }
 
-        queriedEnd = day.ceil(new Date(endRes[0].end), Timezone.UTC);
+        const endResDate = new Date(endRes[0].end); // Need to be protective against a date in the far future
+        if (isNaN(endResDate.valueOf())) {
+          return getDateRange(DEFAULT_SHOWN_DURATION);
+        }
+
+        queriedEnd = day.ceil(endResDate, Timezone.UTC);
 
         const startQuery = baseQuery
           .addSelect(C('start'), { addToOrderBy: 'end', direction: 'ASC' })
