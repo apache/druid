@@ -38,18 +38,18 @@ public class ChatHandlerResourceTest extends EasyMockSupport
   @Mock
   ChatHandlerProvider handlers;
   @Mock
-  TaskHolder taskPropsHolder;
+  TaskHolder taskHolder;
   ChatHandlerResource chatHandlerResource;
 
   @Test
   public void test_noHandlerFound()
   {
     String handlerId = "handlerId";
-    EasyMock.expect(taskPropsHolder.getTaskId()).andReturn(null);
+    EasyMock.expect(taskHolder.getTaskId()).andReturn(null);
     EasyMock.expect(handlers.get(handlerId)).andReturn(Optional.absent());
 
     replayAll();
-    chatHandlerResource = new ChatHandlerResource(handlers, taskPropsHolder);
+    chatHandlerResource = new ChatHandlerResource(handlers, taskHolder);
     Assert.assertThrows(ServiceUnavailableException.class, () -> chatHandlerResource.doTaskChat(handlerId, null));
     verifyAll();
   }

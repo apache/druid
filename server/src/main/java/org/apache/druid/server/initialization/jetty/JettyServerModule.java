@@ -517,10 +517,10 @@ public class JettyServerModule extends JerseyServletModule
 
   @Provides
   @LazySingleton
-  public JettyMonitor getJettyMonitor(TaskHolder taskPropsHolder)
+  public JettyMonitor getJettyMonitor(TaskHolder taskHolder)
   {
     return new JettyMonitor(
-        MonitorsConfig.mapOfDatasourceAndTaskID(taskPropsHolder)
+        MonitorsConfig.mapOfDatasourceAndTaskID(taskHolder)
     );
   }
 

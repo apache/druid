@@ -83,10 +83,10 @@ public class ChatHandlerServerModule implements Module
   @Provides
   @LazySingleton
   public TaskIdResponseHeaderFilterHolder taskIdResponseHeaderFilterHolderBuilder(
-      final TaskHolder taskPropsHolder
+      final TaskHolder taskHolder
   )
   {
-    return new TaskIdResponseHeaderFilterHolder("/druid/worker/v1/chat/*", taskPropsHolder.getTaskId());
+    return new TaskIdResponseHeaderFilterHolder("/druid/worker/v1/chat/*", taskHolder.getTaskId());
   }
 
   @Provides

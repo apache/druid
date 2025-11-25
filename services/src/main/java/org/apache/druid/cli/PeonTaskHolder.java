@@ -31,12 +31,12 @@ import org.apache.druid.server.metrics.TaskHolder;
  * <p>This holder retrieves task information lazily via a {@link Provider} to avoid
  * circular dependencies during Guice initialization.</p>
  */
-public class CliPeonTaskHolder implements TaskHolder
+public class PeonTaskHolder implements TaskHolder
 {
   private Provider<Task> taskProvider;
 
   @Inject
-  public CliPeonTaskHolder(
+  public PeonTaskHolder(
       Provider<Task> taskProvider
   )
   {

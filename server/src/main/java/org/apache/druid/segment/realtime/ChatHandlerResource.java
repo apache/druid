@@ -42,10 +42,10 @@ public class ChatHandlerResource
   private final String taskId;
 
   @Inject
-  public ChatHandlerResource(final ChatHandlerProvider handlers, final TaskHolder taskPropsHolder)
+  public ChatHandlerResource(final ChatHandlerProvider handlers, final TaskHolder taskHolder)
   {
     this.handlers = handlers;
-    this.taskId = taskPropsHolder.getTaskId();
+    this.taskId = taskHolder.getTaskId();
   }
 
   @Path("/{id}")

@@ -33,12 +33,12 @@ import org.apache.druid.server.metrics.LoadSpecHolder;
  * <p>This holder retrieves load specifications lazily via a {@link Provider} to avoid
  * circular dependencies during Guice initialization.</p>
  */
-public class CliPeonLoadSpecHolder implements LoadSpecHolder
+public class PeonLoadSpecHolder implements LoadSpecHolder
 {
   private Provider<Task> taskProvider;
 
   @Inject
-  public CliPeonLoadSpecHolder(
+  public PeonLoadSpecHolder(
       Provider<Task> taskProvider
   )
   {

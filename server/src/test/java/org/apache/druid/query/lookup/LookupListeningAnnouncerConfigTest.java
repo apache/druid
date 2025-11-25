@@ -159,9 +159,9 @@ public class LookupListeningAnnouncerConfigTest
   @Test
   public void testLookupsToLoadInjection()
   {
-    final LoadSpecHolder taskPropsHolder = new DefaultLoadSpecHolder();
-    injector.injectMembers(taskPropsHolder);
-    Assert.assertEquals(LookupLoadingSpec.Mode.ALL, taskPropsHolder.getLookupLoadingSpec().getMode());
+    final LoadSpecHolder taskHolder = new DefaultLoadSpecHolder();
+    injector.injectMembers(taskHolder);
+    Assert.assertEquals(LookupLoadingSpec.Mode.ALL, taskHolder.getLookupLoadingSpec().getMode());
   }
 
   @Test(expected = IllegalArgumentException.class)

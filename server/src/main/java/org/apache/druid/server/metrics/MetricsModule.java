@@ -149,11 +149,11 @@ public class MetricsModule implements Module
   @Provides
   @ManageLifecycle
   public JvmMonitor getJvmMonitor(
-      TaskHolder taskPropsHolder
+      TaskHolder taskHolder
   )
   {
     Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
-        taskPropsHolder
+        taskHolder
     );
     return new JvmMonitor(dimensions);
   }
@@ -161,34 +161,34 @@ public class MetricsModule implements Module
   @Provides
   @ManageLifecycle
   public JvmCpuMonitor getJvmCpuMonitor(
-      TaskHolder taskPropsHolder
+      TaskHolder taskHolder
   )
   {
     Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
-        taskPropsHolder
+        taskHolder
     );
     return new JvmCpuMonitor(dimensions);
   }
 
   @Provides
   @ManageLifecycle
-  public JvmThreadsMonitor getJvmThreadsMonitor(TaskHolder taskPropsHolder)
+  public JvmThreadsMonitor getJvmThreadsMonitor(TaskHolder taskHolder)
   {
     Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
-        taskPropsHolder
+        taskHolder
     );
     return new JvmThreadsMonitor(dimensions);
   }
 
   @Provides
   @ManageLifecycle
-  public SysMonitor getSysMonitor(TaskHolder taskPropsHolder, @Self Set<NodeRole> nodeRoles)
+  public SysMonitor getSysMonitor(TaskHolder taskHolder, @Self Set<NodeRole> nodeRoles)
   {
     if (nodeRoles.contains(NodeRole.PEON)) {
       return new NoopSysMonitor();
     } else {
       Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
-          taskPropsHolder
+          taskHolder
       );
       return new SysMonitor(dimensions);
     }
@@ -197,7 +197,7 @@ public class MetricsModule implements Module
   @Provides
   @ManageLifecycle
   public OshiSysMonitor getOshiSysMonitor(
-      TaskHolder taskPropsHolder,
+      TaskHolder taskHolder,
       @Self Set<NodeRole> nodeRoles,
       OshiSysMonitorConfig oshiSysConfig
   )
@@ -206,7 +206,7 @@ public class MetricsModule implements Module
       return new NoopOshiSysMonitor();
     } else {
       Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
-          taskPropsHolder
+          taskHolder
       );
       return new OshiSysMonitor(dimensions, oshiSysConfig);
     }
