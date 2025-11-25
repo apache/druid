@@ -19,17 +19,10 @@
 
 package org.apache.druid.server.metrics;
 
-import com.google.inject.ImplementedBy;
-
 /**
  * Provides identifying information for a running task. Implementations may throw an exception in
  * non-task contexts, so callers must check the implementation type before invoking its methods.
- *
- * <p>Note: {@link ImplementedBy} is used so that a default implementation is
- * available without requiring explicit bindings in non-task server processes
- * and various tests.</p>
  */
-@ImplementedBy(NoopTaskHolder.class)
 public interface TaskHolder
 {
   /**

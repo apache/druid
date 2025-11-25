@@ -19,18 +19,12 @@
 
 package org.apache.druid.server.metrics;
 
-import com.google.inject.ImplementedBy;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 
 /**
  * Provides loading specifications for a task or server.
- *
- * <p>Note: {@link ImplementedBy} is used so that this implementation
- * is available by default, avoiding the need for explicit bindings in all the
- * non-task server processes and various tests.</p>
  */
-@ImplementedBy(DefaultLoadSpecHolder.class)
 public interface LoadSpecHolder
 {
   /**
