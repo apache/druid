@@ -63,6 +63,9 @@ import java.util.TreeMap;
  * In {@link org.apache.druid.timeline.VersionedIntervalTimeline}, this class is used to manage segments in the same
  * timeChunk.
  *
+ * OvershadowableManager is only used when segment locking is in play, and segments with minor version != 0 have
+ * been created. See {@link PartitionHolder#add(PartitionChunk)}.
+ *
  * This class is not thread-safe.
  */
 class OvershadowableManager<T extends Overshadowable<T>> implements PartitionHolderContents<T>
@@ -652,6 +655,12 @@ class OvershadowableManager<T extends Overshadowable<T>> implements PartitionHol
   @Override
   public boolean addChunk(PartitionChunk<T> chunk)
   {
+    // Chunks with minor version zero need to have restrained partition numbers with OvershadowableManager.
+    if (chunk.getObject().getMinorVersion() == 0 && chunk.getChunkNumber() >= PartitionIds.ROOT_GEN_END_PARTITION_ID) {
+      throw new ISE("PartitionId[%d] must be in the range [0, 32767]. "
+                    + "Try compacting the interval to reduce the segment count.", chunk.getChunkNumber());
+    }
+
     // Sanity check. ExistingChunk should be usually null.
     final PartitionChunk<T> existingChunk = knownPartitionChunks.put(chunk.getChunkNumber(), chunk);
     if (existingChunk != null) {
@@ -949,7 +958,7 @@ class OvershadowableManager<T extends Overshadowable<T>> implements PartitionHol
   }
 
   @Override
-  public boolean visibleChunksAreConsistent()
+  public boolean areVisibleChunksConsistent()
   {
     return Iterators.all(
         visibleGroupPerRange.values().iterator(),

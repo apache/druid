@@ -124,7 +124,7 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
     }
 
     if (curr.isEnd()) {
-      return contents.visibleChunksAreConsistent();
+      return contents.areVisibleChunksConsistent();
     }
 
     while (iter.hasNext()) {
@@ -134,7 +134,7 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
       }
 
       if (next.isEnd()) {
-        return contents.visibleChunksAreConsistent();
+        return contents.areVisibleChunksConsistent();
       }
       curr = next;
     }

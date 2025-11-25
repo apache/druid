@@ -39,7 +39,7 @@ public class SimplePartitionHolderContents<T extends Overshadowable<T>> implemen
   private final TreeMap<PartitionChunk<T>, PartitionChunk<T>> holderMap = new TreeMap<>();
 
   /**
-   * Map of {@link PartitionChunk#getChunkNumber()} to
+   * Map of {@link PartitionChunk#getChunkNumber()} to the actual {@link PartitionChunk}.
    */
   private final Int2ObjectMap<PartitionChunk<T>> chunkForPartition = new Int2ObjectOpenHashMap<>();
 
@@ -50,7 +50,7 @@ public class SimplePartitionHolderContents<T extends Overshadowable<T>> implemen
   }
 
   @Override
-  public boolean visibleChunksAreConsistent()
+  public boolean areVisibleChunksConsistent()
   {
     return true;
   }

@@ -41,7 +41,7 @@ public interface PartitionHolderContents<T>
    * {@link PartitionHolder#isComplete()}. When segment locking is not being used, all chunks
    * are consistent, so this always returns true.
    */
-  boolean visibleChunksAreConsistent();
+  boolean areVisibleChunksConsistent();
 
   /**
    * Adds a chunk.
