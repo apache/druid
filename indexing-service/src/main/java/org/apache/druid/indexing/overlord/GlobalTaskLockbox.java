@@ -27,6 +27,7 @@ import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateRequest;
 import org.apache.druid.indexing.common.actions.SegmentAllocateResult;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -206,12 +207,13 @@ public class GlobalTaskLockbox
    * a batch allocation of segments. It is possible that some requests succeed
    * and others fail. In that case, only the failed ones should be retried.
    *
-   * @param requests                List of allocation requests
-   * @param dataSource              Datasource for which segment is to be allocated.
-   * @param interval                Interval for which segment is to be allocated.
-   * @param skipSegmentLineageCheck Whether lineage check is to be skipped
-   *                                (this is true for streaming ingestion)
-   * @param lockGranularity         Granularity of task lock
+   * @param requests                         List of allocation requests
+   * @param dataSource                       Datasource for which segment is to be allocated.
+   * @param interval                         Interval for which segment is to be allocated.
+   * @param skipSegmentLineageCheck          Whether lineage check is to be skipped
+   *                                         (this is true for streaming ingestion)
+   * @param lockGranularity                  Granularity of task lock
+   * @param initialAllocationPartitionNumber from {@link TaskLockConfig#getInitialAllocationPartitionNumber()}
    * @return List of allocation results in the same order as the requests.
    */
   public List<SegmentAllocateResult> allocateSegments(
@@ -220,7 +222,8 @@ public class GlobalTaskLockbox
       Interval interval,
       boolean skipSegmentLineageCheck,
       LockGranularity lockGranularity,
-      boolean reduceMetadataIO
+      boolean reduceMetadataIO,
+      int initialAllocationPartitionNumber
   )
   {
     return computeForDatasource(
@@ -231,7 +234,8 @@ public class GlobalTaskLockbox
             interval,
             skipSegmentLineageCheck,
             lockGranularity,
-            reduceMetadataIO
+            reduceMetadataIO,
+            initialAllocationPartitionNumber
         )
     );
   }

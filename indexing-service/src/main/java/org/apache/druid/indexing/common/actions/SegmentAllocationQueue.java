@@ -581,7 +581,8 @@ public class SegmentAllocationQueue
         tryInterval,
         requestKey.skipSegmentLineageCheck,
         requestKey.lockGranularity,
-        reduceMetadataIO
+        reduceMetadataIO,
+        config.getInitialAllocationPartitionNumber()
     );
 
     int successfulRequests = 0;
