@@ -57,11 +57,22 @@ public class MetadataStoreRoleProvider implements RoleProvider
       throw new IAE("Could not load userMap for authorizer [%s]", authorizerPrefix);
     }
 
-    BasicAuthorizerUser user = userMap.get(authenticationResult.getIdentity());
-    if (user != null) {
-      roleNames.addAll(user.getRoles());
+    Set<String> claims = RoleProviderUtil.claimValuesFromCtx(authenticationResult.getContext());
+
+    if (claims != null) {
+      return RoleProviderUtil.getRolesByClaimValue(
+          authorizerPrefix,
+          claims,
+          roleNames,
+          cacheManager
+      );
+    } else {
+      return RoleProviderUtil.getRolesByIdentity(
+          userMap,
+          authenticationResult.getIdentity(),
+          roleNames
+      );
     }
-    return roleNames;
   }
 
   @Override
