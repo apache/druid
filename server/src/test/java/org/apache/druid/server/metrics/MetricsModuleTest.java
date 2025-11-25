@@ -88,8 +88,6 @@ public class MetricsModuleTest
                 Key.get(DruidNode.class, Self.class),
                 new DruidNode("test-inject", null, false, null, null, true, false)
             );
-            binder.bind(TaskHolder.class).to(NoopTaskHolder.class).in(LazySingleton.class);
-            binder.bind(LoadSpecHolder.class).to(DefaultLoadSpecHolder.class).in(LazySingleton.class);
           }
         })
     );

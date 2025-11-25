@@ -83,11 +83,7 @@ import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppendera
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
-import org.apache.druid.server.metrics.DefaultLoadSpecHolder;
-import org.apache.druid.server.metrics.LoadSpecHolder;
-import org.apache.druid.server.metrics.NoopTaskHolder;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
-import org.apache.druid.server.metrics.TaskHolder;
 import org.apache.druid.server.metrics.WorkerTaskCountStatsProvider;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.apache.druid.timeline.PruneLastCompactionState;
@@ -154,8 +150,6 @@ public class CliMiddleManager extends ServerRunnable
             binder.bind(TaskRunner.class).to(ForkingTaskRunner.class);
             binder.bind(ForkingTaskRunner.class).in(ManageLifecycle.class);
             binder.bind(WorkerTaskCountStatsProvider.class).to(ForkingTaskRunner.class);
-            binder.bind(TaskHolder.class).to(NoopTaskHolder.class).in(LazySingleton.class);
-            binder.bind(LoadSpecHolder.class).to(DefaultLoadSpecHolder.class).in(LazySingleton.class);
 
             binder.bind(ParallelIndexSupervisorTaskClientProvider.class).toProvider(Providers.of(null));
             binder.bind(ShuffleClient.class).toProvider(Providers.of(null));

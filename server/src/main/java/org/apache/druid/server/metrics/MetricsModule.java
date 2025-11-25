@@ -108,7 +108,7 @@ public class MetricsModule implements Module
   {
     List<Monitor> monitors = new ArrayList<>();
     // HACK: when ServiceStatusMonitor is the first to be loaded, it introduces a circular dependency between
-    // CliPeon.runTask and CliPeon.getTaskHolder/CliPeon.getCliPeonLoadSpecHolder. The reason for this is unclear
+    // CliPeon.runTask and TaskHolder.getDataSource()/TaskHolder.getTaskId(). The reason for this is unclear
     // but by injecting TaskPropertiesHolder early this cycle is avoided.
     injector.getInstance(TaskHolder.class);
     injector.getInstance(LoadSpecHolder.class);

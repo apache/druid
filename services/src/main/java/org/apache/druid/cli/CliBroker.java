@@ -82,12 +82,8 @@ import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
-import org.apache.druid.server.metrics.DefaultLoadSpecHolder;
-import org.apache.druid.server.metrics.LoadSpecHolder;
-import org.apache.druid.server.metrics.NoopTaskHolder;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
-import org.apache.druid.server.metrics.TaskHolder;
 import org.apache.druid.server.router.TieredBrokerConfig;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
 import org.apache.druid.sql.guice.SqlModule;
@@ -165,9 +161,6 @@ public class CliBroker extends ServerRunnable
           JsonConfigProvider.bind(binder, "druid.broker.internal.query.config", InternalQueryConfig.class);
 
           binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
-          binder.bind(TaskHolder.class).to(NoopTaskHolder.class).in(LazySingleton.class);
-          binder.bind(LoadSpecHolder.class).to(DefaultLoadSpecHolder.class).in(LazySingleton.class);
-
           binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
 
           binder.bind(BrokerQueryResource.class).in(LazySingleton.class);

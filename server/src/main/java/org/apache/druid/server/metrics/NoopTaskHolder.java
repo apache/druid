@@ -32,12 +32,12 @@ public class NoopTaskHolder implements TaskHolder
   @Override
   public String getDataSource()
   {
-    throw new UnsupportedOperationException("getDataSource() should not be called for non-cli peons");
+    throw new UnsupportedOperationException("getDataSource() should not be called for non-CliPeon");
   }
 
   @Override
   public String getTaskId()
   {
-    throw new UnsupportedOperationException("getTaskId() should not be called for non-cli peons");
+    throw new UnsupportedOperationException("getTaskId() should not be called for non-CliPeon");
   }
 }
