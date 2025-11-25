@@ -24,6 +24,7 @@ import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
+import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -140,10 +141,20 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
     return total;
   }
 
+  @Nullable
   public Number getLatestMetricEventValue(String metricName)
   {
     final Deque<ServiceMetricEvent> metricEventQueue = metricEvents.get(metricName);
-    return metricEventQueue == null ? 0 : metricEventQueue.getLast().getValue();
+    return metricEventQueue == null ? null : metricEventQueue.getLast().getValue();
+  }
+
+  public Number getLatestMetricEventValue(String metricName, Number defaultValue)
+  {
+    final Number latest = getLatestMetricEventValue(metricName);
+    if (latest == null) {
+      return defaultValue;
+    }
+    return latest;
   }
 
   @Override

@@ -211,7 +211,7 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_EVICT_COUNT) >= 0);
     Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_EVICT_BYTES) > 0);
     Assertions.assertEquals(0, emitter.getMetricEventLongSum(StorageMonitor.VSF_REJECT_COUNT));
-    Assertions.assertTrue(emitter.getLatestMetricEventValue(StorageMonitor.VSF_USED_BYTES).longValue() > 0);
+    Assertions.assertTrue(emitter.getLatestMetricEventValue(StorageMonitor.VSF_USED_BYTES, 0).longValue() > 0);
   }
 
 
@@ -271,7 +271,7 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
   private long getMetricLatestValue(LatchableEmitter emitter, String metricName, int expectedCount)
   {
     Assertions.assertEquals(expectedCount, emitter.getMetricEventCount(metricName));
-    return emitter.getLatestMetricEventValue(metricName).longValue();
+    return emitter.getLatestMetricEventValue(metricName, 0).longValue();
   }
 
   private String createTestDatasourceName()
