@@ -617,6 +617,29 @@ export class Stages {
     });
   }
 
+  getInactiveWorkerCount(stage: StageDefinition): number | undefined {
+    const { counters } = this;
+    const { stageNumber, definition } = stage;
+    const forStageCounters = counters?.[stageNumber];
+    if (!forStageCounters) return;
+
+    const inputChannelCounters = definition.input.map((_, i) => `input${i}` as ChannelCounterName);
+
+    // Calculate and return the number of workers that have zero count across all inputChannelCounters
+    return sum(
+      Object.values(forStageCounters).map(stageCounters =>
+        Number(
+          inputChannelCounters.every(channel => {
+            const c = stageCounters[channel];
+            if (!c) return true;
+            const totalRows = sum(c.rows || []);
+            return totalRows === 0;
+          }),
+        ),
+      ),
+    );
+  }
+
   getPartitionChannelCounterNamesForStage(
     stage: StageDefinition,
     inOut: InOut,

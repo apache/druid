@@ -129,6 +129,8 @@ import org.apache.druid.server.http.RedirectFilter;
 import org.apache.druid.server.http.RedirectInfo;
 import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.initialization.jetty.CliIndexerServerModule;
+import org.apache.druid.server.initialization.jetty.JettyBindings;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
@@ -298,12 +300,7 @@ public class CliOverlord extends ServerRunnable
                     .in(LazySingleton.class);
             }
 
-            Jerseys.addResource(binder, OverlordResource.class);
-            Jerseys.addResource(binder, SupervisorResource.class);
-            Jerseys.addResource(binder, HttpRemoteTaskRunnerResource.class);
-            Jerseys.addResource(binder, OverlordCompactionResource.class);
-            Jerseys.addResource(binder, OverlordDataSourcesResource.class);
-
+            configureOverlordWebResources(binder);
 
             binder.bind(AppenderatorsManager.class)
                   .to(DummyForInjectionAppenderatorsManager.class)
@@ -458,6 +455,50 @@ public class CliOverlord extends ServerRunnable
             dutyBinder.addBinding().to(TaskLogAutoCleaner.class);
             dutyBinder.addBinding().to(UnusedSegmentsKiller.class).in(LazySingleton.class);
           }
+
+          /**
+           * Configures Overlord-specific web resources and QoS filtering.
+           * This method performs two main tasks:
+           * <ol>
+           *   <li>Registers Jersey resources for Overlord REST endpoints</li>
+           *   <li>Configures QoS (Quality of Service) filtering for action APIs only</li>
+           * </ol>
+           * <p>
+           * QoS filtering is applied to action APIs to prevent the Overlord from becoming
+           * unresponsive to health checks
+           */
+          private void configureOverlordWebResources(Binder binder)
+          {
+            Jerseys.addResource(binder, OverlordResource.class);
+            Jerseys.addResource(binder, SupervisorResource.class);
+            Jerseys.addResource(binder, HttpRemoteTaskRunnerResource.class);
+            Jerseys.addResource(binder, OverlordCompactionResource.class);
+            Jerseys.addResource(binder, OverlordDataSourcesResource.class);
+
+
+            final int serverHttpNumThreads = properties.containsKey(CliIndexerServerModule.SERVER_HTTP_NUM_THREADS_PROPERTY)
+                                             ? Integer.parseInt(properties.getProperty(CliIndexerServerModule.SERVER_HTTP_NUM_THREADS_PROPERTY))
+                                             : ServerConfig.getDefaultNumThreads();
+
+            final int maxConcurrentActions;
+            if (properties.containsKey("druid.indexer.server.maxConcurrentActions")) {
+              maxConcurrentActions = Integer.parseInt(properties.getProperty("druid.indexer.server.maxConcurrentActions"));
+            } else {
+              maxConcurrentActions = getDefaultMaxConcurrentActions(serverHttpNumThreads);
+            }
+
+            if (maxConcurrentActions > 0) {
+              // Add QoS filtering for action endpoints only
+              final String[] actionPaths = {
+                  "/druid/indexer/v1/action",
+              };
+
+              log.info("Overlord QoS filtering enabled for action endpoints. Max concurrent actions: [%d]", maxConcurrentActions);
+              JettyBindings.addQosFilter(binder, actionPaths, maxConcurrentActions);
+            } else {
+              log.info("Overlord QoS filtering disabled for action endpoints. Max concurrent actions: [%d]", serverHttpNumThreads);
+            }
+          }
         },
         new IndexingServiceInputSourceModule(),
         new IndexingServiceTaskLogsModule(properties),
@@ -471,6 +512,11 @@ public class CliOverlord extends ServerRunnable
         new MSQDurableStorageModule(),
         new MSQExternalDataSourceModule()
     );
+  }
+
+  public static int getDefaultMaxConcurrentActions(int serverHttpNumThreads)
+  {
+    return Math.max(1, Math.max(serverHttpNumThreads - 4, (int) (serverHttpNumThreads * 0.8)));
   }
 
   /**
