@@ -25,10 +25,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.pac4j.core.config.Config;
-import org.pac4j.core.engine.CallbackLogic;
 import org.pac4j.core.engine.DefaultCallbackLogic;
 import org.pac4j.core.engine.DefaultSecurityLogic;
-import org.pac4j.core.engine.SecurityLogic;
 import org.pac4j.core.exception.http.HttpAction;
 import org.pac4j.core.profile.UserProfile;
 import org.pac4j.jee.context.JEEContext;
@@ -43,7 +41,6 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
 
