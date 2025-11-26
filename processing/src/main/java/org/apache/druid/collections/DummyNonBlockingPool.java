@@ -26,11 +26,10 @@ public final class DummyNonBlockingPool implements NonBlockingPool<Object>
 {
   private static final DummyNonBlockingPool INSTANCE = new DummyNonBlockingPool();
 
+  @SuppressWarnings("unchecked")
   public static <T> NonBlockingPool<T> instance()
   {
-    @SuppressWarnings("unchecked")
-    NonBlockingPool<T> instance = (NonBlockingPool<T>) INSTANCE;
-    return instance;
+    return (NonBlockingPool<T>) INSTANCE;
   }
 
   private DummyNonBlockingPool()
