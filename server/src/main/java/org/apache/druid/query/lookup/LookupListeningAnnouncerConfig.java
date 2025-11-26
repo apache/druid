@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.LoadSpecHolder;
+import org.apache.druid.server.metrics.NoopTaskHolder;
 import org.apache.druid.server.metrics.TaskHolder;
 
 class LookupListeningAnnouncerConfig
@@ -55,7 +56,17 @@ class LookupListeningAnnouncerConfig
         !(lookupTierIsDatasource && null != lookupTier),
         "Cannot specify both `lookupTier` and `lookupTierIsDatasource`"
     );
-    final String lookupTier = lookupTierIsDatasource ? taskHolder.getDataSource() : this.lookupTier;
+
+    final String lookupTier;
+    if (lookupTierIsDatasource) {
+      if (taskHolder instanceof NoopTaskHolder) {
+        lookupTier = null;
+      } else {
+        lookupTier = taskHolder.getDataSource();
+      }
+    } else {
+      lookupTier = this.lookupTier;
+    }
 
     return Preconditions.checkNotNull(
         lookupTier == null ? DEFAULT_TIER : StringUtils.emptyToNullNonDruidDataString(lookupTier),

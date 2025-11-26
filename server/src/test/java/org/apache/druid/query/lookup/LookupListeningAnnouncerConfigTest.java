@@ -179,4 +179,29 @@ public class LookupListeningAnnouncerConfigTest
     final LookupListeningAnnouncerConfig config = configProvider.get();
     Assert.assertEquals(lookupTier, config.getLookupTier());
   }
+
+  @Test
+  public void testLookupTierDefaultsForNonPeonServers()
+  {
+    final Injector injector = Initialization.makeInjectorWithModules(
+        GuiceInjectors.makeStartupInjector(),
+        ImmutableList.of(
+            (Module) binder -> JsonConfigProvider.bindInstance(
+                binder,
+                Key.get(DruidNode.class, Self.class),
+                new DruidNode("test-inject", null, false, null, null, true, false)
+            ),
+            new LookupModule()
+        ));
+    final JsonConfigurator configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
+    properties.put(PROPERTY_BASE + ".lookupTierIsDatasource", "true");
+    final JsonConfigProvider<LookupListeningAnnouncerConfig> configProvider = JsonConfigProvider.of(
+        PROPERTY_BASE,
+        LookupListeningAnnouncerConfig.class
+    );
+    configProvider.inject(properties, configurator);
+    final LookupListeningAnnouncerConfig config = configProvider.get();
+    Assert.assertEquals("__default", config.getLookupTier());
+    Assert.assertEquals(LookupLoadingSpec.ALL, config.getLookupLoadingSpec());
+  }
 }
