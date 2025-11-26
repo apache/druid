@@ -34,7 +34,6 @@ import { day, Duration, Timezone } from 'chronoshift';
 import { C, L, N, SqlExpression, SqlQuery } from 'druid-query-toolkit';
 import { useEffect, useMemo, useState } from 'react';
 
-import { END_OF_TIME_DATE, START_OF_TIME_DATE } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import { useQueryManager } from '../../hooks';
 import {
@@ -56,6 +55,7 @@ import { SegmentBarChart } from './segment-bar-chart';
 
 import './segment-timeline.scss';
 
+const FOUR_DIGIT_YEAR_LIKE = '____-%';
 const DEFAULT_SHOWN_DURATION = new Duration('P1Y');
 const SHOWN_DURATION_OPTIONS: Duration[] = ['P1D', 'P1W', 'P1M', 'P3M', 'P1Y', 'P5Y', 'P10Y'].map(
   d => new Duration(d),
@@ -122,8 +122,8 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
         const baseQuery = SqlQuery.from(N('sys').table('segments'))
           .changeWhereExpression(
             SqlExpression.and(
-              C('start').unequal(START_OF_TIME_DATE),
-              C('end').unequal(END_OF_TIME_DATE),
+              C('start').like(FOUR_DIGIT_YEAR_LIKE),
+              C('end').like(FOUR_DIGIT_YEAR_LIKE),
               C('is_overshadowed').equal(0),
               datasource ? C('datasource').equal(L(datasource)) : undefined,
             ),
