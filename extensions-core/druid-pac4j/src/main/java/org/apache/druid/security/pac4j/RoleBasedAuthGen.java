@@ -30,7 +30,6 @@ import org.pac4j.core.context.session.SessionStore;
 import org.pac4j.core.profile.UserProfile;
 import org.pac4j.oidc.profile.OidcProfile;
 
-import javax.validation.constraints.NotBlank;
 import java.lang.reflect.Array;
 import java.util.Collection;
 import java.util.Collections;
@@ -49,7 +48,7 @@ public class RoleBasedAuthGen implements AuthorizationGenerator
 
   private final String roleClaimPath; // dot separated path to roles claim in the ID token
 
-  public RoleBasedAuthGen(@NotBlank String roleClaimPath)
+  public RoleBasedAuthGen(String roleClaimPath)
   {
     this.roleClaimPath = roleClaimPath;
   }
