@@ -91,7 +91,6 @@ public class HighPartitionNumberTest extends EmbeddedClusterTestBase
     insertSecondSegment();
     insertLastSegments();
 
-
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     // Verify that we have segments with partition numbers above the old limit
