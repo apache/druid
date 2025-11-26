@@ -19,8 +19,8 @@
 
 package org.apache.druid.timeline.partition;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.timeline.Overshadowable;
 
@@ -28,7 +28,6 @@ import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
-import java.util.TreeMap;
 
 /**
  * Contents for {@link PartitionHolder} when segment locking was not used, and therefore no chunks have
@@ -36,17 +35,15 @@ import java.util.TreeMap;
  */
 public class SimplePartitionHolderContents<T extends Overshadowable<T>> implements PartitionHolderContents<T>
 {
-  private final TreeMap<PartitionChunk<T>, PartitionChunk<T>> holderMap = new TreeMap<>();
-
   /**
    * Map of {@link PartitionChunk#getChunkNumber()} to the actual {@link PartitionChunk}.
    */
-  private final Int2ObjectMap<PartitionChunk<T>> chunkForPartition = new Int2ObjectOpenHashMap<>();
+  private final Int2ObjectMap<PartitionChunk<T>> chunkForPartition = new Int2ObjectAVLTreeMap<>();
 
   @Override
   public boolean isEmpty()
   {
-    return holderMap.isEmpty();
+    return chunkForPartition.isEmpty();
   }
 
   @Override
@@ -62,17 +59,22 @@ public class SimplePartitionHolderContents<T extends Overshadowable<T>> implemen
       throw DruidException.defensive("Cannot handle chunk with minorVersion[%d]", chunk.getObject().getMinorVersion());
     }
 
-    final PartitionChunk<T> existingChunk = chunkForPartition.put(chunk.getChunkNumber(), chunk);
-    if (existingChunk != null && !existingChunk.equals(chunk)) {
-      throw DruidException.defensive(
-          "existingChunk[%s] is different from newChunk[%s] for partitionId[%d]",
-          existingChunk,
-          chunk,
-          chunk.getChunkNumber()
-      );
+    final PartitionChunk<T> existingChunk = chunkForPartition.putIfAbsent(chunk.getChunkNumber(), chunk);
+    if (existingChunk != null) {
+      if (!existingChunk.equals(chunk)) {
+        throw DruidException.defensive(
+            "existingChunk[%s] is different from newChunk[%s] for partitionId[%d]",
+            existingChunk,
+            chunk,
+            chunk.getChunkNumber()
+        );
+      } else {
+        // A new chunk of the same major version and partitionId can be added in segment handoff
+        // from stream ingestion tasks to historicals
+        return false;
+      }
     } else {
-      holderMap.put(chunk, chunk);
-      return existingChunk == null;
+      return true;
     }
   }
 
@@ -80,11 +82,21 @@ public class SimplePartitionHolderContents<T extends Overshadowable<T>> implemen
   @Nullable
   public PartitionChunk<T> removeChunk(PartitionChunk<T> chunk)
   {
-    final PartitionChunk<T> retVal = holderMap.remove(chunk);
-    if (retVal != null) {
-      chunkForPartition.remove(chunk.getChunkNumber(), retVal);
+    final PartitionChunk<T> knownChunk = chunkForPartition.get(chunk.getChunkNumber());
+    if (knownChunk == null) {
+      return null;
     }
-    return retVal;
+
+    if (!knownChunk.equals(chunk)) {
+      throw DruidException.defensive(
+          "Unexpected state: Same partitionId[%d], but known partition[%s] is different from the input partition[%s]",
+          chunk.getChunkNumber(),
+          knownChunk,
+          chunk
+      );
+    }
+
+    return chunkForPartition.remove(chunk.getChunkNumber());
   }
 
   @Override
@@ -96,7 +108,7 @@ public class SimplePartitionHolderContents<T extends Overshadowable<T>> implemen
   @Override
   public Iterator<PartitionChunk<T>> visibleChunksIterator()
   {
-    return holderMap.keySet().iterator();
+    return chunkForPartition.values().iterator();
   }
 
   @Override
@@ -109,7 +121,7 @@ public class SimplePartitionHolderContents<T extends Overshadowable<T>> implemen
   public PartitionHolderContents<T> copyVisible()
   {
     final SimplePartitionHolderContents<T> retVal = new SimplePartitionHolderContents<>();
-    for (PartitionChunk<T> chunk : holderMap.keySet()) {
+    for (PartitionChunk<T> chunk : chunkForPartition.values()) {
       retVal.addChunk(chunk);
     }
     return retVal;
@@ -129,20 +141,20 @@ public class SimplePartitionHolderContents<T extends Overshadowable<T>> implemen
       return false;
     }
     SimplePartitionHolderContents<?> that = (SimplePartitionHolderContents<?>) o;
-    return Objects.equals(holderMap, that.holderMap);
+    return Objects.equals(chunkForPartition, that.chunkForPartition);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hashCode(holderMap);
+    return Objects.hashCode(chunkForPartition);
   }
 
   @Override
   public String toString()
   {
     return "SimplePartitionHolderContents{" +
-           "holderMap=" + holderMap +
+           "chunkForPartition=" + chunkForPartition +
            '}';
   }
 }

@@ -70,7 +70,11 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
     }
   }
 
-  protected PartitionHolder(PartitionHolderContents<T> contents, short maxMinorVersion)
+  /**
+   * Constructor for situations where the caller already has a {@link PartitionHolderContents}. Generally used for
+   * copying. Also used for tests.
+   */
+  public PartitionHolder(PartitionHolderContents<T> contents, short maxMinorVersion)
   {
     this.contents = contents;
     this.maxMinorVersion = maxMinorVersion;

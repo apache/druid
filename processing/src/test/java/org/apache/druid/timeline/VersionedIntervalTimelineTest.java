@@ -27,7 +27,9 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.partition.IntegerPartitionChunk;
 import org.apache.druid.timeline.partition.OvershadowableInteger;
+import org.apache.druid.timeline.partition.OvershadowableManager;
 import org.apache.druid.timeline.partition.PartitionHolder;
+import org.apache.druid.timeline.partition.PartitionHolderContents;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -1474,17 +1476,16 @@ public class VersionedIntervalTimelineTest extends VersionedIntervalTimelineTest
 
     final List<TimelineObjectHolder<String, OvershadowableInteger>> holders = timeline.lookup(interval);
 
+    final PartitionHolderContents<OvershadowableInteger> expectedContents = new OvershadowableManager<>();
+    expectedContents.addChunk(makeNumbered("1", 0, 0));
+    expectedContents.addChunk(makeNumbered("1", 1, 0));
+
     Assert.assertEquals(
         ImmutableList.of(
             new TimelineObjectHolder<>(
                 interval,
                 "1",
-                new PartitionHolder<>(
-                    ImmutableList.of(
-                        makeNumbered("1", 0, 0),
-                        makeNumbered("1", 1, 0)
-                    )
-                )
+                new PartitionHolder<>(expectedContents, (short) 0)
             )
         ),
         holders

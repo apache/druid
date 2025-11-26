@@ -37,6 +37,7 @@ import it.unimi.dsi.fastutil.shorts.ShortComparator;
 import it.unimi.dsi.fastutil.shorts.ShortComparators;
 import it.unimi.dsi.fastutil.shorts.ShortSortedSet;
 import it.unimi.dsi.fastutil.shorts.ShortSortedSets;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.timeline.Overshadowable;
@@ -68,7 +69,7 @@ import java.util.TreeMap;
  *
  * This class is not thread-safe.
  */
-class OvershadowableManager<T extends Overshadowable<T>> implements PartitionHolderContents<T>
+public class OvershadowableManager<T extends Overshadowable<T>> implements PartitionHolderContents<T>
 {
   /**
    * There are 3 states for atomicUpdateGroups.
@@ -100,7 +101,7 @@ class OvershadowableManager<T extends Overshadowable<T>> implements PartitionHol
   private final TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> visibleGroupPerRange;
   private final TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> overshadowedGroups;
 
-  OvershadowableManager()
+  public OvershadowableManager()
   {
     this.knownPartitionChunks = new HashMap<>();
     this.standbyGroups = new TreeMap<>();
@@ -657,15 +658,18 @@ class OvershadowableManager<T extends Overshadowable<T>> implements PartitionHol
   {
     // Chunks with minor version zero need to have restrained partition numbers with OvershadowableManager.
     if (chunk.getObject().getMinorVersion() == 0 && chunk.getChunkNumber() >= PartitionIds.ROOT_GEN_END_PARTITION_ID) {
-      throw new ISE("PartitionId[%d] must be in the range [0, 32767]. "
-                    + "Try compacting the interval to reduce the segment count.", chunk.getChunkNumber());
+      throw new ISE(
+          "PartitionId[%d] must be in the range [0, 32767] when using segment locking. "
+          + "Try compacting the interval to reduce the segment count, or use time chunk locking.",
+          chunk.getChunkNumber()
+      );
     }
 
     // Sanity check. ExistingChunk should be usually null.
     final PartitionChunk<T> existingChunk = knownPartitionChunks.put(chunk.getChunkNumber(), chunk);
     if (existingChunk != null) {
       if (!existingChunk.equals(chunk)) {
-        throw new ISE(
+        throw DruidException.defensive(
             "existingChunk[%s] is different from newChunk[%s] for partitionId[%d]",
             existingChunk,
             chunk,
