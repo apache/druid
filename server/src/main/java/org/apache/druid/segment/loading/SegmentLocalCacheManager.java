@@ -649,6 +649,25 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   /**
+   * Testing use only please, any callers that want to do stuff with segments should use
+   * {@link #acquireCachedSegment(DataSegment)} or {@link #acquireSegment(DataSegment)} instead.
+   */
+  @VisibleForTesting
+  @Nullable
+  public ReferenceCountedSegmentProvider getSegmentReferenceProvider(DataSegment segment)
+  {
+    final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
+    final ReferenceCountingLock lock = lock(segment);
+    for (StorageLocation location : locations) {
+      final SegmentCacheEntry entry = location.getCacheEntry(cacheEntry.id);
+      if (entry != null) {
+        return entry.referenceProvider;
+      }
+    }
+    return null;
+  }
+
+  /**
    * Returns the effective segment info directory based on the configuration settings.
    * The directory is selected based on the following configurations injected into this class:
    * <ul>
