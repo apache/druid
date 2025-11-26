@@ -90,7 +90,7 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
   );
 
   private ExecutorService executor;
-  private SegmentLocalCacheManager  cacheManager;
+  private SegmentLocalCacheManager cacheManager;
   private SegmentManager segmentManager;
   private SegmentLocalCacheManager virtualCacheManager;
   private SegmentManager virtualSegmentManager;
@@ -240,7 +240,7 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
   @Test
   public void testDropSegment() throws SegmentLoadingException, ExecutionException, InterruptedException, IOException
   {
-    List<ReferenceCountedSegmentProvider> referenceProviders = new  ArrayList<>();
+    List<ReferenceCountedSegmentProvider> referenceProviders = new ArrayList<>();
     for (DataSegment eachSegment : SEGMENTS) {
       segmentManager.loadSegment(eachSegment);
       ReferenceCountedSegmentProvider refProvider = cacheManager.getSegmentReferenceProvider(eachSegment);
