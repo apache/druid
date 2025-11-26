@@ -20,6 +20,7 @@
 package org.apache.druid.server.metrics;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.metrics.Monitor;
@@ -77,23 +78,25 @@ public class MonitorsConfig
   }
 
   /**
-   * @return a map of task holder dimensions from the provided {@link TaskHolder}. If the holder is a
-   * {@link NoopTaskHolder}, an empty map is returned.
-   *
+   * @return a map of task holder dimensions from the provided {@link TaskHolder} if {@link TaskHolder#getDataSource()}
+   * and {@link TaskHolder#getTaskId()} are non-null.
    * <p>The task ID ({@link TaskHolder#getTaskId()}) is added to both {@link DruidMetrics#TASK_ID}
    * and {@link DruidMetrics#ID} dimensions to the map for backward compatibility. {@link DruidMetrics#ID} is
    * deprecated because it's ambiguous and will be removed in a future release.</p>
    */
   public static Map<String, String[]> mapOfTaskHolderDimensions(final TaskHolder taskHolder)
   {
-    if (taskHolder instanceof NoopTaskHolder) {
-      return Map.of();
+    final String dataSource = taskHolder.getDataSource();
+    final String taskId = taskHolder.getTaskId();
+    final ImmutableMap.Builder<String, String[]> builder = ImmutableMap.builder();
+    if (dataSource != null) {
+      builder.put(DruidMetrics.DATASOURCE, new String[]{dataSource});
     }
-    return Map.of(
-        DruidMetrics.DATASOURCE, new String[]{taskHolder.getDataSource()},
-        DruidMetrics.TASK_ID, new String[]{taskHolder.getTaskId()},
-        DruidMetrics.ID, new String[]{taskHolder.getTaskId()}
-    );
+    if (taskId != null) {
+      builder.put(DruidMetrics.TASK_ID, new String[]{taskId});
+      builder.put(DruidMetrics.ID, new String[]{taskId});
+    }
+    return builder.build();
   }
 
   private static List<Class<? extends Monitor>> getMonitorsFromNames(List<String> monitorNames)

@@ -19,19 +19,23 @@
 
 package org.apache.druid.server.metrics;
 
+import javax.annotation.Nullable;
+
 /**
- * Provides identifying information for a running task. Implementations may throw an exception in
- * non-task contexts, so callers must check the implementation type before invoking its methods.
+ * Provides identifying information for a task. Implementations return {@code null}
+ * when used in server processes that are not {@code CliPeon}.
  */
 public interface TaskHolder
 {
   /**
-   * @return the datasource name for the task.
+   * @return the datasource name for the task, or {@code null} if called from a server that is not {@code CliPeon}.
    */
+  @Nullable
   String getDataSource();
 
   /**
-   * @return the unique task ID.
+   * @return the taskId, or {@code null} if called from a server that is not {@code CliPeon}.
    */
+  @Nullable
   String getTaskId();
 }

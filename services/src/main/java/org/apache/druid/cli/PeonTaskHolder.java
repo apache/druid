@@ -26,7 +26,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.server.metrics.TaskHolder;
 
 /**
- * TaskHolder implementation for peon processes.
+ * TaskHolder implementation for {@code CliPeon} processes.
  *
  * <p>This holder retrieves task information lazily via a {@link Provider} to avoid
  * circular dependencies during Guice initialization.</p>

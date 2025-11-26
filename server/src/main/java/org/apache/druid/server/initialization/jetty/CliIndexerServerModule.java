@@ -36,7 +36,6 @@ import org.apache.druid.segment.realtime.ChatHandlerResource;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.TLSServerConfig;
-import org.apache.druid.server.metrics.NoopTaskHolder;
 import org.apache.druid.server.metrics.TaskHolder;
 import org.apache.druid.server.security.TLSCertificateChecker;
 import org.eclipse.jetty.server.Server;
@@ -113,11 +112,7 @@ public class CliIndexerServerModule implements Module
       final TaskHolder taskHolder
   )
   {
-    if (taskHolder instanceof NoopTaskHolder) {
-      return new TaskIdResponseHeaderFilterHolder("/druid/worker/v1/chat/*", null);
-    } else {
-      return new TaskIdResponseHeaderFilterHolder("/druid/worker/v1/chat/*", taskHolder.getTaskId());
-    }
+    return new TaskIdResponseHeaderFilterHolder("/druid/worker/v1/chat/*", taskHolder.getTaskId());
   }
 
   @Provides
