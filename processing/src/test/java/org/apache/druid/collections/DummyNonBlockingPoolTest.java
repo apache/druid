@@ -22,26 +22,21 @@ package org.apache.druid.collections;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.nio.ByteBuffer;
-
 public class DummyNonBlockingPoolTest
 {
   @Test
   public void testSingletonInstance()
   {
     final NonBlockingPool<Object> p1 = DummyNonBlockingPool.instance();
-    final NonBlockingPool<ByteBuffer> p2 = DummyNonBlockingPool.instance();
+    final NonBlockingPool<Integer> p2 = DummyNonBlockingPool.instance();
     Assertions.assertSame(p1, p2);
   }
 
   @Test
   public void testTakeThrows()
   {
-    final NonBlockingPool<Object> pool = DummyNonBlockingPool.instance();
-    Assertions.assertThrows(
-        UnsupportedOperationException.class,
-        pool::take
-    );
+    final NonBlockingPool<Integer> pool = DummyNonBlockingPool.instance();
+    Assertions.assertThrows(UnsupportedOperationException.class, pool::take);
   }
 }
 

@@ -22,22 +22,20 @@ package org.apache.druid.collections;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.nio.ByteBuffer;
-
 public class DummyBlockingPoolTest
 {
   @Test
   public void testSingletonInstance()
   {
     final BlockingPool<Object> p1 = DummyBlockingPool.instance();
-    final BlockingPool<ByteBuffer> p2 = DummyBlockingPool.instance();
+    final BlockingPool<Integer> p2 = DummyBlockingPool.instance();
     Assertions.assertSame(p1, p2);
   }
 
   @Test
   public void testMaxSizeAndMetricsAreZero()
   {
-    final BlockingPool<Object> pool = DummyBlockingPool.instance();
+    final BlockingPool<Integer> pool = DummyBlockingPool.instance();
     Assertions.assertEquals(0, pool.maxSize());
     Assertions.assertEquals(0, pool.getPendingRequests());
     Assertions.assertEquals(0, pool.getUsedResourcesCount());
@@ -46,17 +44,8 @@ public class DummyBlockingPoolTest
   @Test
   public void testTakeBatchThrows()
   {
-    final BlockingPool<Object> pool = DummyBlockingPool.instance();
-    Assertions.assertThrows(
-        UnsupportedOperationException.class,
-        () -> pool.takeBatch(1, 10L)
-    );
-
-    Assertions.assertThrows(
-        UnsupportedOperationException.class,
-        () -> pool.takeBatch(1)
-    );
+    final BlockingPool<Integer> pool = DummyBlockingPool.instance();
+    Assertions.assertThrows(UnsupportedOperationException.class, () -> pool.takeBatch(1));
+    Assertions.assertThrows(UnsupportedOperationException.class, () -> pool.takeBatch(1, 10L));
   }
 }
-
-
