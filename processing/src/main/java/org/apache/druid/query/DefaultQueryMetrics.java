@@ -464,6 +464,16 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
     return this;
   }
 
+  protected QueryMetrics<QueryType> reportMetricsIfNotZero(String metricName, Number value)
+  {
+    checkModifiedFromOwnerThread();
+    if (value != null && !value.equals(0)) {
+      metrics.put(metricName, value);
+    }
+
+    return this;
+  }
+
   private QueryMetrics<QueryType> reportMillisTimeMetric(String metricName, long timeNs)
   {
     return reportMetric(metricName, TimeUnit.NANOSECONDS.toMillis(timeNs));

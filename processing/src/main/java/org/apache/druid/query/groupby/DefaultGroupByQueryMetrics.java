@@ -22,6 +22,8 @@ package org.apache.druid.query.groupby;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DruidMetrics;
 
+import java.util.concurrent.atomic.LongAdder;
+
 public class DefaultGroupByQueryMetrics extends DefaultQueryMetrics<GroupByQuery> implements GroupByQueryMetrics
 {
   @Override
@@ -58,4 +60,56 @@ public class DefaultGroupByQueryMetrics extends DefaultQueryMetrics<GroupByQuery
   {
     //Don't emit by default
   }
+
+  // GroupByQueries:
+  private final LongAdder mergeBufferAcquisitonTime = new LongAdder();
+  private final LongAdder bytesSpilledToStorage = new LongAdder();
+  private final LongAdder mergeBufferBytesUsed = new LongAdder();
+  private final LongAdder mergeDictionarySize = new LongAdder();
+
+  @Override
+  public void reportGroupByStats()
+  {
+    reportMetricsIfNotZero("bytesSpilledToStorage", bytesSpilledToStorage);
+    reportMetricsIfNotZero("mergeDictionarySize", mergeDictionarySize);
+    reportMetricsIfNotZero("mergeBufferBytesUsed", mergeBufferBytesUsed);
+    reportMetricsIfNotZero("mergeBufferAcquisitonTimeNs", mergeBufferAcquisitonTime);
+  }
+
+  @Override
+  public void mergeBufferAcquisitionTime(long mergeBufferAcquisitionTime)
+  {
+    this.mergeBufferAcquisitonTime.add(mergeBufferAcquisitionTime);
+  }
+
+  @Override
+  public void bytesSpilledToStorage(long bytesSpilledToStorage)
+  {
+    this.bytesSpilledToStorage.add(bytesSpilledToStorage);
+  }
+
+  @Override
+  public void mergeDictionarySize(long mergeDictionarySize)
+  {
+    this.mergeDictionarySize.add(mergeDictionarySize);
+  }
+
+  @Override
+  public long getSpilledBytes()
+  {
+    return bytesSpilledToStorage.longValue();
+  }
+
+  @Override
+  public long getMergeDictionarySize()
+  {
+    return mergeDictionarySize.longValue();
+  }
+
+  @Override
+  public long getMergeBufferAcquisitionTime()
+  {
+    return mergeBufferAcquisitonTime.longValue();
+  }
+
 }
