@@ -131,7 +131,7 @@ public class HighPartitionNumberTest extends EmbeddedClusterTestBase
 
   /**
    * Reinserts the segment from {@link #insertFirstSegment()} directly into metadata storage,
-   * with partition number 32767.
+   * with partition number 32766.
    */
   private void insertSecondSegment()
   {
