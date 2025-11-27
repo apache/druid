@@ -20,6 +20,7 @@
 package org.apache.druid.query.groupby.epinephelinae;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.Pair;
@@ -99,6 +100,8 @@ public class GroupByRowProcessor
   )
   {
     GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
+    final GroupByQueryMetrics groupByQueryMetrics = (GroupByQueryMetrics) queryPlus.getQueryMetrics();
+    Preconditions.checkNotNull(groupByQueryMetrics, "groupByQueryMetrics");
     final Closer closeOnExit = Closer.create();
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
 
@@ -110,7 +113,7 @@ public class GroupByRowProcessor
     final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
         temporaryStorageDirectory,
         querySpecificConfig.getMaxOnDiskStorage().getBytes(),
-        (GroupByQueryMetrics) subqueryPlus.getQueryMetrics()
+        groupByQueryMetrics
     );
 
     closeOnExit.register(temporaryStorage);
@@ -135,6 +138,7 @@ public class GroupByRowProcessor
         mergeBufferSize
     );
     final Grouper<RowBasedKey> grouper = pair.lhs;
+    Preconditions.checkNotNull(grouper);
     final Accumulator<AggregateResult, ResultRow> accumulator = pair.rhs;
     closeOnExit.register(grouper);
 
@@ -143,6 +147,9 @@ public class GroupByRowProcessor
     if (!retVal.isOk()) {
       throw new ResourceLimitExceededException(retVal.getReason());
     }
+
+    grouper.updateGroupByQueryMetrics();
+    groupByQueryMetrics.reportGroupByStats();
 
     return new ResultSupplier()
     {

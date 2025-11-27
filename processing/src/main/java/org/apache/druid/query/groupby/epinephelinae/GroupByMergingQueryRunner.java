@@ -106,7 +106,6 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
   private final ObjectMapper spillMapper;
   private final String processingTmpDir;
   private final int mergeBufferSize;
-  // TODO: Apply aggregateStats
   private final GroupByStatsProvider groupByStatsProvider;
 
   public GroupByMergingQueryRunner(
