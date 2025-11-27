@@ -20,7 +20,6 @@
 package org.apache.druid.query.groupby;
 
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.query.QueryResourceId;
 
 import javax.annotation.Nullable;
 
@@ -37,22 +36,9 @@ public class GroupByStatsProvider
     this.aggregateStatsContainer = AggregateStats.EMPTY_STATS;
   }
 
-  public void aggregateStats(@Nullable GroupByQueryMetrics groupByQueryMetrics)
+  public void aggregateStats(GroupByQueryMetrics groupByQueryMetrics)
   {
-    if (groupByQueryMetrics == null) {
-      return;
-    }
-
     aggregateStatsContainer.addQueryStats(groupByQueryMetrics);
-  }
-
-  public synchronized void closeQuery(QueryResourceId resourceId)
-  {
-    if (resourceId == null || !perQueryStats.containsKey(resourceId)) {
-      return;
-    }
-    PerQueryStats container = perQueryStats.remove(resourceId);
-    aggregateStatsContainer.addQueryStats(container);
   }
 
   public synchronized AggregateStats getStatsSince()

@@ -212,6 +212,7 @@ public class RowBasedGrouperHelper
 
     // See method-level javadoc; we go into combining mode if there is no subquery.
     final boolean combining = subqueryPlus == null;
+    GroupByQuery subquery = combining ? null : (GroupByQuery) subqueryPlus.getQuery();
 
     GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
     final List<ColumnType> valueTypes = DimensionHandlerUtils.getValueTypesFromDimensionSpecs(query.getDimensions());
@@ -222,7 +223,7 @@ public class RowBasedGrouperHelper
     final ThreadLocal<ResultRow> columnSelectorRow = new ThreadLocal<>();
 
     ColumnSelectorFactory columnSelectorFactory = createResultRowBasedColumnSelectorFactory(
-        combining ? query : (GroupByQuery) subqueryPlus.getQuery(),
+        combining ? query : subquery,
         columnSelectorRow::get,
         RowSignature.Finalization.UNKNOWN
     );
