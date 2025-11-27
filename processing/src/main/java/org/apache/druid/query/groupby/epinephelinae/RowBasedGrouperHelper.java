@@ -169,9 +169,9 @@ public class RowBasedGrouperHelper
    * and dim filters) are respected, and its aggregators are used in standard (not combining) form. The input
    * ResultRows are assumed to be results originating from the provided "subquery".
    *
-   * @param query               query that we are grouping for
-   * @param subquery            optional subquery that we are receiving results from (see combining vs. subquery
-   *                            mode above)
+   * @param queryPlus           the query (and context) that we are grouping for
+   * @param subqueryPlus        optional subquery (and context) that produced the intermediate rows, or {@code null} when
+   *                            operating in combining mode (see description above)
    * @param config              groupBy query config
    * @param processingConfig    processing config
    * @param bufferSupplier      supplier of merge buffers

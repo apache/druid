@@ -329,7 +329,7 @@ public class GroupingEngine
    * computing subtotals (like GROUPING SETS), and computing the havingSpec and limitSpec.
    *
    * @param baseRunner      base query runner
-   * @param query           the groupBy query to run inside the base query runner
+   * @param queryPlus       query and context to run inside the base query runner
    * @param responseContext the response context to pass to the base query runner
    *
    * @return merged result sequence
@@ -575,8 +575,8 @@ public class GroupingEngine
   /**
    * Called by {@link GroupByQueryQueryToolChest#mergeResults(QueryRunner)} when it needs to process a subquery.
    *
-   * @param subquery           inner query
-   * @param query              outer query
+   * @param subqueryPlus       inner query (with context)
+   * @param queryPlus          outer query (with context)
    * @param resource           resources returned by {@link #prepareResource(GroupByQuery, BlockingPool, boolean, GroupByQueryConfig)}
    * @param subqueryResult     result rows from the subquery
    * @param wasQueryPushedDown true if the outer query was pushed down (so we only need to merge the outer query's
@@ -647,7 +647,7 @@ public class GroupingEngine
   /**
    * Called by {@link GroupByQueryQueryToolChest#mergeResults(QueryRunner)} when it needs to generate subtotals.
    *
-   * @param query       query that has a "subtotalsSpec"
+   * @param queryPlus   query (and context) that has a "subtotalsSpec"
    * @param resource    resources returned by {@link #prepareResource(GroupByQuery, BlockingPool, boolean, GroupByQueryConfig)}
    * @param queryResult result rows from the main query
    *
