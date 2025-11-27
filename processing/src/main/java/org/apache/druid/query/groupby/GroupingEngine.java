@@ -336,10 +336,11 @@ public class GroupingEngine
    */
   public Sequence<ResultRow> mergeResults(
       final QueryRunner<ResultRow> baseRunner,
-      final GroupByQuery query,
+      final QueryPlus<ResultRow> queryPlus,
       final ResponseContext responseContext
   )
   {
+    GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
     // Merge streams using ResultMergeQueryRunner, then apply postaggregators, then apply limit (which may
     // involve materialization)
     final ResultMergeQueryRunner<ResultRow> mergingQueryRunner = new ResultMergeQueryRunner<>(
@@ -356,7 +357,7 @@ public class GroupingEngine
     final int timestampResultFieldIndexInOriginalDimensions = hasTimestampResultField ? queryContext.getInt(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX) : 0;
     final GroupByQuery newQuery = prepareGroupByQuery(query);
 
-    final Sequence<ResultRow> mergedResults = mergingQueryRunner.run(QueryPlus.wrap(newQuery), responseContext);
+    final Sequence<ResultRow> mergedResults = mergingQueryRunner.run(queryPlus.withQuery(newQuery), responseContext);
 
     // Apply postaggregators if this is the outermost mergeResults (CTX_KEY_OUTERMOST) and we are not executing a
     // pushed-down subquery (CTX_KEY_EXECUTING_NESTED_QUERY).
@@ -584,18 +585,18 @@ public class GroupingEngine
    * @return results of the outer query
    */
   public Sequence<ResultRow> processSubqueryResult(
-      GroupByQuery subquery,
-      GroupByQuery query,
+      QueryPlus<ResultRow> subqueryPlus,
+      QueryPlus<ResultRow> queryPlus,
       GroupByQueryResources resource,
       Sequence<ResultRow> subqueryResult,
-      boolean wasQueryPushedDown,
-      GroupByStatsProvider.PerQueryStats perQueryStats
+      boolean wasQueryPushedDown
   )
   {
     // Keep a reference to resultSupplier outside the "try" so we can close it if something goes wrong
     // while creating the sequence.
     GroupByRowProcessor.ResultSupplier resultSupplier = null;
 
+    GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
     try {
       GroupByQuery queryToRun;
 
@@ -623,8 +624,7 @@ public class GroupingEngine
           resource,
           spillMapper,
           processingConfig.getTmpDir(),
-          processingConfig.intermediateComputeSizeBytes(),
-          perQueryStats
+          processingConfig.intermediateComputeSizeBytes()
       );
 
       final GroupByRowProcessor.ResultSupplier finalResultSupplier = resultSupplier;
@@ -652,10 +652,9 @@ public class GroupingEngine
    * @return results for each list of subtotals in the query, concatenated together
    */
   public Sequence<ResultRow> processSubtotalsSpec(
-      GroupByQuery query,
+      QueryPlus<ResultRow> queryPlus,
       GroupByQueryResources resource,
-      Sequence<ResultRow> queryResult,
-      GroupByStatsProvider.PerQueryStats perQueryStats
+      Sequence<ResultRow> queryResult
   )
   {
     // How it works?
@@ -672,6 +671,7 @@ public class GroupingEngine
     // while creating the sequence.
     GroupByRowProcessor.ResultSupplier resultSupplierOne = null;
 
+    GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
     try {
       // baseSubtotalQuery is the original query with dimensions and aggregators rewritten to apply to the *results*
       // rather than *inputs* of that query. It has its virtual columns and dim filter removed, because those only

@@ -115,11 +115,9 @@ public class GroupByResourcesReservationPool
   public void reserve(
       QueryResourceId queryResourceId,
       GroupByQuery groupByQuery,
-      boolean willMergeRunner,
-      GroupByStatsProvider.PerQueryStats perQueryStats
+      boolean willMergeRunner
   )
   {
-    long startNs = System.nanoTime();
     if (queryResourceId == null) {
       throw DruidException.defensive("Query resource id must be populated");
     }
@@ -151,8 +149,6 @@ public class GroupByResourcesReservationPool
     // Resources have been allocated, spot has been reserved. The reference would ALWAYS refer to 'null'. Refer the
     // allocated resources from it
     reference.compareAndSet(null, resources);
-
-    perQueryStats.mergeBufferAcquisitionTime(System.nanoTime() - startNs);
   }
 
   /**

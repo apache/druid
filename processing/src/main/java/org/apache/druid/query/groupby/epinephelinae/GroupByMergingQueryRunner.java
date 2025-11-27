@@ -21,6 +21,7 @@ package org.apache.druid.query.groupby.epinephelinae;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
@@ -57,6 +58,7 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.GroupByQueryResources;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
 import org.apache.druid.query.groupby.GroupByStatsProvider;
@@ -138,6 +140,8 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
   {
     final GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
+    final GroupByQueryMetrics groupByQueryMetrics = (GroupByQueryMetrics) queryPlus.getQueryMetrics();
+    Preconditions.checkNotNull(groupByQueryMetrics, "groupByQueryMetrics");
 
     // CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION is here because realtime servers use nested mergeRunners calls
     // (one for the entire query and one for each sink). We only want the outer call to actually do merging with a
@@ -167,9 +171,6 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
         StringUtils.format("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
     );
 
-    GroupByStatsProvider.PerQueryStats perQueryStats =
-        groupByStatsProvider.getPerQueryStatsContainer(query.context().getQueryResourceId());
-
     final int priority = queryContext.getPriority();
 
     // Figure out timeoutAt time now, so we can apply the timeout to both the mergeBufferPool.take and the actual
@@ -192,7 +193,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
               final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
                   temporaryStorageDirectory,
                   querySpecificConfig.getMaxOnDiskStorage().getBytes(),
-                  perQueryStats
+                  groupByQueryMetrics
               );
 
               final ReferenceCountingResourceHolder<LimitedTemporaryStorage> temporaryStorageHolder =
@@ -213,7 +214,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
 
               Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, ResultRow>> pair =
                   RowBasedGrouperHelper.createGrouperAccumulatorPair(
-                      query,
+                      queryPlus,
                       null,
                       config,
                       processingConfig,
@@ -226,8 +227,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
                       priority,
                       hasTimeout,
                       timeoutAt,
-                      mergeBufferSize,
-                      perQueryStats
+                      mergeBufferSize
                   );
               final Grouper<RowBasedKey> grouper = pair.lhs;
               final Accumulator<AggregateResult, ResultRow> accumulator = pair.rhs;
