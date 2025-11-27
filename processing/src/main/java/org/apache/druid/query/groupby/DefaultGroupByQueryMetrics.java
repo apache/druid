@@ -26,6 +26,10 @@ import java.util.concurrent.atomic.LongAdder;
 
 public class DefaultGroupByQueryMetrics extends DefaultQueryMetrics<GroupByQuery> implements GroupByQueryMetrics
 {
+  private final LongAdder mergeBufferAcquisitonTime = new LongAdder();
+  private final LongAdder bytesSpilledToStorage = new LongAdder();
+  private final LongAdder mergeDictionarySize = new LongAdder();
+
   @Override
   public void query(GroupByQuery query)
   {
@@ -61,18 +65,11 @@ public class DefaultGroupByQueryMetrics extends DefaultQueryMetrics<GroupByQuery
     //Don't emit by default
   }
 
-  // GroupByQueries:
-  private final LongAdder mergeBufferAcquisitonTime = new LongAdder();
-  private final LongAdder bytesSpilledToStorage = new LongAdder();
-  private final LongAdder mergeBufferBytesUsed = new LongAdder();
-  private final LongAdder mergeDictionarySize = new LongAdder();
-
   @Override
   public void reportGroupByStats()
   {
     reportMetricsIfNotZero("bytesSpilledToStorage", bytesSpilledToStorage);
     reportMetricsIfNotZero("mergeDictionarySize", mergeDictionarySize);
-    reportMetricsIfNotZero("mergeBufferBytesUsed", mergeBufferBytesUsed);
     reportMetricsIfNotZero("mergeBufferAcquisitonTimeNs", mergeBufferAcquisitonTime);
   }
 

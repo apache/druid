@@ -22,9 +22,7 @@ package org.apache.druid.query.groupby;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.query.QueryResourceId;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
+import javax.annotation.Nullable;
 
 /**
  * Metrics collector for groupBy queries like spilled bytes, merge buffer acquistion time, dictionary size.
@@ -32,21 +30,20 @@ import java.util.concurrent.atomic.AtomicLong;
 @LazySingleton
 public class GroupByStatsProvider
 {
-  private final Map<QueryResourceId, PerQueryStats> perQueryStats;
   private final AggregateStats aggregateStatsContainer;
 
   public GroupByStatsProvider()
   {
-    this.perQueryStats = new ConcurrentHashMap<>();
-    this.aggregateStatsContainer = new AggregateStats();
+    this.aggregateStatsContainer = AggregateStats.EMPTY_STATS;
   }
 
-  public PerQueryStats getPerQueryStatsContainer(QueryResourceId resourceId)
+  public void aggregateStats(@Nullable GroupByQueryMetrics groupByQueryMetrics)
   {
-    if (resourceId == null) {
-      return null;
+    if (groupByQueryMetrics == null) {
+      return;
     }
-    return perQueryStats.computeIfAbsent(resourceId, value -> new PerQueryStats());
+
+    aggregateStatsContainer.addQueryStats(groupByQueryMetrics);
   }
 
   public synchronized void closeQuery(QueryResourceId resourceId)
@@ -65,15 +62,13 @@ public class GroupByStatsProvider
 
   public static class AggregateStats
   {
-    private long mergeBufferQueries = 0;
-    private long mergeBufferAcquisitionTimeNs = 0;
-    private long spilledQueries = 0;
-    private long spilledBytes = 0;
-    private long mergeDictionarySize = 0;
+    private long mergeBufferQueries;
+    private long mergeBufferAcquisitionTimeNs;
+    private long spilledQueries;
+    private long spilledBytes;
+    private long mergeDictionarySize;
 
-    public AggregateStats()
-    {
-    }
+    public static final AggregateStats EMPTY_STATS = new AggregateStats(0L, 0L, 0L, 0L, 0L);
 
     public AggregateStats(
         long mergeBufferQueries,
@@ -115,22 +110,22 @@ public class GroupByStatsProvider
       return mergeDictionarySize;
     }
 
-    public void addQueryStats(PerQueryStats perQueryStats)
+    private void addQueryStats(GroupByQueryMetrics groupByQueryMetrics)
     {
-      if (perQueryStats.getMergeBufferAcquisitionTimeNs() > 0) {
+      if (groupByQueryMetrics.getMergeBufferAcquisitionTime() > 0) {
         mergeBufferQueries++;
-        mergeBufferAcquisitionTimeNs += perQueryStats.getMergeBufferAcquisitionTimeNs();
+        mergeBufferAcquisitionTimeNs += groupByQueryMetrics.getMergeBufferAcquisitionTime();
       }
 
-      if (perQueryStats.getSpilledBytes() > 0) {
+      if (groupByQueryMetrics.getSpilledBytes() > 0) {
         spilledQueries++;
-        spilledBytes += perQueryStats.getSpilledBytes();
+        spilledBytes += groupByQueryMetrics.getSpilledBytes();
       }
 
-      mergeDictionarySize += perQueryStats.getMergeDictionarySize();
+      mergeDictionarySize += groupByQueryMetrics.getMergeDictionarySize();
     }
 
-    public AggregateStats reset()
+    private AggregateStats reset()
     {
       AggregateStats aggregateStats =
           new AggregateStats(
@@ -148,43 +143,6 @@ public class GroupByStatsProvider
       this.mergeDictionarySize = 0;
 
       return aggregateStats;
-    }
-  }
-
-  public static class PerQueryStats
-  {
-    private final AtomicLong mergeBufferAcquisitionTimeNs = new AtomicLong(0);
-    private final AtomicLong spilledBytes = new AtomicLong(0);
-    private final AtomicLong mergeDictionarySize = new AtomicLong(0);
-
-    public void mergeBufferAcquisitionTime(long delay)
-    {
-      mergeBufferAcquisitionTimeNs.addAndGet(delay);
-    }
-
-    public void spilledBytes(long bytes)
-    {
-      spilledBytes.addAndGet(bytes);
-    }
-
-    public void dictionarySize(long size)
-    {
-      mergeDictionarySize.addAndGet(size);
-    }
-
-    public long getMergeBufferAcquisitionTimeNs()
-    {
-      return mergeBufferAcquisitionTimeNs.get();
-    }
-
-    public long getSpilledBytes()
-    {
-      return spilledBytes.get();
-    }
-
-    public long getMergeDictionarySize()
-    {
-      return mergeDictionarySize.get();
     }
   }
 }

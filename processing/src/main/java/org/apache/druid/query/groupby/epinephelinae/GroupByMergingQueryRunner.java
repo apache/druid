@@ -306,6 +306,10 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
                 waitForFutureCompletion(query, futures, hasTimeout, timeoutAt - System.currentTimeMillis());
               }
 
+              // grouper.updateGroupByQueryMetrics();
+              // groupByStatsProvider.aggregateStats(queryMetrics);
+//              queryMetrics.reportGroupByStats();
+
               return RowBasedGrouperHelper.makeGrouperIterator(
                   grouper,
                   query,

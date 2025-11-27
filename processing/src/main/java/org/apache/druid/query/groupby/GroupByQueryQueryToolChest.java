@@ -217,7 +217,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
 
       // Clean up the resources reserved during the execution of the query
       closer.register(() -> groupByResourcesReservationPool.clean(queryResourceId));
-      closer.register(() -> groupByStatsProvider.closeQuery(query.context().getQueryResourceId()));
+//      closer.register(() -> groupByStatsProvider.closeQuery(query.context().getQueryResourceId()));
       return Sequences.withBaggage(mergedSequence, closer);
     }
     catch (Exception e) {
