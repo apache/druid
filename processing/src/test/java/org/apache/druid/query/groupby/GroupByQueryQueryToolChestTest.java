@@ -799,7 +799,6 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
           }
         },
         null,
-        null,
         null
     );
 

@@ -763,7 +763,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     ));
     Sequence<ResultRow> pushDownQueryResults = groupingEngine.mergeResults(
         queryRunnerForSegments,
-        (GroupByQuery) GroupByQueryRunnerTestHelper.populateResourceId(queryWithPushDownDisabled),
+        QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(queryWithPushDownDisabled)),
         context
     );
 

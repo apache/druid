@@ -21,10 +21,11 @@ package org.apache.druid.query.groupby;
 
 import org.apache.druid.guice.LazySingleton;
 
-import javax.annotation.Nullable;
-
 /**
- * Metrics collector for groupBy queries like spilled bytes, merge buffer acquistion time, dictionary size.
+ * Aggregates {@link GroupByQueryMetrics} emitted by in-flight groupBy queries and exposes a snapshot that can be
+ * periodically consumed by {@link org.apache.druid.server.metrics.GroupByStatsMonitor}. The provider keeps track of
+ * aggregate counters such as merge-buffer acquisition time, spilled bytes, and the dictionary sizes used while
+ * merging results.
  */
 @LazySingleton
 public class GroupByStatsProvider
@@ -36,6 +37,13 @@ public class GroupByStatsProvider
     this.aggregateStatsContainer = AggregateStats.EMPTY_STATS;
   }
 
+  /**
+   * Adds the stats reported by a single query execution to the shared accumulator. Callers are expected to provide
+   * the {@link GroupByQueryMetrics} associated with the query once all relevant numbers have been recorded on the
+   * metrics instance.
+   *
+   * @param groupByQueryMetrics the query metrics to merge into the aggregate view
+   */
   public void aggregateStats(GroupByQueryMetrics groupByQueryMetrics)
   {
     aggregateStatsContainer.addQueryStats(groupByQueryMetrics);
@@ -46,6 +54,9 @@ public class GroupByStatsProvider
     return aggregateStatsContainer.reset();
   }
 
+  /**
+   * Immutable snapshot of the aggregated groupBy metrics captured between two {@link #getStatsSince()} calls.
+   */
   public static class AggregateStats
   {
     private long mergeBufferQueries;

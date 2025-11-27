@@ -113,8 +113,7 @@ public class GroupByDeserializationBenchmark
           }
         },
         null,
-        null,
-        new GroupByStatsProvider()
+        null
     );
 
     decoratedMapper = groupByQueryQueryToolChest.decorateObjectMapper(undecoratedMapper, sqlQuery);

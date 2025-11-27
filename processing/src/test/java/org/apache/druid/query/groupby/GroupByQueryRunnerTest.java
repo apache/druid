@@ -405,8 +405,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         groupingEngine,
         () -> config,
         DefaultGroupByQueryMetricsFactory.instance(),
-        groupByResourcesReservationPool,
-        statsProvider
+        groupByResourcesReservationPool
     );
     return new GroupByQueryRunnerFactory(groupingEngine, toolChest, bufferPools.getProcessingPool());
   }
