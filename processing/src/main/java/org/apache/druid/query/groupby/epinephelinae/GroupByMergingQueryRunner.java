@@ -106,6 +106,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
   private final ObjectMapper spillMapper;
   private final String processingTmpDir;
   private final int mergeBufferSize;
+  // TODO: Apply aggregateStats
   private final GroupByStatsProvider groupByStatsProvider;
 
   public GroupByMergingQueryRunner(
@@ -306,9 +307,9 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
                 waitForFutureCompletion(query, futures, hasTimeout, timeoutAt - System.currentTimeMillis());
               }
 
-              // grouper.updateGroupByQueryMetrics();
-              // groupByStatsProvider.aggregateStats(queryMetrics);
-//              queryMetrics.reportGroupByStats();
+              grouper.updateGroupByQueryMetrics();
+              groupByStatsProvider.aggregateStats(groupByQueryMetrics);
+              groupByQueryMetrics.reportGroupByStats();
 
               return RowBasedGrouperHelper.makeGrouperIterator(
                   grouper,

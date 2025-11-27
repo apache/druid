@@ -48,6 +48,7 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.DimensionComparisonUtils;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.GroupingAggregatorFactory;
 import org.apache.druid.query.dimension.ColumnSelectorStrategy;
@@ -57,7 +58,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByStatsProvider;
+import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.BufferComparator;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -126,15 +127,14 @@ public class RowBasedGrouperHelper
    * Create a single-threaded grouper and accumulator.
    */
   public static Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, ResultRow>> createGrouperAccumulatorPair(
-      final GroupByQuery query,
-      @Nullable final GroupByQuery subquery,
+      final QueryPlus<ResultRow> query,
+      @Nullable final QueryPlus<ResultRow> subquery,
       final GroupByQueryConfig config,
       final DruidProcessingConfig processingConfig,
       final Supplier<ByteBuffer> bufferSupplier,
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
-      final int mergeBufferSize,
-      final GroupByStatsProvider.PerQueryStats perQueryStats
+      final int mergeBufferSize
   )
   {
     return createGrouperAccumulatorPair(
@@ -151,8 +151,7 @@ public class RowBasedGrouperHelper
         UNKNOWN_THREAD_PRIORITY,
         false,
         UNKNOWN_TIMEOUT,
-        mergeBufferSize,
-        perQueryStats
+        mergeBufferSize
     );
   }
 
@@ -188,8 +187,8 @@ public class RowBasedGrouperHelper
    * @param mergeBufferSize     size of the merge buffers from "bufferSupplier"
    */
   public static Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, ResultRow>> createGrouperAccumulatorPair(
-      final GroupByQuery query,
-      @Nullable final GroupByQuery subquery,
+      final QueryPlus<ResultRow> queryPlus,
+      @Nullable final QueryPlus<ResultRow> subqueryPlus,
       final GroupByQueryConfig config,
       final DruidProcessingConfig processingConfig,
       final Supplier<ByteBuffer> bufferSupplier,
@@ -201,8 +200,7 @@ public class RowBasedGrouperHelper
       final int priority,
       final boolean hasQueryTimeout,
       final long queryTimeoutAt,
-      final int mergeBufferSize,
-      final GroupByStatsProvider.PerQueryStats perQueryStats
+      final int mergeBufferSize
   )
   {
     // concurrencyHint >= 1 for concurrent groupers, -1 for single-threaded
@@ -213,8 +211,9 @@ public class RowBasedGrouperHelper
     }
 
     // See method-level javadoc; we go into combining mode if there is no subquery.
-    final boolean combining = subquery == null;
+    final boolean combining = subqueryPlus == null;
 
+    GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
     final List<ColumnType> valueTypes = DimensionHandlerUtils.getValueTypesFromDimensionSpecs(query.getDimensions());
 
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
@@ -223,7 +222,7 @@ public class RowBasedGrouperHelper
     final ThreadLocal<ResultRow> columnSelectorRow = new ThreadLocal<>();
 
     ColumnSelectorFactory columnSelectorFactory = createResultRowBasedColumnSelectorFactory(
-        combining ? query : subquery,
+        combining ? query : (GroupByQuery) subqueryPlus.getQuery(),
         columnSelectorRow::get,
         RowSignature.Finalization.UNKNOWN
     );
@@ -266,6 +265,9 @@ public class RowBasedGrouperHelper
         limitSpec
     );
 
+    final GroupByQueryMetrics groupByQueryMetrics = (GroupByQueryMetrics) queryPlus.getQueryMetrics();
+    Preconditions.checkNotNull(groupByQueryMetrics, "GroupByQueryMetrics");
+
     final Grouper<RowBasedKey> grouper;
     if (concurrencyHint == -1) {
       grouper = new SpillingGrouper<>(
@@ -282,7 +284,7 @@ public class RowBasedGrouperHelper
           limitSpec,
           sortHasNonGroupingFields,
           mergeBufferSize,
-          perQueryStats
+          groupByQueryMetrics
       );
     } else {
       final Grouper.KeySerdeFactory<RowBasedKey> combineKeySerdeFactory = new RowBasedKeySerdeFactory(
@@ -312,7 +314,7 @@ public class RowBasedGrouperHelper
           priority,
           hasQueryTimeout,
           queryTimeoutAt,
-          perQueryStats
+          groupByQueryMetrics
       );
     }
 

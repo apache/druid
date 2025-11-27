@@ -179,7 +179,8 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
           0,
           4,
           parallelCombineThreads,
-          mergeThreadLocal
+          mergeThreadLocal,
+          new DefaultGroupByQueryMetrics()
       );
       closer.register(grouper);
       grouper.init();

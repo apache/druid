@@ -615,9 +615,11 @@ public class GroupingEngine
         queryToRun = queryToRun.withLimitSpec(((DefaultLimitSpec) queryToRun.getLimitSpec()).withOffsetToLimit());
       }
 
+      final QueryPlus<ResultRow> queryPlusToRun = queryPlus.withQuery(queryToRun);
+
       resultSupplier = GroupByRowProcessor.process(
-          queryToRun,
-          wasQueryPushedDown ? queryToRun : subquery,
+          queryPlusToRun,
+          wasQueryPushedDown ? queryPlusToRun : subqueryPlus,
           subqueryResult,
           configSupplier.get(),
           processingConfig,
@@ -630,8 +632,8 @@ public class GroupingEngine
       final GroupByRowProcessor.ResultSupplier finalResultSupplier = resultSupplier;
       return Sequences.withBaggage(
           mergeResults(
-              (queryPlus, responseContext) -> finalResultSupplier.results(null),
-              query,
+              (qp, responseContext) -> finalResultSupplier.results(null),
+              queryPlus,
               ResponseContext.createEmpty()
           ),
           finalResultSupplier
@@ -697,17 +699,18 @@ public class GroupingEngine
           // timestampResult optimization is not for subtotal scenario, so disable it
           .withOverriddenContext(ImmutableMap.of(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, ""));
 
+      QueryPlus<ResultRow> baseSubtotalQueryPlus = queryPlus.withQuery(baseSubtotalQuery);
+
       resultSupplierOne = GroupByRowProcessor.process(
-          baseSubtotalQuery,
-          baseSubtotalQuery,
+          baseSubtotalQueryPlus,
+          baseSubtotalQueryPlus,
           queryResult,
           configSupplier.get(),
           processingConfig,
           resource,
           spillMapper,
           processingConfig.getTmpDir(),
-          processingConfig.intermediateComputeSizeBytes(),
-          perQueryStats
+          processingConfig.intermediateComputeSizeBytes()
       );
 
       List<String> queryDimNamesInOrder = baseSubtotalQuery.getDimensionNamesInOrder();
@@ -743,15 +746,16 @@ public class GroupingEngine
           subtotalQueryLimitSpec = baseSubtotalQuery.getLimitSpec().filterColumns(columns);
         }
 
-        GroupByQuery subtotalQuery = baseSubtotalQuery
-            .withLimitSpec(subtotalQueryLimitSpec);
+        QueryPlus<ResultRow> subtotalQueryPlus = baseSubtotalQueryPlus.withQuery(
+            baseSubtotalQuery
+            .withLimitSpec(subtotalQueryLimitSpec));
 
         final GroupByRowProcessor.ResultSupplier resultSupplierOneFinal = resultSupplierOne;
         if (Utils.isPrefix(subtotalSpec, queryDimNamesInOrder)) {
           // Since subtotalSpec is a prefix of base query dimensions, so results from base query are also sorted
           // by subtotalSpec as needed by stream merging.
           subtotalsResults.add(
-              processSubtotalsResultAndOptionallyClose(() -> resultSupplierOneFinal, subTotalDimensionSpec, subtotalQuery, false)
+              processSubtotalsResultAndOptionallyClose(() -> resultSupplierOneFinal, subTotalDimensionSpec, subtotalQueryPlus, false)
           );
         } else {
           // Since subtotalSpec is not a prefix of base query dimensions, so results from base query are not sorted
@@ -761,20 +765,19 @@ public class GroupingEngine
           // Also note, we can't create the ResultSupplier eagerly here or as we don't want to eagerly allocate
           // merge buffers for processing subtotal.
           Supplier<GroupByRowProcessor.ResultSupplier> resultSupplierTwo = () -> GroupByRowProcessor.process(
-              baseSubtotalQuery,
-              subtotalQuery,
+              baseSubtotalQueryPlus,
+              subtotalQueryPlus,
               resultSupplierOneFinal.results(subTotalDimensionSpec),
               configSupplier.get(),
               processingConfig,
               resource,
               spillMapper,
               processingConfig.getTmpDir(),
-              processingConfig.intermediateComputeSizeBytes(),
-              perQueryStats
+              processingConfig.intermediateComputeSizeBytes()
           );
 
           subtotalsResults.add(
-              processSubtotalsResultAndOptionallyClose(resultSupplierTwo, subTotalDimensionSpec, subtotalQuery, true)
+              processSubtotalsResultAndOptionallyClose(resultSupplierTwo, subTotalDimensionSpec, subtotalQueryPlus, true)
           );
         }
       }
@@ -792,7 +795,7 @@ public class GroupingEngine
   private Sequence<ResultRow> processSubtotalsResultAndOptionallyClose(
       Supplier<GroupByRowProcessor.ResultSupplier> baseResultsSupplier,
       List<DimensionSpec> dimsToInclude,
-      GroupByQuery subtotalQuery,
+      QueryPlus<ResultRow> subtotalQueryPlus,
       boolean closeOnSequenceRead
   )
   {
@@ -810,7 +813,7 @@ public class GroupingEngine
                       : () -> {}
                   )
               ),
-          subtotalQuery,
+          subtotalQueryPlus,
           ResponseContext.createEmpty()
       );
     }
@@ -849,7 +852,7 @@ public class GroupingEngine
 
   private Set<String> getAggregatorAndPostAggregatorNames(GroupByQuery query)
   {
-    Set<String> aggsAndPostAggs = new HashSet();
+    Set<String> aggsAndPostAggs = new HashSet<>();
     if (query.getAggregatorSpecs() != null) {
       for (AggregatorFactory af : query.getAggregatorSpecs()) {
         aggsAndPostAggs.add(af.getName());

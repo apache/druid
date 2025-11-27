@@ -38,9 +38,10 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByStatsProvider;
+import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -95,7 +96,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   @Nullable
   private final ParallelCombiner<KeyType> parallelCombiner;
   private final boolean mergeThreadLocal;
-  private final GroupByStatsProvider.PerQueryStats perQueryStats;
+  private final GroupByQueryMetrics groupByQueryMetrics;
 
   private volatile boolean initialized = false;
 
@@ -116,7 +117,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       final int priority,
       final boolean hasQueryTimeout,
       final long queryTimeoutAt,
-      final GroupByStatsProvider.PerQueryStats perQueryStats
+      final GroupByQueryMetrics groupByQueryMetrics
   )
   {
     this(
@@ -141,7 +142,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
         groupByQueryConfig.getIntermediateCombineDegree(),
         groupByQueryConfig.getNumParallelCombineThreads(),
         groupByQueryConfig.isMergeThreadLocal(),
-        perQueryStats
+        groupByQueryMetrics
     );
   }
 
@@ -167,7 +168,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       final int intermediateCombineDegree,
       final int numParallelCombineThreads,
       final boolean mergeThreadLocal,
-      final GroupByStatsProvider.PerQueryStats perQueryStats
+      final GroupByQueryMetrics groupByQueryMetrics
   )
   {
     Preconditions.checkArgument(concurrencyHint > 0, "concurrencyHint > 0");
@@ -217,7 +218,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     }
 
     this.mergeThreadLocal = mergeThreadLocal;
-    this.perQueryStats = perQueryStats;
+    this.groupByQueryMetrics = groupByQueryMetrics;
   }
 
   @Override
@@ -231,23 +232,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
 
           for (int i = 0; i < concurrencyHint; i++) {
             final ByteBuffer slice = Groupers.getSlice(buffer, sliceSize, i);
-            final SpillingGrouper<KeyType> grouper = new SpillingGrouper<>(
-                Suppliers.ofInstance(slice),
-                keySerdeFactory,
-                columnSelectorFactory,
-                aggregatorFactories,
-                bufferGrouperMaxSize,
-                bufferGrouperMaxLoadFactor,
-                bufferGrouperInitialBuckets,
-                temporaryStorage,
-                spillMapper,
-                false,
-                limitSpec,
-                sortHasNonGroupingFields,
-                sliceSize,
-                perQueryStats
-            );
-            grouper.init();
+            final SpillingGrouper<KeyType> grouper = generateSpillingGrouperWithBufferSlice(slice, sliceSize);
             groupers.add(grouper);
 
             if (mergeThreadLocal) {
@@ -259,6 +244,28 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
         }
       }
     }
+  }
+
+  private @NotNull SpillingGrouper<KeyType> generateSpillingGrouperWithBufferSlice(ByteBuffer slice, int sliceSize)
+  {
+    final SpillingGrouper<KeyType> grouper = new SpillingGrouper<>(
+        Suppliers.ofInstance(slice),
+        keySerdeFactory,
+        columnSelectorFactory,
+        aggregatorFactories,
+        bufferGrouperMaxSize,
+        bufferGrouperMaxLoadFactor,
+        bufferGrouperInitialBuckets,
+        temporaryStorage,
+        spillMapper,
+        false,
+        limitSpec,
+        sortHasNonGroupingFields,
+        sliceSize,
+        groupByQueryMetrics
+    );
+    grouper.init();
+    return grouper;
   }
 
   @Override
@@ -492,11 +499,17 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   }
 
   @Override
+  public void updateGroupByQueryMetrics()
+  {
+    groupers.forEach(SpillingGrouper::updateGroupByQueryMetrics);
+  }
+
+  @Override
   public void close()
   {
     if (!closed) {
       closed = true;
-      groupers.forEach(Grouper::close);
+      groupers.forEach(SpillingGrouper::close);
     }
   }
 

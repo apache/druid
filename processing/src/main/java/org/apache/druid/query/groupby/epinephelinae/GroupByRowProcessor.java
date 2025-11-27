@@ -36,7 +36,6 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.GroupByQueryResources;
-import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 
@@ -117,8 +116,8 @@ public class GroupByRowProcessor
     closeOnExit.register(temporaryStorage);
 
     Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, ResultRow>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(
-        query,
-        subquery,
+        queryPlus,
+        subqueryPlus,
         querySpecificConfig,
         processingConfig,
         new Supplier<>()
@@ -133,8 +132,7 @@ public class GroupByRowProcessor
         },
         temporaryStorage,
         spillMapper,
-        mergeBufferSize,
-        perQueryStats
+        mergeBufferSize
     );
     final Grouper<RowBasedKey> grouper = pair.lhs;
     final Accumulator<AggregateResult, ResultRow> accumulator = pair.rhs;

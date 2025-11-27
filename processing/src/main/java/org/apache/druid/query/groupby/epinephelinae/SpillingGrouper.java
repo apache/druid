@@ -37,7 +37,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.groupby.GroupByStatsProvider;
+import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 
@@ -75,7 +75,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   private final AggregatorFactory[] aggregatorFactories;
   private final Comparator<Grouper.Entry<KeyType>> keyObjComparator;
   private final Comparator<Grouper.Entry<KeyType>> defaultOrderKeyObjComparator;
-  private final GroupByStatsProvider.PerQueryStats perQueryStats;
+  private final GroupByQueryMetrics groupByQueryMetrics;
 
   private final List<File> files = new ArrayList<>();
   private final List<File> dictionaryFiles = new ArrayList<>();
@@ -98,7 +98,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       final DefaultLimitSpec limitSpec,
       final boolean sortHasNonGroupingFields,
       final int mergeBufferSize,
-      final GroupByStatsProvider.PerQueryStats perQueryStats
+      final GroupByQueryMetrics groupByQueryMetrics
   )
   {
     this.keySerde = keySerdeFactory.factorize();
@@ -158,7 +158,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     this.spillMapper = keySerde.decorateObjectMapper(spillMapper);
     this.spillingAllowed = spillingAllowed;
     this.sortHasNonGroupingFields = sortHasNonGroupingFields;
-    this.perQueryStats = perQueryStats;
+    this.groupByQueryMetrics = groupByQueryMetrics;
   }
 
   @Override
@@ -216,9 +216,16 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   }
 
   @Override
+  public void updateGroupByQueryMetrics() {
+    // TODO: If we do not want groupByQueryMetrics to do addition, simply return a Map,
+    //  then either the ConcurrentGrouper will aggregate the results into a accumulated map,
+    //  or the GroupByQueryMetrics will provide a means to report GroupByMetrics via a map.
+    groupByQueryMetrics.mergeDictionarySize(keySerde.getDictionarySize());
+  }
+
+  @Override
   public void close()
   {
-    perQueryStats.dictionarySize(keySerde.getDictionarySize());
     grouper.close();
     keySerde.reset();
     deleteFiles();
