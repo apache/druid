@@ -41,7 +41,6 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -246,7 +245,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     }
   }
 
-  private @NotNull SpillingGrouper<KeyType> generateSpillingGrouperWithBufferSlice(ByteBuffer slice, int sliceSize)
+  private SpillingGrouper<KeyType> generateSpillingGrouperWithBufferSlice(ByteBuffer slice, int sliceSize)
   {
     final SpillingGrouper<KeyType> grouper = new SpillingGrouper<>(
         Suppliers.ofInstance(slice),
