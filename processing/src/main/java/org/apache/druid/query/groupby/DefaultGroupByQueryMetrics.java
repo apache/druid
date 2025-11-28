@@ -113,10 +113,9 @@ public class DefaultGroupByQueryMetrics extends DefaultQueryMetrics<GroupByQuery
   @Override
   public String toString()
   {
-    return String.format("bytesSpilledToStorage[%s], mergeDictionarySize[%s], mergeBufferAcquisitonTime[%s]",
-                         bytesSpilledToStorage.longValue(),
-                         mergeDictionarySize.longValue(),
-                         mergeBufferAcquisitonTime.longValue()
-    );
+    return "bytesSpilledToStorage[" + bytesSpilledToStorage.longValue()
+           + "], mergeDictionarySize[" + mergeDictionarySize.longValue()
+           + "], mergeBufferAcquisitonTime[" + mergeBufferAcquisitonTime.longValue()
+           + ']';
   }
 }
