@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
@@ -157,15 +156,20 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   }
 
   private Sequence<ResultRow> initAndMergeGroupByResults(
-      final QueryPlus<ResultRow> queryPlus,
+      QueryPlus<ResultRow> queryPlus,
       QueryRunner<ResultRow> runner,
       ResponseContext context,
       boolean willMergeRunner
   )
   {
     final GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
-    final GroupByQueryMetrics groupByQueryMetrics = (GroupByQueryMetrics) queryPlus.getQueryMetrics();
-    Preconditions.checkNotNull(groupByQueryMetrics, "groupByQueryMetrics");
+
+    if (queryPlus.getQueryMetrics() == null) {
+      queryPlus = queryPlus.withQueryMetrics(this);
+    }
+
+    GroupByQueryMetrics groupByQueryMetrics = (GroupByQueryMetrics) queryPlus.getQueryMetrics();
+
 
     // Reserve the group by resources (merge buffers) required for executing the query
     final QueryResourceId queryResourceId = query.context().getQueryResourceId();
