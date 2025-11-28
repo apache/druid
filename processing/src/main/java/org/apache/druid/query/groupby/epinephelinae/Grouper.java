@@ -97,7 +97,9 @@ public interface Grouper<KeyType> extends Closeable
    * Update the results of the GroupByQueryMetrics.
    * Currently only used by {@link ConcurrentGrouper} and {@link SpillingGrouper}
    */
-  default void updateGroupByQueryMetrics() {}
+  default void updateGroupByQueryMetrics()
+  {
+  }
 
   /**
    * Close the grouper and release associated resources.

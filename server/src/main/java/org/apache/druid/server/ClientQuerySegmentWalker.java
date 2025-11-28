@@ -594,9 +594,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             )
         )
         .map(
-            runner ->
-            {
-              final QueryRunner<T> cachingRunner = new ResultLevelCachingQueryRunner<>(
+            runner -> {
+              final QueryRunner<T> resultLevelCachingQueryRunner = new ResultLevelCachingQueryRunner<>(
                   runner,
                   toolChest,
                   query,
@@ -609,7 +608,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
               return new MetricsEmittingQueryRunner<>(
                   emitter,
                   toolChest,
-                  cachingRunner,
+                  resultLevelCachingQueryRunner,
                   MetricsEmittingQueryRunner.NOOP_METRIC_REPORTER,
                   queryMetrics -> {
                     queryMetrics.queryId(query.getId());

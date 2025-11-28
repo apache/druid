@@ -216,7 +216,8 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   }
 
   @Override
-  public void updateGroupByQueryMetrics() {
+  public void updateGroupByQueryMetrics()
+  {
     // TODO: If we do not want groupByQueryMetrics to do addition, simply return a Map,
     //  then either the ConcurrentGrouper will aggregate the results into a accumulated map,
     //  and the GroupByQueryMetrics will provide a means to report GroupByMetrics via a map.
