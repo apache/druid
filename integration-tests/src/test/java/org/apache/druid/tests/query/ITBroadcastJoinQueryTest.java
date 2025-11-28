@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.tests.indexer;
+package org.apache.druid.tests.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
@@ -35,6 +35,7 @@ import org.apache.druid.testing.tools.IntegrationTestingConfig;
 import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
+import org.apache.druid.tests.indexer.AbstractIndexerTest;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
