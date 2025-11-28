@@ -48,6 +48,7 @@ import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -586,7 +587,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         .applyPreMergeDecoration()
         .mergeResults(false)
         .applyPostMergeDecoration()
-        .emitCPUTimeMetric(emitter)
         .postProcess(
             objectMapper.convertValue(
                 query.context().getString("postProcessing"),
@@ -595,16 +595,30 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         )
         .map(
             runner ->
-                new ResultLevelCachingQueryRunner<>(
-                    runner,
-                    toolChest,
-                    query,
-                    objectMapper,
-                    cache,
-                    cacheConfig,
-                    emitter
-                )
-        );
+            {
+              final QueryRunner<T> cachingRunner = new ResultLevelCachingQueryRunner<>(
+                  runner,
+                  toolChest,
+                  query,
+                  objectMapper,
+                  cache,
+                  cacheConfig,
+                  emitter
+              );
+
+              return new MetricsEmittingQueryRunner<>(
+                  emitter,
+                  toolChest,
+                  cachingRunner,
+                  MetricsEmittingQueryRunner.NOOP_METRIC_REPORTER,
+                  queryMetrics -> {
+                    queryMetrics.queryId(query.getId());
+                    queryMetrics.sqlQueryId(query.getSqlQueryId());
+                  }
+              );
+            }
+        )
+        .emitCPUTimeMetric(emitter);
   }
 
   /**

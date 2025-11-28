@@ -1008,10 +1008,7 @@ public class GroupingEngine
     if (!query.getDimensions().isEmpty() || query.hasDroppedDimensions()) {
       return false;
     }
-    if (query.getGranularity().isFinerThan(Granularities.ALL)) {
-      return false;
-    }
-    return true;
+    return !query.getGranularity().isFinerThan(Granularities.ALL);
   }
 
   private static Iterator<ResultRow> summaryRowIterator(GroupByQuery q)

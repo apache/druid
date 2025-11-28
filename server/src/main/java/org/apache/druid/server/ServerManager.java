@@ -529,7 +529,11 @@ public class ServerManager implements QuerySegmentWalker
         toolChest,
         bySegmentQueryRunner,
         QueryMetrics::reportSegmentAndCacheTime,
-        queryMetrics -> queryMetrics.segment(segmentIdString)
+        // TODO: Maybe also apply a log to see when this is called.
+        queryMetrics -> {
+          log.info("Segment MetricsEmittingQueryRunner accepting metrics[%s]", queryMetrics);
+          queryMetrics.segment(segmentIdString);
+        }
     ).withWaitMeasuredFromNow();
 
     final SpecificSegmentQueryRunner<T> specificSegmentQueryRunner = new SpecificSegmentQueryRunner<>(
@@ -649,16 +653,32 @@ public class ServerManager implements QuerySegmentWalker
             cpuTimeAccumulator,
             cacheKeyPrefix
         );
+
+        final QueryRunner<T> finalizeResultsQueryRunner = new FinalizeResultsQueryRunner<>(
+            toolChest.mergeResults(factory.mergeRunners(queryProcessingPool, queryRunners), true),
+            toolChest
+        );
+
+        final QueryRunner<T> datasourceMetricsEmittingQueryRunner = new MetricsEmittingQueryRunner<>(
+            emitter,
+            toolChest,
+            finalizeResultsQueryRunner,
+            MetricsEmittingQueryRunner.NOOP_METRIC_REPORTER,
+            metrics -> {
+              log.info("Datasource MetricsEmittingQueryRunner accepting metrics[%s]", metrics);
+              metrics.queryId(query.getId());
+              metrics.sqlQueryId(query.getSqlQueryId());
+            }
+        );
+
         final QueryRunner<T> queryRunner = CPUTimeMetricQueryRunner.safeBuild(
-            new FinalizeResultsQueryRunner<>(
-                toolChest.mergeResults(factory.mergeRunners(queryProcessingPool, queryRunners), true),
-                toolChest
-            ),
+            datasourceMetricsEmittingQueryRunner,
             toolChest,
             emitter,
             cpuTimeAccumulator,
             true
         );
+
         return queryRunner.run(queryPlus, responseContext).withBaggage(closer);
       }
       catch (Throwable t) {

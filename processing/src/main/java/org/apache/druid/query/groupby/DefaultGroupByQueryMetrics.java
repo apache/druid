@@ -68,9 +68,9 @@ public class DefaultGroupByQueryMetrics extends DefaultQueryMetrics<GroupByQuery
   @Override
   public void reportGroupByStats()
   {
-    reportMetricsIfNotZero("bytesSpilledToStorage", bytesSpilledToStorage);
-    reportMetricsIfNotZero("mergeDictionarySize", mergeDictionarySize);
-    reportMetricsIfNotZero("mergeBufferAcquisitonTimeNs", mergeBufferAcquisitonTime);
+    reportMetricsIfNotZero("bytesSpilledToStorage", bytesSpilledToStorage.longValue());
+    reportMetricsIfNotZero("mergeDictionarySize", mergeDictionarySize.longValue());
+    reportMetricsIfNotZero("mergeBufferAcquisitonTime", mergeBufferAcquisitonTime.longValue());
   }
 
   @Override
@@ -109,4 +109,13 @@ public class DefaultGroupByQueryMetrics extends DefaultQueryMetrics<GroupByQuery
     return mergeBufferAcquisitonTime.longValue();
   }
 
+  @Override
+  public String toString()
+  {
+    return String.format("bytesSpilledToStorage[%s], mergeDictionarySize[%s], mergeBufferAcquisitonTime[%s]",
+                         bytesSpilledToStorage.longValue(),
+                         mergeDictionarySize.longValue(),
+                         mergeBufferAcquisitonTime.longValue()
+    );
+  }
 }

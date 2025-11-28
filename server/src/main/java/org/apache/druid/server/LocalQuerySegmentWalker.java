@@ -27,6 +27,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.FluentQueryRunner;
+import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -116,6 +117,16 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
         .applyPreMergeDecoration()
         .mergeResults(true)
         .applyPostMergeDecoration()
+        .map(runner -> new MetricsEmittingQueryRunner<>(
+            emitter,
+            queryRunnerFactory.getToolchest(),
+            runner,
+            MetricsEmittingQueryRunner.NOOP_METRIC_REPORTER,
+            queryMetrics -> {
+              queryMetrics.queryId(query.getId());
+              queryMetrics.sqlQueryId(query.getSqlQueryId());
+            })
+        )
         .emitCPUTimeMetric(emitter, cpuAccumulator);
   }
 

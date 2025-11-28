@@ -71,7 +71,7 @@ public class GroupByQueryRunnerTestHelper
             serviceEmitter,
             factory.getToolchest(),
             runner,
-            (obj, lng) -> {},
+            MetricsEmittingQueryRunner.NOOP_METRIC_REPORTER,
             (metrics) -> {}
         ).withWaitMeasuredFromNow();
     QueryToolChest toolChest = factory.getToolchest();
