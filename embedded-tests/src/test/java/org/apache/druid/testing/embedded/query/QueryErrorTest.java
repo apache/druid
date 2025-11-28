@@ -37,6 +37,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.druid.testing.embedded.query.ServerManagerForQueryErrorTest.QUERY_CAPACITY_EXCEEDED_TEST_CONTEXT_KEY;
+import static org.apache.druid.testing.embedded.query.ServerManagerForQueryErrorTest.QUERY_FAILURE_TEST_CONTEXT_KEY;
+import static org.apache.druid.testing.embedded.query.ServerManagerForQueryErrorTest.QUERY_TIMEOUT_TEST_CONTEXT_KEY;
+import static org.apache.druid.testing.embedded.query.ServerManagerForQueryErrorTest.QUERY_UNSUPPORTED_TEST_CONTEXT_KEY;
+import static org.apache.druid.testing.embedded.query.ServerManagerForQueryErrorTest.RESOURCE_LIMIT_EXCEEDED_TEST_CONTEXT_KEY;
+
 /**
  * This class tests various query failures.
  * <p>
@@ -90,6 +96,12 @@ public class QueryErrorTest extends QueryTestBase
         )
     );
     cluster.callApi().waitForTaskToSucceed(ingestionStatus.getTaskId(), overlord);
+    try {
+      Thread.sleep(1000L);
+    }
+    catch (InterruptedException e) {
+      throw new AssertionError(e);
+    }
   }
 
   @Test
@@ -144,14 +156,13 @@ public class QueryErrorTest extends QueryTestBase
 
   @ParameterizedTest
   @FieldSource("SHOULD_USE_SQL_ENGINE")
-  public void testQueryTimeout(boolean shouldUseSqlEngine) throws InterruptedException
+  public void testQueryTimeout(boolean shouldUseSqlEngine)
   {
-    Thread.sleep(1000L); // For some reason, we need to wait until the ingestion task finishes.
     MatcherAssert.assertThat(
         Assertions.assertThrows(
             Exception.class,
             () -> cluster.callApi().onAnyBroker(
-                b -> queryFuture(b, shouldUseSqlEngine, ServerManagerForQueryErrorTest.QUERY_TIMEOUT_TEST_CONTEXT_KEY)
+                b -> queryFuture(b, shouldUseSqlEngine, QUERY_TIMEOUT_TEST_CONTEXT_KEY)
             )
         ),
         ExceptionMatcher.of(HttpResponseException.class)
@@ -170,7 +181,7 @@ public class QueryErrorTest extends QueryTestBase
                 b -> queryFuture(
                     b,
                     shouldUseSqlEngine,
-                    ServerManagerForQueryErrorTest.QUERY_CAPACITY_EXCEEDED_TEST_CONTEXT_KEY
+                    QUERY_CAPACITY_EXCEEDED_TEST_CONTEXT_KEY
                 )
             )
         ),
@@ -190,7 +201,7 @@ public class QueryErrorTest extends QueryTestBase
                 b -> queryFuture(
                     b,
                     shouldUseSqlEngine,
-                    ServerManagerForQueryErrorTest.QUERY_UNSUPPORTED_TEST_CONTEXT_KEY
+                    QUERY_UNSUPPORTED_TEST_CONTEXT_KEY
                 )
             )
         ),
@@ -210,7 +221,7 @@ public class QueryErrorTest extends QueryTestBase
                 b -> queryFuture(
                     b,
                     shouldUseSqlEngine,
-                    ServerManagerForQueryErrorTest.RESOURCE_LIMIT_EXCEEDED_TEST_CONTEXT_KEY
+                    RESOURCE_LIMIT_EXCEEDED_TEST_CONTEXT_KEY
                 )
             )
         ),
@@ -227,7 +238,7 @@ public class QueryErrorTest extends QueryTestBase
         Assertions.assertThrows(
             Exception.class,
             () -> cluster.callApi().onAnyBroker(
-                b -> queryFuture(b, shouldUseSqlEngine, ServerManagerForQueryErrorTest.QUERY_FAILURE_TEST_CONTEXT_KEY)
+                b -> queryFuture(b, shouldUseSqlEngine, QUERY_FAILURE_TEST_CONTEXT_KEY)
             )
         ),
         ExceptionMatcher.of(HttpResponseException.class)
