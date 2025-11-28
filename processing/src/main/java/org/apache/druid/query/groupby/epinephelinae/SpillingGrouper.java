@@ -219,13 +219,14 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   public void updateGroupByQueryMetrics() {
     // TODO: If we do not want groupByQueryMetrics to do addition, simply return a Map,
     //  then either the ConcurrentGrouper will aggregate the results into a accumulated map,
-    //  or the GroupByQueryMetrics will provide a means to report GroupByMetrics via a map.
+    //  and the GroupByQueryMetrics will provide a means to report GroupByMetrics via a map.
     groupByQueryMetrics.mergeDictionarySize(keySerde.getDictionarySize());
   }
 
   @Override
   public void close()
   {
+    // TODO: Check if it is ok to emit at close. Will the QueryRunners give the results in time?
     grouper.close();
     keySerde.reset();
     deleteFiles();

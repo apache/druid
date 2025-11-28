@@ -665,6 +665,7 @@ public class ServerManager implements QuerySegmentWalker
             finalizeResultsQueryRunner,
             MetricsEmittingQueryRunner.NOOP_METRIC_REPORTER,
             metrics -> {
+              // TODO: Remove the logs after finished.
               log.info("Datasource MetricsEmittingQueryRunner accepting metrics[%s]", metrics);
               metrics.queryId(query.getId());
               metrics.sqlQueryId(query.getSqlQueryId());

@@ -152,6 +152,8 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
         CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION,
         false
     );
+
+    // TODO: Check will this give me NPE down the road when accessing QueryMetrics from the queryPlus?
     final QueryPlus<ResultRow> queryPlusForRunners = queryPlus
         .withQuery(
             query.withOverriddenContext(ImmutableMap.of(CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION, true))

@@ -109,6 +109,7 @@ public class DefaultGroupByQueryMetrics extends DefaultQueryMetrics<GroupByQuery
     return mergeBufferAcquisitonTime.longValue();
   }
 
+  // TODO: Delete after debugging...
   @Override
   public String toString()
   {
