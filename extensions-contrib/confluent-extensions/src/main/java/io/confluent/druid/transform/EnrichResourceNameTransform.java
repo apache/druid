@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
@@ -40,6 +41,8 @@ public class EnrichResourceNameTransform implements Transform
   private final String fcpResourceIdDimension;
   private final String lookupName;
   private final LookupExtractorFactoryContainerProvider lookupProvider;
+
+  private static final EmittingLogger log = new EmittingLogger(EnrichResourceNameTransform.class);
 
   public EnrichResourceNameTransform(
       @JsonProperty("name") final String name,
@@ -197,58 +200,62 @@ public class EnrichResourceNameTransform implements Transform
   public RowFunction getRowFunction()
   {
     return row -> {
-      Optional<LookupExtractorFactoryContainer> container = lookupProvider.get(lookupName);
-      if (!container.isPresent()) {
-        return null;
-      }
-      LookupExtractor lookup = container.get().getLookupExtractorFactory().get();
-      String metricName = row.getRaw(metricNameDimension).toString();
+      try {
+        Optional<LookupExtractorFactoryContainer> container = lookupProvider.get(lookupName);
+        if (!container.isPresent()) {
+          return null;
+        }
+        LookupExtractor lookup = container.get().getLookupExtractorFactory().get();
+        String metricName = row.getRaw(metricNameDimension).toString();
 
-      if (metricName != null) {
-        // Check if metric name starts with any kafka prefix
-        for (String prefix : kafkaMetricPrefixes) {
-          if (metricName.startsWith(prefix)) {
-            return enrichNameFromLookup(row, lookup, kafkaResourceIdDimension, kafkaResourceIdDerivedDimension);
+        if (metricName != null) {
+          // Check if metric name starts with any kafka prefix
+          for (String prefix : kafkaMetricPrefixes) {
+            if (metricName.startsWith(prefix)) {
+              return enrichNameFromLookup(row, lookup, kafkaResourceIdDimension, kafkaResourceIdDerivedDimension);
+            }
           }
-        }
-        // Check if metric name starts with any connect prefix
-        for (String prefix : connectMetricPrefixes) {
-          if (metricName.startsWith(prefix)) {
-            return enrichNameFromLookup(row, lookup, connectResourceIdDimension, null);
+          // Check if metric name starts with any connect prefix
+          for (String prefix : connectMetricPrefixes) {
+            if (metricName.startsWith(prefix)) {
+              return enrichNameFromLookup(row, lookup, connectResourceIdDimension, null);
+            }
           }
-        }
-        // Check if metric name starts with any client-connector prefix
-        for (String prefix : clientConnectorMetricPrefixes) {
-          if (metricName.startsWith(prefix)) {
-            return enrichNameFromLookup(row, lookup, clientConnectorResourceIdDimension, null);
+          // Check if metric name starts with any client-connector prefix
+          for (String prefix : clientConnectorMetricPrefixes) {
+            if (metricName.startsWith(prefix)) {
+              return enrichNameFromLookup(row, lookup, clientConnectorResourceIdDimension, null);
+            }
           }
-        }
-        // Check if metric name starts with any ksql prefix
-        for (String prefix : ksqlMetricPrefixes) {
-          if (metricName.startsWith(prefix)) {
-            return enrichNameFromLookup(row, lookup, ksqlResourceIdDimension, null);
+          // Check if metric name starts with any ksql prefix
+          for (String prefix : ksqlMetricPrefixes) {
+            if (metricName.startsWith(prefix)) {
+              return enrichNameFromLookup(row, lookup, ksqlResourceIdDimension, null);
+            }
           }
-        }
-        // Check if metric name starts with any schema registry prefix
-        for (String prefix : schemaRegistryMetricPrefixes) {
-          if (metricName.startsWith(prefix)) {
-            return enrichNameFromLookup(row, lookup, schemaRegistryResourceIdDimension, null);
+          // Check if metric name starts with any schema registry prefix
+          for (String prefix : schemaRegistryMetricPrefixes) {
+            if (metricName.startsWith(prefix)) {
+              return enrichNameFromLookup(row, lookup, schemaRegistryResourceIdDimension, null);
+            }
           }
-        }
-        // Check if metric name starts with any flink-compute-pool prefix
-        for (String prefix : fcpMetricPrefixes) {
-          if (metricName.startsWith(prefix)) {
-            return enrichNameFromLookup(row, lookup, fcpResourceIdDimension, null);
+          // Check if metric name starts with any flink-compute-pool prefix
+          for (String prefix : fcpMetricPrefixes) {
+            if (metricName.startsWith(prefix)) {
+              return enrichNameFromLookup(row, lookup, fcpResourceIdDimension, null);
+            }
           }
-        }
-        // Check if metric name starts with any tableflow prefix
-        for (String prefix : tableflowMetricPrefixes) {
-          if (metricName.startsWith(prefix)) {
-            return enrichNameFromLookup(row, lookup, tableflowResourceIdDimension, null);
+          // Check if metric name starts with any tableflow prefix
+          for (String prefix : tableflowMetricPrefixes) {
+            if (metricName.startsWith(prefix)) {
+              return enrichNameFromLookup(row, lookup, tableflowResourceIdDimension, null);
+            }
           }
         }
       }
-
+      catch (Exception ex) {
+        log.warn("Failed to enrich name dut to exception %s", ex.getMessage());
+      }
       return null;
     };
   }

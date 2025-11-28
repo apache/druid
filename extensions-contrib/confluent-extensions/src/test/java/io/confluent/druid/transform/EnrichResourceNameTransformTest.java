@@ -800,4 +800,49 @@ public class EnrichResourceNameTransformTest
     );
   }
 
+
+  @Test
+  public void testInterruptedExceptionHandling()
+  {
+    // This can occur when the lookup provider is not yet started or thread is interrupted
+    // (e.g., during JVM shutdown or ingestion task cancellation by overlord)
+    InterruptedException interruptedException = new InterruptedException("Thread interrupted");
+    RuntimeException runtimeException = new RuntimeException(interruptedException);
+
+    when(mockLookupProvider.get("resource_display_name_test_lookup"))
+            .thenThrow(runtimeException);
+
+    EnrichResourceNameTransform transform = new EnrichResourceNameTransform(
+            "resource_name",
+            "metric_name",
+            ImmutableSet.of("kafka-"),
+            "kafka_resource",
+            "kafka_resource_derived",
+            ImmutableSet.of(),
+            "tableflow_resource",
+            ImmutableSet.of(),
+            "connect_resource",
+            ImmutableSet.of(),
+            "client_connector_resource",
+            ImmutableSet.of(),
+            "ksql_resource",
+            ImmutableSet.of(),
+            "schema_registry_resource",
+            ImmutableSet.of(),
+            "fcp_resource",
+            "resource_display_name_test_lookup",
+            mockLookupProvider
+    );
+
+    TransformSpec transformSpec = new TransformSpec(null, ImmutableList.of(transform));
+    InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
+    Map<String, Object> rowData = ImmutableMap.<String, Object>builder()
+            .put("metric_name", "kafka-producer-metrics")
+            .put("kafka_resource", "lkc-abc123")
+            .build();
+    InputRow row = parser.parseBatch(rowData).get(0);
+    Assert.assertNotNull(row);
+    Assert.assertNull(row.getRaw("resource_name"));
+  }
+
 }
