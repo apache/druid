@@ -126,6 +126,12 @@ public class TestSegmentUtils
     {
       return Cursors.ascendingTimeOrder();
     }
+
+    @Override
+    public int getNumRows()
+    {
+      return 1234;
+    }
   };
 
   public static class SegmentForTesting extends QueryableIndexSegment
@@ -178,6 +184,8 @@ public class TestSegmentUtils
         return (T) INDEX;
       } else if (clazz.equals(CursorFactory.class)) {
         return (T) new QueryableIndexCursorFactory(INDEX);
+      } else if (clazz.equals(PhysicalSegmentInspector.class)) {
+        return (T) new QueryableIndexPhysicalSegmentInspector(INDEX);
       }
       return null;
     }
