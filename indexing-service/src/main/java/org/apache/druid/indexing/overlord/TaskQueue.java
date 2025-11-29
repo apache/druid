@@ -46,6 +46,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskContextEnricher;
+import org.apache.druid.indexing.common.task.TaskMetrics;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseParallelIndexTaskRunner;
@@ -1073,7 +1074,7 @@ public class TaskQueue
     IndexTaskUtils.setTaskDimensions(metricBuilder, task);
     IndexTaskUtils.setTaskStatusDimensions(metricBuilder, status);
 
-    emitter.emit(metricBuilder.setMetric("task/run/time", status.getDuration()));
+    emitter.emit(metricBuilder.setMetric(TaskMetrics.RUN_DURATION, status.getDuration()));
 
     if (status.isSuccess()) {
       Counters.incrementAndGetLong(totalSuccessfulTaskCount, getMetricKey(task));

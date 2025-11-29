@@ -463,7 +463,7 @@ public class TaskQueueTest extends IngestionTestBase
     Thread.sleep(100);
 
     // Verify that metrics are emitted on receiving announcement
-    serviceEmitter.verifyEmitted("task/run/time", Map.of(DruidMetrics.DESCRIPTION, "shutdown on runner"), 1);
+    serviceEmitter.verifyEmitted("task/run/time", Map.of(DruidMetrics.DESCRIPTION, "shutdown"), 1);
     verifySuccessfulTaskCount(taskQueue, 0);
     verifyFailedTaskCount(taskQueue, 1);
 
