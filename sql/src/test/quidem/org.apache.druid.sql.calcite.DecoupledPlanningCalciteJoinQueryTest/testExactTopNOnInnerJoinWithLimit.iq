@@ -8,8 +8,9 @@
 !set sqlQueryId dummy
 !set useApproximateTopN false
 !set useLexicographicTopN true
+!set minTopNThreshold 1
 !set outputformat mysql
-!use druidtest:///?minTopNThreshold=1
+!use druidtest:///
 select f1."dim4", sum("m1") from numfoo f1 inner join (
   select "dim4" from numfoo where dim4 <> 'a' group by 1
 ) f2 on f1."dim4" = f2."dim4" group by 1 limit 1;
