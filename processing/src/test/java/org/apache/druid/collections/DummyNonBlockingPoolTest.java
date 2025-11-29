@@ -19,26 +19,25 @@
 
 package org.apache.druid.collections;
 
-/**
- * NonBlockingPool that cannot allocate objects, {@link #take()} throws {@link UnsupportedOperationException}.
- */
-public final class DummyNonBlockingPool implements NonBlockingPool<Object>
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+public class DummyNonBlockingPoolTest
 {
-  private static final DummyNonBlockingPool INSTANCE = new DummyNonBlockingPool();
-
-  @SuppressWarnings("unchecked")
-  public static <T> NonBlockingPool<T> instance()
+  @Test
+  public void testSingletonInstance()
   {
-    return (NonBlockingPool<T>) INSTANCE;
+    final NonBlockingPool<Object> p1 = DummyNonBlockingPool.instance();
+    final NonBlockingPool<Integer> p2 = DummyNonBlockingPool.instance();
+    Assertions.assertSame(p1, p2);
   }
 
-  private DummyNonBlockingPool()
+  @Test
+  public void testTakeThrows()
   {
-  }
-
-  @Override
-  public ResourceHolder<Object> take()
-  {
-    throw new UnsupportedOperationException();
+    final NonBlockingPool<Integer> pool = DummyNonBlockingPool.instance();
+    Assertions.assertThrows(UnsupportedOperationException.class, pool::take);
   }
 }
+
+
