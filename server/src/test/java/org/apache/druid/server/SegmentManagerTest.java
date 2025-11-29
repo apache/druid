@@ -26,6 +26,7 @@ import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
@@ -73,6 +74,7 @@ public class SegmentManagerTest
   );
 
   private ExecutorService executor;
+  private SegmentLocalCacheManager cacheManager;
   private SegmentManager segmentManager;
 
   @Rule
@@ -104,7 +106,7 @@ public class SegmentManagerTest
     objectMapper.registerSubtypes(TestSegmentUtils.TestSegmentizerFactory.class);
 
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
-    final SegmentLocalCacheManager cacheManager = new SegmentLocalCacheManager(
+    cacheManager = new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
@@ -169,8 +171,12 @@ public class SegmentManagerTest
   @Test
   public void testDropSegment() throws SegmentLoadingException, ExecutionException, InterruptedException, IOException
   {
+    List<ReferenceCountedSegmentProvider> referenceProviders = new ArrayList<>();
     for (DataSegment eachSegment : SEGMENTS) {
       segmentManager.loadSegment(eachSegment);
+      ReferenceCountedSegmentProvider refProvider = cacheManager.getSegmentReferenceProvider(eachSegment);
+      referenceProviders.add(refProvider);
+      Assert.assertFalse(refProvider.isClosed());
     }
 
     final List<Future<Void>> futures = ImmutableList.of(SEGMENTS.get(0), SEGMENTS.get(2)).stream()
@@ -191,6 +197,14 @@ public class SegmentManagerTest
     assertResult(
         ImmutableList.of(SEGMENTS.get(1), SEGMENTS.get(3), SEGMENTS.get(4))
     );
+    for (int i = 0; i < SEGMENTS.size(); i++) {
+      Assert.assertEquals(0, referenceProviders.get(i).getNumReferences());
+      if (i == 0 || i == 2) {
+        Assert.assertTrue(referenceProviders.get(i).isClosed());
+      } else {
+        Assert.assertFalse(referenceProviders.get(i).isClosed());
+      }
+    }
   }
 
   private Void loadSegmentOrFail(DataSegment segment)
