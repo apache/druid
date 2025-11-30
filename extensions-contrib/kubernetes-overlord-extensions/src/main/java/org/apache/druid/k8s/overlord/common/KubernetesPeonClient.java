@@ -137,8 +137,14 @@ public class KubernetesPeonClient
 
   public Optional<LogWatch> getPeonLogWatcher(K8sTaskId taskId)
   {
+    log.info("📺 [K8S-CLIENT] getPeonLogWatcher() called for task [%s] (K8s job: %s)", 
+             taskId.getOriginalTaskId(), taskId.getK8sJobName());
+    log.info("📺 [K8S-CLIENT] Namespace: %s, Container: main", namespace);
+    
     KubernetesClient k8sClient = clientApi.getClient();
     try {
+      log.info("📺 [K8S-CLIENT] Calling Kubernetes API .watchLog() for job [%s]", taskId.getK8sJobName());
+      
       LogWatch logWatch = k8sClient.batch()
           .v1()
           .jobs()
@@ -146,13 +152,19 @@ public class KubernetesPeonClient
           .withName(taskId.getK8sJobName())
           .inContainer("main")
           .watchLog();
+      
       if (logWatch == null) {
+        log.warn("⚠️  [K8S-CLIENT] Kubernetes API returned null LogWatch for job [%s]", 
+                 taskId.getK8sJobName());
         return Optional.absent();
       }
+      
+      log.info("✅ [K8S-CLIENT] Successfully created LogWatch for job [%s]", taskId.getK8sJobName());
       return Optional.of(logWatch);
     }
     catch (Exception e) {
-      log.error(e, "Error watching logs from task: %s", taskId);
+      log.error(e, "❌ [K8S-CLIENT] Error watching logs from task [%s] (job: %s): %s", 
+                taskId.getOriginalTaskId(), taskId.getK8sJobName(), e.getMessage());
       return Optional.absent();
     }
   }

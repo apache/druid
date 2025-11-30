@@ -135,11 +135,24 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Optional<InputStream> streamTaskLog(String taskid, long offset)
   {
+    log.info("📺 [STREAM] API request to stream logs for task [%s] (offset=%d)", taskid, offset);
+    
     KubernetesWorkItem workItem = tasks.get(taskid);
     if (workItem == null) {
+      log.warn("📺 [STREAM] No work item found for task [%s] - task may not exist", taskid);
       return Optional.absent();
     }
-    return workItem.streamTaskLogs();
+    
+    log.info("📺 [STREAM] Found work item for task [%s], delegating to streamTaskLogs()", taskid);
+    Optional<InputStream> result = workItem.streamTaskLogs();
+    
+    if (result.isPresent()) {
+      log.info("✅ [STREAM] Successfully obtained log stream for task [%s]", taskid);
+    } else {
+      log.warn("⚠️  [STREAM] No log stream available for task [%s]", taskid);
+    }
+    
+    return result;
   }
 
   @Override

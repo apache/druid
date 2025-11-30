@@ -28,11 +28,14 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.InputStream;
 
 public class KubernetesWorkItem extends TaskRunnerWorkItem
 {
+  private static final Logger log = new Logger(KubernetesWorkItem.class);
+  
   private final Task task;
   private KubernetesPeonLifecycle kubernetesPeonLifecycle = null;
 
@@ -88,10 +91,23 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
 
   protected Optional<InputStream> streamTaskLogs()
   {
+    log.info("📺 [WORKITEM] streamTaskLogs() called for task [%s]", task.getId());
+    
     if (kubernetesPeonLifecycle == null) {
+      log.warn("📺 [WORKITEM] No peon lifecycle available for task [%s] - task may not have started yet", task.getId());
       return Optional.absent();
     }
-    return kubernetesPeonLifecycle.streamLogs();
+    
+    log.info("📺 [WORKITEM] Peon lifecycle exists for task [%s], delegating to streamLogs()", task.getId());
+    Optional<InputStream> result = kubernetesPeonLifecycle.streamLogs();
+    
+    if (result.isPresent()) {
+      log.info("✅ [WORKITEM] Peon lifecycle returned log stream for task [%s]", task.getId());
+    } else {
+      log.warn("⚠️  [WORKITEM] Peon lifecycle returned no log stream for task [%s]", task.getId());
+    }
+    
+    return result;
   }
 
   @Override

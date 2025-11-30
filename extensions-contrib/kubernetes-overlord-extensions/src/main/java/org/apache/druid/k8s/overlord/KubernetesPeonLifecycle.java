@@ -182,8 +182,12 @@ public class KubernetesPeonLifecycle
   protected synchronized TaskStatus join(long timeout) throws IllegalStateException
   {
     log.info("⏸️  [LIFECYCLE] Joining task [%s], waiting for completion (timeout=%dms)...", taskId.getOriginalTaskId(), timeout);
+    log.info("📊 [LIFECYCLE] Current state before join: %s", state.get());
+    
     try {
+      log.info("🔄 [LIFECYCLE] Transitioning task [%s] to RUNNING state", taskId.getOriginalTaskId());
       updateState(new State[]{State.NOT_STARTED, State.PENDING}, State.RUNNING);
+      log.info("✅ [LIFECYCLE] Task [%s] now in RUNNING state - logs should be streamable", taskId.getOriginalTaskId());
 
       JobResponse jobResponse = kubernetesClient.waitForPeonJobCompletion(
           taskId,
@@ -231,14 +235,30 @@ public class KubernetesPeonLifecycle
    */
   protected Optional<InputStream> streamLogs()
   {
-    if (!State.RUNNING.equals(state.get())) {
+    log.info("📺 [LIFECYCLE] streamLogs() called for task [%s]", taskId.getOriginalTaskId());
+    
+    State currentState = state.get();
+    log.info("📺 [LIFECYCLE] Current task state: %s", currentState);
+    
+    if (!State.RUNNING.equals(currentState)) {
+      log.warn("⚠️  [LIFECYCLE] Task [%s] is not in RUNNING state (state=%s), cannot stream logs", 
+               taskId.getOriginalTaskId(), currentState);
       return Optional.absent();
     }
     
+    log.info("📺 [LIFECYCLE] Task [%s] is RUNNING, requesting LogWatch from Kubernetes client", 
+             taskId.getOriginalTaskId());
+    
     // Use LogWatch for live streaming instead of getLogInputStream which returns a snapshot
     Optional<LogWatch> maybeLogWatch = kubernetesClient.getPeonLogWatcher(taskId);
+    
     if (maybeLogWatch.isPresent()) {
+      log.info("✅ [LIFECYCLE] Successfully obtained LogWatch for task [%s], returning output stream", 
+               taskId.getOriginalTaskId());
       return Optional.of(maybeLogWatch.get().getOutput());
+    } else {
+      log.warn("⚠️  [LIFECYCLE] Kubernetes client returned no LogWatch for task [%s]", 
+               taskId.getOriginalTaskId());
     }
     
     return Optional.absent();
