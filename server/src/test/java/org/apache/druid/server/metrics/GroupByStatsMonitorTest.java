@@ -101,19 +101,8 @@ public class GroupByStatsMonitorTest
     final GroupByStatsMonitor monitor = new GroupByStatsMonitor(
         groupByStatsProvider,
         mergeBufferPool,
-        new TaskHolder() {
-          @Override
-          public String getDataSource()
-          {
-            return dataSource;
-          }
-
-          @Override
-          public String getTaskId()
-          {
-            return taskId;
-          }
-        });
+        new TestTaskHolder(dataSource, taskId)
+    );
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
     emitter.flush();

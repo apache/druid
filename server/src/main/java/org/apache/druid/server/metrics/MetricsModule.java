@@ -107,11 +107,6 @@ public class MetricsModule implements Module
   )
   {
     List<Monitor> monitors = new ArrayList<>();
-    // HACK: when ServiceStatusMonitor is the first to be loaded, it introduces a circular dependency between
-    // CliPeon.runTask and TaskHolder.getDataSource()/TaskHolder.getTaskId(). The reason for this is unclear
-    // but by injecting TaskPropertiesHolder early this cycle is avoided.
-    injector.getInstance(TaskHolder.class);
-    injector.getInstance(LoadSpecHolder.class);
     for (Class<? extends Monitor> monitorClass : Iterables.concat(monitorsConfig.getMonitors(), monitorSet)) {
       if (shouldLoadMonitor(monitorClass, nodeRoles)) {
         monitors.add(injector.getInstance(monitorClass));
@@ -152,9 +147,7 @@ public class MetricsModule implements Module
       TaskHolder taskHolder
   )
   {
-    Map<String, String[]> dimensions = MonitorsConfig.mapOfTaskHolderDimensions(
-        taskHolder
-    );
+    Map<String, String[]> dimensions = MonitorsConfig.mapOfTaskHolderDimensions(taskHolder);
     return new JvmMonitor(dimensions);
   }
 
@@ -164,9 +157,7 @@ public class MetricsModule implements Module
       TaskHolder taskHolder
   )
   {
-    Map<String, String[]> dimensions = MonitorsConfig.mapOfTaskHolderDimensions(
-        taskHolder
-    );
+    Map<String, String[]> dimensions = MonitorsConfig.mapOfTaskHolderDimensions(taskHolder);
     return new JvmCpuMonitor(dimensions);
   }
 
@@ -174,9 +165,7 @@ public class MetricsModule implements Module
   @ManageLifecycle
   public JvmThreadsMonitor getJvmThreadsMonitor(TaskHolder taskHolder)
   {
-    Map<String, String[]> dimensions = MonitorsConfig.mapOfTaskHolderDimensions(
-        taskHolder
-    );
+    Map<String, String[]> dimensions = MonitorsConfig.mapOfTaskHolderDimensions(taskHolder);
     return new JvmThreadsMonitor(dimensions);
   }
 
@@ -187,9 +176,7 @@ public class MetricsModule implements Module
     if (nodeRoles.contains(NodeRole.PEON)) {
       return new NoopSysMonitor();
     } else {
-      Map<String, String[]> dimensions = MonitorsConfig.mapOfTaskHolderDimensions(
-          taskHolder
-      );
+      Map<String, String[]> dimensions = MonitorsConfig.mapOfTaskHolderDimensions(taskHolder);
       return new SysMonitor(dimensions);
     }
   }
@@ -205,9 +192,7 @@ public class MetricsModule implements Module
     if (nodeRoles.contains(NodeRole.PEON)) {
       return new NoopOshiSysMonitor();
     } else {
-      Map<String, String[]> dimensions = MonitorsConfig.mapOfTaskHolderDimensions(
-          taskHolder
-      );
+      Map<String, String[]> dimensions = MonitorsConfig.mapOfTaskHolderDimensions(taskHolder);
       return new OshiSysMonitor(dimensions, oshiSysConfig);
     }
   }

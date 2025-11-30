@@ -29,6 +29,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Scopes;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.DefaultServerHolderModule;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -112,20 +113,7 @@ public class MetricsModuleTest
                 Key.get(DruidNode.class, Self.class),
                 new DruidNode("test-inject", null, false, null, null, true, false)
             );
-            binder.bind(TaskHolder.class).toInstance(new TaskHolder()
-            {
-              @Override
-              public String getDataSource()
-              {
-                return dataSource;
-              }
-
-              @Override
-              public String getTaskId()
-              {
-                return taskId;
-              }
-            });
+            binder.bind(TaskHolder.class).toInstance(new TestTaskHolder(dataSource, taskId));
             binder.bind(LoadSpecHolder.class).to(DefaultLoadSpecHolder.class).in(LazySingleton.class);
           }
         })
@@ -314,11 +302,10 @@ public class MetricsModuleTest
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
           binder.bind(ServiceEmitter.class).toInstance(new NoopServiceEmitter());
           binder.bind(Properties.class).toInstance(properties);
-          binder.bind(LoadSpecHolder.class).to(DefaultLoadSpecHolder.class).in(LazySingleton.class);
-          binder.bind(TaskHolder.class).to(NoopTaskHolder.class).in(LazySingleton.class);
         },
         ServerInjectorBuilder.registerNodeRoleModule(nodeRoles),
-        new MetricsModule()
+        new MetricsModule(),
+        new DefaultServerHolderModule()
     );
   }
 

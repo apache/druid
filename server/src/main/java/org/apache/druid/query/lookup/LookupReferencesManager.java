@@ -42,6 +42,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
+import org.apache.druid.server.metrics.LoadSpecHolder;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -379,7 +380,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   }
 
   /**
-   * Load a set of lookups based on the injected value in {@link TaskPropertiesHolder#getLookupLoadingSpec()}.
+   * Load a set of lookups based on the injected value in {@link LoadSpecHolder#getLookupLoadingSpec()}.
    */
   private void loadLookupsAndInitStateRef()
   {

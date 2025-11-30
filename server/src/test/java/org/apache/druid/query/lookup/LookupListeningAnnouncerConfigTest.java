@@ -35,6 +35,7 @@ import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.DefaultLoadSpecHolder;
 import org.apache.druid.server.metrics.LoadSpecHolder;
 import org.apache.druid.server.metrics.TaskHolder;
+import org.apache.druid.server.metrics.TestTaskHolder;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,20 +59,7 @@ public class LookupListeningAnnouncerConfigTest
                   Key.get(DruidNode.class, Self.class),
                   new DruidNode("test-inject", null, false, null, null, true, false)
               );
-              binder.bind(TaskHolder.class).toInstance(new TaskHolder()
-              {
-                @Override
-                public String getDataSource()
-                {
-                  return "some_datasource";
-                }
-
-                @Override
-                public String getTaskId()
-                {
-                  return "some_taskid";
-                }
-              });
+              binder.bind(TaskHolder.class).toInstance(new TestTaskHolder("some_datasource", "some_taskid"));
               binder.bind(LoadSpecHolder.class).toInstance(new LoadSpecHolder()
               {
                 @Override

@@ -29,7 +29,7 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.TLSServerConfig;
 import org.apache.druid.server.metrics.MonitorsConfig;
-import org.apache.druid.server.metrics.TaskHolder;
+import org.apache.druid.server.metrics.TestTaskHolder;
 import org.apache.druid.server.security.TLSCertificateChecker;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
@@ -58,20 +58,7 @@ public class JettyServerModuleTest
     Mockito.when(jettyServerThreadPool.getBusyThreads()).thenReturn(60);
 
     final Map<String, String[]> dimensionMap = MonitorsConfig.mapOfTaskHolderDimensions(
-        new TaskHolder()
-        {
-          @Override
-          public String getDataSource()
-          {
-            return "ds";
-          }
-
-          @Override
-          public String getTaskId()
-          {
-            return "t0";
-          }
-        }
+        new TestTaskHolder("ds", "t0")
     );
     JettyServerModule.JettyMonitor jettyMonitor = new JettyServerModule.JettyMonitor(dimensionMap);
 
