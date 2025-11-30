@@ -294,6 +294,8 @@ public class EmbeddedClusterApis implements EmbeddedResource
     final int numTombstones = (int) segments.stream().filter(DataSegment::isTombstone).count();
     final int numSegments = segments.size() - numTombstones;
 
+    // System.err.println("Segments available: " + segments.size());
+
     if (numSegments > 0) {
       broker.latchableEmitter().waitForEventAggregate(
           event -> event.hasMetricName("segment/schemaCache/refresh/count")

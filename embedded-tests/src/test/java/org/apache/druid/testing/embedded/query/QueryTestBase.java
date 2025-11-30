@@ -19,10 +19,11 @@
 
 package org.apache.druid.testing.embedded.query;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
+import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -31,12 +32,17 @@ import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 public abstract class QueryTestBase extends EmbeddedClusterTestBase
 {
@@ -54,16 +60,6 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
   protected String brokerEndpoint;
   protected String routerEndpoint;
 
-  public static String getResourceAsString(String file) throws IOException
-  {
-    try (final InputStream inputStream = QueryTestBase.class.getResourceAsStream(file)) {
-      if (inputStream == null) {
-        throw new ISE("Failed to load resource: [%s]", file);
-      }
-      return IOUtils.toString(inputStream, StandardCharsets.UTF_8);
-    }
-  }
-
   /**
    * Hook for the additional setup that needs to be done before all tests.
    */
@@ -77,7 +73,7 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
   {
     overlord.addProperty("druid.manager.segments.pollDuration", "PT0.1s");
     coordinator.addProperty("druid.manager.segments.useIncrementalCache", "always");
-    indexer.setServerMemory(100_000_000)
+    indexer.setServerMemory(500_000_000)
            .addProperty("druid.worker.capacity", "4")
            .addProperty("druid.processing.numThreads", "2")
            .addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
@@ -104,5 +100,54 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
     catch (Exception e) {
       throw new AssertionError(e);
     }
+  }
+
+  /**
+   * Execute a SQL query against the given endpoint via the HTTP client.
+   */
+  protected void executeQuery(
+      String endpoint,
+      String contentType,
+      String query,
+      Consumer<Request> onRequest,
+      BiConsumer<Integer, String> onResponse
+  )
+  {
+    URL url;
+    try {
+      url = new URL(endpoint);
+    }
+    catch (MalformedURLException e) {
+      throw new AssertionError("Malformed URL");
+    }
+
+    Request request = new Request(HttpMethod.POST, url);
+    if (contentType != null) {
+      request.addHeader("Content-Type", contentType);
+    }
+
+    if (query != null) {
+      request.setContent(query.getBytes(StandardCharsets.UTF_8));
+    }
+
+    if (onRequest != null) {
+      onRequest.accept(request);
+    }
+
+    StatusResponseHolder response;
+    try {
+      response = httpClientRef.go(request, StatusResponseHandler.getInstance())
+                              .get();
+    }
+    catch (InterruptedException | ExecutionException e) {
+      throw new AssertionError("Failed to execute a request", e);
+    }
+
+    Assertions.assertNotNull(response);
+
+    onResponse.accept(
+        response.getStatus().getCode(),
+        response.getContent().trim()
+    );
   }
 }

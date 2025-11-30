@@ -22,11 +22,15 @@ package org.apache.druid.testing.embedded.query;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.error.ExceptionMatcher;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.http.ClientSqlQuery;
+import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.rpc.HttpResponseException;
+import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -53,8 +57,9 @@ import static org.apache.druid.testing.embedded.query.ServerManagerForQueryError
  */
 public class QueryErrorTest extends QueryTestBase
 {
-  //  TODO: introduce onAnyRouter(...) and use it; add TLS tests in the follow-up patches
+  // Introduce onAnyRouter(...) and use it; add TLS tests in the follow-up patches
   protected static List<Boolean> SHOULD_USE_SQL_ENGINE = List.of(true, false);
+  protected String tableName;
 
   @Override
   protected EmbeddedDruidCluster createCluster()
@@ -79,29 +84,17 @@ public class QueryErrorTest extends QueryTestBase
   @Override
   protected void beforeAll()
   {
-    var ingestionStatus = cluster.callApi().onAnyBroker(
-        b -> b.submitSqlTask(
-            new ClientSqlQuery(
-                "REPLACE INTO t\n"
-                + "OVERWRITE ALL\n"
-                + "SELECT CURRENT_TIMESTAMP AS __time, 1 AS d\n"
-                + "PARTITIONED BY ALL",
-                null,
-                false,
-                false,
-                false,
-                Map.of(),
-                List.of()
-            )
-        )
-    );
+    tableName = EmbeddedClusterApis.createTestDatasourceName();
+    EmbeddedMSQApis msqApi = new EmbeddedMSQApis(cluster, overlord);
+    SqlTaskStatus ingestionStatus = msqApi.submitTaskSql(StringUtils.format(
+        "REPLACE INTO %s\n"
+        + "OVERWRITE ALL\n"
+        + "SELECT CURRENT_TIMESTAMP AS __time, 1 AS d PARTITIONED BY ALL",
+        tableName
+    ));
+
     cluster.callApi().waitForTaskToSucceed(ingestionStatus.getTaskId(), overlord);
-    try {
-      Thread.sleep(1000L);
-    }
-    catch (InterruptedException e) {
-      throw new AssertionError(e);
-    }
+    cluster.callApi().waitForAllSegmentsToBeAvailable(tableName, coordinator, broker);
   }
 
   @Test
@@ -110,19 +103,7 @@ public class QueryErrorTest extends QueryTestBase
     MatcherAssert.assertThat(
         Assertions.assertThrows(
             Exception.class,
-            () -> cluster.callApi().onAnyBroker(
-                b -> b.submitSqlQuery(
-                    new ClientSqlQuery(
-                        "count(*) FROM t",
-                        null,
-                        false,
-                        false,
-                        false,
-                        Map.of(),
-                        List.of()
-                    )
-                )
-            )
+            () -> cluster.runSql("FROM foo_bar")
         ),
         ExceptionMatcher.of(HttpResponseException.class)
                         .expectMessageContains("400 Bad Request")
@@ -135,19 +116,7 @@ public class QueryErrorTest extends QueryTestBase
     MatcherAssert.assertThat(
         Assertions.assertThrows(
             Exception.class,
-            () -> cluster.callApi().onAnyBroker(
-                b -> b.submitSqlQuery(
-                    new ClientSqlQuery(
-                        "SELECT count(*) FROM lol_kek",
-                        null,
-                        false,
-                        false,
-                        false,
-                        Map.of(),
-                        List.of()
-                    )
-                )
-            )
+            () -> cluster.runSql("SELECT * FROM foo_bar")
         ),
         ExceptionMatcher.of(HttpResponseException.class)
                         .expectMessageContains("400 Bad Request")
@@ -264,7 +233,7 @@ public class QueryErrorTest extends QueryTestBase
   {
     return shouldUseSqlEngine
            ? b.submitSqlQuery(new ClientSqlQuery(
-        "SELECT * FROM t LIMIT 1",
+        StringUtils.format("SELECT * FROM %s LIMIT 1", tableName),
         null,
         false,
         false,
@@ -272,7 +241,7 @@ public class QueryErrorTest extends QueryTestBase
         buildTestContext(contextKey),
         List.of()
     )) : b.submitNativeQuery(new Druids.ScanQueryBuilder()
-                                 .dataSource("t")
+                                 .dataSource(tableName)
                                  .eternityInterval()
                                  .limit(1)
                                  .context(buildTestContext(contextKey))

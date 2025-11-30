@@ -19,23 +19,14 @@
 
 package org.apache.druid.testing.embedded.query;
 
-import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
-import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.FieldSource;
 
 import javax.ws.rs.core.MediaType;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.ExecutionException;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 /**
  * Suite to test various Content-Type headers attached
@@ -43,52 +34,6 @@ import java.util.function.Consumer;
  */
 public class SqlQueryHttpRequestHeadersTest extends QueryTestBase
 {
-  private void executeQuery(
-      String endpoint,
-      String contentType,
-      String query,
-      Consumer<Request> onRequest,
-      BiConsumer<Integer, String> onResponse
-  )
-  {
-    URL url;
-    try {
-      url = new URL(endpoint);
-    }
-    catch (MalformedURLException e) {
-      throw new AssertionError("Malformed URL");
-    }
-
-    Request request = new Request(HttpMethod.POST, url);
-    if (contentType != null) {
-      request.addHeader("Content-Type", contentType);
-    }
-
-    if (query != null) {
-      request.setContent(query.getBytes(StandardCharsets.UTF_8));
-    }
-
-    if (onRequest != null) {
-      onRequest.accept(request);
-    }
-
-    StatusResponseHolder response;
-    try {
-      response = httpClientRef.go(request, StatusResponseHandler.getInstance())
-                              .get();
-    }
-    catch (InterruptedException | ExecutionException e) {
-      throw new AssertionError("Failed to execute a request", e);
-    }
-
-    Assertions.assertNotNull(response);
-
-    onResponse.accept(
-        response.getStatus().getCode(),
-        response.getContent().trim()
-    );
-  }
-
   @ParameterizedTest
   @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testNullContentType(boolean shouldQueryBroker)
