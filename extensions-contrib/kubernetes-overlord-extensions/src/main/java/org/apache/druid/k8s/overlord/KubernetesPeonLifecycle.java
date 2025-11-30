@@ -234,7 +234,14 @@ public class KubernetesPeonLifecycle
     if (!State.RUNNING.equals(state.get())) {
       return Optional.absent();
     }
-    return kubernetesClient.getPeonLogs(taskId);
+    
+    // Use LogWatch for live streaming instead of getLogInputStream which returns a snapshot
+    Optional<LogWatch> maybeLogWatch = kubernetesClient.getPeonLogWatcher(taskId);
+    if (maybeLogWatch.isPresent()) {
+      return Optional.of(maybeLogWatch.get().getOutput());
+    }
+    
+    return Optional.absent();
   }
 
   /**
