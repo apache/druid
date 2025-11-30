@@ -231,8 +231,13 @@ public class KubernetesPeonLifecycle
 
   /**
    * Stream logs from the Kubernetes pod running the peon process
+   * 
+   * IMPORTANT: Uses getPeonLogs() (snapshot) instead of getPeonLogWatcher() (live stream)
+   * to avoid blocking HTTP threads for the entire task duration.
+   * 
+   * For reliable, complete log capture to S3, see saveLogs() which uses LogWatch.
    *
-   * @return
+   * @return Optional InputStream containing a snapshot of current logs (fast, non-blocking)
    */
   protected Optional<InputStream> streamLogs()
   {
@@ -247,18 +252,20 @@ public class KubernetesPeonLifecycle
       return Optional.absent();
     }
     
-    log.info("📺 [LIFECYCLE] Task [%s] is RUNNING, requesting LogWatch from Kubernetes client", 
+    log.info("📺 [LIFECYCLE] Task [%s] is RUNNING, fetching log snapshot from Kubernetes client", 
              taskId.getOriginalTaskId());
     
-    // Use LogWatch for live streaming instead of getLogInputStream which returns a snapshot
-    Optional<LogWatch> maybeLogWatch = kubernetesClient.getPeonLogWatcher(taskId);
+    // Use getPeonLogs() for HTTP endpoint - returns a snapshot quickly (~1-2 seconds)
+    // This prevents blocking HTTP threads for hours on long-running tasks
+    // For complete logs, saveLogs() uses LogWatch which streams continuously to S3
+    Optional<InputStream> maybeLogStream = kubernetesClient.getPeonLogs(taskId);
     
-    if (maybeLogWatch.isPresent()) {
-      log.info("✅ [LIFECYCLE] Successfully obtained LogWatch for task [%s], returning output stream", 
+    if (maybeLogStream.isPresent()) {
+      log.info("✅ [LIFECYCLE] Successfully obtained log snapshot for task [%s], returning stream", 
                taskId.getOriginalTaskId());
-      return Optional.of(maybeLogWatch.get().getOutput());
+      return maybeLogStream;
     } else {
-      log.warn("⚠️  [LIFECYCLE] Kubernetes client returned no LogWatch for task [%s]", 
+      log.warn("⚠️  [LIFECYCLE] Kubernetes client returned no logs for task [%s]", 
                taskId.getOriginalTaskId());
     }
     
