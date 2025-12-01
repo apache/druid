@@ -17,22 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.server.initialization.jetty;
+package org.apache.druid.server.metrics;
 
-import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.realtime.ChatHandlerResource;
-
-import javax.annotation.Nullable;
-
-public class TaskIdResponseHeaderFilterHolder extends ResponseHeaderFilterHolder
+public class TestTaskHolder implements TaskHolder
 {
-  public TaskIdResponseHeaderFilterHolder(String path, @Nullable String taskId)
+  private final String dataSource;
+  private final String taskId;
+
+  public TestTaskHolder(final String dataSource, final String taskId)
   {
-    super(path,
-          taskId == null
-          ? ImmutableMap.of()
-          : ImmutableMap.of(ChatHandlerResource.TASK_ID_HEADER, StringUtils.urlEncode(taskId))
-    );
+    this.dataSource = dataSource;
+    this.taskId = taskId;
+  }
+
+  @Override
+  public String getDataSource()
+  {
+    return dataSource;
+  }
+
+  @Override
+  public String getTaskId()
+  {
+    return taskId;
   }
 }

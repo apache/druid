@@ -1240,6 +1240,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     private final String dataSource;
     private final SegmentCacheManagerFactory segmentCacheManagerFactory;
 
+    @Nullable
+    private String id;
     private CompactionIOConfig ioConfig;
     @Nullable
     private DimensionsSpec dimensionsSpec;
@@ -1266,6 +1268,12 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     {
       this.dataSource = dataSource;
       this.segmentCacheManagerFactory = segmentCacheManagerFactory;
+    }
+
+    public Builder id(String id)
+    {
+      this.id = id;
+      return this;
     }
 
     public Builder interval(Interval interval)
@@ -1353,7 +1361,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     public CompactionTask build()
     {
       return new CompactionTask(
-          null,
+          id,
           null,
           dataSource,
           null,

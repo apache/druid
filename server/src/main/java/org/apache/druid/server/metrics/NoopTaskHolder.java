@@ -17,25 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.guice.annotations;
+package org.apache.druid.server.metrics;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import javax.annotation.Nullable;
 
 /**
- * An annotation to exclude specific node types that a {@link com.google.inject.Module} can be loaded on.
- * The {@link #roles()} should be the {@link org.apache.druid.discovery.NodeRole#jsonName}. If both {@link ExcludeScope}
- * and {@link LoadScope} are set, {@link ExcludeScope} takes precedence.
- * <p>
- * A module not decorated with this annotation or {@link LoadScope} will be loaded on every node role.
+ * A TaskHolder implementation for all servers that are not {@code CliPeon}.
  *
- * @see LoadScope for specifying the exact set of node roles to load on
+ * <p>This holder does not provide task information and will return null from
+ * all its methods.</p>
  */
-@Target({ElementType.TYPE})
-@Retention(RetentionPolicy.RUNTIME)
-public @interface ExcludeScope
+public class NoopTaskHolder implements TaskHolder
 {
-  String[] roles();
+  @Nullable
+  @Override
+  public String getDataSource()
+  {
+    return null;
+  }
+
+  @Nullable
+  @Override
+  public String getTaskId()
+  {
+    return null;
+  }
 }
