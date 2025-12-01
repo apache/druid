@@ -71,7 +71,7 @@ public class BatchIndexingJob
   }
 
   /**
-   * @return true if this is an MSQ job.
+   * @return true if this is an MSQ SQL job.
    */
   public boolean isMsq()
   {

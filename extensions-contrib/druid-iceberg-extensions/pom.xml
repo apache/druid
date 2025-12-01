@@ -43,7 +43,6 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
-      <version>${hadoop.compile.version}</version>
       <scope>compile</scope>
       <exclusions>
         <exclusion>
@@ -618,7 +617,6 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-mapreduce-client-core</artifactId>
       <scope>runtime</scope>
-      <version>${hadoop.compile.version}</version>
       <exclusions>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>

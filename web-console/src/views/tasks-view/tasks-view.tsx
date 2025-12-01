@@ -37,7 +37,7 @@ import {
   ViewControlBar,
 } from '../../components';
 import { AlertDialog, AsyncActionDialog, SpecDialog, TaskTableActionDialog } from '../../dialogs';
-import type { QueryWithContext } from '../../druid-models';
+import type { ConsoleViewId, QueryWithContext } from '../../druid-models';
 import {
   getConsoleViewIcon,
   TASK_CANCELED_ERROR_MESSAGES,
@@ -45,9 +45,6 @@ import {
 } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import {
-  booleanCustomTableFilter,
-  combineModeAndNeedle,
-  parseFilterModeAndNeedle,
   SMALL_TABLE_PAGE_SIZE,
   SMALL_TABLE_PAGE_SIZE_OPTIONS,
   suggestibleFilterInput,
@@ -68,6 +65,7 @@ import {
   QueryState,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
+import { TableFilter, TableFilters } from '../../utils/table-filters';
 import { ExecutionDetailsDialog } from '../workbench-view/execution-details-dialog/execution-details-dialog';
 
 import './tasks-view.scss';
@@ -99,10 +97,10 @@ interface TaskQueryResultRow {
 }
 
 export interface TasksViewProps {
-  filters: Filter[];
-  onFiltersChange(filters: Filter[]): void;
+  filters: TableFilters;
+  onFiltersChange(filters: TableFilters): void;
   openTaskDialog: boolean | undefined;
-  goToDatasource(datasource: string): void;
+  goToView(tab: ConsoleViewId, filters?: TableFilters): void;
   goToQuery(queryWithContext: QueryWithContext): void;
   goToClassicBatchDataLoader(taskId?: string): void;
   capabilities: Capabilities;
@@ -260,7 +258,7 @@ ORDER BY
     type: string,
     fromTable?: boolean,
   ): BasicAction[] {
-    const { goToDatasource, goToClassicBatchDataLoader } = this.props;
+    const { goToView, goToClassicBatchDataLoader } = this.props;
 
     const actions: BasicAction[] = [];
     if (fromTable) {
@@ -282,7 +280,7 @@ ORDER BY
       actions.push({
         icon: IconNames.MULTI_SELECT,
         title: 'Go to datasource',
-        onAction: () => goToDatasource(datasource),
+        onAction: () => goToView('datasources', TableFilters.eq({ datasource })),
       });
     }
     if (oneOf(type, 'index', 'index_parallel')) {
@@ -385,8 +383,8 @@ ORDER BY
         loading={tasksState.loading}
         noDataText={tasksState.isEmpty() ? 'No tasks' : tasksState.getErrorMessage() || ''}
         filterable
-        filtered={filters}
-        onFilteredChange={onFiltersChange}
+        filtered={filters.toFilters()}
+        onFilteredChange={filters => onFiltersChange(TableFilters.fromFilters(filters))}
         defaultSorted={[{ id: 'status', desc: true }]}
         pivotBy={groupTasksBy ? [groupTasksBy] : []}
         defaultPageSize={SMALL_TABLE_PAGE_SIZE}
@@ -504,6 +502,7 @@ ORDER BY
           {
             Header: 'Created time',
             accessor: 'created_time',
+            headerClassName: 'enable-comparisons',
             width: 220,
             Cell: this.renderTaskFilterableCell(
               'created_time',
@@ -521,15 +520,18 @@ ORDER BY
             Aggregated: () => '',
             show: visibleColumns.shown('Created time'),
             filterMethod: (filter: Filter, row: TaskQueryResultRow) => {
-              const modeAndNeedle = parseFilterModeAndNeedle(filter);
-              if (!modeAndNeedle) return true;
+              const tableFilter = TableFilter.fromFilter(filter);
               const parsedRowDate = formatDate(row.created_time);
-              if (modeAndNeedle.mode === '~') {
-                return booleanCustomTableFilter(filter, parsedRowDate);
+              if (tableFilter.mode === '~') {
+                return tableFilter.matches(parsedRowDate);
               }
-              const parsedFilterDate = formatDate(modeAndNeedle.needle);
-              filter.value = combineModeAndNeedle(modeAndNeedle.mode, parsedFilterDate);
-              return booleanCustomTableFilter(filter, parsedRowDate);
+              const parsedFilterDate = formatDate(tableFilter.value);
+              const updatedFilter = new TableFilter(
+                tableFilter.key,
+                tableFilter.mode,
+                parsedFilterDate,
+              );
+              return updatedFilter.matches(parsedRowDate);
             },
           },
           {
@@ -714,7 +716,7 @@ ORDER BY
           <ExecutionDetailsDialog
             id={executionDialogOpen}
             goToTask={taskId => {
-              onFiltersChange([{ id: 'task_id', value: `=${taskId}` }]);
+              onFiltersChange(TableFilters.eq({ task_id: taskId }));
               this.setState({ executionDialogOpen: undefined });
             }}
             onClose={() => this.setState({ executionDialogOpen: undefined })}
