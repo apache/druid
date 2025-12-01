@@ -1,14 +1,14 @@
-# testExactTopNOnInnerJoinWithLimit case-crc:2128ebbe
+# testExactTopNOnInnerJoinWithLimit case-crc:b5816ff1
 # quidem testcase reason: EQUIV_PLAN
 !set debug true
 !set defaultTimeout 300000
 !set maxScatterGatherBytes 9223372036854775807
+!set minTopNThreshold 1
 !set plannerStrategy DECOUPLED
 !set sqlCurrentTimestamp 2000-01-01T00:00:00Z
 !set sqlQueryId dummy
 !set useApproximateTopN false
 !set useLexicographicTopN true
-!set minTopNThreshold 1
 !set outputformat mysql
 !use druidtest:///
 select f1."dim4", sum("m1") from numfoo f1 inner join (

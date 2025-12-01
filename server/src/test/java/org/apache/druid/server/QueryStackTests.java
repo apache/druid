@@ -286,6 +286,7 @@ public class QueryStackTests
    * @deprecated The minTopNThreshold parameter is no longer used. Use query context to set minTopNThreshold.
    */
   @Deprecated
+  @SuppressWarnings("unused")
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
       final Closer closer,
       final Integer minTopNThreshold
@@ -343,6 +344,7 @@ public class QueryStackTests
    * @deprecated The minTopNThreshold parameter is no longer used. Use query context to set minTopNThreshold.
    */
   @Deprecated
+  @SuppressWarnings("unused")
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
       final Closer closer,
       final DruidProcessingConfig processingConfig,
@@ -380,6 +382,7 @@ public class QueryStackTests
    * @deprecated The minTopNThreshold parameter is no longer used. Use query context to set minTopNThreshold.
    */
   @Deprecated
+  @SuppressWarnings("unused")
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
       final DruidProcessingConfig processingConfig,
       final Integer minTopNThreshold,
