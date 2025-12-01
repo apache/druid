@@ -151,7 +151,31 @@ or (failures):
 |-----------|--------|---------------------|
 | **Overlord** | `druid-kubernetes-overlord-extensions-30.0.0.jar` | ✅ YES |
 | **Overlord** | `druid-indexing-service-30.0.0.jar` | ✅ YES |
+| **MiddleManagers** | ANY JARs | ❌ **NO - DO NOT TOUCH** |
 | **Pods** | Docker image | ❌ NO (already have it) |
+
+### 🛡️ **CRITICAL: MiddleManager Safety**
+
+**✅ ZERO RISK TO MIDDLEMANAGERS**
+
+All changes are **100% safe** for static MiddleManagers running production workloads.
+
+**Why:**
+1. **`SwitchingTaskLogStreamer`** - NOT instantiated on MMs (only on Overlord)
+2. **`OverlordResource`** - NOT registered on MMs (only `/druid/worker/v1/*` exposed)
+3. **`KubernetesTaskRunner`** - K8s extension NOT loaded on MMs
+
+**Proof:** See `MIDDLEMANAGER_SAFETY_ANALYSIS.md` for complete evidence.
+
+**What MiddleManagers use instead:**
+- `ForkingTaskRunner` (separate log handling)
+- Different API namespace (`/druid/worker/v1/*`)
+- No Guice bindings for our changed classes
+
+**Deployment Rule:**
+- ✅ Deploy to **Overlord ONLY**
+- ❌ **DO NOT** deploy to MiddleManagers
+- ❌ **DO NOT** restart MiddleManagers
 
 **Why pods don't need update:**
 - Pods already expose the `/liveReports` endpoint via `ControllerChatHandler`
