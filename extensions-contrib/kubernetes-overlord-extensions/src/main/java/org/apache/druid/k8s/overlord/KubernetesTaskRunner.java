@@ -289,37 +289,64 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Optional<InputStream> streamTaskReports(String taskid) throws IOException
   {
+    log.info("📊 [REPORTS] API request to stream live reports for task [%s]", taskid);
+    
     final KubernetesWorkItem workItem = tasks.get(taskid);
     if (workItem == null) {
+      log.warn("⚠️  [REPORTS] No work item found for task [%s] - task may not exist or has not been registered", taskid);
+      log.info("📊 [REPORTS] Returning Optional.absent() - SwitchingTaskLogStreamer will try S3 fallback", taskid);
       return Optional.absent();
     }
+    
+    log.info("📊 [REPORTS] Work item found for task [%s], retrieving task location", taskid);
 
     final TaskLocation taskLocation = workItem.getLocation();
 
     if (TaskLocation.unknown().equals(taskLocation)) {
-      // No location known for this task. It may have not been assigned one yet.
+      log.warn("⚠️  [REPORTS] Task location unknown for task [%s] - pod may not be running yet", taskid);
+      log.info("📊 [REPORTS] Returning Optional.absent() - SwitchingTaskLogStreamer will try S3 fallback");
       return Optional.absent();
     }
+
+    log.info("📊 [REPORTS] Task location for [%s]: host=%s, port=%d, tlsPort=%d", 
+             taskid, taskLocation.getHost(), taskLocation.getPort(), taskLocation.getTlsPort());
 
     final URL url = TaskRunnerUtils.makeTaskLocationURL(
         taskLocation,
         "/druid/worker/v1/chat/%s/liveReports",
         taskid
     );
+    
+    log.info("📊 [REPORTS] Constructed URL for task [%s]: %s", taskid, url);
 
     try {
-      return Optional.of(httpClient.go(
+      log.info("📊 [REPORTS] Sending HTTP GET request to pod for task [%s]...", taskid);
+      InputStream stream = httpClient.go(
           new Request(HttpMethod.GET, url),
           new InputStreamResponseHandler()
-      ).get());
+      ).get();
+      log.info("✅ [REPORTS] Successfully retrieved live reports from pod for task [%s]", taskid);
+      return Optional.of(stream);
     }
     catch (InterruptedException e) {
-      throw new RuntimeException(e);
+      log.error(e, "❌ [REPORTS] HTTP request interrupted for task [%s]", taskid);
+      Thread.currentThread().interrupt();
+      throw new IOException("HTTP request interrupted while fetching live reports for task: " + taskid, e);
     }
     catch (ExecutionException e) {
-      // Unwrap if possible
-      Throwables.propagateIfPossible(e.getCause(), IOException.class);
-      throw new RuntimeException(e);
+      final Throwable cause = e.getCause();
+      log.error(e, "❌ [REPORTS] HTTP request failed for task [%s] - URL: %s, Cause: %s", 
+                taskid, url, cause != null ? cause.getMessage() : "unknown");
+      
+      // CRITICAL: Throw IOException (not RuntimeException) to allow SwitchingTaskLogStreamer 
+      // to fall back to S3 deep storage for completed tasks
+      if (cause instanceof IOException) {
+        log.info("📊 [REPORTS] Throwing IOException - SwitchingTaskLogStreamer will try S3 fallback");
+        throw (IOException) cause;
+      } else {
+        log.info("📊 [REPORTS] Wrapping exception as IOException - SwitchingTaskLogStreamer will try S3 fallback");
+        throw new IOException("Failed to fetch live reports from pod for task: " + taskid, cause != null ? cause : e);
+      }
     }
   }
 

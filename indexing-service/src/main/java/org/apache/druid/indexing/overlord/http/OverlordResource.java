@@ -1081,11 +1081,15 @@ public class OverlordResource
       @PathParam("taskid") final String taskid
   )
   {
+    log.info("🌐 [API] GET /task/%s/reports - Request received", taskid);
     try {
+      log.info("🌐 [API] Delegating to taskLogStreamer.streamTaskReports() for task [%s]", taskid);
       final Optional<InputStream> stream = taskLogStreamer.streamTaskReports(taskid);
       if (stream.isPresent()) {
+        log.info("✅ [API] Successfully retrieved task reports for task [%s], returning 200 OK", taskid);
         return Response.ok(stream.get()).build();
       } else {
+        log.warn("⚠️  [API] No task reports found for task [%s], returning 404 NOT_FOUND", taskid);
         return Response.status(Response.Status.NOT_FOUND)
                        .entity(
                            "No task reports were found for this task. "
@@ -1095,7 +1099,7 @@ public class OverlordResource
       }
     }
     catch (Exception e) {
-      log.warn(e, "Failed to stream task reports for task %s", taskid);
+      log.warn(e, "❌ [API] Failed to stream task reports for task [%s], returning 500 INTERNAL_SERVER_ERROR", taskid);
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
     }
   }
