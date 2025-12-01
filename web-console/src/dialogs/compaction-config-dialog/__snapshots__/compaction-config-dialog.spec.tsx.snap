@@ -360,7 +360,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
               For more information refer to the
                
               <Memo(ExternalLink)
-                href="https://druid.apache.org/docs/35.0.0/ingestion/concurrent-append-replace"
+                href="https://druid.apache.org/docs/35.0.1/ingestion/concurrent-append-replace"
               >
                 documentation
               </Memo(ExternalLink)>
@@ -770,7 +770,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
               For more information refer to the
                
               <Memo(ExternalLink)
-                href="https://druid.apache.org/docs/35.0.0/ingestion/concurrent-append-replace"
+                href="https://druid.apache.org/docs/35.0.1/ingestion/concurrent-append-replace"
               >
                 documentation
               </Memo(ExternalLink)>
@@ -1180,7 +1180,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
               For more information refer to the
                
               <Memo(ExternalLink)
-                href="https://druid.apache.org/docs/35.0.0/ingestion/concurrent-append-replace"
+                href="https://druid.apache.org/docs/35.0.1/ingestion/concurrent-append-replace"
               >
                 documentation
               </Memo(ExternalLink)>
@@ -1590,7 +1590,7 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
               For more information refer to the
                
               <Memo(ExternalLink)
-                href="https://druid.apache.org/docs/35.0.0/ingestion/concurrent-append-replace"
+                href="https://druid.apache.org/docs/35.0.1/ingestion/concurrent-append-replace"
               >
                 documentation
               </Memo(ExternalLink)>
