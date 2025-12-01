@@ -5550,7 +5550,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Vadim Ogievetsky
-version: 1.2.1
+version: 1.2.3
 
 ---
 
@@ -5848,7 +5848,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 1.2.1
+version: 1.2.2
 
 ---
 
