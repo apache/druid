@@ -59,26 +59,6 @@ public class QueryErrorTest extends QueryTestBase
   protected String tableName;
 
   @Override
-  protected EmbeddedDruidCluster createCluster()
-  {
-    overlord.addProperty("druid.manager.segments.pollDuration", "PT0.1s");
-    indexer.setServerMemory(600_000_000)
-           .addProperty("druid.worker.capacity", "4")
-           .addProperty("druid.processing.numThreads", "2")
-           .addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
-
-    return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
-                               .useLatchableEmitter()
-                               .addServer(overlord)
-                               .addServer(coordinator)
-                               .addServer(broker)
-                               .addServer(router)
-                               .addServer(indexer)
-                               .addServer(historical)
-                               .addExtension(ServerManagerForQueryErrorTestModule.class);
-  }
-
-  @Override
   protected void beforeAll()
   {
     tableName = EmbeddedClusterApis.createTestDatasourceName();

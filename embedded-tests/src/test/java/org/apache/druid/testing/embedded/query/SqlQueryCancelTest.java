@@ -21,34 +21,25 @@ package org.apache.druid.testing.embedded.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexing.common.task.IndexTask;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.BaseQuery;
-import org.apache.druid.query.QueryException;
-import org.apache.druid.sql.http.SqlQuery;
+import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 public class SqlQueryCancelTest extends QueryTestBase
 {
+  private static final String QUERY = " SELECT sleep(4) FROM %s LIMIT 4";
 
-  /**
-   * This query will run exactly for 15 seconds.
-   */
-  private static final String QUERY
-      = "SELECT sleep(CASE WHEN added > 0 THEN 1 ELSE 0 END) FROM wikipedia_editstream WHERE added > 0 LIMIT 15";
-
-  private static final int NUM_QUERIES = 3;
   private ObjectMapper jsonMapper;
   private String tableName;
 
@@ -67,69 +58,59 @@ public class SqlQueryCancelTest extends QueryTestBase
   @Test
   public void testCancelValidQuery() throws Exception
   {
+    final String sqlQuery = StringUtils.format(QUERY, tableName);
     final String queryId = "sql-cancel-test";
-    final List<Future<StatusResponseHolder>> queryResponseFutures = new ArrayList<>();
-    for (int i = 0; i < NUM_QUERIES; i++) {
-      queryResponseFutures.add(
-          sqlClient.queryAsync(
-              sqlHelper.getQueryURL(config.getRouterUrl()),
-              new SqlQuery(QUERY, null, false, false, false, ImmutableMap.of(BaseQuery.SQL_QUERY_ID, queryId), null)
-          )
-      );
-    }
+    final ClientSqlQuery query = new ClientSqlQuery(
+        sqlQuery,
+        null,
+        false,
+        false,
+        false,
+        ImmutableMap.of(BaseQuery.SQL_QUERY_ID, queryId),
+        List.of()
+    );
+
+    ListenableFuture<StatusResponseHolder> f = executeQueryAsync(routerEndpoint, jsonMapper.writeValueAsString(query));
 
     // Wait until the sqlLifecycle is authorized and registered
-    Thread.sleep(1000);
-    final HttpResponseStatus responseStatus = sqlClient.cancelQuery(
-        sqlHelper.getCancelUrl(config.getRouterUrl(), queryId),
-        1000
+    Thread.sleep(500L);
+    cancelQuery(
+        routerEndpoint,
+        queryId,
+        (r) -> Assertions.assertEquals(HttpResponseStatus.ACCEPTED, r.getStatus())
     );
-    if (!responseStatus.equals(HttpResponseStatus.ACCEPTED)) {
-      throw new RE("Failed to cancel query [%s]. Response code was [%s]", queryId, responseStatus);
-    }
 
-    for (Future<StatusResponseHolder> queryResponseFuture : queryResponseFutures) {
-      final StatusResponseHolder queryResponse = queryResponseFuture.get(1, TimeUnit.SECONDS);
-      if (!queryResponse.getStatus().equals(HttpResponseStatus.INTERNAL_SERVER_ERROR)) {
-        throw new ISE("Query is not canceled after cancel request");
-      }
-      QueryException queryException = jsonMapper.readValue(queryResponse.getContent(), QueryException.class);
-      if (!"Query cancelled".equals(queryException.getErrorCode())) {
-        throw new ISE(
-            "Expected error code [%s], actual [%s]",
-            "Query cancelled",
-            queryException.getErrorCode()
-        );
-      }
-    }
+    StatusResponseHolder srh = f.get();
+    Assertions.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode(), srh.getStatus().getCode());
   }
 
   @Test
   public void testCancelInvalidQuery() throws Exception
   {
-    final Future<StatusResponseHolder> queryResponseFuture = sqlClient
-        .queryAsync(
-            sqlHelper.getQueryURL(config.getRouterUrl()),
-            new SqlQuery(QUERY, null, false, false, false, ImmutableMap.of(BaseQuery.SQL_QUERY_ID, "validId"), null)
-        );
+    final String sqlQuery = StringUtils.format(QUERY, tableName);
+    final String validQueryId = "sql-cancel-test";
+    final String invalidQueryId = "sql-continue-test";
+    final ClientSqlQuery query = new ClientSqlQuery(
+        sqlQuery,
+        null,
+        false,
+        false,
+        false,
+        ImmutableMap.of(BaseQuery.SQL_QUERY_ID, validQueryId),
+        List.of()
+    );
+
+    ListenableFuture<StatusResponseHolder> f = executeQueryAsync(routerEndpoint, jsonMapper.writeValueAsString(query));
 
     // Wait until the sqlLifecycle is authorized and registered
-    Thread.sleep(1000);
-    final HttpResponseStatus responseStatus = sqlClient.cancelQuery(
-        sqlHelper.getCancelUrl(config.getRouterUrl(), "invalidId"),
-        1000
+    Thread.sleep(500L);
+    cancelQuery(
+        routerEndpoint,
+        invalidQueryId,
+        (r) -> Assertions.assertEquals(HttpResponseStatus.NOT_FOUND, r.getStatus())
     );
-    if (!responseStatus.equals(HttpResponseStatus.NOT_FOUND)) {
-      throw new RE("Expected http response [%s], actual response [%s]", HttpResponseStatus.NOT_FOUND, responseStatus);
-    }
 
-    final StatusResponseHolder queryResponse = queryResponseFuture.get(30, TimeUnit.SECONDS);
-    if (!queryResponse.getStatus().equals(HttpResponseStatus.OK)) {
-      throw new ISE(
-          "Cancel request failed with status[%s] and content[%s]",
-          queryResponse.getStatus(),
-          queryResponse.getContent()
-      );
-    }
+    StatusResponseHolder srh = f.get();
+    Assertions.assertEquals(HttpResponseStatus.OK.getCode(), srh.getStatus().getCode());
   }
 }

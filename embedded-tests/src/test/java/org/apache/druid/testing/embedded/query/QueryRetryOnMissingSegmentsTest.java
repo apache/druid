@@ -73,27 +73,6 @@ public class QueryRetryOnMissingSegmentsTest extends QueryTestBase
   private String tableName;
 
   @Override
-  protected EmbeddedDruidCluster createCluster()
-  {
-    overlord.addProperty("druid.manager.segments.pollDuration", "PT0.1s");
-    coordinator.addProperty("druid.manager.segments.useIncrementalCache", "always");
-    indexer.setServerMemory(400_000_000)
-           .addProperty("druid.worker.capacity", "4")
-           .addProperty("druid.processing.numThreads", "2")
-           .addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
-
-    return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
-                               .useLatchableEmitter()
-                               .addServer(overlord)
-                               .addServer(coordinator)
-                               .addServer(broker)
-                               .addServer(router)
-                               .addServer(indexer)
-                               .addServer(historical)
-                               .addExtension(ServerManagerForQueryErrorTestModule.class);
-  }
-
-  @Override
   public void beforeAll()
   {
     jsonMapper = overlord.bindings().jsonMapper();

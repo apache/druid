@@ -19,6 +19,8 @@
 
 package org.apache.druid.testing.embedded.query;
 
+import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.guice.SleepModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
@@ -36,6 +38,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 
+import javax.ws.rs.core.MediaType;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -46,7 +49,7 @@ import java.util.function.Consumer;
 
 public abstract class QueryTestBase extends EmbeddedClusterTestBase
 {
-  protected static final String SQL_QUERY_ROUTE = "%s/druid/v2/sql/";
+  protected static final String SQL_QUERY_ROUTE = "%s/druid/v2/sql";
   public static List<Boolean> SHOULD_USE_BROKER_TO_QUERY = List.of(true, false);
 
   protected final EmbeddedBroker broker = new EmbeddedBroker();
@@ -85,7 +88,9 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
                                .addServer(broker)
                                .addServer(router)
                                .addServer(indexer)
-                               .addServer(historical);
+                               .addServer(historical)
+                               .addExtension(ServerManagerForQueryErrorTestModule.class)
+                               .addExtension(SleepModule.class);
   }
 
   @BeforeAll
@@ -103,9 +108,28 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
   }
 
   /**
+   * Execute an async SQL query against the given endpoint via the HTTP client.
+   */
+  protected ListenableFuture<StatusResponseHolder> executeQueryAsync(String endpoint, String query)
+  {
+    URL url;
+    try {
+      url = new URL(endpoint);
+    }
+    catch (MalformedURLException e) {
+      throw new AssertionError("Malformed URL");
+    }
+
+    Request request = new Request(HttpMethod.POST, url);
+    request.addHeader("Content-Type", MediaType.APPLICATION_JSON);
+    request.setContent(query.getBytes(StandardCharsets.UTF_8));
+    return httpClientRef.go(request, StatusResponseHandler.getInstance());
+  }
+
+  /**
    * Execute a SQL query against the given endpoint via the HTTP client.
    */
-  protected void executeQuery(
+  protected void executeQueryWithContentType(
       String endpoint,
       String contentType,
       String query,
@@ -154,27 +178,17 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
   /**
    * Execute a SQL query against the given endpoint via the HTTP client.
    */
-  protected void cancelQuery(
-      String endpoint,
-      String queryId,
-      Consumer<Request> onRequest,
-      BiConsumer<Integer, String> onResponse
-  )
+  protected void cancelQuery(String endpoint, String queryId, Consumer<StatusResponseHolder> onResponse)
   {
     URL url;
     try {
-      url = new URL(endpoint);
+      url = new URL(StringUtils.format("%s/%s", endpoint, queryId));
     }
     catch (MalformedURLException e) {
       throw new AssertionError("Malformed URL");
     }
 
     Request request = new Request(HttpMethod.DELETE, url);
-
-    if (onRequest != null) {
-      onRequest.accept(request);
-    }
-
     StatusResponseHolder response;
     try {
       response = httpClientRef.go(request, StatusResponseHandler.getInstance())
@@ -185,10 +199,6 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
     }
 
     Assertions.assertNotNull(response);
-
-    onResponse.accept(
-        response.getStatus().getCode(),
-        response.getContent().trim()
-    );
+    onResponse.accept(response);
   }
 }
