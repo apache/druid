@@ -34,8 +34,6 @@ import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.FieldSource;
 
 import java.util.HashMap;
 import java.util.List;
@@ -58,7 +56,6 @@ import static org.apache.druid.testing.embedded.query.ServerManagerForQueryError
 public class QueryErrorTest extends QueryTestBase
 {
   // Introduce onAnyRouter(...) and use it; add TLS tests in the follow-up patches
-  protected static List<Boolean> SHOULD_USE_SQL_ENGINE = List.of(true, false);
   protected String tableName;
 
   @Override
@@ -123,15 +120,25 @@ public class QueryErrorTest extends QueryTestBase
     );
   }
 
-  @ParameterizedTest
-  @FieldSource("SHOULD_USE_SQL_ENGINE")
-  public void testQueryTimeout(boolean shouldUseSqlEngine)
+  @Test
+  public void testQueryTimeout()
   {
     MatcherAssert.assertThat(
         Assertions.assertThrows(
             Exception.class,
             () -> cluster.callApi().onAnyBroker(
-                b -> queryFuture(b, shouldUseSqlEngine, QUERY_TIMEOUT_TEST_CONTEXT_KEY)
+                b -> sqlQueryFuture(b, QUERY_TIMEOUT_TEST_CONTEXT_KEY)
+            )
+        ),
+        ExceptionMatcher.of(HttpResponseException.class)
+                        .expectMessageContains("504")
+    );
+
+    MatcherAssert.assertThat(
+        Assertions.assertThrows(
+            Exception.class,
+            () -> cluster.callApi().onAnyBroker(
+                b -> nativeQueryFuture(b, QUERY_TIMEOUT_TEST_CONTEXT_KEY)
             )
         ),
         ExceptionMatcher.of(HttpResponseException.class)
@@ -139,19 +146,25 @@ public class QueryErrorTest extends QueryTestBase
     );
   }
 
-  @ParameterizedTest
-  @FieldSource("SHOULD_USE_SQL_ENGINE")
-  public void testQueryCapacityExceeded(boolean shouldUseSqlEngine)
+  @Test
+  public void testQueryCapacityExceeded()
   {
     MatcherAssert.assertThat(
         Assertions.assertThrows(
             Exception.class,
             () -> cluster.callApi().onAnyBroker(
-                b -> queryFuture(
-                    b,
-                    shouldUseSqlEngine,
-                    QUERY_CAPACITY_EXCEEDED_TEST_CONTEXT_KEY
-                )
+                b -> sqlQueryFuture(b, QUERY_CAPACITY_EXCEEDED_TEST_CONTEXT_KEY)
+            )
+        ),
+        ExceptionMatcher.of(HttpResponseException.class)
+                        .expectMessageContains("429")
+    );
+
+    MatcherAssert.assertThat(
+        Assertions.assertThrows(
+            Exception.class,
+            () -> cluster.callApi().onAnyBroker(
+                b -> nativeQueryFuture(b, QUERY_CAPACITY_EXCEEDED_TEST_CONTEXT_KEY)
             )
         ),
         ExceptionMatcher.of(HttpResponseException.class)
@@ -159,19 +172,25 @@ public class QueryErrorTest extends QueryTestBase
     );
   }
 
-  @ParameterizedTest
-  @FieldSource("SHOULD_USE_SQL_ENGINE")
-  public void testQueryUnsupported(boolean shouldUseSqlEngine)
+  @Test
+  public void testQueryUnsupported()
   {
     MatcherAssert.assertThat(
         Assertions.assertThrows(
             Exception.class,
             () -> cluster.callApi().onAnyBroker(
-                b -> queryFuture(
-                    b,
-                    shouldUseSqlEngine,
-                    QUERY_UNSUPPORTED_TEST_CONTEXT_KEY
-                )
+                b -> sqlQueryFuture(b, QUERY_UNSUPPORTED_TEST_CONTEXT_KEY)
+            )
+        ),
+        ExceptionMatcher.of(HttpResponseException.class)
+                        .expectMessageContains("501")
+    );
+
+    MatcherAssert.assertThat(
+        Assertions.assertThrows(
+            Exception.class,
+            () -> cluster.callApi().onAnyBroker(
+                b -> nativeQueryFuture(b, QUERY_UNSUPPORTED_TEST_CONTEXT_KEY)
             )
         ),
         ExceptionMatcher.of(HttpResponseException.class)
@@ -179,19 +198,27 @@ public class QueryErrorTest extends QueryTestBase
     );
   }
 
-  @ParameterizedTest
-  @FieldSource("SHOULD_USE_SQL_ENGINE")
-  public void testQueryResourceLimitExceeded(boolean shouldUseSqlEngine)
+  @Test
+  public void testQueryResourceLimitExceeded()
   {
+    // SQL
     MatcherAssert.assertThat(
         Assertions.assertThrows(
             Exception.class,
             () -> cluster.callApi().onAnyBroker(
-                b -> queryFuture(
-                    b,
-                    shouldUseSqlEngine,
-                    RESOURCE_LIMIT_EXCEEDED_TEST_CONTEXT_KEY
-                )
+                b -> sqlQueryFuture(b, RESOURCE_LIMIT_EXCEEDED_TEST_CONTEXT_KEY)
+            )
+        ),
+        ExceptionMatcher.of(HttpResponseException.class)
+                        .expectMessageContains("400")
+    );
+
+    // Native
+    MatcherAssert.assertThat(
+        Assertions.assertThrows(
+            Exception.class,
+            () -> cluster.callApi().onAnyBroker(
+                b -> nativeQueryFuture(b, RESOURCE_LIMIT_EXCEEDED_TEST_CONTEXT_KEY)
             )
         ),
         ExceptionMatcher.of(HttpResponseException.class)
@@ -199,15 +226,25 @@ public class QueryErrorTest extends QueryTestBase
     );
   }
 
-  @ParameterizedTest
-  @FieldSource("SHOULD_USE_SQL_ENGINE")
-  public void testQueryFailure(boolean shouldUseSqlEngine)
+  @Test
+  public void testQueryFailure()
   {
     MatcherAssert.assertThat(
         Assertions.assertThrows(
             Exception.class,
             () -> cluster.callApi().onAnyBroker(
-                b -> queryFuture(b, shouldUseSqlEngine, QUERY_FAILURE_TEST_CONTEXT_KEY)
+                b -> sqlQueryFuture(b, QUERY_FAILURE_TEST_CONTEXT_KEY)
+            )
+        ),
+        ExceptionMatcher.of(HttpResponseException.class)
+                        .expectMessageContains("500")
+    );
+
+    MatcherAssert.assertThat(
+        Assertions.assertThrows(
+            Exception.class,
+            () -> cluster.callApi().onAnyBroker(
+                b -> nativeQueryFuture(b, QUERY_FAILURE_TEST_CONTEXT_KEY)
             )
         ),
         ExceptionMatcher.of(HttpResponseException.class)
@@ -225,14 +262,11 @@ public class QueryErrorTest extends QueryTestBase
   }
 
   /**
-   * Set up a query future based on whether to use the SQL engine or native engine.
-   *
-   * @param shouldUseSqlEngine uses SQL engine if true, native engine otherwise.
+   * Set up a SQL query future for the test.
    */
-  private ListenableFuture<String> queryFuture(BrokerClient b, boolean shouldUseSqlEngine, String contextKey)
+  private ListenableFuture<String> sqlQueryFuture(BrokerClient b, String contextKey)
   {
-    return shouldUseSqlEngine
-           ? b.submitSqlQuery(new ClientSqlQuery(
+    return b.submitSqlQuery(new ClientSqlQuery(
         StringUtils.format("SELECT * FROM %s LIMIT 1", tableName),
         null,
         false,
@@ -240,12 +274,20 @@ public class QueryErrorTest extends QueryTestBase
         false,
         buildTestContext(contextKey),
         List.of()
-    )) : b.submitNativeQuery(new Druids.ScanQueryBuilder()
-                                 .dataSource(tableName)
-                                 .eternityInterval()
-                                 .limit(1)
-                                 .context(buildTestContext(contextKey))
-                                 .build()
+    ));
+  }
+
+  /**
+   * Set up a native query future for the test.
+   */
+  private ListenableFuture<String> nativeQueryFuture(BrokerClient b, String contextKey)
+  {
+    return b.submitNativeQuery(new Druids.ScanQueryBuilder()
+                                   .dataSource(tableName)
+                                   .eternityInterval()
+                                   .limit(1)
+                                   .context(buildTestContext(contextKey))
+                                   .build()
     );
   }
 }
