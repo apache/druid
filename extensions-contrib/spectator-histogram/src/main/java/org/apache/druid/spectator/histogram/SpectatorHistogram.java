@@ -143,7 +143,7 @@ public class SpectatorHistogram extends Number
   // These are accumulated when an entry is added, or when another histogram is merged into this one.
   private long sumOfCounts = 0;
 
-  static int getMaxIntermdiateHistogramSize()
+  public static int getMaxIntermediateHistogramSize()
   {
     return PercentileBuckets.length() * MAX_ENTRY_BYTES;
   }
@@ -276,7 +276,7 @@ public class SpectatorHistogram extends Number
     return Arrays.copyOf(buffer.array(), buffer.position());
   }
 
-  void insert(Number num)
+  public void insert(Number num)
   {
     this.add(PercentileBuckets.indexOf(num.longValue()), 1L);
   }

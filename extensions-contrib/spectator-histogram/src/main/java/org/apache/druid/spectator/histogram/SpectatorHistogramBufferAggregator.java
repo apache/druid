@@ -20,15 +20,11 @@
 package org.apache.druid.spectator.histogram;
 
 import com.google.common.base.Preconditions;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nonnull;
 import java.nio.ByteBuffer;
-import java.util.IdentityHashMap;
 
 /**
  * Aggregator that builds Spectator Histograms over numeric values read from {@link ByteBuffer}
@@ -38,7 +34,7 @@ public class SpectatorHistogramBufferAggregator implements BufferAggregator
 
   @Nonnull
   private final ColumnValueSelector selector;
-  private final IdentityHashMap<ByteBuffer, Int2ObjectMap<SpectatorHistogram>> histogramCache = new IdentityHashMap<>();
+  private final SpectatorHistogramAggregateHelper innerAggregator = new SpectatorHistogramAggregateHelper();
 
   public SpectatorHistogramBufferAggregator(
       final ColumnValueSelector valueSelector
@@ -51,8 +47,7 @@ public class SpectatorHistogramBufferAggregator implements BufferAggregator
   @Override
   public void init(ByteBuffer buffer, int position)
   {
-    SpectatorHistogram emptyCounts = new SpectatorHistogram();
-    addToCache(buffer, position, emptyCounts);
+    innerAggregator.init(buffer, position);
   }
 
   @Override
@@ -62,70 +57,41 @@ public class SpectatorHistogramBufferAggregator implements BufferAggregator
     if (obj == null) {
       return;
     }
-    SpectatorHistogram counts = histogramCache.get(buffer).get(position);
-    if (obj instanceof SpectatorHistogram) {
-      SpectatorHistogram other = (SpectatorHistogram) obj;
-      counts.merge(other);
-    } else if (obj instanceof Number) {
-      counts.insert((Number) obj);
-    } else {
-      throw new IAE(
-          "Expected a number or a long[], but received [%s] of type [%s]",
-          obj,
-          obj.getClass()
-      );
-    }
+    SpectatorHistogram counts = innerAggregator.get(buffer, position);
+    innerAggregator.merge(counts, obj);
   }
 
   @Override
   public Object get(final ByteBuffer buffer, final int position)
   {
-    // histogramCache is an IdentityHashMap where the reference of buffer is used for equality checks.
-    // So the returned object isn't impacted by the changes in the buffer object made by concurrent threads.
-
-    SpectatorHistogram spectatorHistogram = histogramCache.get(buffer).get(position);
-    if (spectatorHistogram.isEmpty()) {
+    SpectatorHistogram histo = innerAggregator.get(buffer, position);
+    if (histo.isEmpty()) {
       return null;
     }
-    return spectatorHistogram;
+    return histo;
   }
 
   @Override
   public float getFloat(final ByteBuffer buffer, final int position)
   {
-    throw new UnsupportedOperationException("Not implemented");
+    return innerAggregator.getFloat(buffer, position);
   }
 
   @Override
   public long getLong(final ByteBuffer buffer, final int position)
   {
-    throw new UnsupportedOperationException("Not implemented");
+    return innerAggregator.getLong(buffer, position);
   }
 
   @Override
   public void close()
   {
-    histogramCache.clear();
+    innerAggregator.close();
   }
 
   @Override
   public void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
   {
-    SpectatorHistogram histogram = histogramCache.get(oldBuffer).get(oldPosition);
-    addToCache(newBuffer, newPosition, histogram);
-    final Int2ObjectMap<SpectatorHistogram> map = histogramCache.get(oldBuffer);
-    map.remove(oldPosition);
-    if (map.isEmpty()) {
-      histogramCache.remove(oldBuffer);
-    }
-  }
-
-  private void addToCache(final ByteBuffer buffer, final int position, final SpectatorHistogram histogram)
-  {
-    Int2ObjectMap<SpectatorHistogram> map = histogramCache.computeIfAbsent(
-        buffer,
-        b -> new Int2ObjectOpenHashMap<>()
-    );
-    map.put(position, histogram);
+    innerAggregator.relocate(oldPosition, newPosition, oldBuffer, newBuffer);
   }
 }
