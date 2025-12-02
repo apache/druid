@@ -17,25 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.guice.annotations;
+package org.apache.druid.server.metrics;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 
 /**
- * An annotation to exclude specific node types that a {@link com.google.inject.Module} can be loaded on.
- * The {@link #roles()} should be the {@link org.apache.druid.discovery.NodeRole#jsonName}. If both {@link ExcludeScope}
- * and {@link LoadScope} are set, {@link ExcludeScope} takes precedence.
- * <p>
- * A module not decorated with this annotation or {@link LoadScope} will be loaded on every node role.
- *
- * @see LoadScope for specifying the exact set of node roles to load on
+ * Provides loading specifications for a task or server.
  */
-@Target({ElementType.TYPE})
-@Retention(RetentionPolicy.RUNTIME)
-public @interface ExcludeScope
+public interface LoadSpecHolder
 {
-  String[] roles();
+  /**
+   * @return the lookup loading specification.
+   */
+  LookupLoadingSpec getLookupLoadingSpec();
+
+  /**
+   * @return the broadcast datasource loading specification.
+   */
+  BroadcastDatasourceLoadingSpec getBroadcastDatasourceLoadingSpec();
 }

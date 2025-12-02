@@ -28,8 +28,8 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Scopes;
-import com.google.inject.name.Names;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.DefaultServerHolderModule;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -92,10 +92,8 @@ public class MetricsModuleTest
           }
         })
     );
-    final DataSourceTaskIdHolder dimensionIdHolder = new DataSourceTaskIdHolder();
-    injector.injectMembers(dimensionIdHolder);
-    Assert.assertNull(dimensionIdHolder.getDataSource());
-    Assert.assertNull(dimensionIdHolder.getTaskId());
+    Assert.assertTrue(injector.getInstance(TaskHolder.class) instanceof NoopTaskHolder);
+    Assert.assertTrue(injector.getInstance(LoadSpecHolder.class) instanceof DefaultLoadSpecHolder);
   }
 
   @Test
@@ -115,17 +113,14 @@ public class MetricsModuleTest
                 Key.get(DruidNode.class, Self.class),
                 new DruidNode("test-inject", null, false, null, null, true, false)
             );
-            binder.bind(Key.get(String.class, Names.named(DataSourceTaskIdHolder.DATA_SOURCE_BINDING)))
-                  .toInstance(dataSource);
-            binder.bind(Key.get(String.class, Names.named(DataSourceTaskIdHolder.TASK_ID_BINDING)))
-                  .toInstance(taskId);
+            binder.bind(TaskHolder.class).toInstance(new TestTaskHolder(dataSource, taskId));
+            binder.bind(LoadSpecHolder.class).to(DefaultLoadSpecHolder.class).in(LazySingleton.class);
           }
         })
     );
-    final DataSourceTaskIdHolder dimensionIdHolder = new DataSourceTaskIdHolder();
-    injector.injectMembers(dimensionIdHolder);
-    Assert.assertEquals(dataSource, dimensionIdHolder.getDataSource());
-    Assert.assertEquals(taskId, dimensionIdHolder.getTaskId());
+    TaskHolder taskHolder = injector.getInstance(TaskHolder.class);
+    Assert.assertEquals(dataSource, taskHolder.getDataSource());
+    Assert.assertEquals(taskId, taskHolder.getTaskId());
   }
 
   @Test
@@ -309,7 +304,8 @@ public class MetricsModuleTest
           binder.bind(Properties.class).toInstance(properties);
         },
         ServerInjectorBuilder.registerNodeRoleModule(nodeRoles),
-        new MetricsModule()
+        new MetricsModule(),
+        new DefaultServerHolderModule()
     );
   }
 
