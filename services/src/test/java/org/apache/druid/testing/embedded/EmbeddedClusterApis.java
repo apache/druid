@@ -294,8 +294,6 @@ public class EmbeddedClusterApis implements EmbeddedResource
     final int numTombstones = (int) segments.stream().filter(DataSegment::isTombstone).count();
     final int numSegments = segments.size() - numTombstones;
 
-    // System.err.println("Segments available: " + segments.size());
-
     if (numSegments > 0) {
       broker.latchableEmitter().waitForEventAggregate(
           event -> event.hasMetricName("segment/schemaCache/refresh/count")
@@ -437,7 +435,11 @@ public class EmbeddedClusterApis implements EmbeddedResource
   public static Map<String, Object> deserializeJsonToMap(String payload)
   {
     try {
-      return TestHelper.JSON_MAPPER.readValue(payload, new TypeReference<>() {});
+      return TestHelper.JSON_MAPPER.readValue(
+          payload, new TypeReference<>()
+          {
+          }
+      );
     }
     catch (Exception e) {
       throw new ISE(e, "Could not deserialize payload[%s]", payload);
