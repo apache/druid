@@ -150,4 +150,45 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
         response.getContent().trim()
     );
   }
+
+  /**
+   * Execute a SQL query against the given endpoint via the HTTP client.
+   */
+  protected void cancelQuery(
+      String endpoint,
+      String queryId,
+      Consumer<Request> onRequest,
+      BiConsumer<Integer, String> onResponse
+  )
+  {
+    URL url;
+    try {
+      url = new URL(endpoint);
+    }
+    catch (MalformedURLException e) {
+      throw new AssertionError("Malformed URL");
+    }
+
+    Request request = new Request(HttpMethod.DELETE, url);
+
+    if (onRequest != null) {
+      onRequest.accept(request);
+    }
+
+    StatusResponseHolder response;
+    try {
+      response = httpClientRef.go(request, StatusResponseHandler.getInstance())
+                              .get();
+    }
+    catch (InterruptedException | ExecutionException e) {
+      throw new AssertionError("Failed to execute a request", e);
+    }
+
+    Assertions.assertNotNull(response);
+
+    onResponse.accept(
+        response.getStatus().getCode(),
+        response.getContent().trim()
+    );
+  }
 }
