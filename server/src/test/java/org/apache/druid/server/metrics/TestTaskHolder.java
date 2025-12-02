@@ -17,28 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.collections;
+package org.apache.druid.server.metrics;
 
-/**
- * NonBlockingPool that cannot allocate objects, {@link #take()} throws {@link UnsupportedOperationException}.
- */
-public final class DummyNonBlockingPool implements NonBlockingPool<Object>
+public class TestTaskHolder implements TaskHolder
 {
-  private static final DummyNonBlockingPool INSTANCE = new DummyNonBlockingPool();
+  private final String dataSource;
+  private final String taskId;
 
-  @SuppressWarnings("unchecked")
-  public static <T> NonBlockingPool<T> instance()
+  public TestTaskHolder(final String dataSource, final String taskId)
   {
-    return (NonBlockingPool<T>) INSTANCE;
-  }
-
-  private DummyNonBlockingPool()
-  {
+    this.dataSource = dataSource;
+    this.taskId = taskId;
   }
 
   @Override
-  public ResourceHolder<Object> take()
+  public String getDataSource()
   {
-    throw new UnsupportedOperationException();
+    return dataSource;
+  }
+
+  @Override
+  public String getTaskId()
+  {
+    return taskId;
   }
 }

@@ -24,23 +24,24 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import com.google.inject.TypeLiteral;
-import com.google.inject.name.Names;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
-import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
+import org.apache.druid.server.metrics.DefaultLoadSpecHolder;
+import org.apache.druid.server.metrics.LoadSpecHolder;
+import org.apache.druid.server.metrics.TaskHolder;
+import org.apache.druid.server.metrics.TestTaskHolder;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 public class LookupListeningAnnouncerConfigTest
 {
@@ -58,14 +59,21 @@ public class LookupListeningAnnouncerConfigTest
                   Key.get(DruidNode.class, Self.class),
                   new DruidNode("test-inject", null, false, null, null, true, false)
               );
-              binder
-                  .bind(Key.get(String.class, Names.named(DataSourceTaskIdHolder.DATA_SOURCE_BINDING)))
-                  .toInstance("some_datasource");
+              binder.bind(TaskHolder.class).toInstance(new TestTaskHolder("some_datasource", "some_taskid"));
+              binder.bind(LoadSpecHolder.class).toInstance(new LoadSpecHolder()
+              {
+                @Override
+                public LookupLoadingSpec getLookupLoadingSpec()
+                {
+                  return LookupLoadingSpec.loadOnly(Set.of("lookupName1", "lookupName2"));
+                }
 
-              final List<String> lookupsToLoad = Arrays.asList("lookupName1", "lookupName2");
-              binder.bind(new TypeLiteral<List<String>>() {})
-                    .annotatedWith(Names.named(DataSourceTaskIdHolder.LOOKUPS_TO_LOAD_FOR_TASK))
-                    .toInstance(lookupsToLoad);
+                @Override
+                public BroadcastDatasourceLoadingSpec getBroadcastDatasourceLoadingSpec()
+                {
+                  return BroadcastDatasourceLoadingSpec.ALL;
+                }
+              });
             }
           },
           new LookupModule()
@@ -139,9 +147,9 @@ public class LookupListeningAnnouncerConfigTest
   @Test
   public void testLookupsToLoadInjection()
   {
-    final DataSourceTaskIdHolder dimensionIdHolder = new DataSourceTaskIdHolder();
-    injector.injectMembers(dimensionIdHolder);
-    Assert.assertEquals(LookupLoadingSpec.Mode.ALL, dimensionIdHolder.getLookupLoadingSpec().getMode());
+    final LoadSpecHolder taskHolder = new DefaultLoadSpecHolder();
+    injector.injectMembers(taskHolder);
+    Assert.assertEquals(LookupLoadingSpec.Mode.ALL, taskHolder.getLookupLoadingSpec().getMode());
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -158,5 +166,30 @@ public class LookupListeningAnnouncerConfigTest
     configProvider.inject(properties, configurator);
     final LookupListeningAnnouncerConfig config = configProvider.get();
     Assert.assertEquals(lookupTier, config.getLookupTier());
+  }
+
+  @Test
+  public void testLookupTierDefaultsForNonPeonServers()
+  {
+    final Injector injector = Initialization.makeInjectorWithModules(
+        GuiceInjectors.makeStartupInjector(),
+        ImmutableList.of(
+            (Module) binder -> JsonConfigProvider.bindInstance(
+                binder,
+                Key.get(DruidNode.class, Self.class),
+                new DruidNode("test-inject", null, false, null, null, true, false)
+            ),
+            new LookupModule()
+        ));
+    final JsonConfigurator configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
+    properties.put(PROPERTY_BASE + ".lookupTierIsDatasource", "true");
+    final JsonConfigProvider<LookupListeningAnnouncerConfig> configProvider = JsonConfigProvider.of(
+        PROPERTY_BASE,
+        LookupListeningAnnouncerConfig.class
+    );
+    configProvider.inject(properties, configurator);
+    final LookupListeningAnnouncerConfig config = configProvider.get();
+    Assert.assertEquals("__default", config.getLookupTier());
+    Assert.assertEquals(LookupLoadingSpec.ALL, config.getLookupLoadingSpec());
   }
 }

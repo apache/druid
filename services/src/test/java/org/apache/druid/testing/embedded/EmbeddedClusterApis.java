@@ -436,7 +436,8 @@ public class EmbeddedClusterApis implements EmbeddedResource
   {
     try {
       return TestHelper.JSON_MAPPER.readValue(
-          payload, new TypeReference<>()
+          payload,
+          new TypeReference<>()
           {
           }
       );
