@@ -17,38 +17,30 @@
  * under the License.
  */
 
-package org.apache.druid.tests.query;
+package org.apache.druid.testing.embedded.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Inject;
+import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.sql.http.SqlQuery;
-import org.apache.druid.testing.clients.SqlResourceTestClient;
-import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.tools.IntegrationTestingConfig;
-import org.apache.druid.testing.utils.DataLoaderHelper;
-import org.apache.druid.testing.utils.SqlTestQueryHelper;
-import org.apache.druid.tests.TestNGGroup;
+import org.apache.druid.testing.embedded.EmbeddedClusterApis;
+import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Guice;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-@Test(groups = {TestNGGroup.QUERY, TestNGGroup.CENTRALIZED_DATASOURCE_SCHEMA})
-@Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITSqlCancelTest
+public class SqlQueryCancelTest extends QueryTestBase
 {
-  private static final String WIKIPEDIA_DATA_SOURCE = "wikipedia_editstream";
 
   /**
    * This query will run exactly for 15 seconds.
@@ -57,23 +49,19 @@ public class ITSqlCancelTest
       = "SELECT sleep(CASE WHEN added > 0 THEN 1 ELSE 0 END) FROM wikipedia_editstream WHERE added > 0 LIMIT 15";
 
   private static final int NUM_QUERIES = 3;
-
-  @Inject
-  private DataLoaderHelper dataLoaderHelper;
-  @Inject
-  private SqlTestQueryHelper sqlHelper;
-  @Inject
-  private SqlResourceTestClient sqlClient;
-  @Inject
-  private IntegrationTestingConfig config;
-  @Inject
   private ObjectMapper jsonMapper;
+  private String tableName;
 
-  @BeforeMethod
-  public void before()
+  @Override
+  public void beforeAll()
   {
-    // ensure that wikipedia segments are loaded completely
-    dataLoaderHelper.waitUntilDatasourceIsReady(WIKIPEDIA_DATA_SOURCE);
+    jsonMapper = overlord.bindings().jsonMapper();
+    tableName = EmbeddedClusterApis.createTestDatasourceName();
+    final String taskId = IdUtils.getRandomId();
+    final IndexTask task = MoreResources.Task.BASIC_INDEX.get().dataSource(tableName).withId(taskId);
+    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
+    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(tableName, coordinator, broker);
   }
 
   @Test
