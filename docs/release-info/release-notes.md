@@ -30,6 +30,6 @@ For information about new features in Druid 35, see the [Druid 35 release notes]
 
 ## Bug fixes
 
-* Fixes an issue with segment dropping that would not unmap the memory mapped segment files, leaving file descriptors open until the process exits [#18782](https://github.com/apache/druid/pull/18782)
+* Fixes an issue with segment dropping not properly removing the memory mapping of segment files, leaving file descriptors of the deleted files open until the process exits [#18782](https://github.com/apache/druid/pull/18782)
 * Fixes protobuf input format URL path loading [#18770](https://github.com/apache/druid/pull/18770)
 
