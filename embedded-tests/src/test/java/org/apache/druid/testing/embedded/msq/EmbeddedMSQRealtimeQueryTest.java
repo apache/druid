@@ -145,7 +145,7 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
     // Wait for it to be loaded.
     indexer.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("ingest/events/processed")
-                      .hasDimension(DruidMetrics.DATASOURCE, Collections.singletonList(dataSource)),
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(totalRows)
     );
     broker.latchableEmitter().waitForEvent(

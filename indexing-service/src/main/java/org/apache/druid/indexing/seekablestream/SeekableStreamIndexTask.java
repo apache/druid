@@ -43,6 +43,8 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -195,6 +197,13 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   {
     SeekableStreamIndexTaskRunner.Status status = (getRunner() != null) ? getRunner().getStatus() : null;
     return (status != null) ? status.toString() : null;
+  }
+
+  @Override
+  public ServiceMetricEvent.Builder getMetricBuilder()
+  {
+    return super.getMetricBuilder()
+                .setDimensionIfNotNull(DruidMetrics.SUPERVISOR_ID, supervisorId);
   }
 
   public Appenderator newAppenderator(
