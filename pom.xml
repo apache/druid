@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>35.0.0-SNAPSHOT</version>
+    <version>35.0.1</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -66,7 +66,7 @@
         <connection>scm:git:ssh://git@github.com/apache/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/apache/druid.git</developerConnection>
         <url>https://github.com/apache/druid.git</url>
-        <tag>29.0.0-SNAPSHOT</tag>
+        <tag>druid-35.0.1-rc1</tag>
     </scm>
 
     <properties>
@@ -180,7 +180,7 @@
              -->
          <jacocoArgLine />
          <!--  used to enable continuous profiling of jdk17 unit tests in github actions  -->
-         <jfrProfilerArgLine></jfrProfilerArgLine>
+         <jfrProfilerArgLine />
     </properties>
 
     <modules>
@@ -1742,7 +1742,7 @@
                         </goals>
                         <configuration>
                             <rules>
-                                <banDuplicatePomDependencyVersions/>
+                                <banDuplicatePomDependencyVersions />
                                 <requireMavenVersion>
                                     <version>3.0.0</version>
                                 </requireMavenVersion>
@@ -1918,11 +1918,11 @@
                         <trimStackTrace>${surefire.trimStackTrace}</trimStackTrace>
                         <!-- our tests are very verbose, let's keep the volume down -->
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
-                        <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
+                        <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory" />
                         <!-- Surefire default is to exclude static inner classes; which may lead to the ignore of static inner classes
                              https://maven.apache.org/surefire/maven-surefire-plugin/test-mojo.html#excludes -->
                         <excludes>
-                           <exclude/>
+                           <exclude />
                         </excludes>
                     </configuration>
                 </plugin>
