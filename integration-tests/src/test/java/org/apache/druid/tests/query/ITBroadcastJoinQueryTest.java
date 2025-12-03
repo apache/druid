@@ -49,7 +49,6 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
   private static final String BROADCAST_JOIN_METADATA_QUERIES_AFTER_DROP_RESOURCE = "/queries/broadcast_join_after_drop_metadata_queries.json";
   private static final String BROADCAST_JOIN_QUERIES_RESOURCE = "/queries/broadcast_join_queries.json";
   private static final String BROADCAST_JOIN_DATASOURCE = "broadcast_join_wikipedia_test";
-  public static final String WIKIPEDIA_DATA_SOURCE = "wikipedia_editstream";
 
   @Inject
   ServerDiscoveryFactory factory;
@@ -160,7 +159,7 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
     return StringUtils.replace(
         StringUtils.replace(template, "%%JOIN_DATASOURCE%%", joinDataSource),
         "%%REGULAR_DATASOURCE%%",
-        WIKIPEDIA_DATA_SOURCE
+        ITWikipediaQueryTest.WIKIPEDIA_DATA_SOURCE
     );
   }
 }
