@@ -17,5 +17,6 @@
 # under the License.
 #
 
+org.apache.druid.testing.embedded.query.ServerManagerForQueryErrorTestModule
 org.apache.druid.testing.embedded.gcs.GoogleStorageTestModule
 org.apache.druid.testing.embedded.query.ServerManagerForQueryErrorTestModule
