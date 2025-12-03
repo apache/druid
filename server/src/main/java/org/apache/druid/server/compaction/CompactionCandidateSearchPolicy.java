@@ -21,6 +21,7 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 
 /**
@@ -48,9 +49,43 @@ public interface CompactionCandidateSearchPolicy
    * Checks if the given {@link CompactionCandidate} is eligible for compaction
    * in the current iteration. A policy may implement this method to skip
    * compacting intervals or segments that do not fulfil some required criteria.
+   *
+   * @return {@link Eligibility#OK} only if eligible.
    */
-  boolean isEligibleForCompaction(
+  Eligibility checkEligibilityForCompaction(
       CompactionCandidate candidate,
       CompactionTaskStatus latestTaskStatus
   );
+
+  /**
+   * Describes the eligibility of an interval for compaction.
+   */
+  class Eligibility
+  {
+    public static final Eligibility OK = new Eligibility(true, null);
+
+    private final boolean eligible;
+    private final String reason;
+
+    private Eligibility(boolean eligible, String reason)
+    {
+      this.eligible = eligible;
+      this.reason = reason;
+    }
+
+    public boolean isEligible()
+    {
+      return eligible;
+    }
+
+    public String getReason()
+    {
+      return reason;
+    }
+
+    public static Eligibility fail(String messageFormat, Object... args)
+    {
+      return new Eligibility(false, StringUtils.format(messageFormat, args));
+    }
+  }
 }

@@ -68,7 +68,6 @@ public class CompactionStatus
    * The order of the checks must be honored while evaluating them.
    */
   private static final List<Function<Evaluator, CompactionStatus>> CHECKS = Arrays.asList(
-      Evaluator::inputBytesAreWithinLimit,
       Evaluator::segmentsHaveBeenCompactedAtLeastOnce,
       Evaluator::partitionsSpecIsUpToDate,
       Evaluator::indexSpecIsUpToDate,
@@ -321,7 +320,8 @@ public class CompactionStatus
   }
 
   /**
-   * Evaluates {@link #CHECKS} to determine the compaction status.
+   * Evaluates {@link #CHECKS} to determine the compaction status of a
+   * {@link CompactionCandidate}.
    */
   private static class Evaluator
   {
@@ -346,6 +346,11 @@ public class CompactionStatus
 
     private CompactionStatus evaluate()
     {
+      final CompactionStatus inputBytesCheck = inputBytesAreWithinLimit();
+      if (inputBytesCheck.isSkipped()) {
+        return inputBytesCheck;
+      }
+
       final List<String> reasonsForCompaction =
           CHECKS.stream()
                 .map(f -> f.apply(this))

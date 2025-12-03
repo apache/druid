@@ -102,11 +102,13 @@ public class CompactionStatusTracker
     }
 
     // Skip intervals that have been filtered out by the policy
-    if (!searchPolicy.isEligibleForCompaction(candidate, lastTaskStatus)) {
-      return CompactionStatus.skipped("Rejected by search policy");
+    final CompactionCandidateSearchPolicy.Eligibility eligibility
+        = searchPolicy.checkEligibilityForCompaction(candidate, lastTaskStatus);
+    if (eligibility.isEligible()) {
+      return CompactionStatus.pending("Not compacted yet");
+    } else {
+      return CompactionStatus.skipped("Rejected by search policy: %s", eligibility.getReason());
     }
-
-    return CompactionStatus.pending("Not compacted yet");
   }
 
   /**

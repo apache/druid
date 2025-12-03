@@ -64,12 +64,12 @@ public abstract class BaseCandidateSearchPolicy implements CompactionCandidateSe
   }
 
   @Override
-  public boolean isEligibleForCompaction(
+  public Eligibility checkEligibilityForCompaction(
       CompactionCandidate candidate,
       CompactionTaskStatus latestTaskStatus
   )
   {
-    return true;
+    return Eligibility.OK;
   }
 
   /**

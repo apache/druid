@@ -95,21 +95,36 @@ public class MostFragmentedIntervalFirstPolicy implements CompactionCandidateSea
   }
 
   @Override
-  public boolean isEligibleForCompaction(
+  public Eligibility checkEligibilityForCompaction(
       CompactionCandidate candidate,
       CompactionTaskStatus latestTaskStatus
   )
   {
     final CompactionStatistics uncompacted = candidate.getUncompactedStats();
     if (uncompacted == null) {
-      return true;
+      return Eligibility.OK;
     } else if (uncompacted.getNumSegments() < 1) {
-      return false;
+      return Eligibility.fail("No uncompacted segments in interval");
+    } else if (uncompacted.getNumSegments() < minUncompactedCount) {
+      return Eligibility.fail(
+          "Uncompacted segments[%,d] in interval must be at least [%,d].",
+          uncompacted.getNumSegments(), minUncompactedCount
+      );
+    } else if (uncompacted.getTotalBytes() < minUncompactedBytes.getBytes()) {
+      return Eligibility.fail(
+          "Uncompacted bytes[%,d] in interval must be at least [%,d].",
+          minUncompactedBytes.getBytes(), uncompacted.getTotalBytes()
+      );
+    }
+
+    final long avgSegmentSize = (uncompacted.getTotalBytes() / uncompacted.getNumSegments());
+    if (avgSegmentSize > maxAverageUncompactedBytesPerSegment.getBytes()) {
+      return Eligibility.fail(
+          "Average size[%,d] of uncompacted segments in interval must be at most [%,d].",
+          avgSegmentSize, maxAverageUncompactedBytesPerSegment.getBytes()
+      );
     } else {
-      return uncompacted.getNumSegments() >= minUncompactedCount
-          && uncompacted.getTotalBytes() >= minUncompactedBytes.getBytes()
-          && (uncompacted.getTotalBytes() / uncompacted.getNumSegments())
-             <= maxAverageUncompactedBytesPerSegment.getBytes();
+      return Eligibility.OK;
     }
   }
 
