@@ -20,19 +20,23 @@
 package org.apache.druid.testing.embedded.query;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.guice.SleepModule;
+import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
+import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
+import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Assertions;
@@ -105,6 +109,23 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
     catch (Exception e) {
       throw new AssertionError(e);
     }
+  }
+
+  /**
+   * Ingests Druid with some the data from {@link MoreResources.Task#BASIC_INDEX} in a synchronous manner.
+   *
+   * @return ingested datasource name
+   */
+  protected String ingestBasicData()
+  {
+    String datasourceName = EmbeddedClusterApis.createTestDatasourceName();
+
+    final String taskId = IdUtils.getRandomId();
+    final IndexTask task = MoreResources.Task.BASIC_INDEX.get().dataSource(datasourceName).withId(taskId);
+    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
+    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(datasourceName, coordinator, broker);
+    return datasourceName;
   }
 
   /**

@@ -22,14 +22,10 @@ package org.apache.druid.testing.embedded.query;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.http.ClientSqlQuery;
-import org.apache.druid.testing.embedded.EmbeddedClusterApis;
-import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -47,12 +43,7 @@ public class SqlQueryCancelTest extends QueryTestBase
   public void beforeAll()
   {
     jsonMapper = overlord.bindings().jsonMapper();
-    tableName = EmbeddedClusterApis.createTestDatasourceName();
-    final String taskId = IdUtils.getRandomId();
-    final IndexTask task = MoreResources.Task.BASIC_INDEX.get().dataSource(tableName).withId(taskId);
-    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
-    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(tableName, coordinator, broker);
+    tableName = ingestBasicData();
   }
 
   @Test

@@ -29,7 +29,6 @@ import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
-import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;

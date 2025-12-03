@@ -24,9 +24,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.query.sql.SleepOperatorConversion;
 import org.apache.druid.server.ServerManager;
-import org.apache.druid.sql.guice.SqlBindings;
 
 @LoadScope(roles = NodeRole.HISTORICAL_JSON_NAME)
 public class ServerManagerForQueryErrorTestModule implements DruidModule
