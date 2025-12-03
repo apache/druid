@@ -55,22 +55,22 @@ import static org.apache.druid.testing.embedded.query.ServerManagerForQueryError
 public class QueryErrorTest extends QueryTestBase
 {
   // Introduce onAnyRouter(...) and use it; add TLS tests in the follow-up patches
-  protected String tableName;
+  protected String testDataSourceName;
 
   @Override
   protected void beforeAll()
   {
-    tableName = EmbeddedClusterApis.createTestDatasourceName();
+    testDataSourceName = EmbeddedClusterApis.createTestDatasourceName();
     EmbeddedMSQApis msqApi = new EmbeddedMSQApis(cluster, overlord);
     SqlTaskStatus ingestionStatus = msqApi.submitTaskSql(StringUtils.format(
         "REPLACE INTO %s\n"
         + "OVERWRITE ALL\n"
         + "SELECT CURRENT_TIMESTAMP AS __time, 1 AS d PARTITIONED BY ALL",
-        tableName
+        testDataSourceName
     ));
 
     cluster.callApi().waitForTaskToSucceed(ingestionStatus.getTaskId(), overlord);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(tableName, coordinator, broker);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(testDataSourceName, coordinator, broker);
   }
 
   @Test
@@ -246,7 +246,7 @@ public class QueryErrorTest extends QueryTestBase
   private ListenableFuture<String> sqlQueryFuture(BrokerClient b, String contextKey)
   {
     return b.submitSqlQuery(new ClientSqlQuery(
-        StringUtils.format("SELECT * FROM %s LIMIT 1", tableName),
+        StringUtils.format("SELECT * FROM %s LIMIT 1", testDataSourceName),
         null,
         false,
         false,
@@ -262,7 +262,7 @@ public class QueryErrorTest extends QueryTestBase
   private ListenableFuture<String> nativeQueryFuture(BrokerClient b, String contextKey)
   {
     return b.submitNativeQuery(new Druids.ScanQueryBuilder()
-                                   .dataSource(tableName)
+                                   .dataSource(testDataSourceName)
                                    .eternityInterval()
                                    .limit(1)
                                    .context(buildTestContext(contextKey))

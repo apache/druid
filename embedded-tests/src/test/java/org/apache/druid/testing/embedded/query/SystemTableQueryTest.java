@@ -23,7 +23,6 @@ package org.apache.druid.testing.embedded.query;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -34,24 +33,24 @@ import org.junit.jupiter.api.Test;
  */
 public class SystemTableQueryTest extends QueryTestBase
 {
-  private final String tableName1 = "table_a";
-  private final String tableName2 = "table_b";
+  private final String dataSourceName1 = "table_a";
+  private final String dataSourceName2 = "table_b";
 
   @Override
   public void beforeAll()
   {
     final String taskId1 = IdUtils.getRandomId();
     final String taskId2 = IdUtils.getRandomId();
-    final IndexTask task1 = MoreResources.Task.BASIC_INDEX.get().dataSource(tableName1).withId(taskId1);
-    final IndexTask task2 = MoreResources.Task.BASIC_INDEX.get().dataSource(tableName2).withId(taskId2);
+    final IndexTask task1 = MoreResources.Task.BASIC_INDEX.get().dataSource(dataSourceName1).withId(taskId1);
+    final IndexTask task2 = MoreResources.Task.BASIC_INDEX.get().dataSource(dataSourceName2).withId(taskId2);
     cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId1, task1));
     cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId2, task2));
 
     cluster.callApi().waitForTaskToSucceed(taskId1, overlord);
     cluster.callApi().waitForTaskToSucceed(taskId2, overlord);
 
-    cluster.callApi().waitForAllSegmentsToBeAvailable(tableName1, coordinator, broker);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(tableName2, coordinator, broker);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSourceName1, coordinator, broker);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSourceName2, coordinator, broker);
   }
 
   @Test
@@ -63,13 +62,14 @@ public class SystemTableQueryTest extends QueryTestBase
         + "WHERE datasource='%s' \n"
         + "OR    datasource='%s' \n"
         + "GROUP BY 1\n"
-        + "ORDER BY 1", tableName1, tableName2
+        + "ORDER BY 1",
+        dataSourceName1, dataSourceName2
     );
 
     String[] result = cluster.callApi().runSql(query).split("\n");
     Assertions.assertEquals(2, result.length);
-    Assertions.assertEquals(StringUtils.format("%s,10", tableName1), result[0]);
-    Assertions.assertEquals(StringUtils.format("%s,10", tableName2), result[1]);
+    Assertions.assertEquals(StringUtils.format("%s,10", dataSourceName1), result[0]);
+    Assertions.assertEquals(StringUtils.format("%s,10", dataSourceName2), result[1]);
   }
 
   @Test

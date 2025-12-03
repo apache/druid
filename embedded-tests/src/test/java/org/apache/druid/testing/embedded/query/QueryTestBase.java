@@ -19,6 +19,8 @@
 
 package org.apache.druid.testing.embedded.query;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.guice.SleepModule;
@@ -28,6 +30,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -64,6 +67,7 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
   protected final EmbeddedHistorical historical = new EmbeddedHistorical();
 
   protected HttpClient httpClientRef;
+  protected ObjectMapper jsonMapper;
   protected String brokerEndpoint;
   protected String routerEndpoint;
 
@@ -112,7 +116,7 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
   }
 
   /**
-   * Ingests Druid with some the data from {@link MoreResources.Task#BASIC_INDEX} in a synchronous manner.
+   * Ingests test data using the task template {@link MoreResources.Task#BASIC_INDEX} in a synchronous manner.
    *
    * @return ingested datasource name
    */
@@ -131,7 +135,7 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
   /**
    * Execute an async SQL query against the given endpoint via the HTTP client.
    */
-  protected ListenableFuture<StatusResponseHolder> executeQueryAsync(String endpoint, String query)
+  protected ListenableFuture<StatusResponseHolder> executeQueryAsync(String endpoint, ClientSqlQuery query)
   {
     URL url;
     try {
@@ -141,9 +145,18 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
       throw new AssertionError("Malformed URL");
     }
 
+    Assertions.assertNotNull(jsonMapper);
+    String serializedQuery;
+    try {
+      serializedQuery = jsonMapper.writeValueAsString(query);
+    }
+    catch (JsonProcessingException e) {
+      throw new AssertionError(e);
+    }
+
     Request request = new Request(HttpMethod.POST, url);
     request.addHeader("Content-Type", MediaType.APPLICATION_JSON);
-    request.setContent(query.getBytes(StandardCharsets.UTF_8));
+    request.setContent(serializedQuery.getBytes(StandardCharsets.UTF_8));
     return httpClientRef.go(request, StatusResponseHandler.getInstance());
   }
 
@@ -198,8 +211,10 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
 
   /**
    * Execute a SQL query against the given endpoint via the HTTP client.
+   *
+   * @return response holder of a cancelled query
    */
-  protected void cancelQuery(String endpoint, String queryId, Consumer<StatusResponseHolder> onResponse)
+  protected StatusResponseHolder cancelQuery(String endpoint, String queryId)
   {
     URL url;
     try {
@@ -220,6 +235,6 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
     }
 
     Assertions.assertNotNull(response);
-    onResponse.accept(response);
+    return response;
   }
 }

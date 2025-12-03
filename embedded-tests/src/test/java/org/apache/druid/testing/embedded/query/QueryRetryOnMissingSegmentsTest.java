@@ -20,7 +20,6 @@
 package org.apache.druid.testing.embedded.query;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -64,7 +63,6 @@ public class QueryRetryOnMissingSegmentsTest extends QueryTestBase
     QUERY_FAILURE
   }
 
-  private ObjectMapper jsonMapper;
   private String tableName;
 
   @Override

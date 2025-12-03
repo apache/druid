@@ -19,7 +19,6 @@
 
 package org.apache.druid.testing.embedded.query;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.StringUtils;
@@ -35,21 +34,19 @@ import java.util.List;
 public class SqlQueryCancelTest extends QueryTestBase
 {
   private static final String QUERY = " SELECT sleep(4) FROM %s LIMIT 4";
-
-  private ObjectMapper jsonMapper;
-  private String tableName;
+  private String dataSourceName;
 
   @Override
   public void beforeAll()
   {
     jsonMapper = overlord.bindings().jsonMapper();
-    tableName = ingestBasicData();
+    dataSourceName = ingestBasicData();
   }
 
   @Test
   public void testCancelValidQuery() throws Exception
   {
-    final String sqlQuery = StringUtils.format(QUERY, tableName);
+    final String sqlQuery = StringUtils.format(QUERY, dataSourceName);
     final String queryId = "sql-cancel-test";
     final ClientSqlQuery query = new ClientSqlQuery(
         sqlQuery,
@@ -61,24 +58,22 @@ public class SqlQueryCancelTest extends QueryTestBase
         List.of()
     );
 
-    ListenableFuture<StatusResponseHolder> f = executeQueryAsync(routerEndpoint, jsonMapper.writeValueAsString(query));
+    ListenableFuture<StatusResponseHolder> f = executeQueryAsync(routerEndpoint, query);
 
     // Wait until the sqlLifecycle is authorized and registered
     Thread.sleep(500L);
-    cancelQuery(
-        routerEndpoint,
-        queryId,
-        (r) -> Assertions.assertEquals(HttpResponseStatus.ACCEPTED, r.getStatus())
-    );
+    StatusResponseHolder queryCancellationResponse = cancelQuery(routerEndpoint, queryId);
 
-    StatusResponseHolder srh = f.get();
-    Assertions.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode(), srh.getStatus().getCode());
+    StatusResponseHolder queryResponce = f.get();
+
+    Assertions.assertEquals(HttpResponseStatus.ACCEPTED.getCode(), queryCancellationResponse.getStatus().getCode());
+    Assertions.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode(), queryResponce.getStatus().getCode());
   }
 
   @Test
-  public void testCancelInvalidQuery() throws Exception
+  public void test_cancelInvalidQuery_returnsNotFound() throws Exception
   {
-    final String sqlQuery = StringUtils.format(QUERY, tableName);
+    final String sqlQuery = StringUtils.format(QUERY, dataSourceName);
     final String validQueryId = "sql-cancel-test";
     final String invalidQueryId = "sql-continue-test";
     final ClientSqlQuery query = new ClientSqlQuery(
@@ -91,17 +86,15 @@ public class SqlQueryCancelTest extends QueryTestBase
         List.of()
     );
 
-    ListenableFuture<StatusResponseHolder> f = executeQueryAsync(routerEndpoint, jsonMapper.writeValueAsString(query));
+    ListenableFuture<StatusResponseHolder> f = executeQueryAsync(routerEndpoint, query);
 
     // Wait until the sqlLifecycle is authorized and registered
     Thread.sleep(500L);
-    cancelQuery(
-        routerEndpoint,
-        invalidQueryId,
-        (r) -> Assertions.assertEquals(HttpResponseStatus.NOT_FOUND, r.getStatus())
-    );
+    StatusResponseHolder queryCancellationResponse = cancelQuery(routerEndpoint, invalidQueryId);
 
-    StatusResponseHolder srh = f.get();
-    Assertions.assertEquals(HttpResponseStatus.OK.getCode(), srh.getStatus().getCode());
+    StatusResponseHolder queryResponse = f.get();
+
+    Assertions.assertEquals(HttpResponseStatus.NOT_FOUND.getCode(), queryCancellationResponse.getStatus().getCode());
+    Assertions.assertEquals(HttpResponseStatus.OK.getCode(), queryResponse.getStatus().getCode());
   }
 }

@@ -40,6 +40,10 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
+/**
+ * JDBC query integration tests.
+ * Note: we need to correspond queries with TLS support to fullfill the conversion
+ */
 public class JdbcQueryTest extends QueryTestBase
 {
   private static final Logger LOG = new Logger(JdbcQueryTest.class);
@@ -67,26 +71,7 @@ public class JdbcQueryTest extends QueryTestBase
     connections = new String[]{
         StringUtils.format(CONNECTION_TEMPLATE, getServerUrl(router)),
         StringUtils.format(CONNECTION_TEMPLATE, getServerUrl(broker)),
-        // Add in the consecutive patch
-        // StringUtils.format(
-        //    TLS_CONNECTION_TEMPLATE,
-        //    config.getRouterTLSUrl(),
-        //    sslConfig.getTrustStorePath(),
-        //    sslConfig.getTrustStorePasswordProvider().getPassword(),
-        //    sslConfig.getKeyStorePath(),
-        //    sslConfig.getKeyStorePasswordProvider().getPassword(),
-        //    sslConfig.getKeyManagerPasswordProvider().getPassword()
-        //),
-        // StringUtils.format(
-        //    TLS_CONNECTION_TEMPLATE,
-        //    config.getBrokerTLSUrl(),
-        //    sslConfig.getTrustStorePath(),
-        //    sslConfig.getTrustStorePasswordProvider().getPassword(),
-        //    sslConfig.getKeyStorePath(),
-        //    sslConfig.getKeyStorePasswordProvider().getPassword(),
-        //    sslConfig.getKeyManagerPasswordProvider().getPassword()
-        // )
-    };
+        };
 
     tableName = ingestBasicData();
   }
@@ -124,7 +109,7 @@ public class JdbcQueryTest extends QueryTestBase
           druidTables.add(table);
         }
         LOG.info("'druid' schema tables %s", druidTables);
-        // maybe more tables than this, but at least should have @tableName
+        // There may be more tables than this, but at least should have @tableName
         Assertions.assertTrue(
             druidTables.containsAll(ImmutableList.of(tableName))
         );
@@ -203,7 +188,7 @@ public class JdbcQueryTest extends QueryTestBase
            PreparedStatement statement = connection.prepareStatement(query);
            ResultSet resultSet = statement.executeQuery()) {
         // This won't actually run as we expect the exception to be thrown before it gets here
-        throw new IllegalStateException(resultSet.toString());
+        Assertions.fail(resultSet.toString());
       }
       catch (SQLException e) {
         Assertions.assertInstanceOf(AvaticaSqlException.class, e);
