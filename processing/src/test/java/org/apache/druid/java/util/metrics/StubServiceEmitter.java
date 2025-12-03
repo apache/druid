@@ -24,9 +24,11 @@ import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
+import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -39,9 +41,9 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  */
 public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifier
 {
-  private final Queue<Event> events = new ConcurrentLinkedDeque<>();
-  private final Queue<AlertEvent> alertEvents = new ConcurrentLinkedDeque<>();
-  private final ConcurrentHashMap<String, Queue<ServiceMetricEvent>> metricEvents = new ConcurrentHashMap<>();
+  private final Deque<Event> events = new ConcurrentLinkedDeque<>();
+  private final Deque<AlertEvent> alertEvents = new ConcurrentLinkedDeque<>();
+  private final ConcurrentHashMap<String, Deque<ServiceMetricEvent>> metricEvents = new ConcurrentHashMap<>();
 
   public StubServiceEmitter()
   {
@@ -121,6 +123,38 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
     }
 
     return values;
+  }
+
+  public int getMetricEventCount(String metricName)
+  {
+    final Queue<ServiceMetricEvent> metricEventQueue = metricEvents.get(metricName);
+    return metricEventQueue == null ? 0 : metricEventQueue.size();
+  }
+
+  public long getMetricEventLongSum(String metricName)
+  {
+    final Queue<ServiceMetricEvent> metricEventQueue = metricEvents.get(metricName);
+    long total = 0;
+    for (ServiceMetricEvent event : metricEventQueue) {
+      total += event.getValue().longValue();
+    }
+    return total;
+  }
+
+  @Nullable
+  public Number getLatestMetricEventValue(String metricName)
+  {
+    final Deque<ServiceMetricEvent> metricEventQueue = metricEvents.get(metricName);
+    return metricEventQueue == null ? null : metricEventQueue.getLast().getValue();
+  }
+
+  public Number getLatestMetricEventValue(String metricName, Number defaultValue)
+  {
+    final Number latest = getLatestMetricEventValue(metricName);
+    if (latest == null) {
+      return defaultValue;
+    }
+    return latest;
   }
 
   @Override

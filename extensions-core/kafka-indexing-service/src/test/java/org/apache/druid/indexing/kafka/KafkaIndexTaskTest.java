@@ -35,7 +35,12 @@ import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.inject.Injector;
+import org.apache.commons.io.FileUtils;
 import org.apache.curator.test.TestingCluster;
+import org.apache.druid.cli.CliPeon;
+import org.apache.druid.cli.PeonLoadSpecHolder;
+import org.apache.druid.cli.PeonTaskHolder;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
@@ -52,6 +57,8 @@ import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.data.input.kafkainput.KafkaInputFormat;
 import org.apache.druid.data.input.kafkainput.KafkaStringHeaderFormat;
+import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -112,6 +119,10 @@ import org.apache.druid.segment.incremental.RowMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
+import org.apache.druid.server.metrics.LoadSpecHolder;
+import org.apache.druid.server.metrics.TaskHolder;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -127,7 +138,9 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -141,6 +154,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Properties;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -153,6 +168,9 @@ import java.util.stream.Stream;
 @RunWith(Parameterized.class)
 public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 {
+  @Rule
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   private static final long POLL_RETRY_MS = 100;
   private static final Iterable<Header> SAMPLE_HEADERS = ImmutableList.of(new Header()
   {
@@ -3358,6 +3376,80 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     // Verify report metrics
     Assert.assertEquals(reportData.getRecordsProcessed().size(), 2);
     Assert.assertTrue(reportData.getRecordsProcessed().values().containsAll(ImmutableSet.of(6L, 2L)));
+  }
+
+  @Test(timeout = 60_000L)
+  public void testTaskWithTransformSpecDoesNotCauseCliPeonCyclicDependency()
+      throws IOException, ExecutionException, InterruptedException
+  {
+    insertData();
+
+    final KafkaIndexTask task = createTask(
+        "index_kafka_test_id1",
+        NEW_DATA_SCHEMA.withTransformSpec(
+            new TransformSpec(
+                new SelectorDimFilter("dim1", "b", null),
+                ImmutableList.of(
+                    new ExpressionTransform("dim1t", "concat(dim1,dim1)", ExprMacroTable.nil())
+                )
+            )
+        ),
+        new KafkaIndexTaskIOConfig(
+            0,
+            "sequence0",
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 0L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 5L)),
+            kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            true,
+            null,
+            null,
+            INPUT_FORMAT,
+            null,
+            Duration.standardHours(2).getStandardMinutes()
+        )
+    );
+
+    File file = temporaryFolder.newFile("task.json");
+
+    FileUtils.write(file, OBJECT_MAPPER.writeValueAsString(task), StandardCharsets.UTF_8);
+
+    final CliPeon peon = new CliPeon();
+    peon.taskAndStatusFile = ImmutableList.of(file.getParent(), "1");
+
+    final Properties properties = new Properties();
+    peon.configure(properties);
+    final Injector baseInjector = GuiceInjectors.makeStartupInjector();
+    peon.configure(properties, baseInjector);
+    final Injector peonInjector = peon.makeInjector(Set.of(NodeRole.PEON));
+
+    final LoadSpecHolder loadSpecHolder = peonInjector.getInstance(LoadSpecHolder.class);
+    Assert.assertTrue(loadSpecHolder instanceof PeonLoadSpecHolder);
+    Assert.assertEquals(LookupLoadingSpec.ALL, loadSpecHolder.getLookupLoadingSpec());
+    Assert.assertEquals(BroadcastDatasourceLoadingSpec.ALL, loadSpecHolder.getBroadcastDatasourceLoadingSpec());
+
+    final TaskHolder taskHolder = peonInjector.getInstance(TaskHolder.class);
+    Assert.assertTrue(taskHolder instanceof PeonTaskHolder);
+    Assert.assertEquals("index_kafka_test_id1", taskHolder.getTaskId());
+    Assert.assertEquals("test_ds", taskHolder.getDataSource());
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    // Wait for task to exit
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(0, 5)).thrownAway(4).totalProcessed(1));
+
+    // Check published metadata
+    final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
+    assertEqualsExceptVersion(ImmutableList.of(sdd("2009/P1D", 0)), publishedDescriptors);
+    Assert.assertEquals(
+        new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(new KafkaTopicPartition(false, topic, 0), 5L))),
+        newDataSchemaMetadata()
+    );
+
+    // Check segments in deep storage
+    Assert.assertEquals(ImmutableList.of("b"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
+    Assert.assertEquals(ImmutableList.of("bb"), readSegmentColumn("dim1t", publishedDescriptors.get(0)));
   }
 
   public static class TestKafkaInputFormat implements InputFormat

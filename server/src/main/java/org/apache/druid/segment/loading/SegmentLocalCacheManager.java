@@ -54,8 +54,10 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -652,6 +654,31 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
   }
 
+  @Nullable
+  @Override
+  public StorageStats getStorageStats()
+  {
+    if (config.isVirtualStorage()) {
+      final Map<String, VirtualStorageLocationStats> locationStats = new HashMap<>();
+      for (StorageLocation location : locations) {
+        locationStats.put(location.getPath().toString(), location.resetWeakStats());
+      }
+      return new StorageStats(
+          Map.of(),
+          locationStats
+      );
+    } else {
+      final Map<String, StorageLocationStats> locationStats = new HashMap<>();
+      for (StorageLocation location : locations) {
+        locationStats.put(location.getPath().toString(), location.resetStaticStats());
+      }
+      return new StorageStats(
+          locationStats,
+          Map.of()
+      );
+    }
+  }
+
   @VisibleForTesting
   public ConcurrentHashMap<DataSegment, ReferenceCountingLock> getSegmentLocks()
   {
@@ -679,6 +706,25 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       }
     }
     return false;
+  }
+
+  /**
+   * Testing use only please, any callers that want to do stuff with segments should use
+   * {@link #acquireCachedSegment(DataSegment)} or {@link #acquireSegment(DataSegment)} instead. Does not hold locks
+   * and so is not really safe to use while the cache manager is active
+   */
+  @VisibleForTesting
+  @Nullable
+  public ReferenceCountedSegmentProvider getSegmentReferenceProvider(DataSegment segment)
+  {
+    final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
+    for (StorageLocation location : locations) {
+      final SegmentCacheEntry entry = location.getCacheEntry(cacheEntry.id);
+      if (entry != null) {
+        return entry.referenceProvider;
+      }
+    }
+    return null;
   }
 
   /**
