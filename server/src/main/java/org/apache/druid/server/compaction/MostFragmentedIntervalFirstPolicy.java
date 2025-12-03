@@ -22,6 +22,7 @@ package org.apache.druid.server.compaction;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 
 import javax.annotation.Nullable;
 
@@ -35,23 +36,24 @@ import javax.annotation.Nullable;
  */
 public class MostFragmentedIntervalFirstPolicy implements CompactionCandidateSearchPolicy
 {
-  private static final long SIZE_2_GB = 2_000_000_000;
-  private static final long SIZE_10_MB = 10_000_000;
+  private static final HumanReadableBytes SIZE_2_GB = new HumanReadableBytes("2GiB");
+  private static final HumanReadableBytes SIZE_10_MB = new HumanReadableBytes("10MiB");
 
   private final int minUncompactedCount;
-  private final long minUncompactedBytes;
-  private final long maxUncompactedSize;
+  private final HumanReadableBytes minUncompactedBytes;
+  private final HumanReadableBytes maxAverageUncompactedBytesPerSegment;
 
   @JsonCreator
   public MostFragmentedIntervalFirstPolicy(
       @JsonProperty("minUncompactedCount") @Nullable Integer minUncompactedCount,
-      @JsonProperty("minUncompactedBytes") @Nullable Long minUncompactedBytes,
-      @JsonProperty("maxUncompactedSize") @Nullable Long maxUncompactedSize
+      @JsonProperty("minUncompactedBytes") @Nullable HumanReadableBytes minUncompactedBytes,
+      @JsonProperty("maxAverageUncompactedBytesPerSegment") @Nullable HumanReadableBytes maxAverageUncompactedBytesPerSegment
   )
   {
     this.minUncompactedCount = Configs.valueOrDefault(minUncompactedCount, 100);
     this.minUncompactedBytes = Configs.valueOrDefault(minUncompactedBytes, SIZE_10_MB);
-    this.maxUncompactedSize = Configs.valueOrDefault(maxUncompactedSize, SIZE_2_GB);
+    this.maxAverageUncompactedBytesPerSegment
+        = Configs.valueOrDefault(maxAverageUncompactedBytesPerSegment, SIZE_2_GB);
   }
 
   /**
@@ -69,7 +71,7 @@ public class MostFragmentedIntervalFirstPolicy implements CompactionCandidateSea
    * interval to make it eligible for compaction. Default value is {@link #SIZE_10_MB}.
    */
   @JsonProperty
-  public long getMinUncompactedBytes()
+  public HumanReadableBytes getMinUncompactedBytes()
   {
     return minUncompactedBytes;
   }
@@ -79,16 +81,17 @@ public class MostFragmentedIntervalFirstPolicy implements CompactionCandidateSea
    * compaction. Default value is {@link #SIZE_2_GB}.
    */
   @JsonProperty
-  public long getMaxUncompactedSize()
+  public HumanReadableBytes getMaxAverageUncompactedBytesPerSegment()
   {
-    return maxUncompactedSize;
+    return maxAverageUncompactedBytesPerSegment;
   }
 
   @Override
   public int compareCandidates(CompactionCandidate candidateA, CompactionCandidate candidateB)
   {
-    return computePriority(candidateA) - computePriority(candidateB) > 0
-           ? 1 : -1;
+    final double fragmentationDiff
+        = computeFragmentationIndex(candidateA) - computeFragmentationIndex(candidateB);
+    return fragmentationDiff > 0 ? 1 : -1;
   }
 
   @Override
@@ -104,16 +107,19 @@ public class MostFragmentedIntervalFirstPolicy implements CompactionCandidateSea
       return false;
     } else {
       return uncompacted.getNumSegments() >= minUncompactedCount
-          && uncompacted.getTotalBytes() >= minUncompactedBytes
-          && (uncompacted.getTotalBytes() / uncompacted.getNumSegments()) <= maxUncompactedSize;
+          && uncompacted.getTotalBytes() >= minUncompactedBytes.getBytes()
+          && (uncompacted.getTotalBytes() / uncompacted.getNumSegments())
+             <= maxAverageUncompactedBytesPerSegment.getBytes();
     }
   }
 
   /**
-   * Computes the priority of the given compaction candidate by checking the
-   * total number and average size of uncompacted segments.
+   * Computes the degree of fragmentation of the given compaction candidate by
+   * checking the total number and average size of uncompacted segments.
+   * A higher fragmentation index causes the candidate to be higher in priority
+   * for compaction.
    */
-  private double computePriority(CompactionCandidate candidate)
+  private double computeFragmentationIndex(CompactionCandidate candidate)
   {
     final CompactionStatistics compacted = candidate.getCompactedStats();
     final CompactionStatistics uncompacted = candidate.getUncompactedStats();
@@ -123,8 +129,7 @@ public class MostFragmentedIntervalFirstPolicy implements CompactionCandidateSea
 
     final long avgUncompactedSize = Math.max(1, uncompacted.getTotalBytes() / uncompacted.getNumSegments());
 
-    // Priority increases as size decreases and number increases
-    final double normalizingFactor = 1000f;
-    return (normalizingFactor * uncompacted.getNumSegments()) / avgUncompactedSize;
+    // Fragmentation index increases as segment count increases and avg size decreases
+    return (1f * uncompacted.getNumSegments()) / avgUncompactedSize;
   }
 }
