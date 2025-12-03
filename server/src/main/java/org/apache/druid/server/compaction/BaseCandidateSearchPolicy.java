@@ -66,7 +66,6 @@ public abstract class BaseCandidateSearchPolicy implements CompactionCandidateSe
   @Override
   public boolean isEligibleForCompaction(
       CompactionCandidate candidate,
-      CompactionStatus currentCompactionStatus,
       CompactionTaskStatus latestTaskStatus
   )
   {

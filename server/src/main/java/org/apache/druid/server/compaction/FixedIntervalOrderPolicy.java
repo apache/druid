@@ -58,7 +58,6 @@ public class FixedIntervalOrderPolicy implements CompactionCandidateSearchPolicy
   @Override
   public boolean isEligibleForCompaction(
       CompactionCandidate candidate,
-      CompactionStatus currentCompactionStatus,
       CompactionTaskStatus latestTaskStatus
   )
   {

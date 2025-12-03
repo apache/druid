@@ -65,4 +65,14 @@ public class CompactionStatistics
     numIntervals -= other.getNumIntervals();
     numSegments -= other.getNumSegments();
   }
+
+  @Override
+  public String toString()
+  {
+    return "CompactionStatistics{" +
+           "totalBytes=" + totalBytes +
+           ", numSegments=" + numSegments +
+           ", numIntervals=" + numIntervals +
+           '}';
+  }
 }

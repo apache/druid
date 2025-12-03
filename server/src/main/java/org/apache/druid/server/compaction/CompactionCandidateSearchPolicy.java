@@ -29,7 +29,8 @@ import org.apache.druid.server.coordinator.duty.CompactSegments;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "newestSegmentFirst", value = NewestSegmentFirstPolicy.class),
-    @JsonSubTypes.Type(name = "fixedIntervalOrder", value = FixedIntervalOrderPolicy.class)
+    @JsonSubTypes.Type(name = "fixedIntervalOrder", value = FixedIntervalOrderPolicy.class),
+    @JsonSubTypes.Type(name = "mostFragmentedFirst", value = MostFragmentedIntervalFirstPolicy.class)
 })
 public interface CompactionCandidateSearchPolicy
 {
@@ -50,7 +51,6 @@ public interface CompactionCandidateSearchPolicy
    */
   boolean isEligibleForCompaction(
       CompactionCandidate candidate,
-      CompactionStatus currentCompactionStatus,
       CompactionTaskStatus latestTaskStatus
   );
 }
