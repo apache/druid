@@ -78,7 +78,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        testing_group: [query, security, centralized-datasource-schema]
+        testing_group: [query, query-retry, query-error, security, centralized-datasource-schema]
     uses: ./.github/workflows/reusable-standard-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
