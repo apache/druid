@@ -1455,7 +1455,7 @@ notice: |
     * LICENSE:
       * license/LICENSE.lz4.txt (Apache License 2.0)
     * HOMEPAGE:
-      * https://github.com/jpountz/lz4-java
+      * https://github.com/yawkat/lz4-java
 
   This product optionally depends on 'lzma-java', a LZMA Java compression
   and decompression library, which can be obtained at:
@@ -4584,7 +4584,7 @@ notice: |
     * LICENSE:
       * license/LICENSE.lz4.txt (Apache License 2.0)
     * HOMEPAGE:
-      * https://github.com/jpountz/lz4-java
+      * https://github.com/yawkat/lz4-java
 
   This product optionally depends on 'lzma-java', a LZMA Java compression
   and decompression library, which can be obtained at:
