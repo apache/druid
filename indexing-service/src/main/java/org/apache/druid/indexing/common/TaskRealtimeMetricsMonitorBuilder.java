@@ -22,9 +22,12 @@ package org.apache.druid.indexing.common;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
+
+import java.util.Map;
 
 public class TaskRealtimeMetricsMonitorBuilder
 {
@@ -41,13 +44,26 @@ public class TaskRealtimeMetricsMonitorBuilder
     return new TaskRealtimeMetricsMonitor(
         metrics,
         meters,
-        ImmutableMap.of(
-            DruidMetrics.DATASOURCE, new String[]{task.getDataSource()},
-            DruidMetrics.TASK_ID, new String[]{task.getId()},
-            DruidMetrics.TASK_TYPE, new String[]{task.getType()},
-            DruidMetrics.GROUP_ID, new String[]{task.getGroupId()}
-        ),
+        getMetricDimensions(task),
         task.getContextValue(DruidMetrics.TAGS)
     );
+  }
+
+  private static Map<String, String[]> getMetricDimensions(Task task)
+  {
+    final ImmutableMap.Builder<String, String[]> map = new ImmutableMap.Builder<>();
+    map.put(DruidMetrics.DATASOURCE, new String[]{task.getDataSource()});
+    map.put(DruidMetrics.TASK_ID, new String[]{task.getId()});
+    map.put(DruidMetrics.TASK_TYPE, new String[]{task.getType()});
+    map.put(DruidMetrics.GROUP_ID, new String[]{task.getGroupId()});
+
+    if (task instanceof SeekableStreamIndexTask) {
+      final SeekableStreamIndexTask<?, ?, ?> streamIndexTask = (SeekableStreamIndexTask<?, ?, ?>) task;
+      if (streamIndexTask.getSupervisorId() != null) {
+        map.put(DruidMetrics.SUPERVISOR_ID, new String[]{streamIndexTask.getSupervisorId()});
+      }
+    }
+
+    return map.build();
   }
 }
