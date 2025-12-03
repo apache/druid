@@ -35,7 +35,6 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.PhysicalSegmentInspector;
-import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
@@ -206,7 +205,7 @@ class SegmentLocalCacheManagerConcurrencyTest
       virtualStorageManager.drop(segment);
     }
     for (StorageLocation location : virtualStorageManager.getLocations()) {
-      location.resetStats();
+      location.resetWeakStats();
     }
   }
 
@@ -431,8 +430,8 @@ class SegmentLocalCacheManagerConcurrencyTest
     // 5 because __drop path
     Assertions.assertTrue(5 >= location.getPath().listFiles().length);
     Assertions.assertTrue(5 >= location2.getPath().listFiles().length);
-    Assertions.assertEquals(location.getStats().getEvictionCount(), location.getStats().getUnmountCount());
-    Assertions.assertEquals(location2.getStats().getEvictionCount(), location2.getStats().getUnmountCount());
+    Assertions.assertEquals(location.getWeakStats().getEvictionCount(), location.getWeakStats().getUnmountCount());
+    Assertions.assertEquals(location2.getWeakStats().getEvictionCount(), location2.getWeakStats().getUnmountCount());
   }
 
   @Test
@@ -489,8 +488,8 @@ class SegmentLocalCacheManagerConcurrencyTest
       }
     }
 
-    Assertions.assertTrue(location.getStats().getHitCount() >= 0);
-    Assertions.assertTrue(location2.getStats().getHitCount() >= 0);
+    Assertions.assertTrue(location.getWeakStats().getHitCount() >= 0);
+    Assertions.assertTrue(location2.getWeakStats().getHitCount() >= 0);
     assertNoLooseEnds();
   }
 
@@ -565,8 +564,8 @@ class SegmentLocalCacheManagerConcurrencyTest
     Assertions.assertTrue(totalSuccess > ((iterations / 10) * minLoadCount));
     // expect at least some empties from the segment not being cached
     Assertions.assertTrue(totalEmpty > 0);
-    Assertions.assertTrue(location.getStats().getHitCount() >= 0);
-    Assertions.assertTrue(location2.getStats().getHitCount() >= 0);
+    Assertions.assertTrue(location.getWeakStats().getHitCount() >= 0);
+    Assertions.assertTrue(location2.getWeakStats().getHitCount() >= 0);
 
     assertNoLooseEnds();
   }
@@ -600,17 +599,17 @@ class SegmentLocalCacheManagerConcurrencyTest
         totalFailures += result.exceptions.size();
         Assertions.assertEquals(
             totalSuccess,
-            location.getStats().getLoadCount() +
-            location.getStats().getHitCount() +
-            location2.getStats().getLoadCount() +
-            location2.getStats().getHitCount(),
+            location.getWeakStats().getLoadCount() +
+            location.getWeakStats().getHitCount() +
+            location2.getWeakStats().getLoadCount() +
+            location2.getWeakStats().getHitCount(),
             StringUtils.format(
                 "iteration[%s] - loc1: loads[%s] hits[%s] loc2: loads[%s] hits[%s]",
                 i,
-                location.getStats().getLoadCount(),
-                location.getStats().getHitCount(),
-                location2.getStats().getLoadCount(),
-                location2.getStats().getHitCount()
+                location.getWeakStats().getLoadCount(),
+                location.getWeakStats().getHitCount(),
+                location2.getWeakStats().getLoadCount(),
+                location2.getWeakStats().getHitCount()
             )
         );
 
@@ -627,20 +626,20 @@ class SegmentLocalCacheManagerConcurrencyTest
     Assertions.assertEquals(iterations, totalSuccess + totalFailures);
     Assertions.assertEquals(
         totalSuccess,
-        location.getStats().getLoadCount()
-        + location.getStats().getHitCount()
-        + location2.getStats().getLoadCount()
-        + location2.getStats().getHitCount()
+        location.getWeakStats().getLoadCount()
+        + location.getWeakStats().getHitCount()
+        + location2.getWeakStats().getLoadCount()
+        + location2.getWeakStats().getHitCount()
     );
-    Assertions.assertTrue(totalFailures <= location.getStats().getRejectCount() + location2.getStats()
-                                                                                           .getRejectCount());
+    Assertions.assertTrue(totalFailures <= location.getWeakStats().getRejectCount() + location2.getWeakStats()
+                                                                                               .getRejectCount());
 
     if (expectHits) {
-      Assertions.assertTrue(location.getStats().getHitCount() >= 0);
-      Assertions.assertTrue(location2.getStats().getHitCount() >= 0);
+      Assertions.assertTrue(location.getWeakStats().getHitCount() >= 0);
+      Assertions.assertTrue(location2.getWeakStats().getHitCount() >= 0);
     } else {
-      Assertions.assertEquals(0, location.getStats().getHitCount());
-      Assertions.assertEquals(0, location2.getStats().getHitCount());
+      Assertions.assertEquals(0, location.getWeakStats().getHitCount());
+      Assertions.assertEquals(0, location2.getWeakStats().getHitCount());
     }
 
     assertNoLooseEnds();
@@ -720,14 +719,14 @@ class SegmentLocalCacheManagerConcurrencyTest
     // 5 because __drop path
     Assertions.assertTrue(5 >= location.getPath().listFiles().length);
     Assertions.assertTrue(5 >= location2.getPath().listFiles().length);
-    Assertions.assertTrue(location.getStats().getLoadCount() >= 4);
-    Assertions.assertTrue(location2.getStats().getLoadCount() >= 4);
-    Assertions.assertEquals(location.getStats().getEvictionCount(), location.getStats().getUnmountCount());
-    Assertions.assertEquals(location2.getStats().getEvictionCount(), location2.getStats().getUnmountCount());
-    Assertions.assertEquals(location.getStats().getLoadCount() - 4, location.getStats().getEvictionCount());
-    Assertions.assertEquals(location2.getStats().getLoadCount() - 4, location2.getStats().getEvictionCount());
-    Assertions.assertEquals(location.getStats().getLoadCount() - 4, location.getStats().getUnmountCount());
-    Assertions.assertEquals(location2.getStats().getLoadCount() - 4, location2.getStats().getUnmountCount());
+    Assertions.assertTrue(location.getWeakStats().getLoadCount() >= 4);
+    Assertions.assertTrue(location2.getWeakStats().getLoadCount() >= 4);
+    Assertions.assertEquals(location.getWeakStats().getEvictionCount(), location.getWeakStats().getUnmountCount());
+    Assertions.assertEquals(location2.getWeakStats().getEvictionCount(), location2.getWeakStats().getUnmountCount());
+    Assertions.assertEquals(location.getWeakStats().getLoadCount() - 4, location.getWeakStats().getEvictionCount());
+    Assertions.assertEquals(location2.getWeakStats().getLoadCount() - 4, location2.getWeakStats().getEvictionCount());
+    Assertions.assertEquals(location.getWeakStats().getLoadCount() - 4, location.getWeakStats().getUnmountCount());
+    Assertions.assertEquals(location2.getWeakStats().getLoadCount() - 4, location2.getWeakStats().getUnmountCount());
   }
 
   private void makeSegmentsToLoad(
@@ -856,12 +855,12 @@ class SegmentLocalCacheManagerConcurrencyTest
           segmentManager.acquireSegment(segment)
       );
       try {
-        final ReferenceCountedObjectProvider<Segment> referenceProvider =
+        final AcquireSegmentResult result =
             action.getSegmentFuture().get(timeout, TimeUnit.MILLISECONDS);
-        if (referenceProvider == null) {
+        if (result == null) {
           Assertions.fail("this shouldn't happen");
         }
-        final Optional<Segment> segment = referenceProvider.acquireReference().map(closer::register);
+        final Optional<Segment> segment = result.getReferenceProvider().acquireReference().map(closer::register);
         if (segment.isPresent()) {
           PhysicalSegmentInspector gadget = segment.get().as(PhysicalSegmentInspector.class);
           if (delayMin >= 0 && delayMax > 0) {

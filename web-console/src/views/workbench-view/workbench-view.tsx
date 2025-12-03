@@ -36,6 +36,7 @@ import { MenuCheckbox, SplitterLayout } from '../../components';
 import { SpecDialog, StringInputDialog } from '../../dialogs';
 import type {
   CapacityInfo,
+  ConsoleViewId,
   DruidEngine,
   Execution,
   QueryContext,
@@ -56,6 +57,7 @@ import { ExecutionStateCache } from '../../singletons/execution-state-cache';
 import { WorkbenchRunningPromises } from '../../singletons/workbench-running-promises';
 import type { ColumnMetadata } from '../../utils';
 import {
+  assemble,
   deepSet,
   generate8HexId,
   localStorageGet,
@@ -67,6 +69,7 @@ import {
   QueryManager,
   QueryState,
 } from '../../utils';
+import { TableFilters } from '../../utils/table-filters';
 
 import { ColumnTree } from './column-tree/column-tree';
 import { ConnectExternalDataDialog } from './connect-external-data-dialog/connect-external-data-dialog';
@@ -131,7 +134,7 @@ export interface WorkbenchViewProps
   serverQueryContext?: QueryContext;
   queryEngines: DruidEngine[];
   hiddenMoreMenuItems?: MoreMenuItem[] | ((engine: DruidEngine) => MoreMenuItem[]);
-  goToTask(taskId: string): void;
+  goToView(tab: ConsoleViewId, filters?: TableFilters): void;
   getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
   hideToolbar?: boolean;
   maxTasksOptions?:
@@ -334,7 +337,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
   }
 
   private renderExecutionDetailsDialog() {
-    const { goToTask } = this.props;
+    const { goToView } = this.props;
     const { details } = this.state;
     if (!details) return;
 
@@ -343,7 +346,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
         id={details.id}
         initTab={details.initTab}
         initExecution={details.initExecution}
-        goToTask={goToTask}
+        goToTask={(taskId: string) => goToView('tasks', TableFilters.eq({ task_id: taskId }))}
         onClose={() => this.setState({ details: undefined })}
       />
     );
@@ -550,7 +553,9 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
             <div
               key={i}
               className={classNames('tab-button', { active })}
-              data-tooltip={tabEntry.tabName}
+              data-tooltip={assemble(tabEntry.tabName, tabEntry.query.formatLastExecution()).join(
+                '\n',
+              )}
             >
               {active ? (
                 <Popover
@@ -734,7 +739,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
       baseQueryContext,
       serverQueryContext = DEFAULT_SERVER_QUERY_CONTEXT,
       queryEngines,
-      goToTask,
+      goToView,
       getClusterCapacity,
       maxTasksMenuHeader,
       enginesLabelFn,
@@ -771,7 +776,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           onDetails={this.handleDetailsWithExecution}
           queryEngines={queryEngines}
           clusterCapacity={capabilities.getMaxTaskSlots()}
-          goToTask={goToTask}
+          goToTask={(taskId: string) => goToView('tasks', TableFilters.eq({ task_id: taskId }))}
           getClusterCapacity={getClusterCapacity}
           maxTasksMenuHeader={maxTasksMenuHeader}
           enginesLabelFn={enginesLabelFn}

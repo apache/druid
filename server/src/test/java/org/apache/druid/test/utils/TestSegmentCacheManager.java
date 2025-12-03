@@ -28,6 +28,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestSegmentUtils;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
+import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.loading.TombstoneSegmentizerFactory;
 import org.apache.druid.timeline.DataSegment;
@@ -138,7 +139,7 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
       return AcquireSegmentAction.missingSegment();
     }
     return new AcquireSegmentAction(
-        () -> Futures.immediateFuture(getSegmentInternal(dataSegment)),
+        () -> Futures.immediateFuture(AcquireSegmentResult.cached(getSegmentInternal(dataSegment))),
         null
     );
   }

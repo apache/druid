@@ -21,13 +21,9 @@ import type { Filter } from 'react-table';
 import { ReactTableDefaults } from 'react-table';
 
 import { Loader } from '../components';
-import {
-  booleanCustomTableFilter,
-  DEFAULT_TABLE_CLASS_NAME,
-  GenericFilterInput,
-  ReactTablePagination,
-} from '../react-table';
+import { DEFAULT_TABLE_CLASS_NAME, GenericFilterInput, ReactTablePagination } from '../react-table';
 import { countBy } from '../utils';
+import { TableFilter } from '../utils/table-filters';
 
 const NoData = React.memo(function NoData(props: { children?: React.ReactNode }) {
   const { children } = props;
@@ -41,10 +37,11 @@ export function bootstrapReactTable() {
     defaultFilterMethod: (filter: Filter, row: any) => {
       const id = filter.pivotId || filter.id;
       const subRows = row._subRows;
+      const tableFilter = TableFilter.fromFilter(filter);
       if (Array.isArray(subRows)) {
-        return subRows.some(r => booleanCustomTableFilter(filter, r[id]));
+        return subRows.some(r => tableFilter.matches(r[id]));
       } else {
-        return booleanCustomTableFilter(filter, row[id]);
+        return tableFilter.matches(row[id]);
       }
     },
     LoadingComponent: Loader,

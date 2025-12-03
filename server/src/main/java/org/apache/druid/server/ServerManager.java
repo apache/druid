@@ -66,12 +66,12 @@ import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
-import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
+import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.VirtualPlaceholderSegment;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.timeline.DataSegment;
@@ -82,6 +82,7 @@ import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -221,15 +222,19 @@ public class ServerManager implements QuerySegmentWalker
       if (chunk != null) {
         segmentsToMap.add(new DataSegmentAndDescriptor(chunk.getObject(), descriptor));
       } else {
-        segmentsToMap.add(new DataSegmentAndDescriptor(null, descriptor));
+        segmentsToMap.add(DataSegmentAndDescriptor.missing(descriptor));
       }
     }
 
     return segmentManager.getSegmentsBundle(segmentsToMap, segmentMapFunction);
   }
 
+  /**
+   * Combines {@link LeafSegmentsBundle#cachedSegments} with {@link LeafSegmentsBundle#loadableSegments}, loading the
+   * latter set into the cache
+   */
   protected ArrayList<SegmentReference> getOrLoadBundleSegments(
-      Query<?> query,
+      QueryPlus<?> queryPlus,
       LeafSegmentsBundle segmentsBundle,
       SegmentMapFunction segmentMapFunction
   )
@@ -243,7 +248,7 @@ public class ServerManager implements QuerySegmentWalker
     // so we use placeholders instead. this is kind of gross, but otherwise we're going to be loading weak assignments
     // more or less as soon as they are assigned instead of on demand at query time due to the broker issuing metadata
     // queries to build the SQL schema
-    if (query instanceof SegmentMetadataQuery) {
+    if (queryPlus.getQuery() instanceof SegmentMetadataQuery) {
       for (DataSegmentAndDescriptor segment : segmentsBundle.getLoadableSegments()) {
         segmentReferences.add(
             new SegmentReference(
@@ -256,13 +261,15 @@ public class ServerManager implements QuerySegmentWalker
     } else {
       // load the remaining segments
       try {
-        segmentReferences.addAll(
-            getSegmentReferences(
-                segmentsBundle.getLoadableSegments(),
-                segmentMapFunction,
-                query.context().getTimeout()
-            )
+        final LoadSegmentsResult result = getOrLoadSegmentReferences(
+            segmentsBundle.getLoadableSegments(),
+            segmentMapFunction,
+            queryPlus.getQuery().context().getTimeout()
         );
+        segmentReferences.addAll(result.getSegmentReferences());
+        if (segmentManager.canLoadSegmentsOnDemand()) {
+          result.reportMetrics(queryPlus.getQueryMetrics());
+        }
       }
       catch (Throwable t) {
         throw CloseableUtils.closeAndWrapInCatch(t, segmentsBundle::closeCachedReferences);
@@ -274,18 +281,19 @@ public class ServerManager implements QuerySegmentWalker
 
   /**
    * Given a list of {@link DataSegmentAndDescriptor}, uses {@link SegmentManager#acquireSegment(DataSegment)} for each
-   * to obtain a 'reference' to segments in the cache (or loaded from deep storage if necessary/supported by the
+   * to obtain a 'reference' to segments in the cache (or load from deep storage if necessary/supported by the
    * storage layer).
    * <p>
    * For each of these segments, we then apply a {@link SegmentMapFunction} to prepare for processing. The returned
    * {@link SegmentReference} MUST BE CLOSED to release the reference.
    */
-  protected ArrayList<SegmentReference> getSegmentReferences(
+  protected LoadSegmentsResult getOrLoadSegmentReferences(
       List<DataSegmentAndDescriptor> segmentsToMap,
       SegmentMapFunction segmentMapFunction,
       long timeout
   )
   {
+    final long startLoadTime = System.nanoTime();
     // closer to collect everything that needs cleaned up in the event of failure, if we make it out of this function,
     // closing the segment reference handles everything and it is the callers responsibility
     final Closer safetyNet = Closer.create();
@@ -319,7 +327,7 @@ public class ServerManager implements QuerySegmentWalker
     Throwable failure = null;
 
     // getting the future kicks off any background action, so materialize them all to a list to get things started
-    final List<ListenableFuture<ReferenceCountedObjectProvider<Segment>>> futures = new ArrayList<>(actions.size());
+    final List<ListenableFuture<AcquireSegmentResult>> futures = new ArrayList<>(actions.size());
     for (AcquireSegmentAction acquireSegmentAction : actions) {
       // if we haven't failed yet, keep collecting futures
       if (failure == null) {
@@ -330,7 +338,7 @@ public class ServerManager implements QuerySegmentWalker
           failure = t;
         }
       } else {
-        futures.add(Futures.immediateFuture(Optional::empty));
+        futures.add(Futures.immediateFuture(AcquireSegmentResult.empty()));
       }
     }
 
@@ -346,21 +354,30 @@ public class ServerManager implements QuerySegmentWalker
     }
 
     final ArrayList<SegmentReference> segmentReferences = new ArrayList<>(actions.size());
+    long totalSegmentsLoadTime = 0;
+    long totalSegmentsLoadWaitTime = 0;
+    long maxSegmentLoadTime = 0;
+    long maxSegmentWaitTime = 0;
+    long bytesLoaded = 0;
     boolean timedOut = false;
     boolean interrupted = false;
     for (int i = 0; i < actions.size(); i++) {
       try {
         final DataSegmentAndDescriptor segmentAndDescriptor = segmentsToMap.get(i);
         final AcquireSegmentAction action = actions.get(i);
-        final ListenableFuture<ReferenceCountedObjectProvider<Segment>> future = futures.get(i);
-        final ReferenceCountedObjectProvider<Segment> referenceProvider =
-            future.get(timeoutAt - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
-        if (referenceProvider == null) {
+        final ListenableFuture<AcquireSegmentResult> future = futures.get(i);
+        final AcquireSegmentResult result = future.get(timeoutAt - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
+        if (result == null) {
           segmentReferences.add(
               new SegmentReference(segmentAndDescriptor.getDescriptor(), Optional.empty(), action)
           );
         } else {
-          final Optional<Segment> segment = referenceProvider.acquireReference();
+          totalSegmentsLoadTime += result.getLoadTimeNanos();
+          totalSegmentsLoadWaitTime += result.getWaitTimeNanos();
+          maxSegmentLoadTime = Math.max(maxSegmentLoadTime, result.getLoadTimeNanos());
+          maxSegmentWaitTime = Math.max(maxSegmentWaitTime, result.getWaitTimeNanos());
+          bytesLoaded += result.getLoadSizeBytes();
+          final Optional<Segment> segment = result.getReferenceProvider().acquireReference();
           try {
             final Optional<Segment> mappedSegment = segmentMapFunction.apply(segment).map(safetyNet::register);
             segmentReferences.add(
@@ -415,7 +432,18 @@ public class ServerManager implements QuerySegmentWalker
       }
       throw CloseableUtils.closeInCatch(toThrow, safetyNet);
     }
-    return segmentReferences;
+    final long loadTime = System.nanoTime() - startLoadTime;
+    final long count = actions.size();
+    return new LoadSegmentsResult(
+        segmentReferences,
+        loadTime,
+        maxSegmentLoadTime,
+        count == 0 ? 0 : totalSegmentsLoadTime / count,
+        maxSegmentWaitTime,
+        count == 0 ? 0 : totalSegmentsLoadWaitTime / count,
+        bytesLoaded,
+        count
+    );
   }
 
   protected <T> FunctionalIterable<QueryRunner<T>> getQueryRunnersForSegments(
@@ -588,7 +616,7 @@ public class ServerManager implements QuerySegmentWalker
     {
       queryPlus = queryPlus.withQuery(
           ResourceIdPopulatingQueryRunner.populateResourceId(queryPlus.getQuery())
-      );
+      ).withQueryMetrics(toolChest);
       final Query<T> query = queryPlus.getQuery();
       final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
       final SegmentMapFunction segmentMapFn = JvmUtils.safeAccumulateThreadCpuTime(
@@ -606,7 +634,11 @@ public class ServerManager implements QuerySegmentWalker
 
         responseContext.addMissingSegments(segmentsBundle.getMissingSegments());
 
-        final List<SegmentReference> segmentReferences = getOrLoadBundleSegments(query, segmentsBundle, segmentMapFn);
+        final List<SegmentReference> segmentReferences = getOrLoadBundleSegments(
+            queryPlus,
+            segmentsBundle,
+            segmentMapFn
+        );
         closer.registerAll(segmentReferences);
 
         final FunctionalIterable<QueryRunner<T>> queryRunners = getQueryRunnersForSegments(
@@ -639,6 +671,57 @@ public class ServerManager implements QuerySegmentWalker
     protected LeafSegmentsBundle getLeafSegmentsBundle(Query<T> query, SegmentMapFunction segmentMapFunction)
     {
       return ServerManager.this.getSegmentsBundle(timeline, specs, segmentMapFunction);
+    }
+  }
+
+  public static class LoadSegmentsResult
+  {
+    private final ArrayList<SegmentReference> segmentReferences;
+    private final long wallTimeNanos;
+    private final long maxTimeNanos;
+    private final long avgTimeNanos;
+    private final long maxWaitNanos;
+    private final long avgWaitNanos;
+    private final long totalBytes;
+    private final long count;
+
+    public LoadSegmentsResult(
+        ArrayList<SegmentReference> segmentReferences,
+        long wallTimeNanos,
+        long maxTimeNanos,
+        long avgTimeNanos,
+        long maxWaitNanos,
+        long avgWaitNanos,
+        long totalBytes,
+        long count
+    )
+    {
+      this.segmentReferences = segmentReferences;
+      this.wallTimeNanos = wallTimeNanos;
+      this.maxTimeNanos = maxTimeNanos;
+      this.avgTimeNanos = avgTimeNanos;
+      this.maxWaitNanos = maxWaitNanos;
+      this.avgWaitNanos = avgWaitNanos;
+      this.totalBytes = totalBytes;
+      this.count = count;
+    }
+
+    public List<SegmentReference> getSegmentReferences()
+    {
+      return segmentReferences;
+    }
+
+    public void reportMetrics(@Nullable QueryMetrics<?> queryMetrics)
+    {
+      if (queryMetrics != null) {
+        queryMetrics.reportSegmentOnDemandLoadTime(wallTimeNanos);
+        queryMetrics.reportSegmentOnDemandLoadTimeMax(maxTimeNanos);
+        queryMetrics.reportSegmentOnDemandLoadTimeAvg(avgTimeNanos);
+        queryMetrics.reportSegmentOnDemandLoadWaitTimeMax(maxWaitNanos);
+        queryMetrics.reportSegmentOnDemandLoadWaitTimeAvg(avgWaitNanos);
+        queryMetrics.reportSegmentOnDemandLoadBytes(totalBytes);
+        queryMetrics.reportSegmentOnDemandLoadCount(count);
+      }
     }
   }
 }

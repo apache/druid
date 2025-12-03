@@ -22,7 +22,7 @@ import * as JSONBig from 'json-bigint-native';
 import memoize from 'memoize-one';
 import type { JSX } from 'react';
 import React, { createContext, useContext } from 'react';
-import type { Column, Filter, SortingRule } from 'react-table';
+import type { Column, SortingRule } from 'react-table';
 import ReactTable from 'react-table';
 
 import type { TableColumnSelectorColumn } from '../../components';
@@ -47,6 +47,7 @@ import {
   TaskGroupHandoffDialog,
 } from '../../dialogs';
 import type {
+  ConsoleViewId,
   IngestionSpec,
   QueryWithContext,
   RowStatsKey,
@@ -59,7 +60,6 @@ import type { Capabilities } from '../../helpers';
 import {
   SMALL_TABLE_PAGE_SIZE,
   SMALL_TABLE_PAGE_SIZE_OPTIONS,
-  sqlQueryCustomTableFilters,
   suggestibleFilterInput,
 } from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
@@ -90,6 +90,7 @@ import {
   twoLines,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
+import { TableFilters } from '../../utils/table-filters';
 
 import './supervisors-view.scss';
 
@@ -176,13 +177,12 @@ function HeaderStatsKeySelector({ changeStatsKey }: HeaderStatsKeySelectorProps)
 }
 
 export interface SupervisorsViewProps {
-  filters: Filter[];
-  onFiltersChange(filters: Filter[]): void;
+  filters: TableFilters;
+  onFiltersChange(filters: TableFilters): void;
   openSupervisorDialog: boolean | undefined;
-  goToDatasource(datasource: string): void;
+  goToView(tab: ConsoleViewId, filters?: TableFilters): void;
   goToQuery(queryWithContext: QueryWithContext): void;
   goToStreamingDataLoader(supervisorId: string): void;
-  goToTasks(supervisorId: string, type: string | undefined): void;
   capabilities: Capabilities;
 }
 
@@ -288,7 +288,7 @@ export class SupervisorsView extends React.PureComponent<
         let count = -1;
         const auxiliaryQueries: AuxiliaryQueryFn<SupervisorsWithAuxiliaryInfo>[] = [];
         if (capabilities.hasSql()) {
-          const whereExpression = sqlQueryCustomTableFilters(filtered);
+          const whereExpression = filtered.toSqlExpression();
 
           let filterClause = '';
           if (whereExpression.toString() !== 'TRUE') {
@@ -462,7 +462,7 @@ export class SupervisorsView extends React.PureComponent<
     const { filters } = this.props;
     const { page, pageSize, sorted } = this.state;
     if (
-      !sqlQueryCustomTableFilters(filters).equals(sqlQueryCustomTableFilters(prevProps.filters)) ||
+      !filters.toSqlExpression().equals(prevProps.filters.toSqlExpression()) ||
       page !== prevState.page ||
       pageSize !== prevState.pageSize ||
       sortedToOrderByClause(sorted) !== sortedToOrderByClause(prevState.sorted)
@@ -484,7 +484,7 @@ export class SupervisorsView extends React.PureComponent<
     });
   };
 
-  private readonly handleFilterChange = (filters: Filter[]) => {
+  private readonly handleFilterChange = (filters: TableFilters) => {
     this.goToFirstPage();
     this.props.onFiltersChange(filters);
   };
@@ -521,7 +521,7 @@ export class SupervisorsView extends React.PureComponent<
 
   private getSupervisorActions(supervisor: SupervisorQueryResultRow): BasicAction[] {
     const { supervisor_id, datasource, suspended, type } = supervisor;
-    const { goToDatasource, goToStreamingDataLoader } = this.props;
+    const { goToView, goToStreamingDataLoader } = this.props;
 
     const actions: BasicAction[] = [];
     if (oneOf(type, 'kafka', 'kinesis')) {
@@ -529,7 +529,7 @@ export class SupervisorsView extends React.PureComponent<
         {
           icon: IconNames.MULTI_SELECT,
           title: 'Go to datasource',
-          onAction: () => goToDatasource(datasource),
+          onAction: () => goToView('datasources', TableFilters.eq({ datasource })),
         },
         {
           icon: IconNames.CLOUD_UPLOAD,
@@ -778,29 +778,43 @@ export class SupervisorsView extends React.PureComponent<
   }
 
   private goToTasksForSupervisor(supervisor: SupervisorQueryResultRow) {
-    const { goToTasks } = this.props;
+    const { goToView } = this.props;
     switch (supervisor.type) {
       case 'kafka':
       case 'kinesis':
-        goToTasks(
-          `index_${supervisor.type}_${supervisor.supervisor_id}`,
-          `index_${supervisor.type}`,
+        goToView(
+          'tasks',
+          TableFilters.eq({
+            group_id: `index_${supervisor.type}_${supervisor.supervisor_id}`,
+            type: `index_${supervisor.type}`,
+          }),
         );
         return;
 
       case 'autocompact':
-        goToTasks(supervisor.supervisor_id.replace(/^autocompact__/, ''), 'compact');
+        goToView(
+          'tasks',
+          TableFilters.eq({
+            datasource: supervisor.supervisor_id.replace(/^autocompact__/, ''),
+            type: 'compact',
+          }),
+        );
         return;
 
       case 'scheduled_batch':
-        goToTasks(
-          supervisor.supervisor_id.replace(/^scheduled_batch__/, '').replace(/__[0-9a-f-]+$/, ''),
-          'query_controller',
+        goToView(
+          'tasks',
+          TableFilters.eq({
+            datasource: supervisor.supervisor_id
+              .replace(/^scheduled_batch__/, '')
+              .replace(/__[0-9a-f-]+$/, ''),
+            type: 'query_controller',
+          }),
         );
         return;
 
       default:
-        goToTasks(supervisor.supervisor_id, undefined);
+        goToView('tasks', TableFilters.eq({ group_id: supervisor.supervisor_id }));
         return;
     }
   }
@@ -829,8 +843,8 @@ export class SupervisorsView extends React.PureComponent<
             }
             manual
             filterable
-            filtered={filters}
-            onFilteredChange={this.handleFilterChange}
+            filtered={filters.toFilters()}
+            onFilteredChange={filters => this.handleFilterChange(TableFilters.fromFilters(filters))}
             sorted={sorted}
             onSortedChange={sorted => this.setState({ sorted })}
             page={page}
@@ -851,7 +865,7 @@ export class SupervisorsView extends React.PureComponent<
   private readonly getTableColumns = memoize(
     (
       visibleColumns: LocalStorageBackedVisibility,
-      filters: Filter[],
+      filters: TableFilters,
     ): Column<SupervisorQueryResultRow>[] => {
       return [
         {

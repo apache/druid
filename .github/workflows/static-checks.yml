@@ -197,7 +197,7 @@ jobs:
 
       - name: Tar druid logs
         if: ${{ failure() && steps.web-console-test.conclusion == 'failure' }}
-        run: tar cvzf ./druid-logs.tgz -C ./distribution/target/apache-druid-*-SNAPSHOT/ log
+        run: tar cvzf ./druid-logs.tgz -C ./distribution/target/apache-druid-*-SNAPSHOT/ log -C ./var druid/indexing-logs
 
       - name: Upload druid logs to GitHub
         if: ${{ failure() && steps.web-console-test.conclusion == 'failure' }}

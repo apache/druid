@@ -98,8 +98,8 @@
         <fastutil.version>8.5.4</fastutil.version>
         <guava.version>32.1.3-jre</guava.version>
         <guice.version>5.1.0</guice.version>
-        <hamcrest.version>1.3</hamcrest.version>
-        <jetty.version>12.0.25</jetty.version>
+        <hamcrest.version>2.2</hamcrest.version>
+        <jetty.version>12.0.30</jetty.version>
         <jersey.version>1.19.4</jersey.version>
         <jackson.version>2.19.2</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
@@ -1005,6 +1005,11 @@
                 <version>0.9.49</version>
             </dependency>
             <dependency>
+                <groupId>org.checkerframework</groupId>
+                <artifactId>checker-qual</artifactId>
+                <version>${checkerframework.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm</artifactId>
                 <version>9.8</version>
@@ -1224,25 +1229,6 @@
                     </exclusion>
                 </exclusions>
             </dependency>
-            <dependency>
-                <groupId>com.maxmind.geoip2</groupId>
-                <artifactId>geoip2</artifactId>
-                <version>0.4.0</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>com.google.http-client</groupId>
-                        <artifactId>google-http-client</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.google.http-client</groupId>
-                        <artifactId>google-http-client-jackson2</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                        <artifactId>jackson-databind</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
            <dependency>
                <groupId>org.postgresql</groupId>
                <artifactId>postgresql</artifactId>
@@ -1329,7 +1315,7 @@
             </dependency>
             <dependency>
                 <groupId>org.hamcrest</groupId>
-                <artifactId>hamcrest-all</artifactId>
+                <artifactId>hamcrest</artifactId>
                 <version>${hamcrest.version}</version>
                 <scope>test</scope>
             </dependency>

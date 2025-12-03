@@ -37,6 +37,7 @@ import com.google.inject.Module;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexer.granularity.GranularitySpec;
@@ -55,6 +56,7 @@ import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.ShardSpecLookup;
@@ -118,6 +120,9 @@ public class HadoopDruidIndexerConfig
                   new DruidNode("hadoop-indexer", null, false, null, null, true, false)
               );
               JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", HadoopKerberosConfig.class);
+              binder.bind(LocalTmpStorageConfig.class)
+                    .toProvider(new LocalTmpStorageConfig.DefaultLocalTmpStorageConfigProvider("hadoop-indexer"))
+                    .in(LazySingleton.class);
             },
             new IndexingHadoopModule()
         )

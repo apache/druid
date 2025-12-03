@@ -32,7 +32,7 @@ import java.util.Map;
 /**
  * Service metric event builder for MSQ.
  */
-public class MSQMetriceEventBuilder extends ServiceMetricEvent.Builder
+public class MSQMetricEventBuilder extends ServiceMetricEvent.Builder
 {
   /**
    * Value to emit for {@link DruidMetrics#TYPE} in query metrics.
