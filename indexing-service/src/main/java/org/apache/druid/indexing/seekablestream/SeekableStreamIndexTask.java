@@ -200,13 +200,10 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   }
 
   @Override
-  protected ServiceMetricEvent.Builder getMetricBuilder()
+  public ServiceMetricEvent.Builder getMetricBuilder()
   {
-    final ServiceMetricEvent.Builder builder = super.getMetricBuilder();
-    if (supervisorId != null) {
-      builder.setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId);
-    }
-    return builder;
+    return super.getMetricBuilder()
+                .setDimensionIfNotNull(DruidMetrics.SUPERVISOR_ID, supervisorId);
   }
 
   public Appenderator newAppenderator(

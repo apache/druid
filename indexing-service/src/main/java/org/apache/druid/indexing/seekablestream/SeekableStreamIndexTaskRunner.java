@@ -59,7 +59,6 @@ import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.CheckPointDataSourceMetadataAction;
 import org.apache.druid.indexing.common.actions.ResetDataSourceMetadataAction;
@@ -431,7 +430,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     // Set up SegmentGenerationMetrics
     this.segmentGenerationMetrics = new SegmentGenerationMetrics();
     final TaskRealtimeMetricsMonitor metricsMonitor =
-        TaskRealtimeMetricsMonitorBuilder.build(task, segmentGenerationMetrics, rowIngestionMeters);
+        new TaskRealtimeMetricsMonitor(segmentGenerationMetrics, rowIngestionMeters, task.getMetricBuilder());
     toolbox.addMonitor(metricsMonitor);
 
     final String lookupTier = task.getContextValue(CTX_KEY_LOOKUP_TIER);
