@@ -2466,7 +2466,7 @@ module: java-core
 license_name: Apache License version 2.0
 version: 1.8.1
 libraries:
-  - org.lz4: lz4-java
+  - at.yawk.lz4: lz4-java
 
 ---
 
