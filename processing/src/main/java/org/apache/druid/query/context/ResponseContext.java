@@ -279,6 +279,20 @@ public abstract class ResponseContext
     }
   }
 
+  public static class MetricKey extends AbstractKey
+  {
+    MetricKey(String name)
+    {
+      super(name, false, false, new TypeReference<AtomicLong>() {});
+    }
+
+    @Override
+    public Object mergeValues(Object oldValue, Object newValue)
+    {
+      return ((AtomicLong) newValue).addAndGet(((AtomicLong) newValue).get());
+    }
+  }
+
   /**
    * Global registry of response context keys. Also defines the standard keys
    * associated with objects in the context.
@@ -400,20 +414,7 @@ public abstract class ResponseContext
     /**
      * Query total bytes gathered.
      */
-    public static final Key QUERY_TOTAL_BYTES_GATHERED = new AbstractKey(
-        "queryTotalBytesGathered",
-        false, false,
-        new TypeReference<AtomicLong>()
-        {
-        }
-    )
-    {
-      @Override
-      public Object mergeValues(Object oldValue, Object newValue)
-      {
-        return ((AtomicLong) newValue).addAndGet(((AtomicLong) newValue).get());
-      }
-    };
+    public static final Key QUERY_TOTAL_BYTES_GATHERED = new MetricKey("queryTotalBytesGathered");
 
     /**
      * Query fail time (current time + timeout).

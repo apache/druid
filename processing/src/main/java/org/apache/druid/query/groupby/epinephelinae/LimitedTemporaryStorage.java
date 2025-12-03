@@ -68,6 +68,7 @@ public class LimitedTemporaryStorage implements Closeable
   {
     this.storageDirectory = storageDirectory;
     this.maxBytesUsed = maxBytesUsed;
+    log.info("I actually created a LimitedTemporaryStorage without being able to track anything!");
     this.groupByQueryMetrics = groupByQueryMetrics;
   }
 
@@ -143,7 +144,9 @@ public class LimitedTemporaryStorage implements Closeable
       }
       closed = true;
 
-      groupByQueryMetrics.bytesSpilledToStorage(bytesUsed.get());
+      if (groupByQueryMetrics != null) {
+        groupByQueryMetrics.bytesSpilledToStorage(bytesUsed.get());
+      }
       bytesUsed.set(0);
 
       for (File file : ImmutableSet.copyOf(files)) {

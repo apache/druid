@@ -221,7 +221,9 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     // TODO: If we do not want groupByQueryMetrics to do addition, simply return a Map,
     //  then either the ConcurrentGrouper will aggregate the results into a accumulated map,
     //  and the GroupByQueryMetrics will provide a means to report GroupByMetrics via a map.
-    groupByQueryMetrics.mergeDictionarySize(keySerde.getDictionarySize());
+    if (groupByQueryMetrics != null) {
+      groupByQueryMetrics.mergeDictionarySize(keySerde.getDictionarySize());
+    }
   }
 
   @Override
