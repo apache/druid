@@ -28,10 +28,14 @@ import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+/**
+ * Integration test for system table queries.
+ * In this test we're using deterministic table names to avoid flaky behavior of the test.
+ */
 public class SystemTableQueryTest extends QueryTestBase
 {
-  private final String tableName1 = EmbeddedClusterApis.createTestDatasourceName();
-  private final String tableName2 = EmbeddedClusterApis.createTestDatasourceName();
+  private final String tableName1 = "table_a";
+  private final String tableName2 = "table_b";
 
   @Override
   public void beforeAll()
@@ -58,7 +62,8 @@ public class SystemTableQueryTest extends QueryTestBase
         + "FROM sys.segments \n"
         + "WHERE datasource='%s' \n"
         + "OR    datasource='%s' \n"
-        + "GROUP BY 1", tableName1, tableName2
+        + "GROUP BY 1\n"
+        + "ORDER BY 1", tableName1, tableName2
     );
 
     String[] result = cluster.callApi().runSql(query).split("\n");
