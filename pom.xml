@@ -1510,6 +1510,7 @@
                         <!-- The "new" ITs put the test classes into the above testing package. However,
                              the "old" version has them sprinked through the module tree. Remove the following
                              once the old version is retired. -->
+                        <exclude>org/apache/druid/server/coordination/ServerManagerForQueryErrorTest.class</exclude>
                         <exclude>org/apache/druid/guice/SleepModule.class</exclude>
                         <exclude>org/apache/druid/guice/CustomNodeRoleClientModule.class</exclude>
                         <exclude>org/apache/druid/cli/CustomNodeRoleCommandCreator.class</exclude>

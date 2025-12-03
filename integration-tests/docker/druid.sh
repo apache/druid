@@ -22,6 +22,7 @@ getConfPath()
     cluster_conf_base=/tmp/conf/druid/cluster
     case "$1" in
     _common) echo $cluster_conf_base/_common ;;
+    historical-for-query-error-test) echo $cluster_conf_base/data/historical ;;
     historical) echo $cluster_conf_base/data/historical ;;
     middleManager) echo $cluster_conf_base/data/middleManager ;;
     indexer) echo $cluster_conf_base/data/indexer ;;
