@@ -30,14 +30,12 @@ import org.junit.jupiter.api.Test;
  */
 public class SystemTableQueryTest extends QueryTestBase
 {
-  private String dataSourceName1;
-  private String dataSourceName2;
+  private String testDataSourceName;
 
   @Override
   public void beforeAll()
   {
-    dataSourceName1 = ingestBasicData();
-    dataSourceName2 = ingestBasicData();
+    testDataSourceName = ingestBasicData();
   }
 
   @Test
@@ -47,15 +45,12 @@ public class SystemTableQueryTest extends QueryTestBase
         "SELECT datasource, count(*) \n"
         + "FROM sys.segments \n"
         + "WHERE datasource='%s' \n"
-        + "OR    datasource='%s' \n"
-        + "GROUP BY 1\n"
-        + "ORDER BY 1",
-        dataSourceName1, dataSourceName2
+        + "GROUP BY 1",
+        testDataSourceName
     );
 
     String result = cluster.callApi().runSql(query);
-    Assertions.assertTrue(result.contains(dataSourceName1));
-    Assertions.assertTrue(result.contains(dataSourceName2));
+    Assertions.assertEquals(StringUtils.format("%s,10", testDataSourceName), result);
   }
 
   @Test
