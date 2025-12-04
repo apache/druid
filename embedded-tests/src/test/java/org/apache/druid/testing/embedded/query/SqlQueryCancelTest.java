@@ -33,7 +33,7 @@ import java.util.List;
 
 public class SqlQueryCancelTest extends QueryTestBase
 {
-  private static final String QUERY = " SELECT sleep(4) FROM %s LIMIT 4";
+  private static final String QUERY = " SELECT sleep(2) FROM %s LIMIT 2";
   private String dataSourceName;
 
   @Override
@@ -61,7 +61,7 @@ public class SqlQueryCancelTest extends QueryTestBase
     ListenableFuture<StatusResponseHolder> f = executeQueryAsync(routerEndpoint, query);
 
     // Wait until the sqlLifecycle is authorized and registered
-    Thread.sleep(500L);
+    Thread.sleep(300L);
     StatusResponseHolder queryCancellationResponse = cancelQuery(routerEndpoint, queryId);
 
     StatusResponseHolder queryResponce = f.get();
@@ -74,7 +74,7 @@ public class SqlQueryCancelTest extends QueryTestBase
   public void test_cancelInvalidQuery_returnsNotFound() throws Exception
   {
     final String sqlQuery = StringUtils.format(QUERY, dataSourceName);
-    final String validQueryId = "sql-cancel-test";
+    final String validQueryId = "sql-cancel-test-";
     final String invalidQueryId = "sql-continue-test";
     final ClientSqlQuery query = new ClientSqlQuery(
         sqlQuery,
@@ -87,9 +87,6 @@ public class SqlQueryCancelTest extends QueryTestBase
     );
 
     ListenableFuture<StatusResponseHolder> f = executeQueryAsync(routerEndpoint, query);
-
-    // Wait until the sqlLifecycle is authorized and registered
-    Thread.sleep(500L);
     StatusResponseHolder queryCancellationResponse = cancelQuery(routerEndpoint, invalidQueryId);
 
     StatusResponseHolder queryResponse = f.get();

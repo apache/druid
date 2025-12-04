@@ -60,7 +60,7 @@ public class JdbcQueryTest extends QueryTestBase
   private String[] connections;
   private Properties connectionProperties;
 
-  private String tableName;
+  private String dataSourceName;
 
   @Override
   protected void beforeAll()
@@ -73,7 +73,7 @@ public class JdbcQueryTest extends QueryTestBase
         StringUtils.format(CONNECTION_TEMPLATE, getServerUrl(broker)),
         };
 
-    tableName = ingestBasicData();
+    dataSourceName = ingestBasicData();
   }
 
   @Test
@@ -111,16 +111,16 @@ public class JdbcQueryTest extends QueryTestBase
         LOG.info("'druid' schema tables %s", druidTables);
         // There may be more tables than this, but at least should have @tableName
         Assertions.assertTrue(
-            druidTables.containsAll(ImmutableList.of(tableName))
+            druidTables.containsAll(ImmutableList.of(dataSourceName))
         );
 
         Set<String> wikiColumns = new HashSet<>();
-        ResultSet columnsMetadata = metadata.getColumns("druid", "druid", tableName, null);
+        ResultSet columnsMetadata = metadata.getColumns("druid", "druid", dataSourceName, null);
         while (columnsMetadata.next()) {
           final String column = columnsMetadata.getString(4);
           wikiColumns.add(column);
         }
-        LOG.info("'%s' columns %s", tableName, wikiColumns);
+        LOG.info("'%s' columns %s", dataSourceName, wikiColumns);
         // a lot more columns than this, but at least should have these
         Assertions.assertTrue(
             wikiColumns.containsAll(ImmutableList.of("__time", "item", "value"))
@@ -135,7 +135,7 @@ public class JdbcQueryTest extends QueryTestBase
   @Test
   public void testJdbcStatementQuery()
   {
-    String query = StringUtils.format(QUERY_TEMPLATE, tableName, "1000");
+    String query = StringUtils.format(QUERY_TEMPLATE, dataSourceName, "1000");
     for (String url : connections) {
       try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
         try (Statement statement = connection.createStatement()) {
@@ -158,7 +158,7 @@ public class JdbcQueryTest extends QueryTestBase
   @Test
   public void testJdbcPrepareStatementQuery()
   {
-    String query = StringUtils.format(QUERY_TEMPLATE, tableName, "?");
+    String query = StringUtils.format(QUERY_TEMPLATE, dataSourceName, "?");
     for (String url : connections) {
       try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
         try (PreparedStatement statement = connection.prepareStatement(query)) {
@@ -182,7 +182,7 @@ public class JdbcQueryTest extends QueryTestBase
   @Test
   public void testJdbcPrepareStatementQueryMissingParameters()
   {
-    String query = StringUtils.format(QUERY_TEMPLATE, tableName, "?");
+    String query = StringUtils.format(QUERY_TEMPLATE, dataSourceName, "?");
     for (String url : connections) {
       try (Connection connection = DriverManager.getConnection(url, connectionProperties);
            PreparedStatement statement = connection.prepareStatement(query);
