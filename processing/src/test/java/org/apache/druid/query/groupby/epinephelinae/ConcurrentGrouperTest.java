@@ -152,8 +152,7 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
     GroupByQueryMetrics groupByQueryMetrics = new DefaultGroupByQueryMetrics();
     final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
         temporaryFolder.newFolder(),
-        1024 * 1024,
-        groupByQueryMetrics
+        1024 * 1024
     );
     final ListeningExecutorService service = MoreExecutors.listeningDecorator(exec);
     try {
@@ -245,7 +244,7 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
           1024,
           0.7f,
           1,
-          new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024, groupByQueryMetrics),
+          new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024),
           new DefaultObjectMapper(),
           concurrencyHint,
           null,

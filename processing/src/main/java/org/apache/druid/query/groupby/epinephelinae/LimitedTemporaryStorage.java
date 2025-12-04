@@ -48,7 +48,7 @@ public class LimitedTemporaryStorage implements Closeable
 {
   private static final Logger log = new Logger(LimitedTemporaryStorage.class);
 
-  private final GroupByQueryMetrics groupByQueryMetrics;
+//  private final GroupByQueryMetrics groupByQueryMetrics;
 
   private final File storageDirectory;
   private final long maxBytesUsed;
@@ -62,14 +62,11 @@ public class LimitedTemporaryStorage implements Closeable
 
   public LimitedTemporaryStorage(
       File storageDirectory,
-      long maxBytesUsed,
-      GroupByQueryMetrics groupByQueryMetrics
+      long maxBytesUsed
   )
   {
     this.storageDirectory = storageDirectory;
     this.maxBytesUsed = maxBytesUsed;
-    log.info("I actually created a LimitedTemporaryStorage without being able to track anything!");
-    this.groupByQueryMetrics = groupByQueryMetrics;
   }
 
   /**
