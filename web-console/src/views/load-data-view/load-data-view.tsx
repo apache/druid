@@ -3387,6 +3387,20 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 ),
               },
               {
+                name: 'id',
+                label: 'Supervisor ID',
+                type: 'string',
+                defined: isStreamingSpec,
+                placeholder: '(default to the datasource name if not set)',
+                info: (
+                  <p>
+                    The ID of the supervisor that will manage the ingestion. This should generally
+                    be set to the datasource name (the default if left unset) unless you are setting
+                    up multiple supervisors for the same datasource.
+                  </p>
+                ),
+              },
+              {
                 name: 'spec.ioConfig.appendToExisting',
                 label: 'Append to existing',
                 type: 'boolean',
