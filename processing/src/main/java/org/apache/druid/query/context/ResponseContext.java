@@ -244,7 +244,7 @@ public abstract class ResponseContext
    */
   public static class LongKey extends AbstractKey
   {
-    LongKey(String name, boolean inHeader)
+    public LongKey(String name, boolean inHeader)
     {
       super(name, inHeader, false, Long.class);
     }
@@ -276,20 +276,6 @@ public abstract class ResponseContext
         return oldValue;
       }
       return (Long) oldValue + (Long) newValue;
-    }
-  }
-
-  public static class MetricKey extends AbstractKey
-  {
-    public MetricKey(String name)
-    {
-      super(name, false, false, new TypeReference<AtomicLong>() {});
-    }
-
-    @Override
-    public Object mergeValues(Object oldValue, Object newValue)
-    {
-      return ((AtomicLong) newValue).addAndGet(((AtomicLong) newValue).get());
     }
   }
 
@@ -414,7 +400,20 @@ public abstract class ResponseContext
     /**
      * Query total bytes gathered.
      */
-    public static final Key QUERY_TOTAL_BYTES_GATHERED = new MetricKey("queryTotalBytesGathered");
+    public static final Key QUERY_TOTAL_BYTES_GATHERED = new AbstractKey(
+        "queryTotalBytesGathered",
+        false, false,
+        new TypeReference<AtomicLong>()
+        {
+        }
+    )
+    {
+      @Override
+      public Object mergeValues(Object oldValue, Object newValue)
+      {
+        return ((AtomicLong) newValue).addAndGet(((AtomicLong) newValue).get());
+      }
+    };
 
     /**
      * Query fail time (current time + timeout).
