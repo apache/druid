@@ -60,6 +60,9 @@ import java.util.Map;
  */
 public class ForcePushDownNestedQueryTest extends QueryTestBase
 {
+  private final String interval = "2015-09-12/2015-09-13";
+  private final Map<String, Object> forcePushDownNestedContext = Map.of("forcePushDownNestedQuery", "true");
+
   @Override
   public void beforeAll() throws IOException
   {
@@ -74,12 +77,8 @@ public class ForcePushDownNestedQueryTest extends QueryTestBase
   }
 
   @Test
-  public void test_forcePushDownNestedNativeQueries()
+  public void test_native_forcePushDownNestedQueryWithMultipleAggregators()
   {
-    final String interval = "2015-09-12/2015-09-13";
-    final Map<String, Object> forcePushDownNestedContext = Map.of("forcePushDownNestedQuery", "true");
-
-    // Nested group by query with aggregators in both the inner and outer queries
     verifyQuery(
         GroupByQuery
             .builder()
@@ -94,7 +93,7 @@ public class ForcePushDownNestedQueryTest extends QueryTestBase
                     )
                     .setAggregatorSpecs(new LongSumAggregatorFactory("sumAdded", "added"))
                     .setGranularity(Granularities.ALL)
-                    .setContext(forcePushDownNestedContext)
+                    .setContext(Map.of("forcePushDownNestedQuery", "true"))
                     .build()
             )
             .setInterval(interval)
@@ -110,8 +109,11 @@ public class ForcePushDownNestedQueryTest extends QueryTestBase
             )
         )
     );
+  }
 
-    // Nested group by query with force push down and renamed dimensions
+  @Test
+  public void test_native_forcePushDownNestedQueryWithAliasDimensions()
+  {
     verifyQuery(
         GroupByQuery
             .builder()
@@ -142,8 +144,11 @@ public class ForcePushDownNestedQueryTest extends QueryTestBase
             )
         )
     );
+  }
 
-    // Nested group by query with force push down and filter on outer and inner query
+  @Test
+  public void test_native_forcePushDownNestedQueryWithFiltersInInnerAndOuterQueries()
+  {
     verifyQuery(
         GroupByQuery
             .builder()
@@ -157,23 +162,21 @@ public class ForcePushDownNestedQueryTest extends QueryTestBase
                         new DefaultDimensionSpec("user", "renamedUser")
                     )
                     .setAggregatorSpecs(new LongSumAggregatorFactory("sumAdded", "added"))
-                    .setDimFilter(new OrDimFilter(
-                        List.of(
-                            new SelectorDimFilter("channel", "#zh.wikipedia", null),
-                            new SelectorDimFilter("channel", "#es.wikipedia", null)
+                    .setDimFilter(
+                        new OrDimFilter(
+                            List.of(
+                                new SelectorDimFilter("channel", "#zh.wikipedia", null),
+                                new SelectorDimFilter("channel", "#es.wikipedia", null)
+                            )
                         )
-                    ))
+                    )
                     .setGranularity(Granularities.ALL)
                     .setContext(forcePushDownNestedContext)
                     .build()
             )
             .setInterval(interval)
             .setAggregatorSpecs(new LongSumAggregatorFactory("groupedSumAdded", "sumAdded"))
-            .setDimFilter(new AndDimFilter(
-                List.of(
-                    new SelectorDimFilter("renamedChannel", "#zh.wikipedia", null)
-                )
-            ))
+            .setDimFilter(new AndDimFilter(List.of(new SelectorDimFilter("renamedChannel", "#zh.wikipedia", null))))
             .setGranularity(Granularities.ALL)
             .setContext(forcePushDownNestedContext)
             .build(),
@@ -185,8 +188,11 @@ public class ForcePushDownNestedQueryTest extends QueryTestBase
             )
         )
     );
+  }
 
-    // Nested group by query with force push down and having clause
+  @Test
+  public void test_native_forcePushDownNestedQueryWithHavingClause()
+  {
     verifyQuery(
         GroupByQuery
             .builder()
@@ -199,16 +205,14 @@ public class ForcePushDownNestedQueryTest extends QueryTestBase
                         new DefaultDimensionSpec("channel", null),
                         new DefaultDimensionSpec("user", null)
                     )
-                    .setAggregatorSpecs(
-                        new LongSumAggregatorFactory("sumAdded", "added")
-                    )
+                    .setAggregatorSpecs(new LongSumAggregatorFactory("sumAdded", "added"))
                     .setGranularity(Granularities.ALL)
                     .setContext(forcePushDownNestedContext)
                     .build()
             )
             .setInterval(interval)
             .setAggregatorSpecs(new LongSumAggregatorFactory("outerSum", "sumAdded"))
-            .setHavingSpec(new OrHavingSpec(List.of(new GreaterThanHavingSpec("outerSum", 9385570))))
+            .setHavingSpec(new OrHavingSpec(List.of(new GreaterThanHavingSpec("outerSum", 9_385_570))))
             .setGranularity(Granularities.ALL)
             .setContext(forcePushDownNestedContext)
             .build(),
@@ -216,12 +220,15 @@ public class ForcePushDownNestedQueryTest extends QueryTestBase
             Map.of(
                 "version", "v1",
                 "timestamp", "2015-09-12T00:00:00.000Z",
-                "event", Map.of("outerSum", 9385573)
+                "event", Map.of("outerSum", 9_385_573)
             )
         )
     );
+  }
 
-    // 5) Nested group by query with force push down and having clause (no results expected)
+  @Test
+  public void test_native_forcePushDownNestedQueryWithHavingClause2()
+  {
     verifyQuery(
         GroupByQuery
             .builder()
@@ -234,9 +241,7 @@ public class ForcePushDownNestedQueryTest extends QueryTestBase
                         new DefaultDimensionSpec("channel", null),
                         new DefaultDimensionSpec("user", null)
                     )
-                    .setAggregatorSpecs(
-                        new LongSumAggregatorFactory("sumAdded", "added")
-                    )
+                    .setAggregatorSpecs(new LongSumAggregatorFactory("sumAdded", "added"))
                     .setGranularity(Granularities.ALL)
                     .setContext(forcePushDownNestedContext)
                     .build()
@@ -252,9 +257,8 @@ public class ForcePushDownNestedQueryTest extends QueryTestBase
   }
 
   @Test
-  public void test_forcePushDownNestedSqlQueries()
+  public void test_sql_forcePushDownNestedQueryWithMultipleAggregators()
   {
-    // Nested group by double agg query with force push down
     cluster.callApi().verifySqlQuery(
         "SET forcePushDownNestedQuery = TRUE;\n"
         + "SELECT SUM(sumAdded) AS \"groupedSumAdded\" FROM (\n"
@@ -265,8 +269,11 @@ public class ForcePushDownNestedQueryTest extends QueryTestBase
         dataSource,
         "9385573"
     );
+  }
 
-    // Nested group by query with force push down and renamed dimensions
+  @Test
+  public void test_sql_forcePushDownNestedQueryWithAliasDimensions()
+  {
     cluster.callApi().verifySqlQuery(
         "SET forcePushDownNestedQuery = TRUE;\n"
         + "SELECT SUM(sumAdded) AS groupedSumAdded FROM (\n"
@@ -277,26 +284,15 @@ public class ForcePushDownNestedQueryTest extends QueryTestBase
         dataSource,
         "9385573"
     );
+  }
 
-    // Nested group by query with force pushdown disabled and filters on both outer and inner queries.
-    // forcePushDownNestedQuery is intentionally set to false here; enabling it causes the test to fail due to a SQL bug.
-    // See test_forcePushDownNestedQuery_doesNotReturnAdditionalResults()
-    cluster.callApi().verifySqlQuery(
-        "SET forcePushDownNestedQuery = FALSE;\n"
-        + "SELECT renamedChannel, SUM(sumAdded) AS groupedSumAdded\n"
-        + "FROM (\n"
-        + "  SELECT channel AS renamedChannel, \"user\", SUM(added) AS sumAdded\n"
-        + "  FROM %s\n"
-        + "  WHERE channel IN ('#zh.wikipedia', '#es.wikipedia')\n"
-        + "  GROUP BY channel, \"user\"\n"
-        + ") inner_q\n"
-        + "WHERE renamedChannel = '#zh.wikipedia'\n"
-        + "GROUP BY renamedChannel",
-        dataSource,
-        "#zh.wikipedia,191033"
-    );
-
-    // Nested group by query with force push down and having clause
+  /**
+   * Same as {@link #test_sql_forcePushDownNestedQuery_doesNotReturnAdditionalResults},
+   * but with forcePushDownNestedQuery set to false.
+   */
+  @Test
+  public void test_sql_forcePushDownNestedDisabledWithFilters()
+  {
     cluster.callApi().verifySqlQuery(
         "SET forcePushDownNestedQuery = FALSE;\n"
         + "SELECT renamedChannel, SUM(sumAdded) AS \"groupedSumAdded\"\n"
@@ -311,8 +307,28 @@ public class ForcePushDownNestedQueryTest extends QueryTestBase
         dataSource,
         "#zh.wikipedia,191033"
     );
+  }
 
-    // Nested group by query with force push down and having clause. This asserts that the post-processing is invoked
+  @Test
+  public void test_sql_forcePushDownNestedQueryWithHavingClause()
+  {
+    cluster.callApi().verifySqlQuery(
+        "SET forcePushDownNestedQuery = TRUE;\n"
+        + "SELECT SUM(sumAdded) AS outerSum\n"
+        + "FROM (\n"
+        + "  SELECT channel, \"user\", SUM(added) AS sumAdded\n"
+        + "  FROM %s\n"
+        + "  GROUP BY channel, \"user\"\n"
+        + ") inner_q\n"
+        + "HAVING SUM(sumAdded) > 9385570",
+        dataSource,
+        "9385573"
+    );
+  }
+
+  @Test
+  public void test_sql_forcePushDownNestedQueryWithHavingClause2()
+  {
     cluster.callApi().verifySqlQuery(
         "SET forcePushDownNestedQuery = TRUE;\n"
         + "SELECT SUM(sumAdded) FROM (\n"
@@ -326,9 +342,9 @@ public class ForcePushDownNestedQueryTest extends QueryTestBase
   }
 
   @Disabled("Setting forcePushDownNestedQuery = TRUE with filters returns additional results, which appears to be a bug"
-            + " in the SQL layer. The same query with forcePushDownNestedQuery = FALSE works as expected; see test above.")
+            + " in the SQL layer. The same query with forcePushDownNestedQuery = FALSE works as expected in test_forcePushDownNestedSql_filters_aliasQuoted_forcePushDownDisabled()")
   @Test
-  public void test_forcePushDownNestedQuery_doesNotReturnAdditionalResults()
+  public void test_sql_forcePushDownNestedQuery_doesNotReturnAdditionalResults()
   {
     // When forcePushDownNestedQuery is set to TRUE, this test will fail as there's an extra row:
     // #es.wikipedia,634670\n#zh.wikipedia,191033
