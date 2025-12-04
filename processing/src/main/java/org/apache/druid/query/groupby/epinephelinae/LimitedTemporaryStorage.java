@@ -48,7 +48,7 @@ public class LimitedTemporaryStorage implements Closeable
   private static final Logger log = new Logger(LimitedTemporaryStorage.class);
 
   private final File storageDirectory;
-  private final long maxBytesUsed;
+  private final long capacity;
 
   private final AtomicLong bytesUsed = new AtomicLong();
   private final Set<File> files = new TreeSet<>();
@@ -59,11 +59,11 @@ public class LimitedTemporaryStorage implements Closeable
 
   public LimitedTemporaryStorage(
       File storageDirectory,
-      long maxBytesUsed
+      long capacity
   )
   {
     this.storageDirectory = storageDirectory;
-    this.maxBytesUsed = maxBytesUsed;
+    this.capacity = capacity;
   }
 
   /**
@@ -77,8 +77,8 @@ public class LimitedTemporaryStorage implements Closeable
    */
   public LimitedOutputStream createFile() throws IOException
   {
-    if (bytesUsed.get() >= maxBytesUsed) {
-      throw new TemporaryStorageFullException(maxBytesUsed);
+    if (bytesUsed.get() >= capacity) {
+      throw new TemporaryStorageFullException(capacity);
     }
 
     synchronized (files) {
@@ -120,7 +120,7 @@ public class LimitedTemporaryStorage implements Closeable
 
   public long maxSize()
   {
-    return maxBytesUsed;
+    return capacity;
   }
 
   @VisibleForTesting
@@ -200,8 +200,8 @@ public class LimitedTemporaryStorage implements Closeable
 
     private void grab(int n) throws IOException
     {
-      if (bytesUsed.addAndGet(n) > maxBytesUsed) {
-        throw new TemporaryStorageFullException(maxBytesUsed);
+      if (bytesUsed.addAndGet(n) > capacity) {
+        throw new TemporaryStorageFullException(capacity);
       }
     }
   }

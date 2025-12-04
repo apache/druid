@@ -583,6 +583,7 @@ public class GroupingEngine
       GroupByQuery subquery,
       GroupByQuery query,
       GroupByQueryResources resource,
+      ResponseContext context,
       Sequence<ResultRow> subqueryResult,
       boolean wasQueryPushedDown
   )
@@ -616,6 +617,7 @@ public class GroupingEngine
           configSupplier.get(),
           processingConfig,
           resource,
+          context,
           spillMapper,
           processingConfig.getTmpDir(),
           processingConfig.intermediateComputeSizeBytes()
@@ -648,7 +650,8 @@ public class GroupingEngine
   public Sequence<ResultRow> processSubtotalsSpec(
       GroupByQuery query,
       GroupByQueryResources resource,
-      Sequence<ResultRow> queryResult
+      Sequence<ResultRow> queryResult,
+      ResponseContext context
   )
   {
     // How it works?
@@ -697,6 +700,7 @@ public class GroupingEngine
           configSupplier.get(),
           processingConfig,
           resource,
+          context,
           spillMapper,
           processingConfig.getTmpDir(),
           processingConfig.intermediateComputeSizeBytes()
@@ -758,6 +762,7 @@ public class GroupingEngine
               configSupplier.get(),
               processingConfig,
               resource,
+              context,
               spillMapper,
               processingConfig.getTmpDir(),
               processingConfig.intermediateComputeSizeBytes()

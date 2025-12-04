@@ -238,7 +238,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
         return groupingEngine.applyPostProcessing(mergedResults, query);
       } else {
         Sequence<ResultRow> mergedResults = groupingEngine.mergeResults(runner, query.withSubtotalsSpec(null), context);
-        return groupingEngine.processSubtotalsSpec(query, resource, mergedResults);
+        return groupingEngine.processSubtotalsSpec(query, resource, mergedResults, context);
       }
     }
 
@@ -279,6 +279,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
         subquery,
         query,
         resource,
+        context,
         finalizingResults,
         false
     );
@@ -286,7 +287,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     if (query.getSubtotalsSpec() == null) {
       return groupingEngine.applyPostProcessing(processedSubqueryResults, query);
     } else {
-      return groupingEngine.processSubtotalsSpec(query, resource, processedSubqueryResults);
+      return groupingEngine.processSubtotalsSpec(query, resource, processedSubqueryResults, context);
     }
   }
 
@@ -305,6 +306,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
         query,
         rewriteNestedQueryForPushDown(query),
         resource,
+        context,
         finalizedResults,
         true
     );

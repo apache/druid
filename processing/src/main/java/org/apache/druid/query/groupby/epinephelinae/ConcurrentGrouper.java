@@ -497,8 +497,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   {
     Map<String, Long> map = new HashMap<>();
 
-    groupers.forEach(spillingGroupper -> {
-      Map<String, Long> metricsMap = spillingGroupper.getQueryMetricsMap();
+    groupers.forEach(spillingGrouper -> {
+      Map<String, Long> metricsMap = spillingGrouper.getQueryMetricsMap();
 
       for (Map.Entry<String, Long> entry : metricsMap.entrySet()) {
         map.compute(entry.getKey(), (key, value) -> value == null ? entry.getValue() : value + entry.getValue());

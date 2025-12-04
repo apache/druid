@@ -217,9 +217,6 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   @Override
   public Map<String, Long> getQueryMetricsMap()
   {
-    // TODO: If we do not want groupByQueryMetrics to do addition, simply return a Map,
-    //  then either the ConcurrentGrouper will aggregate the results into a accumulated map,
-    //  and the GroupByQueryMetrics will provide a means to report GroupByMetrics via a map.
     return ImmutableMap.of(
         GroupByResponseContextKeys.GROUPBY_MERGE_DICTIONARY_SIZE_NAME, keySerde.getDictionarySize()
     );
@@ -228,7 +225,6 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   @Override
   public void close()
   {
-    // TODO: Check if it is ok to emit at close. Will the QueryRunners give the results in time?
     grouper.close();
     keySerde.reset();
     deleteFiles();

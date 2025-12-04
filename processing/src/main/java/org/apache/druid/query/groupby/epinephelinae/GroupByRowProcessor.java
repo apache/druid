@@ -31,10 +31,12 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryResources;
+import org.apache.druid.query.groupby.GroupByResponseContextKeys;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 
@@ -44,6 +46,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -92,6 +95,7 @@ public class GroupByRowProcessor
       final GroupByQueryConfig config,
       final DruidProcessingConfig processingConfig,
       final GroupByQueryResources resource,
+      final ResponseContext context,
       final ObjectMapper spillMapper,
       final String processingTmpDir,
       final int mergeBufferSize
@@ -142,7 +146,13 @@ public class GroupByRowProcessor
       throw new ResourceLimitExceededException(retVal.getReason());
     }
 
-    grouper.getQueryMetricsMap();
+    if (context != null) {
+      context.add(GroupByResponseContextKeys.GROUPBY_BYTES_SPILLED_TO_STORAGE_KEY, temporaryStorage.currentSize());
+
+      Map<String, Long> metricsMap = grouper.getQueryMetricsMap();
+      context.add(GroupByResponseContextKeys.GROUPBY_MERGE_DICTIONARY_SIZE_KEY,
+                          metricsMap.getOrDefault(GroupByResponseContextKeys.GROUPBY_MERGE_DICTIONARY_SIZE_NAME, 0L));
+    }
 
     return new ResultSupplier()
     {

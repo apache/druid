@@ -277,7 +277,6 @@ public class RowBasedGrouperHelper
           limitSpec,
           sortHasNonGroupingFields,
           mergeBufferSize
-          // TODO: Check if we need to pass a ResponseContext, or can retrieve them from the grouper method.
       );
     } else {
       final Grouper.KeySerdeFactory<RowBasedKey> combineKeySerdeFactory = new RowBasedKeySerdeFactory(

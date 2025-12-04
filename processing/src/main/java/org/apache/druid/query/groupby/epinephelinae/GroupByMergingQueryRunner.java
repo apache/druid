@@ -147,7 +147,6 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
         false
     );
 
-    // TODO: Check will this give me NPE down the road when accessing QueryMetrics from the queryPlus?
     final QueryPlus<ResultRow> queryPlusForRunners = queryPlus
         .withQuery(
             query.withOverriddenContext(ImmutableMap.of(CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION, true))
@@ -302,10 +301,10 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
               }
 
               // Finished the query, so let's collate the metrics!
-              Map<String, Long> metricsMap = grouper.getQueryMetricsMap();
-
               if (responseContext != null) {
                 responseContext.add(GroupByResponseContextKeys.GROUPBY_BYTES_SPILLED_TO_STORAGE_KEY, temporaryStorage.currentSize());
+
+                Map<String, Long> metricsMap = grouper.getQueryMetricsMap();
                 responseContext.add(GroupByResponseContextKeys.GROUPBY_MERGE_DICTIONARY_SIZE_KEY,
                                     metricsMap.getOrDefault(GroupByResponseContextKeys.GROUPBY_MERGE_DICTIONARY_SIZE_NAME, 0L));
               }
