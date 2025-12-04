@@ -162,8 +162,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   )
   {
     final GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
-
-    // TODO: Append the GroupByQueryMetrics using the ResponseContext.
     boolean reportMetricsForEmission = queryPlus.getQueryMetrics() != null;
 
     // Reserve the group by resources (merge buffers) required for executing the query
@@ -185,17 +183,17 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
 
       final Sequence<ResultRow> mergedSequence = mergeGroupByResults(query, resource, runner, context, closer);
 
+      // TODO: Check if need wrap in closer or no?
+      if (reportMetricsForEmission) {
+        GroupByQueryMetrics queryMetrics = (GroupByQueryMetrics) queryPlus.getQueryMetrics();
+        queryMetrics.bytesSpilledToStorage((Long) context.get(GroupByResponseContextKeys.GROUPBY_BYTES_SPILLED_TO_STORAGE_KEY));
+        queryMetrics.mergeDictionarySize((Long) context.get(GroupByResponseContextKeys.GROUPBY_MERGE_DICTIONARY_SIZE_KEY));
+        queryMetrics.mergeBufferAcquisitionTime((Long) context.get(GroupByResponseContextKeys.GROUPBY_MERGE_BUFFER_ACQUISITION_TIME_KEY));
+
+      }
+
       // Clean up the resources reserved during the execution of the query
       closer.register(() -> groupByResourcesReservationPool.clean(queryResourceId));
-      closer.register(() -> {
-        if (reportMetricsForEmission) {
-          GroupByQueryMetrics queryMetrics = (GroupByQueryMetrics) queryPlus.getQueryMetrics();
-          // TODO: Populate the metrics here.
-        }
-      });
-
-      // TODO: Maybe attach metrics reporting with the closer?
-      // closer.register(() -> groupByStatsProvider.closeQuery(query.context().getQueryResourceId()));
 
       return Sequences.withBaggage(mergedSequence, closer);
     }

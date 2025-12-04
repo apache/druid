@@ -305,11 +305,13 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
                 waitForFutureCompletion(query, futures, hasTimeout, timeoutAt - System.currentTimeMillis());
               }
 
+              // Finished the query, so let's collate the metrics!
               Map<String, Long> metricsMap = grouper.getQueryMetricsMap();
 
               if (responseContext != null) {
                 responseContext.add(GroupByResponseContextKeys.GROUPBY_BYTES_SPILLED_TO_STORAGE_KEY, temporaryStorage.currentSize());
-                responseContext.add(GroupByResponseContextKeys.GROUPBY_MERGE_DICTIONARY_SIZE_KEY, metricsMap.getOrDefault(GroupByResponseContextKeys.GROUPBY_MERGE_DICTIONARY_SIZE_NAME, 0L));
+                responseContext.add(GroupByResponseContextKeys.GROUPBY_MERGE_DICTIONARY_SIZE_KEY,
+                                    metricsMap.getOrDefault(GroupByResponseContextKeys.GROUPBY_MERGE_DICTIONARY_SIZE_NAME, 0L));
               }
 
               return RowBasedGrouperHelper.makeGrouperIterator(grouper, query, resources);

@@ -66,29 +66,21 @@ public class DefaultGroupByQueryMetrics extends DefaultQueryMetrics<GroupByQuery
   }
 
   @Override
-  public void reportGroupByStats()
-  {
-    reportMetricsIfNotZero("bytesSpilledToStorage", bytesSpilledToStorage.longValue());
-    reportMetricsIfNotZero("mergeDictionarySize", mergeDictionarySize.longValue());
-    reportMetricsIfNotZero("mergeBufferAcquisitonTime", mergeBufferAcquisitonTime.longValue());
-  }
-
-  @Override
   public void mergeBufferAcquisitionTime(long mergeBufferAcquisitionTime)
   {
-    this.mergeBufferAcquisitonTime.add(mergeBufferAcquisitionTime);
+    reportMetric("mergeBufferAcquisitonTime", mergeBufferAcquisitionTime);
   }
 
   @Override
   public void bytesSpilledToStorage(long bytesSpilledToStorage)
   {
-    this.bytesSpilledToStorage.add(bytesSpilledToStorage);
+    reportMetric("bytesSpilledToStorage", bytesSpilledToStorage);
   }
 
   @Override
   public void mergeDictionarySize(long mergeDictionarySize)
   {
-    this.mergeDictionarySize.add(mergeDictionarySize);
+    reportMetric("mergeDictionarySize", mergeDictionarySize);
   }
 
   @Override

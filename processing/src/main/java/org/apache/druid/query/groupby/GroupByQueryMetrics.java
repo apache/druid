@@ -56,9 +56,6 @@ public interface GroupByQueryMetrics extends QueryMetrics<GroupByQuery>
   void granularity(GroupByQuery query);
 
   @PublicApi
-  void reportGroupByStats();
-
-  @PublicApi
   void mergeBufferAcquisitionTime(long mergeBufferAcquisitionTime);
 
   @PublicApi

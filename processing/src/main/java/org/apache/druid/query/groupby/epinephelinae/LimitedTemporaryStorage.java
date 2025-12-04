@@ -140,10 +140,6 @@ public class LimitedTemporaryStorage implements Closeable
         return;
       }
       closed = true;
-
-      if (groupByQueryMetrics != null) {
-        groupByQueryMetrics.bytesSpilledToStorage(bytesUsed.get());
-      }
       bytesUsed.set(0);
 
       for (File file : ImmutableSet.copyOf(files)) {
