@@ -36,6 +36,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -63,7 +64,7 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
   /**
    * Hook for the additional setup that needs to be done before all tests.
    */
-  protected void beforeAll()
+  protected void beforeAll() throws IOException
   {
     // No-op dy default
   }
