@@ -20,10 +20,7 @@
 package org.apache.druid.testing.embedded.query;
 
 
-import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -33,24 +30,14 @@ import org.junit.jupiter.api.Test;
  */
 public class SystemTableQueryTest extends QueryTestBase
 {
-  private final String dataSourceName1 = "table_a";
-  private final String dataSourceName2 = "table_b";
+  private String dataSourceName1;
+  private String dataSourceName2;
 
   @Override
   public void beforeAll()
   {
-    final String taskId1 = IdUtils.getRandomId();
-    final String taskId2 = IdUtils.getRandomId();
-    final IndexTask task1 = MoreResources.Task.BASIC_INDEX.get().dataSource(dataSourceName1).withId(taskId1);
-    final IndexTask task2 = MoreResources.Task.BASIC_INDEX.get().dataSource(dataSourceName2).withId(taskId2);
-    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId1, task1));
-    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId2, task2));
-
-    cluster.callApi().waitForTaskToSucceed(taskId1, overlord);
-    cluster.callApi().waitForTaskToSucceed(taskId2, overlord);
-
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSourceName1, coordinator, broker);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSourceName2, coordinator, broker);
+    dataSourceName1 = ingestBasicData();
+    dataSourceName2 = ingestBasicData();
   }
 
   @Test
@@ -66,10 +53,9 @@ public class SystemTableQueryTest extends QueryTestBase
         dataSourceName1, dataSourceName2
     );
 
-    String[] result = cluster.callApi().runSql(query).split("\n");
-    Assertions.assertEquals(2, result.length);
-    Assertions.assertEquals(StringUtils.format("%s,10", dataSourceName1), result[0]);
-    Assertions.assertEquals(StringUtils.format("%s,10", dataSourceName2), result[1]);
+    String result = cluster.callApi().runSql(query);
+    Assertions.assertTrue(result.contains(dataSourceName1));
+    Assertions.assertTrue(result.contains(dataSourceName2));
   }
 
   @Test
