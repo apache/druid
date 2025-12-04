@@ -38,7 +38,6 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 
@@ -97,7 +96,6 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   @Nullable
   private final ParallelCombiner<KeyType> parallelCombiner;
   private final boolean mergeThreadLocal;
-  private final GroupByQueryMetrics groupByQueryMetrics;
 
   private volatile boolean initialized = false;
 
@@ -117,9 +115,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       final ListeningExecutorService executor,
       final int priority,
       final boolean hasQueryTimeout,
-      final long queryTimeoutAt,
-      // TODO: To delete later?
-      final GroupByQueryMetrics groupByQueryMetrics
+      final long queryTimeoutAt
   )
   {
     this(
@@ -143,8 +139,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
         queryTimeoutAt,
         groupByQueryConfig.getIntermediateCombineDegree(),
         groupByQueryConfig.getNumParallelCombineThreads(),
-        groupByQueryConfig.isMergeThreadLocal(),
-        groupByQueryMetrics
+        groupByQueryConfig.isMergeThreadLocal()
     );
   }
 
@@ -169,9 +164,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       final long queryTimeoutAt,
       final int intermediateCombineDegree,
       final int numParallelCombineThreads,
-      final boolean mergeThreadLocal,
-      // TODO: To delete if necessary.
-      final GroupByQueryMetrics groupByQueryMetrics
+      final boolean mergeThreadLocal
   )
   {
     Preconditions.checkArgument(concurrencyHint > 0, "concurrencyHint > 0");
@@ -221,7 +214,6 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     }
 
     this.mergeThreadLocal = mergeThreadLocal;
-    this.groupByQueryMetrics = groupByQueryMetrics;
   }
 
   @Override

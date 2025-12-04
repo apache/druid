@@ -48,7 +48,6 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.DimensionComparisonUtils;
 import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.GroupingAggregatorFactory;
 import org.apache.druid.query.dimension.ColumnSelectorStrategy;
@@ -56,10 +55,8 @@ import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.query.groupby.DefaultGroupByQueryMetrics;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.BufferComparator;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -309,8 +306,7 @@ public class RowBasedGrouperHelper
           grouperSorter,
           priority,
           hasQueryTimeout,
-          queryTimeoutAt,
-          new DefaultGroupByQueryMetrics()
+          queryTimeoutAt
       );
     }
 
