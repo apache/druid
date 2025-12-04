@@ -19,11 +19,25 @@
 
 package org.apache.druid.testing.embedded.query;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.DruidProcessingConfigTest;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.filter.AndDimFilter;
+import org.apache.druid.query.filter.OrDimFilter;
+import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.having.GreaterThanHavingSpec;
+import org.apache.druid.query.groupby.having.OrHavingSpec;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
@@ -34,11 +48,15 @@ import org.testcontainers.shaded.com.google.common.io.ByteStreams;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
- * Embedded test to verify nested group-by queries using the {@code forcePushDownNestedQuery} context.
+ * Embedded test that verifies nested group by native and SQL queries
+ * when using the {@link GroupByQueryConfig#CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY} context.
  */
 public class ForcePushDownNestedQueryTest extends QueryTestBase
 {
@@ -56,7 +74,185 @@ public class ForcePushDownNestedQueryTest extends QueryTestBase
   }
 
   @Test
-  public void test_forcePushDownNestedQueries()
+  public void test_forcePushDownNestedNativeQueries()
+  {
+    final String interval = "2015-09-12/2015-09-13";
+    final Map<String, Object> forcePushDownNestedContext = Map.of("forcePushDownNestedQuery", "true");
+
+    // Nested group by query with aggregators in both the inner and outer queries
+    verifyQuery(
+        GroupByQuery
+            .builder()
+            .setDataSource(
+                GroupByQuery
+                    .builder()
+                    .setDataSource(dataSource)
+                    .setInterval(interval)
+                    .setDimensions(
+                        new DefaultDimensionSpec("channel", null),
+                        new DefaultDimensionSpec("user", null)
+                    )
+                    .setAggregatorSpecs(new LongSumAggregatorFactory("sumAdded", "added"))
+                    .setGranularity(Granularities.ALL)
+                    .setContext(forcePushDownNestedContext)
+                    .build()
+            )
+            .setInterval(interval)
+            .setAggregatorSpecs(new LongSumAggregatorFactory("groupedSumAdded", "sumAdded"))
+            .setGranularity(Granularities.ALL)
+            .setContext(forcePushDownNestedContext)
+            .build(),
+        List.of(
+            Map.of(
+                "version", "v1",
+                "timestamp", "2015-09-12T00:00:00.000Z",
+                "event", Map.of("groupedSumAdded", 9385573)
+            )
+        )
+    );
+
+    // Nested group by query with force push down and renamed dimensions
+    verifyQuery(
+        GroupByQuery
+            .builder()
+            .setDataSource(
+                GroupByQuery
+                    .builder()
+                    .setDataSource(dataSource)
+                    .setInterval(interval)
+                    .setDimensions(
+                        new DefaultDimensionSpec("channel", "renamedChannel"),
+                        new DefaultDimensionSpec("user", "renamedUser")
+                    )
+                    .setAggregatorSpecs(new LongSumAggregatorFactory("sumAdded", "added"))
+                    .setGranularity(Granularities.ALL)
+                    .setContext(forcePushDownNestedContext)
+                    .build()
+            )
+            .setInterval(interval)
+            .setAggregatorSpecs(new LongSumAggregatorFactory("groupedSumAdded", "sumAdded"))
+            .setGranularity(Granularities.ALL)
+            .setContext(forcePushDownNestedContext)
+            .build(),
+        List.of(
+            Map.of(
+                "version", "v1",
+                "timestamp", "2015-09-12T00:00:00.000Z",
+                "event", Map.of("groupedSumAdded", 9385573)
+            )
+        )
+    );
+
+    // Nested group by query with force push down and filter on outer and inner query
+    verifyQuery(
+        GroupByQuery
+            .builder()
+            .setDataSource(
+                GroupByQuery
+                    .builder()
+                    .setDataSource(dataSource)
+                    .setInterval(interval)
+                    .setDimensions(
+                        new DefaultDimensionSpec("channel", "renamedChannel"),
+                        new DefaultDimensionSpec("user", "renamedUser")
+                    )
+                    .setAggregatorSpecs(new LongSumAggregatorFactory("sumAdded", "added"))
+                    .setDimFilter(new OrDimFilter(
+                        List.of(
+                            new SelectorDimFilter("channel", "#zh.wikipedia", null),
+                            new SelectorDimFilter("channel", "#es.wikipedia", null)
+                        )
+                    ))
+                    .setGranularity(Granularities.ALL)
+                    .setContext(forcePushDownNestedContext)
+                    .build()
+            )
+            .setInterval(interval)
+            .setAggregatorSpecs(new LongSumAggregatorFactory("groupedSumAdded", "sumAdded"))
+            .setDimFilter(new AndDimFilter(
+                List.of(
+                    new SelectorDimFilter("renamedChannel", "#zh.wikipedia", null)
+                )
+            ))
+            .setGranularity(Granularities.ALL)
+            .setContext(forcePushDownNestedContext)
+            .build(),
+        List.of(
+            Map.of(
+                "version", "v1",
+                "timestamp", "2015-09-12T00:00:00.000Z",
+                "event", Map.of("groupedSumAdded", 191033)
+            )
+        )
+    );
+
+    // Nested group by query with force push down and having clause
+    verifyQuery(
+        GroupByQuery
+            .builder()
+            .setDataSource(
+                GroupByQuery
+                    .builder()
+                    .setDataSource(dataSource)
+                    .setInterval(interval)
+                    .setDimensions(
+                        new DefaultDimensionSpec("channel", null),
+                        new DefaultDimensionSpec("user", null)
+                    )
+                    .setAggregatorSpecs(
+                        new LongSumAggregatorFactory("sumAdded", "added")
+                    )
+                    .setGranularity(Granularities.ALL)
+                    .setContext(forcePushDownNestedContext)
+                    .build()
+            )
+            .setInterval(interval)
+            .setAggregatorSpecs(new LongSumAggregatorFactory("outerSum", "sumAdded"))
+            .setHavingSpec(new OrHavingSpec(List.of(new GreaterThanHavingSpec("outerSum", 9385570))))
+            .setGranularity(Granularities.ALL)
+            .setContext(forcePushDownNestedContext)
+            .build(),
+        List.of(
+            Map.of(
+                "version", "v1",
+                "timestamp", "2015-09-12T00:00:00.000Z",
+                "event", Map.of("outerSum", 9385573)
+            )
+        )
+    );
+
+    // 5) Nested group by query with force push down and having clause (no results expected)
+    verifyQuery(
+        GroupByQuery
+            .builder()
+            .setDataSource(
+                GroupByQuery
+                    .builder()
+                    .setDataSource(dataSource)
+                    .setInterval(interval)
+                    .setDimensions(
+                        new DefaultDimensionSpec("channel", null),
+                        new DefaultDimensionSpec("user", null)
+                    )
+                    .setAggregatorSpecs(
+                        new LongSumAggregatorFactory("sumAdded", "added")
+                    )
+                    .setGranularity(Granularities.ALL)
+                    .setContext(forcePushDownNestedContext)
+                    .build()
+            )
+            .setInterval(interval)
+            .setAggregatorSpecs(new LongSumAggregatorFactory("outerSum", "sumAdded"))
+            .setHavingSpec(new OrHavingSpec(List.of(new GreaterThanHavingSpec("outerSum", 100_000_000))))
+            .setGranularity(Granularities.ALL)
+            .setContext(forcePushDownNestedContext)
+            .build(),
+        List.of()
+    );
+  }
+
+  @Test
+  public void test_forcePushDownNestedSqlQueries()
   {
     // Nested group by double agg query with force push down
     cluster.callApi().verifySqlQuery(
@@ -82,7 +278,7 @@ public class ForcePushDownNestedQueryTest extends QueryTestBase
         "9385573"
     );
 
-    // Nested group-by query with force pushdown disabled and filters on both outer and inner queries.
+    // Nested group by query with force pushdown disabled and filters on both outer and inner queries.
     // forcePushDownNestedQuery is intentionally set to false here; enabling it causes the test to fail due to a SQL bug.
     // See test_forcePushDownNestedQuery_doesNotReturnAdditionalResults()
     cluster.callApi().verifySqlQuery(
@@ -195,5 +391,16 @@ public class ForcePushDownNestedQueryTest extends QueryTestBase
     Assertions.assertEquals(TaskState.SUCCESS, payload.getStatus().getStatus());
     Assertions.assertEquals(1, payload.getStatus().getSegmentLoadWaiterStatus().getTotalSegments());
     Assertions.assertNull(payload.getStatus().getErrorReport());
+  }
+
+  private void verifyQuery(Query<?> query, List<Map<String, Object>> expectedResult)
+  {
+    final String resultAsJson = cluster.callApi().onAnyBroker(b -> b.submitNativeQuery(query));
+    final List<Map<String, Object>> resultList = JacksonUtils.readValue(
+        TestHelper.JSON_MAPPER,
+        resultAsJson.getBytes(StandardCharsets.UTF_8),
+        new TypeReference<>() {}
+    );
+    Assertions.assertEquals(expectedResult, resultList);
   }
 }
