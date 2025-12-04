@@ -494,7 +494,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       boolean isRollupOnMultiValueStringDimension = isPossiblyRollup &&
                                                     dimensionsSpec.getDimensions()
                                                                   .stream()
-                                                                  .anyMatch(DimensionSchema::canBeMultiValued);
+                                                                  .anyMatch(dim -> dim.canBeMultiValued());
 
       boolean isPartitionedOnMultiValueStringDimension =
           isRangePartitioned &&
