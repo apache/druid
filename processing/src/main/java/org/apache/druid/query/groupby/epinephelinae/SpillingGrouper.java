@@ -38,7 +38,6 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.GroupByResponseContextKeys;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -78,7 +77,6 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   private final AggregatorFactory[] aggregatorFactories;
   private final Comparator<Grouper.Entry<KeyType>> keyObjComparator;
   private final Comparator<Grouper.Entry<KeyType>> defaultOrderKeyObjComparator;
-  private final GroupByQueryMetrics groupByQueryMetrics;
 
   private final List<File> files = new ArrayList<>();
   private final List<File> dictionaryFiles = new ArrayList<>();
@@ -160,7 +158,6 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     this.spillMapper = keySerde.decorateObjectMapper(spillMapper);
     this.spillingAllowed = spillingAllowed;
     this.sortHasNonGroupingFields = sortHasNonGroupingFields;
-    this.groupByQueryMetrics = groupByQueryMetrics;
   }
 
   @Override
