@@ -619,17 +619,17 @@ export class Stages {
 
   getInactiveWorkerCount(stage: StageDefinition): number | undefined {
     const { counters } = this;
-    const { stageNumber, definition } = stage;
+    const { stageNumber } = stage;
     const forStageCounters = counters?.[stageNumber];
     if (!forStageCounters) return;
 
-    const inputChannelCounters = definition.input.map((_, i) => `input${i}` as ChannelCounterName);
+    const channelCounters = this.getChannelCounterNamesForStage(stage);
 
     // Calculate and return the number of workers that have zero count across all inputChannelCounters
     return sum(
       Object.values(forStageCounters).map(stageCounters =>
         Number(
-          inputChannelCounters.every(channel => {
+          channelCounters.every(channel => {
             const c = stageCounters[channel];
             if (!c) return true;
             const totalRows = sum(c.rows || []);
