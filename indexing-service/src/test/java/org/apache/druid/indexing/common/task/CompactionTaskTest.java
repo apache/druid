@@ -97,6 +97,7 @@ import org.apache.druid.query.aggregation.firstlast.first.FloatFirstAggregatorFa
 import org.apache.druid.query.aggregation.firstlast.last.DoubleLastAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
@@ -1672,6 +1673,33 @@ public class CompactionTaskTest
     builder.dimensionsSpec(new DimensionsSpec(ImmutableList.of(stringDim)));
     CompactionTask compactionTask = builder.build();
     Assert.assertTrue(compactionTask.identifyMultiValuedDimensions());
+  }
+
+  @Test
+  public void testMSQRangePartitionOnAutoStringDoesNotNeedMVDInfo()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory
+    );
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.compactionRunner(new TestMSQCompactionRunner());
+
+    DimensionSchema stringDim = new AutoTypeColumnSchema("string_dim_1", ColumnType.STRING, null);
+    builder.tuningConfig(TuningConfigBuilder.forCompactionTask()
+                                            .withForceGuaranteedRollup(true)
+                                            .withPartitionsSpec(
+                                                new DimensionRangePartitionsSpec(
+                                                    3,
+                                                    null,
+                                                    List.of(stringDim.getName()),
+                                                    false
+                                                )
+                                            )
+                                            .build());
+    builder.dimensionsSpec(new DimensionsSpec(ImmutableList.of(stringDim)));
+    CompactionTask compactionTask = builder.build();
+    Assert.assertFalse(compactionTask.identifyMultiValuedDimensions());
   }
 
   @Test

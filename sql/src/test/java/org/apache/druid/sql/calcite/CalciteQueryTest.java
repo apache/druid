@@ -8413,7 +8413,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "  REGEXP_EXTRACT(dim1, '^(.))', 1)\n"
         + "FROM foo",
         DruidExceptionMatcher.invalidInput().expectMessageContains(
-            "An invalid pattern [^(.))] was provided for the regexp_extract function, " +
+            "An invalid pattern [^(.))] was provided for the [regexp_extract] function, " +
             "error: [Unmatched closing ')' near index 3\n^(.))\n   ^]"
         )
     );

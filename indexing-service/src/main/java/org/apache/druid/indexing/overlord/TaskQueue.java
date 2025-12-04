@@ -379,7 +379,9 @@ public class TaskQueue
   {
     startStopLock.readLock().lock();
     try {
-      startPendingTasksOnRunner();
+      if (isActive()) {
+        startPendingTasksOnRunner();
+      }
     }
     finally {
       startStopLock.readLock().unlock();

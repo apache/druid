@@ -589,7 +589,7 @@ public class ControllerImpl implements Controller
 
     long startTime = DateTimeUtils.getInstantMillis(MultiStageQueryContext.getStartTime(querySpec.getContext()));
 
-    final MSQMetriceEventBuilder metricBuilder = new MSQMetriceEventBuilder();
+    final MSQMetricEventBuilder metricBuilder = new MSQMetricEventBuilder();
     metricBuilder.setDimension(DruidMetrics.DATASOURCE, DefaultQueryMetrics.getTableNamesAsString(datasources))
                  .setDimension(DruidMetrics.INTERVAL, DefaultQueryMetrics.getIntervalsAsStringArray(intervals))
                  .setDimension(DruidMetrics.DURATION, BaseQuery.calculateDuration(intervals))
@@ -634,7 +634,7 @@ public class ControllerImpl implements Controller
 
     log.debug("Processed bytes[%d] for query[%s].", totalProcessedBytes, querySpec.getId());
 
-    final MSQMetriceEventBuilder metricBuilder = new MSQMetriceEventBuilder();
+    final MSQMetricEventBuilder metricBuilder = new MSQMetricEventBuilder();
     metricBuilder.setMetric("ingest/input/bytes", totalProcessedBytes);
     context.emitMetric(metricBuilder);
   }
@@ -1571,7 +1571,7 @@ public class ControllerImpl implements Controller
       );
     }
 
-    MSQMetriceEventBuilder metricBuilder = new MSQMetriceEventBuilder();
+    MSQMetricEventBuilder metricBuilder = new MSQMetricEventBuilder();
 
     metricBuilder.setMetric("ingest/tombstones/count", numTombstones);
     context.emitMetric(metricBuilder);

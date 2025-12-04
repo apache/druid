@@ -150,6 +150,7 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
         "width": 240,
       },
       {
+        "Cell": [Function],
         "Header": <React.Fragment>
           Num
           <br />

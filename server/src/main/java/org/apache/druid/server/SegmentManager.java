@@ -380,11 +380,11 @@ public class SegmentManager
               try (final Closer closer = Closer.create()) {
                 final Optional<Segment> oldSegment = cacheManager.acquireCachedSegment(oldSegmentRef);
                 long numberOfRows = oldSegment.map(segment -> {
+                  closer.register(segment);
                   final PhysicalSegmentInspector countInspector = segment.as(PhysicalSegmentInspector.class);
                   if (countInspector != null) {
                     return countInspector.getNumRows();
                   }
-                  CloseableUtils.closeAndWrapExceptions(segment);
                   return 0;
                 }).orElse(0);
 

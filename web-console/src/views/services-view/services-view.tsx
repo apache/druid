@@ -41,10 +41,7 @@ import type { QueryWithContext } from '../../druid-models';
 import { getConsoleViewIcon } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
-  booleanCustomTableFilter,
-  combineModeAndNeedle,
   DEFAULT_TABLE_CLASS_NAME,
-  parseFilterModeAndNeedle,
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
   suggestibleFilterInput,
@@ -72,6 +69,7 @@ import {
   ResultWithAuxiliaryWork,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
+import { TableFilter, TableFilters } from '../../utils/table-filters';
 
 import { FillIndicator } from './fill-indicator/fill-indicator';
 
@@ -123,8 +121,8 @@ interface ServicesQuery {
 }
 
 export interface ServicesViewProps {
-  filters: Filter[];
-  onFiltersChange(filters: Filter[]): void;
+  filters: TableFilters;
+  onFiltersChange(filters: TableFilters): void;
   goToQuery(queryWithContext: QueryWithContext): void;
   capabilities: Capabilities;
 }
@@ -438,9 +436,9 @@ ORDER BY
             servicesState.isEmpty() ? 'No services' : servicesState.getErrorMessage() || ''
           }
           filterable
-          filtered={filters}
+          filtered={filters.toFilters()}
           className={`centered-table ${DEFAULT_TABLE_CLASS_NAME}`}
-          onFilteredChange={onFiltersChange}
+          onFilteredChange={filters => onFiltersChange(TableFilters.fromFilters(filters))}
           pivotBy={groupServicesBy ? [groupServicesBy] : []}
           defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
           pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
@@ -454,8 +452,8 @@ ORDER BY
   private readonly getTableColumns = memoize(
     (
       visibleColumns: LocalStorageBackedVisibility,
-      _filters: Filter[],
-      _onFiltersChange: (filters: Filter[]) => void,
+      _filters: TableFilters,
+      _onFiltersChange: (filters: TableFilters) => void,
       workerInfoLookup: Record<string, WorkerInfo>,
     ): Column<ServiceResultRow>[] => {
       const { capabilities } = this.props;
@@ -643,15 +641,18 @@ ORDER BY
           Cell: this.renderFilterableCell('start_time', formatDate),
           Aggregated: () => '',
           filterMethod: (filter: Filter, row: ServiceResultRow) => {
-            const modeAndNeedle = parseFilterModeAndNeedle(filter);
-            if (!modeAndNeedle) return true;
+            const tableFilter = TableFilter.fromFilter(filter);
             const parsedRowTime = formatDate(row.start_time);
-            if (modeAndNeedle.mode === '~') {
-              return booleanCustomTableFilter(filter, parsedRowTime);
+            if (tableFilter.mode === '~') {
+              return tableFilter.matches(parsedRowTime);
             }
-            const parsedFilterTime = formatDate(modeAndNeedle.needle);
-            filter.value = combineModeAndNeedle(modeAndNeedle.mode, parsedFilterTime);
-            return booleanCustomTableFilter(filter, parsedRowTime);
+            const parsedFilterTime = formatDate(tableFilter.value);
+            const updatedFilter = new TableFilter(
+              tableFilter.key,
+              tableFilter.mode,
+              parsedFilterTime,
+            );
+            return updatedFilter.matches(parsedRowTime);
           },
         },
         {
