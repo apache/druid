@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
@@ -80,6 +81,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BinaryOperator;
 
 /**
@@ -163,19 +165,16 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   {
     final GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
 
-    if (queryPlus.getQueryMetrics() == null) {
-      queryPlus = queryPlus.withQueryMetrics(this);
-    }
-
-    GroupByQueryMetrics groupByQueryMetrics = (GroupByQueryMetrics) queryPlus.getQueryMetrics();
-
+    // TODO: Append the GroupByQueryMetrics using the ResponseContext.
+    boolean reportMetricsForEmission = queryPlus.getQueryMetrics() != null;
 
     // Reserve the group by resources (merge buffers) required for executing the query
     final QueryResourceId queryResourceId = query.context().getQueryResourceId();
 
     long startNs = System.nanoTime();
     groupByResourcesReservationPool.reserve(queryResourceId, query, willMergeRunner);
-    groupByQueryMetrics.mergeBufferAcquisitionTime(System.nanoTime() - startNs);
+    context.add(new ResponseContext.MetricKey("mergeBufferAcquisitionTime"),
+                new AtomicLong(System.nanoTime() - startNs));
 
     final GroupByQueryResources resource = groupByResourcesReservationPool.fetch(queryResourceId);
     if (resource == null) {
@@ -188,7 +187,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       Closer closer = Closer.create();
 
       final Sequence<ResultRow> mergedSequence = mergeGroupByResults(
-          queryPlus,
+          query,
           resource,
           runner,
           context,
@@ -210,21 +209,21 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   }
 
   private Sequence<ResultRow> mergeGroupByResults(
-      final QueryPlus<ResultRow> queryPlus,
+      final GroupByQuery query,
       GroupByQueryResources resource,
       QueryRunner<ResultRow> runner,
       ResponseContext context,
       Closer closer
   )
   {
-    if (isNestedQueryPushDown((GroupByQuery) queryPlus.getQuery())) {
-      return mergeResultsWithNestedQueryPushDown(queryPlus, resource, runner, context);
+    if (isNestedQueryPushDown(query)) {
+      return mergeResultsWithNestedQueryPushDown(query, resource, runner, context);
     }
-    return mergeGroupByResultsWithoutPushDown(queryPlus, resource, runner, context, closer);
+    return mergeGroupByResultsWithoutPushDown(query, resource, runner, context, closer);
   }
 
   private Sequence<ResultRow> mergeGroupByResultsWithoutPushDown(
-      QueryPlus<ResultRow> queryPlus,
+      GroupByQuery query,
       GroupByQueryResources resource,
       QueryRunner<ResultRow> runner,
       ResponseContext context,
@@ -232,19 +231,15 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   )
   {
     // If there's a subquery, merge subquery results and then apply the aggregator
-    GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
-
     final DataSource maybeQueryDataSource = query.getDataSource();
 
     if (!(maybeQueryDataSource instanceof QueryDataSource)) {
       if (query.getSubtotalsSpec() == null) {
-        return groupingEngine.applyPostProcessing(groupingEngine.mergeResults(runner, queryPlus, context), query);
+        Sequence<ResultRow> mergedResults = groupingEngine.mergeResults(runner, query, context);
+        return groupingEngine.applyPostProcessing(mergedResults, query);
       } else {
-        return groupingEngine.processSubtotalsSpec(
-            queryPlus,
-            resource,
-            groupingEngine.mergeResults(runner, queryPlus.withQuery(query.withSubtotalsSpec(null)), context)
-        );
+        Sequence<ResultRow> mergedResults = groupingEngine.mergeResults(runner, query.withSubtotalsSpec(null), context);
+        return groupingEngine.processSubtotalsSpec(query, resource, mergedResults);
       }
     }
 
@@ -274,10 +269,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
 
     // TODO: Check if we need to do a fitting action here.
     // closer.register(() -> groupByStatsProvider.closeQuery(subquery.context().getQueryResourceId()));
-    final QueryPlus<ResultRow> subqueryPlus = queryPlus.withQuery(subquery);
 
     final Sequence<ResultRow> subqueryResult = mergeGroupByResults(
-        subqueryPlus,
+        subquery,
         resource,
         runner,
         context,
@@ -286,8 +280,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
 
     final Sequence<ResultRow> finalizingResults = finalizeSubqueryResults(subqueryResult, subquery);
     final Sequence<ResultRow> processedSubqueryResults = groupingEngine.processSubqueryResult(
-        subqueryPlus,
-        queryPlus,
+        subquery,
+        query,
         resource,
         finalizingResults,
         false
@@ -296,26 +290,24 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     if (query.getSubtotalsSpec() == null) {
       return groupingEngine.applyPostProcessing(processedSubqueryResults, query);
     } else {
-      return groupingEngine.processSubtotalsSpec(queryPlus, resource, processedSubqueryResults);
+      return groupingEngine.processSubtotalsSpec(query, resource, processedSubqueryResults);
     }
   }
 
   private Sequence<ResultRow> mergeResultsWithNestedQueryPushDown(
-      QueryPlus<ResultRow> queryPlus,
+      GroupByQuery query,
       GroupByQueryResources resource,
       QueryRunner<ResultRow> runner,
       ResponseContext context
   )
   {
-    GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
-    Sequence<ResultRow> pushDownQueryResults = groupingEngine.mergeResults(runner, queryPlus, context);
+    Sequence<ResultRow> pushDownQueryResults = groupingEngine.mergeResults(runner, query, context);
 
     final Sequence<ResultRow> finalizedResults = finalizeSubqueryResults(pushDownQueryResults, query);
-    QueryPlus<ResultRow> rewrittenQueryPlus = queryPlus.withQuery(rewriteNestedQueryForPushDown(query));
 
     Sequence<ResultRow> processedSubqueryResult = groupingEngine.processSubqueryResult(
-        queryPlus,
-        rewrittenQueryPlus,
+        query,
+        rewriteNestedQueryForPushDown(query),
         resource,
         finalizedResults,
         true
@@ -331,7 +323,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   @VisibleForTesting
   GroupByQuery rewriteNestedQueryForPushDown(GroupByQuery query)
   {
-    return query.withAggregatorSpecs(Lists.transform(query.getAggregatorSpecs(), (agg) -> agg.getCombiningFactory()))
+    return query.withAggregatorSpecs(Lists.transform(query.getAggregatorSpecs(), AggregatorFactory::getCombiningFactory))
                 .withDimensionSpecs(Lists.transform(
                     query.getDimensions(),
                     (dim) -> new DefaultDimensionSpec(

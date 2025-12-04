@@ -281,7 +281,7 @@ public abstract class ResponseContext
 
   public static class MetricKey extends AbstractKey
   {
-    MetricKey(String name)
+    public MetricKey(String name)
     {
       super(name, false, false, new TypeReference<AtomicLong>() {});
     }

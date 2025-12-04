@@ -88,8 +88,8 @@ public class GroupByRowProcessor
    * calls to the {@link ResultSupplier}. Make sure to close it when you're done.
    */
   public static ResultSupplier process(
-      final QueryPlus<ResultRow> queryPlus,
-      final QueryPlus<ResultRow> subqueryPlus,
+      final GroupByQuery query,
+      final GroupByQuery subquery,
       final Sequence<ResultRow> rows,
       final GroupByQueryConfig config,
       final DruidProcessingConfig processingConfig,
@@ -99,7 +99,6 @@ public class GroupByRowProcessor
       final int mergeBufferSize
   )
   {
-    GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
     final GroupByQueryMetrics groupByQueryMetrics = (GroupByQueryMetrics) queryPlus.getQueryMetrics();
     Preconditions.checkNotNull(groupByQueryMetrics, "groupByQueryMetrics");
     final Closer closeOnExit = Closer.create();
