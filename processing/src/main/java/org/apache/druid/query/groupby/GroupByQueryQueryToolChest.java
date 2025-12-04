@@ -187,14 +187,16 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
 
       final Sequence<ResultRow> mergedSequence = mergeGroupByResults(query, resource, runner, context, closer);
 
-      if (reportMetricsForEmission) {
-        GroupByQueryMetrics queryMetrics = (GroupByQueryMetrics) queryPlus.getQueryMetrics();
-        populateQueryMetrics(queryMetrics, context);
-        groupByStatsProvider.aggregateStats(queryMetrics);
-      }
-
       // Clean up the resources reserved during the execution of the query
       closer.register(() -> groupByResourcesReservationPool.clean(queryResourceId));
+
+      if (reportMetricsForEmission) {
+        closer.register(() -> {
+          GroupByQueryMetrics queryMetrics = (GroupByQueryMetrics) queryPlus.getQueryMetrics();
+          populateQueryMetrics(queryMetrics, context);
+          groupByStatsProvider.aggregateStats(queryMetrics);
+        });
+      }
 
       return Sequences.withBaggage(mergedSequence, closer);
     }
@@ -207,6 +209,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
 
   private void populateQueryMetrics(GroupByQueryMetrics queryMetrics, ResponseContext context)
   {
+    // TODO: Everything is working as expected now, but the GroupByQueryMetrics expects to emit the metrics directly.
+    //  Why not we also send the values individually to the GroupByStatsMonitor?
     Object bytesSpilledToStorage = context.get(GroupByResponseContextKeys.GROUPBY_BYTES_SPILLED_TO_STORAGE_KEY);
 
     if (bytesSpilledToStorage != null) {
