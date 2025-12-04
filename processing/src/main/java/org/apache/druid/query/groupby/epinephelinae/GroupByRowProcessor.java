@@ -30,12 +30,10 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.GroupByQueryResources;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
@@ -99,8 +97,6 @@ public class GroupByRowProcessor
       final int mergeBufferSize
   )
   {
-    final GroupByQueryMetrics groupByQueryMetrics = (GroupByQueryMetrics) queryPlus.getQueryMetrics();
-    Preconditions.checkNotNull(groupByQueryMetrics, "groupByQueryMetrics");
     final Closer closeOnExit = Closer.create();
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
 
@@ -111,15 +107,14 @@ public class GroupByRowProcessor
 
     final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
         temporaryStorageDirectory,
-        querySpecificConfig.getMaxOnDiskStorage().getBytes(),
-        groupByQueryMetrics
+        querySpecificConfig.getMaxOnDiskStorage().getBytes()
     );
 
     closeOnExit.register(temporaryStorage);
 
     Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, ResultRow>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(
-        queryPlus,
-        subqueryPlus,
+        query,
+        subquery,
         querySpecificConfig,
         processingConfig,
         new Supplier<>()
@@ -147,8 +142,7 @@ public class GroupByRowProcessor
       throw new ResourceLimitExceededException(retVal.getReason());
     }
 
-    grouper.updateGroupByQueryMetrics();
-    groupByQueryMetrics.reportGroupByStats();
+    grouper.getQueryMetricsMap();
 
     return new ResultSupplier()
     {

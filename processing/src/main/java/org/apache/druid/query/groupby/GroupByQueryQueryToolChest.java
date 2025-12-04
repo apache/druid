@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
@@ -81,7 +80,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BinaryOperator;
 
 /**
@@ -173,8 +171,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
 
     long startNs = System.nanoTime();
     groupByResourcesReservationPool.reserve(queryResourceId, query, willMergeRunner);
-    context.add(new ResponseContext.MetricKey("mergeBufferAcquisitionTime"),
-                new AtomicLong(System.nanoTime() - startNs));
+    context.add(GroupByResponseContextKeys.GROUPBY_MERGE_BUFFER_ACQUISITION_TIME_KEY, System.nanoTime() - startNs);
 
     final GroupByQueryResources resource = groupByResourcesReservationPool.fetch(queryResourceId);
     if (resource == null) {
@@ -186,16 +183,17 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     try {
       Closer closer = Closer.create();
 
-      final Sequence<ResultRow> mergedSequence = mergeGroupByResults(
-          query,
-          resource,
-          runner,
-          context,
-          closer
-      );
+      final Sequence<ResultRow> mergedSequence = mergeGroupByResults(query, resource, runner, context, closer);
 
       // Clean up the resources reserved during the execution of the query
       closer.register(() -> groupByResourcesReservationPool.clean(queryResourceId));
+      closer.register(() -> {
+        if (reportMetricsForEmission) {
+          GroupByQueryMetrics queryMetrics = (GroupByQueryMetrics) queryPlus.getQueryMetrics();
+          // TODO: Populate the metrics here.
+        }
+      });
+
       // TODO: Maybe attach metrics reporting with the closer?
       // closer.register(() -> groupByStatsProvider.closeQuery(query.context().getQueryResourceId()));
 
@@ -471,7 +469,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
                 dimensionSpecs.add(dimensionSpec);
               }
             }
-
+             // TODO: Is this where I aggregate the responseContext?
             return runner.run(
                 queryPlus.withQuery(groupByQuery.withDimensionSpecs(dimensionSpecs)),
                 responseContext

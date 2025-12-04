@@ -57,9 +57,9 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.GroupByQueryResources;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
+import org.apache.druid.query.groupby.GroupByResponseContextKeys;
 import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
@@ -69,6 +69,7 @@ import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -139,8 +140,6 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
   {
     final GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
-    final GroupByQueryMetrics groupByQueryMetrics = (GroupByQueryMetrics) queryPlus.getQueryMetrics();
-    // Preconditions.checkNotNull(groupByQueryMetrics, "groupByQueryMetrics");
 
     // CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION is here because realtime servers use nested mergeRunners calls
     // (one for the entire query and one for each sink). We only want the outer call to actually do merging with a
@@ -193,8 +192,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
             try {
               final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
                   temporaryStorageDirectory,
-                  querySpecificConfig.getMaxOnDiskStorage().getBytes(),
-                  groupByQueryMetrics
+                  querySpecificConfig.getMaxOnDiskStorage().getBytes()
               );
 
               final ReferenceCountingResourceHolder<LimitedTemporaryStorage> temporaryStorageHolder =
@@ -215,7 +213,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
 
               Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, ResultRow>> pair =
                   RowBasedGrouperHelper.createGrouperAccumulatorPair(
-                      queryPlus,
+                      query,
                       null,
                       config,
                       processingConfig,
@@ -307,15 +305,14 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
                 waitForFutureCompletion(query, futures, hasTimeout, timeoutAt - System.currentTimeMillis());
               }
 
-              grouper.updateGroupByQueryMetrics();
-              groupByStatsProvider.aggregateStats(groupByQueryMetrics);
-              groupByQueryMetrics.reportGroupByStats();
+              Map<String, Long> metricsMap = grouper.getQueryMetricsMap();
 
-              return RowBasedGrouperHelper.makeGrouperIterator(
-                  grouper,
-                  query,
-                  resources
-              );
+              if (responseContext != null) {
+                responseContext.add(GroupByResponseContextKeys.GROUPBY_BYTES_SPILLED_TO_STORAGE_KEY, temporaryStorage.currentSize());
+                responseContext.add(GroupByResponseContextKeys.GROUPBY_MERGE_DICTIONARY_SIZE_KEY, metricsMap.getOrDefault(GroupByResponseContextKeys.GROUPBY_MERGE_DICTIONARY_SIZE_NAME, 0L));
+              }
+
+              return RowBasedGrouperHelper.makeGrouperIterator(grouper, query, resources);
             }
             catch (Throwable t) {
               // Exception caught while setting up the iterator; release resources.

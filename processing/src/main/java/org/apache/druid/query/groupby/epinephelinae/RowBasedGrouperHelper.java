@@ -56,6 +56,7 @@ import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.groupby.DefaultGroupByQueryMetrics;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryMetrics;
@@ -127,8 +128,8 @@ public class RowBasedGrouperHelper
    * Create a single-threaded grouper and accumulator.
    */
   public static Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, ResultRow>> createGrouperAccumulatorPair(
-      final QueryPlus<ResultRow> query,
-      @Nullable final QueryPlus<ResultRow> subquery,
+      final GroupByQuery query,
+      @Nullable final GroupByQuery subquery,
       final GroupByQueryConfig config,
       final DruidProcessingConfig processingConfig,
       final Supplier<ByteBuffer> bufferSupplier,
@@ -169,8 +170,8 @@ public class RowBasedGrouperHelper
    * and dim filters) are respected, and its aggregators are used in standard (not combining) form. The input
    * ResultRows are assumed to be results originating from the provided "subquery".
    *
-   * @param queryPlus           the query (and context) that we are grouping for
-   * @param subqueryPlus        optional subquery (and context) that produced the intermediate rows, or {@code null} when
+   * @param query               the query (and context) that we are grouping for
+   * @param subquery            optional subquery (and context) that produced the intermediate rows, or {@code null} when
    *                            operating in combining mode (see description above)
    * @param config              groupBy query config
    * @param processingConfig    processing config
@@ -187,8 +188,8 @@ public class RowBasedGrouperHelper
    * @param mergeBufferSize     size of the merge buffers from "bufferSupplier"
    */
   public static Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, ResultRow>> createGrouperAccumulatorPair(
-      final QueryPlus<ResultRow> queryPlus,
-      @Nullable final QueryPlus<ResultRow> subqueryPlus,
+      final GroupByQuery query,
+      @Nullable final GroupByQuery subquery,
       final GroupByQueryConfig config,
       final DruidProcessingConfig processingConfig,
       final Supplier<ByteBuffer> bufferSupplier,
@@ -211,10 +212,7 @@ public class RowBasedGrouperHelper
     }
 
     // See method-level javadoc; we go into combining mode if there is no subquery.
-    final boolean combining = subqueryPlus == null;
-    GroupByQuery subquery = combining ? null : (GroupByQuery) subqueryPlus.getQuery();
-
-    GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
+    final boolean combining = subquery == null;
     final List<ColumnType> valueTypes = DimensionHandlerUtils.getValueTypesFromDimensionSpecs(query.getDimensions());
 
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
@@ -266,9 +264,6 @@ public class RowBasedGrouperHelper
         limitSpec
     );
 
-    final GroupByQueryMetrics groupByQueryMetrics = (GroupByQueryMetrics) queryPlus.getQueryMetrics();
-    Preconditions.checkNotNull(groupByQueryMetrics, "GroupByQueryMetrics");
-
     final Grouper<RowBasedKey> grouper;
     if (concurrencyHint == -1) {
       grouper = new SpillingGrouper<>(
@@ -284,8 +279,8 @@ public class RowBasedGrouperHelper
           true,
           limitSpec,
           sortHasNonGroupingFields,
-          mergeBufferSize,
-          groupByQueryMetrics
+          mergeBufferSize
+          // TODO: Check if we need to pass a ResponseContext, or can retrieve them from the grouper method.
       );
     } else {
       final Grouper.KeySerdeFactory<RowBasedKey> combineKeySerdeFactory = new RowBasedKeySerdeFactory(
@@ -315,7 +310,7 @@ public class RowBasedGrouperHelper
           priority,
           hasQueryTimeout,
           queryTimeoutAt,
-          groupByQueryMetrics
+          new DefaultGroupByQueryMetrics()
       );
     }
 

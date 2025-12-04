@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import net.jpountz.lz4.LZ4BlockInputStream;
 import net.jpountz.lz4.LZ4BlockOutputStream;
@@ -38,6 +39,7 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQueryMetrics;
+import org.apache.druid.query.groupby.GroupByResponseContextKeys;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 
@@ -53,6 +55,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -97,8 +100,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       final boolean spillingAllowed,
       final DefaultLimitSpec limitSpec,
       final boolean sortHasNonGroupingFields,
-      final int mergeBufferSize,
-      final GroupByQueryMetrics groupByQueryMetrics
+      final int mergeBufferSize
   )
   {
     this.keySerde = keySerdeFactory.factorize();
@@ -216,14 +218,14 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   }
 
   @Override
-  public void updateGroupByQueryMetrics()
+  public Map<String, Long> getQueryMetricsMap()
   {
     // TODO: If we do not want groupByQueryMetrics to do addition, simply return a Map,
     //  then either the ConcurrentGrouper will aggregate the results into a accumulated map,
     //  and the GroupByQueryMetrics will provide a means to report GroupByMetrics via a map.
-    if (groupByQueryMetrics != null) {
-      groupByQueryMetrics.mergeDictionarySize(keySerde.getDictionarySize());
-    }
+    return ImmutableMap.of(
+        GroupByResponseContextKeys.GROUPBY_MERGE_DICTIONARY_SIZE_NAME, keySerde.getDictionarySize()
+    );
   }
 
   @Override

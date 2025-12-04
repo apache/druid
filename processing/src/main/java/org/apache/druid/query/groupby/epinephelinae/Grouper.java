@@ -21,6 +21,7 @@ package org.apache.druid.query.groupby.epinephelinae;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 
@@ -29,6 +30,7 @@ import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.function.ToIntFunction;
 
 /**
@@ -97,8 +99,9 @@ public interface Grouper<KeyType> extends Closeable
    * Update the results of the GroupByQueryMetrics.
    * Currently only used by {@link ConcurrentGrouper} and {@link SpillingGrouper}
    */
-  default void updateGroupByQueryMetrics()
+  default Map<String, Long> getQueryMetricsMap()
   {
+    return ImmutableMap.of();
   }
 
   /**

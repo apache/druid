@@ -47,8 +47,10 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -116,6 +118,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       final int priority,
       final boolean hasQueryTimeout,
       final long queryTimeoutAt,
+      // TODO: To delete later?
       final GroupByQueryMetrics groupByQueryMetrics
   )
   {
@@ -167,6 +170,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       final int intermediateCombineDegree,
       final int numParallelCombineThreads,
       final boolean mergeThreadLocal,
+      // TODO: To delete if necessary.
       final GroupByQueryMetrics groupByQueryMetrics
   )
   {
@@ -260,8 +264,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
         false,
         limitSpec,
         sortHasNonGroupingFields,
-        sliceSize,
-        groupByQueryMetrics
+        sliceSize
     );
     grouper.init();
     return grouper;
@@ -498,9 +501,19 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   }
 
   @Override
-  public void updateGroupByQueryMetrics()
+  public Map<String, Long> getQueryMetricsMap()
   {
-    groupers.forEach(SpillingGrouper::updateGroupByQueryMetrics);
+    Map<String, Long> map = new HashMap<>();
+
+    groupers.forEach(spillingGroupper -> {
+      Map<String, Long> metricsMap = spillingGroupper.getQueryMetricsMap();
+
+      for (Map.Entry<String, Long> entry : metricsMap.entrySet()) {
+        map.compute(entry.getKey(), (key, value) -> value == null ? entry.getValue() : value + entry.getValue());
+      }
+    });
+
+    return map;
   }
 
   @Override
