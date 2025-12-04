@@ -115,7 +115,7 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
   {
     final double fragmentationDiff
         = computeFragmentationIndex(candidateB) - computeFragmentationIndex(candidateA);
-    return fragmentationDiff > 0 ? 1 : -1;
+    return (int) fragmentationDiff;
   }
 
   @Override

@@ -172,6 +172,26 @@ public class MostFragmentedIntervalFirstPolicyTest
     Assertions.assertTrue(policy.compareCandidates(candidateB, candidateA) > 0);
   }
 
+  @Test
+  public void test_compareCandidates_returnsZeroIfSegmentCountAndAvgSizeScaleEquivalently()
+  {
+    final MostFragmentedIntervalFirstPolicy policy = new MostFragmentedIntervalFirstPolicy(
+        100,
+        HumanReadableBytes.valueOf(1),
+        HumanReadableBytes.valueOf(100),
+        null
+    );
+
+    final CompactionCandidate candidateA = createCandidate(100, 25);
+    final CompactionCandidate candidateB = createCandidate(400, 100);
+
+    verifyCandidateIsEligible(candidateA, policy);
+    verifyCandidateIsEligible(candidateB, policy);
+
+    Assertions.assertEquals(0, policy.compareCandidates(candidateA, candidateB));
+    Assertions.assertEquals(0, policy.compareCandidates(candidateB, candidateA));
+  }
+
   private CompactionCandidate createCandidate(int numSegments, long avgSizeBytes)
   {
     final CompactionStatistics dummyCompactedStats = CompactionStatistics.create(1L, 1L, 1L);
