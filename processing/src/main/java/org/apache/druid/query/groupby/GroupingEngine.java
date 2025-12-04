@@ -329,18 +329,17 @@ public class GroupingEngine
    * computing subtotals (like GROUPING SETS), and computing the havingSpec and limitSpec.
    *
    * @param baseRunner      base query runner
-   * @param queryPlus       query and context to run inside the base query runner
+   * @param query           the groupBy query to run inside the base query runner
    * @param responseContext the response context to pass to the base query runner
    *
    * @return merged result sequence
    */
   public Sequence<ResultRow> mergeResults(
       final QueryRunner<ResultRow> baseRunner,
-      final QueryPlus<ResultRow> queryPlus,
+      final GroupByQuery query,
       final ResponseContext responseContext
   )
   {
-    GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
     // Merge streams using ResultMergeQueryRunner, then apply postaggregators, then apply limit (which may
     // involve materialization)
     final ResultMergeQueryRunner<ResultRow> mergingQueryRunner = new ResultMergeQueryRunner<>(
@@ -357,7 +356,7 @@ public class GroupingEngine
     final int timestampResultFieldIndexInOriginalDimensions = hasTimestampResultField ? queryContext.getInt(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX) : 0;
     final GroupByQuery newQuery = prepareGroupByQuery(query);
 
-    final Sequence<ResultRow> mergedResults = mergingQueryRunner.run(queryPlus.withQuery(newQuery), responseContext);
+    final Sequence<ResultRow> mergedResults = mergingQueryRunner.run(QueryPlus.wrap(newQuery), responseContext);
 
     // Apply postaggregators if this is the outermost mergeResults (CTX_KEY_OUTERMOST) and we are not executing a
     // pushed-down subquery (CTX_KEY_EXECUTING_NESTED_QUERY).
@@ -575,8 +574,8 @@ public class GroupingEngine
   /**
    * Called by {@link GroupByQueryQueryToolChest#mergeResults(QueryRunner)} when it needs to process a subquery.
    *
-   * @param subqueryPlus       inner query (with context)
-   * @param queryPlus          outer query (with context)
+   * @param subquery           inner query
+   * @param query              outer query
    * @param resource           resources returned by {@link #prepareResource(GroupByQuery, BlockingPool, boolean, GroupByQueryConfig)}
    * @param subqueryResult     result rows from the subquery
    * @param wasQueryPushedDown true if the outer query was pushed down (so we only need to merge the outer query's
@@ -585,8 +584,8 @@ public class GroupingEngine
    * @return results of the outer query
    */
   public Sequence<ResultRow> processSubqueryResult(
-      QueryPlus<ResultRow> subqueryPlus,
-      QueryPlus<ResultRow> queryPlus,
+      GroupByQuery subquery,
+      GroupByQuery query,
       GroupByQueryResources resource,
       Sequence<ResultRow> subqueryResult,
       boolean wasQueryPushedDown
@@ -596,7 +595,6 @@ public class GroupingEngine
     // while creating the sequence.
     GroupByRowProcessor.ResultSupplier resultSupplier = null;
 
-    GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
     try {
       GroupByQuery queryToRun;
 
@@ -615,11 +613,9 @@ public class GroupingEngine
         queryToRun = queryToRun.withLimitSpec(((DefaultLimitSpec) queryToRun.getLimitSpec()).withOffsetToLimit());
       }
 
-      final QueryPlus<ResultRow> queryPlusToRun = queryPlus.withQuery(queryToRun);
-
       resultSupplier = GroupByRowProcessor.process(
-          queryPlusToRun,
-          wasQueryPushedDown ? queryPlusToRun : subqueryPlus,
+          queryToRun,
+          wasQueryPushedDown ? queryToRun : subquery,
           subqueryResult,
           configSupplier.get(),
           processingConfig,
@@ -632,8 +628,8 @@ public class GroupingEngine
       final GroupByRowProcessor.ResultSupplier finalResultSupplier = resultSupplier;
       return Sequences.withBaggage(
           mergeResults(
-              (qp, responseContext) -> finalResultSupplier.results(null),
-              queryPlus,
+              (queryPlus, responseContext) -> finalResultSupplier.results(null),
+              query,
               ResponseContext.createEmpty()
           ),
           finalResultSupplier
@@ -647,14 +643,14 @@ public class GroupingEngine
   /**
    * Called by {@link GroupByQueryQueryToolChest#mergeResults(QueryRunner)} when it needs to generate subtotals.
    *
-   * @param queryPlus   query (and context) that has a "subtotalsSpec"
+   * @param query       query that has a "subtotalsSpec"
    * @param resource    resources returned by {@link #prepareResource(GroupByQuery, BlockingPool, boolean, GroupByQueryConfig)}
    * @param queryResult result rows from the main query
    *
    * @return results for each list of subtotals in the query, concatenated together
    */
   public Sequence<ResultRow> processSubtotalsSpec(
-      QueryPlus<ResultRow> queryPlus,
+      GroupByQuery query,
       GroupByQueryResources resource,
       Sequence<ResultRow> queryResult
   )
@@ -673,7 +669,6 @@ public class GroupingEngine
     // while creating the sequence.
     GroupByRowProcessor.ResultSupplier resultSupplierOne = null;
 
-    GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
     try {
       // baseSubtotalQuery is the original query with dimensions and aggregators rewritten to apply to the *results*
       // rather than *inputs* of that query. It has its virtual columns and dim filter removed, because those only
@@ -699,11 +694,9 @@ public class GroupingEngine
           // timestampResult optimization is not for subtotal scenario, so disable it
           .withOverriddenContext(ImmutableMap.of(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, ""));
 
-      QueryPlus<ResultRow> baseSubtotalQueryPlus = queryPlus.withQuery(baseSubtotalQuery);
-
       resultSupplierOne = GroupByRowProcessor.process(
-          baseSubtotalQueryPlus,
-          baseSubtotalQueryPlus,
+          baseSubtotalQuery,
+          baseSubtotalQuery,
           queryResult,
           configSupplier.get(),
           processingConfig,
@@ -746,16 +739,14 @@ public class GroupingEngine
           subtotalQueryLimitSpec = baseSubtotalQuery.getLimitSpec().filterColumns(columns);
         }
 
-        QueryPlus<ResultRow> subtotalQueryPlus = baseSubtotalQueryPlus.withQuery(
-            baseSubtotalQuery
-            .withLimitSpec(subtotalQueryLimitSpec));
+        GroupByQuery subtotalQuery = baseSubtotalQuery.withLimitSpec(subtotalQueryLimitSpec);
 
         final GroupByRowProcessor.ResultSupplier resultSupplierOneFinal = resultSupplierOne;
         if (Utils.isPrefix(subtotalSpec, queryDimNamesInOrder)) {
           // Since subtotalSpec is a prefix of base query dimensions, so results from base query are also sorted
           // by subtotalSpec as needed by stream merging.
           subtotalsResults.add(
-              processSubtotalsResultAndOptionallyClose(() -> resultSupplierOneFinal, subTotalDimensionSpec, subtotalQueryPlus, false)
+              processSubtotalsResultAndOptionallyClose(() -> resultSupplierOneFinal, subTotalDimensionSpec, subtotalQuery, false)
           );
         } else {
           // Since subtotalSpec is not a prefix of base query dimensions, so results from base query are not sorted
@@ -765,8 +756,8 @@ public class GroupingEngine
           // Also note, we can't create the ResultSupplier eagerly here or as we don't want to eagerly allocate
           // merge buffers for processing subtotal.
           Supplier<GroupByRowProcessor.ResultSupplier> resultSupplierTwo = () -> GroupByRowProcessor.process(
-              baseSubtotalQueryPlus,
-              subtotalQueryPlus,
+              baseSubtotalQuery,
+              subtotalQuery,
               resultSupplierOneFinal.results(subTotalDimensionSpec),
               configSupplier.get(),
               processingConfig,
@@ -777,7 +768,7 @@ public class GroupingEngine
           );
 
           subtotalsResults.add(
-              processSubtotalsResultAndOptionallyClose(resultSupplierTwo, subTotalDimensionSpec, subtotalQueryPlus, true)
+              processSubtotalsResultAndOptionallyClose(resultSupplierTwo, subTotalDimensionSpec, subtotalQuery, true)
           );
         }
       }
@@ -795,7 +786,7 @@ public class GroupingEngine
   private Sequence<ResultRow> processSubtotalsResultAndOptionallyClose(
       Supplier<GroupByRowProcessor.ResultSupplier> baseResultsSupplier,
       List<DimensionSpec> dimsToInclude,
-      QueryPlus<ResultRow> subtotalQueryPlus,
+      GroupByQuery subtotalQuery,
       boolean closeOnSequenceRead
   )
   {
@@ -813,7 +804,7 @@ public class GroupingEngine
                       : () -> {}
                   )
               ),
-          subtotalQueryPlus,
+          subtotalQuery,
           ResponseContext.createEmpty()
       );
     }
