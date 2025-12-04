@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.groupby.GroupByQueryMetrics;
 
 import java.io.Closeable;
 import java.io.File;
@@ -47,8 +46,6 @@ import java.util.concurrent.atomic.AtomicLong;
 public class LimitedTemporaryStorage implements Closeable
 {
   private static final Logger log = new Logger(LimitedTemporaryStorage.class);
-
-//  private final GroupByQueryMetrics groupByQueryMetrics;
 
   private final File storageDirectory;
   private final long maxBytesUsed;

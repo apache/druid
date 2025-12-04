@@ -398,14 +398,14 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         groupByResourcesReservationPool,
         mapper,
         mapper,
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-        statsProvider
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
         groupingEngine,
         () -> config,
         DefaultGroupByQueryMetricsFactory.instance(),
-        groupByResourcesReservationPool
+        groupByResourcesReservationPool,
+        statsProvider
     );
     return new GroupByQueryRunnerFactory(groupingEngine, toolChest, bufferPools.getProcessingPool());
   }

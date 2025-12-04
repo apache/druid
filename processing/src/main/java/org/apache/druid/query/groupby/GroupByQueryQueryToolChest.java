@@ -266,9 +266,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       throw new UnsupportedOperationException("Subqueries must be of type 'group by'");
     }
 
-    // TODO: Check if we need to do a fitting action here.
-    // closer.register(() -> groupByStatsProvider.closeQuery(subquery.context().getQueryResourceId()));
-
     final Sequence<ResultRow> subqueryResult = mergeGroupByResults(
         subquery,
         resource,

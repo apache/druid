@@ -62,7 +62,6 @@ import org.apache.druid.query.aggregation.datasketches.tuple.ArrayOfDoublesSketc
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
-import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.segment.column.ColumnType;
@@ -279,8 +278,7 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
         TestHelper.makeJsonMapper(),
         TestHelper.makeSmileMapper(),
         (query, future) -> {
-        },
-        new GroupByStatsProvider()
+        }
     );
   }
 

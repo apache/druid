@@ -44,7 +44,6 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
-import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -74,7 +73,6 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
 
     final BlockingPool<ByteBuffer> mergePool =
         new DefaultBlockingPool<>(() -> ByteBuffer.allocate(1024), 1);
-    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
 
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
         new GroupByResourcesReservationPool(mergePool, config);
@@ -110,8 +108,7 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
         groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new DefaultObjectMapper(),
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-        groupByStatsProvider
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
 
     final GroupByQueryRunnerFactory factory = new GroupByQueryRunnerFactory(

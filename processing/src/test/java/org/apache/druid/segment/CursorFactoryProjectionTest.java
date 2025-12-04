@@ -71,7 +71,6 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
-import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -583,8 +582,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         TestHelper.makeJsonMapper(),
         TestHelper.makeSmileMapper(),
         (query, future) -> {
-        },
-        new GroupByStatsProvider()
+        }
     );
     this.timeseriesEngine = new TimeseriesQueryEngine(nonBlockingPool);
   }
@@ -2269,12 +2267,6 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     @Override
     public void granularity(GroupByQuery query)
-    {
-      // no-op for projection tests
-    }
-
-    @Override
-    public void reportGroupByStats()
     {
       // no-op for projection tests
     }

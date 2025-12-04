@@ -71,7 +71,6 @@ import org.apache.druid.query.groupby.DefaultGroupByQueryMetricsFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryMetricsFactory;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
-import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
@@ -961,7 +960,6 @@ public class SqlTestFramework
     private GroupingEngine makeGroupingEngine(
         final ObjectMapper mapper,
         final DruidProcessingConfig processingConfig,
-        final GroupByStatsProvider statsProvider,
         final GroupByQueryConfig config,
         final GroupByResourcesReservationPool groupByResourcesReservationPool
     )
@@ -973,8 +971,7 @@ public class SqlTestFramework
           groupByResourcesReservationPool,
           mapper,
           mapper,
-          QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-          statsProvider
+          QueryRunnerTestHelper.NOOP_QUERYWATCHER
       );
     }
 

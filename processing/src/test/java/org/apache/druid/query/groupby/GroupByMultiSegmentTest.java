@@ -241,7 +241,6 @@ public class GroupByMultiSegmentTest extends InitializedNullHandlingTest
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
         new GroupByResourcesReservationPool(mergePool, config);
     final GroupingEngine groupingEngine = new GroupingEngine(
@@ -250,8 +249,7 @@ public class GroupByMultiSegmentTest extends InitializedNullHandlingTest
         groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
-        NOOP_QUERYWATCHER,
-        groupByStatsProvider
+        NOOP_QUERYWATCHER
     );
 
     groupByFactory = new GroupByQueryRunnerFactory(

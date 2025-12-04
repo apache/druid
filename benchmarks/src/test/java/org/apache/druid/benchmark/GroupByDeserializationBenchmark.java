@@ -112,6 +112,7 @@ public class GroupByDeserializationBenchmark
           }
         },
         null,
+        null,
         null
     );
 

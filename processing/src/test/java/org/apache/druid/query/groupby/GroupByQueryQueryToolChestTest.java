@@ -799,6 +799,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
           }
         },
         null,
+        null,
         null
     );
 
@@ -1293,7 +1294,6 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         bufferSupplier,
         processingConfig.getNumMergeBuffers()
     );
-    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
         new GroupByResourcesReservationPool(mergeBufferPool, queryConfig);
     final GroupingEngine groupingEngine = new GroupingEngine(
@@ -1302,8 +1302,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-        groupByStatsProvider
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
     final GroupByQueryQueryToolChest queryToolChest = new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool);
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
