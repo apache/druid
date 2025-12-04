@@ -63,7 +63,7 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
   /**
    * Hook for the additional setup that needs to be done before all tests.
    */
-  protected void beforeAll()
+  protected void beforeAll() throws Exception
   {
     // No-op dy default
   }
