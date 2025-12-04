@@ -45,6 +45,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
@@ -71,11 +72,8 @@ import org.junit.rules.TemporaryFolder;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -97,51 +95,43 @@ public class CliPeonTest
   @Test
   public void testCliPeonK8sMode() throws IOException
   {
-    File file = temporaryFolder.newFile("task.json");
-    FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
-    GuiceRunnable runnable = new FakeCliPeon(file.getParent(), "k8s");
-    final Injector injector = GuiceInjectors.makeStartupInjector();
-    injector.injectMembers(runnable);
-    Assert.assertNotNull(runnable.makeInjector());
+    final Properties properties = new Properties();
+    properties.setProperty("druid.indexer.runner.type", "k8s");
+    final Injector peonInjector = makePeonInjector(NoopTask.create(), properties);
+    final ExecutorLifecycleConfig executorLifecycleConfig = peonInjector.getInstance(ExecutorLifecycleConfig.class);
+    Assert.assertFalse(executorLifecycleConfig.isParentStreamDefined());
   }
 
   @Test
   public void testCliPeonNonK8sMode() throws IOException
   {
-    File file = temporaryFolder.newFile("task.json");
-    FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
-    GuiceRunnable runnable = new FakeCliPeon(file.getParent(), "httpRemote");
-    final Injector injector = GuiceInjectors.makeStartupInjector();
-    injector.injectMembers(runnable);
-    Assert.assertNotNull(runnable.makeInjector());
+    final Properties properties = new Properties();
+    properties.setProperty("druid.indexer.runner.type", "httpRemote");
+    final Injector peonInjector = makePeonInjector(NoopTask.create(), properties);
+    final ExecutorLifecycleConfig executorLifecycleConfig = peonInjector.getInstance(ExecutorLifecycleConfig.class);
+    Assert.assertTrue(executorLifecycleConfig.isParentStreamDefined());
   }
 
   @Test
-  public void testCliPeonK8sANdWorkerIsK8sMode() throws IOException
+  public void testCliPeonK8sAndWorkerIsK8sMode() throws IOException
   {
-    File file = temporaryFolder.newFile("task.json");
-    FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
-    GuiceRunnable runnable = new FakeCliPeon(file.getParent(), "k8sAndWorker");
-    final Injector injector = GuiceInjectors.makeStartupInjector();
-    injector.injectMembers(runnable);
-    Assert.assertNotNull(runnable.makeInjector());
+    final Properties properties = new Properties();
+    properties.setProperty("druid.indexer.runner.type", "k8sAndWorker");
+    final Injector peonInjector = makePeonInjector(NoopTask.create(), properties);
+    final ExecutorLifecycleConfig executorLifecycleConfig = peonInjector.getInstance(ExecutorLifecycleConfig.class);
+    Assert.assertFalse(executorLifecycleConfig.isParentStreamDefined());
   }
 
   @Test
   public void testCliPeonPolicyEnforcerInToolbox() throws IOException
   {
-    CliPeon runnable = new CliPeon();
-    File file = temporaryFolder.newFile("task.json");
-    FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
-    runnable.taskAndStatusFile = ImmutableList.of(file.getParent(), "1");
-
-    Properties properties = new Properties();
+    final Properties properties = new Properties();
     properties.setProperty("druid.policy.enforcer.type", "restrictAllTables");
-    runnable.configure(properties);
-    runnable.configure(properties, GuiceInjectors.makeStartupInjector());
-
-    Injector secondaryInjector = runnable.makeInjector();
-    Assert.assertEquals(new RestrictAllTablesPolicyEnforcer(null), secondaryInjector.getInstance(PolicyEnforcer.class));
+    final Injector peonInjector = makePeonInjector(NoopTask.create(), properties);
+    Assert.assertEquals(
+        new RestrictAllTablesPolicyEnforcer(null),
+        peonInjector.getInstance(PolicyEnforcer.class)
+    );
   }
 
   @Test
@@ -192,18 +182,12 @@ public class CliPeonTest
   @Test
   public void testCliPeonLocalTmpStorage() throws IOException
   {
+    final Properties properties = new Properties();
     File file = temporaryFolder.newFile("task.json");
-    FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
+    FileUtils.write(file, mapper.writeValueAsString(NoopTask.create()), StandardCharsets.UTF_8);
+    final Injector peonInjector = makePeonInjector(file, properties);
 
-    CliPeon runnable = new CliPeon();
-    runnable.taskAndStatusFile = ImmutableList.of(file.getParent(), "1");
-    Properties properties = new Properties();
-    runnable.configure(properties);
-    runnable.configure(properties, GuiceInjectors.makeStartupInjector());
-    Injector secondaryInjector = runnable.makeInjector();
-    Assert.assertNotNull(secondaryInjector);
-
-    LocalTmpStorageConfig localTmpStorageConfig = secondaryInjector.getInstance(LocalTmpStorageConfig.class);
+    LocalTmpStorageConfig localTmpStorageConfig = peonInjector.getInstance(LocalTmpStorageConfig.class);
     Assert.assertEquals(new File(file.getParent(), "/tmp").getAbsolutePath(), localTmpStorageConfig.getTmpDir().getAbsolutePath());
   }
 
@@ -211,7 +195,7 @@ public class CliPeonTest
   public void testTaskWithDefaultContext() throws IOException
   {
     final CompactionTask compactionTask = compactBuilder.build();
-    final Injector peonInjector = makePeonInjector(new Properties(), compactionTask);
+    final Injector peonInjector = makePeonInjector(compactionTask, new Properties());
 
     verifyLoadSpecHolder(peonInjector.getInstance(LoadSpecHolder.class), compactionTask);
     verifyTaskHolder(peonInjector.getInstance(TaskHolder.class), compactionTask);
@@ -227,7 +211,7 @@ public class CliPeonTest
         ))
         .build();
 
-    final Injector peonInjector = makePeonInjector(new Properties(), compactionTask);
+    final Injector peonInjector = makePeonInjector(compactionTask, new Properties());
 
     verifyLoadSpecHolder(peonInjector.getInstance(LoadSpecHolder.class), compactionTask);
     verifyTaskHolder(peonInjector.getInstance(TaskHolder.class), compactionTask);
@@ -243,7 +227,7 @@ public class CliPeonTest
         })
         .build();
 
-    final Injector peonInjector = makePeonInjector(new Properties(), compactionTask);
+    final Injector peonInjector = makePeonInjector(compactionTask, new Properties());
 
     verifyLoadSpecHolder(peonInjector.getInstance(LoadSpecHolder.class), compactionTask);
     verifyTaskHolder(peonInjector.getInstance(TaskHolder.class), compactionTask);
@@ -264,23 +248,27 @@ public class CliPeonTest
         "[\"org.apache.druid.server.metrics.ServiceStatusMonitor\","
         + " \"org.apache.druid.java.util.metrics.JvmMonitor\"]"
     );
-    final Injector peonInjector = makePeonInjector(properties, compactionTask);
+    final Injector peonInjector = makePeonInjector(compactionTask, properties);
 
     verifyLoadSpecHolder(peonInjector.getInstance(LoadSpecHolder.class), compactionTask);
     verifyTaskHolder(peonInjector.getInstance(TaskHolder.class), compactionTask);
   }
 
-  private Injector makePeonInjector(Properties properties, Task task) throws IOException
+  private Injector makePeonInjector(File taskFile, Properties properties)
   {
-    File file = temporaryFolder.newFile("task.json");
-    FileUtils.write(file, mapper.writeValueAsString(task), StandardCharsets.UTF_8);
-
     final CliPeon peon = new CliPeon();
-    peon.taskAndStatusFile = ImmutableList.of(file.getParent(), "1");
+    peon.taskAndStatusFile = ImmutableList.of(taskFile.getParent(), "1");
 
     peon.configure(properties);
     peon.configure(properties, GuiceInjectors.makeStartupInjector());
     return peon.makeInjector(Set.of(NodeRole.PEON));
+  }
+
+  private Injector makePeonInjector(Task task, Properties properties) throws IOException
+  {
+    File taskFile = temporaryFolder.newFile("task.json");
+    FileUtils.write(taskFile, mapper.writeValueAsString(task), StandardCharsets.UTF_8);
+    return makePeonInjector(taskFile, properties);
   }
 
   private static void verifyLoadSpecHolder(LoadSpecHolder observedLoadSpecHolder, Task task)
@@ -298,30 +286,6 @@ public class CliPeonTest
     Assert.assertTrue(observedTaskHolder instanceof PeonTaskHolder);
     Assert.assertEquals(task.getId(), observedTaskHolder.getTaskId());
     Assert.assertEquals(task.getDataSource(), observedTaskHolder.getDataSource());
-  }
-
-  private static class FakeCliPeon extends CliPeon
-  {
-    List<String> taskAndStatusFile = new ArrayList<>();
-
-    FakeCliPeon(String taskDirectory, String runnerType)
-    {
-      try {
-        taskAndStatusFile.add(taskDirectory);
-        taskAndStatusFile.add("1");
-
-        Field privateField = CliPeon.class
-            .getDeclaredField("taskAndStatusFile");
-        privateField.setAccessible(true);
-        privateField.set(this, taskAndStatusFile);
-
-        System.setProperty("druid.indexer.runner.type", runnerType);
-      }
-      catch (Exception ex) {
-        // do nothing
-      }
-
-    }
   }
 
   private static class TestTask extends NoopTask
