@@ -97,7 +97,7 @@ public class CliPeonTest
   {
     final Properties properties = new Properties();
     properties.setProperty("druid.indexer.runner.type", "k8s");
-    final Injector peonInjector = makePeonInjector(properties, NoopTask.create());
+    final Injector peonInjector = makePeonInjector(NoopTask.create(), properties);
     final ExecutorLifecycleConfig executorLifecycleConfig = peonInjector.getInstance(ExecutorLifecycleConfig.class);
     Assert.assertFalse(executorLifecycleConfig.isParentStreamDefined());
   }
@@ -107,17 +107,17 @@ public class CliPeonTest
   {
     final Properties properties = new Properties();
     properties.setProperty("druid.indexer.runner.type", "httpRemote");
-    final Injector peonInjector = makePeonInjector(properties, NoopTask.create());
+    final Injector peonInjector = makePeonInjector(NoopTask.create(), properties);
     final ExecutorLifecycleConfig executorLifecycleConfig = peonInjector.getInstance(ExecutorLifecycleConfig.class);
     Assert.assertTrue(executorLifecycleConfig.isParentStreamDefined());
   }
 
   @Test
-  public void testCliPeonK8sANdWorkerIsK8sMode() throws IOException
+  public void testCliPeonK8sAndWorkerIsK8sMode() throws IOException
   {
     final Properties properties = new Properties();
     properties.setProperty("druid.indexer.runner.type", "k8sAndWorker");
-    final Injector peonInjector = makePeonInjector(properties, NoopTask.create());
+    final Injector peonInjector = makePeonInjector(NoopTask.create(), properties);
     final ExecutorLifecycleConfig executorLifecycleConfig = peonInjector.getInstance(ExecutorLifecycleConfig.class);
     Assert.assertFalse(executorLifecycleConfig.isParentStreamDefined());
   }
@@ -127,7 +127,7 @@ public class CliPeonTest
   {
     final Properties properties = new Properties();
     properties.setProperty("druid.policy.enforcer.type", "restrictAllTables");
-    final Injector peonInjector = makePeonInjector(properties, NoopTask.create());
+    final Injector peonInjector = makePeonInjector(NoopTask.create(), properties);
     Assert.assertEquals(
         new RestrictAllTablesPolicyEnforcer(null),
         peonInjector.getInstance(PolicyEnforcer.class)
@@ -195,7 +195,7 @@ public class CliPeonTest
   public void testTaskWithDefaultContext() throws IOException
   {
     final CompactionTask compactionTask = compactBuilder.build();
-    final Injector peonInjector = makePeonInjector(new Properties(), compactionTask);
+    final Injector peonInjector = makePeonInjector(compactionTask, new Properties());
 
     verifyLoadSpecHolder(peonInjector.getInstance(LoadSpecHolder.class), compactionTask);
     verifyTaskHolder(peonInjector.getInstance(TaskHolder.class), compactionTask);
@@ -211,7 +211,7 @@ public class CliPeonTest
         ))
         .build();
 
-    final Injector peonInjector = makePeonInjector(new Properties(), compactionTask);
+    final Injector peonInjector = makePeonInjector(compactionTask, new Properties());
 
     verifyLoadSpecHolder(peonInjector.getInstance(LoadSpecHolder.class), compactionTask);
     verifyTaskHolder(peonInjector.getInstance(TaskHolder.class), compactionTask);
@@ -227,7 +227,7 @@ public class CliPeonTest
         })
         .build();
 
-    final Injector peonInjector = makePeonInjector(new Properties(), compactionTask);
+    final Injector peonInjector = makePeonInjector(compactionTask, new Properties());
 
     verifyLoadSpecHolder(peonInjector.getInstance(LoadSpecHolder.class), compactionTask);
     verifyTaskHolder(peonInjector.getInstance(TaskHolder.class), compactionTask);
@@ -248,7 +248,7 @@ public class CliPeonTest
         "[\"org.apache.druid.server.metrics.ServiceStatusMonitor\","
         + " \"org.apache.druid.java.util.metrics.JvmMonitor\"]"
     );
-    final Injector peonInjector = makePeonInjector(properties, compactionTask);
+    final Injector peonInjector = makePeonInjector(compactionTask, properties);
 
     verifyLoadSpecHolder(peonInjector.getInstance(LoadSpecHolder.class), compactionTask);
     verifyTaskHolder(peonInjector.getInstance(TaskHolder.class), compactionTask);
@@ -264,7 +264,7 @@ public class CliPeonTest
     return peon.makeInjector(Set.of(NodeRole.PEON));
   }
 
-  private Injector makePeonInjector(Properties properties, Task task) throws IOException
+  private Injector makePeonInjector(Task task, Properties properties) throws IOException
   {
     File taskFile = temporaryFolder.newFile("task.json");
     FileUtils.write(taskFile, mapper.writeValueAsString(task), StandardCharsets.UTF_8);
