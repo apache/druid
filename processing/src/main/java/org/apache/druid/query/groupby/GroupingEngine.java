@@ -644,6 +644,7 @@ public class GroupingEngine
    * @param query       query that has a "subtotalsSpec"
    * @param resource    resources returned by {@link #prepareResource(GroupByQuery, BlockingPool, boolean, GroupByQueryConfig)}
    * @param queryResult result rows from the main query
+   * @param context     response context for collating query metrics
    *
    * @return results for each list of subtotals in the query, concatenated together
    */
