@@ -95,6 +95,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   private final GroupByQueryConfig queryConfig;
   private final GroupByQueryMetricsFactory queryMetricsFactory;
   private final GroupByResourcesReservationPool groupByResourcesReservationPool;
+  private final GroupByStatsProvider groupByStatsProvider;
 
   @VisibleForTesting
   public GroupByQueryQueryToolChest(
@@ -106,7 +107,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
         groupingEngine,
         GroupByQueryConfig::new,
         DefaultGroupByQueryMetricsFactory.instance(),
-        groupByResourcesReservationPool
+        groupByResourcesReservationPool,
+        new GroupByStatsProvider()
     );
   }
 
@@ -115,13 +117,15 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       GroupingEngine groupingEngine,
       Supplier<GroupByQueryConfig> queryConfigSupplier,
       GroupByQueryMetricsFactory queryMetricsFactory,
-      @Merging GroupByResourcesReservationPool groupByResourcesReservationPool
+      @Merging GroupByResourcesReservationPool groupByResourcesReservationPool,
+      GroupByStatsProvider groupByStatsProvider
   )
   {
     this.groupingEngine = groupingEngine;
     this.queryConfig = queryConfigSupplier.get();
     this.queryMetricsFactory = queryMetricsFactory;
     this.groupByResourcesReservationPool = groupByResourcesReservationPool;
+    this.groupByStatsProvider = groupByStatsProvider;
   }
 
   @Override
@@ -183,13 +187,12 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
 
       final Sequence<ResultRow> mergedSequence = mergeGroupByResults(query, resource, runner, context, closer);
 
-      // TODO: Check if need wrap in closer or no?
       if (reportMetricsForEmission) {
         GroupByQueryMetrics queryMetrics = (GroupByQueryMetrics) queryPlus.getQueryMetrics();
         queryMetrics.bytesSpilledToStorage((Long) context.get(GroupByResponseContextKeys.GROUPBY_BYTES_SPILLED_TO_STORAGE_KEY));
         queryMetrics.mergeDictionarySize((Long) context.get(GroupByResponseContextKeys.GROUPBY_MERGE_DICTIONARY_SIZE_KEY));
         queryMetrics.mergeBufferAcquisitionTime((Long) context.get(GroupByResponseContextKeys.GROUPBY_MERGE_BUFFER_ACQUISITION_TIME_KEY));
-
+        groupByStatsProvider.aggregateStats(queryMetrics);
       }
 
       // Clean up the resources reserved during the execution of the query

@@ -60,7 +60,6 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryResources;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
 import org.apache.druid.query.groupby.GroupByResponseContextKeys;
-import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 
@@ -106,7 +105,6 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
   private final ObjectMapper spillMapper;
   private final String processingTmpDir;
   private final int mergeBufferSize;
-  private final GroupByStatsProvider groupByStatsProvider;
 
   public GroupByMergingQueryRunner(
       GroupByQueryConfig config,
@@ -118,8 +116,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
       int concurrencyHint,
       int mergeBufferSize,
       ObjectMapper spillMapper,
-      String processingTmpDir,
-      GroupByStatsProvider groupByStatsProvider
+      String processingTmpDir
   )
   {
     this.config = config;
@@ -132,7 +129,6 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
     this.spillMapper = spillMapper;
     this.processingTmpDir = processingTmpDir;
     this.mergeBufferSize = mergeBufferSize;
-    this.groupByStatsProvider = groupByStatsProvider;
   }
 
   @Override
