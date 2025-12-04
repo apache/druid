@@ -143,7 +143,7 @@ import {
   updateSchemaWithSample,
   upgradeSpec,
 } from '../../druid-models';
-import { getSpecDatasourceName } from '../../helpers';
+import { getSpecDatasourceName, getSpecSupervisorId } from '../../helpers';
 import { getLink } from '../../links';
 import { Api, AppToaster, UrlBaser } from '../../singletons';
 import {
@@ -3568,7 +3568,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
 
     let currentSupervisorSpec: Partial<IngestionSpec> | undefined;
-    const supervisorId = getSpecDatasourceName(spec);
+    const supervisorId = getSpecSupervisorId(spec);
     if (isStreamingSpec(spec) && supervisorId) {
       try {
         currentSupervisorSpec = cleanSpec(
