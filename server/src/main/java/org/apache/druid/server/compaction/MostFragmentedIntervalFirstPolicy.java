@@ -22,19 +22,23 @@ package org.apache.druid.server.compaction;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 
 import javax.annotation.Nullable;
+import java.util.Comparator;
 
 /**
- * {@link CompactionCandidateSearchPolicy} which prioritizes compaction of the
- * intervals with the largest number of small uncompacted segments.
+ * Experimental {@link CompactionCandidateSearchPolicy} which prioritizes compaction
+ * of intervals with the largest number of small uncompacted segments.
  * <p>
  * This policy favors cluster stability (by prioritizing reduction of segment
  * count) over performance of queries on newer intervals. For the latter, use
  * {@link NewestSegmentFirstPolicy}.
  */
-public class MostFragmentedIntervalFirstPolicy implements CompactionCandidateSearchPolicy
+@UnstableApi
+public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
 {
   private static final HumanReadableBytes SIZE_2_GB = new HumanReadableBytes("2GiB");
   private static final HumanReadableBytes SIZE_10_MB = new HumanReadableBytes("10MiB");
@@ -47,9 +51,24 @@ public class MostFragmentedIntervalFirstPolicy implements CompactionCandidateSea
   public MostFragmentedIntervalFirstPolicy(
       @JsonProperty("minUncompactedCount") @Nullable Integer minUncompactedCount,
       @JsonProperty("minUncompactedBytes") @Nullable HumanReadableBytes minUncompactedBytes,
-      @JsonProperty("maxAverageUncompactedBytesPerSegment") @Nullable HumanReadableBytes maxAverageUncompactedBytesPerSegment
+      @JsonProperty("maxAverageUncompactedBytesPerSegment") @Nullable
+      HumanReadableBytes maxAverageUncompactedBytesPerSegment,
+      @JsonProperty("priorityDatasource") @Nullable String priorityDatasource
   )
   {
+    super(priorityDatasource);
+
+    InvalidInput.conditionalException(
+        minUncompactedCount == null || minUncompactedCount > 0,
+        "'minUncompactedCount'[%s] must be greater than 0",
+        minUncompactedCount
+    );
+    InvalidInput.conditionalException(
+        maxAverageUncompactedBytesPerSegment == null || maxAverageUncompactedBytesPerSegment.getBytes() > 0,
+        "'minUncompactedCount'[%s] must be greater than 0",
+        maxAverageUncompactedBytesPerSegment
+    );
+
     this.minUncompactedCount = Configs.valueOrDefault(minUncompactedCount, 100);
     this.minUncompactedBytes = Configs.valueOrDefault(minUncompactedBytes, SIZE_10_MB);
     this.maxAverageUncompactedBytesPerSegment
@@ -87,10 +106,15 @@ public class MostFragmentedIntervalFirstPolicy implements CompactionCandidateSea
   }
 
   @Override
-  public int compareCandidates(CompactionCandidate candidateA, CompactionCandidate candidateB)
+  protected Comparator<CompactionCandidate> getSegmentComparator()
+  {
+    return this::compare;
+  }
+
+  private int compare(CompactionCandidate candidateA, CompactionCandidate candidateB)
   {
     final double fragmentationDiff
-        = computeFragmentationIndex(candidateA) - computeFragmentationIndex(candidateB);
+        = computeFragmentationIndex(candidateB) - computeFragmentationIndex(candidateA);
     return fragmentationDiff > 0 ? 1 : -1;
   }
 
@@ -107,20 +131,20 @@ public class MostFragmentedIntervalFirstPolicy implements CompactionCandidateSea
       return Eligibility.fail("No uncompacted segments in interval");
     } else if (uncompacted.getNumSegments() < minUncompactedCount) {
       return Eligibility.fail(
-          "Uncompacted segments[%,d] in interval must be at least [%,d].",
+          "Uncompacted segments[%,d] in interval must be at least [%,d]",
           uncompacted.getNumSegments(), minUncompactedCount
       );
     } else if (uncompacted.getTotalBytes() < minUncompactedBytes.getBytes()) {
       return Eligibility.fail(
-          "Uncompacted bytes[%,d] in interval must be at least [%,d].",
-          minUncompactedBytes.getBytes(), uncompacted.getTotalBytes()
+          "Uncompacted bytes[%,d] in interval must be at least [%,d]",
+          uncompacted.getTotalBytes(), minUncompactedBytes.getBytes()
       );
     }
 
     final long avgSegmentSize = (uncompacted.getTotalBytes() / uncompacted.getNumSegments());
     if (avgSegmentSize > maxAverageUncompactedBytesPerSegment.getBytes()) {
       return Eligibility.fail(
-          "Average size[%,d] of uncompacted segments in interval must be at most [%,d].",
+          "Average size[%,d] of uncompacted segments in interval must be at most [%,d]",
           avgSegmentSize, maxAverageUncompactedBytesPerSegment.getBytes()
       );
     } else {
@@ -129,22 +153,28 @@ public class MostFragmentedIntervalFirstPolicy implements CompactionCandidateSea
   }
 
   /**
-   * Computes the degree of fragmentation of the given compaction candidate by
-   * checking the total number and average size of uncompacted segments.
+   * Computes the degree of fragmentation in the interval of the given compaction
+   * candidate. Calculated as the number of uncompacted segments plus an additional
+   * term that captures the "smallness" of segments in that interval.
    * A higher fragmentation index causes the candidate to be higher in priority
    * for compaction.
    */
   private double computeFragmentationIndex(CompactionCandidate candidate)
   {
-    final CompactionStatistics compacted = candidate.getCompactedStats();
     final CompactionStatistics uncompacted = candidate.getUncompactedStats();
-    if (uncompacted == null || compacted == null) {
+    if (uncompacted == null || uncompacted.getNumSegments() < 1 || uncompacted.getTotalBytes() < 1) {
       return 0;
     }
 
     final long avgUncompactedSize = Math.max(1, uncompacted.getTotalBytes() / uncompacted.getNumSegments());
 
-    // Fragmentation index increases as segment count increases and avg size decreases
-    return (1f * uncompacted.getNumSegments()) / avgUncompactedSize;
+    // Fragmentation index increases as uncompacted segment count increases
+    double segmentCountTerm = uncompacted.getNumSegments();
+
+    // Fragmentation index increases as avg uncompacted segment size decreases
+    double segmentSizeTerm =
+        (1.0f * minUncompactedCount * maxAverageUncompactedBytesPerSegment.getBytes()) / avgUncompactedSize;
+
+    return segmentCountTerm + segmentSizeTerm;
   }
 }
