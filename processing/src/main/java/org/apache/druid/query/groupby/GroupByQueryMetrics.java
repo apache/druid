@@ -42,7 +42,7 @@ public interface GroupByQueryMetrics extends QueryMetrics<GroupByQuery>
   void numMetrics(GroupByQuery query);
 
   /**
-   * Sets the number of "complex" metrics of the given groupBy query as dimension. By default it is assumed that
+   * Sets the number of "complex" metrics of the given groupBy query as dimension. By default, it is assumed that
    * "complex" metric is a metric of not long or double type, but it could be redefined in the implementation of this
    * method.
    */

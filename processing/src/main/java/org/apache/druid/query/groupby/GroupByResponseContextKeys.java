@@ -21,6 +21,8 @@ package org.apache.druid.query.groupby;
 
 import org.apache.druid.query.context.ResponseContext;
 
+import javax.annotation.Nullable;
+
 /**
  * Response context keys for GroupBy query metrics.
  * These keys are used to aggregate metrics from parallel query execution threads
@@ -32,6 +34,20 @@ public class GroupByResponseContextKeys
   public static final String GROUPBY_BYTES_SPILLED_TO_STORAGE_NAME = "groupByBytesSpilledToStorage";
   public static final String GROUPBY_MERGE_DICTIONARY_SIZE_NAME = "groupByMergeDictionarySize";
 
+  private static Object mergeMax(@Nullable Object oldValue, @Nullable Object newValue)
+  {
+    if (oldValue == null && newValue == null) {
+      return 0L;
+    }
+
+    if (oldValue == null) {
+      return newValue;
+    } else if (newValue == null) {
+      return oldValue;
+    }
+
+    return Math.max((Long) oldValue, (Long) newValue);
+  }
   /**
    * Maximum bytes spilled to storage across all parallel threads processing segments.
    * This represents the peak disk usage during query execution.
@@ -42,7 +58,7 @@ public class GroupByResponseContextKeys
     @Override
     public Object mergeValues(Object oldValue, Object newValue)
     {
-      return Math.max((Long) oldValue, (Long) newValue);
+      return mergeMax(oldValue, newValue);
     }
   };
 
@@ -56,7 +72,7 @@ public class GroupByResponseContextKeys
     @Override
     public Object mergeValues(Object oldValue, Object newValue)
     {
-      return Math.max((Long) oldValue, (Long) newValue);
+      return mergeMax(oldValue, newValue);
     }
   };
 
@@ -70,7 +86,7 @@ public class GroupByResponseContextKeys
     @Override
     public Object mergeValues(Object oldValue, Object newValue)
     {
-      return Math.max((Long) oldValue, (Long) newValue);
+      return mergeMax(oldValue, newValue);
     }
   };
 

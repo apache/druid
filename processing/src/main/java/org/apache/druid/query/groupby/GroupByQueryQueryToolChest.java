@@ -189,9 +189,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
 
       if (reportMetricsForEmission) {
         GroupByQueryMetrics queryMetrics = (GroupByQueryMetrics) queryPlus.getQueryMetrics();
-        queryMetrics.bytesSpilledToStorage((Long) context.get(GroupByResponseContextKeys.GROUPBY_BYTES_SPILLED_TO_STORAGE_KEY));
-        queryMetrics.mergeDictionarySize((Long) context.get(GroupByResponseContextKeys.GROUPBY_MERGE_DICTIONARY_SIZE_KEY));
-        queryMetrics.mergeBufferAcquisitionTime((Long) context.get(GroupByResponseContextKeys.GROUPBY_MERGE_BUFFER_ACQUISITION_TIME_KEY));
+        populateQueryMetrics(queryMetrics, context);
         groupByStatsProvider.aggregateStats(queryMetrics);
       }
 
@@ -204,6 +202,27 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       // Error creating the Sequence; release resources.
       resource.close();
       throw e;
+    }
+  }
+
+  private void populateQueryMetrics(GroupByQueryMetrics queryMetrics, ResponseContext context)
+  {
+    Object bytesSpilledToStorage = context.get(GroupByResponseContextKeys.GROUPBY_BYTES_SPILLED_TO_STORAGE_KEY);
+
+    if (bytesSpilledToStorage != null) {
+      queryMetrics.bytesSpilledToStorage((Long) bytesSpilledToStorage);
+    }
+
+    Object mergeDictionarySize = context.get(GroupByResponseContextKeys.GROUPBY_MERGE_DICTIONARY_SIZE_KEY);
+
+    if (mergeDictionarySize != null) {
+      queryMetrics.mergeDictionarySize((Long) mergeDictionarySize);
+    }
+
+    Object mergeBufferAcquisitionTime = context.get(GroupByResponseContextKeys.GROUPBY_MERGE_BUFFER_ACQUISITION_TIME_KEY);
+
+    if (mergeBufferAcquisitionTime != null) {
+      queryMetrics.mergeBufferAcquisitionTime((Long) mergeBufferAcquisitionTime);
     }
   }
 
