@@ -32,10 +32,54 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 public class DruidKubernetesCachingClient
 {
+  /**
+   * Event types for Kubernetes informer resource events.
+   */
+  public enum InformerEventType
+  {
+    ADD,
+    UPDATE,
+    DELETE
+  }
+
+  /**
+   * Impl of ResourceEventHandler that simplifies event handling
+   * by accepting a single lambda BiConsumer for all event types (add, update, delete).
+   *
+   * @param <T> The Kubernetes resource type (e.g., Pod, Job)
+   */
+  public static class InformerEventHandler<T> implements ResourceEventHandler<T>
+  {
+    private final BiConsumer<T, InformerEventType> eventConsumer;
+
+    public InformerEventHandler(BiConsumer<T, InformerEventType> eventConsumer)
+    {
+      this.eventConsumer = eventConsumer;
+    }
+
+    @Override
+    public void onAdd(T resource)
+    {
+      eventConsumer.accept(resource, InformerEventType.ADD);
+    }
+
+    @Override
+    public void onUpdate(T oldResource, T newResource)
+    {
+      eventConsumer.accept(newResource, InformerEventType.UPDATE);
+    }
+
+    @Override
+    public void onDelete(T resource, boolean deletedFinalStateUnknown)
+    {
+      eventConsumer.accept(resource, InformerEventType.DELETE);
+    }
+  }
   private static final EmittingLogger log = new EmittingLogger(DruidKubernetesCachingClient.class);
 
   public static final String JOB_NAME_INDEX = "byJobName";
@@ -109,29 +153,12 @@ public class DruidKubernetesCachingClient
                         .inNamespace(namespace)
                         .withLabel(DruidK8sConstants.LABEL_KEY)
                         .inform(
-                            new ResourceEventHandler<>()
-                            {
-                              @Override
-                              public void onAdd(Pod pod)
-                              {
-                                log.debug("Pod[%s] got added", pod.getMetadata().getName());
-                                notifyPodChange(pod);
-                              }
-
-                              @Override
-                              public void onUpdate(Pod oldPod, Pod newPod)
-                              {
-                                log.debug("Pod[%s] got updated", oldPod.getMetadata().getName());
-                                notifyPodChange(newPod);
-                              }
-
-                              @Override
-                              public void onDelete(Pod pod, boolean deletedFinalStateUnknown)
-                              {
-                                log.debug("Pod[%s] got deleted", pod.getMetadata().getName());
-                                notifyPodChange(pod);
-                              }
-                            }, informerResyncPeriodMillis
+                            new InformerEventHandler<>(
+                                (pod, eventType) -> {
+                                  log.debug("Pod[%s] got %s", pod.getMetadata().getName(), eventType.name().toLowerCase());
+                                  notifyPodChange(pod);
+                                }
+                            ), informerResyncPeriodMillis
                         );
 
     Function<Pod, List<String>> jobNameIndexer = pod -> {
@@ -167,29 +194,12 @@ public class DruidKubernetesCachingClient
                         .inNamespace(namespace)
                         .withLabel(DruidK8sConstants.LABEL_KEY)
                         .inform(
-                            new ResourceEventHandler<>()
-                            {
-                              @Override
-                              public void onAdd(Job job)
-                              {
-                                log.debug("Job[%s] got added", job.getMetadata().getName());
-                                eventNotifier.notifyJobChange(job.getMetadata().getName(), job);
-                              }
-
-                              @Override
-                              public void onUpdate(Job oldJob, Job newJob)
-                              {
-                                log.debug("Job[%s] got updated", newJob.getMetadata().getName());
-                                eventNotifier.notifyJobChange(newJob.getMetadata().getName(), newJob);
-                              }
-
-                              @Override
-                              public void onDelete(Job job, boolean deletedFinalStateUnknown)
-                              {
-                                log.debug("Job[%s] got deleted", job.getMetadata().getName());
-                                eventNotifier.notifyJobChange(job.getMetadata().getName(), job);
-                              }
-                            }, informerResyncPeriodMillis
+                            new InformerEventHandler<>(
+                                (job, eventType) -> {
+                                  log.debug("Job[%s] got %s", job.getMetadata().getName(), eventType.name().toLowerCase());
+                                  eventNotifier.notifyJobChange(job.getMetadata().getName(), job);
+                                }
+                            ), informerResyncPeriodMillis
                         );
 
     Function<Job, List<String>> overlordNamespaceIndexer = job -> {
