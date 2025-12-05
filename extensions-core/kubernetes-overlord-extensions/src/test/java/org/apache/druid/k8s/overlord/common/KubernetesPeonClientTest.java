@@ -65,7 +65,7 @@ public class KubernetesPeonClientTest
   {
     clientApi = new TestKubernetesClient(this.client, NAMESPACE);
     serviceEmitter = new StubServiceEmitter("service", "host");
-    instance = new KubernetesPeonClient(clientApi, NAMESPACE, false, serviceEmitter);
+    instance = new KubernetesPeonClient(clientApi, NAMESPACE, null, false, serviceEmitter);
   }
 
   @Test
@@ -255,6 +255,7 @@ public class KubernetesPeonClientTest
     KubernetesPeonClient instance = new KubernetesPeonClient(
         new TestKubernetesClient(this.client, NAMESPACE),
         NAMESPACE,
+        null,
         true,
         serviceEmitter
     );
@@ -280,6 +281,7 @@ public class KubernetesPeonClientTest
     KubernetesPeonClient instance = new KubernetesPeonClient(
         new TestKubernetesClient(this.client, NAMESPACE),
         NAMESPACE,
+        null,
         true,
         serviceEmitter
     );

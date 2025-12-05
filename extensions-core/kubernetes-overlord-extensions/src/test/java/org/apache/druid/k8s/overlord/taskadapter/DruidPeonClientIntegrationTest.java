@@ -90,7 +90,7 @@ public class DruidPeonClientIntegrationTest
         new NamedType(IndexTask.IndexTuningConfig.class, "index")
     );
     k8sClient = new DruidKubernetesClient(new DruidKubernetesVertxHttpClientFactory(new DruidKubernetesVertxHttpClientConfig()), new ConfigBuilder().build());
-    peonClient = new KubernetesPeonClient(k8sClient, "default", false, new NoopServiceEmitter());
+    peonClient = new KubernetesPeonClient(k8sClient, "default", null, false, new NoopServiceEmitter());
     druidNode = new DruidNode(
         "test",
         null,
