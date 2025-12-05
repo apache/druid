@@ -30,8 +30,8 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -270,27 +270,25 @@ public class KubernetesResourceEventNotifierTest
   }
 
   @Test
-  public void testWaitForJobChange_ReturnsNewFutureEachTime()
+  public void testWaitForJobChange_returnsSameFutureIfOneExists()
   {
     String jobName = "test-job";
 
     CompletableFuture<Job> future1 = notifier.waitForJobChange(jobName);
     CompletableFuture<Job> future2 = notifier.waitForJobChange(jobName);
 
-    // Should be different future instances
-    assertNotEquals(future1, future2);
+    assertEquals(future1, future2);
   }
 
   @Test
-  public void testWaitForPodChange_ReturnsNewFutureEachTime()
+  public void testWaitForPodChange_returnsSameFutureIfOneExists()
   {
     String jobName = "test-job";
 
     CompletableFuture<Pod> future1 = notifier.waitForPodChange(jobName);
     CompletableFuture<Pod> future2 = notifier.waitForPodChange(jobName);
 
-    // Should be different future instances
-    assertNotEquals(future1, future2);
+    assertEquals(future1, future2);
   }
 
   private Job createMockJob(String name)
