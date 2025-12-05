@@ -136,9 +136,9 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
   public List<Job> getPeonJobs()
   {
     if (overlordNamespace.isEmpty()) {
-      return cachingClient.executeJobCacheRequest(informer -> informer.getIndexer().list());
+      return cachingClient.readJobCache(informer -> informer.getIndexer().list());
     } else {
-      return cachingClient.executeJobCacheRequest(informer ->
+      return cachingClient.readJobCache(informer ->
                                                   informer.getIndexer()
                                                           .byIndex(DruidKubernetesCachingClient.OVERLORD_NAMESPACE_INDEX, overlordNamespace));
     }
@@ -147,7 +147,7 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
   @Override
   public Optional<Pod> getPeonPod(String jobName)
   {
-    return cachingClient.executePodCacheRequest(informer -> {
+    return cachingClient.readPodCache(informer -> {
       List<Pod> pods = informer.getIndexer().byIndex(DruidKubernetesCachingClient.JOB_NAME_INDEX, jobName);
       return pods.isEmpty() ? Optional.absent() : Optional.of(pods.get(0));
     });
@@ -155,7 +155,7 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
 
   public Optional<Job> getPeonJob(String jobName)
   {
-    return cachingClient.executeJobCacheRequest(informer -> {
+    return cachingClient.readJobCache(informer -> {
       List<Job> jobs = informer.getIndexer().byIndex(DruidKubernetesCachingClient.JOB_NAME_INDEX, jobName);
       return jobs.isEmpty() ? Optional.absent() : Optional.of(jobs.get(0));
     });

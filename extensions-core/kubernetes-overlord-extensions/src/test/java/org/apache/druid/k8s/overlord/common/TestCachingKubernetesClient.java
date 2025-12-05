@@ -230,13 +230,13 @@ public class TestCachingKubernetesClient extends DruidKubernetesCachingClient
   }
 
   @Override
-  public <T> T executePodCacheRequest(KubernetesInformerExecutor<T, Pod> executor)
+  public <T> T readPodCache(KubernetesInformerExecutor<T, Pod> executor)
   {
     return executor.executeRequest(podInformer);
   }
 
   @Override
-  public <T> T executeJobCacheRequest(KubernetesInformerExecutor<T, Job> executor)
+  public <T> T readJobCache(KubernetesInformerExecutor<T, Job> executor)
   {
     return executor.executeRequest(jobInformer);
   }
