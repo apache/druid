@@ -68,6 +68,7 @@ import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.ExecutionVertex;
+import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -611,8 +612,12 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                   resultLevelCachingQueryRunner,
                   MetricsEmittingQueryRunner.NOOP_METRIC_REPORTER,
                   queryMetrics -> {
-                    queryMetrics.queryId(query.getId());
-                    queryMetrics.sqlQueryId(query.getSqlQueryId());
+                    // SearchQuery metrics don't support queryId/sqlQueryId methods as these are
+                    // already set via the delegate in DefaultSearchQueryMetrics
+                    if (!(query instanceof SearchQuery)) {
+                      queryMetrics.queryId(query.getId());
+                      queryMetrics.sqlQueryId(query.getSqlQueryId());
+                    }
                   }
               );
             }
