@@ -353,7 +353,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
         baseBuffer,
         bob,
         ColumnConfig.SELECTION_SIZE,
-        bitmapSerdeFactory,
+        columnFormatSpec,
         ByteOrder.nativeOrder(),
         null
     );
