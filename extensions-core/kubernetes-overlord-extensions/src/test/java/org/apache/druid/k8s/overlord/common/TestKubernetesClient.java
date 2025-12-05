@@ -254,18 +254,6 @@ public class TestKubernetesClient implements KubernetesClientApi
   }
 
   @Override
-  public SharedIndexInformer<Pod> getPodInformer()
-  {
-    return podInformer;
-  }
-
-  @Override
-  public SharedIndexInformer<Job> getJobInformer()
-  {
-    return jobInformer;
-  }
-
-  @Override
   public long getInformerResyncPeriodMillis()
   {
     return 1000L;

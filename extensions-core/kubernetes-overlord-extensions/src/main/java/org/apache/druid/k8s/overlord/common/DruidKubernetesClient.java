@@ -117,24 +117,6 @@ public class DruidKubernetesClient implements KubernetesClientApi
   }
 
   @Override
-  public SharedIndexInformer<Pod> getPodInformer()
-  {
-    if (podInformer == null) {
-      throw DruidException.defensive("Pod informer is not initialized, caching is disabled");
-    }
-    return podInformer;
-  }
-
-  @Override
-  public SharedIndexInformer<Job> getJobInformer()
-  {
-    if (jobInformer == null) {
-      throw DruidException.defensive("Job informer is not initialized, caching is disabled");
-    }
-    return jobInformer;
-  }
-
-  @Override
   public KubernetesResourceEventNotifier getEventNotifier()
   {
     if (eventNotifier == null) {
