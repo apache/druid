@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 public class DruidKubernetesCachingClient
@@ -230,9 +231,14 @@ public class DruidKubernetesCachingClient
     }
   }
 
-  public KubernetesResourceEventNotifier getEventNotifier()
+  public CompletableFuture<Job> waitForJobChange(String jobName)
   {
-    return eventNotifier;
+    return eventNotifier.waitForJobChange(jobName);
+  }
+
+  public CompletableFuture<Pod> waitForPodChange(String jobName)
+  {
+    return eventNotifier.waitForPodChange(jobName);
   }
 
   public long getInformerResyncPeriodMillis()

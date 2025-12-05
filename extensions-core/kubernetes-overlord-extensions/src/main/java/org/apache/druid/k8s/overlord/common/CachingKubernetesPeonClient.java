@@ -70,7 +70,7 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
     boolean jobSeenInCache = false;
 
     // Set up to watch for job changes
-    CompletableFuture<Job> jobFuture = cachingClient.getEventNotifier().waitForJobChange(taskId.getK8sJobName());
+    CompletableFuture<Job> jobFuture = cachingClient.waitForJobChange(taskId.getK8sJobName());
 
     // We will loop until the full timeout is reached if the job is seen in cache. If the job does not show up in the cache we will exit earlier.
     // In this loop we first check the cache to see if our job is there and complete. This avoids missing notifications that happened before we set up the watch.
@@ -99,7 +99,7 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
         Job job = jobFuture.get(cachingClient.getInformerResyncPeriodMillis(), TimeUnit.MILLISECONDS);
 
         // Immediately set up to watch for the next change in case we need to wait again
-        jobFuture = cachingClient.getEventNotifier().waitForJobChange(taskId.getK8sJobName());
+        jobFuture = cachingClient.waitForJobChange(taskId.getK8sJobName());
         log.debug("Received job[%s] change notification", taskId.getK8sJobName());
         jobSeenInCache = true;
 
@@ -170,7 +170,7 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
     boolean podSeenInCache = false;
 
     // Set up to watch for pod changes
-    CompletableFuture<Pod> podFuture = cachingClient.getEventNotifier().waitForPodChange(jobName);
+    CompletableFuture<Pod> podFuture = cachingClient.waitForPodChange(jobName);
 
     // We will loop until the specified timeout is reached, or we see the pod become ready, whichever comes first.
     // We eagerly check the cache first to avoid missing notifications that happened before we set up the watch.
@@ -199,7 +199,7 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
         // We wake up every informer resync period to avoid event notifier misses.
         Pod pod = podFuture.get(cachingClient.getInformerResyncPeriodMillis(), TimeUnit.MILLISECONDS);
 
-        podFuture = cachingClient.getEventNotifier().waitForPodChange(jobName);
+        podFuture = cachingClient.waitForPodChange(jobName);
         log.debug("Received pod[%s] change notification for job[%s]", podName, jobName);
         if (pod == null) {
           log.warn("Pod[%s] for job[%s] is null. This is unusual. Investigate Druid and k8s logs.", podName, jobName);
