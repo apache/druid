@@ -66,7 +66,7 @@ public class DefaultGroupByQueryMetrics extends DefaultQueryMetrics<GroupByQuery
   @Override
   public void mergeBufferAcquisitionTime(long mergeBufferAcquisitionTime)
   {
-    reportMetric("mergeBufferAcquisitonTime", mergeBufferAcquisitionTime);
+    reportMetric("mergeBufferAcquisitionTime", mergeBufferAcquisitionTime);
     this.mergeBufferAcquisitonTime = mergeBufferAcquisitionTime;
   }
 
