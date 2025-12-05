@@ -64,7 +64,6 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.policy.PolicyEnforcer;
-import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.Segment;
@@ -665,19 +664,7 @@ public class ServerManager implements QuerySegmentWalker
             toolChest,
             finalizeResultsQueryRunner,
             MetricsEmittingQueryRunner.NOOP_METRIC_REPORTER,
-            metrics -> {
-              // TODO: Remove the logs after finished.
-              log.info("Datasource MetricsEmittingQueryRunner accepting metrics[%s]", metrics);
-
-              // TODO: Do we need to emit the queryId, sqlQueryId for all queries? Would simply emitting for GroupBy be enough?
-              //  Or is there a case where the GroupBy will automatically emit its query.getId()?
-              // SearchQuery metrics don't support queryId/sqlQueryId methods as these are
-              // already set via the delegate in DefaultSearchQueryMetrics
-              if (!(query instanceof SearchQuery)) {
-                metrics.queryId(query.getId());
-                metrics.sqlQueryId(query.getSqlQueryId());
-              }
-            }
+            metrics -> {}
         );
 
         final QueryRunner<T> queryRunner = CPUTimeMetricQueryRunner.safeBuild(

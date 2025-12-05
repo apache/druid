@@ -36,7 +36,6 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.policy.PolicyEnforcer;
-import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
@@ -119,18 +118,12 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
         .mergeResults(true)
         .applyPostMergeDecoration()
         .map(runner -> new MetricsEmittingQueryRunner<>(
-            emitter,
-            queryRunnerFactory.getToolchest(),
-            runner,
-            MetricsEmittingQueryRunner.NOOP_METRIC_REPORTER,
-            queryMetrics -> {
-              // SearchQuery metrics don't support queryId/sqlQueryId methods as these are
-              // already set via the delegate in DefaultSearchQueryMetrics
-              if (!(query instanceof SearchQuery)) {
-                queryMetrics.queryId(query.getId());
-                queryMetrics.sqlQueryId(query.getSqlQueryId());
-              }
-            })
+                 emitter,
+                 queryRunnerFactory.getToolchest(),
+                 runner,
+                 MetricsEmittingQueryRunner.NOOP_METRIC_REPORTER,
+                 queryMetrics -> {}
+             )
         )
         .emitCPUTimeMetric(emitter, cpuAccumulator);
   }
