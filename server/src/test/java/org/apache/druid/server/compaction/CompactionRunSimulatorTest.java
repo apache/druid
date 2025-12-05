@@ -177,15 +177,17 @@ public class CompactionRunSimulatorTest
         List.of("dataSource", "interval", "numSegments", "bytes", "reasonToSkip"),
         skippedTable.getColumnNames()
     );
+    final String rejectedMessage
+        = "Rejected by search policy: Datasource/Interval is not in the list of 'eligibleCandidates'";
     Assert.assertEquals(
         List.of(
-            List.of("wiki", Intervals.of("2013-01-02/P1D"), 10, 1_000_000_000L, 1, "Rejected by search policy"),
-            List.of("wiki", Intervals.of("2013-01-03/P1D"), 10, 1_000_000_000L, 1, "Rejected by search policy"),
-            List.of("wiki", Intervals.of("2013-01-07/P1D"), 10, 1_000_000_000L, 1, "Rejected by search policy"),
-            List.of("wiki", Intervals.of("2013-01-05/P1D"), 10, 1_000_000_000L, 1, "Rejected by search policy"),
-            List.of("wiki", Intervals.of("2013-01-06/P1D"), 10, 1_000_000_000L, 1, "Rejected by search policy"),
-            List.of("wiki", Intervals.of("2013-01-01/P1D"), 10, 1_000_000_000L, 1, "Rejected by search policy"),
-            List.of("wiki", Intervals.of("2013-01-09/P1D"), 10, 1_000_000_000L, 1, "Rejected by search policy"),
+            List.of("wiki", Intervals.of("2013-01-02/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
+            List.of("wiki", Intervals.of("2013-01-03/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
+            List.of("wiki", Intervals.of("2013-01-07/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
+            List.of("wiki", Intervals.of("2013-01-05/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
+            List.of("wiki", Intervals.of("2013-01-06/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
+            List.of("wiki", Intervals.of("2013-01-01/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
+            List.of("wiki", Intervals.of("2013-01-09/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
             List.of("wiki", Intervals.of("2013-01-10/P1D"), 10, 1_000_000_000L, 1, "skip offset from latest[P1D]")
         ),
         skippedTable.getRows()
