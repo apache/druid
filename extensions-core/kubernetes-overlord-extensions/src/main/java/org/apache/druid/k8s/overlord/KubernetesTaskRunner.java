@@ -53,8 +53,8 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
-import org.apache.druid.k8s.overlord.common.AbstractKubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
+import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.KubernetesResourceNotFoundException;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.tasklogs.TaskLogStreamer;
@@ -108,7 +108,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   protected final ConcurrentHashMap<String, KubernetesWorkItem> tasks = new ConcurrentHashMap<>();
   protected final TaskAdapter adapter;
 
-  private final AbstractKubernetesPeonClient client;
+  private final KubernetesPeonClient client;
   private final KubernetesTaskRunnerConfig config;
   private final ListeningExecutorService exec;
   private final HttpClient httpClient;
@@ -120,7 +120,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public KubernetesTaskRunner(
       TaskAdapter adapter,
       KubernetesTaskRunnerConfig config,
-      AbstractKubernetesPeonClient client,
+      KubernetesPeonClient client,
       HttpClient httpClient,
       PeonLifecycleFactory peonLifecycleFactory,
       ServiceEmitter emitter

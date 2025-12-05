@@ -26,10 +26,9 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.k8s.overlord.common.AbstractKubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.CachingKubernetesPeonClient;
-import org.apache.druid.k8s.overlord.common.DirectKubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
+import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.taskadapter.PodTemplateTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.tasklogs.TaskLogs;
@@ -72,7 +71,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   @Override
   public KubernetesTaskRunner build()
   {
-    AbstractKubernetesPeonClient peonClient;
+    KubernetesPeonClient peonClient;
     boolean enableCache = kubernetesTaskRunnerConfig.isEnableKubernetesClientSharedInformers();
     boolean useOverlordNamespace = adapterTypeAllowingTasksInDifferentNamespaces.contains(taskAdapter.getAdapterType());
 
@@ -95,7 +94,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
       }
     } else {
       if (useOverlordNamespace) {
-        peonClient = new DirectKubernetesPeonClient(
+        peonClient = new KubernetesPeonClient(
             druidKubernetesClient,
             kubernetesTaskRunnerConfig.getNamespace(),
             kubernetesTaskRunnerConfig.getOverlordNamespace(),
@@ -103,7 +102,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
             emitter
         );
       } else {
-        peonClient = new DirectKubernetesPeonClient(
+        peonClient = new KubernetesPeonClient(
             druidKubernetesClient,
             kubernetesTaskRunnerConfig.getNamespace(),
             kubernetesTaskRunnerConfig.isDebugJobs(),

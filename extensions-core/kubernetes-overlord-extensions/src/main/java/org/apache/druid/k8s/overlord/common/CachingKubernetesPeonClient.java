@@ -40,7 +40,7 @@ import java.util.concurrent.TimeoutException;
  * deletion) still contact the API server directly.
  * </p>
  */
-public class CachingKubernetesPeonClient extends AbstractKubernetesPeonClient
+public class CachingKubernetesPeonClient extends KubernetesPeonClient
 {
   protected static final EmittingLogger log = new EmittingLogger(CachingKubernetesPeonClient.class);
 
@@ -160,7 +160,6 @@ public class CachingKubernetesPeonClient extends AbstractKubernetesPeonClient
     });
   }
 
-  @Override
   public Optional<Job> getPeonJob(String jobName)
   {
     return clientApi.executeJobCacheRequest(informer -> {
@@ -169,7 +168,6 @@ public class CachingKubernetesPeonClient extends AbstractKubernetesPeonClient
     });
   }
 
-  @Override
   @Nullable
   protected Pod waitUntilPeonPodCreatedAndReady(String jobName, long howLong, TimeUnit timeUnit)
   {

@@ -36,10 +36,10 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.k8s.overlord.common.AbstractKubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.JobResponse;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
+import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
@@ -95,7 +95,7 @@ public class KubernetesPeonLifecycle
   private final K8sTaskId taskId;
   private final TaskLogs taskLogs;
   private final Task task;
-  private final AbstractKubernetesPeonClient kubernetesClient;
+  private final KubernetesPeonClient kubernetesClient;
   private final ObjectMapper mapper;
   private final TaskStateListener stateListener;
   private final SettableFuture<Boolean> taskStartedSuccessfullyFuture;
@@ -109,7 +109,7 @@ public class KubernetesPeonLifecycle
   protected KubernetesPeonLifecycle(
       Task task,
       K8sTaskId taskId,
-      AbstractKubernetesPeonClient kubernetesClient,
+      KubernetesPeonClient kubernetesClient,
       TaskLogs taskLogs,
       ObjectMapper mapper,
       TaskStateListener stateListener,

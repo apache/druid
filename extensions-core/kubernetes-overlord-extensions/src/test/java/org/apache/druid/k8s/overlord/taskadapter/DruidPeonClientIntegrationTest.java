@@ -35,12 +35,12 @@ import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
-import org.apache.druid.k8s.overlord.common.DirectKubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
 import org.apache.druid.k8s.overlord.common.JobResponse;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.k8s.overlord.common.KubernetesClientApi;
+import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.PeonCommandContext;
 import org.apache.druid.k8s.overlord.common.PeonPhase;
 import org.apache.druid.k8s.overlord.common.httpclient.vertx.DruidKubernetesVertxHttpClientConfig;
@@ -77,7 +77,7 @@ public class DruidPeonClientIntegrationTest
   private TaskConfig taskConfig;
   private DruidNode druidNode;
   private KubernetesClientApi k8sClient;
-  private DirectKubernetesPeonClient peonClient;
+  private KubernetesPeonClient peonClient;
   private ObjectMapper jsonMapper;
 
   @BeforeEach
@@ -90,7 +90,7 @@ public class DruidPeonClientIntegrationTest
         new NamedType(IndexTask.IndexTuningConfig.class, "index")
     );
     k8sClient = new DruidKubernetesClient(new DruidKubernetesVertxHttpClientFactory(new DruidKubernetesVertxHttpClientConfig()), new ConfigBuilder().build());
-    peonClient = new DirectKubernetesPeonClient(k8sClient, "default", false, new NoopServiceEmitter());
+    peonClient = new KubernetesPeonClient(k8sClient, "default", false, new NoopServiceEmitter());
     druidNode = new DruidNode(
         "test",
         null,

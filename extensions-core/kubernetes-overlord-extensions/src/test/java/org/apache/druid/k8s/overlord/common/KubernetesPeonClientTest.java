@@ -45,7 +45,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @EnableKubernetesMockClient(crud = true)
-public class DirectKubernetesPeonClientTest
+public class KubernetesPeonClientTest
 {
   private static final String ID = "id";
   private static final String TASK_NAME_PREFIX = "";
@@ -57,7 +57,7 @@ public class DirectKubernetesPeonClientTest
   private KubernetesClient client;
   private KubernetesMockServer server;
   private KubernetesClientApi clientApi;
-  private DirectKubernetesPeonClient instance;
+  private KubernetesPeonClient instance;
   private StubServiceEmitter serviceEmitter;
 
   @BeforeEach
@@ -65,7 +65,7 @@ public class DirectKubernetesPeonClientTest
   {
     clientApi = new TestKubernetesClient(this.client, NAMESPACE);
     serviceEmitter = new StubServiceEmitter("service", "host");
-    instance = new DirectKubernetesPeonClient(clientApi, NAMESPACE, false, serviceEmitter);
+    instance = new KubernetesPeonClient(clientApi, NAMESPACE, false, serviceEmitter);
   }
 
   @Test
@@ -252,7 +252,7 @@ public class DirectKubernetesPeonClientTest
   @Test
   void test_deletePeonJob_withJob_withDebugJobsTrue_skipsDelete()
   {
-    DirectKubernetesPeonClient instance = new DirectKubernetesPeonClient(
+    KubernetesPeonClient instance = new KubernetesPeonClient(
         new TestKubernetesClient(this.client, NAMESPACE),
         NAMESPACE,
         true,
@@ -277,7 +277,7 @@ public class DirectKubernetesPeonClientTest
   @Test
   void test_deletePeonJob_withoutJob_withDebugJobsTrue_skipsDelete()
   {
-    DirectKubernetesPeonClient instance = new DirectKubernetesPeonClient(
+    KubernetesPeonClient instance = new KubernetesPeonClient(
         new TestKubernetesClient(this.client, NAMESPACE),
         NAMESPACE,
         true,
@@ -350,7 +350,7 @@ public class DirectKubernetesPeonClientTest
   @Test
   void test_getPeonJobs_withJobInDifferentNamespace_returnsPodList()
   {
-    instance = new DirectKubernetesPeonClient(clientApi, NAMESPACE, "ns", false, serviceEmitter);
+    instance = new KubernetesPeonClient(clientApi, NAMESPACE, "ns", false, serviceEmitter);
 
     Job job = new JobBuilder()
         .withNewMetadata()
@@ -370,7 +370,7 @@ public class DirectKubernetesPeonClientTest
   @Test
   void test_getPeonJobs_withJobInDifferentNamespaceButOverlordNamespaceNotSpecified_doesNotReturnPodList()
   {
-    instance = new DirectKubernetesPeonClient(clientApi, NAMESPACE, "ns", false, serviceEmitter);
+    instance = new KubernetesPeonClient(clientApi, NAMESPACE, "ns", false, serviceEmitter);
 
     Job job = new JobBuilder()
         .withNewMetadata()
@@ -390,7 +390,7 @@ public class DirectKubernetesPeonClientTest
   @Test
   void test_getPeonJobs_withJobInSameNamespaceWithoutLabels_doesNotReturnPodList()
   {
-    instance = new DirectKubernetesPeonClient(clientApi, NAMESPACE, NAMESPACE, false, serviceEmitter);
+    instance = new KubernetesPeonClient(clientApi, NAMESPACE, NAMESPACE, false, serviceEmitter);
 
     Job job = new JobBuilder()
         .withNewMetadata()

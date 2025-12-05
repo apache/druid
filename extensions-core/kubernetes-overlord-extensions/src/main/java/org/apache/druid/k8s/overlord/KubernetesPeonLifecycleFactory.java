@@ -21,19 +21,19 @@ package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.k8s.overlord.common.AbstractKubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
+import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.tasklogs.TaskLogs;
 
 public class KubernetesPeonLifecycleFactory implements PeonLifecycleFactory
 {
-  private final AbstractKubernetesPeonClient client;
+  private final KubernetesPeonClient client;
   private final TaskLogs taskLogs;
   private final ObjectMapper mapper;
   private final long logSaveTimeoutMs;
 
   public KubernetesPeonLifecycleFactory(
-      AbstractKubernetesPeonClient client,
+      KubernetesPeonClient client,
       TaskLogs taskLogs,
       ObjectMapper mapper,
       long logSaveTimeoutMs
