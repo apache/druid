@@ -81,34 +81,42 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    List<ImmutableDruidServer> currentServers = prepareCurrentServers();
-    taskMaster.resetPeonsForNewServers(currentServers);
+    // Prevent callbacks from firing while balancer/load queue accounting is taking place.
+    // This ensures snapshot validity at the expense of potentially stale snapshots (in some cases).
+    taskMaster.getCallbackLock().writeLock().lock();
+    try {
+      List<ImmutableDruidServer> currentServers = prepareCurrentServers();
+      taskMaster.resetPeonsForNewServers(currentServers);
 
-    final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
-    final SegmentLoadingConfig segmentLoadingConfig
-        = SegmentLoadingConfig.create(dynamicConfig, params.getUsedSegmentCount());
+      final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
+      final SegmentLoadingConfig segmentLoadingConfig
+          = SegmentLoadingConfig.create(dynamicConfig, params.getUsedSegmentCount());
 
-    final DruidCluster cluster = prepareCluster(dynamicConfig, segmentLoadingConfig, currentServers);
-    cancelLoadsOnDecommissioningServers(cluster);
+      final DruidCluster cluster = prepareCluster(dynamicConfig, segmentLoadingConfig, currentServers);
+      cancelLoadsOnDecommissioningServers(cluster);
 
-    final CoordinatorRunStats stats = params.getCoordinatorStats();
-    collectHistoricalStats(cluster, stats);
-    collectUsedSegmentStats(params, stats);
-    collectDebugStats(segmentLoadingConfig, stats);
+      final CoordinatorRunStats stats = params.getCoordinatorStats();
+      collectHistoricalStats(cluster, stats);
+      collectUsedSegmentStats(params, stats);
+      collectDebugStats(segmentLoadingConfig, stats);
 
-    final int numBalancerThreads = segmentLoadingConfig.getBalancerComputeThreads();
-    final BalancerStrategy balancerStrategy = balancerStrategyFactory.createBalancerStrategy(numBalancerThreads);
-    log.debug(
-        "Using balancer strategy[%s] with [%d] threads.",
-        balancerStrategy.getClass().getSimpleName(), numBalancerThreads
-    );
+      final int numBalancerThreads = segmentLoadingConfig.getBalancerComputeThreads();
+      final BalancerStrategy balancerStrategy = balancerStrategyFactory.createBalancerStrategy(numBalancerThreads);
+      log.debug(
+          "Using balancer strategy[%s] with [%d] threads.",
+          balancerStrategy.getClass().getSimpleName(), numBalancerThreads
+      );
 
-    return params.buildFromExisting()
-                 .withDruidCluster(cluster)
-                 .withBalancerStrategy(balancerStrategy)
-                 .withSegmentLoadingConfig(segmentLoadingConfig)
-                 .withSegmentAssignerUsing(loadQueueManager)
-                 .build();
+      return params.buildFromExisting()
+                   .withDruidCluster(cluster)
+                   .withBalancerStrategy(balancerStrategy)
+                   .withSegmentLoadingConfig(segmentLoadingConfig)
+                   .withSegmentAssignerUsing(loadQueueManager)
+                   .build();
+    }
+    finally {
+      taskMaster.getCallbackLock().writeLock().unlock();
+    }
   }
 
   /**

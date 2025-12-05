@@ -88,6 +88,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  */
@@ -112,6 +114,7 @@ public class DruidCoordinatorTest
   private OverlordClient overlordClient;
   private CompactionStatusTracker statusTracker;
   private LatchableServiceEmitter serviceEmitter;
+  private ReadWriteLock callbackSyncLock;
 
   @Before
   public void setUp() throws Exception
@@ -152,6 +155,7 @@ public class DruidCoordinatorTest
     leaderAnnouncerLatch = new CountDownLatch(1);
     leaderUnannouncerLatch = new CountDownLatch(1);
     serviceEmitter = new LatchableServiceEmitter();
+    callbackSyncLock = new ReentrantReadWriteLock();
     coordinator = new DruidCoordinator(
         druidCoordinatorConfig,
         createMetadataManager(configManager),
@@ -198,6 +202,7 @@ public class DruidCoordinatorTest
     Rule foreverLoadRule = new ForeverLoadRule(ImmutableMap.of(tier, 2), null);
     EasyMock.expect(metadataRuleManager.getRulesWithDefault(EasyMock.anyString()))
             .andReturn(ImmutableList.of(foreverLoadRule)).atLeastOnce();
+    EasyMock.expect(loadQueueTaskMaster.getCallbackLock()).andReturn(callbackSyncLock).anyTimes();
 
     metadataRuleManager.stop();
     EasyMock.expectLastCall().once();
@@ -335,6 +340,7 @@ public class DruidCoordinatorTest
             .andReturn(ImmutableList.of(hotServer, coldServer))
             .atLeastOnce();
     EasyMock.expect(serverInventoryView.isStarted()).andReturn(true).anyTimes();
+    EasyMock.expect(loadQueueTaskMaster.getCallbackLock()).andReturn(callbackSyncLock).anyTimes();
 
     EasyMock.replay(metadataRuleManager, serverInventoryView, loadQueueTaskMaster);
 
@@ -419,6 +425,7 @@ public class DruidCoordinatorTest
             .andReturn(ImmutableList.of(hotServer, coldServer, brokerServer1, brokerServer2, peonServer))
             .atLeastOnce();
     EasyMock.expect(serverInventoryView.isStarted()).andReturn(true).anyTimes();
+    EasyMock.expect(loadQueueTaskMaster.getCallbackLock()).andReturn(callbackSyncLock).anyTimes();
 
     EasyMock.replay(metadataRuleManager, serverInventoryView, loadQueueTaskMaster);
 
@@ -651,6 +658,7 @@ public class DruidCoordinatorTest
     EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically()).andReturn(true).anyTimes();
     EasyMock.expect(serverInventoryView.isStarted()).andReturn(true).anyTimes();
     EasyMock.expect(serverInventoryView.getInventory()).andReturn(Collections.emptyList()).anyTimes();
+    EasyMock.expect(loadQueueTaskMaster.getCallbackLock()).andReturn(callbackSyncLock).anyTimes();
     EasyMock.replay(serverInventoryView, loadQueueTaskMaster, segmentsMetadataManager);
 
     // Create CoordinatorCustomDutyGroups
@@ -719,6 +727,7 @@ public class DruidCoordinatorTest
     Rule foreverLoadRule = new ForeverLoadRule(ImmutableMap.of(coldTier, 0), null);
     EasyMock.expect(metadataRuleManager.getRulesWithDefault(EasyMock.anyString()))
         .andReturn(ImmutableList.of(intervalLoadRule, foreverLoadRule)).atLeastOnce();
+    EasyMock.expect(loadQueueTaskMaster.getCallbackLock()).andReturn(callbackSyncLock).anyTimes();
 
     metadataRuleManager.stop();
     EasyMock.expectLastCall().once();
