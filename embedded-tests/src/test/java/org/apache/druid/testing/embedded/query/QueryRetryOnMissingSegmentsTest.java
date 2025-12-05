@@ -97,7 +97,7 @@ public class QueryRetryOnMissingSegmentsTest extends QueryTestBase
   public void beforeAll()
   {
     jsonMapper = overlord.bindings().jsonMapper();
-    tableName = EmbeddedClusterApis.createTestDatasourceName();
+    tableName = EmbeddedClusterApis.createTestDatasourceName(getDatasourcePrefix());
 
     final String taskId = IdUtils.getRandomId();
     final IndexTask task = MoreResources.Task.BASIC_INDEX.get().dataSource(tableName).withId(taskId);

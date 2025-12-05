@@ -52,7 +52,7 @@ public class ITMSQReindexTest extends AbstractITBatchIndexTest
   public void testMSQDruidInputSource(String sqlFileName, String reIndexSqlFileName, String reIndexQueryFileName)
   {
     final String indexDatasource = dataSource;
-    final String reindexDatasource = EmbeddedClusterApis.createTestDatasourceName();
+    final String reindexDatasource = EmbeddedClusterApis.createTestDatasourceName(getDatasourcePrefix());
     Map<String, Object> context = ImmutableMap.of(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false,
                                                   MultiStageQueryContext.CTX_MAX_NUM_TASKS, 5,
                                                   GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false);

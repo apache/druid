@@ -66,7 +66,7 @@ public class ForcePushDownNestedQueryTest extends QueryTestBase
   @Override
   public void beforeAll() throws IOException
   {
-    dataSource = EmbeddedClusterApis.createTestDatasourceName();
+    dataSource = EmbeddedClusterApis.createTestDatasourceName(getDatasourcePrefix());
     loadWikipediaTable();
   }
 

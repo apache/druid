@@ -79,8 +79,8 @@ public class IndexerTest extends AbstractITBatchIndexTest
   public void testIndexData() throws Exception
   {
     final String indexDatasource = dataSource;
-    final String reindexDatasource = EmbeddedClusterApis.createTestDatasourceName();
-    final String reindexDatasourceWithDruidInputSource = EmbeddedClusterApis.createTestDatasourceName();
+    final String reindexDatasource = EmbeddedClusterApis.createTestDatasourceName(getDatasourcePrefix());
+    final String reindexDatasourceWithDruidInputSource = EmbeddedClusterApis.createTestDatasourceName(getDatasourcePrefix());
     try (
         final Closeable ignored1 = unloader(indexDatasource);
         final Closeable ignored2 = unloader(reindexDatasource);
@@ -131,8 +131,8 @@ public class IndexerTest extends AbstractITBatchIndexTest
   public void testReIndexDataWithTimestamp() throws Exception
   {
     final String indexDatasource = dataSource;
-    final String reindexDatasource = EmbeddedClusterApis.createTestDatasourceName();
-    final String reindexDatasourceWithDruidInputSource = EmbeddedClusterApis.createTestDatasourceName();
+    final String reindexDatasource = EmbeddedClusterApis.createTestDatasourceName(getDatasourcePrefix());
+    final String reindexDatasourceWithDruidInputSource = EmbeddedClusterApis.createTestDatasourceName(getDatasourcePrefix());
     try (
         final Closeable ignored1 = unloader(indexDatasource);
         final Closeable ignored2 = unloader(reindexDatasource);
@@ -197,7 +197,7 @@ public class IndexerTest extends AbstractITBatchIndexTest
   public void testMERGEIndexData() throws Exception
   {
     final String reindexDatasource = dataSource;
-    final String reindexDatasourceWithDruidInputSource = EmbeddedClusterApis.createTestDatasourceName();
+    final String reindexDatasourceWithDruidInputSource = EmbeddedClusterApis.createTestDatasourceName(getDatasourcePrefix());
     try (
         final Closeable ignored2 = unloader(reindexDatasource);
         final Closeable ignored3 = unloader(reindexDatasourceWithDruidInputSource)

@@ -38,7 +38,7 @@ public class ITTransformTest extends AbstractITBatchIndexTest
   public void testIndexAndReIndexWithTransformSpec() throws IOException
   {
     final String indexDatasource = dataSource;
-    final String reindexDatasourceWithDruidInputSource = EmbeddedClusterApis.createTestDatasourceName();
+    final String reindexDatasourceWithDruidInputSource = EmbeddedClusterApis.createTestDatasourceName(getDatasourcePrefix());
 
     try (
         final Closeable ignored1 = unloader(indexDatasource);

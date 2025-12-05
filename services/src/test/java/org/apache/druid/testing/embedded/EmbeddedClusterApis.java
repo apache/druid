@@ -412,11 +412,11 @@ public class EmbeddedClusterApis implements EmbeddedResource
   // STATIC UTILITY METHODS
 
   /**
-   * Creates a random datasource name prefixed with {@link TestDataSource#WIKI}.
+   * Creates a random datasource name with the given prefixed.
    */
-  public static String createTestDatasourceName()
+  public static String createTestDatasourceName(String prefix)
   {
-    return TestDataSource.WIKI + "_" + IdUtils.getRandomId();
+    return prefix + "_" + IdUtils.getRandomId();
   }
 
   /**
