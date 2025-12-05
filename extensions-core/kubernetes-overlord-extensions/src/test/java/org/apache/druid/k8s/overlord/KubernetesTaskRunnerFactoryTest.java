@@ -62,7 +62,8 @@ public class KubernetesTaskRunnerFactoryTest
     Config config = new ConfigBuilder().build();
     config.setAdditionalProperty(
         DruidKubernetesClient.ENABLE_INFORMERS_KEY,
-        kubernetesTaskRunnerConfig.isUseK8sSharedInformers());
+        kubernetesTaskRunnerConfig.isUseK8sSharedInformers()
+    );
 
     druidKubernetesClient =
         new DruidKubernetesClient(new DruidKubernetesVertxHttpClientFactory(new DruidKubernetesVertxHttpClientConfig()), config);
