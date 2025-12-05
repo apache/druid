@@ -19,20 +19,13 @@
 
 package org.apache.druid.msq.exec;
 
-import com.google.common.math.IntMath;
-import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
-import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
-import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
-import org.apache.druid.msq.kernel.WorkOrder;
-
-import java.math.RoundingMode;
 
 public class QueryValidator
 {
@@ -66,24 +59,6 @@ public class QueryValidator
       } else if (numWorkers <= 0) {
         throw new ISE("Number of workers must be greater than 0");
       }
-    }
-  }
-
-  /**
-   * Validate that a {@link WorkOrder} falls within the {@link Limits#MAX_INPUT_FILES_PER_WORKER} limit.
-   */
-  public static void validateWorkOrder(final WorkOrder order)
-  {
-    final int numInputFiles = Ints.checkedCast(order.getInputs().stream().mapToLong(InputSlice::fileCount).sum());
-
-    if (numInputFiles > Limits.MAX_INPUT_FILES_PER_WORKER) {
-      throw new MSQException(
-          new TooManyInputFilesFault(
-              numInputFiles,
-              Limits.MAX_INPUT_FILES_PER_WORKER,
-              IntMath.divide(numInputFiles, Limits.MAX_INPUT_FILES_PER_WORKER, RoundingMode.CEILING)
-          )
-      );
     }
   }
 }
