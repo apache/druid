@@ -38,7 +38,9 @@ import org.junit.jupiter.api.Timeout;
 import java.net.HttpURLConnection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 @EnableKubernetesMockClient(crud = true)
 public class CachingKubernetesPeonClientTest
@@ -84,6 +86,7 @@ public class CachingKubernetesPeonClientTest
         .withNewMetadata()
         .withName(POD_NAME)
         .withNamespace(NAMESPACE)
+        .addToLabels(DruidK8sConstants.LABEL_KEY, "true")
         .addToLabels("job-name", JOB_NAME)
         .endMetadata()
         .withNewStatus()
@@ -121,6 +124,7 @@ public class CachingKubernetesPeonClientTest
         .withNewMetadata()
         .withName("pod-1")
         .withNamespace(NAMESPACE)
+        .addToLabels(DruidK8sConstants.LABEL_KEY, "true")
         .addToLabels("job-name", JOB_NAME)
         .endMetadata()
         .build();
@@ -129,6 +133,7 @@ public class CachingKubernetesPeonClientTest
         .withNewMetadata()
         .withName("pod-2")
         .withNamespace(NAMESPACE)
+        .addToLabels(DruidK8sConstants.LABEL_KEY, "true")
         .addToLabels("job-name", JOB_NAME)
         .endMetadata()
         .build();
@@ -308,6 +313,7 @@ public class CachingKubernetesPeonClientTest
         .withNewMetadata()
         .withName(POD_NAME)
         .withNamespace(NAMESPACE)
+        .addToLabels(DruidK8sConstants.LABEL_KEY, "true")
         .addToLabels("job-name", JOB_NAME)
         .endMetadata()
         .withNewStatus()
@@ -330,6 +336,7 @@ public class CachingKubernetesPeonClientTest
         .withNewMetadata()
         .withName(POD_NAME)
         .withNamespace(NAMESPACE)
+        .addToLabels(DruidK8sConstants.LABEL_KEY, "true")
         .addToLabels("job-name", JOB_NAME)
         .endMetadata()
         .withNewStatus()
@@ -355,6 +362,7 @@ public class CachingKubernetesPeonClientTest
         .withNewMetadata()
         .withName(POD_NAME)
         .withNamespace(NAMESPACE)
+        .addToLabels(DruidK8sConstants.LABEL_KEY, "true")
         .addToLabels("job-name", JOB_NAME)
         .endMetadata()
         .withNewStatus()
@@ -524,19 +532,21 @@ public class CachingKubernetesPeonClientTest
   }
 
   @Test
-  void test_getPeonLogsWatcher_withJob_returnsWatchLogInOptional() throws InterruptedException
+  void test_getPeonLogsWatcher_withJob_returnsWatchLogInOptional()
+      throws InterruptedException, TimeoutException, ExecutionException
   {
     K8sTaskId taskId = new K8sTaskId("", "id");
     Pod pod = new PodBuilder()
         .withNewMetadata()
         .withName(POD_NAME)
+        .addToLabels(DruidK8sConstants.LABEL_KEY, "true")
         .addToLabels("job-name", taskId.getK8sJobName())
         .endMetadata()
         .build();
 
+    CompletableFuture<Pod> podFuture = cachingClient.waitForPodChange(taskId.getK8sJobName());
     client.pods().inNamespace(NAMESPACE).resource(pod).create();
-
-    cachingClient.waitForSync();
+    podFuture.get(5, TimeUnit.SECONDS);
 
     server.expect().get()
           .withPath("/api/v1/namespaces/namespace/pods/id/log?pretty=false&container=main")

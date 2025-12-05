@@ -87,10 +87,10 @@ public class DruidKubernetesCachingClient
 
   private static final long DEFAULT_INFORMER_RESYNC_PERIOD_MS = 300000L; // 5 minutes
 
+  protected final SharedIndexInformer<Pod> podInformer;
+  protected final SharedIndexInformer<Job> jobInformer;
+  protected final KubernetesResourceEventNotifier eventNotifier;
   private final KubernetesClientApi baseClient;
-  private final SharedIndexInformer<Pod> podInformer;
-  private final SharedIndexInformer<Job> jobInformer;
-  private final KubernetesResourceEventNotifier eventNotifier;
   private final long informerResyncPeriodMillis;
 
   public DruidKubernetesCachingClient(
@@ -105,6 +105,18 @@ public class DruidKubernetesCachingClient
 
     this.podInformer = setupPodInformer(namespace);
     this.jobInformer = setupJobInformer(namespace);
+  }
+
+  public void stop()
+  {
+    if (podInformer != null) {
+      podInformer.stop();
+    }
+    if (jobInformer != null) {
+      jobInformer.stop();
+    }
+    // Cancel all pending futures in the event notifier
+    eventNotifier.cancelAll();
   }
 
   public KubernetesClientApi getBaseClient()

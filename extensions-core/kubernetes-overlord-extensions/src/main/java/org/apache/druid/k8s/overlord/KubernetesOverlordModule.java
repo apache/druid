@@ -205,7 +205,8 @@ public class KubernetesOverlordModule implements DruidModule
   @Nullable
   public DruidKubernetesCachingClient makeCachingKubernetesClient(
       KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig,
-      DruidKubernetesClient baseClient
+      DruidKubernetesClient baseClient,
+      Lifecycle lifecycle
   )
   {
     if (!kubernetesTaskRunnerConfig.isUseK8sSharedInformers()) {
@@ -220,7 +221,31 @@ public class KubernetesOverlordModule implements DruidModule
         .getMillis();
 
     log.info("Creating Kubernetes caching client with informer resync period: %d ms", resyncPeriodMillis);
-    return new DruidKubernetesCachingClient(baseClient, namespace, resyncPeriodMillis);
+    final DruidKubernetesCachingClient cachingClient = new DruidKubernetesCachingClient(
+        baseClient,
+        namespace,
+        resyncPeriodMillis
+    );
+
+    lifecycle.addHandler(
+        new Lifecycle.Handler()
+        {
+          @Override
+          public void start()
+          {
+
+          }
+
+          @Override
+          public void stop()
+          {
+            log.info("Stopping Kubernetes caching client");
+            cachingClient.stop();
+          }
+        }
+    );
+
+    return cachingClient;
   }
 
   /**
