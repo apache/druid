@@ -23,8 +23,10 @@ import com.google.common.base.Optional;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -59,12 +61,9 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
   @Override
   public JobResponse waitForPeonJobCompletion(K8sTaskId taskId, long howLong, TimeUnit unit)
   {
-    long timeoutMs = unit.toMillis(howLong);
-    long startTime = System.currentTimeMillis();
-
-    // Give the informer 2 resync periods to see the job. if it isn't seen by then, we assume the job was canceled.
-    // This is to prevent us from waiting for entire max job runtime on a job that was canceled before it even started.
-    long jobMustBeSeenBy = startTime + (clientApi.getInformerResyncPeriodMillis() * 2);
+    Duration timeout = Duration.millis(unit.toMillis(howLong));
+    Duration jobMustBeSeenWithin = Duration.millis(clientApi.getInformerResyncPeriodMillis() * 2);
+    Stopwatch stopwatch = Stopwatch.createStarted();
     boolean jobSeenInCache = false;
 
     // Set up to watch for job changes
@@ -124,7 +123,7 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
       catch (Throwable e) {
         log.noStackTrace().warn(e, "Exception while waiting for change notification of job[%s]", taskId.getK8sJobName());
       }
-    } while ((System.currentTimeMillis() - startTime < timeoutMs) && (jobSeenInCache || System.currentTimeMillis() < jobMustBeSeenBy));
+    } while (stopwatch.hasNotElapsed(timeout) && (jobSeenInCache || stopwatch.hasNotElapsed(jobMustBeSeenWithin)));
 
     log.warn("Timed out waiting for K8s job[%s] to complete", taskId.getK8sJobName());
     return new JobResponse(null, PeonPhase.FAILED);
@@ -162,8 +161,8 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
   @Nullable
   protected Pod waitUntilPeonPodCreatedAndReady(String jobName, long howLong, TimeUnit timeUnit)
   {
-    long timeoutMs = timeUnit.toMillis(howLong);
-    long startTime = System.currentTimeMillis();
+    Duration timeout = Duration.millis(timeUnit.toMillis(howLong));
+    Stopwatch stopwatch = Stopwatch.createStarted();
     String podName = "unknown";
     boolean podSeenInCache = false;
 
@@ -224,7 +223,7 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
       catch (Throwable e) {
         log.warn("Unexpected exception[%s] waiting for pod change notification for job [%s]. Error message[%s]", e.getClass().getName(), jobName, e.getMessage());
       }
-    } while (System.currentTimeMillis() - startTime < timeoutMs);
+    } while (stopwatch.hasNotElapsed(timeout));
 
     if (podSeenInCache) {
       log.warn("Timeout waiting for pod[%s] for job[%s] to become ready after it was created", podName, jobName);
