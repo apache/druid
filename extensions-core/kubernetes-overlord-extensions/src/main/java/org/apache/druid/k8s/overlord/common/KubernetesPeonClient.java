@@ -127,7 +127,7 @@ public class KubernetesPeonClient
                       .withName(taskId.getK8sJobName())
                       .waitUntilCondition(
                           x -> (x == null) || (x.getStatus() != null && x.getStatus().getActive() == null
-                                               && (x.getStatus().getFailed() != null || x.getStatus().getSucceeded() != null)),
+                                  && (x.getStatus().getFailed() != null || x.getStatus().getSucceeded() != null)),
                           howLong,
                           unit
                       );
@@ -169,12 +169,12 @@ public class KubernetesPeonClient
     KubernetesClient k8sClient = clientApi.getClient();
     try {
       LogWatch logWatch = k8sClient.batch()
-                                   .v1()
-                                   .jobs()
-                                   .inNamespace(namespace)
-                                   .withName(taskId.getK8sJobName())
-                                   .inContainer("main")
-                                   .watchLog();
+          .v1()
+          .jobs()
+          .inNamespace(namespace)
+          .withName(taskId.getK8sJobName())
+          .inContainer("main")
+          .watchLog();
       if (logWatch == null) {
         return Optional.absent();
       }
@@ -191,12 +191,12 @@ public class KubernetesPeonClient
     KubernetesClient k8sClient = clientApi.getClient();
     try {
       InputStream logStream = k8sClient.batch()
-                                       .v1()
-                                       .jobs()
-                                       .inNamespace(namespace)
-                                       .withName(taskId.getK8sJobName())
-                                       .inContainer("main")
-                                       .getLogInputStream();
+          .v1()
+          .jobs()
+          .inNamespace(namespace)
+          .withName(taskId.getK8sJobName())
+          .inContainer("main")
+          .getLogInputStream();
       if (logStream == null) {
         return Optional.absent();
       }
@@ -283,10 +283,10 @@ public class KubernetesPeonClient
   private Optional<Pod> getPeonPod(KubernetesClient client, String jobName)
   {
     List<Pod> pods = client.pods()
-                           .inNamespace(namespace)
-                           .withLabel("job-name", jobName)
-                           .list()
-                           .getItems();
+        .inNamespace(namespace)
+        .withLabel("job-name", jobName)
+        .list()
+        .getItems();
     return pods.isEmpty() ? Optional.absent() : Optional.of(pods.get(0));
   }
 
@@ -382,15 +382,15 @@ public class KubernetesPeonClient
     try {
       return RetryUtils.retry(
           () -> client.pods()
-                      .inNamespace(namespace)
-                      .withName(pod.getMetadata().getName())
-                      .waitUntilCondition(
-                          p -> {
-                            if (p == null) {
-                              return true;
-                            }
-                            return p.getStatus() != null && p.getStatus().getPodIP() != null;
-                          }, howLong, timeUnit),
+                    .inNamespace(namespace)
+                    .withName(pod.getMetadata().getName())
+                    .waitUntilCondition(
+                        p -> {
+                          if (p == null) {
+                            return true;
+                          }
+                          return p.getStatus() != null && p.getStatus().getPodIP() != null;
+                        }, howLong, timeUnit),
           this::isRetryableTransientConnectionPoolException, quietTries, maxTries);
     }
     catch (Exception e) {
