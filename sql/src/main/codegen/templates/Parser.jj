@@ -5925,7 +5925,7 @@ SqlTypeNameSpec SqlTypeName1(Span s) :
     |
         <SMALLINT> { s.add(this); sqlTypeName = SqlTypeName.SMALLINT; }
     |
-        <BIGINT> { s.add(this); sqlTypeName = SqlTypeName.BIGINT; }
+        ( <BIGINT> | <LONG> ) { s.add(this); sqlTypeName = SqlTypeName.BIGINT; }
     |
         <REAL> { s.add(this); sqlTypeName = SqlTypeName.REAL; }
     |
