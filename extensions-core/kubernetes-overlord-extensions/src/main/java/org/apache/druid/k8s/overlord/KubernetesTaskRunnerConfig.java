@@ -82,10 +82,10 @@ public class KubernetesTaskRunnerConfig
 
   @JsonProperty
   // enable using kubernetes informer cache for peon client operations
-  private boolean enableKubernetesClientSharedInformers = false;
+  private boolean useK8sSharedInformers = false;
 
   @JsonProperty
-  private Period kubernetesClientInformerResyncPeriod = new Period("PT5M");
+  private Period k8sSharedInformerResyncPeriod = new Period("PT5M");
 
   @JsonProperty
   @NotNull
@@ -172,8 +172,8 @@ public class KubernetesTaskRunnerConfig
       Map<String, String> annotations,
       Integer capacity,
       Period taskJoinTimeout,
-      boolean enableKubernetesClientSharedInformers,
-      Period kubernetesClientInformerResyncPeriod
+      boolean useK8sSharedInformers,
+      Period k8sSharedInformerResyncPeriod
   )
   {
     this.namespace = namespace;
@@ -251,13 +251,13 @@ public class KubernetesTaskRunnerConfig
         capacity,
         this.capacity
     );
-    this.enableKubernetesClientSharedInformers = ObjectUtils.getIfNull(
-        enableKubernetesClientSharedInformers,
-        this.enableKubernetesClientSharedInformers
+    this.useK8sSharedInformers = ObjectUtils.getIfNull(
+        useK8sSharedInformers,
+        this.useK8sSharedInformers
     );
-    this.kubernetesClientInformerResyncPeriod = ObjectUtils.getIfNull(
-        kubernetesClientInformerResyncPeriod,
-        this.kubernetesClientInformerResyncPeriod
+    this.k8sSharedInformerResyncPeriod = ObjectUtils.getIfNull(
+        k8sSharedInformerResyncPeriod,
+        this.k8sSharedInformerResyncPeriod
     );
   }
 
@@ -368,14 +368,14 @@ public class KubernetesTaskRunnerConfig
     return capacity;
   }
 
-  public boolean isEnableKubernetesClientSharedInformers()
+  public boolean isUseK8sSharedInformers()
   {
-    return enableKubernetesClientSharedInformers;
+    return useK8sSharedInformers;
   }
 
-  public Period getKubernetesClientInformerResyncPeriod()
+  public Period getK8sSharedInformerResyncPeriod()
   {
-    return kubernetesClientInformerResyncPeriod;
+    return k8sSharedInformerResyncPeriod;
   }
 
   public static Builder builder()

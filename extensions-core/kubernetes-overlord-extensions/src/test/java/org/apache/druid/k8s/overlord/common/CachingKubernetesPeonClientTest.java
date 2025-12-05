@@ -63,7 +63,7 @@ public class CachingKubernetesPeonClientTest
     clientApi = new TestKubernetesClient(client, NAMESPACE);
     clientApi.start();
 
-    peonClient = new CachingKubernetesPeonClient(clientApi, NAMESPACE, false, serviceEmitter);
+    peonClient = new CachingKubernetesPeonClient(clientApi, NAMESPACE, "", false, serviceEmitter);
   }
 
   @AfterEach

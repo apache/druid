@@ -72,43 +72,25 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   public KubernetesTaskRunner build()
   {
     KubernetesPeonClient peonClient;
-    boolean enableCache = kubernetesTaskRunnerConfig.isEnableKubernetesClientSharedInformers();
+    boolean enableCache = kubernetesTaskRunnerConfig.isUseK8sSharedInformers();
     boolean useOverlordNamespace = adapterTypeAllowingTasksInDifferentNamespaces.contains(taskAdapter.getAdapterType());
 
     if (enableCache) {
-      if (useOverlordNamespace) {
-        peonClient = new CachingKubernetesPeonClient(
-            druidKubernetesClient,
-            kubernetesTaskRunnerConfig.getNamespace(),
-            kubernetesTaskRunnerConfig.getOverlordNamespace(),
-            kubernetesTaskRunnerConfig.isDebugJobs(),
-            emitter
-        );
-      } else {
-        peonClient = new CachingKubernetesPeonClient(
-            druidKubernetesClient,
-            kubernetesTaskRunnerConfig.getNamespace(),
-            kubernetesTaskRunnerConfig.isDebugJobs(),
-            emitter
-        );
-      }
+      peonClient = new CachingKubernetesPeonClient(
+          druidKubernetesClient,
+          kubernetesTaskRunnerConfig.getNamespace(),
+          useOverlordNamespace ? kubernetesTaskRunnerConfig.getOverlordNamespace() : "",
+          kubernetesTaskRunnerConfig.isDebugJobs(),
+          emitter
+      );
     } else {
-      if (useOverlordNamespace) {
-        peonClient = new KubernetesPeonClient(
-            druidKubernetesClient,
-            kubernetesTaskRunnerConfig.getNamespace(),
-            kubernetesTaskRunnerConfig.getOverlordNamespace(),
-            kubernetesTaskRunnerConfig.isDebugJobs(),
-            emitter
-        );
-      } else {
-        peonClient = new KubernetesPeonClient(
-            druidKubernetesClient,
-            kubernetesTaskRunnerConfig.getNamespace(),
-            kubernetesTaskRunnerConfig.isDebugJobs(),
-            emitter
-        );
-      }
+      peonClient = new KubernetesPeonClient(
+          druidKubernetesClient,
+          kubernetesTaskRunnerConfig.getNamespace(),
+          useOverlordNamespace ? kubernetesTaskRunnerConfig.getOverlordNamespace() : "",
+          kubernetesTaskRunnerConfig.isDebugJobs(),
+          emitter
+      );
     }
 
     runner = new KubernetesTaskRunner(

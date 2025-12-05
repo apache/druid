@@ -52,17 +52,8 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
       ServiceEmitter emitter
   )
   {
-    super(clientApi, namespace, overlordNamespace, debugJobs, emitter);
-  }
 
-  public CachingKubernetesPeonClient(
-      KubernetesClientApi clientApi,
-      String namespace,
-      boolean debugJobs,
-      ServiceEmitter emitter
-  )
-  {
-    super(clientApi, namespace, "", debugJobs, emitter);
+    super(clientApi, namespace, overlordNamespace == null ? "" : overlordNamespace, debugJobs, emitter);
   }
 
   @Override
@@ -125,13 +116,13 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
       catch (TimeoutException e) {
         // A timeout here is not a problem, it forces us to loop around and check the cache again.
         // This prevents the case where we miss a notification and wait forever.
-        log.debug("Timeout waiting for job change notification for job[%s]. If full job timeout has not been reached, the job completion wait will continue", taskId.getK8sJobName());
+        log.debug("Timeout waiting for change notification of job[%s]. Waiting until full job timeout.", taskId.getK8sJobName());
       }
       catch (InterruptedException e) {
         throw DruidException.defensive(e, "Interrupted waiting for job change notification for job[%s]", taskId.getK8sJobName());
       }
       catch (Throwable e) {
-        log.warn("Exception[%s] waiting for job change notification for job[%s]. Error message[%s]", e.getClass().getName(), taskId.getK8sJobName(), e.getMessage());
+        log.noStackTrace().warn(e, "Exception while waiting for change notification of job[%s]", taskId.getK8sJobName());
       }
     } while ((System.currentTimeMillis() - startTime < timeoutMs) && (jobSeenInCache || System.currentTimeMillis() < jobMustBeSeenBy));
 
