@@ -31,6 +31,8 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
+import org.apache.druid.segment.TestDataSource;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
@@ -111,7 +113,80 @@ public class CompactionRunSimulatorTest
     );
     Assert.assertEquals(
         Collections.singletonList(
-            Arrays.asList("wiki", Intervals.of("2013-01-10/P1D"), 10, 1_000_000_000L, 1, "skip offset from latest[P1D]")
+            List.of("wiki", Intervals.of("2013-01-10/P1D"), 10, 1_000_000_000L, 1, "skip offset from latest[P1D]")
+        ),
+        skippedTable.getRows()
+    );
+  }
+
+  @Test
+  public void testSimulate_withFixedIntervalOrderPolicy()
+  {
+    final TestSegmentsMetadataManager segmentsMetadataManager = new TestSegmentsMetadataManager();
+
+    // Add some segments to the timeline
+    final String dataSource = TestDataSource.WIKI;
+    final List<DataSegment> wikiSegments
+        = CreateDataSegments.ofDatasource(dataSource)
+                            .forIntervals(10, Granularities.DAY)
+                            .withNumPartitions(10)
+                            .startingAt("2013-01-01")
+                            .eachOfSizeInMb(100);
+    wikiSegments.forEach(segmentsMetadataManager::addSegment);
+
+    final FixedIntervalOrderPolicy policy = new FixedIntervalOrderPolicy(
+        List.of(
+            new FixedIntervalOrderPolicy.Candidate(dataSource, Intervals.of("2013-01-08/P1D")),
+            new FixedIntervalOrderPolicy.Candidate(dataSource, Intervals.of("2013-01-04/P1D"))
+        )
+    );
+    final CompactionSimulateResult simulateResult = simulator.simulateRunWithConfig(
+        DruidCompactionConfig
+            .empty()
+            .withClusterConfig(new ClusterCompactionConfig(null, null, policy, null, null))
+            .withDatasourceConfig(
+                InlineSchemaDataSourceCompactionConfig.builder().forDataSource(dataSource).build()
+            ),
+        segmentsMetadataManager.getRecentDataSourcesSnapshot(),
+        CompactionEngine.NATIVE
+    );
+
+    Assert.assertNotNull(simulateResult);
+
+    final Map<CompactionStatus.State, Table> compactionStates = simulateResult.getCompactionStates();
+    Assert.assertNotNull(compactionStates);
+
+    Assert.assertNull(compactionStates.get(CompactionStatus.State.COMPLETE));
+    Assert.assertNull(compactionStates.get(CompactionStatus.State.RUNNING));
+
+    final Table pendingTable = compactionStates.get(CompactionStatus.State.PENDING);
+    Assert.assertEquals(
+        List.of("dataSource", "interval", "numSegments", "bytes", "maxTaskSlots", "reasonToCompact"),
+        pendingTable.getColumnNames()
+    );
+    Assert.assertEquals(
+        List.of(
+            List.of("wiki", Intervals.of("2013-01-08/P1D"), 10, 1_000_000_000L, 1, "not compacted yet"),
+            List.of("wiki", Intervals.of("2013-01-04/P1D"), 10, 1_000_000_000L, 1, "not compacted yet")
+        ),
+        pendingTable.getRows()
+    );
+
+    final Table skippedTable = compactionStates.get(CompactionStatus.State.SKIPPED);
+    Assert.assertEquals(
+        List.of("dataSource", "interval", "numSegments", "bytes", "reasonToSkip"),
+        skippedTable.getColumnNames()
+    );
+    Assert.assertEquals(
+        List.of(
+            List.of("wiki", Intervals.of("2013-01-02/P1D"), 10, 1_000_000_000L, 1, "Rejected by search policy"),
+            List.of("wiki", Intervals.of("2013-01-03/P1D"), 10, 1_000_000_000L, 1, "Rejected by search policy"),
+            List.of("wiki", Intervals.of("2013-01-07/P1D"), 10, 1_000_000_000L, 1, "Rejected by search policy"),
+            List.of("wiki", Intervals.of("2013-01-05/P1D"), 10, 1_000_000_000L, 1, "Rejected by search policy"),
+            List.of("wiki", Intervals.of("2013-01-06/P1D"), 10, 1_000_000_000L, 1, "Rejected by search policy"),
+            List.of("wiki", Intervals.of("2013-01-01/P1D"), 10, 1_000_000_000L, 1, "Rejected by search policy"),
+            List.of("wiki", Intervals.of("2013-01-09/P1D"), 10, 1_000_000_000L, 1, "Rejected by search policy"),
+            List.of("wiki", Intervals.of("2013-01-10/P1D"), 10, 1_000_000_000L, 1, "skip offset from latest[P1D]")
         ),
         skippedTable.getRows()
     );
