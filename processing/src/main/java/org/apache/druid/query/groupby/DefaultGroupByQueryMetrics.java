@@ -22,13 +22,11 @@ package org.apache.druid.query.groupby;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DruidMetrics;
 
-import java.util.concurrent.atomic.LongAdder;
-
 public class DefaultGroupByQueryMetrics extends DefaultQueryMetrics<GroupByQuery> implements GroupByQueryMetrics
 {
-  private final LongAdder mergeBufferAcquisitonTime = new LongAdder();
-  private final LongAdder bytesSpilledToStorage = new LongAdder();
-  private final LongAdder mergeDictionarySize = new LongAdder();
+  private long mergeBufferAcquisitonTime = 0L;
+  private long bytesSpilledToStorage = 0L;
+  private long mergeDictionarySize = 0L;
 
   @Override
   public void query(GroupByQuery query)
@@ -69,45 +67,48 @@ public class DefaultGroupByQueryMetrics extends DefaultQueryMetrics<GroupByQuery
   public void mergeBufferAcquisitionTime(long mergeBufferAcquisitionTime)
   {
     reportMetric("mergeBufferAcquisitonTime", mergeBufferAcquisitionTime);
+    this.mergeBufferAcquisitonTime = mergeBufferAcquisitionTime;
   }
 
   @Override
   public void bytesSpilledToStorage(long bytesSpilledToStorage)
   {
     reportMetric("bytesSpilledToStorage", bytesSpilledToStorage);
+    this.bytesSpilledToStorage = bytesSpilledToStorage;
   }
 
   @Override
   public void mergeDictionarySize(long mergeDictionarySize)
   {
     reportMetric("mergeDictionarySize", mergeDictionarySize);
+    this.mergeDictionarySize = mergeDictionarySize;
   }
 
   @Override
   public long getSpilledBytes()
   {
-    return bytesSpilledToStorage.longValue();
+    return bytesSpilledToStorage;
   }
 
   @Override
   public long getMergeDictionarySize()
   {
-    return mergeDictionarySize.longValue();
+    return mergeDictionarySize;
   }
 
   @Override
   public long getMergeBufferAcquisitionTime()
   {
-    return mergeBufferAcquisitonTime.longValue();
+    return mergeBufferAcquisitonTime;
   }
 
   // TODO: Delete after debugging...
   @Override
   public String toString()
   {
-    return "bytesSpilledToStorage[" + bytesSpilledToStorage.longValue()
-           + "], mergeDictionarySize[" + mergeDictionarySize.longValue()
-           + "], mergeBufferAcquisitonTime[" + mergeBufferAcquisitonTime.longValue()
+    return "bytesSpilledToStorage[" + bytesSpilledToStorage
+           + "], mergeDictionarySize[" + mergeDictionarySize
+           + "], mergeBufferAcquisitonTime[" + mergeBufferAcquisitonTime
            + ']';
   }
 }

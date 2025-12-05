@@ -64,6 +64,7 @@ public interface GroupByQueryMetrics extends QueryMetrics<GroupByQuery>
   @PublicApi
   void mergeDictionarySize(long mergeDictionarySize);
 
+  // The get metrics methods below are used for GroupByStatsMonitor
   @PublicApi
   long getSpilledBytes();
 
