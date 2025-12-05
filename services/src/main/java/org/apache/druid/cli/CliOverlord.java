@@ -98,6 +98,7 @@ import org.apache.druid.indexing.overlord.duty.TaskLogAutoCleanerConfig;
 import org.apache.druid.indexing.overlord.duty.UnusedSegmentsKiller;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerResource;
+import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerV2Factory;
 import org.apache.druid.indexing.overlord.http.OverlordCompactionResource;
 import org.apache.druid.indexing.overlord.http.OverlordDataSourcesResource;
 import org.apache.druid.indexing.overlord.http.OverlordRedirectInfo;
@@ -392,6 +393,11 @@ public class CliOverlord extends ServerRunnable
                      .to(HttpRemoteTaskRunnerFactory.class)
                      .in(LazySingleton.class);
                 binder.bind(HttpRemoteTaskRunnerFactory.class).in(LazySingleton.class);
+
+                biddy.addBinding(HttpRemoteTaskRunnerV2Factory.TYPE_NAME)
+                     .to(HttpRemoteTaskRunnerV2Factory.class)
+                     .in(LazySingleton.class);
+                binder.bind(HttpRemoteTaskRunnerV2Factory.class).in(LazySingleton.class);
 
                 JacksonConfigProvider.bind(binder, WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class, null);
                 JacksonConfigProvider.bind(

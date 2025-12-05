@@ -64,7 +64,6 @@ public class WorkerHolder
 
   public static final TypeReference<ChangeRequestsSnapshot<WorkerHistoryItem>> WORKER_SYNC_RESP_TYPE_REF = new TypeReference<>() {};
 
-
   private final Worker worker;
   private Worker disabledWorker;
 
@@ -85,6 +84,16 @@ public class WorkerHolder
   private final HttpRemoteTaskRunnerConfig config;
 
   private final Listener listener;
+
+  private final AtomicReference<State> state;
+
+  public enum State
+  {
+    READY,
+    PENDING_ASSIGN,
+    BLACKLISTED,
+    LAZY
+  }
 
   public WorkerHolder(
       ObjectMapper smileMapper,
@@ -121,6 +130,8 @@ public class WorkerHolder
       knownAnnouncements.forEach(e -> announcements.put(e.getTaskId(), e));
     }
     tasksSnapshotRef = new AtomicReference<>(announcements);
+
+    this.state = new AtomicReference<>(State.READY);
   }
 
   public Worker getWorker()
@@ -464,5 +475,20 @@ public class WorkerHolder
     void taskAddedOrUpdated(TaskAnnouncement announcement, WorkerHolder workerHolder);
 
     void stateChanged(boolean enabled, WorkerHolder workerHolder);
+  }
+
+  public State getState()
+  {
+    return state.get();
+  }
+
+  public State compareAndExchangeState(State expectedState, State newState)
+  {
+    return state.compareAndExchange(expectedState, newState);
+  }
+
+  public void setState(State state)
+  {
+    this.state.set(state);
   }
 }
