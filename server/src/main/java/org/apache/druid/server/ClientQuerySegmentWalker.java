@@ -587,6 +587,17 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         .applyPreMergeDecoration()
         .mergeResults(false)
         .applyPostMergeDecoration()
+        // TODO: Find out why removing this .map statement will pass the test in SqlResourceTest....
+        .map(runner ->
+                 new MetricsEmittingQueryRunner<>(
+                     emitter,
+                     toolChest,
+                     runner,
+                     MetricsEmittingQueryRunner.NOOP_METRIC_REPORTER,
+                     queryMetrics -> {}
+                 )
+        )
+        .emitCPUTimeMetric(emitter)
         .postProcess(
             objectMapper.convertValue(
                 query.context().getString("postProcessing"),
@@ -594,27 +605,17 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             )
         )
         .map(
-            runner -> {
-              final QueryRunner<T> resultLevelCachingQueryRunner = new ResultLevelCachingQueryRunner<>(
-                  runner,
-                  toolChest,
-                  query,
-                  objectMapper,
-                  cache,
-                  cacheConfig,
-                  emitter
-              );
-
-              return new MetricsEmittingQueryRunner<>(
-                  emitter,
-                  toolChest,
-                  resultLevelCachingQueryRunner,
-                  MetricsEmittingQueryRunner.NOOP_METRIC_REPORTER,
-                  queryMetrics -> {}
-              );
-            }
-        )
-        .emitCPUTimeMetric(emitter);
+            runner ->
+                new ResultLevelCachingQueryRunner<>(
+                    runner,
+                    toolChest,
+                    query,
+                    objectMapper,
+                    cache,
+                    cacheConfig,
+                    emitter
+                )
+        );
   }
 
   /**

@@ -529,11 +529,7 @@ public class ServerManager implements QuerySegmentWalker
         toolChest,
         bySegmentQueryRunner,
         QueryMetrics::reportSegmentAndCacheTime,
-        // TODO: Maybe also apply a log to see when this is called.
-        queryMetrics -> {
-          log.info("Segment MetricsEmittingQueryRunner accepting metrics[%s]", queryMetrics);
-          queryMetrics.segment(segmentIdString);
-        }
+        queryMetrics -> queryMetrics.segment(segmentIdString)
     ).withWaitMeasuredFromNow();
 
     final SpecificSegmentQueryRunner<T> specificSegmentQueryRunner = new SpecificSegmentQueryRunner<>(
