@@ -122,6 +122,7 @@ public class NestedDataFormatsTest extends EmbeddedClusterTestBase
     final String scanQuery = "select event, to_json_string(agent) as agent from %s where json_value(event, '$.type') = 'PercentClear' and json_value(agent, '$.os') = 'Android' order by __time asc limit 1";
     final String scanQueryResultDefaultFormat = cluster.callApi().runSql(scanQuery, defaultFormat);
     final String scanQueryResultNoneObjectStorage = cluster.callApi().runSql(scanQuery, dataSource);
+    // CHECKSTYLE: text blocks not supported in current Checkstyle version
     Assertions.assertEquals(
          """
          "{""type"":""PercentClear"",""percentage"":85}","{""type"":""Mobile Browser"",""category"":""Smartphone"",""browser"":""Chrome Mobile"",""browser_version"":""50.0.2661.89"",""os"":""Android"",""platform"":""Android""}"
