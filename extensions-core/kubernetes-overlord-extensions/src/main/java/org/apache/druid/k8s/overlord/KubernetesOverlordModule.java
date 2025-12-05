@@ -95,7 +95,7 @@ public class KubernetesOverlordModule implements DruidModule
   public void configure(Binder binder)
   {
     // druid.indexer.runner.type=k8s
-    JsonConfigProvider.bind(binder, IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX, KubernetesTaskRunnerConfig.class);
+    JsonConfigProvider.bind(binder, IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX, KubernetesTaskRunnerStaticConfig.class);
     JsonConfigProvider.bind(binder, K8SANDWORKER_PROPERTIES_PREFIX, KubernetesAndWorkerTaskRunnerConfig.class);
     JsonConfigProvider.bind(binder, "druid.indexer.queue", TaskQueueConfig.class);
     JacksonConfigProvider.bind(binder, KubernetesTaskRunnerDynamicConfig.CONFIG_KEY, KubernetesTaskRunnerDynamicConfig.class, null);
@@ -152,8 +152,18 @@ public class KubernetesOverlordModule implements DruidModule
 
   @Provides
   @LazySingleton
+  public KubernetesTaskRunnerEffectiveConfig provideEffectiveConfig(
+      KubernetesTaskRunnerStaticConfig staticConfig,
+      Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigSupplier
+  )
+  {
+    return new KubernetesTaskRunnerEffectiveConfig(staticConfig, dynamicConfigSupplier);
+  }
+
+  @Provides
+  @LazySingleton
   public DruidKubernetesClient makeKubernetesClient(
-      KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig,
+      KubernetesTaskRunnerStaticConfig kubernetesTaskRunnerConfig,
       DruidKubernetesHttpClientFactory httpClientFactory,
       Lifecycle lifecycle
   )
@@ -217,7 +227,7 @@ public class KubernetesOverlordModule implements DruidModule
   TaskAdapter provideTaskAdapter(
       DruidKubernetesClient client,
       Properties properties,
-      KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig,
+      KubernetesTaskRunnerEffectiveConfig kubernetesTaskRunnerConfig,
       TaskConfig taskConfig,
       StartupLoggingConfig startupLoggingConfig,
       @Self DruidNode druidNode,
@@ -260,7 +270,7 @@ public class KubernetesOverlordModule implements DruidModule
           druidNode,
           smileMapper,
           taskLogs,
-          new DynamicConfigPodTemplateSelector(properties, dynamicConfigRef)
+          new DynamicConfigPodTemplateSelector(properties, kubernetesTaskRunnerConfig)
       );
     } else {
       return new SingleContainerTaskAdapter(

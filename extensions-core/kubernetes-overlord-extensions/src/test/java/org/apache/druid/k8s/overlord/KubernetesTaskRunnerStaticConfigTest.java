@@ -29,15 +29,15 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-public class KubernetesTaskRunnerConfigTest
+public class KubernetesTaskRunnerStaticConfigTest
 {
   @Test
   public void test_deserializable() throws IOException
   {
     ObjectMapper mapper = new DefaultObjectMapper();
-    KubernetesTaskRunnerConfig config = mapper.readValue(
+    KubernetesTaskRunnerStaticConfig config = mapper.readValue(
         this.getClass().getClassLoader().getResource("kubernetesTaskRunnerConfig.json"),
-        KubernetesTaskRunnerConfig.class
+        KubernetesTaskRunnerStaticConfig.class
     );
 
     Assert.assertEquals("namespace", config.getNamespace());
@@ -60,7 +60,7 @@ public class KubernetesTaskRunnerConfigTest
   @Test
   public void test_builder_preservesDefaults()
   {
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
         .withNamespace("namespace")
         .withDisableClientProxy(true)
         .build();
@@ -85,7 +85,7 @@ public class KubernetesTaskRunnerConfigTest
   @Test
   public void test_builder()
   {
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
         .withNamespace("namespace")
         .withDebugJob(true)
         .withSidecarSupport(true)
