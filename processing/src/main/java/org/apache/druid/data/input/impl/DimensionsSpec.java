@@ -127,6 +127,8 @@ public class DimensionsSpec
                       ? new ArrayList<>()
                       : Lists.newArrayList(dimensions);
 
+    // Iteration order affects JSON serialization used by generateSequenceName(),
+    // which depends on stable DataSchema hashing for supervisor consistency.
     this.dimensionExclusions = (dimensionExclusions == null)
                                ? new HashSet<>()
                                : Sets.newHashSet(dimensionExclusions);
