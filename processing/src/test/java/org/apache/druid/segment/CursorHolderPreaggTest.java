@@ -101,8 +101,7 @@ public class CursorHolderPreaggTest extends InitializedNullHandlingTest
         ),
         TestHelper.makeJsonMapper(),
         TestHelper.makeSmileMapper(),
-        (query, future) -> {
-        }
+        (query, future) -> {}
     );
 
     this.cursorFactory = new CursorFactory()

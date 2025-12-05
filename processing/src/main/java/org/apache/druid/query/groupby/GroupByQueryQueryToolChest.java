@@ -492,7 +492,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
                 dimensionSpecs.add(dimensionSpec);
               }
             }
-             // TODO: Is this where I aggregate the responseContext?
+             // TODO: Do I need to aggregate the responseContext for the subquery?
             return runner.run(
                 queryPlus.withQuery(groupByQuery.withDimensionSpecs(dimensionSpecs)),
                 responseContext

@@ -37,10 +37,10 @@ import java.util.Set;
 public class QueryDataSource implements DataSource
 {
   @JsonProperty
-  private final Query query;
+  private final Query<?> query;
 
   @JsonCreator
-  public QueryDataSource(@JsonProperty("query") Query query)
+  public QueryDataSource(@JsonProperty("query") Query<?> query)
   {
     this.query = Preconditions.checkNotNull(query, "'query' must be nonnull");
   }

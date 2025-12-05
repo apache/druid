@@ -101,14 +101,4 @@ public class DefaultGroupByQueryMetrics extends DefaultQueryMetrics<GroupByQuery
   {
     return mergeBufferAcquisitonTime;
   }
-
-  // TODO: Delete after debugging...
-  @Override
-  public String toString()
-  {
-    return "bytesSpilledToStorage[" + bytesSpilledToStorage
-           + "], mergeDictionarySize[" + mergeDictionarySize
-           + "], mergeBufferAcquisitonTime[" + mergeBufferAcquisitonTime
-           + ']';
-  }
 }

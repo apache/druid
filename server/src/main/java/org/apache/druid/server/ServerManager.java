@@ -655,7 +655,7 @@ public class ServerManager implements QuerySegmentWalker
             toolChest
         );
 
-        final QueryRunner<T> datasourceMetricsEmittingQueryRunner = new MetricsEmittingQueryRunner<>(
+        final QueryRunner<T> finalizedMetricsEmittingQueryRunner = new MetricsEmittingQueryRunner<>(
             emitter,
             toolChest,
             finalizeResultsQueryRunner,
@@ -664,7 +664,7 @@ public class ServerManager implements QuerySegmentWalker
         );
 
         final QueryRunner<T> queryRunner = CPUTimeMetricQueryRunner.safeBuild(
-            datasourceMetricsEmittingQueryRunner,
+            finalizedMetricsEmittingQueryRunner,
             toolChest,
             emitter,
             cpuTimeAccumulator,

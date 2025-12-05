@@ -174,8 +174,7 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
         ),
         TestHelper.makeJsonMapper(),
         TestHelper.makeSmileMapper(),
-        (query, future) -> {
-        }
+        (query, future) -> {}
     );
     topnQueryEngine = new TopNQueryEngine(nonBlockingPool);
   }

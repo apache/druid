@@ -34,7 +34,7 @@ import java.util.function.ObjLongConsumer;
  */
 public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
 {
-  public static final ObjLongConsumer<QueryMetrics<?>> NOOP_METRIC_REPORTER = (metrics, value) -> { };
+  public static final ObjLongConsumer<QueryMetrics<?>> NOOP_METRIC_REPORTER = (metrics, value) -> {};
 
   private final ServiceEmitter emitter;
   private final QueryToolChest<T, ? extends Query<T>> queryToolChest;

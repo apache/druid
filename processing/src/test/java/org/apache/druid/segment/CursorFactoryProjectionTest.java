@@ -581,8 +581,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         resourcesReservationPool,
         TestHelper.makeJsonMapper(),
         TestHelper.makeSmileMapper(),
-        (query, future) -> {
-        }
+        (query, future) -> {}
     );
     this.timeseriesEngine = new TimeseriesQueryEngine(nonBlockingPool);
   }
@@ -2250,25 +2249,21 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     @Override
     public void numDimensions(GroupByQuery query)
     {
-      // no-op for projection tests
     }
 
     @Override
     public void numMetrics(GroupByQuery query)
     {
-      // no-op for projection tests
     }
 
     @Override
     public void numComplexMetrics(GroupByQuery query)
     {
-      // no-op for projection tests
     }
 
     @Override
     public void granularity(GroupByQuery query)
     {
-      // no-op for projection tests
     }
 
     @Override

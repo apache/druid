@@ -277,8 +277,7 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
         ),
         TestHelper.makeJsonMapper(),
         TestHelper.makeSmileMapper(),
-        (query, future) -> {
-        }
+        (query, future) -> {}
     );
   }
 

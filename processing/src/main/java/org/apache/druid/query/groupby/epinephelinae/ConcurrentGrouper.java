@@ -46,7 +46,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -415,20 +414,22 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   {
     // The number of groupers is same with the number of processing threads in the executor
     final List<ListenableFuture<CloseableIterator<Entry<KeyType>>>> futures = groupers.stream()
-                .map(grouper ->
-                         executor.submit(
-                             new AbstractPrioritizedCallable<CloseableIterator<Entry<KeyType>>>(priority)
-                             {
-                               @Override
-                               public CloseableIterator<Entry<KeyType>> call()
-                               {
-                                 return grouper.iterator(true);
-                               }
-                             }
-                         )
-                )
-                .collect(Collectors.toList()
-    );
+                                                                                      .map(grouper ->
+                                                                                               executor.submit(
+                                                                                                   new AbstractPrioritizedCallable<CloseableIterator<Entry<KeyType>>>(
+                                                                                                       priority)
+                                                                                                   {
+                                                                                                     @Override
+                                                                                                     public CloseableIterator<Entry<KeyType>> call()
+                                                                                                     {
+                                                                                                       return grouper.iterator(
+                                                                                                           true);
+                                                                                                     }
+                                                                                                   }
+                                                                                               )
+                                                                                      )
+                                                                                      .collect(Collectors.toList()
+                                                                                      );
 
     ListenableFuture<List<CloseableIterator<Entry<KeyType>>>> future = Futures.allAsList(futures);
     try {
@@ -495,17 +496,9 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   @Override
   public Map<String, Long> getQueryMetricsMap()
   {
-    Map<String, Long> map = new HashMap<>();
-
-    groupers.forEach(spillingGrouper -> {
-      Map<String, Long> metricsMap = spillingGrouper.getQueryMetricsMap();
-
-      for (Map.Entry<String, Long> entry : metricsMap.entrySet()) {
-        map.compute(entry.getKey(), (key, value) -> value == null ? entry.getValue() : value + entry.getValue());
-      }
-    });
-
-    return map;
+    return groupers.stream()
+                   .flatMap(grouper -> grouper.getQueryMetricsMap().entrySet().stream())
+                   .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, Long::sum));
   }
 
   @Override
