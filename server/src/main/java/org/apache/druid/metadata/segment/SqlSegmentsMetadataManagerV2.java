@@ -35,7 +35,11 @@ import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
+import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
+import org.apache.druid.timeline.DataSegmentChange;
+
+import java.util.List;
 
 /**
  * Implementation V2 of {@link SegmentsMetadataManager}, that can use the
@@ -63,6 +67,7 @@ public class SqlSegmentsMetadataManagerV2 implements SegmentsMetadataManager
   private final SegmentsMetadataManager delegate;
   private final SegmentMetadataCache segmentMetadataCache;
   private final SegmentsMetadataManagerConfig managerConfig;
+  private final ChangeRequestHistory<List<DataSegmentChange>> dataSegmentChanges;
 
   public SqlSegmentsMetadataManagerV2(
       SegmentMetadataCache segmentMetadataCache,
@@ -82,6 +87,7 @@ public class SqlSegmentsMetadataManagerV2 implements SegmentsMetadataManager
     );
     this.managerConfig = managerConfig.get();
     this.segmentMetadataCache = segmentMetadataCache;
+    this.dataSegmentChanges = new ChangeRequestHistory<>(10, false);
   }
 
   /**
@@ -170,5 +176,11 @@ public class SqlSegmentsMetadataManagerV2 implements SegmentsMetadataManager
   public void stopAsyncUsedFlagLastUpdatedUpdate()
   {
     delegate.stopAsyncUsedFlagLastUpdatedUpdate();
+  }
+
+  @Override
+  public ChangeRequestHistory<List<DataSegmentChange>> getChangeRequestHistory()
+  {
+    return dataSegmentChanges;
   }
 }
