@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.Query;
@@ -66,18 +67,28 @@ public class GroupByQueryRunnerTestHelper
       ServiceEmitter serviceEmitter
   )
   {
+    QueryToolChest toolChest = factory.getToolchest();
     MetricsEmittingQueryRunner<ResultRow> metricsEmittingQueryRunner =
         new MetricsEmittingQueryRunner<ResultRow>(
             serviceEmitter,
-            factory.getToolchest(),
+            toolChest,
             runner,
             MetricsEmittingQueryRunner.NOOP_METRIC_REPORTER,
             (metrics) -> {}
         ).withWaitMeasuredFromNow();
-    QueryToolChest toolChest = factory.getToolchest();
-    QueryRunner<T> theRunner = new FinalizeResultsQueryRunner<>(
+
+    QueryRunner<T> finalizeResultsQueryRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(toolChest.preMergeQueryDecoration(metricsEmittingQueryRunner)),
         toolChest
+    );
+
+    QueryRunner<T> theRunner = new MetricsEmittingQueryRunner<>(
+        serviceEmitter,
+        toolChest,
+        finalizeResultsQueryRunner,
+        MetricsEmittingQueryRunner.NOOP_METRIC_REPORTER,
+        (queryMetrics -> {
+        })
     );
 
     return theRunner.run(QueryPlus.wrap(populateResourceId(query))).toList();
