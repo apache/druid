@@ -172,7 +172,7 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
     TaskReport.ReportMap expectedReports = buildExpectedTaskReportParallel(
         task.getId(),
         ImmutableList.of(),
-        new RowIngestionMetersTotals(200, 5630, 0, 0, 0)
+        new RowIngestionMetersTotals(200, 5630, 0, 0, 0, 0)
     );
     TaskReport.ReportMap actualReports = runTaskAndGetReports(task, TaskState.SUCCESS);
     compareTaskReports(expectedReports, actualReports);
