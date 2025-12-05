@@ -40,10 +40,6 @@ public class TestNGGroup
    */
   public static final String QUERY = "query";
 
-  public static final String QUERY_RETRY = "query-retry";
-
-  public static final String QUERY_ERROR = "query-error";
-
   /**
    * This group can only be run individually using -Dgroups=security since it requires specific test data setup.
    */

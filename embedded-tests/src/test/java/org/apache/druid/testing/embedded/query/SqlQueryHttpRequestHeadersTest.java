@@ -38,7 +38,7 @@ public class SqlQueryHttpRequestHeadersTest extends QueryTestBase
   @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testNullContentType(boolean shouldQueryBroker)
   {
-    executeQuery(
+    executeQueryWithContentType(
         shouldQueryBroker ? brokerEndpoint : routerEndpoint,
         null,
         "select 1",
@@ -52,7 +52,7 @@ public class SqlQueryHttpRequestHeadersTest extends QueryTestBase
   @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testUnsupportedContentType(boolean shouldQueryBroker)
   {
-    executeQuery(
+    executeQueryWithContentType(
         shouldQueryBroker ? brokerEndpoint : routerEndpoint,
         "application/xml",
         "select 1",
@@ -69,7 +69,7 @@ public class SqlQueryHttpRequestHeadersTest extends QueryTestBase
   @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testTextPlain(boolean shouldQueryBroker)
   {
-    executeQuery(
+    executeQueryWithContentType(
         shouldQueryBroker ? brokerEndpoint : routerEndpoint,
         MediaType.TEXT_PLAIN,
         "select \n1",
@@ -86,7 +86,7 @@ public class SqlQueryHttpRequestHeadersTest extends QueryTestBase
   @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testFormURLEncoded(boolean shouldQueryBroker)
   {
-    executeQuery(
+    executeQueryWithContentType(
         shouldQueryBroker ? brokerEndpoint : routerEndpoint,
         MediaType.APPLICATION_FORM_URLENCODED,
         URLEncoder.encode("select 'x % y'", StandardCharsets.UTF_8),
@@ -103,7 +103,7 @@ public class SqlQueryHttpRequestHeadersTest extends QueryTestBase
   @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testFormURLEncoded_InvalidEncoding(boolean shouldQueryBroker)
   {
-    executeQuery(
+    executeQueryWithContentType(
         shouldQueryBroker ? brokerEndpoint : routerEndpoint,
         MediaType.APPLICATION_FORM_URLENCODED,
         "select 'x % y'",
@@ -120,7 +120,7 @@ public class SqlQueryHttpRequestHeadersTest extends QueryTestBase
   @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testJSON(boolean shouldQueryBroker)
   {
-    executeQuery(
+    executeQueryWithContentType(
         shouldQueryBroker ? brokerEndpoint : routerEndpoint,
         MediaType.APPLICATION_JSON,
         "{\"query\":\"select 567\"}",
@@ -132,7 +132,7 @@ public class SqlQueryHttpRequestHeadersTest extends QueryTestBase
         }
     );
 
-    executeQuery(
+    executeQueryWithContentType(
         shouldQueryBroker ? brokerEndpoint : routerEndpoint,
         "application/json; charset=UTF-8",
         "{\"query\":\"select 567\"}",
@@ -149,7 +149,7 @@ public class SqlQueryHttpRequestHeadersTest extends QueryTestBase
   @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testInvalidJSONFormat(boolean shouldQueryBroker)
   {
-    executeQuery(
+    executeQueryWithContentType(
         shouldQueryBroker ? brokerEndpoint : routerEndpoint,
         MediaType.APPLICATION_JSON,
         "{\"query\":select 567}",
@@ -166,7 +166,7 @@ public class SqlQueryHttpRequestHeadersTest extends QueryTestBase
   @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testEmptyQuery_TextPlain(boolean shouldQueryBroker)
   {
-    executeQuery(
+    executeQueryWithContentType(
         shouldQueryBroker ? brokerEndpoint : routerEndpoint,
         MediaType.TEXT_PLAIN,
         null,
@@ -183,7 +183,7 @@ public class SqlQueryHttpRequestHeadersTest extends QueryTestBase
   @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testEmptyQuery_UrlEncoded(boolean shouldQueryBroker)
   {
-    executeQuery(
+    executeQueryWithContentType(
         shouldQueryBroker ? brokerEndpoint : routerEndpoint,
         MediaType.APPLICATION_FORM_URLENCODED,
         null,
@@ -200,7 +200,7 @@ public class SqlQueryHttpRequestHeadersTest extends QueryTestBase
   @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testBlankQuery_TextPlain(boolean shouldQueryBroker)
   {
-    executeQuery(
+    executeQueryWithContentType(
         shouldQueryBroker ? brokerEndpoint : routerEndpoint,
         MediaType.TEXT_PLAIN,
         "     ",
@@ -217,7 +217,7 @@ public class SqlQueryHttpRequestHeadersTest extends QueryTestBase
   @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testEmptyQuery_JSON(boolean shouldQueryBroker)
   {
-    executeQuery(
+    executeQueryWithContentType(
         shouldQueryBroker ? brokerEndpoint : routerEndpoint,
         MediaType.APPLICATION_JSON,
         null,
@@ -234,7 +234,7 @@ public class SqlQueryHttpRequestHeadersTest extends QueryTestBase
   @FieldSource("SHOULD_USE_BROKER_TO_QUERY")
   public void testMultipleContentType_usesFirstOne(boolean shouldQueryBroker)
   {
-    executeQuery(
+    executeQueryWithContentType(
         shouldQueryBroker ? brokerEndpoint : routerEndpoint,
         MediaType.TEXT_PLAIN,
         "SELECT 1",

@@ -19,23 +19,33 @@
 
 package org.apache.druid.testing.embedded.query;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.guice.SleepModule;
+import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
+import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
+import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 
+import javax.ws.rs.core.MediaType;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -46,7 +56,7 @@ import java.util.function.Consumer;
 
 public abstract class QueryTestBase extends EmbeddedClusterTestBase
 {
-  protected static final String SQL_QUERY_ROUTE = "%s/druid/v2/sql/";
+  protected static final String SQL_QUERY_ROUTE = "%s/druid/v2/sql";
   public static List<Boolean> SHOULD_USE_BROKER_TO_QUERY = List.of(true, false);
 
   protected final EmbeddedBroker broker = new EmbeddedBroker();
@@ -57,6 +67,7 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
   protected final EmbeddedHistorical historical = new EmbeddedHistorical();
 
   protected HttpClient httpClientRef;
+  protected ObjectMapper jsonMapper;
   protected String brokerEndpoint;
   protected String routerEndpoint;
 
@@ -85,7 +96,9 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
                                .addServer(broker)
                                .addServer(router)
                                .addServer(indexer)
-                               .addServer(historical);
+                               .addServer(historical)
+                               .addExtension(ServerManagerForQueryErrorTestModule.class)
+                               .addExtension(SleepModule.class);
   }
 
   @BeforeAll
@@ -103,9 +116,54 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
   }
 
   /**
+   * Ingests test data using the task template {@link MoreResources.Task#BASIC_INDEX} in a synchronous manner.
+   *
+   * @return ingested datasource name
+   */
+  protected String ingestBasicData()
+  {
+    String datasourceName = EmbeddedClusterApis.createTestDatasourceName(getDatasourcePrefix());
+
+    final String taskId = IdUtils.getRandomId();
+    final IndexTask task = MoreResources.Task.BASIC_INDEX.get().dataSource(datasourceName).withId(taskId);
+    cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
+    cluster.callApi().waitForTaskToSucceed(taskId, overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(datasourceName, coordinator, broker);
+    return datasourceName;
+  }
+
+  /**
+   * Execute an async SQL query against the given endpoint via the HTTP client.
+   */
+  protected ListenableFuture<StatusResponseHolder> executeQueryAsync(String endpoint, ClientSqlQuery query)
+  {
+    URL url;
+    try {
+      url = new URL(endpoint);
+    }
+    catch (MalformedURLException e) {
+      throw new AssertionError("Malformed URL");
+    }
+
+    Assertions.assertNotNull(jsonMapper);
+    String serializedQuery;
+    try {
+      serializedQuery = jsonMapper.writeValueAsString(query);
+    }
+    catch (JsonProcessingException e) {
+      throw new AssertionError(e);
+    }
+
+    Request request = new Request(HttpMethod.POST, url);
+    request.addHeader("Content-Type", MediaType.APPLICATION_JSON);
+    request.setContent(serializedQuery.getBytes(StandardCharsets.UTF_8));
+    return httpClientRef.go(request, StatusResponseHandler.getInstance());
+  }
+
+  /**
    * Execute a SQL query against the given endpoint via the HTTP client.
    */
-  protected void executeQuery(
+  protected void executeQueryWithContentType(
       String endpoint,
       String contentType,
       String query,
@@ -149,5 +207,34 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
         response.getStatus().getCode(),
         response.getContent().trim()
     );
+  }
+
+  /**
+   * Execute a SQL query against the given endpoint via the HTTP client.
+   *
+   * @return response holder of a cancelled query
+   */
+  protected StatusResponseHolder cancelQuery(String endpoint, String queryId)
+  {
+    URL url;
+    try {
+      url = new URL(StringUtils.format("%s/%s", endpoint, queryId));
+    }
+    catch (MalformedURLException e) {
+      throw new AssertionError("Malformed URL");
+    }
+
+    Request request = new Request(HttpMethod.DELETE, url);
+    StatusResponseHolder response;
+    try {
+      response = httpClientRef.go(request, StatusResponseHandler.getInstance())
+                              .get();
+    }
+    catch (InterruptedException | ExecutionException e) {
+      throw new AssertionError("Failed to execute a request", e);
+    }
+
+    Assertions.assertNotNull(response);
+    return response;
   }
 }
