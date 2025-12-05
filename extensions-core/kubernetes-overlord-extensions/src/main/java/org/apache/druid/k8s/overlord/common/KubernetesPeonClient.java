@@ -127,7 +127,7 @@ public class KubernetesPeonClient
                       .withName(taskId.getK8sJobName())
                       .waitUntilCondition(
                           x -> (x == null) || (x.getStatus() != null && x.getStatus().getActive() == null
-                                  && (x.getStatus().getFailed() != null || x.getStatus().getSucceeded() != null)),
+                                               && (x.getStatus().getFailed() != null || x.getStatus().getSucceeded() != null)),
                           howLong,
                           unit
                       );
@@ -191,12 +191,12 @@ public class KubernetesPeonClient
     KubernetesClient k8sClient = clientApi.getClient();
     try {
       InputStream logStream = k8sClient.batch()
-          .v1()
-          .jobs()
-          .inNamespace(namespace)
-          .withName(taskId.getK8sJobName())
-          .inContainer("main")
-          .getLogInputStream();
+                                   .v1()
+                                   .jobs()
+                                   .inNamespace(namespace)
+                                   .withName(taskId.getK8sJobName())
+                                   .inContainer("main")
+                                   .getLogInputStream();
       if (logStream == null) {
         return Optional.absent();
       }
