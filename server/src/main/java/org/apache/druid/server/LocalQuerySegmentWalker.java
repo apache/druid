@@ -117,13 +117,14 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
         .applyPreMergeDecoration()
         .mergeResults(true)
         .applyPostMergeDecoration()
-        .map(runner -> new MetricsEmittingQueryRunner<>(
-                 emitter,
-                 queryRunnerFactory.getToolchest(),
-                 runner,
-                 MetricsEmittingQueryRunner.NOOP_METRIC_REPORTER,
-                 queryMetrics -> {}
-             )
+        .map(runner ->
+                 new MetricsEmittingQueryRunner<>(
+                     emitter,
+                     queryRunnerFactory.getToolchest(),
+                     runner,
+                     MetricsEmittingQueryRunner.NOOP_METRIC_REPORTER,
+                     queryMetrics -> {}
+                 )
         )
         .emitCPUTimeMetric(emitter, cpuAccumulator);
   }

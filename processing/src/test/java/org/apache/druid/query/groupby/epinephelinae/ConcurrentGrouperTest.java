@@ -36,8 +36,6 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.query.groupby.DefaultGroupByQueryMetrics;
-import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.BufferComparator;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.Entry;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.KeySerde;
@@ -149,7 +147,6 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
   @Test()
   public void testAggregate() throws InterruptedException, ExecutionException, IOException
   {
-    GroupByQueryMetrics groupByQueryMetrics = new DefaultGroupByQueryMetrics();
     final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
         temporaryFolder.newFolder(),
         1024 * 1024
@@ -196,7 +193,7 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
         });
       }
 
-      for (Future eachFuture : futures) {
+      for (Future<?> eachFuture : futures) {
         eachFuture.get();
       }
 
@@ -230,7 +227,6 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
       return;
     }
 
-    GroupByQueryMetrics groupByQueryMetrics = new DefaultGroupByQueryMetrics();
     ListeningExecutorService service = MoreExecutors.listeningDecorator(exec);
     try {
       final ConcurrentGrouper<LongKey> grouper = new ConcurrentGrouper<>(
@@ -273,7 +269,7 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
         });
       }
 
-      for (Future eachFuture : futures) {
+      for (Future<?> eachFuture : futures) {
         eachFuture.get();
       }
 

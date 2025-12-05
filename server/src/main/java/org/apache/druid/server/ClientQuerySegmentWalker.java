@@ -587,7 +587,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         .applyPreMergeDecoration()
         .mergeResults(false)
         .applyPostMergeDecoration()
-        // TODO: Find out why removing this .map statement will pass the test in SqlResourceTest....
         .map(runner ->
                  new MetricsEmittingQueryRunner<>(
                      emitter,
