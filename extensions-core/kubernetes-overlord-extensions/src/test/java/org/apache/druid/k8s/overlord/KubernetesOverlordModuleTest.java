@@ -180,7 +180,6 @@ public class KubernetesOverlordModuleTest
     props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
     injector = makeInjectorWithProperties(props, false, true);
 
-
     TaskAdapter adapter = injector.getInstance(TaskAdapter.class);
 
     Assert.assertNotNull(adapter);

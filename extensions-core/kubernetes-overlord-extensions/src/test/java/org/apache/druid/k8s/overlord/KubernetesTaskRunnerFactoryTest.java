@@ -26,6 +26,7 @@ import io.fabric8.kubernetes.client.ConfigBuilder;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.k8s.overlord.common.DruidKubernetesCachingClient;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.httpclient.vertx.DruidKubernetesVertxHttpClientConfig;
@@ -47,6 +48,7 @@ public class KubernetesTaskRunnerFactoryTest
   private TaskLogs taskLogs;
 
   private DruidKubernetesClient druidKubernetesClient;
+  private DruidKubernetesCachingClient druidKubernetesCachingClient;
   @Mock private ServiceEmitter emitter;
   private TaskAdapter taskAdapter;
 
@@ -60,13 +62,10 @@ public class KubernetesTaskRunnerFactoryTest
     taskLogs = new NoopTaskLogs();
 
     Config config = new ConfigBuilder().build();
-    config.setAdditionalProperty(
-        DruidKubernetesClient.ENABLE_INFORMERS_KEY,
-        kubernetesTaskRunnerConfig.isUseK8sSharedInformers()
-    );
 
     druidKubernetesClient =
         new DruidKubernetesClient(new DruidKubernetesVertxHttpClientFactory(new DruidKubernetesVertxHttpClientConfig()), config);
+    druidKubernetesCachingClient = null;
     taskAdapter = new TestTaskAdapter();
   }
 
@@ -80,7 +79,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskLogs,
         druidKubernetesClient,
         emitter,
-        taskAdapter
+        taskAdapter,
+        druidKubernetesCachingClient
     );
 
     KubernetesTaskRunner expectedRunner = factory.build();

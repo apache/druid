@@ -50,9 +50,9 @@ public class CachingKubernetesPeonClientTest
 
   private KubernetesClient client;
   private KubernetesMockServer server;
-  private TestKubernetesClient clientApi;
   private CachingKubernetesPeonClient peonClient;
   private StubServiceEmitter serviceEmitter;
+  private TestCachingKubernetesClient cachingClient;
 
   @BeforeEach
   public void setup() throws Exception
@@ -60,17 +60,19 @@ public class CachingKubernetesPeonClientTest
     serviceEmitter = new StubServiceEmitter("service", "host");
 
     // Set up real informers with the mock client
-    clientApi = new TestKubernetesClient(client, NAMESPACE);
-    clientApi.start();
+    TestKubernetesClient clientApi = new TestKubernetesClient(client, NAMESPACE);
 
-    peonClient = new CachingKubernetesPeonClient(clientApi, NAMESPACE, "", false, serviceEmitter);
+    cachingClient = new TestCachingKubernetesClient(clientApi, NAMESPACE);
+    cachingClient.start();
+
+    peonClient = new CachingKubernetesPeonClient(cachingClient, NAMESPACE, "", false, serviceEmitter);
   }
 
   @AfterEach
   public void teardown()
   {
-    if (clientApi != null) {
-      clientApi.stop();
+    if (cachingClient != null) {
+      cachingClient.stop();
     }
   }
 
@@ -92,7 +94,7 @@ public class CachingKubernetesPeonClientTest
     client.pods().inNamespace(NAMESPACE).resource(pod).create();
 
     // Wait for informer to sync
-    clientApi.waitForSync();
+    cachingClient.waitForSync();
 
     // Query from cache
     Optional<Pod> result = peonClient.getPeonPod(JOB_NAME);
@@ -105,7 +107,7 @@ public class CachingKubernetesPeonClientTest
   public void test_getPeonPod_withoutPodInCache_returnsAbsentOptional() throws Exception
   {
     // Wait for informer to sync (empty cache)
-    clientApi.waitForSync();
+    cachingClient.waitForSync();
 
     Optional<Pod> result = peonClient.getPeonPod(JOB_NAME);
 
@@ -134,7 +136,7 @@ public class CachingKubernetesPeonClientTest
     client.pods().inNamespace(NAMESPACE).resource(pod1).create();
     client.pods().inNamespace(NAMESPACE).resource(pod2).create();
 
-    clientApi.waitForSync();
+    cachingClient.waitForSync();
 
     Optional<Pod> result = peonClient.getPeonPod(JOB_NAME);
 
@@ -157,7 +159,7 @@ public class CachingKubernetesPeonClientTest
 
     client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job).create();
 
-    clientApi.waitForSync();
+    cachingClient.waitForSync();
 
     Optional<Job> result = peonClient.getPeonJob(JOB_NAME);
 
@@ -168,7 +170,7 @@ public class CachingKubernetesPeonClientTest
   @Test
   public void test_getPeonJob_withoutJobInCache_returnsAbsentOptional() throws Exception
   {
-    clientApi.waitForSync();
+    cachingClient.waitForSync();
 
     Optional<Job> result = peonClient.getPeonJob(JOB_NAME);
 
@@ -197,7 +199,7 @@ public class CachingKubernetesPeonClientTest
     client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job1).create();
     client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job2).create();
 
-    clientApi.waitForSync();
+    cachingClient.waitForSync();
 
     List<Job> jobs = peonClient.getPeonJobs();
 
@@ -207,7 +209,7 @@ public class CachingKubernetesPeonClientTest
   @Test
   public void test_getPeonJobs_withOverlordNamespace_returnsFilteredJobs() throws Exception
   {
-    peonClient = new CachingKubernetesPeonClient(clientApi, NAMESPACE, OVERLORD_NAMESPACE, false, serviceEmitter);
+    peonClient = new CachingKubernetesPeonClient(cachingClient, NAMESPACE, OVERLORD_NAMESPACE, false, serviceEmitter);
 
     Job matchingJob = new JobBuilder()
         .withNewMetadata()
@@ -230,7 +232,7 @@ public class CachingKubernetesPeonClientTest
     client.batch().v1().jobs().inNamespace(NAMESPACE).resource(matchingJob).create();
     client.batch().v1().jobs().inNamespace(NAMESPACE).resource(nonMatchingJob).create();
 
-    clientApi.waitForSync();
+    cachingClient.waitForSync();
 
     List<Job> jobs = peonClient.getPeonJobs();
 
@@ -241,7 +243,7 @@ public class CachingKubernetesPeonClientTest
   @Test
   public void test_getPeonJobs_whenCacheEmpty_returnsEmptyList() throws Exception
   {
-    clientApi.waitForSync();
+    cachingClient.waitForSync();
 
     List<Job> jobs = peonClient.getPeonJobs();
 
@@ -265,7 +267,7 @@ public class CachingKubernetesPeonClientTest
         .build();
 
     client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job).create();
-    clientApi.waitForSync();
+    cachingClient.waitForSync();
 
 
     // Start waiting in background
@@ -313,7 +315,7 @@ public class CachingKubernetesPeonClientTest
         .build();
 
     client.pods().inNamespace(NAMESPACE).resource(pod).create();
-    clientApi.waitForSync();
+    cachingClient.waitForSync();
 
     // Start waiting for pod to be ready in background
     CompletableFuture<Pod> futurePod = CompletableFuture.supplyAsync(() ->
@@ -360,7 +362,7 @@ public class CachingKubernetesPeonClientTest
         .build();
 
     client.pods().inNamespace(NAMESPACE).resource(pod).create();
-    clientApi.waitForSync();
+    cachingClient.waitForSync();
 
     // Wait for pod to be ready with short timeout
     Pod result = peonClient.waitUntilPeonPodCreatedAndReady(JOB_NAME, 1, TimeUnit.SECONDS);
@@ -372,7 +374,7 @@ public class CachingKubernetesPeonClientTest
   @Test
   public void test_waitUntilPeonPodCreatedAndReady_returnNullWhenPodNeverCreated() throws Exception
   {
-    clientApi.waitForSync();
+    cachingClient.waitForSync();
 
     Assertions.assertNull(peonClient.waitUntilPeonPodCreatedAndReady(JOB_NAME, 1, TimeUnit.SECONDS));
   }
@@ -394,7 +396,7 @@ public class CachingKubernetesPeonClientTest
         .build();
 
     client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job).create();
-    clientApi.waitForSync();
+    cachingClient.waitForSync();
 
     // Wait with short timeout - job never completes
     JobResponse response = peonClient.waitForPeonJobCompletion(taskId, 500, TimeUnit.MILLISECONDS);
@@ -421,7 +423,7 @@ public class CachingKubernetesPeonClientTest
         .build();
 
     client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job).create();
-    clientApi.waitForSync();
+    cachingClient.waitForSync();
 
     // Start waiting in background
     CompletableFuture<JobResponse> futureResponse = CompletableFuture.supplyAsync(() ->
@@ -470,7 +472,7 @@ public class CachingKubernetesPeonClientTest
         .build();
 
     client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job).create();
-    clientApi.waitForSync();
+    cachingClient.waitForSync();
 
     // Start waiting in background
     CompletableFuture<JobResponse> futureResponse = CompletableFuture.supplyAsync(() ->
@@ -513,7 +515,7 @@ public class CachingKubernetesPeonClientTest
     // Delete immediately before informer syncs
     client.batch().v1().jobs().inNamespace(NAMESPACE).withName(taskId.getK8sJobName()).delete();
 
-    clientApi.waitForSync();
+    cachingClient.waitForSync();
 
     JobResponse response = peonClient.waitForPeonJobCompletion(taskId, 10, TimeUnit.SECONDS);
 
@@ -534,7 +536,7 @@ public class CachingKubernetesPeonClientTest
 
     client.pods().inNamespace(NAMESPACE).resource(pod).create();
 
-    clientApi.waitForSync();
+    cachingClient.waitForSync();
 
     server.expect().get()
           .withPath("/api/v1/namespaces/namespace/pods/id/log?pretty=false&container=main")

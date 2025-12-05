@@ -46,8 +46,10 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
 {
   protected static final EmittingLogger log = new EmittingLogger(CachingKubernetesPeonClient.class);
 
+  private final DruidKubernetesCachingClient cachingClient;
+
   public CachingKubernetesPeonClient(
-      KubernetesClientApi clientApi,
+      DruidKubernetesCachingClient cachingClient,
       String namespace,
       String overlordNamespace,
       boolean debugJobs,
@@ -55,19 +57,20 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
   )
   {
 
-    super(clientApi, namespace, overlordNamespace == null ? "" : overlordNamespace, debugJobs, emitter);
+    super(cachingClient.getBaseClient(), namespace, overlordNamespace == null ? "" : overlordNamespace, debugJobs, emitter);
+    this.cachingClient = cachingClient;
   }
 
   @Override
   public JobResponse waitForPeonJobCompletion(K8sTaskId taskId, long howLong, TimeUnit unit)
   {
     Duration timeout = Duration.millis(unit.toMillis(howLong));
-    Duration jobMustBeSeenWithin = Duration.millis(clientApi.getInformerResyncPeriodMillis() * 2);
+    Duration jobMustBeSeenWithin = Duration.millis(cachingClient.getInformerResyncPeriodMillis() * 2);
     Stopwatch stopwatch = Stopwatch.createStarted();
     boolean jobSeenInCache = false;
 
     // Set up to watch for job changes
-    CompletableFuture<Job> jobFuture = clientApi.getEventNotifier().waitForJobChange(taskId.getK8sJobName());
+    CompletableFuture<Job> jobFuture = cachingClient.getEventNotifier().waitForJobChange(taskId.getK8sJobName());
 
     // We will loop until the full timeout is reached if the job is seen in cache. If the job does not show up in the cache we will exit earlier.
     // In this loop we first check the cache to see if our job is there and complete. This avoids missing notifications that happened before we set up the watch.
@@ -93,10 +96,10 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
         }
 
         // We wake up every informer resync period to avoid event notifier misses.
-        Job job = jobFuture.get(clientApi.getInformerResyncPeriodMillis(), TimeUnit.MILLISECONDS);
+        Job job = jobFuture.get(cachingClient.getInformerResyncPeriodMillis(), TimeUnit.MILLISECONDS);
 
         // Immediately set up to watch for the next change in case we need to wait again
-        jobFuture = clientApi.getEventNotifier().waitForJobChange(taskId.getK8sJobName());
+        jobFuture = cachingClient.getEventNotifier().waitForJobChange(taskId.getK8sJobName());
         log.debug("Received job[%s] change notification", taskId.getK8sJobName());
         jobSeenInCache = true;
 
@@ -133,27 +136,27 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
   public List<Job> getPeonJobs()
   {
     if (overlordNamespace.isEmpty()) {
-      return clientApi.executeJobCacheRequest(informer -> informer.getIndexer().list());
+      return cachingClient.executeJobCacheRequest(informer -> informer.getIndexer().list());
     } else {
-      return clientApi.executeJobCacheRequest(informer ->
+      return cachingClient.executeJobCacheRequest(informer ->
                                                   informer.getIndexer()
-                                                          .byIndex(DruidKubernetesClient.OVERLORD_NAMESPACE_INDEX, overlordNamespace));
+                                                          .byIndex(DruidKubernetesCachingClient.OVERLORD_NAMESPACE_INDEX, overlordNamespace));
     }
   }
 
   @Override
   public Optional<Pod> getPeonPod(String jobName)
   {
-    return clientApi.executePodCacheRequest(informer -> {
-      List<Pod> pods = informer.getIndexer().byIndex(DruidKubernetesClient.JOB_NAME_INDEX, jobName);
+    return cachingClient.executePodCacheRequest(informer -> {
+      List<Pod> pods = informer.getIndexer().byIndex(DruidKubernetesCachingClient.JOB_NAME_INDEX, jobName);
       return pods.isEmpty() ? Optional.absent() : Optional.of(pods.get(0));
     });
   }
 
   public Optional<Job> getPeonJob(String jobName)
   {
-    return clientApi.executeJobCacheRequest(informer -> {
-      List<Job> jobs = informer.getIndexer().byIndex(DruidKubernetesClient.JOB_NAME_INDEX, jobName);
+    return cachingClient.executeJobCacheRequest(informer -> {
+      List<Job> jobs = informer.getIndexer().byIndex(DruidKubernetesCachingClient.JOB_NAME_INDEX, jobName);
       return jobs.isEmpty() ? Optional.absent() : Optional.of(jobs.get(0));
     });
   }
@@ -167,7 +170,7 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
     boolean podSeenInCache = false;
 
     // Set up to watch for pod changes
-    CompletableFuture<Pod> podFuture = clientApi.getEventNotifier().waitForPodChange(jobName);
+    CompletableFuture<Pod> podFuture = cachingClient.getEventNotifier().waitForPodChange(jobName);
 
     // We will loop until the specified timeout is reached, or we see the pod become ready, whichever comes first.
     // We eagerly check the cache first to avoid missing notifications that happened before we set up the watch.
@@ -194,9 +197,9 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
         }
 
         // We wake up every informer resync period to avoid event notifier misses.
-        Pod pod = podFuture.get(clientApi.getInformerResyncPeriodMillis(), TimeUnit.MILLISECONDS);
+        Pod pod = podFuture.get(cachingClient.getInformerResyncPeriodMillis(), TimeUnit.MILLISECONDS);
 
-        podFuture = clientApi.getEventNotifier().waitForPodChange(jobName);
+        podFuture = cachingClient.getEventNotifier().waitForPodChange(jobName);
         log.debug("Received pod[%s] change notification for job[%s]", podName, jobName);
         if (pod == null) {
           log.warn("Pod[%s] for job[%s] is null. This is unusual. Investigate Druid and k8s logs.", podName, jobName);

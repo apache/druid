@@ -53,6 +53,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.k8s.overlord.common.DruidKubernetesCachingClient;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
 import org.apache.druid.k8s.overlord.common.httpclient.DruidKubernetesHttpClientFactory;
 import org.apache.druid.k8s.overlord.common.httpclient.jdk.DruidKubernetesJdkHttpClientConfig;
@@ -73,6 +74,7 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.TaskLogs;
 
+import javax.annotation.Nullable;
 import java.util.Locale;
 import java.util.Properties;
 
@@ -150,15 +152,18 @@ public class KubernetesOverlordModule implements DruidModule
     JsonConfigProvider.bind(binder, JDK_HTTPCLIENT_PROPERITES_PREFIX, DruidKubernetesJdkHttpClientConfig.class);
   }
 
+  /**
+   * Provides the base Kubernetes client for direct API operations.
+   * This is always created regardless of caching configuration.
+   */
   @Provides
   @LazySingleton
-  public DruidKubernetesClient makeKubernetesClient(
+  public DruidKubernetesClient makeBaseKubernetesClient(
       KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig,
       DruidKubernetesHttpClientFactory httpClientFactory,
       Lifecycle lifecycle
   )
   {
-    final DruidKubernetesClient client;
     final Config config = new ConfigBuilder().build();
 
     if (kubernetesTaskRunnerConfig.isDisableClientProxy()) {
@@ -168,14 +173,7 @@ public class KubernetesOverlordModule implements DruidModule
 
     config.setNamespace(kubernetesTaskRunnerConfig.getNamespace());
 
-    config.setAdditionalProperty(
-        DruidKubernetesClient.ENABLE_INFORMERS_KEY,
-        kubernetesTaskRunnerConfig.isUseK8sSharedInformers());
-    config.setAdditionalProperty(
-        DruidKubernetesClient.INFORMER_RESYNC_PERIOD_MS_KEY,
-        kubernetesTaskRunnerConfig.getK8sSharedInformerResyncPeriod().toStandardDuration().getMillis());
-
-    client = new DruidKubernetesClient(httpClientFactory, config);
+    final DruidKubernetesClient client = new DruidKubernetesClient(httpClientFactory, config);
 
     lifecycle.addHandler(
         new Lifecycle.Handler()
@@ -189,13 +187,40 @@ public class KubernetesOverlordModule implements DruidModule
           @Override
           public void stop()
           {
-            log.info("Stopping overlord Kubernetes client");
+            log.info("Stopping base Kubernetes client");
             client.getClient().close();
           }
         }
     );
 
     return client;
+  }
+
+  /**
+   * Provides the caching Kubernetes client that uses informers for efficient resource watching.
+   * Only created when caching is enabled via configuration.
+   */
+  @Provides
+  @LazySingleton
+  @Nullable
+  public DruidKubernetesCachingClient makeCachingKubernetesClient(
+      KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig,
+      DruidKubernetesClient baseClient
+  )
+  {
+    if (!kubernetesTaskRunnerConfig.isUseK8sSharedInformers()) {
+      log.info("Kubernetes shared informers disabled, caching client will not be created");
+      return null;
+    }
+
+    String namespace = kubernetesTaskRunnerConfig.getNamespace();
+    long resyncPeriodMillis = kubernetesTaskRunnerConfig
+        .getK8sSharedInformerResyncPeriod()
+        .toStandardDuration()
+        .getMillis();
+
+    log.info("Creating Kubernetes caching client with informer resync period: %d ms", resyncPeriodMillis);
+    return new DruidKubernetesCachingClient(baseClient, namespace, resyncPeriodMillis);
   }
 
   /**
