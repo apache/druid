@@ -64,7 +64,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   private static final Period LOG_SAVE_TIMEOUT = new Period("PT300S");
   private static final Period SHORT_LOG_SAVE_TIMEOUT = new Period("PT1S");
 
-  @Mock KubernetesPeonClient kubernetesClient;
+  @Mock
+  KubernetesPeonClient kubernetesClient;
   @Mock TaskLogs taskLogs;
 
   @Mock LogWatch logWatch;

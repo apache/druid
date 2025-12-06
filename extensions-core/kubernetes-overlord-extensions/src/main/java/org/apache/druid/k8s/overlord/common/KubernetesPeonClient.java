@@ -46,14 +46,22 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * A KubernetesPeonClient implementation that directly queries the Kubernetes API server for all read and write
+ * operations on a per-task basis.
+ * <p>
+ * This implementation does not use caching and may put more load on the Kubernetes API server compared to
+ * {@link CachingKubernetesPeonClient}, especially when many tasks are running concurrently.
+ * </p>
+ */
 public class KubernetesPeonClient
 {
   private static final EmittingLogger log = new EmittingLogger(KubernetesPeonClient.class);
 
-  private final KubernetesClientApi clientApi;
-  private final String namespace;
-  private final String overlordNamespace;
-  private final boolean debugJobs;
+  protected final KubernetesClientApi clientApi;
+  protected final String namespace;
+  protected final String overlordNamespace;
+  protected final boolean debugJobs;
   private final ServiceEmitter emitter;
 
   public KubernetesPeonClient(
@@ -66,19 +74,9 @@ public class KubernetesPeonClient
   {
     this.clientApi = clientApi;
     this.namespace = namespace;
-    this.overlordNamespace = overlordNamespace;
+    this.overlordNamespace = overlordNamespace == null ? "" : overlordNamespace;
     this.debugJobs = debugJobs;
     this.emitter = emitter;
-  }
-
-  public KubernetesPeonClient(
-      KubernetesClientApi clientApi,
-      String namespace,
-      boolean debugJobs,
-      ServiceEmitter emitter
-  )
-  {
-    this(clientApi, namespace, "", debugJobs, emitter);
   }
 
   public Pod launchPeonJobAndWaitForStart(Job job, Task task, long howLong, TimeUnit timeUnit) throws IllegalStateException
@@ -119,7 +117,7 @@ public class KubernetesPeonClient
                       .withName(taskId.getK8sJobName())
                       .waitUntilCondition(
                           x -> (x == null) || (x.getStatus() != null && x.getStatus().getActive() == null
-                          && (x.getStatus().getFailed() != null || x.getStatus().getSucceeded() != null)),
+                                               && (x.getStatus().getFailed() != null || x.getStatus().getSucceeded() != null)),
                           howLong,
                           unit
                       );
@@ -156,46 +154,76 @@ public class KubernetesPeonClient
     }
   }
 
+  /**
+   * Get a LogWatch for the peon pod associated with the given taskId. Create it if it does not already exist.
+   * <p>
+   * Any issues creating the LogWatch will be logged and an absent Optional will be returned.
+   * </p>
+   *
+   * @return an Optional containing the {@link LogWatch} if it exists or was created.
+   */
   public Optional<LogWatch> getPeonLogWatcher(K8sTaskId taskId)
   {
+    Optional<Pod> maybePod = getPeonPod(taskId.getK8sJobName());
+    if (!maybePod.isPresent()) {
+      log.debug("Pod for job[%s] not found in cache, cannot watch logs", taskId.getK8sJobName());
+      return Optional.absent();
+    }
+
+    Pod pod = maybePod.get();
+    String podName = pod.getMetadata().getName();
+
     KubernetesClient k8sClient = clientApi.getClient();
     try {
-      LogWatch logWatch = k8sClient.batch()
-          .v1()
-          .jobs()
-          .inNamespace(namespace)
-          .withName(taskId.getK8sJobName())
-          .inContainer("main")
-          .watchLog();
+      LogWatch logWatch = k8sClient.pods()
+                                   .inNamespace(namespace)
+                                   .withName(podName)
+                                   .inContainer("main")
+                                   .watchLog();
       if (logWatch == null) {
         return Optional.absent();
       }
       return Optional.of(logWatch);
     }
     catch (Exception e) {
-      log.error(e, "Error watching logs from task: %s", taskId);
+      log.error(e, "Error watching logs from task: %s, pod: %s", taskId, podName);
       return Optional.absent();
     }
   }
 
+  /**
+   * Get an InputStream for the logs of the peon pod associated with the given taskId.
+   * <p>
+   * Any issues creating the InputStream will be logged and an absent Optional will be returned.
+   * </p>
+   *
+   * @return an Optional containing the {@link InputStream} if the pod exists and logs could be streamed, or absent otherwise
+   */
   public Optional<InputStream> getPeonLogs(K8sTaskId taskId)
   {
+    Optional<Pod> maybePod = getPeonPod(taskId.getK8sJobName());
+    if (!maybePod.isPresent()) {
+      log.debug("Pod for job[%s] not found in cache, cannot stream logs", taskId.getK8sJobName());
+      return Optional.absent();
+    }
+
+    Pod pod = maybePod.get();
+    String podName = pod.getMetadata().getName();
+
     KubernetesClient k8sClient = clientApi.getClient();
     try {
-      InputStream logStream = k8sClient.batch()
-                                   .v1()
-                                   .jobs()
-                                   .inNamespace(namespace)
-                                   .withName(taskId.getK8sJobName())
-                                   .inContainer("main")
-                                   .getLogInputStream();
+      InputStream logStream = k8sClient.pods()
+                                       .inNamespace(namespace)
+                                       .resource(pod)
+                                       .inContainer("main")
+                                       .getLogInputStream();
       if (logStream == null) {
         return Optional.absent();
       }
       return Optional.of(logStream);
     }
     catch (Exception e) {
-      log.error(e, "Error streaming logs from task: %s", taskId);
+      log.error(e, "Error streaming logs for pod[%s] associated with task[%s]", podName, taskId.getOriginalTaskId());
       return Optional.absent();
     }
   }
