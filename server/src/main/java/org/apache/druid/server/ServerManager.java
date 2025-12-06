@@ -649,16 +649,28 @@ public class ServerManager implements QuerySegmentWalker
             cpuTimeAccumulator,
             cacheKeyPrefix
         );
+
+        final QueryRunner<T> finalizeResultsQueryRunner = new FinalizeResultsQueryRunner<>(
+            toolChest.mergeResults(factory.mergeRunners(queryProcessingPool, queryRunners), true),
+            toolChest
+        );
+
+        final QueryRunner<T> finalizedMetricsEmittingQueryRunner = new MetricsEmittingQueryRunner<>(
+            emitter,
+            toolChest,
+            finalizeResultsQueryRunner,
+            MetricsEmittingQueryRunner.NOOP_METRIC_REPORTER,
+            metrics -> {}
+        );
+
         final QueryRunner<T> queryRunner = CPUTimeMetricQueryRunner.safeBuild(
-            new FinalizeResultsQueryRunner<>(
-                toolChest.mergeResults(factory.mergeRunners(queryProcessingPool, queryRunners), true),
-                toolChest
-            ),
+            finalizedMetricsEmittingQueryRunner,
             toolChest,
             emitter,
             cpuTimeAccumulator,
             true
         );
+
         return queryRunner.run(queryPlus, responseContext).withBaggage(closer);
       }
       catch (Throwable t) {

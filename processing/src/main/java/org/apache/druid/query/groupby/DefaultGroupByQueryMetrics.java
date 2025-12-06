@@ -24,6 +24,10 @@ import org.apache.druid.query.DruidMetrics;
 
 public class DefaultGroupByQueryMetrics extends DefaultQueryMetrics<GroupByQuery> implements GroupByQueryMetrics
 {
+  private long mergeBufferAcquisitonTime = 0L;
+  private long bytesSpilledToStorage = 0L;
+  private long mergeDictionarySize = 0L;
+
   @Override
   public void query(GroupByQuery query)
   {
@@ -57,5 +61,44 @@ public class DefaultGroupByQueryMetrics extends DefaultQueryMetrics<GroupByQuery
   public void granularity(GroupByQuery query)
   {
     //Don't emit by default
+  }
+
+  @Override
+  public void mergeBufferAcquisitionTime(long mergeBufferAcquisitionTime)
+  {
+    reportMetric("mergeBufferAcquisitionTime", mergeBufferAcquisitionTime);
+    this.mergeBufferAcquisitonTime = mergeBufferAcquisitionTime;
+  }
+
+  @Override
+  public void bytesSpilledToStorage(long bytesSpilledToStorage)
+  {
+    reportMetric("bytesSpilledToStorage", bytesSpilledToStorage);
+    this.bytesSpilledToStorage = bytesSpilledToStorage;
+  }
+
+  @Override
+  public void mergeDictionarySize(long mergeDictionarySize)
+  {
+    reportMetric("mergeDictionarySize", mergeDictionarySize);
+    this.mergeDictionarySize = mergeDictionarySize;
+  }
+
+  @Override
+  public long getSpilledBytes()
+  {
+    return bytesSpilledToStorage;
+  }
+
+  @Override
+  public long getMergeDictionarySize()
+  {
+    return mergeDictionarySize;
+  }
+
+  @Override
+  public long getMergeBufferAcquisitionTime()
+  {
+    return mergeBufferAcquisitonTime;
   }
 }

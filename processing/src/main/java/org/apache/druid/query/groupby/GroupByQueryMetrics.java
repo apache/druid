@@ -42,7 +42,7 @@ public interface GroupByQueryMetrics extends QueryMetrics<GroupByQuery>
   void numMetrics(GroupByQuery query);
 
   /**
-   * Sets the number of "complex" metrics of the given groupBy query as dimension. By default it is assumed that
+   * Sets the number of "complex" metrics of the given groupBy query as dimension. By default, it is assumed that
    * "complex" metric is a metric of not long or double type, but it could be redefined in the implementation of this
    * method.
    */
@@ -54,4 +54,23 @@ public interface GroupByQueryMetrics extends QueryMetrics<GroupByQuery>
    */
   @PublicApi
   void granularity(GroupByQuery query);
+
+  @PublicApi
+  void mergeBufferAcquisitionTime(long mergeBufferAcquisitionTime);
+
+  @PublicApi
+  void bytesSpilledToStorage(long bytesSpilledToStorage);
+
+  @PublicApi
+  void mergeDictionarySize(long mergeDictionarySize);
+
+  // The get metrics methods below are used for GroupByStatsMonitor
+  @PublicApi
+  long getSpilledBytes();
+
+  @PublicApi
+  long getMergeDictionarySize();
+
+  @PublicApi
+  long getMergeBufferAcquisitionTime();
 }

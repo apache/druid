@@ -20,42 +20,33 @@
 package org.apache.druid.query.groupby;
 
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.query.QueryResourceId;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Metrics collector for groupBy queries like spilled bytes, merge buffer acquistion time, dictionary size.
+ * Aggregates {@link GroupByQueryMetrics} emitted by in-flight groupBy queries and exposes a snapshot that can be
+ * periodically consumed by {@link org.apache.druid.server.metrics.GroupByStatsMonitor}. The provider keeps track of
+ * aggregate counters such as merge-buffer acquisition time, spilled bytes, and the dictionary sizes used while
+ * merging results.
  */
 @LazySingleton
 public class GroupByStatsProvider
 {
-  private final Map<QueryResourceId, PerQueryStats> perQueryStats;
   private final AggregateStats aggregateStatsContainer;
 
   public GroupByStatsProvider()
   {
-    this.perQueryStats = new ConcurrentHashMap<>();
-    this.aggregateStatsContainer = new AggregateStats();
+    this.aggregateStatsContainer = AggregateStats.EMPTY_STATS;
   }
 
-  public PerQueryStats getPerQueryStatsContainer(QueryResourceId resourceId)
+  /**
+   * Adds the stats reported by a single query execution to the shared accumulator. Callers are expected to provide
+   * the {@link GroupByQueryMetrics} associated with the query once all relevant numbers have been recorded on the
+   * metrics instance.
+   *
+   * @param groupByQueryMetrics the query metrics to merge into the aggregate view
+   */
+  public void aggregateStats(GroupByQueryMetrics groupByQueryMetrics)
   {
-    if (resourceId == null) {
-      return null;
-    }
-    return perQueryStats.computeIfAbsent(resourceId, value -> new PerQueryStats());
-  }
-
-  public synchronized void closeQuery(QueryResourceId resourceId)
-  {
-    if (resourceId == null || !perQueryStats.containsKey(resourceId)) {
-      return;
-    }
-    PerQueryStats container = perQueryStats.remove(resourceId);
-    aggregateStatsContainer.addQueryStats(container);
+    aggregateStatsContainer.addQueryStats(groupByQueryMetrics);
   }
 
   public synchronized AggregateStats getStatsSince()
@@ -63,17 +54,18 @@ public class GroupByStatsProvider
     return aggregateStatsContainer.reset();
   }
 
+  /**
+   * Immutable snapshot of the aggregated groupBy metrics captured between two {@link #getStatsSince()} calls.
+   */
   public static class AggregateStats
   {
-    private long mergeBufferQueries = 0;
-    private long mergeBufferAcquisitionTimeNs = 0;
-    private long spilledQueries = 0;
-    private long spilledBytes = 0;
-    private long mergeDictionarySize = 0;
+    private long mergeBufferQueries;
+    private long mergeBufferAcquisitionTimeNs;
+    private long spilledQueries;
+    private long spilledBytes;
+    private long mergeDictionarySize;
 
-    public AggregateStats()
-    {
-    }
+    public static final AggregateStats EMPTY_STATS = new AggregateStats(0L, 0L, 0L, 0L, 0L);
 
     public AggregateStats(
         long mergeBufferQueries,
@@ -115,22 +107,22 @@ public class GroupByStatsProvider
       return mergeDictionarySize;
     }
 
-    public void addQueryStats(PerQueryStats perQueryStats)
+    private void addQueryStats(GroupByQueryMetrics groupByQueryMetrics)
     {
-      if (perQueryStats.getMergeBufferAcquisitionTimeNs() > 0) {
+      if (groupByQueryMetrics.getMergeBufferAcquisitionTime() > 0) {
         mergeBufferQueries++;
-        mergeBufferAcquisitionTimeNs += perQueryStats.getMergeBufferAcquisitionTimeNs();
+        mergeBufferAcquisitionTimeNs += groupByQueryMetrics.getMergeBufferAcquisitionTime();
       }
 
-      if (perQueryStats.getSpilledBytes() > 0) {
+      if (groupByQueryMetrics.getSpilledBytes() > 0) {
         spilledQueries++;
-        spilledBytes += perQueryStats.getSpilledBytes();
+        spilledBytes += groupByQueryMetrics.getSpilledBytes();
       }
 
-      mergeDictionarySize += perQueryStats.getMergeDictionarySize();
+      mergeDictionarySize += groupByQueryMetrics.getMergeDictionarySize();
     }
 
-    public AggregateStats reset()
+    private AggregateStats reset()
     {
       AggregateStats aggregateStats =
           new AggregateStats(
@@ -148,43 +140,6 @@ public class GroupByStatsProvider
       this.mergeDictionarySize = 0;
 
       return aggregateStats;
-    }
-  }
-
-  public static class PerQueryStats
-  {
-    private final AtomicLong mergeBufferAcquisitionTimeNs = new AtomicLong(0);
-    private final AtomicLong spilledBytes = new AtomicLong(0);
-    private final AtomicLong mergeDictionarySize = new AtomicLong(0);
-
-    public void mergeBufferAcquisitionTime(long delay)
-    {
-      mergeBufferAcquisitionTimeNs.addAndGet(delay);
-    }
-
-    public void spilledBytes(long bytes)
-    {
-      spilledBytes.addAndGet(bytes);
-    }
-
-    public void dictionarySize(long size)
-    {
-      mergeDictionarySize.addAndGet(size);
-    }
-
-    public long getMergeBufferAcquisitionTimeNs()
-    {
-      return mergeBufferAcquisitionTimeNs.get();
-    }
-
-    public long getSpilledBytes()
-    {
-      return spilledBytes.get();
-    }
-
-    public long getMergeDictionarySize()
-    {
-      return mergeDictionarySize.get();
     }
   }
 }

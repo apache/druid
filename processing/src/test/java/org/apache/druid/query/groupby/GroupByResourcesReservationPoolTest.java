@@ -129,8 +129,7 @@ public class GroupByResourcesReservationPoolTest
       groupByResourcesReservationPool.reserve(
           queryResourceId1,
           QUERY,
-          true,
-          new GroupByStatsProvider.PerQueryStats()
+          true
       );
       reserveCalledByFirstThread.countDown();
       try {
@@ -173,8 +172,7 @@ public class GroupByResourcesReservationPoolTest
         groupByResourcesReservationPool.reserve(
             queryResourceId2,
             QUERY,
-            true,
-            new GroupByStatsProvider.PerQueryStats()
+            true
         );
         threadsCompleted.countDown();
       });
@@ -209,8 +207,7 @@ public class GroupByResourcesReservationPoolTest
     groupByResourcesReservationPool.reserve(
         queryResourceId,
         QUERY,
-        true,
-        new GroupByStatsProvider.PerQueryStats()
+        true
     );
 
     Assert.assertThrows(
@@ -218,8 +215,7 @@ public class GroupByResourcesReservationPoolTest
         () -> groupByResourcesReservationPool.reserve(
             queryResourceId,
             QUERY,
-            true,
-            new GroupByStatsProvider.PerQueryStats()
+            true
         )
     );
   }
@@ -235,8 +231,7 @@ public class GroupByResourcesReservationPoolTest
     groupByResourcesReservationPool.reserve(
         queryResourceId,
         QUERY,
-        true,
-        new GroupByStatsProvider.PerQueryStats()
+        true
     );
     GroupByQueryResources oldResources = groupByResourcesReservationPool.fetch(queryResourceId);
 
@@ -247,8 +242,7 @@ public class GroupByResourcesReservationPoolTest
     groupByResourcesReservationPool.reserve(
         queryResourceId,
         QUERY,
-        true,
-        new GroupByStatsProvider.PerQueryStats()
+        true
     );
     GroupByQueryResources newResources = groupByResourcesReservationPool.fetch(queryResourceId);
     Assert.assertNotNull(newResources);

@@ -211,7 +211,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
             stubServiceEmitter,
             TOOL_CHEST,
             runner,
-            (obj, lng) -> {},
+            MetricsEmittingQueryRunner.NOOP_METRIC_REPORTER,
             (metrics) -> {}
         ).withWaitMeasuredFromNow();
     Iterable<ScanResultValue> results = metricsEmittingQueryRunner.run(QueryPlus.wrap(query)).toList();

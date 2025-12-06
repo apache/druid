@@ -326,8 +326,6 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
 
-    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
-
     final GroupByResourcesReservationPool groupByResourcesReservationPool = new GroupByResourcesReservationPool(
         mergePool,
         config
@@ -342,8 +340,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
         groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
-        NOOP_QUERYWATCHER,
-        groupByStatsProvider
+        NOOP_QUERYWATCHER
     );
 
     final GroupingEngine tooSmallEngine = new GroupingEngine(
@@ -352,8 +349,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
         tooSmallGroupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
-        NOOP_QUERYWATCHER,
-        groupByStatsProvider
+        NOOP_QUERYWATCHER
     );
 
     groupByFactory = new GroupByQueryRunnerFactory(

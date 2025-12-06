@@ -57,7 +57,6 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.BufferComparator;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -133,8 +132,7 @@ public class RowBasedGrouperHelper
       final Supplier<ByteBuffer> bufferSupplier,
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
-      final int mergeBufferSize,
-      final GroupByStatsProvider.PerQueryStats perQueryStats
+      final int mergeBufferSize
   )
   {
     return createGrouperAccumulatorPair(
@@ -151,8 +149,7 @@ public class RowBasedGrouperHelper
         UNKNOWN_THREAD_PRIORITY,
         false,
         UNKNOWN_TIMEOUT,
-        mergeBufferSize,
-        perQueryStats
+        mergeBufferSize
     );
   }
 
@@ -170,7 +167,7 @@ public class RowBasedGrouperHelper
    * and dim filters) are respected, and its aggregators are used in standard (not combining) form. The input
    * ResultRows are assumed to be results originating from the provided "subquery".
    *
-   * @param query               query that we are grouping for
+   * @param query               the query that we are grouping for
    * @param subquery            optional subquery that we are receiving results from (see combining vs. subquery
    *                            mode above)
    * @param config              groupBy query config
@@ -201,8 +198,7 @@ public class RowBasedGrouperHelper
       final int priority,
       final boolean hasQueryTimeout,
       final long queryTimeoutAt,
-      final int mergeBufferSize,
-      final GroupByStatsProvider.PerQueryStats perQueryStats
+      final int mergeBufferSize
   )
   {
     // concurrencyHint >= 1 for concurrent groupers, -1 for single-threaded
@@ -281,8 +277,7 @@ public class RowBasedGrouperHelper
           true,
           limitSpec,
           sortHasNonGroupingFields,
-          mergeBufferSize,
-          perQueryStats
+          mergeBufferSize
       );
     } else {
       final Grouper.KeySerdeFactory<RowBasedKey> combineKeySerdeFactory = new RowBasedKeySerdeFactory(
@@ -311,8 +306,7 @@ public class RowBasedGrouperHelper
           grouperSorter,
           priority,
           hasQueryTimeout,
-          queryTimeoutAt,
-          perQueryStats
+          queryTimeoutAt
       );
     }
 

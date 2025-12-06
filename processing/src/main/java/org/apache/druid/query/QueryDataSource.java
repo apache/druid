@@ -40,7 +40,7 @@ public class QueryDataSource implements DataSource
   private final Query<?> query;
 
   @JsonCreator
-  public QueryDataSource(@JsonProperty("query") Query query)
+  public QueryDataSource(@JsonProperty("query") Query<?> query)
   {
     this.query = Preconditions.checkNotNull(query, "'query' must be nonnull");
   }
@@ -56,7 +56,7 @@ public class QueryDataSource implements DataSource
   }
 
   @JsonProperty
-  public Query getQuery()
+  public Query<?> getQuery()
   {
     return query;
   }
