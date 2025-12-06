@@ -118,6 +118,7 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
   void loadData() throws IOException
   {
     msqApis = new EmbeddedMSQApis(cluster, overlord);
+    dataSource = "wiki_data";
     loadWikiData();
   }
 
