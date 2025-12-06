@@ -2656,6 +2656,66 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     );
   }
 
+  @Test
+  public void testOffsetSnapshot_filtersNullValues()
+  {
+    Map<String, Long> rawCurrent = new HashMap<>();
+    rawCurrent.put("partition-0", 100L);
+    rawCurrent.put("partition-1", null);    // will be filtered
+    rawCurrent.put("partition-2", 200L);
+
+    Map<String, Long> rawEnd = new HashMap<>();
+    rawEnd.put("partition-0", 300L);
+    rawEnd.put("partition-3", null);        // will be filtered
+
+    SeekableStreamSupervisor.OffsetSnapshot<String, Long> snapshot =
+        new SeekableStreamSupervisor.OffsetSnapshot<>(rawCurrent, rawEnd);
+
+    Assert.assertEquals(
+        ImmutableMap.of("partition-0", 100L, "partition-2", 200L),
+        snapshot.getCurrentOffsets()
+    );
+
+    Assert.assertEquals(
+        ImmutableMap.of("partition-0", 300L),
+        snapshot.getEndOffsets()
+    );
+  }
+
+  @Test
+  public void testOffsetSnapshot_handlesNullInputsGracefully()
+  {
+    SeekableStreamSupervisor.OffsetSnapshot<String, Long> snapshot1 =
+        new SeekableStreamSupervisor.OffsetSnapshot<>(null, ImmutableMap.of("p0", 100L));
+    Assert.assertTrue(snapshot1.getCurrentOffsets().isEmpty());
+    Assert.assertEquals(ImmutableMap.of("p0", 100L), snapshot1.getEndOffsets());
+
+    SeekableStreamSupervisor.OffsetSnapshot<String, Long> snapshot2 =
+        new SeekableStreamSupervisor.OffsetSnapshot<>(ImmutableMap.of("p0", 100L), null);
+    Assert.assertEquals(ImmutableMap.of("p0", 100L), snapshot2.getCurrentOffsets());
+    Assert.assertTrue(snapshot2.getEndOffsets().isEmpty());
+
+    SeekableStreamSupervisor.OffsetSnapshot<String, Long> snapshot3 =
+        new SeekableStreamSupervisor.OffsetSnapshot<>(null, null);
+    Assert.assertTrue(snapshot3.getCurrentOffsets().isEmpty());
+    Assert.assertTrue(snapshot3.getEndOffsets().isEmpty());
+  }
+
+  @Test
+  public void testOffsetSnapshot_emptyInputReturnsEmptyMap()
+  {
+    SeekableStreamSupervisor.OffsetSnapshot<String, Long> snapshot =
+        new SeekableStreamSupervisor.OffsetSnapshot<>(
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
+
+    Assert.assertTrue(snapshot.getCurrentOffsets().isEmpty());
+    Assert.assertSame(ImmutableMap.of(), snapshot.getCurrentOffsets());
+    Assert.assertTrue(snapshot.getEndOffsets().isEmpty());
+    Assert.assertSame(ImmutableMap.of(), snapshot.getEndOffsets());
+  }
+
   private void expectEmitterSupervisor(boolean suspended)
   {
     spec = createMock(SeekableStreamSupervisorSpec.class);
