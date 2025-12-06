@@ -122,7 +122,7 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
    */
   protected String ingestBasicData()
   {
-    String datasourceName = EmbeddedClusterApis.createTestDatasourceName();
+    String datasourceName = EmbeddedClusterApis.createTestDatasourceName(getDatasourcePrefix());
 
     final String taskId = IdUtils.getRandomId();
     final IndexTask task = MoreResources.Task.BASIC_INDEX.get().dataSource(datasourceName).withId(taskId);

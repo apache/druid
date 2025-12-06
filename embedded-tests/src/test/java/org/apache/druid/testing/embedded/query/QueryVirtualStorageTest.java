@@ -19,7 +19,6 @@
 
 package org.apache.druid.testing.embedded.query;
 
-import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.HumanReadableBytes;
@@ -119,7 +118,7 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
   void loadData() throws IOException
   {
     msqApis = new EmbeddedMSQApis(cluster, overlord);
-    dataSource = createTestDatasourceName();
+    dataSource = "wiki_data";
     loadWikiData();
   }
 
@@ -272,11 +271,6 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
   {
     Assertions.assertEquals(expectedCount, emitter.getMetricEventCount(metricName));
     return emitter.getLatestMetricEventValue(metricName, 0).longValue();
-  }
-
-  private String createTestDatasourceName()
-  {
-    return "wiki-" + IdUtils.getRandomId();
   }
 
   /**

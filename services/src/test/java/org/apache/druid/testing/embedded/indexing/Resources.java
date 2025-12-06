@@ -131,6 +131,23 @@ public class Resources
         throw new RuntimeException(e);
       }
     }
+
+    public static HttpInputSource kttm1Day()
+    {
+      try {
+        return new HttpInputSource(
+            List.of(new URIBuilder("https://static.imply.io/example-data/kttm-nested-v2/kttm-nested-v2-2019-08-25.json.gz").build()),
+            null,
+            null,
+            null,
+            null,
+            new HttpInputSourceConfig(null, null)
+        );
+      }
+      catch (URISyntaxException e) {
+        throw new RuntimeException(e);
+      }
+    }
   }
 
   /**

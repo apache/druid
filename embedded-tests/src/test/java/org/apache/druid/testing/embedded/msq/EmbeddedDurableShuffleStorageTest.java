@@ -107,7 +107,7 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
   final void setupData() throws IOException
   {
     msqApis = new EmbeddedMSQApis(cluster, overlord);
-    dataSource = EmbeddedClusterApis.createTestDatasourceName();
+    dataSource = EmbeddedClusterApis.createTestDatasourceName(getDatasourcePrefix());
     loadWikipediaTable();
   }
 

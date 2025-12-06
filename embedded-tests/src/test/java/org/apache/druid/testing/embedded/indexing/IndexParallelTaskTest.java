@@ -159,7 +159,7 @@ public class IndexParallelTaskTest extends EmbeddedClusterTestBase
     runQueries(dataSource);
 
     // Re-index into a different datasource, indexing 1 segment per sub-task
-    final String dataSource2 = EmbeddedClusterApis.createTestDatasourceName();
+    final String dataSource2 = EmbeddedClusterApis.createTestDatasourceName(getDatasourcePrefix());
     final TaskBuilder.IndexParallel reindexTaskSplitBySegment =
         TaskBuilder.ofTypeIndexParallel()
                    .dataSource(dataSource2)
@@ -185,7 +185,7 @@ public class IndexParallelTaskTest extends EmbeddedClusterTestBase
     runQueries(dataSource2);
 
     // Re-index into a different datasource, indexing 1 file per sub-task
-    final String dataSource3 = EmbeddedClusterApis.createTestDatasourceName();
+    final String dataSource3 = EmbeddedClusterApis.createTestDatasourceName(getDatasourcePrefix());
     final TaskBuilder.IndexParallel reindexTaskSplitByFile =
         TaskBuilder.ofTypeIndexParallel()
                    .dataSource(dataSource3)

@@ -26,6 +26,9 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.List;
+import java.util.Map;
+
 public class ClientSqlQueryTest
 {
   @Test
@@ -58,5 +61,12 @@ public class ClientSqlQueryTest
         ImmutableList.of(new ClientSqlParameter("ARRAY", ImmutableList.of(-25.7, 20.2, 36.85)))
     );
     Assert.assertEquals(query, jsonMapper.readValue(jsonMapper.writeValueAsString(query), ClientSqlQuery.class));
+  }
+
+  @Test
+  public void testSimple()
+  {
+    final ClientSqlQuery query = ClientSqlQuery.simple("select 1");
+    Assert.assertEquals(new ClientSqlQuery("select 1", null, false, false, false, Map.of(), List.of()), query);
   }
 }

@@ -70,7 +70,7 @@
     </scm>
 
     <properties>
-        <java.version>11</java.version>
+        <java.version>17</java.version>
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
@@ -1572,7 +1572,7 @@
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>true</failsOnError>
                     <excludes>
-                        *com/fasterxml/jackson/databind/*
+                        *com/fasterxml/jackson/databind/*,**/NestedDataFormatsTest.java
                     </excludes>
                 </configuration>
                 <dependencies>

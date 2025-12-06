@@ -51,7 +51,7 @@ public class ITCombiningInputSourceParallelIndexTest extends AbstractITBatchInde
   public void testIndexData() throws Exception
   {
     final String indexDatasource = dataSource;
-    final String combiningDatasource = EmbeddedClusterApis.createTestDatasourceName();
+    final String combiningDatasource = EmbeddedClusterApis.createTestDatasourceName(getDatasourcePrefix());
     Map<String, Object> inputFormatMap = new ImmutableMap
         .Builder<String, Object>()
         .put("type", "json")
