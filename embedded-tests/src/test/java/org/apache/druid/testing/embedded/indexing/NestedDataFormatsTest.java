@@ -67,6 +67,7 @@ public class NestedDataFormatsTest extends EmbeddedClusterTestBase
   {
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
+                               .useDefaultTimeoutForLatchableEmitter(60)
                                .addServer(overlord)
                                .addServer(coordinator)
                                .addServer(new EmbeddedIndexer())
@@ -143,12 +144,12 @@ public class NestedDataFormatsTest extends EmbeddedClusterTestBase
     final String scanQueryResultNoneObjectStorage = cluster.callApi().runSql(scanQuery, dataSource);
     // CHECKSTYLE: text blocks not supported in current Checkstyle version
     Assertions.assertEquals(
-         """
-         "{""type"":""PercentClear"",""percentage"":85}","{""type"":""Mobile Browser"",""category"":""Smartphone"",""browser"":""Chrome Mobile"",""browser_version"":""50.0.2661.89"",""os"":""Android"",""platform"":""Android""}"
-         """.trim(), scanQueryResultDefaultFormat);
+        """
+            "{""type"":""PercentClear"",""percentage"":85}","{""type"":""Mobile Browser"",""category"":""Smartphone"",""browser"":""Chrome Mobile"",""browser_version"":""50.0.2661.89"",""os"":""Android"",""platform"":""Android""}"
+            """.trim(), scanQueryResultDefaultFormat);
     Assertions.assertEquals(
-         """
-         "{""percentage"":85,""type"":""PercentClear""}","{""browser"":""Chrome Mobile"",""browser_version"":""50.0.2661.89"",""category"":""Smartphone"",""os"":""Android"",""platform"":""Android"",""type"":""Mobile Browser""}"
-         """.trim(), scanQueryResultNoneObjectStorage);
+        """
+            "{""percentage"":85,""type"":""PercentClear""}","{""browser"":""Chrome Mobile"",""browser_version"":""50.0.2661.89"",""category"":""Smartphone"",""os"":""Android"",""platform"":""Android"",""type"":""Mobile Browser""}"
+            """.trim(), scanQueryResultNoneObjectStorage);
   }
 }

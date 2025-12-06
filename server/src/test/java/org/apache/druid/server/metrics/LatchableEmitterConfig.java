@@ -35,7 +35,7 @@ public class LatchableEmitterConfig
       @JsonProperty("defaultWaitTimeoutMillis") @Nullable Long defaultWaitTimeoutMillis
   )
   {
-    this.defaultWaitTimeoutMillis = Configs.valueOrDefault(defaultWaitTimeoutMillis, 50_000);
+    this.defaultWaitTimeoutMillis = Configs.valueOrDefault(defaultWaitTimeoutMillis, 10_000);
   }
 
   /**
