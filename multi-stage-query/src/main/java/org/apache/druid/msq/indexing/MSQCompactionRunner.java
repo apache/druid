@@ -717,40 +717,57 @@ public class MSQCompactionRunner implements CompactionRunner
     final int totalNumSpecs = tasks.size();
     log.info("Generated [%d] MSQControllerTask specs", totalNumSpecs);
 
+    TaskStatus firstFailure = null;
     int failCnt = 0;
 
-    for (MSQControllerTask eachTask : tasks) {
-      final String json = toolbox.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(eachTask);
-      if (!currentSubTaskHolder.setTask(eachTask)) {
+    for (int taskCnt = 0; taskCnt < tasks.size(); taskCnt++) {
+      final MSQControllerTask task = tasks.get(taskCnt);
+      final String json = toolbox.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(task);
+      if (!currentSubTaskHolder.setTask(task)) {
         String errMsg = "Task was asked to stop. Finish as failed.";
-        log.info(errMsg);
+        log.info("%s", errMsg);
         return TaskStatus.failure(compactionTaskId, errMsg);
       }
       try {
-        if (eachTask.isReady(toolbox.getTaskActionClient())) {
-          log.info("Running MSQControllerTask: " + json);
-          final TaskStatus eachResult = eachTask.run(toolbox);
-          if (!eachResult.isSuccess()) {
+        if (task.isReady(toolbox.getTaskActionClient())) {
+          log.info("Running MSQControllerTask[%d]: %s", taskCnt, json);
+          final TaskStatus taskStatus = task.run(toolbox);
+          if (!taskStatus.isSuccess()) {
             failCnt++;
-            log.warn("Failed to run MSQControllerTask: [%s].\nTrying the next MSQControllerTask.", json);
+            log.warn("Failed to run MSQControllerTask[%d]: %s", taskCnt, taskStatus.getErrorMsg());
+            if (firstFailure == null) {
+              firstFailure = taskStatus;
+            }
           }
         } else {
           failCnt++;
-          log.warn("MSQControllerTask is not ready: [%s].\nTrying the next MSQControllerTask.", json);
+          log.warn("MSQControllerTask[%d] is not ready.", taskCnt);
         }
       }
       catch (Exception e) {
         failCnt++;
-        log.warn(e, "Failed to run MSQControllerTask: [%s].\nTrying the next MSQControllerTask.", json);
+        log.warn(e, "Failed to run MSQControllerTask[%d].", taskCnt);
       }
     }
-    String msg = StringUtils.format(
+
+    log.info(
         "Ran [%d] MSQControllerTasks, [%d] succeeded, [%d] failed",
         totalNumSpecs,
         totalNumSpecs - failCnt,
         failCnt
     );
-    log.info(msg);
-    return failCnt == 0 ? TaskStatus.success(compactionTaskId) : TaskStatus.failure(compactionTaskId, msg);
+
+    if (failCnt == 0) {
+      return TaskStatus.success(compactionTaskId);
+    } else if (firstFailure != null && failCnt == 1) {
+      return TaskStatus.failure(compactionTaskId, firstFailure.getErrorMsg());
+    } else {
+      final StringBuilder msgBuilder =
+          new StringBuilder().append(failCnt).append("/").append(totalNumSpecs).append(" jobs failed");
+      if (firstFailure != null) {
+        msgBuilder.append("; first failure was: ").append(firstFailure.getErrorMsg());
+      }
+      return TaskStatus.failure(compactionTaskId, msgBuilder.toString());
+    }
   }
 }
