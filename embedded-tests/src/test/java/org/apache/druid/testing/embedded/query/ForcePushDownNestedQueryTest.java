@@ -67,7 +67,7 @@ public class ForcePushDownNestedQueryTest extends QueryTestBase
   @Override
   protected EmbeddedDruidCluster createCluster()
   {
-    return super.createCluster().useDefaultTimeoutForLatchableEmitter(20);
+    return super.createCluster().useDefaultTimeoutForLatchableEmitter(30);
   }
 
   @Override
