@@ -19,6 +19,8 @@
 
 package org.apache.druid.server.compaction;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CreateDataSegments;
@@ -26,6 +28,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 
+import java.io.IOException;
 import java.util.List;
 
 public class MostFragmentedIntervalFirstPolicyTest
@@ -192,6 +195,40 @@ public class MostFragmentedIntervalFirstPolicyTest
     Assertions.assertEquals(0, policy.compareCandidates(candidateB, candidateA));
   }
 
+  @Test
+  public void test_equals()
+  {
+    EqualsVerifier.forClass(MostFragmentedIntervalFirstPolicy.class)
+                  .usingGetClass()
+                  .withIgnoredFields("comparator")
+                  .verify();
+  }
+
+  @Test
+  public void test_serde_allFieldsSet() throws IOException
+  {
+    final MostFragmentedIntervalFirstPolicy policy = new MostFragmentedIntervalFirstPolicy(
+        1,
+        HumanReadableBytes.valueOf(2),
+        HumanReadableBytes.valueOf(3),
+        "foo"
+    );
+    final DefaultObjectMapper mapper = new DefaultObjectMapper();
+    final CompactionCandidateSearchPolicy policy2 =
+        mapper.readValue(mapper.writeValueAsString(policy), CompactionCandidateSearchPolicy.class);
+    Assertions.assertEquals(policy, policy2);
+  }
+
+  @Test
+  public void test_serde_noFieldsSet() throws IOException
+  {
+    final MostFragmentedIntervalFirstPolicy policy = new MostFragmentedIntervalFirstPolicy(null, null, null, null);
+    final DefaultObjectMapper mapper = new DefaultObjectMapper();
+    final CompactionCandidateSearchPolicy policy2 =
+        mapper.readValue(mapper.writeValueAsString(policy), CompactionCandidateSearchPolicy.class);
+    Assertions.assertEquals(policy, policy2);
+  }
+
   private CompactionCandidate createCandidate(int numSegments, long avgSizeBytes)
   {
     final CompactionStatistics dummyCompactedStats = CompactionStatistics.create(1L, 1L, 1L);
@@ -201,7 +238,7 @@ public class MostFragmentedIntervalFirstPolicyTest
         1L
     );
     return CompactionCandidate.from(List.of(SEGMENT), null)
-        .withCurrentStatus(CompactionStatus.pending(dummyCompactedStats, uncompactedStats, ""));
+                              .withCurrentStatus(CompactionStatus.pending(dummyCompactedStats, uncompactedStats, ""));
   }
 
   private void verifyCandidateIsEligible(CompactionCandidate candidate, MostFragmentedIntervalFirstPolicy policy)
