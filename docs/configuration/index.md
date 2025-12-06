@@ -2223,9 +2223,11 @@ context). If query does have `maxQueuedBytes` in the context, then that value is
 
 ### TopN query config
 
+The `druid.query.topN.minTopNThreshold` configuration property has been deprecated. Use the `minTopNThreshold` query context parameter instead.
+
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.topN.minTopNThreshold`|See [TopN Aliasing](../querying/topnquery.md#aliasing) for details.|1000|
+|`druid.query.topN.minTopNThreshold`|**Deprecated.** Use the `minTopNThreshold` query context parameter instead. See [TopN Aliasing](../querying/topnquery.md#aliasing) for details.|1000|
 
 ### Search query config
 
