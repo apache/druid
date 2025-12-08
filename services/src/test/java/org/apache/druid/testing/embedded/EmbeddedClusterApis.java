@@ -52,8 +52,8 @@ import org.junit.jupiter.api.Assertions;
 
 import java.io.Closeable;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -236,7 +236,7 @@ public class EmbeddedClusterApis implements EmbeddedResource
    */
   public int getTaskCount(String status, String dataSource)
   {
-    return ImmutableList.copyOf((Collection<?>) onLeaderOverlord(o -> o.taskStatuses(status, dataSource, 100))).size();
+    return ImmutableList.copyOf((Iterator<?>) onLeaderOverlord(o -> o.taskStatuses(status, dataSource, 100))).size();
   }
 
   /**
