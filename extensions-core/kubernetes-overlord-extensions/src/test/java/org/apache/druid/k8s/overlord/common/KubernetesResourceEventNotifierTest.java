@@ -30,8 +30,8 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -82,56 +82,6 @@ public class KubernetesResourceEventNotifierTest
     Pod result = future.get(1, TimeUnit.SECONDS);
     assertSame(mockPod, result);
     assertTrue(future.isDone());
-  }
-
-  @Test
-  public void testMultipleWatchers_AllNotified() throws Exception
-  {
-    String jobName = "test-job";
-    Job mockJob = createMockJob(jobName);
-
-    CompletableFuture<Job> future1 = notifier.waitForJobChange(jobName);
-    CompletableFuture<Job> future2 = notifier.waitForJobChange(jobName);
-    CompletableFuture<Job> future3 = notifier.waitForJobChange(jobName);
-
-    assertFalse(future1.isDone());
-    assertFalse(future2.isDone());
-    assertFalse(future3.isDone());
-
-    notifier.notifyJobChange(jobName, mockJob);
-
-    Job result1 = future1.get(1, TimeUnit.SECONDS);
-    Job result2 = future2.get(1, TimeUnit.SECONDS);
-    Job result3 = future3.get(1, TimeUnit.SECONDS);
-
-    assertSame(mockJob, result1);
-    assertSame(mockJob, result2);
-    assertSame(mockJob, result3);
-  }
-
-  @Test
-  public void testMultiplePodWatchers_AllNotified() throws Exception
-  {
-    String jobName = "test-job";
-    Pod mockPod = createMockPod(jobName);
-
-    CompletableFuture<Pod> future1 = notifier.waitForPodChange(jobName);
-    CompletableFuture<Pod> future2 = notifier.waitForPodChange(jobName);
-    CompletableFuture<Pod> future3 = notifier.waitForPodChange(jobName);
-
-    assertFalse(future1.isDone());
-    assertFalse(future2.isDone());
-    assertFalse(future3.isDone());
-
-    notifier.notifyPodChange(jobName, mockPod);
-
-    Pod result1 = future1.get(1, TimeUnit.SECONDS);
-    Pod result2 = future2.get(1, TimeUnit.SECONDS);
-    Pod result3 = future3.get(1, TimeUnit.SECONDS);
-
-    assertSame(mockPod, result1);
-    assertSame(mockPod, result2);
-    assertSame(mockPod, result3);
   }
 
   @Test
@@ -270,25 +220,27 @@ public class KubernetesResourceEventNotifierTest
   }
 
   @Test
-  public void testWaitForJobChange_returnsSameFutureIfOneExists()
+  public void test_waitForJobChange_multipleWaitsCancelsOldFutureAndCreatesNewOne()
   {
     String jobName = "test-job";
 
     CompletableFuture<Job> future1 = notifier.waitForJobChange(jobName);
     CompletableFuture<Job> future2 = notifier.waitForJobChange(jobName);
 
-    assertEquals(future1, future2);
+    assertTrue(future1.isCancelled());
+    assertNotEquals(future1, future2);
   }
 
   @Test
-  public void testWaitForPodChange_returnsSameFutureIfOneExists()
+  public void test_waitForPodChange_multipleWaitsCancelsOldFutureAndCreatesNewOne()
   {
     String jobName = "test-job";
 
     CompletableFuture<Pod> future1 = notifier.waitForPodChange(jobName);
     CompletableFuture<Pod> future2 = notifier.waitForPodChange(jobName);
 
-    assertEquals(future1, future2);
+    assertTrue(future1.isCancelled());
+    assertNotEquals(future1, future2);
   }
 
   private Job createMockJob(String name)

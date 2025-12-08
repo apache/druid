@@ -167,7 +167,7 @@ public class DruidKubernetesCachingClient
                         .inform(
                             new InformerEventHandler<>(
                                 (pod, eventType) -> {
-                                  log.debug("Pod[%s] got %s", pod.getMetadata().getName(), eventType.name().toLowerCase());
+                                  log.debug("Pod[%s] got %s", pod.getMetadata().getName(), eventType.name());
                                   notifyPodChange(pod);
                                 }
                             ), informerResyncPeriodMillis
@@ -208,7 +208,7 @@ public class DruidKubernetesCachingClient
                         .inform(
                             new InformerEventHandler<>(
                                 (job, eventType) -> {
-                                  log.debug("Job[%s] got %s", job.getMetadata().getName(), eventType.name().toLowerCase());
+                                  log.debug("Job[%s] got %s", job.getMetadata().getName(), eventType.name());
                                   eventNotifier.notifyJobChange(job.getMetadata().getName(), job);
                                 }
                             ), informerResyncPeriodMillis
@@ -261,6 +261,16 @@ public class DruidKubernetesCachingClient
   public CompletableFuture<Pod> waitForPodChange(String jobName)
   {
     return eventNotifier.waitForPodChange(jobName);
+  }
+
+  public void cancelJobWatcher(String jobName)
+  {
+    eventNotifier.cancelJobWatcher(jobName);
+  }
+
+  public void cancelPodWatcher(String jobName)
+  {
+    eventNotifier.cancelPodWatcher(jobName);
   }
 
   public long getInformerResyncPeriodMillis()

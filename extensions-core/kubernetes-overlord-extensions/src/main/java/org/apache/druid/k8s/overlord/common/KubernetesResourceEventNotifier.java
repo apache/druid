@@ -30,7 +30,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * Manages event notifications for Kubernetes resources (Jobs and Pods).
  * <p>
  * Allows tasks to wait for specific resource changes without polling, improving efficiency and responsiveness.
- * Crtical component of {@link CachingKubernetesPeonClient} functionality.
+ * Critical component of {@link CachingKubernetesPeonClient} functionality.
+ * </p>
+ * <p>
+ * This implementation assumes only one waiter per job/pod at a time. If a new waiter is registered for a job that
+ * already has one, the previous waiter will be cancelled.
  * </p>
  */
 public class KubernetesResourceEventNotifier
@@ -42,62 +46,106 @@ public class KubernetesResourceEventNotifier
 
   /**
    * Register to be notified when a job with the given name changes.
-   * The returned future will complete when the job is added, updated, or deleted.
+   * <p>
+   * IMPORTANT: Callers must call {@link #cancelJobWatcher(String)} when done waiting to avoid resource leaks.
    *
    * @param jobName The name of the job to watch
    * @return A future that completes when the job changes
    */
   public CompletableFuture<Job> waitForJobChange(String jobName)
   {
-    return jobWatchers.computeIfAbsent(jobName, k -> {
-      log.debug("Creating new watcher for job [%s]", jobName);
-      return new CompletableFuture<>();
-    });
+    CompletableFuture<Job> future = new CompletableFuture<>();
+    CompletableFuture<Job> previous = jobWatchers.put(jobName, future);
 
+    if (previous != null && !previous.isDone()) {
+      log.warn("Replacing active watcher for job [%s] - multiple waiters detected", jobName);
+      previous.cancel(true);
+    }
+
+    log.debug("Registered watcher for job [%s]", jobName);
+    return future;
   }
 
   /**
    * Register to be notified when a pod for the given job name changes.
-   * The returned future will complete when a pod with the job-name label changes.
+   * <p>
+   * IMPORTANT: Callers must call {@link #cancelPodWatcher(String)} when done waiting to avoid resource leaks.
    *
    * @param jobName The job-name label value to watch for
    * @return A future that completes when a matching pod changes
    */
   public CompletableFuture<Pod> waitForPodChange(String jobName)
   {
-    return podWatchers.computeIfAbsent(jobName, k -> {
-      log.debug("Creating new watcher for pod with job-name [%s]", jobName);
-      return new CompletableFuture<>();
-    });
+    CompletableFuture<Pod> future = new CompletableFuture<>();
+    CompletableFuture<Pod> previous = podWatchers.put(jobName, future);
+
+    if (previous != null && !previous.isDone()) {
+      log.warn("Replacing active watcher for pod with job-name [%s] - multiple waiters detected", jobName);
+      previous.cancel(true);
+    }
+
+    log.debug("Registered watcher for pod with job-name [%s]", jobName);
+    return future;
   }
 
   /**
-   * Notify all watchers that a job with the given name has changed and remove the watcher from the map.
+   * Cancel and remove a job watcher. Safe to call even if the future has already completed.
+   *
+   * @param jobName The name of the job to stop watching
+   */
+  public void cancelJobWatcher(String jobName)
+  {
+    CompletableFuture<Job> future = jobWatchers.remove(jobName);
+    if (future != null && !future.isDone()) {
+      log.debug("Cancelling watcher for job [%s]", jobName);
+      future.cancel(true);
+    }
+  }
+
+  /**
+   * Cancel and remove a pod watcher. Safe to call even if the future has already completed.
+   *
+   * @param jobName The job-name label value to stop watching
+   */
+  public void cancelPodWatcher(String jobName)
+  {
+    CompletableFuture<Pod> future = podWatchers.remove(jobName);
+    if (future != null && !future.isDone()) {
+      log.debug("Cancelling watcher for pod with job-name [%s]", jobName);
+      future.cancel(true);
+    }
+  }
+
+  /**
+   * Notify the waiter that a job with the given name has changed.
+   * Completes the future and removes it from the map.
    *
    * @param jobName The name of the job that changed
+   * @param job The job that changed
    */
   public void notifyJobChange(String jobName, Job job)
   {
     CompletableFuture<Job> future = jobWatchers.remove(jobName);
     if (future != null) {
-      log.debug("Notifying watchers of job [%s] change", jobName);
+      log.debug("Notifying watcher of job [%s] change", jobName);
       future.complete(job);
     }
   }
 
   /**
-   * Notify all watchers that a pod for the given job name has changed and remove the watcher from the map.
+   * Notify the waiter that a pod for the given job name has changed.
+   * Completes the future and removes it from the map.
    *
    * @param jobName The job-name label value that changed
+   * @param pod The pod that changed
    */
   public void notifyPodChange(String jobName, Pod pod)
   {
     CompletableFuture<Pod> future = podWatchers.remove(jobName);
     if (future != null) {
-      log.debug("Notifying watchers of pod change for job-name [%s]", jobName);
+      log.debug("Notifying watcher of pod change for job-name [%s]", jobName);
       future.complete(pod);
     }
-
   }
 
   /**

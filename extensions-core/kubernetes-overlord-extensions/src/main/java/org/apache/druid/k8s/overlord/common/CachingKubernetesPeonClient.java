@@ -30,7 +30,9 @@ import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -69,16 +71,12 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
     Stopwatch stopwatch = Stopwatch.createStarted();
     boolean jobSeenInCache = false;
 
-    // Set up to watch for job changes
-    CompletableFuture<Job> jobFuture = cachingClient.waitForJobChange(taskId.getK8sJobName());
-
-    // We will loop until the full timeout is reached if the job is seen in cache. If the job does not show up in the cache we will exit earlier.
-    // In this loop we first check the cache to see if our job is there and complete. This avoids missing notifications that happened before we set up the watch.
-    // If the job is not complete we wait for a notification of a job change or a timeout.
-    // If it is a timeout, we loop back to check the cache again.
-    // If it is a job change notification, we check the job state and exit if complete, or loop again if still running.
-    do {
-      try {
+    try {
+      CompletableFuture<Job> jobFuture = cachingClient.waitForJobChange(taskId.getK8sJobName());
+      while (stopwatch.hasNotElapsed(timeout) && (jobSeenInCache || stopwatch.hasNotElapsed(jobMustBeSeenWithin))) {
+        if (jobFuture.isDone()) {
+          jobFuture = cachingClient.waitForJobChange(taskId.getK8sJobName());
+        }
         Optional<Job> maybeJob = getPeonJob(taskId.getK8sJobName());
         if (maybeJob.isPresent()) {
           jobSeenInCache = true;
@@ -93,40 +91,34 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
           // Job was in cache before, but now it's gone - it was deleted and will never complete.
           log.warn("K8s Job[%s] was not found. It can happen if the task was canceled", taskId.getK8sJobName());
           return new JobResponse(null, PeonPhase.FAILED);
-        }
-
-        // We wake up every informer resync period to avoid event notifier misses.
-        Job job = jobFuture.get(cachingClient.getInformerResyncPeriodMillis(), TimeUnit.MILLISECONDS);
-
-        // Immediately set up to watch for the next change in case we need to wait again
-        jobFuture = cachingClient.waitForJobChange(taskId.getK8sJobName());
-        log.debug("Received job[%s] change notification", taskId.getK8sJobName());
-        jobSeenInCache = true;
-
-        if (job == null) {
-          log.warn("K8s job[%s] was not found. It can happen if the task was canceled", taskId.getK8sJobName());
-          return new JobResponse(null, PeonPhase.FAILED);
-        }
-
-        JobResponse currentResponse = determineJobResponse(job);
-        if (currentResponse.getPhase() != PeonPhase.RUNNING) {
-          return currentResponse;
         } else {
-          log.debug("K8s job[%s] is still running", taskId.getK8sJobName());
+          log.debug("K8s job[%s] not yet found in cache", taskId.getK8sJobName());
+        }
+
+        try {
+          jobFuture.get(cachingClient.getInformerResyncPeriodMillis(), TimeUnit.MILLISECONDS);
+        }
+        catch (ExecutionException | CancellationException e) {
+          Throwable cause = e.getCause();
+          if (cause instanceof CancellationException) {
+            log.noStackTrace().warn("Job change watch for job[%s] was cancelled", taskId.getK8sJobName());
+          } else {
+            log.noStackTrace().warn(cause, "Exception while waiting for change notification of job[%s]", taskId.getK8sJobName());
+          }
+        }
+        catch (TimeoutException e) {
+          // No job change event notified within the timeout time. If there is more time, it will loop back and check the cache again.
+          log.debug("Timeout waiting for change notification of job[%s].", taskId.getK8sJobName());
+        }
+        catch (InterruptedException e) {
+          throw DruidException.defensive(e, "Interrupted waiting for job change notification for job[%s]", taskId.getK8sJobName());
         }
       }
-      catch (TimeoutException e) {
-        // A timeout here is not a problem, it forces us to loop around and check the cache again.
-        // This prevents the case where we miss a notification and wait forever.
-        log.debug("Timeout waiting for change notification of job[%s]. Waiting until full job timeout.", taskId.getK8sJobName());
-      }
-      catch (InterruptedException e) {
-        throw DruidException.defensive(e, "Interrupted waiting for job change notification for job[%s]", taskId.getK8sJobName());
-      }
-      catch (Throwable e) {
-        log.noStackTrace().warn(e, "Exception while waiting for change notification of job[%s]", taskId.getK8sJobName());
-      }
-    } while (stopwatch.hasNotElapsed(timeout) && (jobSeenInCache || stopwatch.hasNotElapsed(jobMustBeSeenWithin)));
+    }
+    finally {
+      // Clean up: remove from map and cancel if still pending
+      cachingClient.cancelJobWatcher(taskId.getK8sJobName());
+    }
 
     log.warn("Timed out waiting for K8s job[%s] to complete", taskId.getK8sJobName());
     return new JobResponse(null, PeonPhase.FAILED);
@@ -161,78 +153,61 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
     });
   }
 
+  @Override
   @Nullable
   protected Pod waitUntilPeonPodCreatedAndReady(String jobName, long howLong, TimeUnit timeUnit)
   {
     Duration timeout = Duration.millis(timeUnit.toMillis(howLong));
     Stopwatch stopwatch = Stopwatch.createStarted();
-    String podName = "unknown";
-    boolean podSeenInCache = false;
 
-    // Set up to watch for pod changes
-    CompletableFuture<Pod> podFuture = cachingClient.waitForPodChange(jobName);
-
-    // We will loop until the specified timeout is reached, or we see the pod become ready, whichever comes first.
-    // We eagerly check the cache first to avoid missing notifications that happened before we set up the watch.
-    // If the pod is not ready we wait for a notification of a pod change or a timeout.
-    // If it is a timeout, we loop back to check the cache again (if there is time)
-    // If it is a pod change notification, we check the pod state and exit if ready, or loop again if still not ready.
-    do {
-      try {
-        // First check to see if pod is already in cache and ready in case our completion future started after the update event fired
+    try {
+      CompletableFuture<Pod> podFuture = cachingClient.waitForPodChange(jobName);
+      while (stopwatch.hasNotElapsed(timeout)) {
+        if (podFuture.isDone()) {
+          podFuture = cachingClient.waitForPodChange(jobName);
+        }
         Optional<Pod> maybePod = getPeonPod(jobName);
         if (maybePod.isPresent()) {
-          podSeenInCache = true;
           Pod pod = maybePod.get();
-          podName = pod.getMetadata().getName();
-
+          String podName = pod.getMetadata() != null && pod.getMetadata().getName() != null
+                    ? pod.getMetadata().getName()
+                    : "unknown";
           if (isPodRunningOrComplete(pod)) {
-            log.info("Pod[%s] for job[%s] is running or complete", podName, jobName);
+            log.info("Pod[%s] for job[%s] is now in Running/Complete state", podName, jobName);
             return pod;
           } else {
-            log.debug("Pod[%s] for job[%s] exists but not ready yet", podName, jobName);
+            log.debug("Pod[%s] for job[%s] found in cache but not yet Running/Complete", podName, jobName);
           }
         } else {
-          log.info("Pod for job[%s] not created yet", jobName);
+          log.debug("Pod for job[%s] not yet found in cache", jobName);
         }
 
-        // We wake up every informer resync period to avoid event notifier misses.
-        Pod pod = podFuture.get(cachingClient.getInformerResyncPeriodMillis(), TimeUnit.MILLISECONDS);
-
-        podFuture = cachingClient.waitForPodChange(jobName);
-        log.debug("Received pod[%s] change notification for job[%s]", podName, jobName);
-        if (pod == null) {
-          log.warn("Pod[%s] for job[%s] is null. This is unusual. Investigate Druid and k8s logs.", podName, jobName);
-          return null;
-        } else {
-          podSeenInCache = true;
-          podName = pod.getMetadata().getName();
-          if (isPodRunningOrComplete(pod)) {
-            log.info("Pod[%s] for job[%s] is running or complete", podName, jobName);
-            return pod;
+        try {
+          podFuture.get(cachingClient.getInformerResyncPeriodMillis(), TimeUnit.MILLISECONDS);
+        }
+        catch (ExecutionException | CancellationException e) {
+          // This is unusual. Log warning but try to continue
+          Throwable cause = e.getCause();
+          if (cause instanceof CancellationException) {
+            log.noStackTrace().warn("Pod change watch for job[%s] was cancelled", jobName);
           } else {
-            log.debug("Pod[%s] for job[%s] exists but not ready yet", podName, jobName);
+            log.noStackTrace().warn(cause, "Unexpected exception while waiting for pod change notification for job[%s]", jobName);
           }
         }
+        catch (TimeoutException e) {
+          // No pod change event notified within the timeout time. If there is more time, it will loop back and check the cache again.
+          log.debug("Timeout waiting for change notification of pod for job[%s].", jobName);
+        }
+        catch (InterruptedException e) {
+          throw DruidException.defensive(e, "Interrupted waiting for pod change notification for job[%s]", jobName);
+        }
       }
-      catch (TimeoutException e) {
-        // A timeout here is not a problem, it forces us to loop around and check the cache again.
-        // This prevents the case where we miss a notification and wait forever.
-        log.debug("Timeout waiting for pod change notification for job[%s], If full timeout has not been reached, the pod startup wait will continue", jobName);
-      }
-      catch (InterruptedException e) {
-        throw DruidException.defensive(e, "Interrupted waiting for pod change notification for job[%s]", jobName);
-      }
-      catch (Throwable e) {
-        log.warn("Unexpected exception[%s] waiting for pod change notification for job [%s]. Error message[%s]", e.getClass().getName(), jobName, e.getMessage());
-      }
-    } while (stopwatch.hasNotElapsed(timeout));
-
-    if (podSeenInCache) {
-      log.warn("Timeout waiting for pod[%s] for job[%s] to become ready after it was created", podName, jobName);
-    } else {
-      log.warn("Timeout waiting for pod for job[%s] to be created", jobName);
     }
+    finally {
+      // Clean up: remove from map and cancel if still pending
+      cachingClient.cancelPodWatcher(jobName);
+    }
+    log.warn("Timed out waiting for pod for job[%s] to be created and ready", jobName);
     return null;
   }
 

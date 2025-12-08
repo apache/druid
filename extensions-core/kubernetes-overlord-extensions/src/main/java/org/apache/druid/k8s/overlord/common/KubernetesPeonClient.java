@@ -90,12 +90,7 @@ public class KubernetesPeonClient
       createK8sJobWithRetries(job);
       log.info("Submitted job[%s] for task[%s]. Waiting for POD to launch.", jobName, task.getId());
 
-      // Wait for the pod to be available
-      Pod mainPod = getPeonPodWithRetries(jobName);
-      log.info("Pod for job[%s] launched for task[%s]. Waiting for pod to be in running state.", jobName, task.getId());
-
-      // Wait for the pod to be in state running, completed, or failed.
-      Pod result = waitForPodResultWithRetries(mainPod, howLong, timeUnit);
+      Pod result = waitUntilPeonPodCreatedAndReady(jobName, howLong, timeUnit);
 
       if (result == null) {
         throw new ISE("K8s pod for the task [%s] appeared and disappeared. It can happen if the task was canceled", task.getId());
@@ -105,6 +100,29 @@ public class KubernetesPeonClient
       emitK8sPodMetrics(task, "k8s/peon/startup/time", duration);
       return result;
     });
+  }
+
+  /**
+   * Waits until a pod for the given job is created and ready to be monitored.
+   * <p>
+   * A pod can appear and dissapear in some cases, such as the task being canceled. In this case, null is returned and
+   * the caller should handle accordingly.
+   * </p>
+   *
+   * @param jobName  the name of the job whose pod we're waiting for
+   * @param howLong  the maximum time to wait
+   * @param timeUnit the time unit for the timeout
+   * @return the {@link Pod} which was waited for or null if the pod appeared and dissapeared
+   * @throws DruidException if the pod never appears within the timeout period
+   */
+  protected Pod waitUntilPeonPodCreatedAndReady(String jobName, long howLong, TimeUnit timeUnit)
+  {
+    // Wait for the pod to be available
+    Pod mainPod = getPeonPodWithRetries(jobName);
+    log.info("Pod for job[%s] launched. Waiting for pod to be in running state.", jobName);
+
+    // Wait for the pod to be in state running, completed, or failed.
+    return waitForPodResultWithRetries(mainPod, howLong, timeUnit);
   }
 
   public JobResponse waitForPeonJobCompletion(K8sTaskId taskId, long howLong, TimeUnit unit)
