@@ -95,7 +95,7 @@ public class UnionQueryTest extends EmbeddedClusterTestBase
 
     final List<String> datasourceNames = IntStream
         .range(0, numDatasources)
-        .mapToObj(i -> EmbeddedClusterApis.createTestDatasourceName(getDatasourcePrefix()))
+        .mapToObj(i -> EmbeddedClusterApis.createTestDatasourceName())
         .collect(Collectors.toList());
 
     for (String datasourceName : datasourceNames) {

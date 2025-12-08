@@ -60,7 +60,7 @@ public class QueryErrorTest extends QueryTestBase
   @Override
   protected void beforeAll()
   {
-    testDataSourceName = EmbeddedClusterApis.createTestDatasourceName(getDatasourcePrefix());
+    testDataSourceName = EmbeddedClusterApis.createTestDatasourceName();
     EmbeddedMSQApis msqApi = new EmbeddedMSQApis(cluster, overlord);
     SqlTaskStatus ingestionStatus = msqApi.submitTaskSql(StringUtils.format(
         "REPLACE INTO %s\n"

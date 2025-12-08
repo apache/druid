@@ -24,6 +24,7 @@ package org.apache.druid.segment;
  */
 public final class TestDataSource
 {
+  public static final String PREFIX = "datasource";
   public static final String WIKI = "wiki";
   public static final String KOALA = "koala";
 }

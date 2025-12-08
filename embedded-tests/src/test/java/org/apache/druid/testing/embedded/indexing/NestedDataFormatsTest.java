@@ -57,12 +57,6 @@ public class NestedDataFormatsTest extends EmbeddedClusterTestBase
   private final String defaultFormat = "koala_default";
 
   @Override
-  protected String getDatasourcePrefix()
-  {
-    return TestDataSource.KOALA;
-  }
-
-  @Override
   protected EmbeddedDruidCluster createCluster()
   {
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()

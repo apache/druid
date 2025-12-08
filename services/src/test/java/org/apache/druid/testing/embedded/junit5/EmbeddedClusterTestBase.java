@@ -20,7 +20,6 @@
 package org.apache.druid.testing.embedded.junit5;
 
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -99,11 +98,6 @@ public abstract class EmbeddedClusterTestBase
   @BeforeEach
   protected void refreshDatasourceName()
   {
-    dataSource = EmbeddedClusterApis.createTestDatasourceName(getDatasourcePrefix());
-  }
-
-  protected String getDatasourcePrefix()
-  {
-    return TestDataSource.WIKI;
+    dataSource = EmbeddedClusterApis.createTestDatasourceName();
   }
 }
