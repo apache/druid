@@ -73,9 +73,9 @@ Other configurations required are:
 Druid operators can dynamically tune certain features within this extension. You don't need to restart the Overlord
 service for these changes to take effect.
 
-Druid can dynamically tune [pod template selection](#pod-template-selection), which allows you to configure the pod 
-template based on the task to be run. To enable dynamic pod template selection, first configure the 
-[custom template pod adapter](#custom-template-pod-adapter).
+Druid can dynamically tune [pod template selection](#pod-template-selection) and [capacity](#properties). Where capacity refers to `druid.indexer.runner.capacity`.
+
+Pod template selection allows you to configure the pod template based on the task to be run. To enable dynamic pod template selection, first configure the [custom template pod adapter](#custom-template-pod-adapter).
 
 Use the following APIs to view and update the dynamic configuration for the Kubernetes task runner.
 
@@ -151,7 +151,8 @@ Host: http://ROUTER_IP:ROUTER_PORT
         "type": ["index_kafka"]
       }
     ]
-  }
+  },
+  "capacity": 12
 }
 ```
 </details>
@@ -159,6 +160,8 @@ Host: http://ROUTER_IP:ROUTER_PORT
 #### Update dynamic configuration
 
 Updates the dynamic configuration for the Kubernetes Task Runner
+
+Note: Both `podTemplateSelectStrategy` and `capacity` are optional fields. A POST request may include either, both, or neither.
 
 ##### URL
 
@@ -218,7 +221,8 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/k8s/taskrunner/executionconf
         "type": ["index_kafka"]
       }
     ]
-  }
+  },
+  "capacity": 6
 }'
 ```
 
@@ -250,7 +254,8 @@ Content-Type: application/json
         "type": ["index_kafka"]
       }
     ]
-  }
+  },
+  "capacity": 6
 }
 ```
 
@@ -334,7 +339,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
       "comment": "",
       "ip": "127.0.0.1"
     },
-    "payload": "{\"type\": \"default\",\"podTemplateSelectStrategy\":{\"type\": \"taskType\"}",
+    "payload": "{\"type\": \"default\",\"podTemplateSelectStrategy\":{\"type\": \"taskType\"},\"capacity\":6",
     "auditTime": "2024-06-13T20:59:51.622Z"
   }
 ]
@@ -815,7 +820,7 @@ Should you require the needed permissions for interacting across Kubernetes name
 | `druid.indexer.runner.annotations` | `JsonObject` | Additional annotations you want to add to peon pod. | `{}` | No |
 | `druid.indexer.runner.peonMonitors` | `JsonArray` | Overrides `druid.monitoring.monitors`. Use this property if you don't want to inherit monitors from the Overlord. | `[]` | No |
 | `druid.indexer.runner.graceTerminationPeriodSeconds` | `Long` | Number of seconds you want to wait after a sigterm for container lifecycle hooks to complete. Keep at a smaller value if you want tasks to hold locks for shorter periods. | `PT30S` (K8s default) | No |
-| `druid.indexer.runner.capacity` | `Integer` | Number of concurrent jobs that can be sent to Kubernetes. | `2147483647` | No |
+| `druid.indexer.runner.capacity` | `Integer` | Number of concurrent jobs that can be sent to Kubernetes. Value will be overridden if a dynamic config value has been set. | `2147483647` | No |
 | `druid.indexer.runner.cpuCoreInMicro` | `Integer` | Number of CPU micro core for the task. | `1000` | No |
 | `druid.indexer.runner.logSaveTimeout` | `Duration` | The peon executing the ingestion task makes a best effort to persist the pod logs from `k8s` to persistent task log storage. The timeout ensures that `k8s` connection issues do not cause the pod to hang indefinitely thereby blocking Overlord operations. If the timeout occurs before the logs are saved, those logs will not be available in Druid. | `PT300S` | NO |
 | `druid.indexer.runner.useK8sSharedInformers` | `boolean` | Whether to use shared informers to watch for pod/job changes. This is more efficient on the Kubernetes API server, but may use more memory in the Overlord. | `false` | No |

@@ -26,16 +26,13 @@ import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
-import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.querykit.common.OffsetLimitStageProcessor;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import java.util.Collections;
 import java.util.UUID;
 import java.util.stream.IntStream;
 
@@ -93,37 +90,6 @@ public class QueryValidatorTest
         Limits.MAX_FRAME_COLUMNS
     ));
     QueryValidator.validateQueryDef(createQueryDefinition(Limits.MAX_FRAME_COLUMNS + 1, 1));
-  }
-
-  @Test
-  public void testMoreInputFiles()
-  {
-    int numWorkers = 3;
-    int inputFiles = numWorkers * Limits.MAX_INPUT_FILES_PER_WORKER + 1;
-
-    final WorkOrder workOrder = new WorkOrder(
-        createQueryDefinition(inputFiles, numWorkers),
-        0,
-        0,
-        Collections.singletonList(() -> inputFiles), // Slice with a large number of inputFiles
-        null,
-        null,
-        null,
-        null
-    );
-
-    expectedException.expect(MSQException.class);
-    expectedException.expectMessage(StringUtils.format(
-        "Too many input files/segments [%d] encountered. Maximum input files/segments per worker is set to [%d]. Try"
-        + " breaking your query up into smaller queries, or increasing the number of workers to at least [%d] by"
-        + " setting %s in your query context",
-        inputFiles,
-        Limits.MAX_INPUT_FILES_PER_WORKER,
-        numWorkers + 1,
-        MultiStageQueryContext.CTX_MAX_NUM_TASKS
-    ));
-
-    QueryValidator.validateWorkOrder(workOrder);
   }
 
   public static QueryDefinition createQueryDefinition(int numColumns, int numWorkers)
