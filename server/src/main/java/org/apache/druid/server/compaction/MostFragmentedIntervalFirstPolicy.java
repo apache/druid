@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.HumanReadableBytes;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
+import java.util.Objects;
 
 /**
  * Experimental {@link CompactionCandidateSearchPolicy} which prioritizes compaction
@@ -109,6 +110,43 @@ public class MostFragmentedIntervalFirstPolicy extends BaseCandidateSearchPolicy
   protected Comparator<CompactionCandidate> getSegmentComparator()
   {
     return this::compare;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    MostFragmentedIntervalFirstPolicy policy = (MostFragmentedIntervalFirstPolicy) o;
+    return minUncompactedCount == policy.minUncompactedCount
+           && Objects.equals(minUncompactedBytes, policy.minUncompactedBytes)
+           && Objects.equals(maxAverageUncompactedBytesPerSegment, policy.maxAverageUncompactedBytesPerSegment);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        super.hashCode(),
+        minUncompactedCount,
+        minUncompactedBytes,
+        maxAverageUncompactedBytesPerSegment
+    );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "MostFragmentedIntervalFirstPolicy{" +
+           "minUncompactedCount=" + minUncompactedCount +
+           ", minUncompactedBytes=" + minUncompactedBytes +
+           ", maxAverageUncompactedBytesPerSegment=" + maxAverageUncompactedBytesPerSegment +
+           ", priorityDataSource='" + getPriorityDatasource() + '\'' +
+           '}';
   }
 
   private int compare(CompactionCandidate candidateA, CompactionCandidate candidateB)

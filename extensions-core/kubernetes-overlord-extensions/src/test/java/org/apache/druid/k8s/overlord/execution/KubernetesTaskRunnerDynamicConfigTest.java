@@ -36,7 +36,8 @@ public class KubernetesTaskRunnerDynamicConfigTest
                   + "  \"type\": \"default\",\n"
                   + "  \"podTemplateSelectStrategy\": {\n"
                   + "    \"type\": \"default\"\n"
-                  + "  }\n"
+                  + "  },\n"
+                  + "  \"capacity\": 3\n"
                   + "}";
 
     KubernetesTaskRunnerDynamicConfig deserialized = jsonMapper.readValue(
@@ -45,6 +46,7 @@ public class KubernetesTaskRunnerDynamicConfigTest
     );
     PodTemplateSelectStrategy selectStrategy = deserialized.getPodTemplateSelectStrategy();
     Assert.assertTrue(selectStrategy instanceof TaskTypePodTemplateSelectStrategy);
+    Assert.assertEquals(Integer.valueOf(3), deserialized.getCapacity());
 
     json = "{\n"
            + "  \"type\": \"default\",\n"
@@ -72,5 +74,14 @@ public class KubernetesTaskRunnerDynamicConfigTest
     selectStrategy = deserialized.getPodTemplateSelectStrategy();
     Assert.assertTrue(selectStrategy instanceof SelectorBasedPodTemplateSelectStrategy);
     Assert.assertEquals(2, ((SelectorBasedPodTemplateSelectStrategy) selectStrategy).getSelectors().size());
+    Assert.assertNull(deserialized.getCapacity());
+
+    json = "{\n"
+           + "  \"type\": \"default\",\n"
+           + "  \"capacity\": 12"
+           + "}";
+    deserialized = jsonMapper.readValue(json, KubernetesTaskRunnerDynamicConfig.class);
+    Assert.assertEquals(Integer.valueOf(12), deserialized.getCapacity());
+    Assert.assertNull(deserialized.getPodTemplateSelectStrategy());
   }
 }

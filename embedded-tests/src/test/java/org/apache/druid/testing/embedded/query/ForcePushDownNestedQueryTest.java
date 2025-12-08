@@ -40,6 +40,7 @@ import org.apache.druid.query.groupby.having.OrHavingSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
+import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
@@ -62,6 +63,12 @@ public class ForcePushDownNestedQueryTest extends QueryTestBase
 {
   private final String interval = "2015-09-12/2015-09-13";
   private final Map<String, Object> forcePushDownNestedContext = Map.of("forcePushDownNestedQuery", "true");
+
+  @Override
+  protected EmbeddedDruidCluster createCluster()
+  {
+    return super.createCluster().useDefaultTimeoutForLatchableEmitter(20);
+  }
 
   @Override
   public void beforeAll() throws IOException

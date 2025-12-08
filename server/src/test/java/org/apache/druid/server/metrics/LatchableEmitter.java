@@ -126,7 +126,7 @@ public class LatchableEmitter extends StubServiceEmitter
     try {
       final long awaitTime = timeoutMillis >= 0 ? timeoutMillis : Long.MAX_VALUE;
       if (!waitCondition.countDownLatch.await(awaitTime, TimeUnit.MILLISECONDS)) {
-        throw new ISE("Timed out waiting for event");
+        throw new ISE("Timed out waiting for event after [%,d]ms", awaitTime);
       }
     }
     catch (InterruptedException e) {
@@ -152,7 +152,7 @@ public class LatchableEmitter extends StubServiceEmitter
     try {
       final long awaitTime = timeoutMillis >= 0 ? timeoutMillis : Long.MAX_VALUE;
       if (!waitCondition.countDownLatch.await(awaitTime, TimeUnit.MILLISECONDS)) {
-        throw new ISE("Timed out waiting for next event");
+        throw new ISE("Timed out waiting for next event after [%,d]ms", awaitTime);
       }
     }
     catch (InterruptedException e) {
