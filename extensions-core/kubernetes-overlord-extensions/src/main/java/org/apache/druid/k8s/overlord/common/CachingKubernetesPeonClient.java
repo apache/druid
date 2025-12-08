@@ -22,6 +22,7 @@ package org.apache.druid.k8s.overlord.common;
 import com.google.common.base.Optional;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import io.fabric8.kubernetes.client.informers.cache.Store;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -128,27 +129,27 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
   public List<Job> getPeonJobs()
   {
     if (overlordNamespace.isEmpty()) {
-      return cachingClient.readJobCache(informer -> informer.getIndexer().list());
+      return cachingClient.readJobCache(Store::list);
     } else {
-      return cachingClient.readJobCache(informer ->
-                                                  informer.getIndexer()
-                                                          .byIndex(DruidKubernetesCachingClient.OVERLORD_NAMESPACE_INDEX, overlordNamespace));
+      return cachingClient.readJobCache(
+          indexer ->
+              indexer.byIndex(DruidKubernetesCachingClient.OVERLORD_NAMESPACE_INDEX, overlordNamespace));
     }
   }
 
   @Override
   public Optional<Pod> getPeonPod(String jobName)
   {
-    return cachingClient.readPodCache(informer -> {
-      List<Pod> pods = informer.getIndexer().byIndex(DruidKubernetesCachingClient.JOB_NAME_INDEX, jobName);
+    return cachingClient.readPodCache(indexer -> {
+      List<Pod> pods = indexer.byIndex(DruidKubernetesCachingClient.JOB_NAME_INDEX, jobName);
       return pods.isEmpty() ? Optional.absent() : Optional.of(pods.get(0));
     });
   }
 
   public Optional<Job> getPeonJob(String jobName)
   {
-    return cachingClient.readJobCache(informer -> {
-      List<Job> jobs = informer.getIndexer().byIndex(DruidKubernetesCachingClient.JOB_NAME_INDEX, jobName);
+    return cachingClient.readJobCache(indexer -> {
+      List<Job> jobs = indexer.byIndex(DruidKubernetesCachingClient.JOB_NAME_INDEX, jobName);
       return jobs.isEmpty() ? Optional.absent() : Optional.of(jobs.get(0));
     });
   }

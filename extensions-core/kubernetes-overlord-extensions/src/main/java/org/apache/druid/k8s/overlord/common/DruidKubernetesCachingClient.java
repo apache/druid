@@ -140,7 +140,7 @@ public class DruidKubernetesCachingClient
     if (podInformer == null) {
       throw DruidException.defensive("Pod informer is not initialized, caching is disabled");
     }
-    return executor.executeRequest(podInformer);
+    return executor.executeRequest(podInformer.getIndexer());
   }
 
   public <T> T readJobCache(SharedInformerCacheReadRequestExecutor<T, Job> executor)
@@ -148,7 +148,7 @@ public class DruidKubernetesCachingClient
     if (jobInformer == null) {
       throw DruidException.defensive("Job informer is not initialized, caching is disabled");
     }
-    return executor.executeRequest(jobInformer);
+    return executor.executeRequest(jobInformer.getIndexer());
   }
 
   /**

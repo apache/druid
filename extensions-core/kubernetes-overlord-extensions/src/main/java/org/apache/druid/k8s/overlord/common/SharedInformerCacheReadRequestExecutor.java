@@ -19,10 +19,10 @@
 
 package org.apache.druid.k8s.overlord.common;
 
-import io.fabric8.kubernetes.client.informers.SharedIndexInformer;
+import io.fabric8.kubernetes.client.informers.cache.Indexer;
 
 @FunctionalInterface
 public interface SharedInformerCacheReadRequestExecutor<T, R>
 {
-  T executeRequest(SharedIndexInformer<R> informer);
+  T executeRequest(Indexer<R> indexer);
 }
