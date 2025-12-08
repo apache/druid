@@ -24,10 +24,6 @@ import org.apache.druid.query.DruidMetrics;
 
 public class DefaultGroupByQueryMetrics extends DefaultQueryMetrics<GroupByQuery> implements GroupByQueryMetrics
 {
-  private long mergeBufferAcquisitonTime = 0L;
-  private long bytesSpilledToStorage = 0L;
-  private long mergeDictionarySize = 0L;
-
   @Override
   public void query(GroupByQuery query)
   {
@@ -83,6 +79,12 @@ public class DefaultGroupByQueryMetrics extends DefaultQueryMetrics<GroupByQuery
     reportMetric("mergeDictionarySize", mergeDictionarySize);
     this.mergeDictionarySize = mergeDictionarySize;
   }
+
+  // The following are used for channeling the metrics to GroupByStatsMonitor.
+  // We can remove these methods should we decide to sunset the GroupByStatsMonitor.
+  private long mergeBufferAcquisitonTime = 0L;
+  private long bytesSpilledToStorage = 0L;
+  private long mergeDictionarySize = 0L;
 
   @Override
   public long getSpilledBytes()
