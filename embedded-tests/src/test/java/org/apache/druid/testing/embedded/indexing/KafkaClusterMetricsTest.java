@@ -31,7 +31,6 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
@@ -63,7 +62,7 @@ import java.util.stream.Collectors;
 @SuppressWarnings("resource")
 public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
 {
-  private static final String TOPIC = EmbeddedClusterApis.createTestDatasourceName(TestDataSource.WIKI);
+  private static final String TOPIC = EmbeddedClusterApis.createTestDatasourceName();
 
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();
