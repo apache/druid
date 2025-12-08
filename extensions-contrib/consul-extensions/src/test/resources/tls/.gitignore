@@ -1,0 +1,11 @@
+# Generated test certificates - do not commit
+*.pem
+*.srl
+*.p12
+*.jks
+*.crt
+*.key
+*.csr
+*.req
+*.cnf
+consul-config.json

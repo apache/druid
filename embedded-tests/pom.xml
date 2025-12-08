@@ -549,6 +549,12 @@
       <version>5.5</version>
       <scope>test</scope>
     </dependency>
+      <dependency>
+          <groupId>org.apache.druid.extensions.contrib</groupId>
+          <artifactId>druid-consul-extensions</artifactId>
+          <version>${project.parent.version}</version>
+          <scope>test</scope>
+      </dependency>
 
   </dependencies>
 
