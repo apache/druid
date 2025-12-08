@@ -238,6 +238,7 @@
         <module>extensions-contrib/cassandra-storage</module>
         <module>extensions-contrib/dropwizard-emitter</module>
         <module>extensions-contrib/cloudfiles-extensions</module>
+        <module>extensions-contrib/consul-extensions</module>
         <module>extensions-contrib/graphite-emitter</module>
         <module>extensions-contrib/distinctcount</module>
         <module>extensions-contrib/druid-exact-count-bitmap</module>
