@@ -26,6 +26,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
@@ -93,6 +94,8 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
   private final ConcurrentMap<DataSegment, SegmentHolder> segmentsToLoad = new ConcurrentHashMap<>();
   private final ConcurrentMap<DataSegment, SegmentHolder> segmentsToDrop = new ConcurrentHashMap<>();
+
+  @GuardedBy("lock")
   private final Set<DataSegment> segmentsMarkedToDrop = ConcurrentHashMap.newKeySet();
   private final LoadingRateTracker loadingRateTracker = new LoadingRateTracker();
 
@@ -101,12 +104,14 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
    * drop requests as well. This need not be thread-safe as all operations on it
    * are synchronized with the {@link #lock}.
    */
+  @GuardedBy("lock")
   private final Set<SegmentHolder> queuedSegments = new TreeSet<>();
 
   /**
    * Set of segments for which requests have been sent to the server and can
    * not be cancelled anymore. This need not be thread-safe.
    */
+  @GuardedBy("lock")
   private final Set<DataSegment> activeRequestSegments = new HashSet<>();
 
   private final ScheduledExecutorService processingExecutor;
@@ -388,15 +393,20 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
           @Override
           public void addSegment(DataSegment segment, DataSegmentChangeCallback callback)
           {
-            updateSuccessOrFailureInHolder(segmentsToLoad.remove(segment), status);
+            synchronized (lock) {
+              updateSuccessOrFailureInHolder(segmentsToLoad.remove(segment), status);
+            }
           }
 
           @Override
           public void removeSegment(DataSegment segment, DataSegmentChangeCallback callback)
           {
-            updateSuccessOrFailureInHolder(segmentsToDrop.remove(segment), status);
+            synchronized (lock) {
+              updateSuccessOrFailureInHolder(segmentsToDrop.remove(segment), status);
+            }
           }
 
+          @GuardedBy("lock")
           private void updateSuccessOrFailureInHolder(SegmentHolder holder, SegmentChangeStatus status)
           {
             if (holder == null) {
@@ -508,6 +518,8 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   public void dropSegment(DataSegment segment, LoadPeonCallback callback)
   {
     synchronized (lock) {
+      // Unmark the segment for dropping in case it was already marked
+      unmarkSegmentToDrop(segment);
       if (stopped) {
         log.warn(
             "Server[%s] cannot drop segment[%s] because load queue peon is stopped.",
@@ -582,19 +594,25 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   @Override
   public void markSegmentToDrop(DataSegment dataSegment)
   {
-    segmentsMarkedToDrop.add(dataSegment);
+    synchronized (lock) {
+      segmentsMarkedToDrop.add(dataSegment);
+    }
   }
 
   @Override
   public void unmarkSegmentToDrop(DataSegment dataSegment)
   {
-    segmentsMarkedToDrop.remove(dataSegment);
+    synchronized (lock) {
+      segmentsMarkedToDrop.remove(dataSegment);
+    }
   }
 
   @Override
   public Set<DataSegment> getSegmentsMarkedToDrop()
   {
-    return Collections.unmodifiableSet(segmentsMarkedToDrop);
+    synchronized (lock) {
+      return Collections.unmodifiableSet(segmentsMarkedToDrop);
+    }
   }
 
   private void onRequestFailed(SegmentHolder holder, SegmentChangeStatus status)
