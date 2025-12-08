@@ -74,6 +74,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -106,6 +107,9 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
    */
   @GuardedBy("lock")
   private final Set<SegmentHolder> queuedSegments = new TreeSet<>();
+
+  @GuardedBy("lock")
+  private final Set<SegmentHolder> recentlySucceededActions = new TreeSet<>();
 
   /**
    * Set of segments for which requests have been sent to the server and can
@@ -420,6 +424,9 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
             } else {
               onRequestCompleted(holder, RequestStatus.SUCCESS, status);
             }
+
+            holder.markRequestSucceeded();
+            recentlySucceededActions.add(holder);
           }
         }, null
     );
@@ -474,6 +481,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       segmentsToLoad.clear();
       queuedSegments.clear();
       activeRequestSegments.clear();
+      recentlySucceededActions.clear();
       queuedSize.set(0L);
       loadingRateTracker.stop();
       stats.get().clear();
@@ -564,13 +572,44 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   }
 
   @Override
-  public Set<SegmentHolder> getSegmentsInQueue()
+  public Set<SegmentHolder> getSegmentsInQueue(Set<DataSegment> segmentsLoadedOnServer)
   {
-    final Set<SegmentHolder> segmentsInQueue;
+    final Set<SegmentHolder> queuedActions;
     synchronized (lock) {
-      segmentsInQueue = new HashSet<>(queuedSegments);
+      queuedActions = new HashSet<>(queuedSegments);
+      final Set<DataSegment> segmentsInQueue =
+          queuedActions.stream().map(SegmentHolder::getSegment).collect(Collectors.toSet());
+
+      // Check all recently succeeded actions
+      final Set<SegmentHolder> succeededActions = Set.copyOf(recentlySucceededActions);
+      for (SegmentHolder holder : succeededActions) {
+        if (segmentsInQueue.contains(holder.getSegment())) {
+          // If a recently succeeded segment has been queued again, honor the state in the queue
+          recentlySucceededActions.remove(holder);
+          continue;
+        }
+
+        final boolean isSegmentLoaded = segmentsLoadedOnServer.contains(holder.getSegment());
+
+        if (holder.isLoad() == isSegmentLoaded) {
+          // Remove actions that have recently completed and are reflected in the inventory
+          recentlySucceededActions.remove(holder);
+        } else if (holder.isStaleSuccessfulRequest()) {
+          // If the inventory is taking too long to get updated, clean up the state of the peon
+          recentlySucceededActions.remove(holder);
+        } else {
+          // Add actions that have recently completed but are yet to reflect in the inventory
+          queuedActions.add(holder);
+        }
+      }
+
+      // Add entries for segments that are currently marked to be dropped
+      for (DataSegment segment : segmentsMarkedToDrop) {
+        queuedActions.add(new SegmentHolder(segment, SegmentAction.MOVE_FROM, config.getLoadTimeout(), null));
+      }
     }
-    return segmentsInQueue;
+
+    return queuedActions;
   }
 
   @Override
