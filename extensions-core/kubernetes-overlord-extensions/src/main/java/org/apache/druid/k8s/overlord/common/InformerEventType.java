@@ -19,10 +19,12 @@
 
 package org.apache.druid.k8s.overlord.common;
 
-import io.fabric8.kubernetes.client.informers.cache.Indexer;
-
-@FunctionalInterface
-public interface SharedInformerCacheReadRequestExecutor<T, R>
+/**
+ * Event types for Kubernetes informer resource events.
+ */
+public enum InformerEventType
 {
-  T executeRequest(Indexer<R> indexer);
+  ADD,
+  UPDATE,
+  DELETE
 }

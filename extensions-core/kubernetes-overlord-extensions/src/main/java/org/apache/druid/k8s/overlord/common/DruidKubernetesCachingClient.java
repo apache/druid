@@ -22,9 +22,7 @@ package org.apache.druid.k8s.overlord.common;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
 import io.fabric8.kubernetes.client.informers.SharedIndexInformer;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import java.util.Collections;
@@ -32,64 +30,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 public class DruidKubernetesCachingClient
 {
-  /**
-   * Event types for Kubernetes informer resource events.
-   */
-  public enum InformerEventType
-  {
-    ADD,
-    UPDATE,
-    DELETE
-  }
-
-  /**
-   * Impl of ResourceEventHandler that simplifies event handling
-   * by accepting a single lambda BiConsumer for all event types (add, update, delete).
-   *
-   * @param <T> The Kubernetes resource type (e.g., Pod, Job)
-   */
-  public static class InformerEventHandler<T> implements ResourceEventHandler<T>
-  {
-    private final BiConsumer<T, InformerEventType> eventConsumer;
-
-    public InformerEventHandler(BiConsumer<T, InformerEventType> eventConsumer)
-    {
-      this.eventConsumer = eventConsumer;
-    }
-
-    @Override
-    public void onAdd(T resource)
-    {
-      eventConsumer.accept(resource, InformerEventType.ADD);
-    }
-
-    @Override
-    public void onUpdate(T oldResource, T newResource)
-    {
-      eventConsumer.accept(newResource, InformerEventType.UPDATE);
-    }
-
-    @Override
-    public void onDelete(T resource, boolean deletedFinalStateUnknown)
-    {
-      eventConsumer.accept(resource, InformerEventType.DELETE);
-    }
-  }
   private static final EmittingLogger log = new EmittingLogger(DruidKubernetesCachingClient.class);
 
   public static final String JOB_NAME_INDEX = "byJobName";
   public static final String OVERLORD_NAMESPACE_INDEX = "byOverlordNamespace";
 
-  private static final long DEFAULT_INFORMER_RESYNC_PERIOD_MS = 300000L; // 5 minutes
-
-  protected final SharedIndexInformer<Pod> podInformer;
-  protected final SharedIndexInformer<Job> jobInformer;
-  protected final KubernetesResourceEventNotifier eventNotifier;
+  private final SharedIndexInformer<Pod> podInformer;
+  private final SharedIndexInformer<Job> jobInformer;
+  private final KubernetesResourceEventNotifier eventNotifier;
   private final KubernetesClientApi baseClient;
   private final long informerResyncPeriodMillis;
 
@@ -107,6 +59,9 @@ public class DruidKubernetesCachingClient
     this.jobInformer = setupJobInformer(namespace);
   }
 
+  /**
+   * Stops the fabric8 informers and cancels all pending futures in the event notifier.
+   */
   public void stop()
   {
     if (podInformer != null) {
@@ -124,31 +79,25 @@ public class DruidKubernetesCachingClient
     return baseClient;
   }
 
-  // Delegate write operations to base client
-  public <T> T executeRequest(KubernetesExecutor<T> executor) throws KubernetesResourceNotFoundException
-  {
-    return baseClient.executeRequest(executor);
-  }
-
   public KubernetesClient getClient()
   {
     return baseClient.getClient();
   }
 
-  public <T> T readPodCache(SharedInformerCacheReadRequestExecutor<T, Pod> executor)
+  /**
+   * Reads from thePod Informer's {@link io.fabric8.kubernetes.client.informers.cache.Indexer} using the provided executor.
+   */
+  public <T> T readPodCache(SharedInformerCacheReader<T, Pod> executor)
   {
-    if (podInformer == null) {
-      throw DruidException.defensive("Pod informer is not initialized, caching is disabled");
-    }
-    return executor.executeRequest(podInformer.getIndexer());
+    return executor.readFromCache(podInformer.getIndexer());
   }
 
-  public <T> T readJobCache(SharedInformerCacheReadRequestExecutor<T, Job> executor)
+  /**
+   * Reads from the Job Informer's {@link io.fabric8.kubernetes.client.informers.cache.Indexer} using the provided executor.
+   */
+  public <T> T readJobCache(SharedInformerCacheReader<T, Job> executor)
   {
-    if (jobInformer == null) {
-      throw DruidException.defensive("Job informer is not initialized, caching is disabled");
-    }
-    return executor.executeRequest(jobInformer.getIndexer());
+    return executor.readFromCache(jobInformer.getIndexer());
   }
 
   /**

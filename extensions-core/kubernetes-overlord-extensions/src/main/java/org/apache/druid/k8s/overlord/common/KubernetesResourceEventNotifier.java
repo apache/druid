@@ -58,11 +58,11 @@ public class KubernetesResourceEventNotifier
     CompletableFuture<Job> previous = jobWatchers.put(jobName, future);
 
     if (previous != null && !previous.isDone()) {
-      log.warn("Replacing active watcher for job [%s] - multiple waiters detected", jobName);
+      log.warn("Replacing active watcher for job[%s] - multiple waiters detected", jobName);
       previous.cancel(true);
     }
 
-    log.debug("Registered watcher for job [%s]", jobName);
+    log.debug("Registered watcher for job[%s]", jobName);
     return future;
   }
 
@@ -97,7 +97,7 @@ public class KubernetesResourceEventNotifier
   {
     CompletableFuture<Job> future = jobWatchers.remove(jobName);
     if (future != null && !future.isDone()) {
-      log.debug("Cancelling watcher for job [%s]", jobName);
+      log.debug("Cancelling watcher for job[%s]", jobName);
       future.cancel(true);
     }
   }
@@ -143,7 +143,7 @@ public class KubernetesResourceEventNotifier
   {
     CompletableFuture<Pod> future = podWatchers.remove(jobName);
     if (future != null) {
-      log.debug("Notifying watcher of pod change for job-name [%s]", jobName);
+      log.debug("Notifying watcher of pod change for job-name[%s]", jobName);
       future.complete(pod);
     }
   }

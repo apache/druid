@@ -19,18 +19,10 @@
 
 package org.apache.druid.k8s.overlord.common;
 
-public class TestCachingKubernetesClient extends DruidKubernetesCachingClient
+import io.fabric8.kubernetes.client.informers.cache.Indexer;
+
+@FunctionalInterface
+public interface SharedInformerCacheReader<T, R>
 {
-  private static final long TESTING_RESYNC_PERIOD_MS = 10L;
-
-  public TestCachingKubernetesClient(KubernetesClientApi clientApi, String namespace)
-  {
-    super(clientApi, namespace, TESTING_RESYNC_PERIOD_MS);
-  }
-
-  public void waitForSync() throws InterruptedException
-  {
-    // Give informers a bit more time to process
-    Thread.sleep(50L);
-  }
+  T readFromCache(Indexer<R> indexer);
 }

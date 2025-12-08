@@ -67,15 +67,16 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
   @Override
   public JobResponse waitForPeonJobCompletion(K8sTaskId taskId, long howLong, TimeUnit unit)
   {
-    Duration timeout = Duration.millis(unit.toMillis(howLong));
-    Duration jobMustBeSeenWithin = Duration.millis(cachingClient.getInformerResyncPeriodMillis() * 2);
-    Stopwatch stopwatch = Stopwatch.createStarted();
+    final Duration timeout = Duration.millis(unit.toMillis(howLong));
+    final Duration jobMustBeSeenWithin = Duration.millis(cachingClient.getInformerResyncPeriodMillis() * 2);
+    final Stopwatch stopwatch = Stopwatch.createStarted();
     boolean jobSeenInCache = false;
 
     try {
-      CompletableFuture<Job> jobFuture = cachingClient.waitForJobChange(taskId.getK8sJobName());
+      CompletableFuture<Job> jobFuture = null;
       while (stopwatch.hasNotElapsed(timeout) && (jobSeenInCache || stopwatch.hasNotElapsed(jobMustBeSeenWithin))) {
-        if (jobFuture.isDone()) {
+        if (jobFuture == null || jobFuture.isDone()) {
+          // Register a future to watch the next change to this job
           jobFuture = cachingClient.waitForJobChange(taskId.getK8sJobName());
         }
         Optional<Job> maybeJob = getPeonJob(taskId.getK8sJobName());
@@ -158,13 +159,14 @@ public class CachingKubernetesPeonClient extends KubernetesPeonClient
   @Nullable
   protected Pod waitUntilPeonPodCreatedAndReady(String jobName, long howLong, TimeUnit timeUnit)
   {
-    Duration timeout = Duration.millis(timeUnit.toMillis(howLong));
-    Stopwatch stopwatch = Stopwatch.createStarted();
+    final Duration timeout = Duration.millis(timeUnit.toMillis(howLong));
+    final Stopwatch stopwatch = Stopwatch.createStarted();
 
     try {
-      CompletableFuture<Pod> podFuture = cachingClient.waitForPodChange(jobName);
+      CompletableFuture<Pod> podFuture = null;
       while (stopwatch.hasNotElapsed(timeout)) {
-        if (podFuture.isDone()) {
+        if (podFuture == null || podFuture.isDone()) {
+          // Register a future to watch the next change to this pod
           podFuture = cachingClient.waitForPodChange(jobName);
         }
         Optional<Pod> maybePod = getPeonPod(jobName);

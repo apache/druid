@@ -93,9 +93,9 @@ public class KubernetesPeonClient
       Pod result = waitUntilPeonPodCreatedAndReady(jobName, howLong, timeUnit);
 
       if (result == null) {
-        throw new ISE("K8s pod for the task [%s] appeared and disappeared. It can happen if the task was canceled", task.getId());
+        throw new ISE("K8s pod for the task[%s] appeared and disappeared. It can happen if the task was canceled", task.getId());
       }
-      log.info("Pod for job[%s] is in state [%s] for task[%s].", jobName, result.getStatus().getPhase(), task.getId());
+      log.info("Pod for job[%s] is in state[%s] for task[%s].", jobName, result.getStatus().getPhase(), task.getId());
       long duration = System.currentTimeMillis() - start;
       emitK8sPodMetrics(task, "k8s/peon/startup/time", duration);
       return result;
@@ -140,13 +140,13 @@ public class KubernetesPeonClient
                           unit
                       );
       if (job == null) {
-        log.info("K8s job for the task [%s] was not found. It can happen if the task was canceled", taskId);
+        log.info("K8s job for the task[%s] was not found. It can happen if the task was canceled", taskId);
         return new JobResponse(null, PeonPhase.FAILED);
       }
       if (job.getStatus().getSucceeded() != null) {
         return new JobResponse(job, PeonPhase.SUCCEEDED);
       }
-      log.warn("Task %s failed with status %s", taskId, job.getStatus());
+      log.warn("Task[%s] failed with status[%s]", taskId, job.getStatus());
       return new JobResponse(job, PeonPhase.FAILED);
     });
   }
@@ -161,13 +161,13 @@ public class KubernetesPeonClient
                                                                  .withName(taskId.getK8sJobName())
                                                                  .delete().isEmpty());
       if (result) {
-        log.info("Cleaned up k8s job: %s", taskId);
+        log.info("Cleaned up k8s job[%s]", taskId);
       } else {
-        log.info("K8s job does not exist: %s", taskId);
+        log.info("K8s job[%s] does not exist", taskId);
       }
       return result;
     } else {
-      log.info("Not cleaning up job %s due to flag: debugJobs=true", taskId);
+      log.info("Not cleaning up job[%s] due to flag: debugJobs=true", taskId);
       return true;
     }
   }
@@ -204,18 +204,15 @@ public class KubernetesPeonClient
       return Optional.of(logWatch);
     }
     catch (Exception e) {
-      log.error(e, "Error watching logs from task: %s, pod: %s", taskId, podName);
+      log.error(e, "Error watching logs from task[%s], pod[%s].", taskId, podName);
       return Optional.absent();
     }
   }
 
   /**
    * Get an InputStream for the logs of the peon pod associated with the given taskId.
-   * <p>
-   * Any issues creating the InputStream will be logged and an absent Optional will be returned.
-   * </p>
    *
-   * @return an Optional containing the {@link InputStream} if the pod exists and logs could be streamed, or absent otherwise
+   * @return an Optional containing the {@link InputStream} for the logs of the pod, if it exists and logs could be streamed, or absent otherwise.
    */
   public Optional<InputStream> getPeonLogs(K8sTaskId taskId)
   {
@@ -290,7 +287,7 @@ public class KubernetesPeonClient
                    .delete().isEmpty()) {
           numDeleted.incrementAndGet();
         } else {
-          log.error("Failed to delete job %s", x.getMetadata().getName());
+          log.error("Failed to delete job[%s]", x.getMetadata().getName());
         }
       });
       return numDeleted.get();
