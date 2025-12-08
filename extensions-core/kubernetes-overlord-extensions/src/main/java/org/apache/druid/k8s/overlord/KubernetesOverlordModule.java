@@ -214,7 +214,7 @@ public class KubernetesOverlordModule implements DruidModule
   @LazySingleton
   @Nullable
   public DruidKubernetesCachingClient makeCachingKubernetesClient(
-      KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig,
+      KubernetesTaskRunnerStaticConfig kubernetesTaskRunnerConfig,
       DruidKubernetesClient baseClient,
       Lifecycle lifecycle
   )
