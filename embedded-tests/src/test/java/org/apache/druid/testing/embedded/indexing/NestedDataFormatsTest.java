@@ -76,12 +76,9 @@ public class NestedDataFormatsTest extends EmbeddedClusterTestBase
                                .addServer(new EmbeddedRouter());
   }
 
-  @Override
   @BeforeAll
-  protected void setup() throws Exception
+  protected void ingestWithDefaultFormat() throws Exception
   {
-    super.setup();
-    super.refreshDatasourceName();
     final TaskBuilder.IndexParallel indexTask =
         TaskBuilder.ofTypeIndexParallel()
                    .dataSource(defaultFormat)
