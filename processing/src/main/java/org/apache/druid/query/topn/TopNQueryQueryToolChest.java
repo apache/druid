@@ -451,8 +451,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   public QueryRunner<Result<TopNResultValue>> postMergeQueryDecoration(final QueryRunner<Result<TopNResultValue>> runner)
   {
     final ThresholdAdjustingQueryRunner thresholdRunner = new ThresholdAdjustingQueryRunner(
-        runner,
-        config
+        runner
     );
     return new QueryRunner<>()
     {
@@ -605,15 +604,12 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   static class ThresholdAdjustingQueryRunner implements QueryRunner<Result<TopNResultValue>>
   {
     private final QueryRunner<Result<TopNResultValue>> runner;
-    private final TopNQueryConfig config;
 
     public ThresholdAdjustingQueryRunner(
-        QueryRunner<Result<TopNResultValue>> runner,
-        TopNQueryConfig config
+        QueryRunner<Result<TopNResultValue>> runner
     )
     {
       this.runner = runner;
-      this.config = config;
     }
 
     @Override
@@ -629,7 +625,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
 
       final TopNQuery query = (TopNQuery) input;
       final int minTopNThreshold = query.context()
-                                        .getInt(QueryContexts.MIN_TOP_N_THRESHOLD, config.getMinTopNThreshold());
+                                        .getInt(QueryContexts.MIN_TOP_N_THRESHOLD, TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD);
       if (query.getThreshold() > minTopNThreshold) {
         return runner.run(queryPlus, responseContext);
       }
