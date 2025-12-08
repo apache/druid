@@ -27,12 +27,17 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 
 /**
- * Runs some basic ingestion tests against latest image Druid containers running
- * on a K3s cluster with druid-operator and using {@code k8s} task runner type.
+ * Base class for Kubernetes task runner tests. Subclasses configure whether to use
+ * SharedInformers for caching.
  */
-public class KubernetesTaskRunnerDockerTest extends IngestionSmokeTest implements LatestImageDockerTest
+abstract class BaseKubernetesTaskRunnerDockerTest extends IngestionSmokeTest implements LatestImageDockerTest
 {
-  private static final String MANIFEST_TEMPLATE = "manifests/druid-service-with-operator.yaml";
+  protected static final String MANIFEST_TEMPLATE = "manifests/druid-service-with-operator.yaml";
+
+  /**
+   * Subclasses override to enable/disable SharedInformer caching.
+   */
+  protected abstract boolean useSharedInformers();
 
   @Override
   protected EmbeddedDruidCluster addServers(EmbeddedDruidCluster cluster)
@@ -45,6 +50,8 @@ public class KubernetesTaskRunnerDockerTest extends IngestionSmokeTest implement
         .addProperty("druid.indexer.runner.type", "k8s")
         .addProperty("druid.indexer.runner.namespace", "druid")
         .addProperty("druid.indexer.runner.capacity", "4")
+        .addProperty("druid.indexer.runner.useK8sSharedInformers", String.valueOf(useSharedInformers()))
+        .addProperty("druid.indexer.runner.k8sSharedInformerResyncPeriod", "PT1s")
         .usingPort(30090);
 
     final K3sClusterResource k3sCluster = new K3sClusterWithOperatorResource()

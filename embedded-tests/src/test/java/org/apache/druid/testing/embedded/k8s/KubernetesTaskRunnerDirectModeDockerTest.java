@@ -17,29 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord.common;
+package org.apache.druid.testing.embedded.k8s;
 
-import io.fabric8.kubernetes.client.KubernetesClient;
-
-public class TestKubernetesClient implements KubernetesClientApi
+/**
+ * Runs ingestion tests using direct K8s API interaction (default mode).
+ * Each task makes direct API calls to the Kubernetes API server.
+ */
+public class KubernetesTaskRunnerDirectModeDockerTest extends BaseKubernetesTaskRunnerDockerTest
 {
-
-  private final KubernetesClient client;
-
-  public TestKubernetesClient(KubernetesClient client, String namespace)
-  {
-    this.client = client;
-  }
-
   @Override
-  public <T> T executeRequest(KubernetesExecutor<T> executor) throws KubernetesResourceNotFoundException
+  protected boolean useSharedInformers()
   {
-    return executor.executeRequest(client);
-  }
-
-  @Override
-  public KubernetesClient getClient()
-  {
-    return client;
+    return false;
   }
 }

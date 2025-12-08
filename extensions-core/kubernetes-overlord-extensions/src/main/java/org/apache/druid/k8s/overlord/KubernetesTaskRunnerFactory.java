@@ -27,12 +27,15 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.k8s.overlord.common.CachingKubernetesPeonClient;
+import org.apache.druid.k8s.overlord.common.DruidKubernetesCachingClient;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.taskadapter.PodTemplateTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.tasklogs.TaskLogs;
 
+import javax.annotation.Nullable;
 import java.util.Set;
 
 public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<KubernetesTaskRunner>
@@ -43,6 +46,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   private final KubernetesTaskRunnerEffectiveConfig kubernetesTaskRunnerConfig;
   private final TaskLogs taskLogs;
   private final DruidKubernetesClient druidKubernetesClient;
+  private final DruidKubernetesCachingClient druidKubernetesCachingClient;
   private final ServiceEmitter emitter;
   private KubernetesTaskRunner runner;
   private final TaskAdapter taskAdapter;
@@ -58,7 +62,8 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
       DruidKubernetesClient druidKubernetesClient,
       ServiceEmitter emitter,
       TaskAdapter taskAdapter,
-      ConfigManager configManager
+      ConfigManager configManager,
+      @Nullable DruidKubernetesCachingClient druidKubernetesCachingClient
   )
   {
     this.smileMapper = smileMapper;
@@ -66,6 +71,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     this.kubernetesTaskRunnerConfig = kubernetesTaskRunnerConfig;
     this.taskLogs = taskLogs;
     this.druidKubernetesClient = druidKubernetesClient;
+    this.druidKubernetesCachingClient = druidKubernetesCachingClient;
     this.emitter = emitter;
     this.taskAdapter = taskAdapter;
     this.configManager = configManager;
@@ -75,11 +81,14 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   public KubernetesTaskRunner build()
   {
     KubernetesPeonClient peonClient;
-    if (adapterTypeAllowingTasksInDifferentNamespaces.contains(taskAdapter.getAdapterType())) {
-      peonClient = new KubernetesPeonClient(
-          druidKubernetesClient,
+    boolean enableCache = kubernetesTaskRunnerConfig.isUseK8sSharedInformers();
+    boolean useOverlordNamespace = adapterTypeAllowingTasksInDifferentNamespaces.contains(taskAdapter.getAdapterType());
+
+    if (enableCache && druidKubernetesCachingClient != null) {
+      peonClient = new CachingKubernetesPeonClient(
+          druidKubernetesCachingClient,
           kubernetesTaskRunnerConfig.getNamespace(),
-          kubernetesTaskRunnerConfig.getOverlordNamespace(),
+          useOverlordNamespace ? kubernetesTaskRunnerConfig.getOverlordNamespace() : "",
           kubernetesTaskRunnerConfig.isDebugJobs(),
           emitter
       );
@@ -87,6 +96,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
       peonClient = new KubernetesPeonClient(
           druidKubernetesClient,
           kubernetesTaskRunnerConfig.getNamespace(),
+          useOverlordNamespace ? kubernetesTaskRunnerConfig.getOverlordNamespace() : "",
           kubernetesTaskRunnerConfig.isDebugJobs(),
           emitter
       );

@@ -19,27 +19,18 @@
 
 package org.apache.druid.k8s.overlord.common;
 
-import io.fabric8.kubernetes.client.KubernetesClient;
-
-public class TestKubernetesClient implements KubernetesClientApi
+public class TestCachingKubernetesClient extends DruidKubernetesCachingClient
 {
+  private static final long TESTING_RESYNC_PERIOD_MS = 10L;
 
-  private final KubernetesClient client;
-
-  public TestKubernetesClient(KubernetesClient client, String namespace)
+  public TestCachingKubernetesClient(KubernetesClientApi clientApi, String namespace)
   {
-    this.client = client;
+    super(clientApi, namespace, TESTING_RESYNC_PERIOD_MS);
   }
 
-  @Override
-  public <T> T executeRequest(KubernetesExecutor<T> executor) throws KubernetesResourceNotFoundException
+  public void waitForSync() throws InterruptedException
   {
-    return executor.executeRequest(client);
-  }
-
-  @Override
-  public KubernetesClient getClient()
-  {
-    return client;
+    // Give informers a bit more time to process
+    Thread.sleep(50L);
   }
 }

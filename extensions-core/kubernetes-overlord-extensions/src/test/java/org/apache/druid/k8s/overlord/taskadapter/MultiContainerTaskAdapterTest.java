@@ -86,7 +86,7 @@ class MultiContainerTaskAdapterTest
   @Test
   public void testMultiContainerSupport() throws IOException
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    TestKubernetesClient testClient = new TestKubernetesClient(client, "namespace");
     Pod pod = K8sTestUtils.fileToResource("multiContainerPodSpec.yaml", Pod.class);
     KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
                                                                         .withNamespace("namespace")
@@ -137,7 +137,7 @@ class MultiContainerTaskAdapterTest
   @Test
   public void testMultiContainerSupportWithNamedContainer() throws IOException
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    TestKubernetesClient testClient = new TestKubernetesClient(client, "namespace");
     Pod pod = K8sTestUtils.fileToResource("multiContainerPodSpecOrder.yaml", Pod.class);
     KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
                                                                               .withNamespace("namespace")
@@ -191,7 +191,7 @@ class MultiContainerTaskAdapterTest
   @Test
   public void testOverridingPeonMonitors() throws IOException
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    TestKubernetesClient testClient = new TestKubernetesClient(client, "namespace");
     Pod pod = K8sTestUtils.fileToResource("podSpec.yaml", Pod.class);
     KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
                                                                               .withNamespace("namespace")

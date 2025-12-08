@@ -19,27 +19,12 @@
 
 package org.apache.druid.k8s.overlord.common;
 
-import io.fabric8.kubernetes.client.KubernetesClient;
-
-public class TestKubernetesClient implements KubernetesClientApi
+/**
+ * Event types for Kubernetes informer resource events.
+ */
+public enum InformerEventType
 {
-
-  private final KubernetesClient client;
-
-  public TestKubernetesClient(KubernetesClient client, String namespace)
-  {
-    this.client = client;
-  }
-
-  @Override
-  public <T> T executeRequest(KubernetesExecutor<T> executor) throws KubernetesResourceNotFoundException
-  {
-    return executor.executeRequest(client);
-  }
-
-  @Override
-  public KubernetesClient getClient()
-  {
-    return client;
-  }
+  ADD,
+  UPDATE,
+  DELETE
 }

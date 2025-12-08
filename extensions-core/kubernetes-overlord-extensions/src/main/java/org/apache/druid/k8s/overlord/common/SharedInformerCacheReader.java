@@ -19,27 +19,10 @@
 
 package org.apache.druid.k8s.overlord.common;
 
-import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.informers.cache.Indexer;
 
-public class TestKubernetesClient implements KubernetesClientApi
+@FunctionalInterface
+public interface SharedInformerCacheReader<T, R>
 {
-
-  private final KubernetesClient client;
-
-  public TestKubernetesClient(KubernetesClient client, String namespace)
-  {
-    this.client = client;
-  }
-
-  @Override
-  public <T> T executeRequest(KubernetesExecutor<T> executor) throws KubernetesResourceNotFoundException
-  {
-    return executor.executeRequest(client);
-  }
-
-  @Override
-  public KubernetesClient getClient()
-  {
-    return client;
-  }
+  T readFromCache(Indexer<R> indexer);
 }
