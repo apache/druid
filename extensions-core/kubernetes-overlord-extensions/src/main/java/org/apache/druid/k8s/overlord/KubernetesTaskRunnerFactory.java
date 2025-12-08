@@ -21,6 +21,7 @@ package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
@@ -39,23 +40,25 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   public static final String TYPE_NAME = "k8s";
   private final ObjectMapper smileMapper;
   private final HttpClient httpClient;
-  private final KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig;
+  private final KubernetesTaskRunnerEffectiveConfig kubernetesTaskRunnerConfig;
   private final TaskLogs taskLogs;
   private final DruidKubernetesClient druidKubernetesClient;
   private final ServiceEmitter emitter;
   private KubernetesTaskRunner runner;
   private final TaskAdapter taskAdapter;
+  private final ConfigManager configManager;
   private final Set<String> adapterTypeAllowingTasksInDifferentNamespaces = Set.of(PodTemplateTaskAdapter.TYPE);
 
   @Inject
   public KubernetesTaskRunnerFactory(
       @Smile ObjectMapper smileMapper,
       @EscalatedGlobal final HttpClient httpClient,
-      KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig,
+      KubernetesTaskRunnerEffectiveConfig kubernetesTaskRunnerConfig,
       TaskLogs taskLogs,
       DruidKubernetesClient druidKubernetesClient,
       ServiceEmitter emitter,
-      TaskAdapter taskAdapter
+      TaskAdapter taskAdapter,
+      ConfigManager configManager
   )
   {
     this.smileMapper = smileMapper;
@@ -65,6 +68,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     this.druidKubernetesClient = druidKubernetesClient;
     this.emitter = emitter;
     this.taskAdapter = taskAdapter;
+    this.configManager = configManager;
   }
 
   @Override
@@ -99,7 +103,8 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
             smileMapper,
             kubernetesTaskRunnerConfig.getLogSaveTimeout().toStandardDuration().getMillis()
         ),
-        emitter
+        emitter,
+        configManager
     );
     return runner;
   }
