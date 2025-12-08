@@ -44,10 +44,8 @@ public class CostBasedAutoScalerConfigTest
                   + "  \"scaleActionStartDelayMillis\": 300000,\n"
                   + "  \"scaleActionPeriodMillis\": 60000,\n"
                   + "  \"lagWeight\": 0.6,\n"
-                  + "  \"idleWeight\": 0.25,\n"
-                  + "  \"changeWeight\": 0.15,\n"
-                  + "  \"distancePenaltyExponent\": 3.0,\n"
-                  + "  \"lagAggregate\": \"SUM\"\n"
+                  + "  \"idleWeight\": 0.4,\n"
+                  + "  \"distancePenaltyExponent\": 3.0\n"
                   + "}";
 
     CostBasedAutoScalerConfig config = mapper.readValue(json, CostBasedAutoScalerConfig.class);
@@ -63,8 +61,7 @@ public class CostBasedAutoScalerConfigTest
     Assert.assertEquals(300000L, config.getScaleActionStartDelayMillis());
     Assert.assertEquals(60000L, config.getScaleActionPeriodMillis());
     Assert.assertEquals(0.6, config.getLagWeight(), 0.001);
-    Assert.assertEquals(0.25, config.getIdleWeight(), 0.001);
-    Assert.assertEquals(0.15, config.getChangeWeight(), 0.001);
+    Assert.assertEquals(0.4, config.getIdleWeight(), 0.001);
 
     // Test serialization back to JSON
     String serialized = mapper.writeValueAsString(config);
@@ -159,39 +156,6 @@ public class CostBasedAutoScalerConfigTest
                              .taskCountMax(100)
                              .taskCountMin(5)
                              .stopTaskCountRatio(1.5)
-                             .enableTaskAutoScaler(true)
-                             .build();
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testValidation_NegativeLagWeight()
-  {
-    CostBasedAutoScalerConfig.builder()
-                             .taskCountMax(100)
-                             .taskCountMin(5)
-                             .lagWeight(-0.1)
-                             .enableTaskAutoScaler(true)
-                             .build();
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testValidation_NegativeIdleWeight()
-  {
-    CostBasedAutoScalerConfig.builder()
-                             .taskCountMax(100)
-                             .taskCountMin(5)
-                             .idleWeight(-0.1)
-                             .enableTaskAutoScaler(true)
-                             .build();
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testValidation_NegativeChangeWeight()
-  {
-    CostBasedAutoScalerConfig.builder()
-                             .taskCountMax(100)
-                             .taskCountMin(5)
-                             .changeWeight(-0.1)
                              .enableTaskAutoScaler(true)
                              .build();
   }

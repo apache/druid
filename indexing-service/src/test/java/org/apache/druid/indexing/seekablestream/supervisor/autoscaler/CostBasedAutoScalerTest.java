@@ -28,9 +28,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.mockito.Mockito.when;
 
@@ -62,8 +61,7 @@ public class CostBasedAutoScalerTest
                                       .scaleActionStartDelayMillis(300000L)
                                       .scaleActionPeriodMillis(60000L)
                                       .lagWeight(0.6)
-                                      .idleWeight(0.3)
-                                      .changeWeight(0.1)
+                                      .idleWeight(0.4)
                                       .build();
 
     autoScaler = new CostBasedAutoScaler(
@@ -76,41 +74,11 @@ public class CostBasedAutoScalerTest
   }
 
   @Test
-  public void testComputeFactorsWithBounds()
-  {
-    // 100 partitions, bounds [1, 100] - full range
-    List<Integer> factors = autoScaler.computeFactors(100, new int[]{1, 100});
-    Assert.assertEquals(1, (int) factors.get(0));
-    Assert.assertEquals(100, (int) factors.get(factors.size() - 1));
-    Assert.assertTrue(factors.contains(25));
-    Assert.assertTrue(factors.contains(34));
-    Assert.assertTrue(factors.contains(50));
-
-    // 100 partitions, bounds [5, 20] - constrained range
-    List<Integer> constrainedFactors = autoScaler.computeFactors(100, new int[]{5, 20});
-    for (int f : constrainedFactors) {
-      Assert.assertTrue("Factor " + f + " should be >= 5", f >= 5);
-      Assert.assertTrue("Factor " + f + " should be <= 20", f <= 20);
-    }
-    Assert.assertTrue(constrainedFactors.contains(10));
-    Assert.assertTrue(constrainedFactors.contains(13));
-    Assert.assertTrue(constrainedFactors.contains(17));
-    Assert.assertTrue(constrainedFactors.contains(20));
-
-    // Empty result when no factors in range
-    List<Integer> emptyFactors = autoScaler.computeFactors(100, new int[]{101, 200});
-    Assert.assertTrue(emptyFactors.isEmpty());
-
-    // Edge case: zero partitions
-    Assert.assertTrue(autoScaler.computeFactors(0, new int[]{1, 100}).isEmpty());
-  }
-
-  @Test
   public void testComputeFactorsGradualScaling()
   {
     // Verify gradual scaling: for 100 partitions, going from 25 tasks (4 partitions/task)
     // the next step should be 34 tasks (3 partitions/task)
-    List<Integer> factors = autoScaler.computeFactors(100, new int[]{1, 100});
+    List<Integer> factors = autoScaler.computeFactors(100);
 
     int idx25 = factors.indexOf(25);
     int idx34 = factors.indexOf(34);
@@ -123,7 +91,7 @@ public class CostBasedAutoScalerTest
   public void testComputeOptimalTaskCountInvalidInputs()
   {
     // Empty metrics list
-    int result = autoScaler.computeOptimalTaskCount(Collections.emptyList());
+    int result = autoScaler.computeOptimalTaskCount(new AtomicReference<>(null));
     Assert.assertEquals(-1, result);
 
     // Zero partitions
@@ -135,7 +103,7 @@ public class CostBasedAutoScalerTest
         0.0   // pollIdleRatio
     );
 
-    result = autoScaler.computeOptimalTaskCount(Collections.singletonList(zeroPartitionsMetrics));
+    result = autoScaler.computeOptimalTaskCount(new AtomicReference<>(zeroPartitionsMetrics));
     Assert.assertEquals(-1, result);
   }
 
@@ -151,8 +119,12 @@ public class CostBasedAutoScalerTest
         0.001       // pollIdleRatio - low idle (tasks are busy)
     );
 
-    int initialResult = autoScaler.computeOptimalTaskCount(Collections.singletonList(oldMetrics));
-    Assert.assertEquals(34, initialResult);
+    int initialResult = autoScaler.computeOptimalTaskCount(new AtomicReference<>(oldMetrics));
+
+    // Expect -1 since we're scaling down, but config should contain 34 now.
+    Assert.assertEquals(-1, initialResult);
+    Assert.assertNotNull(config.getTaskCountStart());
+    Assert.assertEquals(34, config.getTaskCountStart().intValue());
 
     CostMetrics newMetrics = new CostMetrics(
         System.currentTimeMillis(),
@@ -162,7 +134,7 @@ public class CostBasedAutoScalerTest
         0.001       // pollIdleRatio - low idle (tasks are busy)
     );
 
-    int result = autoScaler.computeOptimalTaskCount(Arrays.asList(oldMetrics, newMetrics));
+    int result = autoScaler.computeOptimalTaskCount(new AtomicReference<>(newMetrics));
     // With relatively high lag and very low idle, the algorithm should recommend scaling up
     Assert.assertEquals(50, result);
   }
@@ -179,7 +151,7 @@ public class CostBasedAutoScalerTest
         0.1         // pollIdleRatio - low idle (tasks are busy)
     );
 
-    int result = autoScaler.computeOptimalTaskCount(Collections.singletonList(metrics));
+    int result = autoScaler.computeOptimalTaskCount(new AtomicReference<>(metrics));
     // With very high lag and low idle, algorithm should recommend scaling up aggressively
     Assert.assertEquals(50, result);
   }

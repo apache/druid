@@ -31,17 +31,28 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 @UnstableApi
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "autoScalerStrategy", defaultImpl = LagBasedAutoScalerConfig.class)
 @JsonSubTypes(value = {
-        @Type(name = "lagBased", value = LagBasedAutoScalerConfig.class),
-        @Type(name = "costBased", value = CostBasedAutoScalerConfig.class)
+    @Type(name = "lagBased", value = LagBasedAutoScalerConfig.class),
+    @Type(name = "costBased", value = CostBasedAutoScalerConfig.class)
 })
 public interface AutoScalerConfig
 {
   boolean getEnableTaskAutoScaler();
+
   long getMinTriggerScaleActionFrequencyMillis();
+
   int getTaskCountMax();
+
   int getTaskCountMin();
+
   Integer getTaskCountStart();
+
+  default void setTaskCountStart(int newTaskCountStart)
+  {
+    // No-op
+  }
+
   Double getStopTaskCountRatio();
+
   SupervisorTaskAutoScaler createAutoScaler(Supervisor supervisor, SupervisorSpec spec, ServiceEmitter emitter);
 }
 

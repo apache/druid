@@ -51,7 +51,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   private final boolean enableTaskAutoScaler;
   private final int taskCountMax;
   private final int taskCountMin;
-  private final Integer taskCountStart;
+  private Integer taskCountStart;
   private final long minTriggerScaleActionFrequencyMillis;
   private final Double stopTaskCountRatio;
 
@@ -62,7 +62,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
 
   private final double lagWeight;
   private final double idleWeight;
-  private final double changeWeight;
 
   @JsonCreator
   public CostBasedAutoScalerConfig(
@@ -77,8 +76,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       @Nullable @JsonProperty("scaleActionStartDelayMillis") Long scaleActionStartDelayMillis,
       @Nullable @JsonProperty("scaleActionPeriodMillis") Long scaleActionPeriodMillis,
       @Nullable @JsonProperty("lagWeight") Double lagWeight,
-      @Nullable @JsonProperty("idleWeight") Double idleWeight,
-      @Nullable @JsonProperty("changeWeight") Double changeWeight
+      @Nullable @JsonProperty("idleWeight") Double idleWeight
   )
   {
     this.enableTaskAutoScaler = enableTaskAutoScaler != null ? enableTaskAutoScaler : false;
@@ -103,7 +101,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     // Cost function weights with defaults
     this.lagWeight = lagWeight != null ? lagWeight : DEFAULT_LAG_WEIGHT;
     this.idleWeight = idleWeight != null ? idleWeight : DEFAULT_IDLE_WEIGHT;
-    this.changeWeight = changeWeight != null ? changeWeight : 0.;
 
     if (this.enableTaskAutoScaler) {
       Preconditions.checkNotNull(taskCountMax, "taskCountMax is required when enableTaskAutoScaler is true");
@@ -131,7 +128,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     // Validate weights are non-negative
     Preconditions.checkArgument(this.lagWeight >= 0, "lagWeight must be >= 0");
     Preconditions.checkArgument(this.idleWeight >= 0, "idleWeight must be >= 0");
-    Preconditions.checkArgument(this.changeWeight >= 0, "changeWeight must be >= 0");
   }
 
   /**
@@ -169,6 +165,12 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   public Integer getTaskCountStart()
   {
     return taskCountStart;
+  }
+
+  @Override
+  public void setTaskCountStart(int newTaskCountStart)
+  {
+    this.taskCountStart = newTaskCountStart;
   }
 
   @Override
@@ -222,12 +224,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     return idleWeight;
   }
 
-  @JsonProperty
-  public double getChangeWeight()
-  {
-    return changeWeight;
-  }
-
   @Override
   public SupervisorTaskAutoScaler createAutoScaler(Supervisor supervisor, SupervisorSpec spec, ServiceEmitter emitter)
   {
@@ -256,7 +252,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            && scaleActionPeriodMillis == that.scaleActionPeriodMillis
            && Double.compare(that.lagWeight, lagWeight) == 0
            && Double.compare(that.idleWeight, idleWeight) == 0
-           && Double.compare(that.changeWeight, changeWeight) == 0
            && Objects.equals(taskCountStart, that.taskCountStart)
            && Objects.equals(stopTaskCountRatio, that.stopTaskCountRatio);
   }
@@ -276,8 +271,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
         scaleActionStartDelayMillis,
         scaleActionPeriodMillis,
         lagWeight,
-        idleWeight,
-        changeWeight
+        idleWeight
     );
   }
 
@@ -297,7 +291,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            ", scaleActionPeriodMillis=" + scaleActionPeriodMillis +
            ", lagWeight=" + lagWeight +
            ", idleWeight=" + idleWeight +
-           ", changeWeight=" + changeWeight +
            '}';
   }
 
@@ -319,7 +312,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     private Long scaleActionPeriodMillis;
     private Double lagWeight;
     private Double idleWeight;
-    private Double changeWeight;
 
     private Builder()
     {
@@ -397,12 +389,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       return this;
     }
 
-    public Builder changeWeight(double changeWeight)
-    {
-      this.changeWeight = changeWeight;
-      return this;
-    }
-
     public CostBasedAutoScalerConfig build()
     {
       return new CostBasedAutoScalerConfig(
@@ -417,8 +403,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
           scaleActionStartDelayMillis,
           scaleActionPeriodMillis,
           lagWeight,
-          idleWeight,
-          changeWeight
+          idleWeight
       );
     }
   }

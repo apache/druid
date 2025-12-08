@@ -19,9 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
-import org.apache.commons.collections4.queue.CircularFifoQueue;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.AggregateFunction;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
@@ -32,15 +30,15 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 
-import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Cost-based auto-scaler for seekable stream supervisors.
@@ -55,8 +53,16 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   private static final double MESSAGE_GAP_FULL_IDLE_MILLIS = 5000.0;
   private static final int SCALE_FACTOR_DISCRETE_DISTANCE = 2;
 
+  private static final Map<Integer, List<Integer>> FACTORS_CACHE = new HashMap<>();
+
   private final String dataSource;
-  private final CircularFifoQueue<CostMetrics> metricsQueue;
+  /**
+   * Atomic reference to CostMetrics object. All operations must be performed
+   * with sequentially consistent semantics (volatile reads/writes).
+   * However, it may be fine-tuned with acquire/release semantics,
+   * but requires careful reasoning about correctness.
+   */
+  private final AtomicReference<CostMetrics> currentMetrics;
   private final ScheduledExecutorService metricsCollectionExec;
   private final ScheduledExecutorService scalingDecisionExec;
   private final SupervisorSpec spec;
@@ -65,8 +71,6 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   private final ServiceEmitter emitter;
   private final ServiceMetricEvent.Builder metricBuilder;
   private final WeightedCostFunction costFunction;
-
-  private final ReentrantLock lock = new ReentrantLock(true);
 
   public CostBasedAutoScaler(
       SeekableStreamSupervisor supervisor,
@@ -83,10 +87,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     this.emitter = emitter;
 
     final String supervisorId = StringUtils.format("Supervisor-%s", dataSource);
-    final int queueSize = (int) (config.getMetricsCollectionRangeMillis()
-                                 / config.getMetricsCollectionIntervalMillis()) + 1;
 
-    this.metricsQueue = new CircularFifoQueue<>(queueSize);
+    this.currentMetrics = new AtomicReference<>(null);
     this.costFunction = new WeightedCostFunction();
 
     this.metricsCollectionExec = Execs.scheduledSingleThreaded(
@@ -107,25 +109,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   @Override
   public void start()
   {
-    Callable<Integer> scaleAction = () -> {
-      lock.lock();
-      try {
-        return computeOptimalTaskCount(new ArrayList<>(metricsQueue));
-      }
-      finally {
-        lock.unlock();
-      }
-    };
-
-    Runnable onSuccessfulScale = () -> {
-      lock.lock();
-      try {
-        metricsQueue.clear();
-      }
-      finally {
-        lock.unlock();
-      }
-    };
+    Callable<Integer> scaleAction = () -> computeOptimalTaskCount(currentMetrics);
+    Runnable onSuccessfulScale = () -> currentMetrics.set(null);
 
     metricsCollectionExec.scheduleAtFixedRate(
         collectMetrics(),
@@ -143,11 +128,10 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     log.info(
         "CostBasedAutoScaler started for dataSource [%s]: collecting metrics every [%d]ms, "
-        + "evaluating scaling every [%d]ms, queue size [%d]",
+        + "evaluating scaling every [%d]ms",
         dataSource,
         config.getMetricsCollectionIntervalMillis(),
-        config.getScaleActionPeriodMillis(),
-        metricsQueue.maxSize()
+        config.getScaleActionPeriodMillis()
     );
   }
 
@@ -162,17 +146,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   @Override
   public void reset()
   {
-    lock.lock();
-    try {
-      metricsQueue.clear();
-      log.info("CostBasedAutoScaler reset for dataSource [%s]", dataSource);
-    }
-    catch (Exception e) {
-      log.warn(e, "Error while resetting CostBasedAutoScaler for dataSource [%s]", dataSource);
-    }
-    finally {
-      lock.unlock();
-    }
+    currentMetrics.set(null);
   }
 
   private Runnable collectMetrics()
@@ -197,24 +171,18 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
       final double pollIdleRatio = extractPollIdleRatio();
 
-      final CostMetrics metrics = new CostMetrics(
-          System.currentTimeMillis(),
-          avgPartitionLag,
-          currentTaskCount,
-          partitionCount,
-          pollIdleRatio
+      currentMetrics.compareAndSet(
+          null,
+          new CostMetrics(
+              System.currentTimeMillis(),
+              avgPartitionLag,
+              currentTaskCount,
+              partitionCount,
+              pollIdleRatio
+          )
       );
 
-      lock.lock();
-      try {
-        metricsQueue.offer(metrics);
-        costFunction.updateLagBounds(lagStats.getMetric(AggregateFunction.AVERAGE));
-      }
-      finally {
-        lock.unlock();
-      }
-
-      log.debug("Collected metrics for dataSource [%s]: %s", dataSource, metrics);
+      log.debug("Collected metrics for dataSource [%s]", dataSource);
     };
   }
 
@@ -264,28 +232,26 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   /**
    * @return optimal task count, or -1 if no scaling action needed
    */
-  public int computeOptimalTaskCount(List<CostMetrics> metricsHistory)
+  public int computeOptimalTaskCount(AtomicReference<CostMetrics> currentMetricsRef)
   {
-    if (metricsHistory.isEmpty()) {
+    final CostMetrics currentMetrics = currentMetricsRef.get();
+    if (currentMetrics == null) {
       log.debug("No metrics available yet for dataSource [%s]", dataSource);
       return -1;
     }
-
-    final CostMetrics currentMetrics = metricsHistory.get(metricsHistory.size() - 1);
 
     if (currentMetrics.getPartitionCount() <= 0) {
       return -1;
     }
 
     final int currentTaskCount = currentMetrics.getCurrentTaskCount();
-    final int minTaskBound = Math.min(config.getTaskCountMin(), currentMetrics.getPartitionCount());
-    final int maxTaskCount = Math.min(config.getTaskCountMax(), currentMetrics.getPartitionCount());
 
-    // TODO: think about caching.
-    List<Integer> validTaskCounts = computeFactors(
+    FACTORS_CACHE.computeIfAbsent(
         currentMetrics.getPartitionCount(),
-        new int[]{minTaskBound, maxTaskCount}
+        k -> computeFactors(currentMetrics.getPartitionCount())
     );
+
+    final List<Integer> validTaskCounts = FACTORS_CACHE.get(currentMetrics.getPartitionCount());
 
     if (validTaskCounts.isEmpty()) {
       log.warn("No valid task counts after applying constraints for dataSource [%s]", dataSource);
@@ -300,7 +266,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     double optimalCost = Double.POSITIVE_INFINITY;
 
     // TODO: what if somehow it is not in the validTaskCounts list?
-    int bestTaskCountIndex = validTaskCounts.indexOf(currentTaskCount);
+    final int bestTaskCountIndex = validTaskCounts.indexOf(currentTaskCount);
     for (int i = bestTaskCountIndex - SCALE_FACTOR_DISCRETE_DISTANCE;
          i <= bestTaskCountIndex + SCALE_FACTOR_DISCRETE_DISTANCE; i++) {
       // Range check.
@@ -316,9 +282,13 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       }
     }
 
-    emitter.emit(metricBuilder.setMetric("task/autoScaler/optimalTaskCount", optimalTaskCount));
-    emitter.emit(metricBuilder.setMetric("task/autoScaler/currentTaskCount", currentMetrics.getCurrentTaskCount()));
-    emitter.emit(metricBuilder.setMetric("task/autoScaler/partitionCount", currentMetrics.getPartitionCount()));
+    emitter.emit(ServiceMetricEvent.builder()
+                                   .setMetric(
+                                       SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC,
+                                       optimalTaskCount
+                                   ));
+    emitter.emit(ServiceMetricEvent.builder()
+                                   .setMetric("task/autoScaler/partitionCount", currentMetrics.getPartitionCount()));
 
     log.info(
         "Cost-based scaling evaluation for dataSource [%s]: current=%d, optimal=%d, cost=%.4f, "
@@ -347,7 +317,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
           currentTaskCount,
           optimalTaskCount
       );
-      return optimalTaskCount;
+      config.setTaskCountStart(optimalTaskCount);
+      return -1;
     } else {
       log.debug("No scaling action needed for dataSource [%s], staying at %d tasks", dataSource, optimalTaskCount);
       return -1;
@@ -360,7 +331,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    *
    * @return sorted list of valid task counts within bounds
    */
-  List<Integer> computeFactors(int partitionCount, @NotNull int[] bounds)
+  List<Integer> computeFactors(int partitionCount)
   {
     if (partitionCount <= 0) {
       return Collections.emptyList();
@@ -370,9 +341,6 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     for (int partitionsPerTask = partitionCount; partitionsPerTask >= 1; partitionsPerTask--) {
       int taskCount = (partitionCount + partitionsPerTask - 1) / partitionsPerTask;
-      if (taskCount < bounds[0] || taskCount > bounds[1]) {
-        continue;
-      }
       if (result.isEmpty() || result.get(result.size() - 1) != taskCount) {
         result.add(taskCount);
       }
