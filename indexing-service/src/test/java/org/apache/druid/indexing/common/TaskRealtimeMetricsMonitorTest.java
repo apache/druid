@@ -25,6 +25,7 @@ import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.java.util.metrics.MonitorUtils;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
@@ -74,7 +75,11 @@ public class TaskRealtimeMetricsMonitorTest
           return null;
         })
         .when(emitter).emit(ArgumentMatchers.any(Event.class));
-    target = new TaskRealtimeMetricsMonitor(segmentGenerationMetrics, rowIngestionMeters, DIMENSIONS, TAGS);
+    target = new TaskRealtimeMetricsMonitor(
+        segmentGenerationMetrics,
+        rowIngestionMeters,
+        createMetricEventBuilder()
+    );
   }
 
   @Test
@@ -89,7 +94,11 @@ public class TaskRealtimeMetricsMonitorTest
   @Test
   public void testdoMonitorWithoutTagsShouldNotEmitTags()
   {
-    target = new TaskRealtimeMetricsMonitor(segmentGenerationMetrics, rowIngestionMeters, DIMENSIONS, null);
+    target = new TaskRealtimeMetricsMonitor(
+        segmentGenerationMetrics,
+        rowIngestionMeters,
+        createMetricEventBuilder()
+    );
     for (ServiceMetricEvent sme : emittedEvents.values()) {
       Assert.assertFalse(sme.getUserDims().containsKey(DruidMetrics.TAGS));
     }
@@ -98,7 +107,11 @@ public class TaskRealtimeMetricsMonitorTest
   @Test
   public void testMessageGapAggStats()
   {
-    target = new TaskRealtimeMetricsMonitor(segmentGenerationMetrics, rowIngestionMeters, DIMENSIONS, null);
+    target = new TaskRealtimeMetricsMonitor(
+        segmentGenerationMetrics,
+        rowIngestionMeters,
+        createMetricEventBuilder()
+    );
 
     target.doMonitor(emitter);
     Assert.assertFalse(emittedEvents.containsKey("ingest/events/minMessageGap"));
@@ -112,5 +125,13 @@ public class TaskRealtimeMetricsMonitorTest
     Assert.assertTrue(emittedEvents.containsKey("ingest/events/minMessageGap"));
     Assert.assertTrue(emittedEvents.containsKey("ingest/events/maxMessageGap"));
     Assert.assertTrue(emittedEvents.containsKey("ingest/events/avgMessageGap"));
+  }
+
+  private ServiceMetricEvent.Builder createMetricEventBuilder()
+  {
+    final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+    MonitorUtils.addDimensionsToBuilder(builder, DIMENSIONS);
+    builder.setDimensionIfNotNull(DruidMetrics.TAGS, TAGS);
+    return builder;
   }
 }

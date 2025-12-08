@@ -892,10 +892,21 @@
                 <artifactId>commons-dbcp2</artifactId>
                 <version>2.0.1</version>
             </dependency>
+            <!-- this is relocated to at.yawk.lz4, but license checker script (the one that uses licenses.yaml)
+             complains about stuff (our dependencies) using org.lz4 package, so put this here even though our own
+              packaging doesn't use it directly anymore
+             -->
             <dependency>
                 <groupId>org.lz4</groupId>
                 <artifactId>lz4-java</artifactId>
-                <version>1.8.0</version>
+                <version>1.8.1</version>
+            </dependency>
+            <!-- dependency:analyze complains if we don't declare this like this in our own packaging, since this is
+             what org.lz4 is relocated as -->
+            <dependency>
+                <groupId>at.yawk.lz4</groupId>
+                <artifactId>lz4-java</artifactId>
+                <version>1.8.1</version>
             </dependency>
             <dependency>
                 <groupId>org.xerial.snappy</groupId>

@@ -129,9 +129,9 @@ import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.initialization.jetty.ChatHandlerServerModule;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
-import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
-import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
+import org.apache.druid.server.metrics.LoadSpecHolder;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
+import org.apache.druid.server.metrics.TaskHolder;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.apache.druid.tasklogs.TaskPayloadManager;
 import org.eclipse.jetty.server.Server;
@@ -261,6 +261,9 @@ public class CliPeon extends GuiceRunnable
                 .setTaskFile(Paths.get(taskDirPath, "task.json").toFile())
                 .setStatusFile(Paths.get(taskDirPath, "attempt", attemptId, "status.json").toFile());
 
+            binder.bind(TaskHolder.class).to(PeonTaskHolder.class).in(LazySingleton.class);
+            binder.bind(LoadSpecHolder.class).to(PeonLoadSpecHolder.class).in(LazySingleton.class);
+
             binder.bind(Properties.class).toInstance(properties);
             if (properties.getProperty("druid.indexer.runner.type", "").contains("k8s")) {
               log.info("Running peon in k8s mode");
@@ -327,38 +330,6 @@ public class CliPeon extends GuiceRunnable
             catch (IOException e) {
               throw new RuntimeException(e);
             }
-          }
-
-          @Provides
-          @LazySingleton
-          @Named(DataSourceTaskIdHolder.DATA_SOURCE_BINDING)
-          public String getDataSourceFromTask(final Task task)
-          {
-            return task.getDataSource();
-          }
-
-          @Provides
-          @LazySingleton
-          @Named(DataSourceTaskIdHolder.TASK_ID_BINDING)
-          public String getTaskIDFromTask(final Task task)
-          {
-            return task.getId();
-          }
-
-          @Provides
-          @LazySingleton
-          @Named(DataSourceTaskIdHolder.LOOKUPS_TO_LOAD_FOR_TASK)
-          public LookupLoadingSpec getLookupsToLoad(final Task task)
-          {
-            return task.getLookupLoadingSpec();
-          }
-
-          @Provides
-          @LazySingleton
-          @Named(DataSourceTaskIdHolder.BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)
-          public BroadcastDatasourceLoadingSpec getBroadcastDatasourcesToLoad(final Task task)
-          {
-            return task.getBroadcastDatasourceLoadingSpec();
           }
 
           @Provides

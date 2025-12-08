@@ -138,4 +138,10 @@ public interface SegmentCacheManager
   void shutdownBootstrap();
 
   void shutdown();
+
+  /**
+   * Collect {@link StorageStats}, if available.
+   */
+  @Nullable
+  StorageStats getStorageStats();
 }

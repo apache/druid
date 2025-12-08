@@ -55,7 +55,7 @@ export const ShowJson = React.memo(function ShowJson(props: ShowJsonProps) {
         <ButtonGroup className="right-buttons">
           <Button
             disabled={jsonState.loading}
-            text="Refesh"
+            text="Refresh"
             minimal
             onClick={() => queryManager.rerunLastQuery()}
           />

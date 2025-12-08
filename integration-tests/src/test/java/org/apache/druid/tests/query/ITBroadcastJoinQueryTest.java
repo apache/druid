@@ -50,7 +50,6 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
   private static final String BROADCAST_JOIN_QUERIES_RESOURCE = "/queries/broadcast_join_queries.json";
   private static final String BROADCAST_JOIN_DATASOURCE = "broadcast_join_wikipedia_test";
 
-
   @Inject
   ServerDiscoveryFactory factory;
 

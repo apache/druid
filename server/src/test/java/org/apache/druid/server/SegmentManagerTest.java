@@ -35,6 +35,7 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TestHelper;
@@ -45,7 +46,6 @@ import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalLoadSpec;
-import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
@@ -90,7 +90,9 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
   );
 
   private ExecutorService executor;
+  private SegmentLocalCacheManager cacheManager;
   private SegmentManager segmentManager;
+  private SegmentLocalCacheManager virtualCacheManager;
   private SegmentManager virtualSegmentManager;
 
   @Rule
@@ -160,7 +162,7 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
     );
 
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
-    final SegmentLocalCacheManager cacheManager = new SegmentLocalCacheManager(
+    cacheManager = new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
@@ -170,7 +172,7 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
     segmentManager = new SegmentManager(cacheManager);
 
     final List<StorageLocation> virtualStorageLocations = virtualLoaderConfig.toStorageLocations();
-    final SegmentCacheManager virtualCacheManager = new SegmentLocalCacheManager(
+    virtualCacheManager = new SegmentLocalCacheManager(
         virtualStorageLocations,
         virtualLoaderConfig,
         new LeastBytesUsedStorageLocationSelectorStrategy(virtualStorageLocations),
@@ -238,8 +240,12 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
   @Test
   public void testDropSegment() throws SegmentLoadingException, ExecutionException, InterruptedException, IOException
   {
+    List<ReferenceCountedSegmentProvider> referenceProviders = new ArrayList<>();
     for (DataSegment eachSegment : SEGMENTS) {
       segmentManager.loadSegment(eachSegment);
+      ReferenceCountedSegmentProvider refProvider = cacheManager.getSegmentReferenceProvider(eachSegment);
+      referenceProviders.add(refProvider);
+      Assert.assertFalse(refProvider.isClosed());
     }
 
     final List<Future<Void>> futures = ImmutableList.of(SEGMENTS.get(0), SEGMENTS.get(2)).stream()
@@ -260,6 +266,14 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
     assertResult(
         ImmutableList.of(SEGMENTS.get(1), SEGMENTS.get(3), SEGMENTS.get(4))
     );
+    for (int i = 0; i < SEGMENTS.size(); i++) {
+      Assert.assertEquals(0, referenceProviders.get(i).getNumReferences());
+      if (i == 0 || i == 2) {
+        Assert.assertTrue(referenceProviders.get(i).isClosed());
+      } else {
+        Assert.assertFalse(referenceProviders.get(i).isClosed());
+      }
+    }
   }
 
   private Void loadSegmentOrFail(DataSegment segment)

@@ -29,7 +29,7 @@ jobs:
     uses: ./.github/workflows/worker.yml
     with:
       script: .github/scripts/run_unit-tests -Dtest=!QTest,'${{ matrix.pattern }}' -Dmaven.test.failure.ignore=true
-      artifact_prefix: "unit-test-reports"
+      artifact_prefix: "unit-test-reports-jdk${{ matrix.jdk }}"
       jdk: ${{ matrix.jdk }}
       key: "test-jdk${{ matrix.jdk }}-[${{ matrix.pattern }}]"
 
@@ -43,17 +43,21 @@ jobs:
     name: "test-report"
     needs: run-unit-tests
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: [ "17", "21" ]
     steps:
       - name: Download reports for all unit test jobs
         uses: actions/download-artifact@v4
         with:
-          pattern: "unit-test-reports-*"
+          pattern: "unit-test-reports-jdk${{ matrix.jdk }}*"
           path: target/surefire-reports
 
       - name: Publish Test Report
         uses: mikepenz/action-junit-report@v5
         with:
-          check_name: "Unit Test Report"
+          check_name: "Unit Test Report (JDK ${{ matrix.jdk }})"
           report_paths: '**/target/surefire-reports/TEST-*.xml'
           detailed_summary: true
           flaky_summary: true
