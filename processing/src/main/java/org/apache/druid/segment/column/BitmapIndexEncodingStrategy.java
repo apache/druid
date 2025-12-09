@@ -21,6 +21,7 @@ package org.apache.druid.segment.column;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.base.Preconditions;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
@@ -36,11 +37,14 @@ import java.util.Objects;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
-    @JsonSubTypes.Type(value = BitmapIndexEncodingStrategy.DictionaryId.class, name = "dictionaryId"),
-    @JsonSubTypes.Type(value = BitmapIndexEncodingStrategy.NullsOnly.class, name = "nullsOnly")
+    @JsonSubTypes.Type(value = BitmapIndexEncodingStrategy.DictionaryEncodedValueIndex.class, name = BitmapIndexEncodingStrategy.TYPE_DICTIONARY),
+    @JsonSubTypes.Type(value = BitmapIndexEncodingStrategy.NullValueIndex.class, name = BitmapIndexEncodingStrategy.TYPE_NULL)
 })
 public abstract class BitmapIndexEncodingStrategy implements Serializer
 {
+  protected static final String TYPE_DICTIONARY = "DictionaryEncodedValueIndex";
+  protected static final String TYPE_NULL = "NullValueIndex";
+
   /**
    * Assigned in {@link #init(BitmapFactory, int)}
    */
@@ -72,18 +76,20 @@ public abstract class BitmapIndexEncodingStrategy implements Serializer
   @Override
   public long getSerializedSize()
   {
+    Preconditions.checkArgument(writer != null, "Not closed yet!");
     return writer.getSerializedSize();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
+    Preconditions.checkArgument(writer != null, "Not closed yet!");
     writer.writeTo(channel, fileBuilder);
   }
 
-  public static class DictionaryId extends BitmapIndexEncodingStrategy
+  public static class DictionaryEncodedValueIndex extends BitmapIndexEncodingStrategy
   {
-    public static final DictionaryId INSTANCE = new DictionaryId();
+    public static final DictionaryEncodedValueIndex INSTANCE = new DictionaryEncodedValueIndex();
 
     @Override
     public void init(BitmapFactory bitmapFactory, int dictionarySize)
@@ -118,13 +124,13 @@ public abstract class BitmapIndexEncodingStrategy implements Serializer
     @Override
     public String toString()
     {
-      return "DictionaryId";
+      return TYPE_DICTIONARY;
     }
   }
 
-  public static class NullsOnly extends BitmapIndexEncodingStrategy
+  public static class NullValueIndex extends BitmapIndexEncodingStrategy
   {
-    public static final NullsOnly INSTANCE = new NullsOnly();
+    public static final NullValueIndex INSTANCE = new NullValueIndex();
 
     @Override
     public void init(BitmapFactory bitmapFactory, int unused)
@@ -159,7 +165,7 @@ public abstract class BitmapIndexEncodingStrategy implements Serializer
     @Override
     public String toString()
     {
-      return "NullsOnly";
+      return TYPE_NULL;
     }
   }
 }

@@ -1159,8 +1159,8 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
                    .setType(theType != null
                             ? theType
                             : ColumnType.leastRestrictiveType(FieldTypeInfo.convertToSet(types.getByteValue())));
-      if (indexEncoding != null && !(indexEncoding instanceof BitmapIndexEncodingStrategy.DictionaryId)) {
-        if (formatSpec.getNumericFieldsBitmapIndexEncoding() instanceof BitmapIndexEncodingStrategy.NullsOnly) {
+      if (indexEncoding != null && !(indexEncoding instanceof BitmapIndexEncodingStrategy.DictionaryEncodedValueIndex)) {
+        if (formatSpec.getNumericFieldsBitmapIndexEncoding() instanceof BitmapIndexEncodingStrategy.NullValueIndex) {
           Preconditions.checkArgument(
               rBitmaps.size() == 1,
               StringUtils.format("expecting 1 bitmap, got [%d]", rBitmaps.size())

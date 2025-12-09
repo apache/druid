@@ -160,13 +160,13 @@ public class NestedDataTestUtils
       File file = selfConcatenateResourceFile(tempFolder, inputFile, numCopies);
       inputFiles.add(new LocalInputSource(file.getParentFile(), file.getName()));
     }
-    return new SegmentBuilder(tempFolder, closer).inputSources(inputFiles)
+    return new ResourceFileSegmentBuilder(tempFolder, closer).inputSources(inputFiles)
                                                  .granularity(granularity)
                                                  .rollup(rollup)
                                                  .build();
   }
 
-  public static class SegmentBuilder
+  public static class ResourceFileSegmentBuilder
   {
     private TemporaryFolder tempFolder;
     private Closer closer;
@@ -192,13 +192,13 @@ public class NestedDataTestUtils
      * <li>rollup is on by default</li>
      * <li>use the default index spec</li>
      */
-    public SegmentBuilder(TemporaryFolder tempFolder, Closer closer)
+    public ResourceFileSegmentBuilder(TemporaryFolder tempFolder, Closer closer)
     {
       this.tempFolder = tempFolder;
       this.closer = closer;
     }
 
-    public SegmentBuilder input(String... inputs)
+    public ResourceFileSegmentBuilder input(String... inputs)
     {
       this.inputSources =
           Arrays.stream(inputs)
@@ -207,49 +207,49 @@ public class NestedDataTestUtils
       return this;
     }
 
-    public SegmentBuilder inputSources(List<InputSource> inputSources)
+    public ResourceFileSegmentBuilder inputSources(List<InputSource> inputSources)
     {
       this.inputSources = inputSources;
       return this;
     }
 
-    public SegmentBuilder inputFormat(InputFormat inputFormat)
+    public ResourceFileSegmentBuilder inputFormat(InputFormat inputFormat)
     {
       this.inputFormat = inputFormat;
       return this;
     }
 
-    public SegmentBuilder dimensionsSpec(DimensionsSpec dimensionsSpec)
+    public ResourceFileSegmentBuilder dimensionsSpec(DimensionsSpec dimensionsSpec)
     {
       this.dimensionsSpec = dimensionsSpec;
       return this;
     }
 
-    public SegmentBuilder transformSpec(TransformSpec transformSpec)
+    public ResourceFileSegmentBuilder transformSpec(TransformSpec transformSpec)
     {
       this.transformSpec = transformSpec;
       return this;
     }
 
-    public SegmentBuilder aggregators(AggregatorFactory[] aggregators)
+    public ResourceFileSegmentBuilder aggregators(AggregatorFactory[] aggregators)
     {
       this.aggregators = aggregators;
       return this;
     }
 
-    public SegmentBuilder granularity(Granularity queryGranularity)
+    public ResourceFileSegmentBuilder granularity(Granularity queryGranularity)
     {
       this.queryGranularity = queryGranularity;
       return this;
     }
 
-    public SegmentBuilder rollup(boolean rollup)
+    public ResourceFileSegmentBuilder rollup(boolean rollup)
     {
       this.rollup = rollup;
       return this;
     }
 
-    public SegmentBuilder indexSpec(IndexSpec indexSpec)
+    public ResourceFileSegmentBuilder indexSpec(IndexSpec indexSpec)
     {
       this.indexSpec = indexSpec;
       return this;
@@ -295,7 +295,7 @@ public class NestedDataTestUtils
   }
 
   /**
-   * @deprecated Use {@link SegmentBuilder} instead.
+   * @deprecated Use {@link ResourceFileSegmentBuilder} instead.
    */
   @Deprecated
   public static List<Segment> createSegments(
@@ -417,8 +417,8 @@ public class NestedDataTestUtils
       {
         try {
           return ImmutableList.<Segment>builder()
-                              .addAll(new SegmentBuilder(tempFolder, closer).input(jsonInputFile).build())
-                              .add(new SegmentBuilder(tempFolder, null).input(jsonInputFile).buildIncremental())
+                              .addAll(new ResourceFileSegmentBuilder(tempFolder, closer).input(jsonInputFile).build())
+                              .add(new ResourceFileSegmentBuilder(tempFolder, null).input(jsonInputFile).buildIncremental())
                               .build();
         }
         catch (Exception e) {
@@ -439,8 +439,8 @@ public class NestedDataTestUtils
       {
         try {
           return ImmutableList.of(
-              new SegmentBuilder(tempFolder, null).input(jsonInputFile).buildIncremental(),
-              new SegmentBuilder(tempFolder, null).input(jsonInputFile).buildIncremental()
+              new ResourceFileSegmentBuilder(tempFolder, null).input(jsonInputFile).buildIncremental(),
+              new ResourceFileSegmentBuilder(tempFolder, null).input(jsonInputFile).buildIncremental()
           );
         }
         catch (Exception e) {
@@ -461,8 +461,8 @@ public class NestedDataTestUtils
       {
         try {
           return ImmutableList.<Segment>builder()
-                              .addAll(new SegmentBuilder(tempFolder, closer).input(jsonInputFile).build())
-                              .addAll(new SegmentBuilder(tempFolder, closer).input(jsonInputFile).build())
+                              .addAll(new ResourceFileSegmentBuilder(tempFolder, closer).input(jsonInputFile).build())
+                              .addAll(new ResourceFileSegmentBuilder(tempFolder, closer).input(jsonInputFile).build())
                               .build();
         }
         catch (Exception e) {
@@ -489,7 +489,7 @@ public class NestedDataTestUtils
                        .map(strategy -> IndexSpec.builder().withStringDictionaryEncoding(strategy).build())
                        .map(indexSpec -> {
                          try {
-                           return new SegmentBuilder(tempFolder, closer).input(jsonInputFile)
+                           return new ResourceFileSegmentBuilder(tempFolder, closer).input(jsonInputFile)
                                                                         .indexSpec(indexSpec)
                                                                         .build();
                          }

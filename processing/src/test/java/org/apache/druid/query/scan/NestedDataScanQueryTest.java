@@ -91,8 +91,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     for (boolean auto : new boolean[]{true, false}) {
       for (ObjectStorageEncoding objectStorage : ObjectStorageEncoding.values()) {
         for (BitmapIndexEncodingStrategy bitmapIndex : new BitmapIndexEncodingStrategy[]{
-            BitmapIndexEncodingStrategy.DictionaryId.INSTANCE,
-            BitmapIndexEncodingStrategy.NullsOnly.INSTANCE
+            BitmapIndexEncodingStrategy.DictionaryEncodedValueIndex.INSTANCE,
+            BitmapIndexEncodingStrategy.NullValueIndex.INSTANCE
         }) {
           specs.add(
               new Object[]{
@@ -136,7 +136,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
             new NestedFieldVirtualColumn("nester", "$.x[0]", "x_0"),
             new NestedFieldVirtualColumn("nester", "$.y.c[1]", "y_c_1")
         ).build();
-    List<Segment> segs = new NestedDataTestUtils.SegmentBuilder(tempFolder, closer).build();
+    List<Segment> segs = new NestedDataTestUtils.ResourceFileSegmentBuilder(tempFolder, closer).build();
 
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 
@@ -167,7 +167,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         )
         .context(ImmutableMap.of())
         .build();
-    List<Segment> segs = new NestedDataTestUtils.SegmentBuilder(tempFolder, closer).dimensionsSpec(dimensionsSpec)
+    List<Segment> segs = new NestedDataTestUtils.ResourceFileSegmentBuilder(tempFolder, closer).dimensionsSpec(dimensionsSpec)
                                                                                    .build();
 
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
@@ -201,8 +201,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         .virtualColumns(new NestedFieldVirtualColumn("nest", "$.long", "long"))
         .build();
 
-    NestedDataTestUtils.SegmentBuilder builder =
-        new NestedDataTestUtils.SegmentBuilder(tempFolder, closer).input(NestedDataTestUtils.NUMERIC_DATA_FILE)
+    NestedDataTestUtils.ResourceFileSegmentBuilder builder =
+        new NestedDataTestUtils.ResourceFileSegmentBuilder(tempFolder, closer).input(NestedDataTestUtils.NUMERIC_DATA_FILE)
                                                                   .dimensionsSpec(dimensionsSpec)
                                                                   .granularity(Granularities.YEAR);
     List<Segment> realtimeSegs = List.of(builder.buildIncremental());
@@ -236,7 +236,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         .virtualColumns(new NestedFieldVirtualColumn("nest", "$.long", "long"))
         .build();
     List<Segment> segs =
-        new NestedDataTestUtils.SegmentBuilder(tempFolder, closer).input(NestedDataTestUtils.NUMERIC_DATA_FILE)
+        new NestedDataTestUtils.ResourceFileSegmentBuilder(tempFolder, closer).input(NestedDataTestUtils.NUMERIC_DATA_FILE)
                                                                   .rollup(rollup)
                                                                   .granularity(Granularities.YEAR)
                                                                   .build();
@@ -268,7 +268,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
             new NestedFieldVirtualColumn("count", "$.x", "count_path")
         )
         .build();
-    NestedDataTestUtils.SegmentBuilder builder = new NestedDataTestUtils.SegmentBuilder(tempFolder, closer);
+    NestedDataTestUtils.ResourceFileSegmentBuilder builder = new NestedDataTestUtils.ResourceFileSegmentBuilder(tempFolder, closer);
     List<Segment> realtimeSegs = List.of(builder.buildIncremental());
     List<Segment> segs = builder.build();
 
@@ -296,7 +296,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     Query<ScanResultValue> scanQuery = queryBuilder().columns("x", "x_0", "y_c_1")
                                                      .virtualColumns(virtualColumns)
                                                      .build();
-    NestedDataTestUtils.SegmentBuilder builder = new NestedDataTestUtils.SegmentBuilder(tempFolder, closer);
+    NestedDataTestUtils.ResourceFileSegmentBuilder builder = new NestedDataTestUtils.ResourceFileSegmentBuilder(tempFolder, closer);
     List<Segment> realtimeSegs = ImmutableList.of(builder.buildIncremental());
     List<Segment> segs = builder.build();
 
@@ -333,7 +333,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         )
         .build();
 
-    List<Segment> segments = new NestedDataTestUtils.SegmentBuilder(tempFolder, closer)
+    List<Segment> segments = new NestedDataTestUtils.ResourceFileSegmentBuilder(tempFolder, closer)
         .input(NestedDataTestUtils.SIMPLE_DATA_TSV_FILE)
         .inputFormat(NestedDataTestUtils.SIMPLE_DATA_TSV_INPUT_FORMAT)
         .dimensionsSpec(DimensionsSpec.builder().setDimensions(dimensionsSpec).build())
@@ -406,7 +406,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         .virtualColumns(new NestedFieldVirtualColumn("nest", "$.x", "x"))
         .filters(new SelectorDimFilter("x", "200", null))
         .build();
-    List<Segment> segs = new NestedDataTestUtils.SegmentBuilder(tempFolder, closer).dimensionsSpec(dimensionsSpec)
+    List<Segment> segs = new NestedDataTestUtils.ResourceFileSegmentBuilder(tempFolder, closer).dimensionsSpec(dimensionsSpec)
                                                                                    .build();
 
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
@@ -437,7 +437,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         .virtualColumns(new NestedFieldVirtualColumn("nest", "$.x", "x"))
         .filters(new BoundDimFilter("x", "100", "300", false, false, null, null, StringComparators.LEXICOGRAPHIC))
         .build();
-    List<Segment> segs = new NestedDataTestUtils.SegmentBuilder(tempFolder, closer).dimensionsSpec(dimensionsSpec)
+    List<Segment> segs = new NestedDataTestUtils.ResourceFileSegmentBuilder(tempFolder, closer).dimensionsSpec(dimensionsSpec)
                                                                                    .build();
 
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
@@ -451,8 +451,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
   @Test
   public void testIngestAndScanSegmentsRealtimeSchemaDiscovery() throws Exception
   {
-    NestedDataTestUtils.SegmentBuilder segmentBuilder =
-        new NestedDataTestUtils.SegmentBuilder(tempFolder, closer).input(NestedDataTestUtils.TYPES_DATA_FILE)
+    NestedDataTestUtils.ResourceFileSegmentBuilder segmentBuilder =
+        new NestedDataTestUtils.ResourceFileSegmentBuilder(tempFolder, closer).input(NestedDataTestUtils.TYPES_DATA_FILE)
                                                                   .granularity(Granularities.DAY);
     List<Segment> realtimeSegs = List.of(segmentBuilder.buildIncremental());
     List<Segment> segs = segmentBuilder.build();
@@ -489,8 +489,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                                       )
                                                   )
                                                   .build();
-    NestedDataTestUtils.SegmentBuilder builder =
-        new NestedDataTestUtils.SegmentBuilder(tempFolder, closer).input(NestedDataTestUtils.TYPES_DATA_FILE)
+    NestedDataTestUtils.ResourceFileSegmentBuilder builder =
+        new NestedDataTestUtils.ResourceFileSegmentBuilder(tempFolder, closer).input(NestedDataTestUtils.TYPES_DATA_FILE)
                                                                   .dimensionsSpec(dimensionsSpec)
                                                                   .granularity(Granularities.DAY);
     List<Segment> realtimeSegs = List.of(builder.buildIncremental());
@@ -511,8 +511,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
   @Test
   public void testIngestAndScanSegmentsRealtimeSchemaDiscoveryArrayTypes() throws Exception
   {
-    NestedDataTestUtils.SegmentBuilder builder =
-        new NestedDataTestUtils.SegmentBuilder(tempFolder, closer).input(NestedDataTestUtils.ARRAY_TYPES_DATA_FILE);
+    NestedDataTestUtils.ResourceFileSegmentBuilder builder =
+        new NestedDataTestUtils.ResourceFileSegmentBuilder(tempFolder, closer).input(NestedDataTestUtils.ARRAY_TYPES_DATA_FILE);
     List<Segment> realtimeSegs = List.of(builder.buildIncremental());
     List<Segment> segs = builder.build();
 
@@ -531,8 +531,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
   @Test
   public void testIngestAndScanSegmentsRealtimeSchemaDiscoveryMoreArrayTypes() throws Exception
   {
-    NestedDataTestUtils.SegmentBuilder builder =
-        new NestedDataTestUtils.SegmentBuilder(tempFolder, closer).input(NestedDataTestUtils.ARRAY_TYPES_DATA_FILE_2);
+    NestedDataTestUtils.ResourceFileSegmentBuilder builder =
+        new NestedDataTestUtils.ResourceFileSegmentBuilder(tempFolder, closer).input(NestedDataTestUtils.ARRAY_TYPES_DATA_FILE_2);
     List<Segment> realtimeSegs = List.of(builder.buildIncremental());
     List<Segment> segs = builder.build();
 
@@ -559,8 +559,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
   @Test
   public void testIngestAndScanSegmentsRealtimeSchemaDiscoveryTypeGauntlet() throws Exception
   {
-    NestedDataTestUtils.SegmentBuilder builder =
-        new NestedDataTestUtils.SegmentBuilder(tempFolder, closer).input(NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE);
+    NestedDataTestUtils.ResourceFileSegmentBuilder builder =
+        new NestedDataTestUtils.ResourceFileSegmentBuilder(tempFolder, closer).input(NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE);
 
     List<Segment> realtimeSegs = List.of(builder.buildIncremental());
     List<Segment> segs = builder.build();
@@ -606,8 +606,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         )
         .build();
 
-    NestedDataTestUtils.SegmentBuilder builder =
-        new NestedDataTestUtils.SegmentBuilder(tempFolder, closer).input(NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE)
+    NestedDataTestUtils.ResourceFileSegmentBuilder builder =
+        new NestedDataTestUtils.ResourceFileSegmentBuilder(tempFolder, closer).input(NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE)
                                                                   .dimensionsSpec(dimensionsSpec);
     List<Segment> realtimeSegs = List.of(builder.buildIncremental());
     List<Segment> segs = builder.granularity(Granularities.HOUR).build();
@@ -646,8 +646,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         .filters(NotDimFilter.of(NullFilter.forColumn("v0")))
         .virtualColumns(new NestedFieldVirtualColumn("obj", "v0", ColumnType.NESTED_DATA, null, true, "$.b", false))
         .build();
-    NestedDataTestUtils.SegmentBuilder builder =
-        new NestedDataTestUtils.SegmentBuilder(tempFolder, closer).input(NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE)
+    NestedDataTestUtils.ResourceFileSegmentBuilder builder =
+        new NestedDataTestUtils.ResourceFileSegmentBuilder(tempFolder, closer).input(NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE)
                                                                   .dimensionsSpec(dimensionsSpec);
     List<Segment> realtimeSegs = List.of(builder.buildIncremental());
     List<Segment> segs = builder.granularity(Granularities.HOUR).build();
@@ -686,8 +686,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         .filters(new AndDimFilter(NotDimFilter.of(NullFilter.forColumn("complexObj")), new NullFilter("str", null)))
         .columns("complexObj")
         .build();
-    NestedDataTestUtils.SegmentBuilder builder =
-        new NestedDataTestUtils.SegmentBuilder(tempFolder, closer).input(NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE)
+    NestedDataTestUtils.ResourceFileSegmentBuilder builder =
+        new NestedDataTestUtils.ResourceFileSegmentBuilder(tempFolder, closer).input(NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE)
                                                                   .dimensionsSpec(dimensionsSpec);
     List<Segment> realtimeSegs = List.of(builder.buildIncremental());
     List<Segment> segs = builder.build();

@@ -60,7 +60,7 @@ public class NestedDataColumnV5<TKeyDictionary extends Indexed<ByteBuffer>, TStr
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
       Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
       SegmentFileMapper fileMapper,
-      NestedCommonFormatColumnFormatSpec bitmapSerdeFactory,
+      NestedCommonFormatColumnFormatSpec columnFormatSpec,
       ByteOrder byteOrder
   )
   {
@@ -77,7 +77,7 @@ public class NestedDataColumnV5<TKeyDictionary extends Indexed<ByteBuffer>, TStr
         doubleDictionarySupplier,
         arrayDictionarySupplier,
         fileMapper,
-        bitmapSerdeFactory,
+        columnFormatSpec,
         byteOrder,
         NestedPathFinder.JSON_PATH_ROOT
     );

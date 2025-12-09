@@ -22,7 +22,6 @@ package org.apache.druid.segment.nested;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.BitmapIndexEncodingStrategy;
@@ -44,7 +43,7 @@ public class NestedCommonFormatColumnFormatSpec
   private static final NestedCommonFormatColumnFormatSpec DEFAULT =
       builder().setObjectFieldsDictionaryEncoding(StringEncodingStrategy.UTF8_STRATEGY)
                .setObjectStorageEncoding(ObjectStorageEncoding.SMILE)
-               .setNumericFieldsBitmapIndexEncoding(BitmapIndexEncodingStrategy.DictionaryId.INSTANCE)
+               .setNumericFieldsBitmapIndexEncoding(BitmapIndexEncodingStrategy.DictionaryEncodedValueIndex.INSTANCE)
                .build();
 
   public static Builder builder()
@@ -91,10 +90,11 @@ public class NestedCommonFormatColumnFormatSpec
     }
 
     if (builder.numericFieldsBitmapIndexEncoding == null) {
-      builder.setNumericFieldsBitmapIndexEncoding(GuavaUtils.firstNonNull(
-          defaultSpec.getNumericFieldsBitmapIndexEncoding(),
-          DEFAULT.getNumericFieldsBitmapIndexEncoding()
-      ));
+      if (defaultSpec.getNumericFieldsBitmapIndexEncoding() != null) {
+        builder.setNumericFieldsBitmapIndexEncoding(defaultSpec.getNumericFieldsBitmapIndexEncoding());
+      } else {
+        builder.setNumericFieldsBitmapIndexEncoding(DEFAULT.getNumericFieldsBitmapIndexEncoding());
+      }
     }
 
     if (builder.objectFieldsDictionaryEncoding == null) {

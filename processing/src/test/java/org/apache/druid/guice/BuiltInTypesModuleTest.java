@@ -130,7 +130,7 @@ public class BuiltInTypesModuleTest
         NestedCommonFormatColumnFormatSpec
             .builder()
             .setStringDictionaryEncoding(new StringEncodingStrategy.FrontCoded(16, (byte) 1))
-            .setNumericFieldsBitmapIndexEncoding(BitmapIndexEncodingStrategy.NullsOnly.INSTANCE)
+            .setNumericFieldsBitmapIndexEncoding(BitmapIndexEncodingStrategy.NullValueIndex.INSTANCE)
             .build(),
         IndexSpec.getDefault().getAutoColumnFormatSpec()
     );
