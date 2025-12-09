@@ -236,6 +236,20 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   }
 
   @Override
+  public Optional<InputStream> streamTaskReports(String taskid) throws IOException
+  {
+    // Try Kubernetes runner first (for K8s tasks)
+    Optional<InputStream> kubernetesTaskReports = kubernetesTaskRunner.streamTaskReports(taskid);
+    if (kubernetesTaskReports.isPresent()) {
+      return kubernetesTaskReports;
+    } else if (workerTaskRunner instanceof TaskLogStreamer) {
+      // Fall back to worker runner (for MiddleManager tasks)
+      return ((TaskLogStreamer) workerTaskRunner).streamTaskReports(taskid);
+    }
+    return Optional.absent();
+  }
+
+  @Override
   public TaskLocation getTaskLocation(String taskId)
   {
     TaskLocation taskLocation = kubernetesTaskRunner.getTaskLocation(taskId);
