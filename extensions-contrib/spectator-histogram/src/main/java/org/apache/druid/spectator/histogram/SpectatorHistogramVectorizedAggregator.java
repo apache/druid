@@ -54,6 +54,10 @@ public class SpectatorHistogramVectorizedAggregator implements VectorAggregator
     }
 
     SpectatorHistogram histogram = innerAggregator.get(buffer, position);
+    if (histogram == null) {
+      return;
+    }
+
     for (int i = startRow; i < endRow; ++i) {
       Object other = vector[i];
       if (other != null) {

@@ -49,13 +49,18 @@ public class SpectatorHistogramNumericVectorizedAggregator implements VectorAggr
   @Override
   public void aggregate(ByteBuffer buffer, int position, int startRow, int endRow)
   {
+    final SpectatorHistogram histogram = innerAggregator.get(buffer, position);
+    if (histogram == null) {
+      return;
+    }
+
     boolean[] isNull = selector.getNullVector();
     long[] vector = selector.getLongVector();
     boolean hasNulls = isNull != null;
-    final SpectatorHistogram histogram = innerAggregator.get(buffer, position);
 
     for (int i = startRow; i < endRow; ++i) {
-      if (!hasNulls || !isNull[i]) {
+      boolean rowIsNull = hasNulls && isNull[i];
+      if (!rowIsNull) {
         innerAggregator.merge(histogram, vector[i]);
       }
     }
@@ -71,7 +76,8 @@ public class SpectatorHistogramNumericVectorizedAggregator implements VectorAggr
     final Int2ObjectMap<SpectatorHistogram> histMap = innerAggregator.get(buffer);
     for (int i = 0; i < numRows; ++i) {
       int rowIndex = rows != null ? rows[i] : i;
-      if (!hasNulls || !isNull[rowIndex]) {
+      boolean rowIsNull = hasNulls && isNull[rowIndex];
+      if (!rowIsNull) {
         int position = positions[i] + positionOffset;
         innerAggregator.merge(histMap.get(position), vector[rowIndex]);
       }
@@ -82,11 +88,11 @@ public class SpectatorHistogramNumericVectorizedAggregator implements VectorAggr
   @Override
   public Object get(ByteBuffer buffer, int position)
   {
-    SpectatorHistogram histo = innerAggregator.get(buffer, position);
-    if (histo == null || histo.isEmpty()) {
+    SpectatorHistogram histogram = innerAggregator.get(buffer, position);
+    if (histogram == null || histogram.isEmpty()) {
       return null;
     }
-    return histo;
+    return histogram;
   }
 
   @Override

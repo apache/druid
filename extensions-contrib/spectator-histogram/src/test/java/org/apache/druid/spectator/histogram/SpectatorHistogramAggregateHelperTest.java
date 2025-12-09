@@ -125,9 +125,9 @@ public class SpectatorHistogramAggregateHelperTest extends InitializedNullHandli
     helper.merge(histogram, 300.0);
 
     SpectatorHistogram expected = new SpectatorHistogram();
-    expected.insert(100);
-    expected.insert(200L);
-    expected.insert(300.0);
+    expected.insert(Long.valueOf(100));
+    expected.insert(Long.valueOf(200));
+    expected.insert(Float.valueOf(300.0f));
 
     Assert.assertEquals(expected, histogram);
   }

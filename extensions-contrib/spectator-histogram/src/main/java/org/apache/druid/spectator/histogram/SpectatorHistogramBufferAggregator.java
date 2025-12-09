@@ -58,17 +58,20 @@ public class SpectatorHistogramBufferAggregator implements BufferAggregator
       return;
     }
     SpectatorHistogram counts = innerAggregator.get(buffer, position);
+    if (counts == null) {
+      return;
+    }
     innerAggregator.merge(counts, obj);
   }
 
   @Override
   public Object get(final ByteBuffer buffer, final int position)
   {
-    SpectatorHistogram histo = innerAggregator.get(buffer, position);
-    if (histo.isEmpty()) {
+    SpectatorHistogram histogram = innerAggregator.get(buffer, position);
+    if (histogram == null || histogram.isEmpty()) {
       return null;
     }
-    return histo;
+    return histogram;
   }
 
   @Override

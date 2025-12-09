@@ -40,7 +40,7 @@ public class SpectatorHistogramAggregateHelper
   }
 
   /**
-   * Merge obj ({@link SpectatorHistogram} or {@link Object}) into {@param current}.
+   * Merge obj ({@link SpectatorHistogram} or {@link Number}) into {@param current}.
    */
   public void merge(SpectatorHistogram current, Object obj)
   {

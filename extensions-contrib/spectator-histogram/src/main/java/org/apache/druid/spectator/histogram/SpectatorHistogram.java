@@ -281,6 +281,11 @@ public class SpectatorHistogram extends Number
     this.add(PercentileBuckets.indexOf(num.longValue()), 1L);
   }
 
+  public void insert(long num)
+  {
+    this.add(PercentileBuckets.indexOf(num), 1L);
+  }
+
   void merge(SpectatorHistogram source)
   {
     if (source == null) {
