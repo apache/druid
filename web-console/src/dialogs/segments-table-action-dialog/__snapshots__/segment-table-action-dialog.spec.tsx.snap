@@ -142,6 +142,18 @@ exports[`SegmentTableActionDialog matches snapshot 1`] = `
                     <span
                       class="bp5-button-text"
                     >
+                      Refresh
+                    </span>
+                  </button>
+                  <button
+                    class="bp5-button bp5-disabled bp5-minimal"
+                    disabled=""
+                    tabindex="-1"
+                    type="button"
+                  >
+                    <span
+                      class="bp5-button-text"
+                    >
                       Download
                     </span>
                   </button>

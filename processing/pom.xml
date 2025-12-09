@@ -36,7 +36,6 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <sigar.base.version>1.6.5</sigar.base.version>
     <sigar.version>${sigar.base.version}.132</sigar.version>
-    <ipaddress.version>5.3.4</ipaddress.version>
     <oshi.version>6.4.4</oshi.version>
   </properties>
 
@@ -133,7 +132,6 @@
     <dependency>
       <groupId>org.checkerframework</groupId>
       <artifactId>checker-qual</artifactId>
-      <version>${checkerframework.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.maven</groupId>
@@ -249,7 +247,7 @@
       <artifactId>compress-lzf</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.lz4</groupId>
+      <groupId>at.yawk.lz4</groupId>
       <artifactId>lz4-java</artifactId>
     </dependency>
     <dependency>
@@ -279,7 +277,6 @@
     <dependency>
       <groupId>com.github.seancfoley</groupId>
       <artifactId>ipaddress</artifactId>
-      <version>${ipaddress.version}</version>
     </dependency>
     <dependency>
       <groupId>com.opencsv</groupId>
@@ -401,7 +398,7 @@
     </dependency>
     <dependency>
       <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-all</artifactId>
+      <artifactId>hamcrest</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -445,7 +442,6 @@
     <dependency>
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
-      <version>${postgresql.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>

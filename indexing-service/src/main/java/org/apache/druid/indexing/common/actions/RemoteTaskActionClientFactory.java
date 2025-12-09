@@ -33,6 +33,7 @@ import org.apache.druid.rpc.ServiceLocator;
 import org.apache.druid.rpc.StandardRetryPolicy;
 
 /**
+ *
  */
 public class RemoteTaskActionClientFactory implements TaskActionClientFactory
 {
@@ -50,11 +51,7 @@ public class RemoteTaskActionClientFactory implements TaskActionClientFactory
     this.overlordClient = clientFactory.makeClient(
         NodeRole.OVERLORD.toString(),
         serviceLocator,
-        StandardRetryPolicy.builder()
-            .maxAttempts(retryPolicyConfig.getMaxRetryCount() - 1)
-            .minWaitMillis(retryPolicyConfig.getMinWait().toStandardDuration().getMillis())
-            .maxWaitMillis(retryPolicyConfig.getMaxWait().toStandardDuration().getMillis())
-            .build()
+        buildRetryPolicy(retryPolicyConfig)
     );
     this.jsonMapper = jsonMapper;
   }
@@ -63,5 +60,21 @@ public class RemoteTaskActionClientFactory implements TaskActionClientFactory
   public TaskActionClient create(Task task)
   {
     return new RemoteTaskActionClient(task, overlordClient, jsonMapper);
+  }
+
+  /**
+   * Converts a {@link RetryPolicyConfig} to a {@link StandardRetryPolicy}.
+   *
+   * @param retryPolicyConfig the retry policy configuration
+   *
+   * @return the standard retry policy
+   */
+  static StandardRetryPolicy buildRetryPolicy(final RetryPolicyConfig retryPolicyConfig)
+  {
+    return StandardRetryPolicy.builder()
+                              .maxAttempts(retryPolicyConfig.getMaxRetryCount() + 1)
+                              .minWaitMillis(retryPolicyConfig.getMinWait().toStandardDuration().getMillis())
+                              .maxWaitMillis(retryPolicyConfig.getMaxWait().toStandardDuration().getMillis())
+                              .build();
   }
 }

@@ -68,6 +68,11 @@ services:
       - ./service-supervisords/metadata-storage.conf:/usr/lib/druid/conf/metadata-storage.conf
     env_file:
       - ./environment-configs/common
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "--silent"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
 
 
 ### overlords

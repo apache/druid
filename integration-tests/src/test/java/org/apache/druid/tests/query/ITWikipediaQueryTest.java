@@ -84,9 +84,9 @@ public class ITWikipediaQueryTest
 
   /**
    * A combination of request Content-Type and Accept HTTP header
-   * The first is Content-Type which can not be null while the 2nd is Accept which could be null
+   * The first is Content-Type that cannot be null while the 2nd is Accept that could be null
    * <p>
-   * When Accept is null, its value defaults to value of Content-Type
+   * When Accept is null, its value defaults to the value of Content-Type
    */
   @DataProvider
   public static Object[][] encodingCombination()

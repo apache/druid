@@ -116,7 +116,6 @@
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-sts</artifactId>
-            <version>${aws.sdk.version}</version>
             <exclusions>
                 <exclusion>
                     <artifactId>aws-java-sdk-core</artifactId>
@@ -171,6 +170,11 @@
             <artifactId>druid-indexing-service</artifactId>
             <version>${project.parent.version}</version>
             <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

@@ -1744,7 +1744,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       checkIfStreamInactiveAndTurnSupervisorIdle();
 
       // If supervisor is already stopping, don't contend for stateChangeLock since the block can be skipped
-      if (stateManager.getSupervisorState().getBasicState().equals(SupervisorStateManager.BasicState.STOPPING)) {
+      if (isStopping()) {
         logDebugReport();
         return;
       }
@@ -1752,7 +1752,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       synchronized (stateChangeLock) {
         // if supervisor is not suspended, ensure required tasks are running
         // if suspended, ensure tasks have been requested to gracefully stop
-        if (stateManager.getSupervisorState().getBasicState().equals(SupervisorStateManager.BasicState.STOPPING)) {
+        if (isStopping()) {
           // if we're already terminating, don't do anything here, the terminate already handles shutdown
           log.debug("Supervisor[%s] for datasource[%s] is already stopping.", supervisorId, dataSource);
         } else if (stateManager.isIdle()) {
@@ -2024,7 +2024,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   {
     Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
     if (taskQueue.isPresent()) {
-      taskQueue.get().shutdown(id, reasonFormat, args);
+      if (isStopping()) {
+        log.debug(
+            "Not shutting down task[%s] because the supervisor[%s] has been stopped. Reason was[%s]",
+            id,
+            supervisorId,
+            StringUtils.format(reasonFormat, args)
+        );
+      } else {
+        taskQueue.get().shutdown(id, reasonFormat, args);
+      }
     } else {
       log.error("Failed to get task queue because I'm not the leader!");
     }
@@ -2034,7 +2043,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   {
     Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
     if (taskQueue.isPresent()) {
-      taskQueue.get().shutdownWithSuccess(id, reasonFormat, args);
+      if (isStopping()) {
+        log.debug(
+            "Not shutting down task[%s] because the supervisor[%s] has been stopped. Reason was[%s]",
+            id,
+            supervisorId,
+            StringUtils.format(reasonFormat, args)
+        );
+      } else {
+        taskQueue.get().shutdownWithSuccess(id, reasonFormat, args);
+      }
     } else {
       log.error("Failed to get task queue because I'm not the leader!");
     }
@@ -4560,6 +4578,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     finally {
       recordSupplierLock.unlock();
     }
+  }
+
+  /**
+   * Whether this supervisor is in a {@link SupervisorStateManager.BasicState#STOPPING} state.
+   */
+  private boolean isStopping()
+  {
+    return stateManager.getSupervisorState().getBasicState().equals(SupervisorStateManager.BasicState.STOPPING);
   }
 
   /**

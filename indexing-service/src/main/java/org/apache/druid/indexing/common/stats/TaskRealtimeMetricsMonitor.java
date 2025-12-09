@@ -19,19 +19,13 @@
 
 package org.apache.druid.indexing.common.stats;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
-import org.apache.druid.java.util.metrics.MonitorUtils;
-import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
-
-import javax.annotation.Nullable;
-import java.util.Map;
 
 /**
  * Emits metrics from {@link SegmentGenerationMetrics} and {@link RowIngestionMeters}.
@@ -42,9 +36,7 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
 
   private final SegmentGenerationMetrics segmentGenerationMetrics;
   private final RowIngestionMeters rowIngestionMeters;
-  private final Map<String, String[]> dimensions;
-  @Nullable
-  private final Map<String, Object> metricTags;
+  private final ServiceMetricEvent.Builder builder;
 
   private SegmentGenerationMetrics previousSegmentGenerationMetrics;
   private RowIngestionMetersTotals previousRowIngestionMetersTotals;
@@ -52,14 +44,12 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
   public TaskRealtimeMetricsMonitor(
       SegmentGenerationMetrics segmentGenerationMetrics,
       RowIngestionMeters rowIngestionMeters,
-      Map<String, String[]> dimensions,
-      @Nullable Map<String, Object> metricTags
+      ServiceMetricEvent.Builder metricEventBuilder
   )
   {
     this.segmentGenerationMetrics = segmentGenerationMetrics;
     this.rowIngestionMeters = rowIngestionMeters;
-    this.dimensions = ImmutableMap.copyOf(dimensions);
-    this.metricTags = metricTags;
+    this.builder = metricEventBuilder;
     previousSegmentGenerationMetrics = new SegmentGenerationMetrics();
     previousRowIngestionMetersTotals = new RowIngestionMetersTotals(0, 0, 0, 0, 0);
   }
@@ -70,9 +60,6 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
     SegmentGenerationMetrics metrics = segmentGenerationMetrics.snapshot();
     RowIngestionMetersTotals rowIngestionMetersTotals = rowIngestionMeters.getTotals();
 
-    final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-    MonitorUtils.addDimensionsToBuilder(builder, dimensions);
-
     final long thrownAway = rowIngestionMetersTotals.getThrownAway() - previousRowIngestionMetersTotals.getThrownAway();
     if (thrownAway > 0) {
       log.warn(
@@ -80,7 +67,6 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
           thrownAway
       );
     }
-    builder.setDimensionIfNotNull(DruidMetrics.TAGS, metricTags);
     emitter.emit(builder.setMetric("ingest/events/thrownAway", thrownAway));
 
     final long unparseable = rowIngestionMetersTotals.getUnparseable()
