@@ -54,7 +54,7 @@ public class NestedDataFormatsTest extends EmbeddedClusterTestBase
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
 
-  private final String defaultFormat = "koala_default";
+  private final String datasourceWithDefaultFormat = EmbeddedClusterApis.createTestDatasourceName();
 
   @Override
   protected EmbeddedDruidCluster createCluster()
