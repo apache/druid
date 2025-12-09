@@ -22,7 +22,7 @@ package org.apache.druid.segment.serde;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.segment.column.BitmapIndexEncodingStrategy;
+import org.apache.druid.segment.column.BitmapIndexType;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -466,7 +466,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           spec.getLongColumnCompression(),
           spec.getDoubleColumnCompression(),
           spec.getBitmapEncoding(),
-          spec.getNumericFieldsBitmapIndexEncoding()
+          spec.getNumericFieldsBitmapIndexType()
       );
     }
 
@@ -481,7 +481,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
         @JsonProperty("longColumnCompression")@Nullable CompressionStrategy longColumnCompression,
         @JsonProperty("doubleColumnCompression")@Nullable CompressionStrategy doubleColumnCompression,
         @JsonProperty("bitmapEncoding") @Nullable BitmapSerdeFactory bitmapEncoding,
-        @JsonProperty("numericFieldsBitmapIndex")@Nullable BitmapIndexEncodingStrategy numericFieldsBitmapIndex
+        @JsonProperty("numericFieldsBitmapIndex")@Nullable BitmapIndexType numericFieldsBitmapIndex
     )
     {
       super(

@@ -37,10 +37,10 @@ import java.util.Objects;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
-    @JsonSubTypes.Type(value = BitmapIndexEncodingStrategy.DictionaryEncodedValueIndex.class, name = BitmapIndexEncodingStrategy.TYPE_DICTIONARY),
-    @JsonSubTypes.Type(value = BitmapIndexEncodingStrategy.NullValueIndex.class, name = BitmapIndexEncodingStrategy.TYPE_NULL)
+    @JsonSubTypes.Type(value = BitmapIndexType.DictionaryEncodedValueIndex.class, name = BitmapIndexType.TYPE_DICTIONARY),
+    @JsonSubTypes.Type(value = BitmapIndexType.NullValueIndex.class, name = BitmapIndexType.TYPE_NULL)
 })
-public abstract class BitmapIndexEncodingStrategy implements Serializer
+public abstract class BitmapIndexType implements Serializer
 {
   protected static final String TYPE_DICTIONARY = "DictionaryEncodedValueIndex";
   protected static final String TYPE_NULL = "NullValueIndex";
@@ -51,7 +51,7 @@ public abstract class BitmapIndexEncodingStrategy implements Serializer
   @Nullable
   protected MutableBitmap[] bitmaps;
   /**
-   * Assigned in {@link #close(BitmapFactory, GenericIndexedWriter)}
+   * Assigned in {@link #finalize(BitmapFactory, GenericIndexedWriter)}
    */
   @Nullable
   GenericIndexedWriter<ImmutableBitmap> writer;
@@ -60,7 +60,7 @@ public abstract class BitmapIndexEncodingStrategy implements Serializer
 
   public abstract void add(int row, int sortedId, @Nullable Object o);
 
-  public void close(BitmapFactory bitmapFactory, GenericIndexedWriter<ImmutableBitmap> writer) throws IOException
+  public void finalize(BitmapFactory bitmapFactory, GenericIndexedWriter<ImmutableBitmap> writer) throws IOException
   {
     if (bitmaps == null) {
       throw DruidException.defensive("Not initiated yet");
@@ -87,7 +87,7 @@ public abstract class BitmapIndexEncodingStrategy implements Serializer
     writer.writeTo(channel, fileBuilder);
   }
 
-  public static class DictionaryEncodedValueIndex extends BitmapIndexEncodingStrategy
+  public static class DictionaryEncodedValueIndex extends BitmapIndexType
   {
     public static final DictionaryEncodedValueIndex INSTANCE = new DictionaryEncodedValueIndex();
 
@@ -128,7 +128,7 @@ public abstract class BitmapIndexEncodingStrategy implements Serializer
     }
   }
 
-  public static class NullValueIndex extends BitmapIndexEncodingStrategy
+  public static class NullValueIndex extends BitmapIndexType
   {
     public static final NullValueIndex INSTANCE = new NullValueIndex();
 

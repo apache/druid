@@ -32,18 +32,18 @@ public class BitmapIndexEncodingStrategyTest
   @Test
   public void testNullsOnlySerde() throws JsonProcessingException
   {
-    BitmapIndexEncodingStrategy strategy = BitmapIndexEncodingStrategy.NullValueIndex.INSTANCE;
+    BitmapIndexType strategy = BitmapIndexType.NullValueIndex.INSTANCE;
     String there = JSON_MAPPER.writeValueAsString(strategy);
-    BitmapIndexEncodingStrategy andBackAgain = JSON_MAPPER.readValue(there, BitmapIndexEncodingStrategy.class);
+    BitmapIndexType andBackAgain = JSON_MAPPER.readValue(there, BitmapIndexType.class);
     Assert.assertEquals(strategy, andBackAgain);
   }
 
   @Test
   public void testDictionaryIdSerde() throws JsonProcessingException
   {
-    BitmapIndexEncodingStrategy strategy = BitmapIndexEncodingStrategy.DictionaryEncodedValueIndex.INSTANCE;
+    BitmapIndexType strategy = BitmapIndexType.DictionaryEncodedValueIndex.INSTANCE;
     String there = JSON_MAPPER.writeValueAsString(strategy);
-    BitmapIndexEncodingStrategy andBackAgain = JSON_MAPPER.readValue(there, BitmapIndexEncodingStrategy.class);
+    BitmapIndexType andBackAgain = JSON_MAPPER.readValue(there, BitmapIndexType.class);
     Assert.assertEquals(strategy, andBackAgain);
   }
 }

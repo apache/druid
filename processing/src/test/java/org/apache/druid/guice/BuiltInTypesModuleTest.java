@@ -27,7 +27,7 @@ import org.apache.druid.segment.DimensionHandlerProvider;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.NestedCommonFormatColumnHandler;
-import org.apache.druid.segment.column.BitmapIndexEncodingStrategy;
+import org.apache.druid.segment.column.BitmapIndexType;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
@@ -130,7 +130,7 @@ public class BuiltInTypesModuleTest
         NestedCommonFormatColumnFormatSpec
             .builder()
             .setStringDictionaryEncoding(new StringEncodingStrategy.FrontCoded(16, (byte) 1))
-            .setNumericFieldsBitmapIndexEncoding(BitmapIndexEncodingStrategy.NullValueIndex.INSTANCE)
+            .setNumericFieldsBitmapIndexType(BitmapIndexType.NullValueIndex.INSTANCE)
             .build(),
         IndexSpec.getDefault().getAutoColumnFormatSpec()
     );

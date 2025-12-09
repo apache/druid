@@ -43,7 +43,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.column.BaseColumnHolder;
-import org.apache.druid.segment.column.BitmapIndexEncodingStrategy;
+import org.apache.druid.segment.column.BitmapIndexType;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -1152,15 +1152,15 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
         arrayElementBitmaps = null;
       }
       ColumnType theType = types.getSingleType();
-      BitmapIndexEncodingStrategy indexEncoding = (theType != null && theType.isNumeric())
-                                                  ? formatSpec.getNumericFieldsBitmapIndexEncoding()
+      BitmapIndexType indexEncoding = (theType != null && theType.isNumeric())
+                                                  ? formatSpec.getNumericFieldsBitmapIndexType()
                                                   : null;
       columnBuilder.setHasMultipleValues(false)
                    .setType(theType != null
                             ? theType
                             : ColumnType.leastRestrictiveType(FieldTypeInfo.convertToSet(types.getByteValue())));
-      if (indexEncoding != null && !(indexEncoding instanceof BitmapIndexEncodingStrategy.DictionaryEncodedValueIndex)) {
-        if (formatSpec.getNumericFieldsBitmapIndexEncoding() instanceof BitmapIndexEncodingStrategy.NullValueIndex) {
+      if (indexEncoding != null && !(indexEncoding instanceof BitmapIndexType.DictionaryEncodedValueIndex)) {
+        if (formatSpec.getNumericFieldsBitmapIndexType() instanceof BitmapIndexType.NullValueIndex) {
           Preconditions.checkArgument(
               rBitmaps.size() == 1,
               StringUtils.format("expecting 1 bitmap, got [%d]", rBitmaps.size())
@@ -1168,7 +1168,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
         } else {
           throw DruidException.defensive(
               "Unsupported BitmapIndexEncodingStrategy[%s]",
-              formatSpec.getNumericFieldsBitmapIndexEncoding()
+              formatSpec.getNumericFieldsBitmapIndexType()
           );
         }
       } else {

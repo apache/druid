@@ -49,7 +49,7 @@ public final class ScalarDoubleFieldColumnWriter extends GlobalDictionaryEncoded
   )
   {
     super(columnName, fieldName, segmentWriteOutMedium, columnFormatSpec, globalDictionaryIdLookup);
-    bitmapIndexEncoding = columnFormatSpec.getNumericFieldsBitmapIndexEncoding();
+    bitmapIndexEncoding = columnFormatSpec.getNumericFieldsBitmapIndexType();
   }
 
   @Override

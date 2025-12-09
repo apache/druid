@@ -31,7 +31,7 @@ import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.column.BitmapIndexEncodingStrategy;
+import org.apache.druid.segment.column.BitmapIndexType;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSerializer;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.FixedIndexedIntWriter;
@@ -81,7 +81,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
   protected final DictionaryIdLookup globalDictionaryIdLookup;
   protected final LocalDimensionDictionary localDictionary = new LocalDimensionDictionary();
 
-  public BitmapIndexEncodingStrategy bitmapIndexEncoding = BitmapIndexEncodingStrategy.DictionaryEncodedValueIndex.INSTANCE;
+  public BitmapIndexType bitmapIndexEncoding = BitmapIndexType.DictionaryEncodedValueIndex.INSTANCE;
   protected final Int2ObjectRBTreeMap<MutableBitmap> arrayElements = new Int2ObjectRBTreeMap<>();
 
   protected final Closer fieldResourceCloser = Closer.create();
@@ -259,7 +259,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
       bitmapIndexEncoding.add(rowCount, sortedLocalId, value);
       rowCount++;
     }
-    bitmapIndexEncoding.close(columnFormatSpec.getBitmapEncoding().getBitmapFactory(), bitmapIndexWriter);
+    bitmapIndexEncoding.finalize(columnFormatSpec.getBitmapEncoding().getBitmapFactory(), bitmapIndexWriter);
 
     final Serializer fieldSerializer = new Serializer()
     {

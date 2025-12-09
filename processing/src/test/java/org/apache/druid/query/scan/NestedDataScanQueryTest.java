@@ -50,7 +50,7 @@ import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.BitmapIndexEncodingStrategy;
+import org.apache.druid.segment.column.BitmapIndexType;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.nested.ObjectStorageEncoding;
@@ -90,9 +90,9 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     NestedCommonFormatColumnFormatSpec.Builder builder = NestedCommonFormatColumnFormatSpec.builder();
     for (boolean auto : new boolean[]{true, false}) {
       for (ObjectStorageEncoding objectStorage : ObjectStorageEncoding.values()) {
-        for (BitmapIndexEncodingStrategy bitmapIndex : new BitmapIndexEncodingStrategy[]{
-            BitmapIndexEncodingStrategy.DictionaryEncodedValueIndex.INSTANCE,
-            BitmapIndexEncodingStrategy.NullValueIndex.INSTANCE
+        for (BitmapIndexType bitmapIndex : new BitmapIndexType[]{
+            BitmapIndexType.DictionaryEncodedValueIndex.INSTANCE,
+            BitmapIndexType.NullValueIndex.INSTANCE
         }) {
           specs.add(
               new Object[]{
@@ -104,7 +104,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                   ),
                   auto,
                   builder.setObjectStorageEncoding(objectStorage)
-                         .setNumericFieldsBitmapIndexEncoding(bitmapIndex).build()
+                         .setNumericFieldsBitmapIndexType(bitmapIndex).build()
               });
         }
       }

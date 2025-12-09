@@ -24,7 +24,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.column.BitmapIndexEncodingStrategy;
+import org.apache.druid.segment.column.BitmapIndexType;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
@@ -47,7 +47,7 @@ public class NestedCommonFormatColumnFormatSpecTest
                                           .setStringDictionaryEncoding(
                                               new StringEncodingStrategy.FrontCoded(16, FrontCodedIndexed.V1)
                                           )
-                                          .setNumericFieldsBitmapIndexEncoding(BitmapIndexEncodingStrategy.NullValueIndex.INSTANCE)
+                                          .setNumericFieldsBitmapIndexType(BitmapIndexType.NullValueIndex.INSTANCE)
                                           .build();
     Assert.assertEquals(
         spec,
