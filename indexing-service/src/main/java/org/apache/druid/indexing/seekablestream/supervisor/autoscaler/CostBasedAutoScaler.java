@@ -50,7 +50,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 {
   private static final EmittingLogger log = new EmittingLogger(CostBasedAutoScaler.class);
 
-  private static final double MESSAGE_GAP_FULL_IDLE_MILLIS = 5000.0;
+  private static final String POLL_IDLE_RATIO_AVG_KEY = "poll-idle-ratio-avg";
   private static final int SCALE_FACTOR_DISCRETE_DISTANCE = 2;
 
   private static final Map<Integer, List<Integer>> FACTORS_CACHE = new HashMap<>();
@@ -187,8 +187,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   }
 
   /**
-   * Extracts average idle ratio from task statistics by analyzing message gaps.
-   * Returns value between 0.0 and 1.0.
+   * Extracts the average poll-idle-ratio-avg Kafka metric from task statistics.
+   * Returns value between 0.0 and 1.0, where higher values indicate more idle time.
    */
   private double extractPollIdleRatio()
   {
@@ -212,11 +212,13 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
           @SuppressWarnings("unchecked")
           Map<String, Object> taskStats = (Map<String, Object>) taskStatsObj;
 
-          final Object messageGapObj = taskStats.get("messageGap");
-          if (messageGapObj instanceof Number) {
-            final long messageGap = ((Number) messageGapObj).longValue();
-            totalIdleRatio += Math.min(1.0, messageGap / MESSAGE_GAP_FULL_IDLE_MILLIS);
-            count++;
+          final Object pollIdleRatioObj = taskStats.get(POLL_IDLE_RATIO_AVG_KEY);
+          if (pollIdleRatioObj instanceof Number) {
+            final double pollIdleRatio = ((Number) pollIdleRatioObj).doubleValue();
+            if (!Double.isNaN(pollIdleRatio) && pollIdleRatio >= 0.0 && pollIdleRatio <= 1.0) {
+              totalIdleRatio += pollIdleRatio;
+              count++;
+            }
           }
         }
       }
@@ -282,13 +284,8 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       }
     }
 
-    emitter.emit(ServiceMetricEvent.builder()
-                                   .setMetric(
-                                       SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC,
-                                       optimalTaskCount
-                                   ));
-    emitter.emit(ServiceMetricEvent.builder()
-                                   .setMetric("task/autoScaler/partitionCount", currentMetrics.getPartitionCount()));
+    emitter.emit(metricBuilder.setMetric(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC, optimalTaskCount));
+    emitter.emit(metricBuilder.setMetric("task/autoScaler/partitionCount", currentMetrics.getPartitionCount()));
 
     log.info(
         "Cost-based scaling evaluation for dataSource [%s]: current=%d, optimal=%d, cost=%.4f, "
