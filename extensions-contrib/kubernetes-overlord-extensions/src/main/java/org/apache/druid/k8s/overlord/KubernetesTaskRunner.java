@@ -48,25 +48,20 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.tasklogs.TaskLogStreamer;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -288,65 +283,20 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Optional<InputStream> streamTaskReports(String taskid) throws IOException
   {
-    log.info("📊 [REPORTS] API request to stream live reports for task [%s]", taskid);
+    // DISABLED: Live task reports via direct HTTP to pod IPs don't work when the Overlord
+    // is running outside the Kubernetes cluster (cannot reach pod network 172.31.x.x).
+    // This method now returns Optional.absent() immediately to:
+    // 1. Avoid blocking HTTP threads with connection timeouts (10-20 seconds each)
+    // 2. Allow immediate fallback to S3-based reports (which work correctly)
+    // 3. Prevent "Faulty channel in resource pool" errors in logs
+    //
+    // To re-enable live reports (if pod network becomes reachable):
+    // - Revert this commit, OR
+    // - Set up Kubernetes Services for each task pod, OR
+    // - Configure network routing so Overlord can reach pod IPs
     
-    final KubernetesWorkItem workItem = tasks.get(taskid);
-    if (workItem == null) {
-      log.warn("⚠️  [REPORTS] No work item found for task [%s] - task may not exist or has not been registered", taskid);
-      log.info("📊 [REPORTS] Returning Optional.absent() - SwitchingTaskLogStreamer will try S3 fallback", taskid);
-      return Optional.absent();
-    }
-    
-    log.info("📊 [REPORTS] Work item found for task [%s], retrieving task location", taskid);
-
-    final TaskLocation taskLocation = workItem.getLocation();
-
-    if (TaskLocation.unknown().equals(taskLocation)) {
-      log.warn("⚠️  [REPORTS] Task location unknown for task [%s] - pod may not be running yet", taskid);
-      log.info("📊 [REPORTS] Returning Optional.absent() - SwitchingTaskLogStreamer will try S3 fallback");
-      return Optional.absent();
-    }
-
-    log.info("📊 [REPORTS] Task location for [%s]: host=%s, port=%d, tlsPort=%d", 
-             taskid, taskLocation.getHost(), taskLocation.getPort(), taskLocation.getTlsPort());
-
-    final URL url = TaskRunnerUtils.makeTaskLocationURL(
-        taskLocation,
-        "/druid/worker/v1/chat/%s/liveReports",
-        taskid
-    );
-    
-    log.info("📊 [REPORTS] Constructed URL for task [%s]: %s", taskid, url);
-
-    try {
-      log.info("📊 [REPORTS] Sending HTTP GET request to pod for task [%s]...", taskid);
-      InputStream stream = httpClient.go(
-          new Request(HttpMethod.GET, url),
-          new InputStreamResponseHandler()
-      ).get();
-      log.info("✅ [REPORTS] Successfully retrieved live reports from pod for task [%s]", taskid);
-      return Optional.of(stream);
-    }
-    catch (InterruptedException e) {
-      log.error(e, "❌ [REPORTS] HTTP request interrupted for task [%s]", taskid);
-      Thread.currentThread().interrupt();
-      throw new IOException("HTTP request interrupted while fetching live reports for task: " + taskid, e);
-    }
-    catch (ExecutionException e) {
-      final Throwable cause = e.getCause();
-      log.error(e, "❌ [REPORTS] HTTP request failed for task [%s] - URL: %s, Cause: %s", 
-                taskid, url, cause != null ? cause.getMessage() : "unknown");
-      
-      // CRITICAL: Throw IOException (not RuntimeException) to allow SwitchingTaskLogStreamer 
-      // to fall back to S3 deep storage for completed tasks
-      if (cause instanceof IOException) {
-        log.info("📊 [REPORTS] Throwing IOException - SwitchingTaskLogStreamer will try S3 fallback");
-        throw (IOException) cause;
-      } else {
-        log.info("📊 [REPORTS] Wrapping exception as IOException - SwitchingTaskLogStreamer will try S3 fallback");
-        throw new IOException("Failed to fetch live reports from pod for task: " + taskid, cause != null ? cause : e);
-      }
-    }
+    log.debug("Live task reports disabled - returning Optional.absent() for task [%s]. Reports will be retrieved from S3.", taskid);
+    return Optional.absent();
   }
 
   @Override
