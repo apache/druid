@@ -414,22 +414,20 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   {
     // The number of groupers is same with the number of processing threads in the executor
     final List<ListenableFuture<CloseableIterator<Entry<KeyType>>>> futures = groupers.stream()
-                                                                                      .map(grouper ->
-                                                                                               executor.submit(
-                                                                                                   new AbstractPrioritizedCallable<CloseableIterator<Entry<KeyType>>>(
-                                                                                                       priority)
-                                                                                                   {
-                                                                                                     @Override
-                                                                                                     public CloseableIterator<Entry<KeyType>> call()
-                                                                                                     {
-                                                                                                       return grouper.iterator(
-                                                                                                           true);
-                                                                                                     }
-                                                                                                   }
-                                                                                               )
-                                                                                      )
-                                                                                      .collect(Collectors.toList()
-                                                                                      );
+                .map(grouper ->
+                         executor.submit(
+                             new AbstractPrioritizedCallable<CloseableIterator<Entry<KeyType>>>(priority)
+                             {
+                               @Override
+                               public CloseableIterator<Entry<KeyType>> call()
+                               {
+                                 return grouper.iterator(true);
+                               }
+                             }
+                         )
+                )
+                .collect(Collectors.toList()
+    );
 
     ListenableFuture<List<CloseableIterator<Entry<KeyType>>>> future = Futures.allAsList(futures);
     try {

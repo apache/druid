@@ -146,7 +146,6 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
         CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION,
         false
     );
-
     final QueryPlus<ResultRow> queryPlusForRunners = queryPlus
         .withQuery(
             query.withOverriddenContext(ImmutableMap.of(CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION, true))

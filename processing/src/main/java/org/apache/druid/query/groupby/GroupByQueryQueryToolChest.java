@@ -209,8 +209,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
 
   private void populateQueryMetrics(GroupByQueryMetrics queryMetrics, ResponseContext context)
   {
-    // TODO: Everything is working as expected now, but the GroupByQueryMetrics expects to emit the metrics directly.
-    //  Why not we also send the values individually to the GroupByStatsMonitor?
     Object bytesSpilledToStorage = context.get(GroupByResponseContextKeys.GROUPBY_BYTES_SPILLED_TO_STORAGE_KEY);
 
     if (bytesSpilledToStorage != null) {
