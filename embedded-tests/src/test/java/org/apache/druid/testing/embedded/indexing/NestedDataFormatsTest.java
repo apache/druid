@@ -141,6 +141,8 @@ public class NestedDataFormatsTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(
         """
             "{""percentage"":85,""type"":""PercentClear""}","{""browser"":""Chrome Mobile"",""browser_version"":""50.0.2661.89"",""category"":""Smartphone"",""os"":""Android"",""platform"":""Android"",""type"":""Mobile Browser""}"
-            """.trim(), scanQueryResultNoneObjectStorage);
+            """.trim(),
+            scanQueryResultNoneObjectStorage
+        );
   }
 }
