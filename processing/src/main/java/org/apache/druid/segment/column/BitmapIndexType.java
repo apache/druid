@@ -51,7 +51,7 @@ public abstract class BitmapIndexType implements Serializer
   @Nullable
   protected MutableBitmap[] bitmaps;
   /**
-   * Assigned in {@link #finalize(BitmapFactory, GenericIndexedWriter)}
+   * Assigned in {@link #finalizeWriter(BitmapFactory, GenericIndexedWriter)}
    */
   @Nullable
   GenericIndexedWriter<ImmutableBitmap> writer;
@@ -60,7 +60,7 @@ public abstract class BitmapIndexType implements Serializer
 
   public abstract void add(int row, int sortedId, @Nullable Object o);
 
-  public void finalize(BitmapFactory bitmapFactory, GenericIndexedWriter<ImmutableBitmap> writer) throws IOException
+  public void finalizeWriter(BitmapFactory bitmapFactory, GenericIndexedWriter<ImmutableBitmap> writer) throws IOException
   {
     if (bitmaps == null) {
       throw DruidException.defensive("Not initiated yet");

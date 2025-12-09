@@ -259,7 +259,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
       bitmapIndexEncoding.add(rowCount, sortedLocalId, value);
       rowCount++;
     }
-    bitmapIndexEncoding.finalize(columnFormatSpec.getBitmapEncoding().getBitmapFactory(), bitmapIndexWriter);
+    bitmapIndexEncoding.finalizeWriter(columnFormatSpec.getBitmapEncoding().getBitmapFactory(), bitmapIndexWriter);
 
     final Serializer fieldSerializer = new Serializer()
     {
