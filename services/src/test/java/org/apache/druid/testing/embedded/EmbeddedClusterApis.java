@@ -41,7 +41,6 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.sql.http.ResultFormat;
@@ -421,11 +420,11 @@ public class EmbeddedClusterApis implements EmbeddedResource
   // STATIC UTILITY METHODS
 
   /**
-   * Creates a random datasource name prefixed with {@link TestDataSource#WIKI}.
+   * Creates a random datasource name prefixed with {@code datasource_}.
    */
   public static String createTestDatasourceName()
   {
-    return TestDataSource.WIKI + "_" + IdUtils.getRandomId();
+    return "datasource_" + IdUtils.getRandomId();
   }
 
   /**
