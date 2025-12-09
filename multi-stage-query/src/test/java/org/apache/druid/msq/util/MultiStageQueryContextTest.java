@@ -22,8 +22,10 @@ package org.apache.druid.msq.util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
@@ -116,7 +118,80 @@ public class MultiStageQueryContextTest
 
     Assert.assertEquals(
         1024,
-        MultiStageQueryContext.getMaxInputBytesPerWorker(QueryContext.of(propertyMap)));
+        MultiStageQueryContext.getMaxInputBytesPerWorker(QueryContext.of(propertyMap))
+    );
+  }
+
+  @Test
+  public void getMaxInputFilesPerWorker_unset_returnsDefaultValue()
+  {
+    Assert.assertEquals(
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
+        MultiStageQueryContext.getMaxInputFilesPerWorker(QueryContext.empty())
+    );
+  }
+
+  @Test
+  public void getMaxInputFilesPerWorker_set_returnsCorrectValue()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(MultiStageQueryContext.CTX_MAX_INPUT_FILES_PER_WORKER, 5000);
+    Assert.assertEquals(5000, MultiStageQueryContext.getMaxInputFilesPerWorker(QueryContext.of(propertyMap)));
+  }
+
+  @Test
+  public void getMaxInputFilesPerWorker_zero_throwsException()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(MultiStageQueryContext.CTX_MAX_INPUT_FILES_PER_WORKER, 0);
+    Assert.assertThrows(
+        DruidException.class,
+        () -> MultiStageQueryContext.getMaxInputFilesPerWorker(QueryContext.of(propertyMap))
+    );
+  }
+
+  @Test
+  public void getMaxInputFilesPerWorker_negative_throwsException()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(MultiStageQueryContext.CTX_MAX_INPUT_FILES_PER_WORKER, -1);
+    Assert.assertThrows(
+        DruidException.class,
+        () -> MultiStageQueryContext.getMaxInputFilesPerWorker(QueryContext.of(propertyMap))
+    );
+  }
+
+  @Test
+  public void getMaxPartitions_unset_returnsDefaultValue()
+  {
+    Assert.assertEquals(
+        Limits.DEFAULT_MAX_PARTITIONS,
+        MultiStageQueryContext.getMaxPartitions(QueryContext.empty())
+    );
+  }
+
+  @Test
+  public void getMaxPartitions_set_returnsCorrectValue()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(MultiStageQueryContext.CTX_MAX_PARTITIONS, 50000);
+    Assert.assertEquals(50000, MultiStageQueryContext.getMaxPartitions(QueryContext.of(propertyMap)));
+  }
+
+  @Test
+  public void getMaxPartitions_zero_throwsException()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(MultiStageQueryContext.CTX_MAX_PARTITIONS, 0);
+    Assert.assertThrows(
+        DruidException.class,
+        () -> MultiStageQueryContext.getMaxPartitions(QueryContext.of(propertyMap))
+    );
+  }
+
+  @Test
+  public void getMaxPartitions_negative_throwsException()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(MultiStageQueryContext.CTX_MAX_PARTITIONS, -1);
+    Assert.assertThrows(
+        DruidException.class,
+        () -> MultiStageQueryContext.getMaxPartitions(QueryContext.of(propertyMap))
+    );
   }
 
   @Test
@@ -206,7 +281,10 @@ public class MultiStageQueryContextTest
   @Test
   public void getSelectDestination_unset_returnsDefaultValue()
   {
-    Assert.assertEquals(MSQSelectDestination.TASKREPORT, MultiStageQueryContext.getSelectDestination(QueryContext.empty()));
+    Assert.assertEquals(
+        MSQSelectDestination.TASKREPORT,
+        MultiStageQueryContext.getSelectDestination(QueryContext.empty())
+    );
   }
 
   @Test

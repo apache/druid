@@ -46,10 +46,11 @@ public class TooManyInputFilesFault extends BaseMSQFault
     super(
         CODE,
         "Too many input files/segments [%d] encountered. Maximum input files/segments per worker is set to [%d]. Try"
-        + " breaking your query up into smaller queries, or increasing the number of workers to at least [%d] by"
-        + " setting %s in your query context",
+        + " increasing the limit using the %s query context parameter, breaking your query up into smaller queries,"
+        + " or increasing the number of workers to at least [%d] by setting %s in your query context.",
         numInputFiles,
         maxInputFiles,
+        MultiStageQueryContext.CTX_MAX_INPUT_FILES_PER_WORKER,
         minNumWorkers,
         MultiStageQueryContext.CTX_MAX_NUM_TASKS
     );
