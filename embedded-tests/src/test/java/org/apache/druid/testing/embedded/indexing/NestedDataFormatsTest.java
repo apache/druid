@@ -75,15 +75,15 @@ public class NestedDataFormatsTest extends EmbeddedClusterTestBase
   {
     final TaskBuilder.IndexParallel indexTask =
         TaskBuilder.ofTypeIndexParallel()
-                   .dataSource(defaultFormat)
+                   .dataSource(datasourceWithDefaultFormat)
                    .timestampColumn("timestamp")
                    .jsonInputFormat()
                    .inputSource(Resources.HttpData.kttm1Day())
                    .schemaDiscovery();
 
-    final String taskId = EmbeddedClusterApis.newTaskId(defaultFormat);
+    final String taskId = EmbeddedClusterApis.newTaskId(datasourceWithDefaultFormat);
     cluster.callApi().runTask(indexTask.withId(taskId), overlord);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(defaultFormat, coordinator, broker);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(datasourceWithDefaultFormat, coordinator, broker);
   }
 
   @Test
@@ -114,7 +114,7 @@ public class NestedDataFormatsTest extends EmbeddedClusterTestBase
         }
     );
     Map<String, Object> defaultFormatResult =
-        result.stream().filter(map -> defaultFormat.equals(map.get("datasource"))).findFirst().get();
+        result.stream().filter(map -> datasourceWithDefaultFormat.equals(map.get("datasource"))).findFirst().get();
     Map<String, Object> noneObjectStorageFormatResult =
         result.stream().filter(map -> dataSource.equals(map.get("datasource"))).findFirst().get();
     // Test ingesting with skipping raw json smile format works, same row count, with ~20% storage saving
@@ -125,13 +125,13 @@ public class NestedDataFormatsTest extends EmbeddedClusterTestBase
 
     // Test querying on a nested field works
     final String groupByQuery = "select json_value(event, '$.type') as event_type, count(*) as total from %s group by 1 order by 2 desc, 1 asc limit 10";
-    final String queryResultDefaultFormat = cluster.callApi().runSql(groupByQuery, defaultFormat);
+    final String queryResultDefaultFormat = cluster.callApi().runSql(groupByQuery, datasourceWithDefaultFormat);
     final String queryResultNoneObjectStorage = cluster.callApi().runSql(groupByQuery, dataSource);
     Assertions.assertEquals(queryResultDefaultFormat, queryResultNoneObjectStorage);
 
     // Test reconstruct json column works, the ordering of the fields has changed, but all values are perserved.
     final String scanQuery = "select event, to_json_string(agent) as agent from %s where json_value(event, '$.type') = 'PercentClear' and json_value(agent, '$.os') = 'Android' order by __time asc limit 1";
-    final String scanQueryResultDefaultFormat = cluster.callApi().runSql(scanQuery, defaultFormat);
+    final String scanQueryResultDefaultFormat = cluster.callApi().runSql(scanQuery, datasourceWithDefaultFormat);
     final String scanQueryResultNoneObjectStorage = cluster.callApi().runSql(scanQuery, dataSource);
     // CHECKSTYLE: text blocks not supported in current Checkstyle version
     Assertions.assertEquals(
