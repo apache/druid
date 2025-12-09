@@ -925,7 +925,7 @@ ${title} uncompressed size: ${formatBytesCompact(
                   <div>{formatInteger(value)}</div>
                   <div
                     className="detail-line"
-                    data-tooltip="Workers are counted as inactive until they reprot starting to read rows from their input."
+                    data-tooltip="Workers are counted as inactive until they report starting to read rows from their input."
                   >{`${formatInteger(inactiveWorkers)} inactive`}</div>
                 </div>
               );

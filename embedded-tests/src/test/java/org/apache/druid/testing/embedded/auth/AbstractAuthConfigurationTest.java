@@ -1018,9 +1018,8 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
 
   /**
    * curr_size on historicals changes because cluster state is not isolated across
-   * different
-   * integration tests, zero it out for consistent test results
-   * version and start_time are not configurable therefore we zero them as well
+   * different integration tests, zero it out for consistent test results.
+   * version, start_time, available_processors, total_memory are not configurable therefore we zero them as well
    */
   protected static List<Map<String, Object>> getServersWithoutNonConfigurableFields(List<Map<String, Object>> servers)
   {
@@ -1031,6 +1030,8 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
           newServer.put("curr_size", 0);
           newServer.put("start_time", "0");
           newServer.put("version", "0.0.0");
+          newServer.put("available_processors", 0);
+          newServer.put("total_memory", 0);
           return newServer;
         }
     );

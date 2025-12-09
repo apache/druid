@@ -472,7 +472,7 @@ public class MSQFaultsTest extends MSQTestBase
   {
     RowSignature dummyRowSignature = RowSignature.builder().add("__time", ColumnType.LONG).build();
 
-    final int numFiles = 20000;
+    final int numFiles = 100000;
 
     final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
@@ -492,9 +492,10 @@ public class MSQFaultsTest extends MSQTestBase
             + ") PARTITIONED by day",
             externalFiles
         ))
+        .setQueryContext(Map.of("maxNumTasks", 8))
         .setExpectedDataSource("foo1")
         .setExpectedRowSignature(dummyRowSignature)
-        .setExpectedMSQFault(new TooManyInputFilesFault(numFiles, Limits.MAX_INPUT_FILES_PER_WORKER, 2))
+        .setExpectedMSQFault(new TooManyInputFilesFault(numFiles, Limits.MAX_INPUT_FILES_PER_WORKER, 10))
         .verifyResults();
   }
 

@@ -34,6 +34,7 @@ import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.apache.druid.k8s.overlord.KubernetesTaskRunnerStaticConfig;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.k8s.overlord.common.PeonCommandContext;
 import org.apache.druid.k8s.overlord.common.TestKubernetesClient;
@@ -85,11 +86,11 @@ class MultiContainerTaskAdapterTest
   @Test
   public void testMultiContainerSupport() throws IOException
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    TestKubernetesClient testClient = new TestKubernetesClient(client, "namespace");
     Pod pod = K8sTestUtils.fileToResource("multiContainerPodSpec.yaml", Pod.class);
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("namespace")
-        .build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
+                                                                        .withNamespace("namespace")
+                                                                        .build();
     MultiContainerTaskAdapter adapter = new MultiContainerTaskAdapter(
         testClient,
         config,
@@ -136,12 +137,12 @@ class MultiContainerTaskAdapterTest
   @Test
   public void testMultiContainerSupportWithNamedContainer() throws IOException
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    TestKubernetesClient testClient = new TestKubernetesClient(client, "namespace");
     Pod pod = K8sTestUtils.fileToResource("multiContainerPodSpecOrder.yaml", Pod.class);
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("namespace")
-        .withPrimaryContainerName("primary")
-        .build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
+                                                                              .withNamespace("namespace")
+                                                                              .withPrimaryContainerName("primary")
+                                                                              .build();
     MultiContainerTaskAdapter adapter = new MultiContainerTaskAdapter(
         testClient,
         config,
@@ -190,13 +191,13 @@ class MultiContainerTaskAdapterTest
   @Test
   public void testOverridingPeonMonitors() throws IOException
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    TestKubernetesClient testClient = new TestKubernetesClient(client, "namespace");
     Pod pod = K8sTestUtils.fileToResource("podSpec.yaml", Pod.class);
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("namespace")
-        .withPrimaryContainerName("primary")
-        .withPeonMonitors(ImmutableList.of("org.apache.druid.java.util.metrics.JvmMonitor"))
-        .build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
+                                                                              .withNamespace("namespace")
+                                                                              .withPrimaryContainerName("primary")
+                                                                              .withPeonMonitors(ImmutableList.of("org.apache.druid.java.util.metrics.JvmMonitor"))
+                                                                              .build();
 
     MultiContainerTaskAdapter adapter = new MultiContainerTaskAdapter(
         testClient,
