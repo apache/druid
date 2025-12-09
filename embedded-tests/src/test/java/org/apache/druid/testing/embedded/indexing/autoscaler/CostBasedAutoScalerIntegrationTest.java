@@ -26,7 +26,6 @@ import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -35,7 +34,6 @@ import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
-import org.apache.druid.testing.embedded.emitter.LatchableEmitterModule;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -43,7 +41,6 @@ import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -52,21 +49,17 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC;
-
 /**
  * Integration test for {@link org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler}.
  * <p>
- * Tests the autoscaler's ability to compute optimal task counts based
- * on partition count and cost metrics (lag and idle time).
+ * Tests the autoscaler's ability to compute optimal task counts based on partition count and cost metrics (lag and idle time).
  */
 public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
 {
   private static final String TOPIC = EmbeddedClusterApis.createTestDatasourceName();
   private static final String EVENT_TEMPLATE = "{\"timestamp\":\"%s\",\"dimension\":\"value%d\",\"metric\":%d}";
-  ;
-  private static final int PARTITION_COUNT = 100;
-  private static final int INITIAL_TASK_COUNT = 25;
+  private static final int PARTITION_COUNT = 10;
+  private static final int INITIAL_TASK_COUNT = 10;
 
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();
@@ -87,6 +80,7 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
       {
         super.start();
         createTopicWithPartitions(TOPIC, PARTITION_COUNT);
+        produceRecordsToKafka(500);
       }
 
       @Override
@@ -107,31 +101,27 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
 
     coordinator.addProperty("druid.manager.segments.useIncrementalCache", "ifSynced");
 
-    cluster.addExtension(KafkaIndexTaskModule.class)
-           .addExtension(LatchableEmitterModule.class)
-           .useDefaultTimeoutForLatchableEmitter(300)
-           .addCommonProperty("druid.emitter", "latching")
-           .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.1s")
-           .addResource(kafkaServer)
+    cluster.useLatchableEmitter()
            .addServer(coordinator)
            .addServer(overlord)
            .addServer(indexer)
            .addServer(broker)
            .addServer(historical)
+           .addExtension(KafkaIndexTaskModule.class)
+           .addCommonProperty("druid.monitoring.emissionPeriod", "PT0.5s")
+           .addResource(kafkaServer)
            .addServer(new EmbeddedRouter());
 
     return cluster;
   }
 
-  @Disabled
   @Test
   @Timeout(45)
   public void test_autoScaler_computesOptimalTaskCountAndProduceScaleDown()
   {
-    final String supervisorId = dataSource + "_supe";
+    final String superId = dataSource + "_super";
 
-    // Produce some amount of data to kafka, to trigger a 'scale down' decision to 17 tasks.
-    produceRecordsToKafka(50);
+    // Produce some amount of data to kafka, to trigger a 'scale down' decision to 4 tasks.
 
     final CostBasedAutoScalerConfig autoScalerConfig = CostBasedAutoScalerConfig
         .builder()
@@ -140,35 +130,27 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
         .taskCountMax(100)
         .taskCountStart(INITIAL_TASK_COUNT)
         .metricsCollectionIntervalMillis(3000)
-        .metricsCollectionRangeMillis(2000)
-        .scaleActionStartDelayMillis(3000)
-        .scaleActionPeriodMillis(2000)
-        .minTriggerScaleActionFrequencyMillis(3000)
+        .scaleActionStartDelayMillis(5000)
+        .scaleActionPeriodMillis(5000)
+        .minTriggerScaleActionFrequencyMillis(5000)
         // Weight configuration: strongly favor lag reduction over idle time
         .lagWeight(0.9)
         .idleWeight(0.1)
         .build();
 
-    final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisorWithAutoScaler(
-        supervisorId,
-        autoScalerConfig
-    );
+    final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisorWithAutoScaler(superId, autoScalerConfig);
 
     // Submit the supervisor
-    Assertions.assertEquals(
-        supervisorId,
-        cluster.callApi().postSupervisor(kafkaSupervisorSpec)
-    );
+    Assertions.assertEquals(superId, cluster.callApi().postSupervisor(kafkaSupervisorSpec));
 
     // Wait for the supervisor to be healthy and running
-    waitForSupervisorRunning(supervisorId);
+    waitForSupervisorRunning(superId);
 
-    // Wait for autoscaler to emit optimalTaskCount metric indicating scale-up
-    // We expect the optimal task count to be either 34 or 50.
+    // Wait for autoscaler to emit optimalTaskCount metric indicating scale-down
+    // We expect the optimal task count to 2
     overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName(AUTOSCALER_REQUIRED_TASKS_METRIC)
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
-                      .hasValueMatching(Matchers.equalTo(17L))
+        event -> event.hasMetricName("task/autoScaler/costBased/optimalTaskCount")
+                       .hasValueMatching(Matchers.equalTo(4L))
     );
 
     // Suspend the supervisor
@@ -177,7 +159,7 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
 
   private void waitForSupervisorRunning(String supervisorId)
   {
-    int maxAttempts = 120;
+    int maxAttempts = 10;
     int attempt = 0;
     while (attempt < maxAttempts) {
       SupervisorStatus status = cluster.callApi().getSupervisorStatus(supervisorId);
@@ -186,7 +168,7 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
       }
       attempt++;
       try {
-        Thread.sleep(3000);
+        Thread.sleep(1000);
       }
       catch (InterruptedException e) {
         Thread.currentThread().interrupt();
@@ -222,7 +204,7 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
     return MoreResources.Supervisor.KAFKA_JSON
         .get()
         .withDataSchema(schema -> schema.withTimestamp(new TimestampSpec("timestamp", "iso", null)))
-        .withTuningConfig(tuningConfig -> tuningConfig.withMaxRowsPerSegment(1000))
+        .withTuningConfig(tuningConfig -> tuningConfig.withMaxRowsPerSegment(100))
         .withIoConfig(
             ioConfig -> ioConfig
                 .withConsumerProperties(kafkaServer.consumerProperties())

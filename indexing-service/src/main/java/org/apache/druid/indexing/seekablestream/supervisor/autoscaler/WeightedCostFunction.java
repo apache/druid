@@ -28,7 +28,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 public class WeightedCostFunction
 {
   private static final Logger log = new Logger(WeightedCostFunction.class);
-  private static final double HIGH_LAG_THRESHOLD = 200_000.0;
+  private static final double HIGH_LAG_THRESHOLD = 10_000.0;
   private static final double MIN_SCALE_FACTOR = 0.1;
 
   private final AdaptiveBounds lagBounds;

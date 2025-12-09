@@ -4371,6 +4371,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return partitionOffsets;
   }
 
+  public double getPollIdleRatioMetric()
+  {
+    return recordSupplier.getPollIdleRatioMetric();
+  }
+
   /**
    * Should never be called outside of tests.
    */

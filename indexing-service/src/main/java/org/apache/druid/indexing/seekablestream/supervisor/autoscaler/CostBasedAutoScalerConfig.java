@@ -40,10 +40,9 @@ import java.util.Objects;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class CostBasedAutoScalerConfig implements AutoScalerConfig
 {
-  private static final long DEFAULT_METRICS_COLLECTION_INTERVAL_MILLIS = 60 * 1000; // 1 minute
-  private static final long DEFAULT_METRICS_COLLECTION_RANGE_MILLIS = 10 * 60 * 1000; // 10 minutes
-  private static final long DEFAULT_SCALE_ACTION_START_DELAY_MILLIS = 5 * 60 * 1000; // 5 minutes
-  private static final long DEFAULT_SCALE_ACTION_PERIOD_MILLIS = 10 * 60 * 1000; // 10 minutes
+  private static final long DEFAULT_METRICS_COLLECTION_INTERVAL_MILLIS = 3 * 60 * 1000; // 3 minutes
+  private static final long DEFAULT_SCALE_ACTION_START_DELAY_MILLIS = 10 * 60 * 1000; // 10 minutes
+  private static final long DEFAULT_SCALE_ACTION_PERIOD_MILLIS = 15 * 60 * 1000; // 15 minutes
   private static final long DEFAULT_MIN_TRIGGER_SCALE_ACTION_FREQUENCY_MILLIS = 1200000; // 20 minutes
   private static final double DEFAULT_LAG_WEIGHT = 0.25;
   private static final double DEFAULT_IDLE_WEIGHT = 0.75;
@@ -54,9 +53,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   private Integer taskCountStart;
   private final long minTriggerScaleActionFrequencyMillis;
   private final Double stopTaskCountRatio;
-
   private final long metricsCollectionIntervalMillis;
-  private final long metricsCollectionRangeMillis;
   private final long scaleActionStartDelayMillis;
   private final long scaleActionPeriodMillis;
 
@@ -72,7 +69,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       @Nullable @JsonProperty("minTriggerScaleActionFrequencyMillis") Long minTriggerScaleActionFrequencyMillis,
       @Nullable @JsonProperty("stopTaskCountRatio") Double stopTaskCountRatio,
       @Nullable @JsonProperty("metricsCollectionIntervalMillis") Long metricsCollectionIntervalMillis,
-      @Nullable @JsonProperty("metricsCollectionRangeMillis") Long metricsCollectionRangeMillis,
       @Nullable @JsonProperty("scaleActionStartDelayMillis") Long scaleActionStartDelayMillis,
       @Nullable @JsonProperty("scaleActionPeriodMillis") Long scaleActionPeriodMillis,
       @Nullable @JsonProperty("lagWeight") Double lagWeight,
@@ -85,9 +81,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     this.metricsCollectionIntervalMillis = metricsCollectionIntervalMillis != null
                                            ? metricsCollectionIntervalMillis
                                            : DEFAULT_METRICS_COLLECTION_INTERVAL_MILLIS;
-    this.metricsCollectionRangeMillis = metricsCollectionRangeMillis != null
-                                        ? metricsCollectionRangeMillis
-                                        : DEFAULT_METRICS_COLLECTION_RANGE_MILLIS;
     this.scaleActionStartDelayMillis = scaleActionStartDelayMillis != null
                                        ? scaleActionStartDelayMillis
                                        : DEFAULT_SCALE_ACTION_START_DELAY_MILLIS;
@@ -195,12 +188,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   }
 
   @JsonProperty
-  public long getMetricsCollectionRangeMillis()
-  {
-    return metricsCollectionRangeMillis;
-  }
-
-  @JsonProperty
   public long getScaleActionStartDelayMillis()
   {
     return scaleActionStartDelayMillis;
@@ -247,7 +234,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            && taskCountMin == that.taskCountMin
            && minTriggerScaleActionFrequencyMillis == that.minTriggerScaleActionFrequencyMillis
            && metricsCollectionIntervalMillis == that.metricsCollectionIntervalMillis
-           && metricsCollectionRangeMillis == that.metricsCollectionRangeMillis
            && scaleActionStartDelayMillis == that.scaleActionStartDelayMillis
            && scaleActionPeriodMillis == that.scaleActionPeriodMillis
            && Double.compare(that.lagWeight, lagWeight) == 0
@@ -267,7 +253,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
         minTriggerScaleActionFrequencyMillis,
         stopTaskCountRatio,
         metricsCollectionIntervalMillis,
-        metricsCollectionRangeMillis,
         scaleActionStartDelayMillis,
         scaleActionPeriodMillis,
         lagWeight,
@@ -286,7 +271,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
            ", minTriggerScaleActionFrequencyMillis=" + minTriggerScaleActionFrequencyMillis +
            ", stopTaskCountRatio=" + stopTaskCountRatio +
            ", metricsCollectionIntervalMillis=" + metricsCollectionIntervalMillis +
-           ", metricsCollectionRangeMillis=" + metricsCollectionRangeMillis +
            ", scaleActionStartDelayMillis=" + scaleActionStartDelayMillis +
            ", scaleActionPeriodMillis=" + scaleActionPeriodMillis +
            ", lagWeight=" + lagWeight +
@@ -307,7 +291,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     private Long minTriggerScaleActionFrequencyMillis;
     private Double stopTaskCountRatio;
     private Long metricsCollectionIntervalMillis;
-    private Long metricsCollectionRangeMillis;
     private Long scaleActionStartDelayMillis;
     private Long scaleActionPeriodMillis;
     private Double lagWeight;
@@ -359,12 +342,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       return this;
     }
 
-    public Builder metricsCollectionRangeMillis(long metricsCollectionRangeMillis)
-    {
-      this.metricsCollectionRangeMillis = metricsCollectionRangeMillis;
-      return this;
-    }
-
     public Builder scaleActionStartDelayMillis(long scaleActionStartDelayMillis)
     {
       this.scaleActionStartDelayMillis = scaleActionStartDelayMillis;
@@ -399,7 +376,6 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
           minTriggerScaleActionFrequencyMillis,
           stopTaskCountRatio,
           metricsCollectionIntervalMillis,
-          metricsCollectionRangeMillis,
           scaleActionStartDelayMillis,
           scaleActionPeriodMillis,
           lagWeight,

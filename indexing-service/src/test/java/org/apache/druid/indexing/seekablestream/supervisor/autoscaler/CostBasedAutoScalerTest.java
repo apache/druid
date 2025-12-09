@@ -57,7 +57,6 @@ public class CostBasedAutoScalerTest
                                       .taskCountStart(10)
                                       .minTriggerScaleActionFrequencyMillis(600000L)
                                       .metricsCollectionIntervalMillis(30000L)
-                                      .metricsCollectionRangeMillis(600000L)
                                       .scaleActionStartDelayMillis(300000L)
                                       .scaleActionPeriodMillis(60000L)
                                       .lagWeight(0.6)
@@ -145,10 +144,10 @@ public class CostBasedAutoScalerTest
     // Very high lag scenario - algorithm should recommend scaling up
     CostMetrics metrics = new CostMetrics(
         System.currentTimeMillis(),
-        3000000.0,  // avgPartitionLag - very high (above HIGH_LAG_THRESHOLD)
+        10001.0,  // avgPartitionLag - very high (above HIGH_LAG_THRESHOLD)
         25,         // currentTaskCount
         100,        // partitionCount
-        0.1         // pollIdleRatio - low idle (tasks are busy)
+        0.01         // pollIdleRatio - low idle (tasks are busy)
     );
 
     int result = autoScaler.computeOptimalTaskCount(new AtomicReference<>(metrics));

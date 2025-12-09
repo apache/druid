@@ -50,7 +50,6 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 {
   private static final EmittingLogger log = new EmittingLogger(CostBasedAutoScaler.class);
 
-  private static final String POLL_IDLE_RATIO_AVG_KEY = "poll-idle-ratio-avg";
   private static final int SCALE_FACTOR_DISCRETE_DISTANCE = 2;
 
   private static final Map<Integer, List<Integer>> FACTORS_CACHE = new HashMap<>();
@@ -114,14 +113,14 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     metricsCollectionExec.scheduleAtFixedRate(
         collectMetrics(),
-        config.getScaleActionStartDelayMillis(),
+        config.getMetricsCollectionIntervalMillis(),
         config.getMetricsCollectionIntervalMillis(),
         TimeUnit.MILLISECONDS
     );
 
     scalingDecisionExec.scheduleAtFixedRate(
         supervisor.buildDynamicAllocationTask(scaleAction, onSuccessfulScale, emitter),
-        config.getScaleActionStartDelayMillis() + config.getMetricsCollectionRangeMillis(),
+        config.getScaleActionStartDelayMillis(),
         config.getScaleActionPeriodMillis(),
         TimeUnit.MILLISECONDS
     );
@@ -168,8 +167,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       final double avgPartitionLag = partitionCount > 0
                                      ? (double) lagStats.getTotalLag() / partitionCount
                                      : 0.0;
-
-      final double pollIdleRatio = extractPollIdleRatio();
+      final double pollIdleRatio = supervisor.getPollIdleRatioMetric();
 
       currentMetrics.compareAndSet(
           null,
@@ -187,51 +185,6 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   }
 
   /**
-   * Extracts the average poll-idle-ratio-avg Kafka metric from task statistics.
-   * Returns value between 0.0 and 1.0, where higher values indicate more idle time.
-   */
-  private double extractPollIdleRatio()
-  {
-    try {
-      final Map<String, Map<String, Object>> stats = supervisor.getStats();
-      if (stats == null || stats.isEmpty()) {
-        return 0.0;
-      }
-
-      double totalIdleRatio = 0.0;
-      int count = 0;
-
-      for (Map<String, Object> groupStats : stats.values()) {
-        if (groupStats == null) {
-          continue;
-        }
-        for (Object taskStatsObj : groupStats.values()) {
-          if (!(taskStatsObj instanceof Map)) {
-            continue;
-          }
-          @SuppressWarnings("unchecked")
-          Map<String, Object> taskStats = (Map<String, Object>) taskStatsObj;
-
-          final Object pollIdleRatioObj = taskStats.get(POLL_IDLE_RATIO_AVG_KEY);
-          if (pollIdleRatioObj instanceof Number) {
-            final double pollIdleRatio = ((Number) pollIdleRatioObj).doubleValue();
-            if (!Double.isNaN(pollIdleRatio) && pollIdleRatio >= 0.0 && pollIdleRatio <= 1.0) {
-              totalIdleRatio += pollIdleRatio;
-              count++;
-            }
-          }
-        }
-      }
-
-      return count > 0 ? totalIdleRatio / count : 0.0;
-    }
-    catch (Exception e) {
-      log.debug(e, "Could not extract poll idle ratio from task stats for dataSource [%s]", dataSource);
-      return 0.0;
-    }
-  }
-
-  /**
    * @return optimal task count, or -1 if no scaling action needed
    */
   public int computeOptimalTaskCount(AtomicReference<CostMetrics> currentMetricsRef)
@@ -242,18 +195,15 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       return -1;
     }
 
-    if (currentMetrics.getPartitionCount() <= 0) {
+    if (currentMetrics.getPartitionCount() <= 0 || currentMetrics.getCurrentTaskCount() <= 0) {
       return -1;
     }
 
     final int currentTaskCount = currentMetrics.getCurrentTaskCount();
-
-    FACTORS_CACHE.computeIfAbsent(
+    final List<Integer> validTaskCounts = FACTORS_CACHE.computeIfAbsent(
         currentMetrics.getPartitionCount(),
-        k -> computeFactors(currentMetrics.getPartitionCount())
+        this::computeFactors
     );
-
-    final List<Integer> validTaskCounts = FACTORS_CACHE.get(currentMetrics.getPartitionCount());
 
     if (validTaskCounts.isEmpty()) {
       log.warn("No valid task counts after applying constraints for dataSource [%s]", dataSource);
@@ -276,6 +226,11 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
         continue;
       }
       int taskCount = validTaskCounts.get(i);
+      if (taskCount < config.getTaskCountMin()) {
+        continue;
+      } else if (taskCount > config.getTaskCountMax()) {
+        break;
+      }
       double cost = costFunction.computeCost(currentMetrics, taskCount, config);
       log.debug("Proposed task count: %d, Cost: %.4f", taskCount, cost);
       if (cost < optimalCost) {
@@ -284,8 +239,10 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       }
     }
 
-    emitter.emit(metricBuilder.setMetric(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC, optimalTaskCount));
-    emitter.emit(metricBuilder.setMetric("task/autoScaler/partitionCount", currentMetrics.getPartitionCount()));
+    System.err.println("Emitting " + optimalTaskCount);
+    // emitter.emit(metricBuilder.setMetric(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC, optimalTaskCount));
+    emitter.emit(ServiceMetricEvent.builder()
+                                   .setMetric("task/autoScaler/costBased/optimalTaskCount", (long) optimalTaskCount));
 
     log.info(
         "Cost-based scaling evaluation for dataSource [%s]: current=%d, optimal=%d, cost=%.4f, "

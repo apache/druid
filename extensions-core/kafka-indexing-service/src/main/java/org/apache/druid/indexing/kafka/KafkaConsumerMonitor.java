@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.kafka;
 
+import com.google.common.util.concurrent.AtomicDouble;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -46,6 +47,8 @@ public class KafkaConsumerMonitor extends AbstractMonitor
   private static final String TOPIC_TAG = "topic";
   private static final String PARTITION_TAG = "partition";
   private static final String NODE_ID_TAG = "node-id";
+
+  private static final String POLL_IDLE_RATION_METRIC_NAME = "poll-idle-ratio-avg";
 
   /**
    * Kafka metric name -> Kafka metric descriptor. Taken from
@@ -129,6 +132,7 @@ public class KafkaConsumerMonitor extends AbstractMonitor
 
   private final KafkaConsumer<?, ?> consumer;
   private final Map<MetricName, AtomicLong> counters = new HashMap<>();
+  private final AtomicDouble pollIdleRatioAvg = new AtomicDouble(1.0d);
 
   public KafkaConsumerMonitor(final KafkaConsumer<?, ?> consumer)
   {
@@ -172,6 +176,13 @@ public class KafkaConsumerMonitor extends AbstractMonitor
           emitter.emit(builder.setMetric(kafkaConsumerMetric.getDruidMetricName(), emitValue));
         }
       }
+
+      // Capture `poll-idle-ratio-avg` metric for autoscaler purposes.
+      if (POLL_IDLE_RATION_METRIC_NAME.equals(metricName.name())) {
+        if (entry.getValue().metricValue() != null) {
+          pollIdleRatioAvg.set(((Number) entry.getValue().metricValue()).doubleValue());
+        }
+      }
     }
 
     return !stopAfterNext;
@@ -180,5 +191,11 @@ public class KafkaConsumerMonitor extends AbstractMonitor
   public void stopAfterNextEmit()
   {
     stopAfterNext = true;
+  }
+
+  // Use that method in the future as metrics forwarder to supervisor
+  public double getPollIdleRatioAvg()
+  {
+    return pollIdleRatioAvg.get();
   }
 }
