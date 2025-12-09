@@ -53,12 +53,14 @@ import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -183,6 +185,8 @@ public class SystemSchema extends AbstractSchema
       .add("start_time", ColumnType.STRING)
       .add("version", ColumnType.STRING)
       .add("labels", ColumnType.STRING)
+      .add("available_processors", ColumnType.LONG)
+      .add("total_memory", ColumnType.LONG)
       .build();
 
   static final RowSignature SERVER_SEGMENTS_SIGNATURE = RowSignature
@@ -234,7 +238,8 @@ public class SystemSchema extends AbstractSchema
       final CoordinatorClient coordinatorClient,
       final OverlordClient overlordClient,
       final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
-      final ObjectMapper jsonMapper
+      final ObjectMapper jsonMapper,
+      @EscalatedClient final HttpClient httpClient
   )
   {
     Preconditions.checkNotNull(serverView, "serverView");
@@ -255,7 +260,9 @@ public class SystemSchema extends AbstractSchema
         TASKS_TABLE,
         new TasksTable(overlordClient, authorizerMapper),
         SUPERVISOR_TABLE,
-        new SupervisorsTable(overlordClient, authorizerMapper)
+        new SupervisorsTable(overlordClient, authorizerMapper),
+        SystemServerPropertiesTable.TABLE_NAME,
+        new SystemServerPropertiesTable(druidNodeDiscoveryProvider, authorizerMapper, httpClient, jsonMapper)
     );
   }
 
@@ -648,7 +655,9 @@ public class SystemSchema extends AbstractSchema
           null,
           toStringOrNull(discoveryDruidNode.getStartTime()),
           node.getVersion(),
-          node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels())
+          node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels()),
+          (long) discoveryDruidNode.getAvailableProcessors(),
+          discoveryDruidNode.getTotalMemory()
       };
     }
 
@@ -673,7 +682,9 @@ public class SystemSchema extends AbstractSchema
           isLeader ? 1L : 0L,
           toStringOrNull(discoveryDruidNode.getStartTime()),
           node.getVersion(),
-          node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels())
+          node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels()),
+          (long) discoveryDruidNode.getAvailableProcessors(),
+          discoveryDruidNode.getTotalMemory()
       };
     }
 
@@ -710,7 +721,9 @@ public class SystemSchema extends AbstractSchema
           null,
           toStringOrNull(discoveryDruidNode.getStartTime()),
           node.getVersion(),
-          node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels())
+          node.getLabels() == null ? null : JacksonUtils.writeValueAsString(jsonMapper, node.getLabels()),
+          (long) discoveryDruidNode.getAvailableProcessors(),
+          discoveryDruidNode.getTotalMemory()
       };
     }
 
@@ -741,13 +754,6 @@ public class SystemSchema extends AbstractSchema
       }
     }
 
-    private static Iterator<DiscoveryDruidNode> getDruidServers(DruidNodeDiscoveryProvider druidNodeDiscoveryProvider)
-    {
-      return Arrays.stream(NodeRole.values())
-                   .flatMap(nodeRole -> druidNodeDiscoveryProvider.getForNodeRole(nodeRole).getAllNodes().stream())
-                   .collect(Collectors.toList())
-                   .iterator();
-    }
   }
 
   /**
@@ -1105,7 +1111,7 @@ public class SystemSchema extends AbstractSchema
   /**
    * Checks if an authenticated user has the STATE READ permissions needed to view server information.
    */
-  private static void checkStateReadAccessForServers(
+  public static void checkStateReadAccessForServers(
       AuthenticationResult authenticationResult,
       AuthorizerMapper authorizerMapper
   )
@@ -1119,6 +1125,17 @@ public class SystemSchema extends AbstractSchema
     if (!authResult.allowAccessWithNoRestriction()) {
       throw new ForbiddenException("Insufficient permission to view servers: " + authResult.getErrorMessage());
     }
+  }
+
+  /**
+   * Returns an iterator over all discoverable Druid nodes in the cluster.
+   */
+  public static Iterator<DiscoveryDruidNode> getDruidServers(DruidNodeDiscoveryProvider druidNodeDiscoveryProvider)
+  {
+    return Arrays.stream(NodeRole.values())
+                 .flatMap(nodeRole -> druidNodeDiscoveryProvider.getForNodeRole(nodeRole).getAllNodes().stream())
+                 .collect(Collectors.toList())
+                 .iterator();
   }
 
   /**

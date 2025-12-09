@@ -53,6 +53,7 @@ import org.junit.jupiter.api.Assertions;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -228,6 +229,14 @@ public class EmbeddedClusterApis implements EmbeddedResource
                       .hasDimension(DruidMetrics.TASK_ID, taskId)
     );
     return getTaskStatus(taskId);
+  }
+
+  /**
+   * Gets the count of tasks with the given status for the specified datasource.
+   */
+  public int getTaskCount(String status, String dataSource)
+  {
+    return ImmutableList.copyOf((Iterator<?>) onLeaderOverlord(o -> o.taskStatuses(status, dataSource, 100))).size();
   }
 
   /**

@@ -23,15 +23,7 @@ import { useEffect, useState } from 'react';
 import type { Column, ReactTableFunction } from 'react-table';
 
 import { filterMap, toggle } from '../utils';
-
-import {
-  combineModeAndNeedle,
-  FILTER_MODES,
-  FILTER_MODES_NO_COMPARISON,
-  filterModeToIcon,
-  filterModeToTitle,
-  parseFilterModeAndNeedle,
-} from './react-table-filters';
+import { TableFilter } from '../utils/table-filters';
 
 interface FilterRendererProps {
   column: Column;
@@ -48,7 +40,7 @@ export function GenericFilterInput({ column, filter, onChange, key }: FilterRend
 
   const enableComparisons = String(column.headerClassName).includes('enable-comparisons');
 
-  const { mode, needle } = (filter ? parseFilterModeAndNeedle(filter, true) : undefined) || {
+  const { mode, needle } = (filter ? TableFilter.parseModeAndNeedle(filter, true) : undefined) || {
     mode: '~',
     needle: '',
   };
@@ -56,7 +48,7 @@ export function GenericFilterInput({ column, filter, onChange, key }: FilterRend
   useEffect(() => {
     const handler = setTimeout(() => {
       if (focusedText !== undefined && focusedText !== debouncedValue) {
-        onChange(combineModeAndNeedle(mode, focusedText));
+        onChange(TableFilter.combineModeAndNeedle(mode, focusedText));
         setDebouncedValue(focusedText);
       }
     }, INPUT_DEBOUNCE_TIME_IN_MILLISECONDS);
@@ -80,19 +72,21 @@ export function GenericFilterInput({ column, filter, onChange, key }: FilterRend
           onInteraction={setMenuOpen}
           content={
             <Menu>
-              {(enableComparisons ? FILTER_MODES : FILTER_MODES_NO_COMPARISON).map((m, i) => (
-                <MenuItem
-                  key={i}
-                  icon={filterModeToIcon(m)}
-                  text={filterModeToTitle(m)}
-                  onClick={() => onChange(combineModeAndNeedle(m, needle))}
-                  labelElement={m === mode ? <Icon icon={IconNames.TICK} /> : undefined}
-                />
-              ))}
+              {(enableComparisons ? TableFilter.MODES : TableFilter.MODES_NO_COMPARISON).map(
+                (m, i) => (
+                  <MenuItem
+                    key={i}
+                    icon={TableFilter.modeToIcon(m)}
+                    text={TableFilter.modeToTitle(m)}
+                    onClick={() => onChange(TableFilter.combineModeAndNeedle(m, needle))}
+                    labelElement={m === mode ? <Icon icon={IconNames.TICK} /> : undefined}
+                  />
+                ),
+              )}
             </Menu>
           }
         >
-          <Button className="filter-mode-button" icon={filterModeToIcon(mode)} minimal />
+          <Button className="filter-mode-button" icon={TableFilter.modeToIcon(mode)} minimal />
         </Popover>
       }
       value={focusedText ?? needle}
@@ -101,7 +95,7 @@ export function GenericFilterInput({ column, filter, onChange, key }: FilterRend
         if (e.key === 'Enter') {
           const inputValue = (e.target as HTMLInputElement).value;
           setDebouncedValue(undefined); // Reset debounce to avoid duplicate triggers
-          onChange(combineModeAndNeedle(mode, inputValue));
+          onChange(TableFilter.combineModeAndNeedle(mode, inputValue));
         }
       }}
       rightElement={
@@ -119,7 +113,7 @@ export function suggestibleFilterInput(suggestions: string[]) {
   return function SuggestibleFilterInput({ filter, onChange, key, ...rest }: FilterRendererProps) {
     let valuesFilteredOn: string[] | undefined;
     if (filter) {
-      const modeAndNeedle = parseFilterModeAndNeedle(filter, true);
+      const modeAndNeedle = TableFilter.parseModeAndNeedle(filter, true);
       if (modeAndNeedle && modeAndNeedle.mode === '=') {
         valuesFilteredOn = modeAndNeedle.needleParts;
       }
@@ -145,7 +139,7 @@ export function suggestibleFilterInput(suggestions: string[]) {
                   text={suggestion}
                   onClick={() =>
                     onChange(
-                      combineModeAndNeedle(
+                      TableFilter.combineModeAndNeedle(
                         '=',
                         valuesFilteredOn
                           ? toggle(valuesFilteredOn, suggestion).join('|')

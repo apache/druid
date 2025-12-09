@@ -96,17 +96,19 @@ public class CompactionStatusTracker
     if (lastTaskStatus != null
         && lastTaskStatus.getState() == TaskState.SUCCESS
         && snapshotTime != null && snapshotTime.isBefore(lastTaskStatus.getUpdatedTime())) {
-      return CompactionStatus.complete(
+      return CompactionStatus.skipped(
           "Segment timeline not updated since last compaction task succeeded"
       );
     }
 
     // Skip intervals that have been filtered out by the policy
-    if (!searchPolicy.isEligibleForCompaction(candidate, CompactionStatus.pending(""), lastTaskStatus)) {
-      return CompactionStatus.skipped("Rejected by search policy");
+    final CompactionCandidateSearchPolicy.Eligibility eligibility
+        = searchPolicy.checkEligibilityForCompaction(candidate, lastTaskStatus);
+    if (eligibility.isEligible()) {
+      return CompactionStatus.pending("Not compacted yet");
+    } else {
+      return CompactionStatus.skipped("Rejected by search policy: %s", eligibility.getReason());
     }
-
-    return CompactionStatus.pending("Not compacted yet");
   }
 
   /**

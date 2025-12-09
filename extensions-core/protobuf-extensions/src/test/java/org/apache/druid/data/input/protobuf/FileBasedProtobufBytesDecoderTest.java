@@ -25,6 +25,7 @@ import com.google.protobuf.util.JsonFormat;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
 import java.nio.ByteBuffer;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -66,6 +67,16 @@ public class FileBasedProtobufBytesDecoderTest
     );
 
     assertEquals("prototest.ProtoNestedEvent", decoder.getDescriptor().getFullName());
+  }
+
+  @Test
+  public void testDescriptorUrl()
+  {
+    File descFile = new File("src/test/resources/proto_test_event.desc");
+    String path = descFile.getAbsoluteFile().toString();
+
+    final var decoder = new FileBasedProtobufBytesDecoder("file://" + path, "ProtoTestEvent");
+    assertEquals("prototest.ProtoTestEvent", decoder.getDescriptor().getFullName());
   }
 
   @Test
@@ -123,7 +134,7 @@ public class FileBasedProtobufBytesDecoderTest
     );
 
     assertEquals(
-        "Descriptor not found in class path [file:/nonexist.desc]",
+        "Failed to initialize descriptor at [file:/nonexist.desc]",
         ex.getMessage()
     );
   }

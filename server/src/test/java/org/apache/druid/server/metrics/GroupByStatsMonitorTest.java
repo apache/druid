@@ -19,18 +19,10 @@
 
 package org.apache.druid.server.metrics;
 
-import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.name.Names;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
-import org.apache.druid.guice.GuiceInjectors;
-import org.apache.druid.guice.JsonConfigProvider;
-import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.groupby.GroupByStatsProvider;
-import org.apache.druid.server.DruidNode;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -84,7 +76,7 @@ public class GroupByStatsMonitorTest
   public void testMonitor()
   {
     final GroupByStatsMonitor monitor =
-        new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool, new DataSourceTaskIdHolder());
+        new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool, new NoopTaskHolder());
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
     emitter.flush();
@@ -106,24 +98,11 @@ public class GroupByStatsMonitorTest
   {
     final String dataSource = "fooDs";
     final String taskId = "taskId1";
-    final Injector injector = Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(),
-        List.of(binder -> {
-          JsonConfigProvider.bindInstance(
-              binder,
-              Key.get(DruidNode.class, Self.class),
-              new DruidNode("test-inject", null, false, null, null, true, false)
-          );
-          binder.bind(Key.get(String.class, Names.named(DataSourceTaskIdHolder.DATA_SOURCE_BINDING)))
-                .toInstance(dataSource);
-          binder.bind(Key.get(String.class, Names.named(DataSourceTaskIdHolder.TASK_ID_BINDING)))
-                .toInstance(taskId);
-        })
+    final GroupByStatsMonitor monitor = new GroupByStatsMonitor(
+        groupByStatsProvider,
+        mergeBufferPool,
+        new TestTaskHolder(dataSource, taskId)
     );
-    final DataSourceTaskIdHolder dsTaskIdHolder = new DataSourceTaskIdHolder();
-    injector.injectMembers(dsTaskIdHolder);
-    final GroupByStatsMonitor monitor =
-        new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool, dsTaskIdHolder);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
     emitter.flush();
@@ -153,7 +132,7 @@ public class GroupByStatsMonitorTest
     }).get(20, TimeUnit.SECONDS);
 
     final GroupByStatsMonitor monitor =
-        new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool, new DataSourceTaskIdHolder());
+        new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool, new NoopTaskHolder());
     final StubServiceEmitter emitter = new StubServiceEmitter("DummyService", "DummyHost");
     boolean ret = monitor.doMonitor(emitter);
     Assert.assertTrue(ret);
@@ -182,7 +161,7 @@ public class GroupByStatsMonitorTest
       }
 
       final GroupByStatsMonitor monitor =
-          new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool, new DataSourceTaskIdHolder());
+          new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool, new NoopTaskHolder());
       final StubServiceEmitter emitter = new StubServiceEmitter("DummyService", "DummyHost");
       boolean ret = monitor.doMonitor(emitter);
       Assert.assertTrue(ret);

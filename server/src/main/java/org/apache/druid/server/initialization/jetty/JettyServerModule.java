@@ -53,9 +53,9 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.StatusResource;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.TLSServerConfig;
-import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.server.metrics.MonitorsConfig;
+import org.apache.druid.server.metrics.TaskHolder;
 import org.apache.druid.server.security.CustomCheckX509TrustManager;
 import org.apache.druid.server.security.TLSCertificateChecker;
 import org.eclipse.jetty.server.ConnectionFactory;
@@ -212,7 +212,7 @@ public class JettyServerModule extends JerseyServletModule
     threadPool.setDaemon(true);
     jettyServerThreadPool = threadPool;
 
-    final Server server = new Server(threadPool);
+    final Server server = new Server(jettyServerThreadPool);
 
     // Without this bean set, the default ScheduledExecutorScheduler runs as non-daemon, causing lifecycle hooks to fail
     // to fire on main exit. Related bug: https://github.com/apache/druid/pull/1627
@@ -517,12 +517,10 @@ public class JettyServerModule extends JerseyServletModule
 
   @Provides
   @LazySingleton
-  public JettyMonitor getJettyMonitor(DataSourceTaskIdHolder dataSourceTaskIdHolder)
+  public JettyMonitor getJettyMonitor(TaskHolder taskHolder)
   {
     return new JettyMonitor(
-        MonitorsConfig.mapOfDatasourceAndTaskID(
-            dataSourceTaskIdHolder.getDataSource(), dataSourceTaskIdHolder.getTaskId()
-        )
+        MonitorsConfig.mapOfTaskHolderDimensions(taskHolder)
     );
   }
 

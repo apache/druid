@@ -20,7 +20,9 @@
 package org.apache.druid.server.compaction;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -33,6 +35,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedPartitionChunk;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -137,18 +140,29 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
           final String temporaryVersion = DateTimes.nowUtc().toString();
           for (Map.Entry<Interval, Set<DataSegment>> partitionsPerInterval : intervalToPartitionMap.entrySet()) {
             Interval interval = partitionsPerInterval.getKey();
-            int partitionNum = 0;
             Set<DataSegment> segmentSet = partitionsPerInterval.getValue();
             int partitions = segmentSet.size();
-            for (DataSegment segment : segmentSet) {
-              DataSegment segmentsForCompact = segment.withShardSpec(new NumberedShardSpec(partitionNum, partitions));
-              timelineWithConfiguredSegmentGranularity.add(
-                  interval,
-                  temporaryVersion,
-                  NumberedPartitionChunk.make(partitionNum, partitions, segmentsForCompact)
-              );
-              partitionNum += 1;
-            }
+            timelineWithConfiguredSegmentGranularity.addAll(
+                Iterators.transform(
+                    segmentSet.iterator(),
+                    new Function<>()
+                    {
+                      int partitionNum = 0;
+
+                      @Override
+                      public VersionedIntervalTimeline.PartitionChunkEntry<String, DataSegment> apply(DataSegment segment)
+                      {
+                        final DataSegment segmentForCompact =
+                            segment.withShardSpec(new NumberedShardSpec(partitionNum, partitions));
+                        return new VersionedIntervalTimeline.PartitionChunkEntry<>(
+                            interval,
+                            temporaryVersion,
+                            NumberedPartitionChunk.make(partitionNum++, partitions, segmentForCompact)
+                        );
+                      }
+                    }
+                )
+            );
           }
           // PartitionHolder can only holds chunks of one partition space
           // However, partition in the new timeline (timelineWithConfiguredSegmentGranularity) can be hold multiple
