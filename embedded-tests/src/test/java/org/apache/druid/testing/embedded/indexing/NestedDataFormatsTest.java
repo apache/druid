@@ -70,7 +70,7 @@ public class NestedDataFormatsTest extends EmbeddedClusterTestBase
                    .dataSource(datasourceWithDefaultFormat)
                    .timestampColumn("timestamp")
                    .jsonInputFormat()
-                   .inputSource(Resources.HttpData.kttm1Day())
+                   .inputSource(Resources.HttpData.kttmNested1Day())
                    .schemaDiscovery();
 
     final String taskId = EmbeddedClusterApis.newTaskId(datasourceWithDefaultFormat);
@@ -89,7 +89,7 @@ public class NestedDataFormatsTest extends EmbeddedClusterTestBase
                    .dataSource(dataSource)
                    .timestampColumn("timestamp")
                    .jsonInputFormat()
-                   .inputSource(Resources.HttpData.kttm1Day())
+                   .inputSource(Resources.HttpData.kttmNested1Day())
                    .schemaDiscovery()
                    .tuningConfig(t -> t.withIndexSpec(IndexSpec.builder().withAutoColumnFormatSpec(spec).build()));
     final String taskId = EmbeddedClusterApis.newTaskId(dataSource);

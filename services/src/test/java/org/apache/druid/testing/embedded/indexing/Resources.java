@@ -132,7 +132,7 @@ public class Resources
       }
     }
 
-    public static HttpInputSource kttm1Day()
+    public static HttpInputSource kttmNested1Day()
     {
       try {
         return new HttpInputSource(
