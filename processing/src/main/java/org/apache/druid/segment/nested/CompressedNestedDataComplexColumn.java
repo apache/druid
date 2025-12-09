@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.nested;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -1152,19 +1151,24 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
         arrayElementBitmaps = null;
       }
       ColumnType theType = types.getSingleType();
-      BitmapIndexType indexEncoding = (theType != null && theType.isNumeric())
-                                                  ? formatSpec.getNumericFieldsBitmapIndexType()
-                                                  : null;
+      BitmapIndexType indexType = (theType != null && theType.isNumeric())
+                                  ? formatSpec.getNumericFieldsBitmapIndexType()
+                                  : null;
       columnBuilder.setHasMultipleValues(false)
                    .setType(theType != null
                             ? theType
                             : ColumnType.leastRestrictiveType(FieldTypeInfo.convertToSet(types.getByteValue())));
-      if (indexEncoding != null && !(indexEncoding instanceof BitmapIndexType.DictionaryEncodedValueIndex)) {
+      if (indexType != null && !(indexType instanceof BitmapIndexType.DictionaryEncodedValueIndex)) {
         if (formatSpec.getNumericFieldsBitmapIndexType() instanceof BitmapIndexType.NullValueIndex) {
-          Preconditions.checkArgument(
-              rBitmaps.size() == 1,
-              StringUtils.format("expecting 1 bitmap, got [%d]", rBitmaps.size())
-          );
+          if (rBitmaps.size() != 1) {
+            throw DruidException.forPersona(DruidException.Persona.USER)
+                                .ofCategory(DruidException.Category.INVALID_INPUT)
+                                .build(StringUtils.format(
+                                    "expecting 1 bitmap for %s type index, got [%d]",
+                                    indexType.toString(),
+                                    rBitmaps.size()
+                                ));
+          }
         } else {
           throw DruidException.defensive(
               "Unsupported BitmapIndexEncodingStrategy[%s]",
