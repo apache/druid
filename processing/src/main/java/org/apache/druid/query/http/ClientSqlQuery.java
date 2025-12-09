@@ -77,11 +77,6 @@ public class ClientSqlQuery
     this.parameters = parameters;
   }
 
-  public static ClientSqlQuery simple(String query)
-  {
-    return new ClientSqlQuery(query, null, false, false, false, Map.of(), List.of());
-  }
-
   public String getQuery()
   {
     return query;
