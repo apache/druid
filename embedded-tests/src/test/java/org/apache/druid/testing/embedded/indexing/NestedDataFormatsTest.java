@@ -19,13 +19,9 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.indexing.common.task.TaskBuilder;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
-import org.apache.druid.query.http.ClientSqlQuery;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.TestDataSource;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.nested.ObjectStorageEncoding;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
@@ -40,10 +36,6 @@ import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Embedded tests for nested data, ingested in different {@link NestedCommonFormatColumnFormatSpec}.
@@ -71,7 +63,7 @@ public class NestedDataFormatsTest extends EmbeddedClusterTestBase
   }
 
   @BeforeAll
-  protected void ingestWithDefaultFormat() throws Exception
+  protected void ingestWithDefaultFormat()
   {
     final TaskBuilder.IndexParallel indexTask =
         TaskBuilder.ofTypeIndexParallel()
@@ -104,46 +96,35 @@ public class NestedDataFormatsTest extends EmbeddedClusterTestBase
     cluster.callApi().runTask(indexTask.withId(taskId), overlord);
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
-    final String resultAsJson =
-        cluster.callApi().onAnyBroker(b -> b.submitSqlQuery(ClientSqlQuery.simple("select * from sys.segments")));
-    List<Map<String, Object>> result = JacksonUtils.readValue(
-        TestHelper.JSON_MAPPER,
-        resultAsJson.getBytes(StandardCharsets.UTF_8),
-        new TypeReference<>()
-        {
-        }
-    );
-    Map<String, Object> defaultFormatResult =
-        result.stream().filter(map -> datasourceWithDefaultFormat.equals(map.get("datasource"))).findFirst().get();
-    Map<String, Object> noneObjectStorageFormatResult =
-        result.stream().filter(map -> dataSource.equals(map.get("datasource"))).findFirst().get();
     // Test ingesting with skipping raw json smile format works, same row count, with ~20% storage saving
-    Assertions.assertEquals(465_346, defaultFormatResult.get("num_rows"));
-    Assertions.assertEquals(53_000_804, defaultFormatResult.get("size"));
-    Assertions.assertEquals(465_346, noneObjectStorageFormatResult.get("num_rows"));
-    Assertions.assertEquals(41_938_750, noneObjectStorageFormatResult.get("size"));
+    final String metadata = "select sum(num_rows), sum(size) from sys.segments where datasource = '%s' group by datasource";
+    final String defaultFormatResult = cluster.runSql(metadata, datasourceWithDefaultFormat);
+    final String noneObjectStorageFormatResult = cluster.runSql(metadata, dataSource);
+    Assertions.assertEquals(StringUtils.format("%d,%d", 465_346, 53_000_804), defaultFormatResult);
+    Assertions.assertEquals(StringUtils.format("%d,%d", 465_346, 41_938_750), noneObjectStorageFormatResult);
 
     // Test querying on a nested field works
     final String groupByQuery = "select json_value(event, '$.type') as event_type, count(*) as total from %s group by 1 order by 2 desc, 1 asc limit 10";
-    final String queryResultDefaultFormat = cluster.callApi().runSql(groupByQuery, datasourceWithDefaultFormat);
-    final String queryResultNoneObjectStorage = cluster.callApi().runSql(groupByQuery, dataSource);
+    final String queryResultDefaultFormat = cluster.runSql(groupByQuery, datasourceWithDefaultFormat);
+    final String queryResultNoneObjectStorage = cluster.runSql(groupByQuery, dataSource);
     Assertions.assertEquals(queryResultDefaultFormat, queryResultNoneObjectStorage);
 
     // Test reconstruct json column works, the ordering of the fields has changed, but all values are perserved.
     final String scanQuery = "select event, to_json_string(agent) as agent from %s where json_value(event, '$.type') = 'PercentClear' and json_value(agent, '$.os') = 'Android' order by __time asc limit 1";
-    final String scanQueryResultDefaultFormat = cluster.callApi().runSql(scanQuery, datasourceWithDefaultFormat);
-    final String scanQueryResultNoneObjectStorage = cluster.callApi().runSql(scanQuery, dataSource);
+    final String scanQueryResultDefaultFormat = cluster.runSql(scanQuery, datasourceWithDefaultFormat);
+    final String scanQueryResultNoneObjectStorage = cluster.runSql(scanQuery, dataSource);
     // CHECKSTYLE: text blocks not supported in current Checkstyle version
     Assertions.assertEquals(
         """
             "{""type"":""PercentClear"",""percentage"":85}","{""type"":""Mobile Browser"",""category"":""Smartphone"",""browser"":""Chrome Mobile"",""browser_version"":""50.0.2661.89"",""os"":""Android"",""platform"":""Android""}"
             """.trim(),
-            scanQueryResultDefaultFormat);
+        scanQueryResultDefaultFormat
+    );
     Assertions.assertEquals(
         """
             "{""percentage"":85,""type"":""PercentClear""}","{""browser"":""Chrome Mobile"",""browser_version"":""50.0.2661.89"",""category"":""Smartphone"",""os"":""Android"",""platform"":""Android"",""type"":""Mobile Browser""}"
             """.trim(),
-            scanQueryResultNoneObjectStorage
-        );
+        scanQueryResultNoneObjectStorage
+    );
   }
 }
