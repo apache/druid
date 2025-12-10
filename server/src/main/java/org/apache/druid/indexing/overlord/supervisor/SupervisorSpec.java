@@ -116,12 +116,12 @@ public interface SupervisorSpec
   }
 
   /**
-   * Perform any merging of spec configurations needed after deserialization.
+   * Updates this supervisor spec by merging values from the given {@code existingSpec}.
+   * This method may be used to carry forward existing spec values when a supervisor is being resubmitted.
    *
    * @param existingSpec used spec to merge values from
-   * @throws DruidException if the spec update is not allowed
    */
-  default void mergeSpecConfigs(@NotNull SupervisorSpec existingSpec)
+  default void merge(@NotNull SupervisorSpec existingSpec)
   {
     // No-op by default
   }

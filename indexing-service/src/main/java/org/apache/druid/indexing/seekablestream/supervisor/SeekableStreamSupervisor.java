@@ -611,7 +611,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       log.warn("autoScalerConfig is null but scale action is submitted, how can it be ?");
       return;
     }
-    autoScalerConfig.setTaskCountStart(desiredActiveTaskCount);
+    ioConfig.setTaskCount(desiredActiveTaskCount);
     try {
       Optional<SupervisorManager> supervisorManager = taskMaster.getSupervisorManager();
       if (supervisorManager.isPresent()) {
@@ -1179,7 +1179,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       catch (Exception e) {
         stateManager.recordThrowableEvent(e);
         log.makeAlert(e, "Exception stopping [%s]", supervisorId)
-            .emit();
+           .emit();
       }
     }
   }
@@ -1357,7 +1357,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         }
         initRetryCounter++;
         log.makeAlert(e, "Exception starting SeekableStreamSupervisor[%s]", supervisorId)
-            .emit();
+           .emit();
 
         throw new RuntimeException(e);
       }

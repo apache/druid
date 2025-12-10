@@ -124,8 +124,10 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     );
     log.info(
         "LagBasedAutoScaler will collect lag every [%d] millis and will keep up to [%d] data points for the last [%d] millis for dataSource [%s]",
-        lagBasedAutoScalerConfig.getLagCollectionIntervalMillis(), lagMetricsQueue.maxSize(),
-        lagBasedAutoScalerConfig.getLagCollectionRangeMillis(), dataSource
+        lagBasedAutoScalerConfig.getLagCollectionIntervalMillis(),
+        lagMetricsQueue.maxSize(),
+        lagBasedAutoScalerConfig.getLagCollectionRangeMillis(),
+        dataSource
     );
   }
 
@@ -190,27 +192,27 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     };
   }
 
-    /**
-     * This method determines whether to do scale actions based on collected lag points.
-     * The current algorithm of scale is straightforward:
-     * <ul>
-     * <li>First, compute the proportion of lag points higher/lower than <code>scaleOutThreshold</code>/<code>scaleInThreshold</code>,
-     * getting <code>scaleOutThreshold</code>/<code>scaleInThreshold</code>.
-     * <li>Secondly, compare <code>scaleOutThreshold</code>/<code>scaleInThreshold</code> with
-     * <code>triggerScaleOutFractionThreshold</code>/<code>triggerScaleInFractionThreshold</code>.
-     * <ul><li>P.S. Scale out action has a higher priority than scale in action.</ul>
-     * <li>Finally, if <code>scaleOutThreshold</code>/<code>scaleInThreshold</code> is higher than
-     * <code>triggerScaleOutFractionThreshold</code>/<code>triggerScaleInFractionThreshold</code>, scale out/in action would be triggered.
-     * </ul>
-     *
-     * @param lags the lag metrics of Stream (Kafka/Kinesis)
-     * @return Integer, target number of tasksCount. -1 means skip scale action.
-     */
+  /**
+   * This method determines whether to do scale actions based on collected lag points.
+   * The current algorithm of scale is straightforward:
+   * <ul>
+   * <li>First, compute the proportion of lag points higher/lower than {@code scaleOutThreshold/scaleInThreshold},
+   * getting {@code scaleInThreshold/scaleOutThreshold},.
+   * <li>Secondly, compare {@code scaleInThreshold/scaleOutThreshold} with
+   * {@code triggerScaleOutFractionThreshold/triggerScaleInFractionThreshold}.
+   * <ul><li>P.S. Scale out action has a higher priority than scale in action.</ul>
+   * <li>Finally, if {@code scaleOutThreshold/scaleInThreshold}, is higher than
+   * {@code triggerScaleOutFractionThreshold/triggerScaleInFractionThreshold}, scale out/in action would be triggered.
+   * </ul>
+   *
+   * @param lags the lag metrics of Stream (Kafka/Kinesis)
+   * @return Integer, target number of tasksCount. -1 means skip scale action.
+   */
   private int computeDesiredTaskCount(List<Long> lags)
   {
-    // if supervisor is not suspended, ensure required tasks are running
+    // if the supervisor is not suspended, ensure required tasks are running
     // if suspended, ensure tasks have been requested to gracefully stop
-    log.debug("Computing desired task count for [%s], based on following lags : [%s]", dataSource, lags);
+    log.debug("Computing the desired task count for [%s], based on following lags : [%s]", dataSource, lags);
     int beyond = 0;
     int within = 0;
     int metricsCount = lags.size();

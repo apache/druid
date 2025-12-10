@@ -192,11 +192,9 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   @Override
   public SupervisorTaskAutoScaler createAutoscaler(Supervisor supervisor)
   {
-    AutoScalerConfig autoScalerConfig = ingestionSchema.getIOConfig().getAutoScalerConfig();
-    if (autoScalerConfig != null
-        && autoScalerConfig.getEnableTaskAutoScaler()
-        && supervisor instanceof SeekableStreamSupervisor) {
-      return autoScalerConfig.createAutoScaler(supervisor, this, emitter);
+    AutoScalerConfig autoScalerCfg = ingestionSchema.getIOConfig().getAutoScalerConfig();
+    if (autoScalerCfg != null && autoScalerCfg.getEnableTaskAutoScaler() && supervisor instanceof SeekableStreamSupervisor) {
+      return autoScalerCfg.createAutoScaler(supervisor, this, emitter);
     }
     return new NoopTaskAutoScaler();
   }
@@ -263,13 +261,8 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     }
   }
 
-  /**
-   * Writes the <code>taskCountStart</code> value from old config, if not specificed in new config.
-   *
-   * @param existingSpec the existing supervisor specification to merge configuration values from
-   */
   @Override
-  public void mergeSpecConfigs(@NotNull SupervisorSpec existingSpec)
+  public void merge(@NotNull SupervisorSpec existingSpec)
   {
     AutoScalerConfig thisAutoScalerConfig = this.getIoConfig().getAutoScalerConfig();
     // Either if autoscaler is absent or taskCountStart is specified - just return.
@@ -277,15 +270,21 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
       return;
     }
 
-    // TODO[sasha]: use switch expression with pattern matching when we move to Java 21 as minimum requirement.
+    // Use a switch expression with pattern matching when we move to Java 21 as a minimum requirement.
     if (existingSpec instanceof SeekableStreamSupervisorSpec) {
-      // Note: for some reason, sources are available only for bytecode version 11.
-      //noinspection PatternVariableCanBeUsed
-      var spec = (SeekableStreamSupervisorSpec) existingSpec;
+      SeekableStreamSupervisorSpec spec = (SeekableStreamSupervisorSpec) existingSpec;
       AutoScalerConfig autoScalerConfig = spec.getIoConfig().getAutoScalerConfig();
-      if (autoScalerConfig != null && autoScalerConfig.getTaskCountStart() != null) {
-        thisAutoScalerConfig.setTaskCountStart(autoScalerConfig.getTaskCountStart());
+      if (autoScalerConfig == null) {
+        return;
       }
+      // provided `taskCountStart` > provided `taskCount` > existing `taskCount` > provided `taskCountMin`.
+      int taskCount = thisAutoScalerConfig.getTaskCountMin();
+      if (this.getIoConfig().getTaskCount() != null) {
+        taskCount = this.getIoConfig().getTaskCount();
+      } else if (spec.getIoConfig().getTaskCount() != null) {
+        taskCount = spec.getIoConfig().getTaskCount();
+      }
+      this.getIoConfig().setTaskCount(taskCount);
     }
   }
 

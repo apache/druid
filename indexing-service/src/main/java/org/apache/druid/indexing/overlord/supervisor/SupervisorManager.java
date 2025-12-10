@@ -176,7 +176,7 @@ public class SupervisorManager
       final boolean shouldUpdateSpec = shouldUpdateSupervisor(spec);
       SupervisorSpec existingSpec = possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
       if (existingSpec != null) {
-        spec.mergeSpecConfigs(existingSpec);
+        spec.merge(existingSpec);
       }
       createAndStartSupervisorInternal(spec, shouldUpdateSpec);
       return shouldUpdateSpec;

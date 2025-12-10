@@ -784,7 +784,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     int taskCountBeforeScaleOut = supervisor.getIoConfig().getAutoScalerConfig().getTaskCountMin();
     Assert.assertEquals(1, taskCountBeforeScaleOut);
     Thread.sleep(1000);
-    int taskCountAfterScaleOut = supervisor.getIoConfig().getAutoScalerConfig().getTaskCountStart();
+    int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountAfterScaleOut);
     Assert.assertTrue(
         dynamicActionEmitter
@@ -1014,7 +1014,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Assert.assertNull(supervisor.getIoConfig().getAutoScalerConfig().getTaskCountStart());
     Thread.sleep(1000);
 
-    int taskCountAfterScaleOut = supervisor.getIoConfig().getAutoScalerConfig().getTaskCountStart();
+    int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountAfterScaleOut);
     emitter.verifyEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC, 1);
 
@@ -1066,7 +1066,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Assert.assertNull(supervisor.getIoConfig().getAutoScalerConfig().getTaskCountStart());
 
     Thread.sleep(1000);
-    int taskCountAfterScaleOut = supervisor.getIoConfig().getAutoScalerConfig().getTaskCountStart();
+    int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(1, taskCountAfterScaleOut);
     emitter.verifyEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC, 1);
 
@@ -1126,7 +1126,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
     Thread.sleep(2000);
     // Then
-    Assert.assertEquals(10, (int) supervisor.getIoConfig().getAutoScalerConfig().getTaskCountStart());
+    Assert.assertEquals(10, (int) supervisor.getIoConfig().getTaskCount());
 
     emitter.verifyEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC, 1);
 
@@ -1605,17 +1605,17 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     mockIngestionSchema();
 
     // Given
-    // Create existing spec with autoscaler config that has taskCountStart set to 5
+    // Create existing spec with autoscaler config and taskCount set to 5
     HashMap<String, Object> existingAutoScalerConfig = new HashMap<>();
     existingAutoScalerConfig.put("enableTaskAutoScaler", true);
     existingAutoScalerConfig.put("taskCountMax", 8);
     existingAutoScalerConfig.put("taskCountMin", 1);
-    existingAutoScalerConfig.put("taskCountStart", 5);
 
     SeekableStreamSupervisorIOConfig existingIoConfig = EasyMock.mock(SeekableStreamSupervisorIOConfig.class);
     EasyMock.expect(existingIoConfig.getAutoScalerConfig())
             .andReturn(mapper.convertValue(existingAutoScalerConfig, AutoScalerConfig.class))
             .anyTimes();
+    EasyMock.expect(existingIoConfig.getTaskCount()).andReturn(5).anyTimes();
     EasyMock.replay(existingIoConfig);
 
     SeekableStreamSupervisorIngestionSpec existingIngestionSchema = EasyMock.mock(SeekableStreamSupervisorIngestionSpec.class);
@@ -1631,7 +1631,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         existingIngestionSchema
     );
 
-    // Create new spec with autoscaler config that has taskCountStart not set (null)
+    // Create new spec with autoscaler config that has taskCountStart not set (null) and no taskCount set
     HashMap<String, Object> newAutoScalerConfig = new HashMap<>();
     newAutoScalerConfig.put("enableTaskAutoScaler", true);
     newAutoScalerConfig.put("taskCountMax", 8);
@@ -1641,6 +1641,9 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     EasyMock.expect(newIoConfig.getAutoScalerConfig())
             .andReturn(mapper.convertValue(newAutoScalerConfig, AutoScalerConfig.class))
             .anyTimes();
+    EasyMock.expect(newIoConfig.getTaskCount()).andReturn(null).anyTimes();
+    newIoConfig.setTaskCount(5);
+    EasyMock.expectLastCall().once();
     EasyMock.replay(newIoConfig);
 
     SeekableStreamSupervisorIngestionSpec newIngestionSchema = EasyMock.mock(SeekableStreamSupervisorIngestionSpec.class);
@@ -1654,15 +1657,14 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         newIngestionSchema
     );
 
-
     // Before merge, taskCountStart should be null
     Assert.assertNull(newSpec.getIoConfig().getAutoScalerConfig().getTaskCountStart());
 
-    // When
-    newSpec.mergeSpecConfigs(existingSpec);
+    // When - merge should copy taskCount from existing spec since new spec has no taskCount
+    newSpec.merge(existingSpec);
 
-    // Then - taskCountStart should be copied from existing spec
-    Assert.assertEquals(Integer.valueOf(5), newSpec.getIoConfig().getAutoScalerConfig().getTaskCountStart());
+    // Then - verify setTaskCount was called (EasyMock will verify the mock expectations)
+    EasyMock.verify(newIoConfig);
   }
 
   private TestSeekableStreamSupervisorSpec buildDefaultSupervisorSpecWithIngestionSchema(
