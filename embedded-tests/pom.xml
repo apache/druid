@@ -29,6 +29,7 @@
 
   <properties>
     <surefire.rerunFailingTestsCount>0</surefire.rerunFailingTestsCount>
+    <maven.compiler.release>17</maven.compiler.release>
   </properties>
 
   <parent>
