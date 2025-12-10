@@ -52,7 +52,7 @@ public class KafkaConsumerMonitor extends AbstractMonitor
 
   /**
    * Kafka metric name -> Kafka metric descriptor. Taken from
-   * https://kafka.apache.org/documentation/#consumer_fetch_monitoring.
+   * <a href="https://kafka.apache.org/documentation/#consumer_fetch_monitoring">documentation</a>.
    */
   private static final Map<String, KafkaConsumerMetric> METRICS =
       Stream.of(
@@ -193,7 +193,12 @@ public class KafkaConsumerMonitor extends AbstractMonitor
     stopAfterNext = true;
   }
 
-  // Use that method in the future as metrics forwarder to supervisor
+  /**
+   * Average poll-to-idle ratio as reported by the Kafka consumer.
+   * A value of 0 represents that the consumer is never idle, i.e. always consuming.
+   * A value of 1 represents that the consumer is always idle, i.e. not receiving data.
+   * @return
+   */
   public double getPollIdleRatioAvg()
   {
     return pollIdleRatioAvg.get();

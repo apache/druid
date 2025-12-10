@@ -27,30 +27,22 @@ import java.util.Objects;
  */
 public class CostMetrics
 {
-  private final long timestamp;
   private final double avgPartitionLag;
   private final int currentTaskCount;
   private final int partitionCount;
   private final double pollIdleRatio;
 
   public CostMetrics(
-      long timestamp,
       double avgPartitionLag,
       int currentTaskCount,
       int partitionCount,
       double pollIdleRatio
   )
   {
-    this.timestamp = timestamp;
     this.avgPartitionLag = avgPartitionLag;
     this.currentTaskCount = currentTaskCount;
     this.partitionCount = partitionCount;
     this.pollIdleRatio = pollIdleRatio;
-  }
-
-  public long getTimestamp()
-  {
-    return timestamp;
   }
 
   /**

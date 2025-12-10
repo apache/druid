@@ -51,6 +51,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   private static final EmittingLogger log = new EmittingLogger(CostBasedAutoScaler.class);
 
   private static final int SCALE_FACTOR_DISCRETE_DISTANCE = 2;
+  private static final String OPTIMAL_TASK_COUNT_METRIC = "task/autoScaler/costBased/optimalTaskCount";
 
   private static final Map<Integer, List<Integer>> FACTORS_CACHE = new HashMap<>();
 
@@ -164,16 +165,11 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
       final int currentTaskCount = supervisor.getActiveTaskGroupsCount();
       final int partitionCount = supervisor.getPartitionCount();
-      final double avgPartitionLag = partitionCount > 0
-                                     ? (double) lagStats.getTotalLag() / partitionCount
-                                     : 0.0;
       final double pollIdleRatio = supervisor.getPollIdleRatioMetric();
 
-      currentMetrics.compareAndSet(
-          null,
+      currentMetrics.set(
           new CostMetrics(
-              System.currentTimeMillis(),
-              avgPartitionLag,
+              lagStats.getAvgLag(),
               currentTaskCount,
               partitionCount,
               pollIdleRatio
@@ -239,10 +235,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       }
     }
 
-    System.err.println("Emitting " + optimalTaskCount);
-    // emitter.emit(metricBuilder.setMetric(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC, optimalTaskCount));
-    emitter.emit(ServiceMetricEvent.builder()
-                                   .setMetric("task/autoScaler/costBased/optimalTaskCount", (long) optimalTaskCount));
+    emitter.emit(ServiceMetricEvent.builder().setMetric(OPTIMAL_TASK_COUNT_METRIC, (long) optimalTaskCount));
 
     log.info(
         "Cost-based scaling evaluation for dataSource [%s]: current=%d, optimal=%d, cost=%.4f, "
