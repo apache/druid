@@ -765,8 +765,6 @@ class SegmentLocalCacheManagerConcurrencyTest
     Assertions.assertTrue(location2.getWeakStats().getHitCount() >= 0);
 
     // now ensure that we can successfully do stuff after all those interrupts
-//    location.resetWeakStats();
-//    location2.resetWeakStats();
     int totalSuccess = 0;
     int totalFailures = 0;
     for (int i = 0; i < iterations; i++) {
