@@ -74,6 +74,10 @@ public class SpectatorHistogramNumericVectorizedAggregator implements VectorAggr
     boolean hasNulls = isNull != null;
 
     final Int2ObjectMap<SpectatorHistogram> histMap = innerAggregator.get(buffer);
+    if (histMap == null) {
+      return;
+    }
+
     for (int i = 0; i < numRows; ++i) {
       int rowIndex = rows != null ? rows[i] : i;
       boolean rowIsNull = hasNulls && isNull[rowIndex];

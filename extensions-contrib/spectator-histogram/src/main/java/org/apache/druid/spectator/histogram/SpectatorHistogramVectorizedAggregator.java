@@ -75,6 +75,10 @@ public class SpectatorHistogramVectorizedAggregator implements VectorAggregator
     }
 
     final Int2ObjectMap<SpectatorHistogram> histMap = innerAggregator.get(buffer);
+    if (histMap == null) {
+      return;
+    }
+
     for (int i = 0; i < numRows; ++i) {
       int rowIndex = rows != null ? rows[i] : i;
       Object other = vector[rowIndex];

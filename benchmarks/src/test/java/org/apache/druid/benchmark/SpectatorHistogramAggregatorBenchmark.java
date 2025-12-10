@@ -321,7 +321,7 @@ public class SpectatorHistogramAggregatorBenchmark
         .include(SpectatorHistogramAggregatorBenchmark.class.getSimpleName())
         .forks(1)
         .warmupIterations(1)
-        .measurementIterations(2)
+        .measurementIterations(10)
         .build();
     new Runner(opt).run();
   }
