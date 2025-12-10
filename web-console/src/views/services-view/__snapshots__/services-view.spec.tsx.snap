@@ -59,7 +59,7 @@ exports[`ServicesView renders data 1`] = `
           "Usage",
           "Start time",
           "Version",
-          "CPU processors",
+          "Available processors",
           "Total memory",
           "Labels",
           "Detail",
@@ -225,12 +225,16 @@ exports[`ServicesView renders data 1`] = `
           {
             "Aggregated": [Function],
             "Cell": [Function],
-            "Header": "CPU processors",
+            "Header": <React.Fragment>
+              Available
+              <br />
+              processors
+            </React.Fragment>,
             "accessor": "available_processors",
             "className": "padded",
             "filterable": false,
             "show": true,
-            "width": 120,
+            "width": 100,
           },
           {
             "Aggregated": [Function],
