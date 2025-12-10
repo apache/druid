@@ -332,7 +332,6 @@ ModuleRepository.registerModule<GroupingTableParameterValues>({
           <Loader
             cancelText="Cancel query"
             onCancel={() => {
-              console.log('Cancel query clicked');
               pivotValueQueryManager.cancelCurrent();
               resultQueryManager.cancelCurrent();
             }}
