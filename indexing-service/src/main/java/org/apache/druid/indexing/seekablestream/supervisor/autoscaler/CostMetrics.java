@@ -83,8 +83,7 @@ public class CostMetrics
       return false;
     }
     CostMetrics that = (CostMetrics) o;
-    return timestamp == that.timestamp
-           && Double.compare(that.avgPartitionLag, avgPartitionLag) == 0
+    return Double.compare(that.avgPartitionLag, avgPartitionLag) == 0
            && currentTaskCount == that.currentTaskCount
            && partitionCount == that.partitionCount
            && Double.compare(that.pollIdleRatio, pollIdleRatio) == 0;
@@ -94,7 +93,6 @@ public class CostMetrics
   public int hashCode()
   {
     return Objects.hash(
-        timestamp,
         avgPartitionLag,
         currentTaskCount,
         partitionCount,
@@ -106,8 +104,7 @@ public class CostMetrics
   public String toString()
   {
     return "CostMetrics{" +
-           "timestamp=" + timestamp +
-           ", avgPartitionLag=" + avgPartitionLag +
+           "avgPartitionLag=" + avgPartitionLag +
            ", currentTaskCount=" + currentTaskCount +
            ", partitionCount=" + partitionCount +
            ", pollIdleRatio=" + pollIdleRatio +

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
@@ -87,13 +88,14 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     this.scaleActionPeriodMillis = scaleActionPeriodMillis != null
                                    ? scaleActionPeriodMillis
                                    : DEFAULT_SCALE_ACTION_PERIOD_MILLIS;
-    this.minTriggerScaleActionFrequencyMillis = minTriggerScaleActionFrequencyMillis != null
-                                                ? minTriggerScaleActionFrequencyMillis
-                                                : DEFAULT_MIN_TRIGGER_SCALE_ACTION_FREQUENCY_MILLIS;
+    this.minTriggerScaleActionFrequencyMillis = Configs.valueOrDefault(
+        minTriggerScaleActionFrequencyMillis,
+        DEFAULT_MIN_TRIGGER_SCALE_ACTION_FREQUENCY_MILLIS
+    );
 
     // Cost function weights with defaults
-    this.lagWeight = lagWeight != null ? lagWeight : DEFAULT_LAG_WEIGHT;
-    this.idleWeight = idleWeight != null ? idleWeight : DEFAULT_IDLE_WEIGHT;
+    this.lagWeight = Configs.valueOrDefault(lagWeight, DEFAULT_LAG_WEIGHT);
+    this.idleWeight = Configs.valueOrDefault(idleWeight, DEFAULT_IDLE_WEIGHT);
 
     if (this.enableTaskAutoScaler) {
       Preconditions.checkNotNull(taskCountMax, "taskCountMax is required when enableTaskAutoScaler is true");
@@ -106,8 +108,8 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
       this.taskCountMax = taskCountMax;
       this.taskCountMin = taskCountMin;
     } else {
-      this.taskCountMax = taskCountMax != null ? taskCountMax : 0;
-      this.taskCountMin = taskCountMin != null ? taskCountMin : 0;
+      this.taskCountMax = Configs.valueOrDefault(taskCountMax, 0);
+      this.taskCountMin = Configs.valueOrDefault(taskCountMin, 0);
     }
     this.taskCountStart = taskCountStart;
 
@@ -214,7 +216,7 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   @Override
   public SupervisorTaskAutoScaler createAutoScaler(Supervisor supervisor, SupervisorSpec spec, ServiceEmitter emitter)
   {
-    return new CostBasedAutoScaler((SeekableStreamSupervisor) supervisor, spec.getId(), this, spec, emitter);
+    return new CostBasedAutoScaler((SeekableStreamSupervisor) supervisor, this, spec, emitter);
   }
 
   @Override

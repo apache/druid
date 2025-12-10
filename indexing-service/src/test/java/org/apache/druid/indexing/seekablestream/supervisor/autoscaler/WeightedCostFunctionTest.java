@@ -208,7 +208,6 @@ public class WeightedCostFunctionTest
   )
   {
     return new CostMetrics(
-        System.currentTimeMillis(),
         avgPartitionLag,
         currentTaskCount,
         partitionCount,

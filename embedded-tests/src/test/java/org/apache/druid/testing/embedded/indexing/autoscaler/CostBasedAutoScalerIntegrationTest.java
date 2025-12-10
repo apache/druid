@@ -24,6 +24,7 @@ import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
@@ -129,10 +130,10 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
         .taskCountMin(1)
         .taskCountMax(100)
         .taskCountStart(INITIAL_TASK_COUNT)
-        .metricsCollectionIntervalMillis(3000)
-        .scaleActionStartDelayMillis(5000)
-        .scaleActionPeriodMillis(5000)
-        .minTriggerScaleActionFrequencyMillis(5000)
+        .metricsCollectionIntervalMillis(1000)
+        .scaleActionStartDelayMillis(1500)
+        .scaleActionPeriodMillis(1500)
+        .minTriggerScaleActionFrequencyMillis(3000)
         // Weight configuration: strongly favor lag reduction over idle time
         .lagWeight(0.9)
         .idleWeight(0.1)
@@ -149,7 +150,7 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
     // Wait for autoscaler to emit optimalTaskCount metric indicating scale-down
     // We expect the optimal task count to 2
     overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("task/autoScaler/costBased/optimalTaskCount")
+        event -> event.hasMetricName(CostBasedAutoScaler.OPTIMAL_TASK_COUNT_METRIC)
                        .hasValueMatching(Matchers.equalTo(4L))
     );
 
