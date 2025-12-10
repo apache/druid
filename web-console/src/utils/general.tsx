@@ -63,9 +63,29 @@ export function arraysEqualByElement<T>(xs: T[], ys: T[]): boolean {
   return xs.length === ys.length && xs.every((x, i) => x === ys[i]);
 }
 
-export function wait(ms: number): Promise<void> {
-  return new Promise(resolve => {
-    setTimeout(resolve, ms);
+export function wait(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new Error('Aborted'));
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      cleanup();
+      resolve();
+    }, ms);
+
+    const onAbort = () => {
+      cleanup();
+      reject(new Error('Aborted'));
+    };
+
+    const cleanup = () => {
+      clearTimeout(timeoutId);
+      signal?.removeEventListener('abort', onAbort);
+    };
+
+    signal?.addEventListener('abort', onAbort);
   });
 }
 

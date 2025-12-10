@@ -229,6 +229,7 @@ export const ExploreView = React.memo(function ExploreView({ capabilities }: Exp
 
       const { query: rewrittenQuery, maxTime } = await rewriteMaxDataTime(
         rewriteAggregate(parsedQuery, querySource.measures),
+        signal,
       );
       const results = await runSqlQuery(rewrittenQuery, queryTimezone, signal);
 

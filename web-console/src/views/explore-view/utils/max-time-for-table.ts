@@ -27,7 +27,7 @@ let lastMaxTimeTable: string | undefined;
 let lastMaxTimeValue: Date | undefined;
 let lastMaxTimeTimestamp = 0;
 
-export async function getMaxTimeForTable(tableName: string): Promise<Date> {
+export async function getMaxTimeForTable(tableName: string, signal?: AbortSignal): Promise<Date> {
   // micro-cache get
   if (
     lastMaxTimeTable === tableName &&
@@ -37,12 +37,15 @@ export async function getMaxTimeForTable(tableName: string): Promise<Date> {
     return lastMaxTimeValue;
   }
 
-  const d = await queryDruidSql({
-    query: sql`SELECT MAX(__time) AS "maxTime" FROM ${T(tableName)}`,
-    context: {
-      timeout: 2000, // We expect this query to be superfast
+  const d = await queryDruidSql(
+    {
+      query: sql`SELECT MAX(__time) AS "maxTime" FROM ${T(tableName)}`,
+      context: {
+        timeout: 2000, // We expect this query to be superfast
+      },
     },
-  });
+    signal,
+  );
 
   const maxTimeRaw = deepGet(d, '0.maxTime');
   const maxTime = new Date(maxTimeRaw);
