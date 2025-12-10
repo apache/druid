@@ -395,7 +395,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Thread.sleep(1000);
     verifyAll();
 
-    int taskCountAfterScale = supervisor.getIoConfig().getAutoScalerConfig().getTaskCountStart();
+    int taskCountAfterScale = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountAfterScale);
 
     KafkaIndexTask task = captured.getValue();
