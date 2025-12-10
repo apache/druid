@@ -39,6 +39,9 @@ export async function getMaxTimeForTable(tableName: string): Promise<Date> {
 
   const d = await queryDruidSql({
     query: sql`SELECT MAX(__time) AS "maxTime" FROM ${T(tableName)}`,
+    context: {
+      timeout: 2000, // We expect this query to be superfast
+    },
   });
 
   const maxTimeRaw = deepGet(d, '0.maxTime');
