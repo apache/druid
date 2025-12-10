@@ -49,6 +49,7 @@ import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_FAULT_TOLERAN
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MAX_FRAME_SIZE;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MAX_NUM_TASKS;
+import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MAX_ROWS_IN_MEMORY;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MAX_THREADS;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MSQ_MODE;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_REMOVE_NULL_BYTES;
@@ -159,19 +160,33 @@ public class MultiStageQueryContextTest
   }
 
   @Test
-  public void getRowsInMemory_unset_returnsDefaultValue()
+  public void getMaxRowsInMemory_unset_returnsDefaultValue()
   {
     Assert.assertEquals(
-        MultiStageQueryContext.DEFAULT_ROWS_IN_MEMORY,
-        MultiStageQueryContext.getRowsInMemory(QueryContext.empty())
+        MultiStageQueryContext.DEFAULT_MAX_ROWS_IN_MEMORY,
+        MultiStageQueryContext.getMaxRowsInMemory(QueryContext.empty())
     );
   }
 
   @Test
-  public void getRowsInMemory_set_returnsCorrectValue()
+  public void getMaxRowsInMemory_set_returnsCorrectValue()
   {
-    Map<String, Object> propertyMap = ImmutableMap.of(CTX_ROWS_IN_MEMORY, 10);
-    Assert.assertEquals(10, MultiStageQueryContext.getRowsInMemory(QueryContext.of(propertyMap)));
+    Map<String, Object> propertyMap = ImmutableMap.of(CTX_MAX_ROWS_IN_MEMORY, 10);
+    Assert.assertEquals(10, MultiStageQueryContext.getMaxRowsInMemory(QueryContext.of(propertyMap)));
+  }
+
+  @Test
+  public void getMaxRowsInMemory_altSet_returnsCorrectValue()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(CTX_ROWS_IN_MEMORY, 20);
+    Assert.assertEquals(20, MultiStageQueryContext.getMaxRowsInMemory(QueryContext.of(propertyMap)));
+  }
+
+  @Test
+  public void getMaxRowsInMemory_bothSet_returnsCorrectValue()
+  {
+    Map<String, Object> propertyMap = ImmutableMap.of(CTX_ROWS_IN_MEMORY, 20, CTX_MAX_ROWS_IN_MEMORY, 10);
+    Assert.assertEquals(10, MultiStageQueryContext.getMaxRowsInMemory(QueryContext.of(propertyMap)));
   }
 
   @Test
