@@ -59,9 +59,7 @@ public class NestedDataFormatsTest extends EmbeddedClusterTestBase
                                .addServer(new EmbeddedIndexer())
                                .addServer(new EmbeddedHistorical())
                                .addServer(broker)
-                               .addServer(new EmbeddedRouter())
-                               .addCommonProperty("druid.storage.zip", "false")
-                               .addCommonProperty("druid.indexer.task.buildV10", "true");
+                               .addServer(new EmbeddedRouter());
   }
 
   @BeforeAll
@@ -102,8 +100,8 @@ public class NestedDataFormatsTest extends EmbeddedClusterTestBase
     final String metadataSql = "select sum(num_rows), sum(size) from sys.segments where datasource = '%s'";
     final String defaultFormatResult = cluster.runSql(metadataSql, datasourceWithDefaultFormat);
     final String noneObjectStorageFormatResult = cluster.runSql(metadataSql, dataSource);
-    Assertions.assertEquals(StringUtils.format("%d,%d", 465_346, 53_005_406), defaultFormatResult);
-    Assertions.assertEquals(StringUtils.format("%d,%d", 465_346, 41_942_995), noneObjectStorageFormatResult);
+    Assertions.assertEquals(StringUtils.format("%d,%d", 465_346, 53_000_804), defaultFormatResult);
+    Assertions.assertEquals(StringUtils.format("%d,%d", 465_346, 41_938_750), noneObjectStorageFormatResult);
 
     // Test querying on a nested field works
     final String groupByQuery =
