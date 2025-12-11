@@ -37,7 +37,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-import java.util.Collections;
 import java.util.List;
 
 public class EmbeddedMSQRealtimeUnnestQueryTest extends BaseRealtimeQueryTest
@@ -98,7 +97,7 @@ public class EmbeddedMSQRealtimeUnnestQueryTest extends BaseRealtimeQueryTest
     // Wait for it to be loaded.
     indexer.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("ingest/events/processed")
-                      .hasDimension(DruidMetrics.DATASOURCE, Collections.singletonList(dataSource)),
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(totalRows)
     );
   }

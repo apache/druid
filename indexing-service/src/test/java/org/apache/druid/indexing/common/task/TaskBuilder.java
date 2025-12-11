@@ -62,9 +62,9 @@ import java.util.stream.Stream;
  * explicitly.
  *
  * @param <Self> Type of this builder itself
- * @param <C> Type of tuning config used by this builder.
- * @param <T> Type of task created by this builder.
- * @param <CB> Type of tuning config builder
+ * @param <C>    Type of tuning config used by this builder.
+ * @param <T>    Type of task created by this builder.
+ * @param <CB>   Type of tuning config builder
  * @see #ofTypeIndex()
  * @see #tuningConfig(Consumer) to specify the {@code tuningConfig}.
  */
@@ -283,6 +283,12 @@ public abstract class TaskBuilder<
                 .map(StringDimensionSchema::new)
                 .collect(Collectors.toList())
       );
+      return (Self) this;
+    }
+
+    public Self schemaDiscovery()
+    {
+      dataSchema.withDimensions(DimensionsSpec.builder().useSchemaDiscovery(true).build());
       return (Self) this;
     }
 

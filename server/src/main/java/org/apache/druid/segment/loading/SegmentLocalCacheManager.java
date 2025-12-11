@@ -1036,7 +1036,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               );
               atomicMoveAndDeleteCacheEntryDirectory(storageDir);
             } else {
-              needsLoad = false;
+              needsLoad = referenceProvider != null;
             }
           }
           if (needsLoad) {
@@ -1102,14 +1102,17 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       try {
         synchronized (this) {
           if (referenceProvider != null) {
-            referenceProvider.close();
+            ReferenceCountedSegmentProvider provider = referenceProvider;
             referenceProvider = null;
+            provider.close();
           }
           if (!config.isDeleteOnRemove()) {
             return;
           }
           if (storageDir != null) {
-            atomicMoveAndDeleteCacheEntryDirectory(storageDir);
+            if (storageDir.exists()) {
+              atomicMoveAndDeleteCacheEntryDirectory(storageDir);
+            }
             storageDir = null;
             location = null;
           }

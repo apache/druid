@@ -1165,7 +1165,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               getIntervalActionButton={(start, end, datasource, realtime) => {
                 return (
                   <Button
-                    text="Apply fitler to table"
+                    text="Apply filter to table"
                     small
                     rightIcon={IconNames.ARROW_DOWN}
                     onClick={() => {

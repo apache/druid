@@ -73,7 +73,7 @@ public class KubernetesTaskExecutionConfigResource
    * Updates the Kubernetes execution configuration.
    *
    * @param dynamicConfig the new execution configuration to set
-   * @param req             the HTTP servlet request providing context for audit information
+   * @param req           the HTTP servlet request providing context for audit information
    * @return a response indicating the success or failure of the update operation
    */
   @POST
@@ -84,13 +84,19 @@ public class KubernetesTaskExecutionConfigResource
       @Context final HttpServletRequest req
   )
   {
+    KubernetesTaskRunnerDynamicConfig currentConfig = getDynamicConfig();
+    KubernetesTaskRunnerDynamicConfig mergedConfig = dynamicConfig;
+
+    if (currentConfig != null) {
+      mergedConfig = currentConfig.merge(dynamicConfig);
+    }
     final ConfigManager.SetResult setResult = configManager.set(
         KubernetesTaskRunnerDynamicConfig.CONFIG_KEY,
-        dynamicConfig,
+        mergedConfig,
         AuthorizationUtils.buildAuditInfo(req)
     );
     if (setResult.isOk()) {
-      log.info("Updating K8s execution configs: %s", dynamicConfig);
+      log.info("Updating K8s execution configs: %s", mergedConfig);
 
       return Response.ok().build();
     } else {
@@ -148,10 +154,14 @@ public class KubernetesTaskExecutionConfigResource
   @ResourceFilters(ConfigResourceFilter.class)
   public Response getExecutionConfig()
   {
+    return Response.ok(getDynamicConfig()).build();
+  }
+
+  private KubernetesTaskRunnerDynamicConfig getDynamicConfig()
+  {
     if (dynamicConfigRef == null) {
       dynamicConfigRef = configManager.watch(KubernetesTaskRunnerDynamicConfig.CONFIG_KEY, KubernetesTaskRunnerDynamicConfig.class);
     }
-
-    return Response.ok(dynamicConfigRef.get()).build();
+    return dynamicConfigRef.get();
   }
 }

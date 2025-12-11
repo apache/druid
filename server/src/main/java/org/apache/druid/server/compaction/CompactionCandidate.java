@@ -137,6 +137,20 @@ public class CompactionCandidate
     return CompactionStatistics.create(totalBytes, numSegments(), numIntervals);
   }
 
+  @Nullable
+  public CompactionStatistics getCompactedStats()
+  {
+    return (currentStatus == null || currentStatus.getCompactedStats() == null)
+           ? null : currentStatus.getCompactedStats();
+  }
+
+  @Nullable
+  public CompactionStatistics getUncompactedStats()
+  {
+    return (currentStatus == null || currentStatus.getUncompactedStats() == null)
+           ? null : currentStatus.getUncompactedStats();
+  }
+
   /**
    * Current compaction status of the time chunk corresponding to this candidate.
    */
