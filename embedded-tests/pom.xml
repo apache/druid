@@ -29,6 +29,8 @@
 
   <properties>
     <surefire.rerunFailingTestsCount>0</surefire.rerunFailingTestsCount>
+    <!--  Hadoop relies upon JDK 11 language level which breaks when upgraded to anything higher, but we can use 17 in \
+    embedded-tests, which supports more features such as multiline text block literal delimiter (""")  -->
     <maven.compiler.release>17</maven.compiler.release>
   </properties>
 
