@@ -30,6 +30,7 @@ blocks:
         commands:
           - echo $SEMAPHORE_WORKFLOW_ID
           - sem-version java 17
+          - cache clear
           - checkout
       jobs:
         - name: "Install"
@@ -52,6 +53,7 @@ blocks:
         commands:
           - echo $SEMAPHORE_WORKFLOW_ID
           - sem-version java 17
+          - cache clear
           - checkout
           - artifact pull workflow cache-post-install.tgz
           - tar zxf cache-post-install.tgz
@@ -146,8 +148,9 @@ blocks:
           env_vars:
             - name: MAVEN_PROJECTS
               value: services
+            # Must include -Dmaven.repo.local=.m2 to use the cached artifacts
             - name: MAVEN_OPTS
-              value: "-DforkCount=1 -DreuseForks=false"
+              value: "-Dmaven.repo.local=.m2 -DforkCount=1 -DreuseForks=false"
           commands: *run_tests
 
         - name: "Druid E2E Tests"

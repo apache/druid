@@ -28,8 +28,8 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.JettyUtils;
 import org.apache.druid.server.security.AuthConfig;
 import org.eclipse.jetty.client.HttpClient;
-import org.eclipse.jetty.client.api.Request;
-import org.eclipse.jetty.proxy.ProxyServlet;
+import org.eclipse.jetty.client.Request;
+import org.eclipse.jetty.ee8.proxy.ProxyServlet;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;

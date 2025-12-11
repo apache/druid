@@ -40,14 +40,13 @@ import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.sql.avatica.DruidAvaticaJsonHandler;
 import org.apache.druid.sql.avatica.DruidAvaticaProtobufHandler;
+import org.eclipse.jetty.ee8.servlet.DefaultServlet;
+import org.eclipse.jetty.ee8.servlet.FilterHolder;
+import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee8.servlet.ServletHolder;
 import org.eclipse.jetty.rewrite.handler.RewriteHandler;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.HandlerList;
-import org.eclipse.jetty.servlet.DefaultServlet;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
 
 import javax.servlet.Servlet;
 import java.util.List;
@@ -151,17 +150,13 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     RewriteHandler rewriteHandler = WebConsoleJettyServerInitializer.createWebConsoleRewriteHandler();
     JettyServerInitUtils.maybeAddHSTSPatternRule(serverConfig, rewriteHandler);
 
-    final HandlerList handlerList = new HandlerList();
-    handlerList.setHandlers(
-        new Handler[]{
-            rewriteHandler,
-            JettyServerInitUtils.getJettyRequestLogHandler(),
-            JettyServerInitUtils.wrapWithDefaultGzipHandler(
-                root,
-                serverConfig.getInflateBufferSize(),
-                serverConfig.getCompressionLevel()
-            )
-        }
+    final Handler.Sequence handlerList = new Handler.Sequence(
+        rewriteHandler,
+        JettyServerInitUtils.wrapWithDefaultGzipHandler(
+            root,
+            serverConfig.getInflateBufferSize(),
+            serverConfig.getCompressionLevel()
+        )
     );
     server.setHandler(handlerList);
   }

@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.avatica;
 
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.DruidNode;
 import org.easymock.EasyMock;
 import org.eclipse.jetty.http.HttpURI;
@@ -31,21 +30,18 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
-public class DruidAvaticaProtobufHandlerTest extends DruidAvaticaHandlerTest
+public class DruidAvaticaJsonHandlerTest extends DruidAvaticaHandlerTest
 {
   @Override
   protected String getJdbcUrlTail()
   {
-    return StringUtils.format(
-            "%s;serialization=protobuf",
-            DruidAvaticaProtobufHandler.AVATICA_PATH
-    );
+    return DruidAvaticaJsonHandler.AVATICA_PATH;
   }
 
   @Override
-  protected DruidAvaticaProtobufHandler getAvaticaHandler(final DruidMeta druidMeta)
+  protected DruidAvaticaHandler getAvaticaHandler(final DruidMeta druidMeta)
   {
-    return new DruidAvaticaProtobufHandler(
+    return new DruidAvaticaJsonHandler(
             druidMeta,
             new DruidNode("dummy", "dummy", false, 1, null, true, false),
             new AvaticaMonitor()
@@ -70,13 +66,13 @@ public class DruidAvaticaProtobufHandlerTest extends DruidAvaticaHandlerTest
     EasyMock.expect(request.getHttpURI()).andReturn(httpURI);
     EasyMock.expect(httpURI.getPath()).andReturn(DruidAvaticaProtobufHandler.AVATICA_PATH_NO_TRAILING_SLASH);
     EasyMock.expect(request.getMethod()).andReturn("GET");
-    
+
     response.setStatus(405);
     EasyMock.expectLastCall();
-    
+
     response.write(
-        EasyMock.eq(true), 
-        EasyMock.anyObject(ByteBuffer.class), 
+        EasyMock.eq(true),
+        EasyMock.anyObject(ByteBuffer.class),
         EasyMock.eq(callback)
     );
     EasyMock.expectLastCall();

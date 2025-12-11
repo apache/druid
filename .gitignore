@@ -49,3 +49,5 @@ nbactions.xml
 nb-configuration.xml
 *.iq.out
 *.iq@*.out
+
+.m2/*

@@ -39,7 +39,6 @@ import org.apache.calcite.avatica.BuiltInConnectionProperty;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchStatementException;
-import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.security.PolicyModule;
@@ -253,7 +252,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   }
 
   // Default implementation is for JSON to allow debugging of tests.
-  protected AbstractAvaticaHandler getAvaticaHandler(final DruidMeta druidMeta)
+  protected DruidAvaticaHandler getAvaticaHandler(final DruidMeta druidMeta)
   {
     return new DruidAvaticaJsonHandler(
         druidMeta,

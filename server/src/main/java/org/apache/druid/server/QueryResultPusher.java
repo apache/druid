@@ -39,7 +39,6 @@ import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.ForbiddenException;
-import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpHeader;
 
 import javax.annotation.Nullable;
@@ -52,6 +51,7 @@ import javax.ws.rs.core.Response;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -69,7 +69,7 @@ public abstract class QueryResultPusher
   private final QueryResource.QueryMetricCounter counter;
   private final MediaType contentType;
   private final Map<String, String> extraHeaders;
-  private final HttpFields trailerFields;
+  private final Map<String, String> trailerFields;
 
   private StreamingHttpResponseAccumulator accumulator;
   private AsyncContext asyncContext;
@@ -94,7 +94,7 @@ public abstract class QueryResultPusher
     this.counter = counter;
     this.contentType = contentType;
     this.extraHeaders = extraHeaders;
-    this.trailerFields = new HttpFields();
+    this.trailerFields = new HashMap<>();
   }
 
   /**
@@ -153,16 +153,11 @@ public abstract class QueryResultPusher
         response.setHeader(entry.getKey(), entry.getValue());
       }
 
-      if (response instanceof org.eclipse.jetty.server.Response) {
-        org.eclipse.jetty.server.Response jettyResponse = (org.eclipse.jetty.server.Response) response;
+      response.setHeader(HttpHeader.TRAILER.toString(), RESULT_TRAILER_HEADERS);
+      response.setTrailerFields(() -> trailerFields);
 
-        jettyResponse.setHeader(HttpHeader.TRAILER.toString(), RESULT_TRAILER_HEADERS);
-        jettyResponse.setTrailers(() -> trailerFields);
-
-        // Start with complete status
-
-        trailerFields.put(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER, "true");
-      }
+      // Start with complete status
+      trailerFields.put(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER, "true");
 
       accumulator = new StreamingHttpResponseAccumulator(queryResponse.getResponseContext(), resultsWriter);
 
@@ -447,10 +442,7 @@ public abstract class QueryResultPusher
         response.setHeader(QueryResource.BROKER_QUERY_TIME_RESPONSE_HEADER, String.valueOf(brokerQueryTime));
         response.setContentType(contentType.toString());
 
-        if (response instanceof org.eclipse.jetty.server.Response) {
-          org.eclipse.jetty.server.Response jettyResponse = (org.eclipse.jetty.server.Response) response;
-          jettyResponse.setTrailers(() -> trailerFields);
-        }
+        response.setTrailerFields(() -> trailerFields);
 
         try {
           out = new CountingOutputStream(response.getOutputStream());

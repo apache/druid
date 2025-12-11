@@ -36,7 +36,7 @@ java -classpath "/my/druid/lib/*" -Ddruid.extensions.loadList="[]" org.apache.dr
   --out /home/druid/output.txt
 ```
 
-If you use JDK 11 and above, you need to add the following additional parameters
+If you use JDK 17 and above, you need to add the following additional parameters
 ```
 --add-opens java.base/java.lang=ALL-UNNAMED
 --add-opens java.base/sun.nio.ch=ALL-UNNAMED

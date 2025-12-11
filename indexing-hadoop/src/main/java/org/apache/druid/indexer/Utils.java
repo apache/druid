@@ -36,18 +36,18 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.eclipse.jetty.client.HttpClient;
-import org.eclipse.jetty.client.api.ContentResponse;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -56,6 +56,10 @@ public class Utils
 {
   private static final Logger log = new Logger(Utils.class);
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
+  
+  // HTTP timeouts to mimic Jetty HttpClient default behavior (15s connect, 60s request)
+  private static final Duration HTTP_CONNECT_TIMEOUT = Duration.ofSeconds(15);
+  private static final Duration HTTP_REQUEST_TIMEOUT = Duration.ofSeconds(60);
 
   public static OutputStream makePathAndOutputStream(JobContext job, Path outputPath, boolean deleteExisting)
       throws IOException
@@ -186,10 +190,11 @@ public class Utils
 
   public static boolean checkAppSuccessFromYarnRM(Job job)
   {
-    final HttpClient httpClient = new HttpClient();
+    final HttpClient httpClient = HttpClient.newBuilder()
+        .connectTimeout(HTTP_CONNECT_TIMEOUT)
+        .build();
     final AtomicBoolean succeeded = new AtomicBoolean(false);
     try {
-      httpClient.start();
       RetryUtils.retry(
           () -> {
             checkAppSuccessFromYarnRMOnce(httpClient, job, succeeded);
@@ -207,31 +212,30 @@ public class Utils
       // we're already in a best-effort fallback failure handling case, just stop if we have issues with the http client
       return false;
     }
-    finally {
-      try {
-        httpClient.stop();
-      }
-      catch (Exception e) {
-        log.error(e, "Got exception with httpClient.stop() while trying to contact YARN RM.");
-      }
-    }
   }
 
   private static void checkAppSuccessFromYarnRMOnce(
       HttpClient httpClient,
       Job job,
       AtomicBoolean succeeded
-  ) throws IOException, InterruptedException, ExecutionException, TimeoutException
+  ) throws IOException, InterruptedException
   {
     String appId = StringUtils.replace(job.getJobID().toString(), "job", "application");
     String yarnRM = job.getConfiguration().get("yarn.resourcemanager.webapp.address");
     String yarnEndpoint = StringUtils.format("http://%s/ws/v1/cluster/apps/%s", yarnRM, appId);
     log.info("Attempting to retrieve app status from YARN ResourceManager at [%s].", yarnEndpoint);
 
-    ContentResponse res = httpClient.GET(yarnEndpoint);
-    log.info("App status response from YARN RM: " + res.getContentAsString());
+    HttpRequest request = HttpRequest.newBuilder()
+        .uri(URI.create(yarnEndpoint))
+        .timeout(HTTP_REQUEST_TIMEOUT)
+        .GET()
+        .build();
+    HttpResponse<String> res = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+    String responseBody = res.body();
+    log.info("App status response from YARN RM: " + responseBody);
     Map<String, Object> respMap = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
-        res.getContentAsString(),
+        responseBody,
         new TypeReference<>() {}
     );
 
