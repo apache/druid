@@ -54,8 +54,6 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   public static final String OPTIMAL_TASK_COUNT_METRIC = "task/autoScaler/costBased/optimalTaskCount";
 
   private static final Map<Integer, int[]> FACTORS_CACHE = new LinkedHashMap<>();
-  private static final int FACTORS_CACHE_MAX_SIZE = 10; // Enough for most scenarios, almost capacity * loadFactor.
-
   private final String supervisorId;
   private final SeekableStreamSupervisor supervisor;
   private final ServiceEmitter emitter;
@@ -179,16 +177,13 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       return -1;
     }
 
-    if (metrics.getPartitionCount() <= 0 || metrics.getCurrentTaskCount() <= 0) {
+    final int partitionCount = metrics.getPartitionCount();
+    final int currentTaskCount = metrics.getCurrentTaskCount();
+    if (partitionCount <= 0 || currentTaskCount <= 0) {
       return -1;
     }
 
-    final int currentTaskCount = metrics.getCurrentTaskCount();
-    final int[] validTaskCounts = FACTORS_CACHE.computeIfAbsent(metrics.getPartitionCount(), this::computeFactors);
-    if (FACTORS_CACHE.size() > FACTORS_CACHE_MAX_SIZE) {
-      int firstKey = FACTORS_CACHE.keySet().iterator().next();
-      FACTORS_CACHE.remove(firstKey);
-    }
+    final int[] validTaskCounts = CostBasedAutoScaler.computeFactors(partitionCount);
 
     if (validTaskCounts.length == 0) {
       log.warn("No valid task counts after applying constraints for dataSource [%s]", supervisorId);
@@ -201,7 +196,6 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     int optimalTaskCount = -1;
     double optimalCost = Double.POSITIVE_INFINITY;
-
 
     final int bestTaskCountIndex = Arrays.binarySearch(validTaskCounts, currentTaskCount);
     for (int i = bestTaskCountIndex - SCALE_FACTOR_DISCRETE_DISTANCE;
@@ -251,7 +245,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    *
    * @return sorted list of valid task counts within bounds
    */
-  int[] computeFactors(int partitionCount)
+  static int[] computeFactors(int partitionCount)
   {
     if (partitionCount <= 0) {
       return new int[]{};
