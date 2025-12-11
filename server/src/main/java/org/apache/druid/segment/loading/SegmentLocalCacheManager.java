@@ -38,7 +38,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
@@ -54,8 +53,10 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -182,6 +183,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     final boolean isLocationsValid = !(locations == null || locations.isEmpty());
     final boolean isLocationsConfigValid = !(config.getLocations() == null || config.getLocations().isEmpty());
     return isLocationsValid || isLocationsConfigValid;
+  }
+
+  @Override
+  public boolean canLoadSegmentsOnDemand()
+  {
+    return config.isVirtualStorage();
   }
 
   @Override
@@ -460,7 +467,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         if (hold != null) {
           if (hold.getEntry().isMounted()) {
             return new AcquireSegmentAction(
-                () -> Futures.immediateFuture(hold.getEntry().referenceProvider),
+                () -> Futures.immediateFuture(AcquireSegmentResult.cached(hold.getEntry().referenceProvider)),
                 hold
             );
           } else {
@@ -614,6 +621,31 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
   }
 
+  @Nullable
+  @Override
+  public StorageStats getStorageStats()
+  {
+    if (config.isVirtualStorage()) {
+      final Map<String, VirtualStorageLocationStats> locationStats = new HashMap<>();
+      for (StorageLocation location : locations) {
+        locationStats.put(location.getPath().toString(), location.resetWeakStats());
+      }
+      return new StorageStats(
+          Map.of(),
+          locationStats
+      );
+    } else {
+      final Map<String, StorageLocationStats> locationStats = new HashMap<>();
+      for (StorageLocation location : locations) {
+        locationStats.put(location.getPath().toString(), location.resetStaticStats());
+      }
+      return new StorageStats(
+          locationStats,
+          Map.of()
+      );
+    }
+  }
+
   @VisibleForTesting
   public ConcurrentHashMap<DataSegment, ReferenceCountingLock> getSegmentLocks()
   {
@@ -641,6 +673,25 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       }
     }
     return false;
+  }
+
+  /**
+   * Testing use only please, any callers that want to do stuff with segments should use
+   * {@link #acquireCachedSegment(DataSegment)} or {@link #acquireSegment(DataSegment)} instead. Does not hold locks
+   * and so is not really safe to use while the cache manager is active
+   */
+  @VisibleForTesting
+  @Nullable
+  public ReferenceCountedSegmentProvider getSegmentReferenceProvider(DataSegment segment)
+  {
+    final SegmentCacheEntry cacheEntry = new SegmentCacheEntry(segment);
+    for (StorageLocation location : locations) {
+      final SegmentCacheEntry entry = location.getCacheEntry(cacheEntry.id);
+      if (entry != null) {
+        return entry.referenceProvider;
+      }
+    }
+    return null;
   }
 
   /**
@@ -673,18 +724,28 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return infoDir;
   }
 
-  private Supplier<ListenableFuture<ReferenceCountedObjectProvider<Segment>>> makeOnDemandLoadSupplier(
+  private Supplier<ListenableFuture<AcquireSegmentResult>> makeOnDemandLoadSupplier(
       final SegmentCacheEntry entry,
       final StorageLocation location
   )
   {
     return Suppliers.memoize(
-        () -> virtualStorageLoadOnDemandExec.submit(
-            () -> {
-              entry.mount(location);
-              return entry.referenceProvider;
-            }
-        )
+        () -> {
+          final long startTime = System.nanoTime();
+          return virtualStorageLoadOnDemandExec.submit(
+              () -> {
+                final long execStartTime = System.nanoTime();
+                final long waitTime = execStartTime - startTime;
+                entry.mount(location);
+                return new AcquireSegmentResult(
+                    entry.referenceProvider,
+                    entry.dataSegment.getSize(),
+                    waitTime,
+                    System.nanoTime() - startTime
+                );
+              }
+          );
+        }
     );
   }
 
@@ -942,7 +1003,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               );
               atomicMoveAndDeleteCacheEntryDirectory(storageDir);
             } else {
-              needsLoad = false;
+              needsLoad = referenceProvider != null;
             }
           }
           if (needsLoad) {
@@ -1008,14 +1069,17 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       try {
         synchronized (this) {
           if (referenceProvider != null) {
-            referenceProvider.close();
+            ReferenceCountedSegmentProvider provider = referenceProvider;
             referenceProvider = null;
+            provider.close();
           }
           if (!config.isDeleteOnRemove()) {
             return;
           }
           if (storageDir != null) {
-            atomicMoveAndDeleteCacheEntryDirectory(storageDir);
+            if (storageDir.exists()) {
+              atomicMoveAndDeleteCacheEntryDirectory(storageDir);
+            }
             storageDir = null;
             location = null;
           }

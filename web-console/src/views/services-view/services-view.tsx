@@ -41,10 +41,7 @@ import type { QueryWithContext } from '../../druid-models';
 import { getConsoleViewIcon } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
-  booleanCustomTableFilter,
-  combineModeAndNeedle,
   DEFAULT_TABLE_CLASS_NAME,
-  parseFilterModeAndNeedle,
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
   suggestibleFilterInput,
@@ -59,6 +56,7 @@ import {
   formatBytesCompact,
   formatDate,
   formatDurationWithMsIfNeeded,
+  formatInteger,
   getApiArray,
   hasOverlayOpen,
   LocalStorageBackedVisibility,
@@ -70,8 +68,10 @@ import {
   QueryManager,
   QueryState,
   ResultWithAuxiliaryWork,
+  twoLines,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
+import { TableFilter, TableFilters } from '../../utils/table-filters';
 
 import { FillIndicator } from './fill-indicator/fill-indicator';
 
@@ -89,6 +89,8 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Usage',
     'Start time',
     'Version',
+    'Available processors',
+    'Total memory',
     'Labels',
     'Detail',
   ],
@@ -123,8 +125,8 @@ interface ServicesQuery {
 }
 
 export interface ServicesViewProps {
-  filters: Filter[];
-  onFiltersChange(filters: Filter[]): void;
+  filters: TableFilters;
+  onFiltersChange(filters: TableFilters): void;
   goToQuery(queryWithContext: QueryWithContext): void;
   capabilities: Capabilities;
 }
@@ -152,6 +154,8 @@ interface ServiceResultRow {
   readonly start_time: string;
   readonly version: string;
   readonly labels: string | null;
+  readonly available_processors: number;
+  readonly total_memory: number;
 }
 
 interface ServicesWithAuxiliaryInfo {
@@ -254,7 +258,9 @@ export class ServicesView extends React.PureComponent<ServicesViewProps, Service
   "is_leader",
   "start_time",
   "version",
-  "labels"
+  "labels",
+  "available_processors",
+  "total_memory"
 FROM sys.servers
 ORDER BY
   (
@@ -305,6 +311,8 @@ ORDER BY
                 is_leader: 0,
                 version: '',
                 labels: null,
+                available_processors: -1,
+                total_memory: -1,
               };
             },
           );
@@ -438,9 +446,9 @@ ORDER BY
             servicesState.isEmpty() ? 'No services' : servicesState.getErrorMessage() || ''
           }
           filterable
-          filtered={filters}
+          filtered={filters.toFilters()}
           className={`centered-table ${DEFAULT_TABLE_CLASS_NAME}`}
-          onFilteredChange={onFiltersChange}
+          onFilteredChange={filters => onFiltersChange(TableFilters.fromFilters(filters))}
           pivotBy={groupServicesBy ? [groupServicesBy] : []}
           defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
           pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
@@ -454,8 +462,8 @@ ORDER BY
   private readonly getTableColumns = memoize(
     (
       visibleColumns: LocalStorageBackedVisibility,
-      _filters: Filter[],
-      _onFiltersChange: (filters: Filter[]) => void,
+      _filters: TableFilters,
+      _onFiltersChange: (filters: TableFilters) => void,
       workerInfoLookup: Record<string, WorkerInfo>,
     ): Column<ServiceResultRow>[] => {
       const { capabilities } = this.props;
@@ -643,15 +651,18 @@ ORDER BY
           Cell: this.renderFilterableCell('start_time', formatDate),
           Aggregated: () => '',
           filterMethod: (filter: Filter, row: ServiceResultRow) => {
-            const modeAndNeedle = parseFilterModeAndNeedle(filter);
-            if (!modeAndNeedle) return true;
+            const tableFilter = TableFilter.fromFilter(filter);
             const parsedRowTime = formatDate(row.start_time);
-            if (modeAndNeedle.mode === '~') {
-              return booleanCustomTableFilter(filter, parsedRowTime);
+            if (tableFilter.mode === '~') {
+              return tableFilter.matches(parsedRowTime);
             }
-            const parsedFilterTime = formatDate(modeAndNeedle.needle);
-            filter.value = combineModeAndNeedle(modeAndNeedle.mode, parsedFilterTime);
-            return booleanCustomTableFilter(filter, parsedRowTime);
+            const parsedFilterTime = formatDate(tableFilter.value);
+            const updatedFilter = new TableFilter(
+              tableFilter.key,
+              tableFilter.mode,
+              parsedFilterTime,
+            );
+            return updatedFilter.matches(parsedRowTime);
           },
         },
         {
@@ -661,6 +672,37 @@ ORDER BY
           width: 200,
           Cell: this.renderFilterableCell('version'),
           Aggregated: () => '',
+        },
+        {
+          Header: twoLines('Available', 'processors'),
+          show: visibleColumns.shown('Available processors'),
+          accessor: 'available_processors',
+          className: 'padded',
+          filterable: false,
+          width: 100,
+          Cell: ({ value }) => (value === null ? '' : formatInteger(value)),
+          Aggregated: ({ subRows }) => {
+            const originalRows: ServiceResultRow[] = subRows.map(r => r._original);
+            const totalAvailableProcessors = sum(originalRows, s => s.available_processors);
+            return totalAvailableProcessors;
+          },
+        },
+        {
+          Header: 'Total memory',
+          show: visibleColumns.shown('Total memory'),
+          accessor: 'total_memory',
+          className: 'padded',
+          width: 120,
+          filterable: false,
+          Cell: ({ value }) => {
+            if (value === null) return '';
+            return formatBytes(value, true);
+          },
+          Aggregated: ({ subRows }) => {
+            const originalRows: ServiceResultRow[] = subRows.map(r => r._original);
+            const totalMemory = sum(originalRows, s => s.total_memory);
+            return formatBytes(totalMemory, true);
+          },
         },
         {
           Header: 'Labels',

@@ -127,7 +127,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertTrue(supervisorStatus.isSuspended());
     indexer.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("ingest/handoff/count")
-                      .hasDimension(DruidMetrics.DATASOURCE, List.of(dataSource)),
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(expectedSegments)
     );
     overlord.latchableEmitter().waitForEventAggregate(

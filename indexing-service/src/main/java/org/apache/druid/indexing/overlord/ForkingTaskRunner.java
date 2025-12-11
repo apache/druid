@@ -524,7 +524,7 @@ public class ForkingTaskRunner
       try {
         taskLogPusher.pushTaskLog(task.getId(), logFile);
       }
-      catch (IOException e) {
+      catch (Exception e) {
         LOGGER.error("Task[%s] failed to push task logs to [%s]: Exception[%s]",
             task.getId(), logFile.getName(), e.getMessage());
       }
@@ -532,7 +532,7 @@ public class ForkingTaskRunner
         try {
           taskLogPusher.pushTaskReports(task.getId(), reportsFile);
         }
-        catch (IOException e) {
+        catch (Exception e) {
           LOGGER.error("Task[%s] failed to push task reports to [%s]: Exception[%s]",
               task.getId(), reportsFile.getName(), e.getMessage());
         }

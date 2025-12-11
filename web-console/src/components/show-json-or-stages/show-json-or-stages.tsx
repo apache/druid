@@ -40,7 +40,7 @@ export interface ShowJsonOrStagesProps {
 export const ShowJsonOrStages = React.memo(function ShowJsonOrStages(props: ShowJsonOrStagesProps) {
   const { endpoint, transform, downloadFilename } = props;
 
-  const [jsonState] = useQueryManager<null, [string, Execution | undefined]>({
+  const [jsonState, queryManager] = useQueryManager<null, [string, Execution | undefined]>({
     processQuery: async (_, signal) => {
       const resp = await Api.instance.get(endpoint, { signal });
       let data = resp.data;
@@ -68,6 +68,12 @@ export const ShowJsonOrStages = React.memo(function ShowJsonOrStages(props: Show
     <div className="show-json-or-stages">
       <div className="top-actions">
         <ButtonGroup className="right-buttons">
+          <Button
+            disabled={jsonState.loading}
+            text="Refresh"
+            minimal
+            onClick={() => queryManager.rerunLastQuery()}
+          />
           {downloadFilename && (
             <Button
               disabled={jsonState.loading}

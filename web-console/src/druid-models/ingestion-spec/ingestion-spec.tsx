@@ -77,12 +77,12 @@ const CURRENT_YEAR = new Date().getUTCFullYear();
 
 export interface IngestionSpec {
   readonly type: IngestionType;
+  readonly id?: string;
   readonly spec: IngestionSpecInner;
   readonly context?: { useConcurrentLocks?: boolean };
   readonly suspended?: boolean;
 
   // Added by the server
-  readonly id?: string;
   readonly groupId?: string;
   readonly resource?: any;
 }

@@ -19,8 +19,11 @@
 
 package org.apache.druid.testing.embedded.junit5;
 
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedDruidServer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,6 +55,19 @@ public abstract class EmbeddedClusterTestBase
    * Random test datasource name that is freshly generated for each test method.
    */
   protected String dataSource;
+
+  /**
+   * Returns the URL of the requested server.
+   */
+  protected static String getServerUrl(EmbeddedDruidServer<?> server)
+  {
+    final DruidNode node = server.bindings().selfNode();
+    return StringUtils.format(
+        "http://%s:%s",
+        node.getHost(),
+        node.getPlaintextPort()
+    );
+  }
 
   /**
    * Creates the cluster to be used in this test class. This method is invoked

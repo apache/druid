@@ -21,6 +21,7 @@ package org.apache.druid.k8s.overlord.taskadapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.google.common.base.Optional;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -34,6 +35,7 @@ import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.apache.druid.k8s.overlord.KubernetesTaskRunnerStaticConfig;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
 import org.apache.druid.k8s.overlord.common.JobResponse;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
@@ -89,7 +91,7 @@ public class DruidPeonClientIntegrationTest
         new NamedType(IndexTask.IndexTuningConfig.class, "index")
     );
     k8sClient = new DruidKubernetesClient(new DruidKubernetesVertxHttpClientFactory(new DruidKubernetesVertxHttpClientConfig()), new ConfigBuilder().build());
-    peonClient = new KubernetesPeonClient(k8sClient, "default", false, new NoopServiceEmitter());
+    peonClient = new KubernetesPeonClient(k8sClient, "default", null, false, new NoopServiceEmitter());
     druidNode = new DruidNode(
         "test",
         null,
@@ -110,9 +112,9 @@ public class DruidPeonClientIntegrationTest
     PodSpec podSpec = K8sTestUtils.getDummyPodSpec();
 
     Task task = K8sTestUtils.getTask();
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("default")
-        .build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
+                                                                              .withNamespace("default")
+                                                                              .build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         k8sClient,
         config,
@@ -162,7 +164,9 @@ public class DruidPeonClientIntegrationTest
 
     // now copy the task.json file from the pod and make sure its the same as our task.json we expected
     Path downloadPath = Paths.get(tempDir.toAbsolutePath().toString(), "task.json");
-    Pod mainJobPod = peonClient.getPeonPodWithRetries(taskId.getK8sJobName());
+    Optional<Pod> maybeMainJobPod = peonClient.getPeonPod(taskId.getK8sJobName());
+    assertTrue(maybeMainJobPod.isPresent());
+    Pod mainJobPod = maybeMainJobPod.get();
     k8sClient.executeRequest(client -> {
       client.pods()
             .inNamespace("default")
