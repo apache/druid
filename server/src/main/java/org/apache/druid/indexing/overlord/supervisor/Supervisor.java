@@ -71,6 +71,11 @@ public interface Supervisor
     return ImmutableMap.of();
   }
 
+  default Map<String, Map<String, Object>> getTaskMetrics()
+  {
+    return ImmutableMap.of();
+  }
+
   default List<ParseExceptionReport> getParseErrors()
   {
     return ImmutableList.of();

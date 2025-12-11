@@ -81,6 +81,13 @@ public interface SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetTy
   ListenableFuture<DateTime> getStartTimeAsync(String id);
 
   /**
+   * Gets all available metrics for a task.
+   *
+   * @param id task id
+   */
+  ListenableFuture<Map<String, Object>> getMetrics(String id);
+
+  /**
    * Pause a task.
    *
    * Calls {@link SeekableStreamIndexTaskRunner#pauseHTTP} task-side to do the initial pause, then uses
