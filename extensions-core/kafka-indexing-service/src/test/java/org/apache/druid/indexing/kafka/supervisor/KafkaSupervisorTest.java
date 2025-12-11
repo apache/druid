@@ -389,7 +389,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     supervisor.start();
     int taskCountBeforeScale = supervisor.getIoConfig().getTaskCount();
-    Assert.assertNull(supervisor.getIoConfig().getAutoScalerConfig().getTaskCountStart());
+    Assert.assertEquals(1, taskCountBeforeScale);
     autoscaler.start();
     supervisor.runInternal();
     Thread.sleep(1000);

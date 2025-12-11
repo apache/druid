@@ -566,51 +566,43 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private boolean changeTaskCount(int desiredActiveTaskCount)
       throws InterruptedException, ExecutionException
   {
-    if (autoScalerConfig == null) {
-      log.warn("autoScalerConfig is 'null' but dynamic allocation notice is submitted, how can it be ?");
-      return false;
-    }
     int currentActiveTaskCount;
     Collection<TaskGroup> activeTaskGroups = activelyReadingTaskGroups.values();
     currentActiveTaskCount = activeTaskGroups.size();
 
     if (desiredActiveTaskCount < 0 || desiredActiveTaskCount == currentActiveTaskCount) {
       return false;
+    } else {
+      log.info(
+          "Starting scale action, current active task count is [%d] and desired task count is [%d] for supervisor[%s] for dataSource[%s].",
+          currentActiveTaskCount,
+          desiredActiveTaskCount,
+          supervisorId,
+          dataSource
+      );
+      final Stopwatch scaleActionStopwatch = Stopwatch.createStarted();
+      gracefulShutdownInternal();
+      changeTaskCountInIOConfig(desiredActiveTaskCount);
+      clearAllocationInfo();
+      emitter.emit(ServiceMetricEvent.builder()
+                                     .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
+                                     .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                                     .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
+                                     .setDimensionIfNotNull(
+                                         DruidMetrics.TAGS,
+                                         spec.getContextValue(DruidMetrics.TAGS)
+                                     )
+                                     .setMetric(
+                                         AUTOSCALER_SCALING_TIME_METRIC,
+                                         scaleActionStopwatch.millisElapsed()
+                                     ));
+      log.info("Changed taskCount to [%s] for supervisor[%s] for dataSource[%s].", desiredActiveTaskCount, supervisorId, dataSource);
+      return true;
     }
-    log.info(
-        "Starting scale action, current active task count is [%d] and desired task count is [%d] for supervisor[%s] for dataSource[%s].",
-        currentActiveTaskCount,
-        desiredActiveTaskCount,
-        supervisorId,
-        dataSource
-    );
-    final Stopwatch scaleActionStopwatch = Stopwatch.createStarted();
-    gracefulShutdownInternal();
-    changeTaskCountInAutoScalerConfig(desiredActiveTaskCount);
-    clearAllocationInfo();
-    emitter.emit(ServiceMetricEvent.builder()
-                                 .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
-                                 .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                                 .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
-                                 .setDimensionIfNotNull(
-                                     DruidMetrics.TAGS,
-                                     spec.getContextValue(DruidMetrics.TAGS)
-                                 )
-                                 .setMetric(
-                                     AUTOSCALER_SCALING_TIME_METRIC,
-                                     scaleActionStopwatch.millisElapsed()
-                                 ));
-    log.info("Changed taskCount to [%s] for supervisor[%s] for dataSource[%s].", desiredActiveTaskCount, supervisorId, dataSource);
-    return true;
   }
 
-  private void changeTaskCountInAutoScalerConfig(int desiredActiveTaskCount)
+  private void changeTaskCountInIOConfig(int desiredActiveTaskCount)
   {
-    // Sanity check.
-    if (autoScalerConfig == null) {
-      log.warn("autoScalerConfig is null but scale action is submitted, how can it be ?");
-      return;
-    }
     ioConfig.setTaskCount(desiredActiveTaskCount);
     try {
       Optional<SupervisorManager> supervisorManager = taskMaster.getSupervisorManager();

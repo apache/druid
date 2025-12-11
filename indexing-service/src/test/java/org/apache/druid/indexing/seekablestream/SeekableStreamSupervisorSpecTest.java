@@ -779,9 +779,8 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     supervisor.start();
     autoScaler.start();
     supervisor.runInternal();
-    Assert.assertNotNull(supervisor.getIoConfig().getAutoScalerConfig());
 
-    int taskCountBeforeScaleOut = supervisor.getIoConfig().getAutoScalerConfig().getTaskCountMin();
+    int taskCountBeforeScaleOut = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(1, taskCountBeforeScaleOut);
     Thread.sleep(1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
@@ -1010,8 +1009,8 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     autoScaler.start();
     supervisor.runInternal();
 
-    Assert.assertNotNull(supervisor.getIoConfig().getAutoScalerConfig());
-    Assert.assertNull(supervisor.getIoConfig().getAutoScalerConfig().getTaskCountStart());
+    int taskCountBeforeScaleOut = supervisor.getIoConfig().getTaskCount();
+    Assert.assertEquals(1, taskCountBeforeScaleOut);
     Thread.sleep(1000);
 
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
@@ -1057,13 +1056,14 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
     // enable autoscaler so that taskcount config will be ignored and init value of taskCount will use taskCountMin.
     Assert.assertEquals(1, (int) supervisor.getIoConfig().getTaskCount());
-    Assert.assertNotNull(supervisor.getIoConfig().getAutoScalerConfig());
+    supervisor.getIoConfig().setTaskCount(2);
 
     supervisor.start();
     autoScaler.start();
     supervisor.runInternal();
 
-    Assert.assertNull(supervisor.getIoConfig().getAutoScalerConfig().getTaskCountStart());
+    int taskCountBeforeScaleOut = supervisor.getIoConfig().getTaskCount();
+    Assert.assertEquals(2, taskCountBeforeScaleOut);
 
     Thread.sleep(1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
@@ -1113,17 +1113,15 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     );
 
     // enable autoscaler so that taskcount config will be ignored and the init value of taskCount will use taskCountMin.
-    Assert.assertNotNull(supervisor.getIoConfig().getAutoScalerConfig());
-    Assert.assertEquals(
-        supervisor.getIoConfig().getAutoScalerConfig().getTaskCountMin(),
-        (int) supervisor.getIoConfig().getTaskCount()
-    );
+    Assert.assertEquals(1, (int) supervisor.getIoConfig().getTaskCount());
+    supervisor.getIoConfig().setTaskCount(2);
 
     // When
     supervisor.start();
     autoScaler.start();
     supervisor.runInternal();
 
+    Assert.assertEquals(2, (int) supervisor.getIoConfig().getTaskCount());
     Thread.sleep(2000);
     // Then
     Assert.assertEquals(10, (int) supervisor.getIoConfig().getTaskCount());
@@ -1496,11 +1494,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
             DruidException.Category.INVALID_INPUT,
             "invalidInput"
         ).expectMessageIs(
-            StringUtils.format(
-                "Cannot update supervisor spec from type[%s] to type[%s]",
-                proposedSpec.getClass().getSimpleName(),
-                otherSpec.getClass().getSimpleName()
-            )
+            StringUtils.format("Cannot update supervisor spec from type[%s] to type[%s]", proposedSpec.getClass().getSimpleName(), otherSpec.getClass().getSimpleName())
         )
     );
   }

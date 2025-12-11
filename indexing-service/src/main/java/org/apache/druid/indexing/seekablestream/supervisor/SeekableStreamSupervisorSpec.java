@@ -192,9 +192,9 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   @Override
   public SupervisorTaskAutoScaler createAutoscaler(Supervisor supervisor)
   {
-    AutoScalerConfig autoScalerCfg = ingestionSchema.getIOConfig().getAutoScalerConfig();
-    if (autoScalerCfg != null && autoScalerCfg.getEnableTaskAutoScaler() && supervisor instanceof SeekableStreamSupervisor) {
-      return autoScalerCfg.createAutoScaler(supervisor, this, emitter);
+    AutoScalerConfig autoScalerConfig = ingestionSchema.getIOConfig().getAutoScalerConfig();
+    if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler() && supervisor instanceof SeekableStreamSupervisor) {
+      return autoScalerConfig.createAutoScaler(supervisor, this, emitter);
     }
     return new NoopTaskAutoScaler();
   }
