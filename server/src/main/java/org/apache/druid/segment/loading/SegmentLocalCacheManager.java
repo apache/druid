@@ -1003,7 +1003,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               );
               atomicMoveAndDeleteCacheEntryDirectory(storageDir);
             } else {
-              needsLoad = referenceProvider != null;
+              needsLoad = referenceProvider == null;
             }
           }
           if (needsLoad) {
