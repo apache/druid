@@ -85,12 +85,10 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     this.supervisorId = spec.getId();
     this.emitter = emitter;
 
-    final String supervisorId = StringUtils.format("Supervisor-%s", supervisor);
-
     this.currentMetrics = new AtomicReference<>(null);
     this.costFunction = new WeightedCostFunction();
 
-    this.autoscalerExecutor = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(supervisorId));
+    this.autoscalerExecutor = Execs.scheduledSingleThreaded(StringUtils.encodeForFormat(spec.getId()));
     this.metricBuilder = ServiceMetricEvent.builder()
                                            .setDimension(DruidMetrics.DATASOURCE, supervisorId)
                                            .setDimension(

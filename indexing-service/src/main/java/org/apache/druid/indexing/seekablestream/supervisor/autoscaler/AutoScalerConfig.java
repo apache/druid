@@ -46,11 +46,6 @@ public interface AutoScalerConfig
 
   Integer getTaskCountStart();
 
-  default void setTaskCountStart(int newTaskCountStart)
-  {
-    // No-op
-  }
-
   Double getStopTaskCountRatio();
 
   SupervisorTaskAutoScaler createAutoScaler(Supervisor supervisor, SupervisorSpec spec, ServiceEmitter emitter);

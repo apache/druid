@@ -36,6 +36,7 @@ import static org.mockito.Mockito.when;
 public class CostBasedAutoScalerTest
 {
   private CostBasedAutoScaler autoScaler;
+  private SupervisorSpec mockSupervisorSpec;
   private SeekableStreamSupervisor mockSupervisor;
   private ServiceEmitter mockEmitter;
   private CostBasedAutoScalerConfig config;
@@ -43,10 +44,13 @@ public class CostBasedAutoScalerTest
   @Before
   public void setUp()
   {
+    mockSupervisorSpec = Mockito.mock(SupervisorSpec.class);
     mockSupervisor = Mockito.mock(SeekableStreamSupervisor.class);
     mockEmitter = Mockito.mock(ServiceEmitter.class);
 
     SeekableStreamSupervisorIOConfig mockIoConfig = Mockito.mock(SeekableStreamSupervisorIOConfig.class);
+
+    when(mockSupervisorSpec.getId()).thenReturn("test-supervisor");
     when(mockSupervisor.getIoConfig()).thenReturn(mockIoConfig);
     when(mockIoConfig.getStream()).thenReturn("test-stream");
 
@@ -66,7 +70,7 @@ public class CostBasedAutoScalerTest
     autoScaler = new CostBasedAutoScaler(
         mockSupervisor,
         config,
-        Mockito.mock(SupervisorSpec.class),
+        mockSupervisorSpec,
         mockEmitter
     );
   }

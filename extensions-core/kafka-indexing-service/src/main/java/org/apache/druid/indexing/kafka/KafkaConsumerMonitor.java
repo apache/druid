@@ -48,7 +48,7 @@ public class KafkaConsumerMonitor extends AbstractMonitor
   private static final String PARTITION_TAG = "partition";
   private static final String NODE_ID_TAG = "node-id";
 
-  private static final String POLL_IDLE_RATION_METRIC_NAME = "poll-idle-ratio-avg";
+  private static final String POLL_IDLE_RATIO_METRIC_NAME = "poll-idle-ratio-avg";
 
   /**
    * Kafka metric name -> Kafka metric descriptor. Taken from
@@ -178,7 +178,7 @@ public class KafkaConsumerMonitor extends AbstractMonitor
       }
 
       // Capture `poll-idle-ratio-avg` metric for autoscaler purposes.
-      if (POLL_IDLE_RATION_METRIC_NAME.equals(metricName.name())) {
+      if (POLL_IDLE_RATIO_METRIC_NAME.equals(metricName.name())) {
         if (entry.getValue().metricValue() != null) {
           pollIdleRatioAvg.set(((Number) entry.getValue().metricValue()).doubleValue());
         }
