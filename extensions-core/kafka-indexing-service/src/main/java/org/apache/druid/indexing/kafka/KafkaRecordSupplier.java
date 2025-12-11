@@ -160,7 +160,9 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
                                         .stream()
                                         .map(e -> new StreamPartition<>(
                                             stream,
-                                            new KafkaTopicPartition(multiTopic, e.topic(), e.partition())
+                                            new KafkaTopicPartition(multiTopic, e.topic(),
+                                                                    e.partition()
+                                            )
                                         ))
                                         .collect(Collectors.toSet()));
   }
@@ -221,14 +223,14 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   public Map<KafkaTopicPartition, Long> getLatestSequenceNumbers(Set<StreamPartition<KafkaTopicPartition>> partitions)
   {
     return wrapExceptions(() -> CollectionUtils.mapKeys(
-        consumer.endOffsets(
-            partitions
-                .stream()
-                .map(e -> e.getPartitionId().asTopicPartition(e.getStream()))
-                .collect(Collectors.toList()
-                )
-        ),
-        p -> new KafkaTopicPartition(multiTopic, p.topic(), p.partition())
+      consumer.endOffsets(
+        partitions
+            .stream()
+            .map(e -> e.getPartitionId().asTopicPartition(e.getStream()))
+            .collect(Collectors.toList()
+        )
+      ),
+      p -> new KafkaTopicPartition(multiTopic, p.topic(), p.partition())
     ));
   }
 
@@ -254,20 +256,16 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
         if (allPartitions.isEmpty()) {
           throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                               .ofCategory(DruidException.Category.INVALID_INPUT)
-                              .build(
-                                  "No partitions found for topics that match given pattern [%s]."
-                                  + "Check that the pattern regex is correct and matching topics exists", stream
-                              );
+                              .build("No partitions found for topics that match given pattern [%s]."
+                                     + "Check that the pattern regex is correct and matching topics exists", stream);
         }
       } else {
         allPartitions = consumer.partitionsFor(stream);
         if (allPartitions == null) {
           throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                               .ofCategory(DruidException.Category.INVALID_INPUT)
-                              .build(
-                                  "Topic [%s] is not found."
-                                  + " Check that the topic exists in Kafka cluster", stream
-                              );
+                              .build("Topic [%s] is not found."
+                                     + " Check that the topic exists in Kafka cluster", stream);
         }
       }
       return allPartitions.stream()
@@ -324,10 +322,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
     // Additional DynamicConfigProvider based extensible support for all consumer properties
     Object dynamicConfigProviderJson = consumerProperties.get(KafkaSupervisorIOConfig.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY);
     if (dynamicConfigProviderJson != null) {
-      DynamicConfigProvider dynamicConfigProvider = configMapper.convertValue(
-          dynamicConfigProviderJson,
-          DynamicConfigProvider.class
-      );
+      DynamicConfigProvider dynamicConfigProvider = configMapper.convertValue(dynamicConfigProviderJson, DynamicConfigProvider.class);
       Map<String, String> dynamicConfig = dynamicConfigProvider.getConfig();
       for (Map.Entry<String, String> e : dynamicConfig.entrySet()) {
         properties.setProperty(e.getKey(), e.getValue());
@@ -355,8 +350,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
                                            deserializerReturnType.getTypeName());
       }
     }
-    catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException |
-           InvocationTargetException e) {
+    catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
       throw new StreamException(e);
     }
 

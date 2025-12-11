@@ -4464,9 +4464,34 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return partitionOffsets;
   }
 
+  /**
+   * Calculates the average poll-idle-ratio metric across all active tasks.
+   * This metric indicates how much time the consumer spends idle waiting for data.
+   *
+   * @return the average poll-idle-ratio across all tasks, or 1 (full idle) if no tasks or metrics are available
+   */
   public double getPollIdleRatioMetric()
   {
-    return recordSupplier.getPollIdleRatioMetric();
+    Map<String, Map<String, Object>> taskMetrics = getTaskMetrics();
+    if (taskMetrics.isEmpty()) {
+      return 1.;
+    }
+
+    double sum = 0;
+    int count = 0;
+    for (Map<String, Object> groupMetrics : taskMetrics.values()) {
+      for (Object taskMetric : groupMetrics.values()) {
+        if (taskMetric instanceof Map) {
+          Object pollIdleRatio = ((Map<?, ?>) taskMetric).get("pollIdleRatio");
+          if (pollIdleRatio instanceof Number) {
+            sum += ((Number) pollIdleRatio).doubleValue();
+            count++;
+          }
+        }
+      }
+    }
+
+    return count > 0 ? sum / count : 1.;
   }
 
   /**
