@@ -1128,30 +1128,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
         ints = VSizeColumnarInts.readFromByteBuffer(dataBuffer);
       }
 
-      GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
-          dataBuffer,
-          formatSpec.getBitmapEncoding().getObjectStrategy(),
-          columnBuilder.getFileMapper()
-      );
-      final Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier;
-      final GenericIndexed<ImmutableBitmap> arrayElementBitmaps;
-      if (dataBuffer.hasRemaining()) {
-        arrayElementDictionarySupplier = FixedIndexed.read(
-            dataBuffer,
-            INT_TYPE_STRATEGY,
-            byteOrder,
-            Integer.BYTES
-        );
-        arrayElementBitmaps = GenericIndexed.read(
-            dataBuffer,
-            formatSpec.getBitmapEncoding().getObjectStrategy(),
-            columnBuilder.getFileMapper()
-        );
-      } else {
-        arrayElementDictionarySupplier = null;
-        arrayElementBitmaps = null;
-      }
-      ColumnType theType = types.getSingleType();
+      final ColumnType theType = types.getSingleType();
       columnBuilder.setHasMultipleValues(false)
                    .setType(theType != null
                             ? theType
@@ -1168,40 +1145,61 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
       } else {
         indexType = null;
       }
-      if (indexType != null && !(indexType instanceof BitmapIndexType.DictionaryEncodedValueIndex)) {
-        if (formatSpec.getLongFieldBitmapIndexType() instanceof BitmapIndexType.NullValueIndex) {
-          if (rBitmaps.size() != 1) {
-            throw DruidException.forPersona(DruidException.Persona.USER)
-                                .ofCategory(DruidException.Category.INVALID_INPUT)
-                                .build(StringUtils.format(
-                                    "expecting 1 bitmap for %s type index, got [%d]",
-                                    indexType.toString(),
-                                    rBitmaps.size()
-                                ));
-          }
+
+      final ImmutableBitmap nullBitmap;
+      if (indexType == null || indexType instanceof BitmapIndexType.DictionaryEncodedValueIndex) {
+        GenericIndexed<ImmutableBitmap> rBitmaps = BitmapIndexType.DictionaryEncodedValueIndex.read(
+            dataBuffer,
+            formatSpec.getBitmapEncoding().getObjectStrategy(),
+            columnBuilder.getFileMapper()
+        );
+        final Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier;
+        final GenericIndexed<ImmutableBitmap> arrayElementBitmaps;
+        if (dataBuffer.hasRemaining()) {
+          arrayElementDictionarySupplier = FixedIndexed.read(
+              dataBuffer,
+              INT_TYPE_STRATEGY,
+              byteOrder,
+              Integer.BYTES
+          );
+          arrayElementBitmaps = GenericIndexed.read(
+              dataBuffer,
+              formatSpec.getBitmapEncoding().getObjectStrategy(),
+              columnBuilder.getFileMapper()
+          );
         } else {
-          throw DruidException.defensive("Unsupported BitmapIndexType[%s]", formatSpec.getLongFieldBitmapIndexType());
+          arrayElementDictionarySupplier = null;
+          arrayElementBitmaps = null;
         }
+        final boolean hasNull = localDictionarySupplier.get().get(0) == 0;
+        nullBitmap = hasNull
+                     ? rBitmaps.get(0)
+                     : formatSpec.getBitmapEncoding().getBitmapFactory().makeEmptyImmutableBitmap();
+        columnBuilder.setHasNulls(hasNull)
+                     .setIndexSupplier(new NestedFieldColumnIndexSupplier(
+                         types,
+                         formatSpec.getBitmapEncoding().getBitmapFactory(),
+                         columnConfig,
+                         rBitmaps,
+                         localDictionarySupplier,
+                         stringDictionarySupplier,
+                         longDictionarySupplier,
+                         doubleDictionarySupplier,
+                         arrayDictionarySupplier,
+                         arrayElementDictionarySupplier,
+                         arrayElementBitmaps
+                     ), true, false);
+      } else if (indexType instanceof BitmapIndexType.NullValueIndex) {
+        nullBitmap = BitmapIndexType.NullValueIndex.read(
+            dataBuffer,
+            formatSpec.getBitmapEncoding().getObjectStrategy()
+        );
+        columnBuilder.setHasNulls(!nullBitmap.isEmpty()).setNullValueIndexSupplier(nullBitmap);
       } else {
-        columnBuilder.setIndexSupplier(new NestedFieldColumnIndexSupplier(
-            types,
-            formatSpec.getBitmapEncoding().getBitmapFactory(),
-            columnConfig,
-            rBitmaps,
-            localDictionarySupplier,
-            stringDictionarySupplier,
-            longDictionarySupplier,
-            doubleDictionarySupplier,
-            arrayDictionarySupplier,
-            arrayElementDictionarySupplier,
-            arrayElementBitmaps
-        ), true, false);
+        throw DruidException.defensive("Unsupported BitmapIndexType[%s]", indexType);
       }
 
-      final boolean hasNull = localDictionarySupplier.get().get(0) == 0;
-      final ImmutableBitmap nullValueIndex =
-          hasNull ? rBitmaps.get(0) : formatSpec.getBitmapEncoding().getBitmapFactory().makeEmptyImmutableBitmap();
-      Supplier<DictionaryEncodedColumn<?>> columnSupplier = () -> closer.register(new NestedFieldDictionaryEncodedColumn(
+      columnBuilder.setDictionaryEncodedColumnSupplier(() -> closer.register(new NestedFieldDictionaryEncodedColumn(
           types,
           longs.get(),
           doubles.get(),
@@ -1211,12 +1209,8 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
           doubleDictionarySupplier.get(),
           arrayDictionarySupplier != null ? arrayDictionarySupplier.get() : null,
           localDictionarySupplier.get(),
-          nullValueIndex
-      ));
-      columnBuilder.setHasNulls(hasNull)
-                   .setNullValueIndexSupplier(nullValueIndex)
-                   .setDictionaryEncodedColumnSupplier(columnSupplier);
-
+          nullBitmap
+      )));
       return columnBuilder.build();
     }
     catch (IOException ex) {

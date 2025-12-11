@@ -21,17 +21,22 @@ package org.apache.druid.segment.column;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.base.Preconditions;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.segment.data.ByteBufferWriter;
+import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
+import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.serde.Serializer;
+import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.util.Objects;
 
@@ -40,70 +45,136 @@ import java.util.Objects;
     @JsonSubTypes.Type(value = BitmapIndexType.DictionaryEncodedValueIndex.class, name = BitmapIndexType.TYPE_DICTIONARY),
     @JsonSubTypes.Type(value = BitmapIndexType.NullValueIndex.class, name = BitmapIndexType.TYPE_NULL)
 })
-public abstract class BitmapIndexType implements Serializer
+public abstract class BitmapIndexType
 {
   protected static final String TYPE_DICTIONARY = "dictionaryEncodedValueIndex";
   protected static final String TYPE_NULL = "nullValueIndex";
 
   /**
-   * Assigned in {@link #init(BitmapFactory, int)}
+   * Interface to serialize bitmap index.
    */
-  @Nullable
-  protected MutableBitmap[] bitmaps;
+  public interface Writer extends Serializer
+  {
+    /**
+     * Creates a new writer, and prepares the writer for writing.
+     */
+    void openWriter(
+        SegmentWriteOutMedium writeoutMedium,
+        String columnName,
+        ObjectStrategy<ImmutableBitmap> objectStrategy
+    ) throws IOException;
+
+    /**
+     * Creates mutable bitmaps on the heap.
+     */
+    void init(BitmapFactory bitmapFactory, int dictionarySize);
+
+    /**
+     * Update the bitmaps on the heap accordingly.
+     */
+    void add(int row, int sortedId, @Nullable Object o);
+
+    /**
+     * Writes the bitmaps to writer, and free up heap memory for bitmaps.
+     */
+    void finalizeWriter(BitmapFactory bitmapFactory) throws IOException;
+  }
+
   /**
-   * Assigned in {@link #finalizeWriter(BitmapFactory, GenericIndexedWriter)}
+   * Returns a new {@link Writer} to serialize bitmap index.
    */
-  @Nullable
-  GenericIndexedWriter<ImmutableBitmap> writer;
-
-  public abstract void init(BitmapFactory bitmapFactory, int dictionarySize);
-
-  public abstract void add(int row, int sortedId, @Nullable Object o);
-
-  public void finalizeWriter(BitmapFactory bitmapFactory, GenericIndexedWriter<ImmutableBitmap> writer) throws IOException
-  {
-    if (bitmaps == null) {
-      throw DruidException.defensive("Not initiated yet");
-    }
-    this.writer = writer;
-    for (int i = 0; i < bitmaps.length; i++) {
-      writer.write(bitmapFactory.makeImmutableBitmap(bitmaps[i]));
-      bitmaps[i] = null; // Reclaim memory
-    }
-    bitmaps = null;
-  }
-
-  @Override
-  public long getSerializedSize()
-  {
-    Preconditions.checkArgument(writer != null, "Not closed yet!");
-    return writer.getSerializedSize();
-  }
-
-  @Override
-  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
-  {
-    Preconditions.checkArgument(writer != null, "Not closed yet!");
-    writer.writeTo(channel, fileBuilder);
-  }
+  public abstract Writer getWriter();
 
   public static class DictionaryEncodedValueIndex extends BitmapIndexType
   {
     public static final DictionaryEncodedValueIndex INSTANCE = new DictionaryEncodedValueIndex();
 
-    @Override
-    public void init(BitmapFactory bitmapFactory, int dictionarySize)
+    public static GenericIndexed<ImmutableBitmap> read(
+        ByteBuffer dataBuffer,
+        ObjectStrategy<ImmutableBitmap> objectStrategy,
+        SegmentFileMapper fileMapper
+    )
     {
-      bitmaps = new MutableBitmap[dictionarySize];
-      for (int index = 0; index < dictionarySize; index++) {
-        bitmaps[index] = bitmapFactory.makeEmptyMutableBitmap();
-      }
+      return GenericIndexed.read(dataBuffer, objectStrategy, fileMapper);
     }
 
     @Override
-    public void add(int row, int sortedId, @Nullable Object o)
+    public BitmapIndexType.Writer getWriter()
     {
-      bitmaps[sortedId].add(row);
+      return new BitmapIndexType.Writer()
+      {
+        @Nullable
+        private GenericIndexedWriter<ImmutableBitmap> writer;
+
+        @Nullable
+        private MutableBitmap[] bitmaps;
+
+        @Override
+        public void openWriter(
+            SegmentWriteOutMedium writeoutMedium,
+            String columnName,
+            ObjectStrategy<ImmutableBitmap> objectStrategy
+        ) throws IOException
+        {
+          if (writer != null) {
+            throw DruidException.defensive("Writer already initiated");
+          }
+          writer = new GenericIndexedWriter<>(writeoutMedium, columnName, objectStrategy);
+          writer.open();
+          writer.setObjectsNotSorted();
+        }
+
+        @Override
+        public void init(BitmapFactory bitmapFactory, int dictionarySize)
+        {
+          if (bitmaps != null) {
+            throw DruidException.defensive("Bitmaps already initiated");
+          }
+          bitmaps = new MutableBitmap[dictionarySize];
+          for (int index = 0; index < dictionarySize; index++) {
+            bitmaps[index] = bitmapFactory.makeEmptyMutableBitmap();
+          }
+        }
+
+        @Override
+        public void add(int row, int sortedId, @Nullable Object o)
+        {
+          bitmaps[sortedId].add(row);
+        }
+
+        @Override
+        public void finalizeWriter(BitmapFactory bitmapFactory) throws IOException
+        {
+          if (writer == null) {
+            throw DruidException.defensive("Writer not initiated yet");
+          } else if (bitmaps == null) {
+            throw DruidException.defensive("Invalid state, missing bitmaps");
+          }
+          for (int i = 0; i < bitmaps.length; i++) {
+            writer.write(bitmapFactory.makeImmutableBitmap(bitmaps[i]));
+            bitmaps[i] = null; // Reclaim memory
+          }
+          bitmaps = null;
+        }
+
+        @Override
+        public long getSerializedSize()
+        {
+          if (writer == null) {
+            throw DruidException.defensive("Writer not initiated yet");
+          }
+          return writer.getSerializedSize();
+        }
+
+        @Override
+        public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
+        {
+          if (writer == null) {
+            throw DruidException.defensive("Writer not initiated yet");
+          }
+          writer.writeTo(channel, fileBuilder);
+        }
+      };
     }
 
     @Override
@@ -132,19 +203,85 @@ public abstract class BitmapIndexType implements Serializer
   {
     public static final NullValueIndex INSTANCE = new NullValueIndex();
 
-    @Override
-    public void init(BitmapFactory bitmapFactory, int unused)
+    public static ImmutableBitmap read(ByteBuffer dataBuffer, ObjectStrategy<ImmutableBitmap> objectStrategy)
     {
-      bitmaps = new MutableBitmap[1];
-      bitmaps[0] = bitmapFactory.makeEmptyMutableBitmap();
+      return objectStrategy.fromByteBufferWithSize(dataBuffer);
     }
 
     @Override
-    public void add(int row, int sortedId, @Nullable Object o)
+    public Writer getWriter()
     {
-      if (o == null) {
-        bitmaps[0].add(row);
-      }
+      return new Writer()
+      {
+        @Nullable
+        protected ByteBufferWriter<ImmutableBitmap> writer;
+
+        @Nullable
+        protected MutableBitmap[] bitmaps;
+
+        @Override
+        public void openWriter(
+            SegmentWriteOutMedium writeoutMedium,
+            String columnName,
+            ObjectStrategy<ImmutableBitmap> objectStrategy
+        ) throws IOException
+        {
+          if (writer != null) {
+            throw DruidException.defensive("Writer already initiated");
+          }
+          writer = new ByteBufferWriter(writeoutMedium, objectStrategy);
+          writer.open();
+        }
+
+        @Override
+        public void init(BitmapFactory bitmapFactory, int unused)
+        {
+          if (bitmaps != null) {
+            throw DruidException.defensive("Bitmaps already initiated");
+          }
+          bitmaps = new MutableBitmap[1];
+          bitmaps[0] = bitmapFactory.makeEmptyMutableBitmap();
+        }
+
+        @Override
+        public void add(int row, int sortedId, @Nullable Object o)
+        {
+          if (o == null) {
+            bitmaps[0].add(row);
+          }
+        }
+
+        @Override
+        public void finalizeWriter(BitmapFactory bitmapFactory) throws IOException
+        {
+          if (writer == null) {
+            throw DruidException.defensive("Writer not initiated yet");
+          } else if (bitmaps == null) {
+            throw DruidException.defensive("Invalid state, missing bitmaps");
+          }
+          writer.write(bitmapFactory.makeImmutableBitmap(bitmaps[0]));
+          bitmaps[0] = null; // Reclaim memory
+          bitmaps = null;
+        }
+
+        @Override
+        public long getSerializedSize()
+        {
+          if (writer == null) {
+            throw DruidException.defensive("Writer not initiated yet");
+          }
+          return writer.getSerializedSize();
+        }
+
+        @Override
+        public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
+        {
+          if (writer == null) {
+            throw DruidException.defensive("Writer not initiated yet");
+          }
+          writer.writeTo(channel, fileBuilder);
+        }
+      };
     }
 
     @Override
