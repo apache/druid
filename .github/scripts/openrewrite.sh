@@ -19,7 +19,7 @@ set -e
 set -x
 
 echo 'Running Maven install...'
-${MVN} clean install -q -ff -pl '!distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C
-${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+mvn -B clean install -q -ff -pl '!distribution' -P skip-tests -Dweb.console.skip=true -T1C
+mvn -B install -q -ff -pl 'distribution' -P skip-tests -Dweb.console.skip=true
 
-${MVN} rewrite:dryRun ${MAVEN_SKIP}
+mvn -B rewrite:dryRun -Dweb.console.skip=true

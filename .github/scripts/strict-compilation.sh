@@ -20,4 +20,4 @@ set -x
 
 # errorprone requires JDK 11+
 # Strict compilation requires more than 2 GB
-${MVN} clean -DstrictCompile compile test-compile --fail-at-end ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C
+mvn -B clean -DstrictCompile compile test-compile --fail-at-end -P skip-tests -Dweb.console.skip=true -T1C

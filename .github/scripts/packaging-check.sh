@@ -19,7 +19,7 @@ set -e
 set -x
 
 ./.github/scripts/setup_generate_license.sh
-${MVN} clean install -Prat --fail-at-end \
-  -pl '!benchmarks, !distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Dweb.console.skip=false -T1C
-${MVN} install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end \
-  -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Dweb.console.skip=false -T1C
+mvn -B clean install -Prat --fail-at-end \
+  -pl '!benchmarks, !distribution' -P skip-tests -Dweb.console.skip=false -T1C
+mvn -B install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end \
+  -pl 'distribution' -P skip-tests -Dweb.console.skip=false -T1C

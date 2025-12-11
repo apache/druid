@@ -19,22 +19,22 @@ set -e
 set -x
 
 echo 'Running Maven install...'
-${MVN} clean install -q -ff -pl '!distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C
-${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+mvn -B clean install -q -ff -pl '!distribution' -P skip-tests -Dweb.console.skip=true -Dmaven.javadoc.skip=true -T1C
+mvn -B install -q -ff -pl 'distribution' -P skip-tests -Dweb.console.skip=true -Dmaven.javadoc.skip=true
 
-${MVN} checkstyle:checkstyle --fail-at-end
+mvn -B checkstyle:checkstyle --fail-at-end
 
 ./.github/scripts/license_checks_script.sh
 
 ./.github/scripts/analyze_dependencies_script.sh
 
-${MVN} animal-sniffer:check --fail-at-end
+mvn -B animal-sniffer:check --fail-at-end
 
-${MVN} enforcer:enforce --fail-at-end
+mvn -B enforcer:enforce --fail-at-end
 
-${MVN} forbiddenapis:check forbiddenapis:testCheck --fail-at-end
+mvn -B forbiddenapis:check forbiddenapis:testCheck --fail-at-end
 
 # TODO: consider adding pmd:cpd-check
-${MVN} pmd:check --fail-at-end
+mvn -B pmd:check --fail-at-end
 
-${MVN} spotbugs:check --fail-at-end -pl '!benchmarks'
+mvn -B spotbugs:check --fail-at-end -pl '!benchmarks'
