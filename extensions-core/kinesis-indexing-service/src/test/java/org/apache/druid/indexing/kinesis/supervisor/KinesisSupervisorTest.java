@@ -108,6 +108,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -5652,7 +5653,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
   private static Map<String, Task> toMap(List<Task> tasks)
   {
-    return tasks.stream().collect(Collectors.toMap(Task::getId, Function.identity()));
+    return tasks.stream().collect(Collectors.toMap(Task::getId, Function.identity(), (a, b) -> a, LinkedHashMap::new));
   }
 
   private static class TestTaskRunnerWorkItem extends TaskRunnerWorkItem
