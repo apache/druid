@@ -107,7 +107,8 @@ public class BuiltInTypesModuleTest
     props.setProperty("druid.indexing.formats.indexSpec.autoColumnFormatSpec.stringDictionaryEncoding.type", StringEncodingStrategy.FRONT_CODED);
     props.setProperty("druid.indexing.formats.indexSpec.autoColumnFormatSpec.stringDictionaryEncoding.bucketSize", "16");
     props.setProperty("druid.indexing.formats.indexSpec.autoColumnFormatSpec.stringDictionaryEncoding.formatVersion", "1");
-    props.setProperty("druid.indexing.formats.indexSpec.autoColumnFormatSpec.numericFieldsBitmapIndexEncoding.type", "nullsOnly");
+    props.setProperty("druid.indexing.formats.indexSpec.autoColumnFormatSpec.longFieldBitmapIndexType.type", "nullValueIndex");
+    props.setProperty("druid.indexing.formats.indexSpec.autoColumnFormatSpec.doubleFieldBitmapIndexType.type", "nullValueIndex");
     // ensure that this cannot be set
     props.setProperty("druid.indexing.formats.indexSpec.autoColumnFormatSpec.bitmapEncoding", "roaring");
     props.setProperty("druid.indexing.formats.indexSpec.metricCompression", CompressionStrategy.ZSTD.toString());
@@ -130,7 +131,8 @@ public class BuiltInTypesModuleTest
         NestedCommonFormatColumnFormatSpec
             .builder()
             .setStringDictionaryEncoding(new StringEncodingStrategy.FrontCoded(16, (byte) 1))
-            .setNumericFieldsBitmapIndexType(BitmapIndexType.NullValueIndex.INSTANCE)
+            .setLongFieldBitmapIndexType(BitmapIndexType.NullValueIndex.INSTANCE)
+            .setDoubleFieldBitmapIndexType(BitmapIndexType.NullValueIndex.INSTANCE)
             .build(),
         IndexSpec.getDefault().getAutoColumnFormatSpec()
     );

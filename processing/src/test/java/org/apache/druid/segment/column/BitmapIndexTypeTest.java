@@ -25,7 +25,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class BitmapIndexEncodingStrategyTest
+public class BitmapIndexTypeTest
 {
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 

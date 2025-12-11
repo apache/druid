@@ -49,7 +49,7 @@ public final class ScalarLongFieldColumnWriter extends GlobalDictionaryEncodedFi
   )
   {
     super(columnName, fieldName, segmentWriteOutMedium, columnFormatSpec, globalDictionaryIdLookup);
-    bitmapIndexEncoding = columnFormatSpec.getNumericFieldsBitmapIndexType();
+    bitmapIndexType = columnFormatSpec.getLongFieldBitmapIndexType();
   }
 
   @Override

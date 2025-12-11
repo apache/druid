@@ -42,8 +42,8 @@ import java.util.Objects;
 })
 public abstract class BitmapIndexType implements Serializer
 {
-  protected static final String TYPE_DICTIONARY = "DictionaryEncodedValueIndex";
-  protected static final String TYPE_NULL = "NullValueIndex";
+  protected static final String TYPE_DICTIONARY = "dictionaryEncodedValueIndex";
+  protected static final String TYPE_NULL = "nullValueIndex";
 
   /**
    * Assigned in {@link #init(BitmapFactory, int)}

@@ -81,7 +81,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
   protected final DictionaryIdLookup globalDictionaryIdLookup;
   protected final LocalDimensionDictionary localDictionary = new LocalDimensionDictionary();
 
-  public BitmapIndexType bitmapIndexEncoding = BitmapIndexType.DictionaryEncodedValueIndex.INSTANCE;
+  public BitmapIndexType bitmapIndexType = BitmapIndexType.DictionaryEncodedValueIndex.INSTANCE;
   protected final Int2ObjectRBTreeMap<MutableBitmap> arrayElements = new Int2ObjectRBTreeMap<>();
 
   protected final Closer fieldResourceCloser = Closer.create();
@@ -247,7 +247,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
     }
 
     openColumnSerializer(tmpWriteoutMedium, sortedGlobal[sortedGlobal.length - 1]);
-    bitmapIndexEncoding.init(columnFormatSpec.getBitmapEncoding().getBitmapFactory(), sortedGlobal.length);
+    bitmapIndexType.init(columnFormatSpec.getBitmapEncoding().getBitmapFactory(), sortedGlobal.length);
     final IntIterator rows = intermediateValueWriter.getIterator();
     int rowCount = 0;
     while (rows.hasNext()) {
@@ -256,10 +256,10 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
       encodedValueSerializer.addValue(sortedLocalId);
       T value = (T) globalDictionaryIdLookup.getDictionaryValue(unsortedToGlobal[unsortedLocalId]);
       writeValue(value);
-      bitmapIndexEncoding.add(rowCount, sortedLocalId, value);
+      bitmapIndexType.add(rowCount, sortedLocalId, value);
       rowCount++;
     }
-    bitmapIndexEncoding.finalizeWriter(columnFormatSpec.getBitmapEncoding().getBitmapFactory(), bitmapIndexWriter);
+    bitmapIndexType.finalizeWriter(columnFormatSpec.getBitmapEncoding().getBitmapFactory(), bitmapIndexWriter);
 
     final Serializer fieldSerializer = new Serializer()
     {
@@ -275,7 +275,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
         return 1 + Integer.BYTES + // version + feature flags
                sortedDictionaryWriter.getSerializedSize() +
                getSerializedColumnSize() +
-               bitmapIndexEncoding.getSerializedSize() +
+               bitmapIndexType.getSerializedSize() +
                arraySize;
       }
 
@@ -286,7 +286,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
         Channels.writeFully(channel, ByteBuffer.wrap(Ints.toByteArray(flags)));
         sortedDictionaryWriter.writeTo(channel, fileBuilder);
         writeColumnTo(channel, fileBuilder);
-        bitmapIndexEncoding.writeTo(channel, fileBuilder);
+        bitmapIndexType.writeTo(channel, fileBuilder);
         if (arrayElements.size() > 0) {
           arrayElementDictionaryWriter.writeTo(channel, fileBuilder);
           arrayElementIndexWriter.writeTo(channel, fileBuilder);

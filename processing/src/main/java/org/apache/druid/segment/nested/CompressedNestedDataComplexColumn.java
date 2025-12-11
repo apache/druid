@@ -51,6 +51,7 @@ import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategy;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.AtomicIntegerReadableOffset;
 import org.apache.druid.segment.data.ColumnarDoubles;
 import org.apache.druid.segment.data.ColumnarInts;
@@ -1151,15 +1152,24 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
         arrayElementBitmaps = null;
       }
       ColumnType theType = types.getSingleType();
-      BitmapIndexType indexType = (theType != null && theType.isNumeric())
-                                  ? formatSpec.getNumericFieldsBitmapIndexType()
-                                  : null;
       columnBuilder.setHasMultipleValues(false)
                    .setType(theType != null
                             ? theType
                             : ColumnType.leastRestrictiveType(FieldTypeInfo.convertToSet(types.getByteValue())));
+      final BitmapIndexType indexType;
+      if (theType != null) {
+        if (theType.getType() == ValueType.LONG) {
+          indexType = formatSpec.getLongFieldBitmapIndexType();
+        } else if (theType.getType() == ValueType.DOUBLE) {
+          indexType = formatSpec.getDoubleFieldBitmapIndexType();
+        } else {
+          indexType = null;
+        }
+      } else {
+        indexType = null;
+      }
       if (indexType != null && !(indexType instanceof BitmapIndexType.DictionaryEncodedValueIndex)) {
-        if (formatSpec.getNumericFieldsBitmapIndexType() instanceof BitmapIndexType.NullValueIndex) {
+        if (formatSpec.getLongFieldBitmapIndexType() instanceof BitmapIndexType.NullValueIndex) {
           if (rBitmaps.size() != 1) {
             throw DruidException.forPersona(DruidException.Persona.USER)
                                 .ofCategory(DruidException.Category.INVALID_INPUT)
@@ -1170,10 +1180,7 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
                                 ));
           }
         } else {
-          throw DruidException.defensive(
-              "Unsupported BitmapIndexEncodingStrategy[%s]",
-              formatSpec.getNumericFieldsBitmapIndexType()
-          );
+          throw DruidException.defensive("Unsupported BitmapIndexType[%s]", formatSpec.getLongFieldBitmapIndexType());
         }
       } else {
         columnBuilder.setIndexSupplier(new NestedFieldColumnIndexSupplier(
@@ -1192,6 +1199,8 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
       }
 
       final boolean hasNull = localDictionarySupplier.get().get(0) == 0;
+      final ImmutableBitmap nullValueIndex =
+          hasNull ? rBitmaps.get(0) : formatSpec.getBitmapEncoding().getBitmapFactory().makeEmptyImmutableBitmap();
       Supplier<DictionaryEncodedColumn<?>> columnSupplier = () -> closer.register(new NestedFieldDictionaryEncodedColumn(
           types,
           longs.get(),
@@ -1202,9 +1211,11 @@ public abstract class CompressedNestedDataComplexColumn<TKeyDictionary extends I
           doubleDictionarySupplier.get(),
           arrayDictionarySupplier != null ? arrayDictionarySupplier.get() : null,
           localDictionarySupplier.get(),
-          hasNull ? rBitmaps.get(0) : formatSpec.getBitmapEncoding().getBitmapFactory().makeEmptyImmutableBitmap()
+          nullValueIndex
       ));
-      columnBuilder.setHasNulls(hasNull).setDictionaryEncodedColumnSupplier(columnSupplier);
+      columnBuilder.setHasNulls(hasNull)
+                   .setNullValueIndexSupplier(nullValueIndex)
+                   .setDictionaryEncodedColumnSupplier(columnSupplier);
 
       return columnBuilder.build();
     }
