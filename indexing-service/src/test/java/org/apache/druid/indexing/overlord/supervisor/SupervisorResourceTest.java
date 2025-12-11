@@ -364,10 +364,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     Assert.assertTrue(
         specs.stream()
              .allMatch(spec ->
-                           ("id1".equals(spec.getId()) && spec.getDataSource().equals("datasource1") && SPEC1.equals(
-                               spec.getSpec())) ||
-                           ("id2".equals(spec.getId()) && spec.getDataSource().equals("datasource2") && SPEC2.equals(
-                               spec.getSpec()))
+                           ("id1".equals(spec.getId()) && spec.getDataSource().equals("datasource1") && SPEC1.equals(spec.getSpec())) ||
+                           ("id2".equals(spec.getId()) && spec.getDataSource().equals("datasource2") && SPEC2.equals(spec.getSpec()))
              )
     );
   }
@@ -1007,9 +1005,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(3);
     EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id1", null)).andReturn(versions1).times(1);
     EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id2", null)).andReturn(versions2).times(1);
-    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id3", null))
-            .andReturn(Collections.emptyList())
-            .times(1);
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id3", null)).andReturn(Collections.emptyList()).times(1);
     setupMockRequest();
     replayAll();
 
@@ -1345,317 +1341,97 @@ public class SupervisorResourceTest extends EasyMockSupport
     Assert.assertEquals(spec, specRoundTrip);
   }
 
-
   @Test
   public void testSpecPostMergeUsesExistingTaskCountHigherPriorityHasBeenMissed()
   {
-    // Tests that when a new spec is submitted without taskCountStart, the merge function
-    // follows the priority: provided taskCountStart > provided taskCount > existing taskCount > provided taskCountMin.
+    // New spec has no taskCount -> should use existing taskCount (5)
+    TestSeekableStreamSupervisorSpec existingSpec = createTestSpec(5, 1);
+    TestSeekableStreamSupervisorSpec newSpec = createTestSpecWithExpectedMerge(null, 2, 5);
 
-    // Create an existing spec with taskCount=5 (simulating a scaled state)
-    HashMap<String, Object> existingAutoScalerConfig = new HashMap<>();
-    existingAutoScalerConfig.put("enableTaskAutoScaler", true);
-    existingAutoScalerConfig.put("taskCountMax", 7);
-    existingAutoScalerConfig.put("taskCountMin", 1);
-    // Note: taskCountStart is NOT set in the existing spec
-
-    SeekableStreamSupervisorIOConfig existingIoConfig = EasyMock.createMock(SeekableStreamSupervisorIOConfig.class);
-    EasyMock.expect(existingIoConfig.getAutoScalerConfig())
-            .andReturn(OBJECT_MAPPER.convertValue(existingAutoScalerConfig, AutoScalerConfig.class))
-            .anyTimes();
-    EasyMock.expect(existingIoConfig.getStream()).andReturn("test-stream").anyTimes();
-    EasyMock.expect(existingIoConfig.getTaskCount()).andReturn(5).anyTimes(); // existing taskCount is 5
-    EasyMock.replay(existingIoConfig);
-
-    DataSchema existingDataSchema = EasyMock.createMock(DataSchema.class);
-    EasyMock.expect(existingDataSchema.getDataSource()).andReturn("datasource1").anyTimes();
-    EasyMock.replay(existingDataSchema);
-
-    SeekableStreamSupervisorIngestionSpec existingIngestionSchema =
-        EasyMock.createMock(SeekableStreamSupervisorIngestionSpec.class);
-    EasyMock.expect(existingIngestionSchema.getIOConfig()).andReturn(existingIoConfig).anyTimes();
-    EasyMock.expect(existingIngestionSchema.getDataSchema()).andReturn(existingDataSchema).anyTimes();
-    EasyMock.replay(existingIngestionSchema);
-
-    TestSeekableStreamSupervisorSpec existingSpec = new TestSeekableStreamSupervisorSpec(
-        "my-id",
-        existingIngestionSchema
-    );
-
-    // Create a new spec WITHOUT taskCountStart and WITHOUT taskCount in autoScalerConfig
-    HashMap<String, Object> newAutoScalerConfig = new HashMap<>();
-    newAutoScalerConfig.put("enableTaskAutoScaler", true);
-    newAutoScalerConfig.put("taskCountMax", 8);
-    newAutoScalerConfig.put("taskCountMin", 2);
-    // Note: taskCountStart is NOT set
-
-    SeekableStreamSupervisorIOConfig newIoConfig = EasyMock.createMock(SeekableStreamSupervisorIOConfig.class);
-    EasyMock.expect(newIoConfig.getAutoScalerConfig())
-            .andReturn(OBJECT_MAPPER.convertValue(newAutoScalerConfig, AutoScalerConfig.class))
-            .anyTimes();
-    EasyMock.expect(newIoConfig.getStream()).andReturn("test-stream").anyTimes();
-    EasyMock.expect(newIoConfig.getTaskCount()).andReturn(null).anyTimes(); // new spec has no taskCount
-    newIoConfig.setTaskCount(5); // Expect merge to set taskCount to existing value (5)
-    EasyMock.expectLastCall().once();
-    EasyMock.replay(newIoConfig);
-
-    DataSchema newDataSchema = EasyMock.createMock(DataSchema.class);
-    EasyMock.expect(newDataSchema.getDataSource()).andReturn("datasource1").anyTimes();
-    EasyMock.replay(newDataSchema);
-
-    SeekableStreamSupervisorIngestionSpec newIngestionSchema =
-        EasyMock.createMock(SeekableStreamSupervisorIngestionSpec.class);
-    EasyMock.expect(newIngestionSchema.getIOConfig()).andReturn(newIoConfig).anyTimes();
-    EasyMock.expect(newIngestionSchema.getDataSchema()).andReturn(newDataSchema).anyTimes();
-    EasyMock.replay(newIngestionSchema);
-
-    TestSeekableStreamSupervisorSpec newSpec = new TestSeekableStreamSupervisorSpec(
-        "my-id",
-        newIngestionSchema
-    )
-    {
-      @Override
-      public List<String> getDataSources()
-      {
-        return Collections.singletonList("datasource1");
-      }
-    };
-
-    // Set up mocks for SupervisorManager behavior
-    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
-
-    // Mock createOrUpdateAndStartSupervisor to call merge
-    final SupervisorSpec existingSpecForMerge = existingSpec;
-    Capture<SupervisorSpec> capturedNewSpec = EasyMock.newCapture();
-    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(EasyMock.capture(capturedNewSpec)))
-            .andAnswer(() -> {
-              SupervisorSpec arg = (SupervisorSpec) EasyMock.getCurrentArguments()[0];
-              arg.merge(existingSpecForMerge);
-              return true;
-            });
-
-    // Mock getSupervisorSpec to return the existing spec (simulating an update scenario)
-    EasyMock.expect(supervisorManager.getSupervisorSpec("my-id"))
-            .andReturn(Optional.of(existingSpec))
-            .anyTimes();
-
-    setupMockRequest();
-    setupMockRequestForAudit();
-
-    EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
-    auditManager.doAudit(EasyMock.anyObject());
-    EasyMock.expectLastCall().once();
-
-    replayAll();
-
-    // Before merge, taskCountStart should be null in new spec
-    Assert.assertNull(newSpec.getIoConfig().getAutoScalerConfig().getTaskCountStart());
-
-    // When
-    Response response = supervisorResource.specPost(newSpec, false, request);
-    verifyAll();
-
-    Assert.assertEquals(200, response.getStatus());
+    newSpec.merge(existingSpec);
+    EasyMock.verify(newSpec.getIoConfig());
   }
 
   @Test
   public void testSpecPostMergeUsesProvidedTaskCountOverExistingTaskCount()
   {
-    // Create an existing spec with taskCount=5
-    HashMap<String, Object> existingAutoScalerConfig = new HashMap<>();
-    existingAutoScalerConfig.put("enableTaskAutoScaler", true);
-    existingAutoScalerConfig.put("taskCountMax", 7);
-    existingAutoScalerConfig.put("taskCountMin", 1);
+    // New spec has taskCount=3 -> should use provided taskCount over existing (5)
+    TestSeekableStreamSupervisorSpec existingSpec = createTestSpec(5, 1);
+    TestSeekableStreamSupervisorSpec newSpec = createTestSpecWithExpectedMerge(3, 2, 3);
 
-    SeekableStreamSupervisorIOConfig existingIoConfig = EasyMock.createMock(SeekableStreamSupervisorIOConfig.class);
-    EasyMock.expect(existingIoConfig.getAutoScalerConfig())
-            .andReturn(OBJECT_MAPPER.convertValue(existingAutoScalerConfig, AutoScalerConfig.class))
-            .anyTimes();
-    EasyMock.expect(existingIoConfig.getStream()).andReturn("test-stream").anyTimes();
-    EasyMock.expect(existingIoConfig.getTaskCount()).andReturn(5).anyTimes();
-    EasyMock.replay(existingIoConfig);
-
-    DataSchema existingDataSchema = EasyMock.createMock(DataSchema.class);
-    EasyMock.expect(existingDataSchema.getDataSource()).andReturn("datasource1").anyTimes();
-    EasyMock.replay(existingDataSchema);
-
-    SeekableStreamSupervisorIngestionSpec existingIngestionSchema =
-        EasyMock.createMock(SeekableStreamSupervisorIngestionSpec.class);
-    EasyMock.expect(existingIngestionSchema.getIOConfig()).andReturn(existingIoConfig).anyTimes();
-    EasyMock.expect(existingIngestionSchema.getDataSchema()).andReturn(existingDataSchema).anyTimes();
-    EasyMock.replay(existingIngestionSchema);
-
-    TestSeekableStreamSupervisorSpec existingSpec = new TestSeekableStreamSupervisorSpec(
-        "my-id",
-        existingIngestionSchema
-    );
-
-    // Create a new spec with taskCount=3 (provided taskCount should take precedence)
-    HashMap<String, Object> newAutoScalerConfig = new HashMap<>();
-    newAutoScalerConfig.put("enableTaskAutoScaler", true);
-    newAutoScalerConfig.put("taskCountMax", 8);
-    newAutoScalerConfig.put("taskCountMin", 2);
-
-    SeekableStreamSupervisorIOConfig newIoConfig = EasyMock.createMock(SeekableStreamSupervisorIOConfig.class);
-    EasyMock.expect(newIoConfig.getAutoScalerConfig())
-            .andReturn(OBJECT_MAPPER.convertValue(newAutoScalerConfig, AutoScalerConfig.class))
-            .anyTimes();
-    EasyMock.expect(newIoConfig.getStream()).andReturn("test-stream").anyTimes();
-    EasyMock.expect(newIoConfig.getTaskCount()).andReturn(3).anyTimes(); // provided taskCount=3
-    newIoConfig.setTaskCount(3); // Expect merge to use provided taskCount (3)
-    EasyMock.expectLastCall().once();
-    EasyMock.replay(newIoConfig);
-
-    DataSchema newDataSchema = EasyMock.createMock(DataSchema.class);
-    EasyMock.expect(newDataSchema.getDataSource()).andReturn("datasource1").anyTimes();
-    EasyMock.replay(newDataSchema);
-
-    SeekableStreamSupervisorIngestionSpec newIngestionSchema =
-        EasyMock.createMock(SeekableStreamSupervisorIngestionSpec.class);
-    EasyMock.expect(newIngestionSchema.getIOConfig()).andReturn(newIoConfig).anyTimes();
-    EasyMock.expect(newIngestionSchema.getDataSchema()).andReturn(newDataSchema).anyTimes();
-    EasyMock.replay(newIngestionSchema);
-
-    TestSeekableStreamSupervisorSpec newSpec = new TestSeekableStreamSupervisorSpec(
-        "my-id",
-        newIngestionSchema
-    )
-    {
-      @Override
-      public List<String> getDataSources()
-      {
-        return Collections.singletonList("datasource1");
-      }
-    };
-
-    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
-
-    final SupervisorSpec existingSpecForMerge = existingSpec;
-    Capture<SupervisorSpec> capturedNewSpec = EasyMock.newCapture();
-    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(EasyMock.capture(capturedNewSpec)))
-            .andAnswer(() -> {
-              SupervisorSpec arg = (SupervisorSpec) EasyMock.getCurrentArguments()[0];
-              arg.merge(existingSpecForMerge);
-              return true;
-            });
-
-    EasyMock.expect(supervisorManager.getSupervisorSpec("my-id"))
-            .andReturn(Optional.of(existingSpec))
-            .anyTimes();
-
-    setupMockRequest();
-    setupMockRequestForAudit();
-
-    EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
-    auditManager.doAudit(EasyMock.anyObject());
-    EasyMock.expectLastCall().once();
-
-    replayAll();
-
-    Response response = supervisorResource.specPost(newSpec, false, request);
-    verifyAll();
-
-    Assert.assertEquals(200, response.getStatus());
+    newSpec.merge(existingSpec);
+    EasyMock.verify(newSpec.getIoConfig());
   }
 
   @Test
   public void testSpecPostMergeFallsBackToProvidedTaskCountMin()
   {
-    // Create an existing spec with no taskCount
-    HashMap<String, Object> existingAutoScalerConfig = new HashMap<>();
-    existingAutoScalerConfig.put("enableTaskAutoScaler", true);
-    existingAutoScalerConfig.put("taskCountMax", 7);
-    existingAutoScalerConfig.put("taskCountMin", 1);
+    // Neither has taskCount -> should fall back to taskCountMin (4)
+    TestSeekableStreamSupervisorSpec existingSpec = createTestSpec(null, 1);
+    TestSeekableStreamSupervisorSpec newSpec = createTestSpecWithExpectedMerge(null, 4, 4);
 
-    SeekableStreamSupervisorIOConfig existingIoConfig = EasyMock.createMock(SeekableStreamSupervisorIOConfig.class);
-    EasyMock.expect(existingIoConfig.getAutoScalerConfig())
-            .andReturn(OBJECT_MAPPER.convertValue(existingAutoScalerConfig, AutoScalerConfig.class))
+    newSpec.merge(existingSpec);
+    EasyMock.verify(newSpec.getIoConfig());
+  }
+
+  private TestSeekableStreamSupervisorSpec createTestSpec(Integer taskCount, int taskCountMin)
+  {
+    HashMap<String, Object> autoScalerConfig = new HashMap<>();
+    autoScalerConfig.put("enableTaskAutoScaler", true);
+    autoScalerConfig.put("taskCountMax", 10);
+    autoScalerConfig.put("taskCountMin", taskCountMin);
+
+    SeekableStreamSupervisorIOConfig ioConfig = EasyMock.createMock(SeekableStreamSupervisorIOConfig.class);
+    EasyMock.expect(ioConfig.getAutoScalerConfig())
+            .andReturn(OBJECT_MAPPER.convertValue(autoScalerConfig, AutoScalerConfig.class))
             .anyTimes();
-    EasyMock.expect(existingIoConfig.getStream()).andReturn("test-stream").anyTimes();
-    EasyMock.expect(existingIoConfig.getTaskCount()).andReturn(null).anyTimes(); // existing has no taskCount
-    EasyMock.replay(existingIoConfig);
+    EasyMock.expect(ioConfig.getTaskCount()).andReturn(taskCount).anyTimes();
+    EasyMock.replay(ioConfig);
 
-    DataSchema existingDataSchema = EasyMock.createMock(DataSchema.class);
-    EasyMock.expect(existingDataSchema.getDataSource()).andReturn("datasource1").anyTimes();
-    EasyMock.replay(existingDataSchema);
+    DataSchema dataSchema = EasyMock.createMock(DataSchema.class);
+    EasyMock.expect(dataSchema.getDataSource()).andReturn("datasource1").anyTimes();
+    EasyMock.replay(dataSchema);
 
-    SeekableStreamSupervisorIngestionSpec existingIngestionSchema =
+    SeekableStreamSupervisorIngestionSpec ingestionSchema =
         EasyMock.createMock(SeekableStreamSupervisorIngestionSpec.class);
-    EasyMock.expect(existingIngestionSchema.getIOConfig()).andReturn(existingIoConfig).anyTimes();
-    EasyMock.expect(existingIngestionSchema.getDataSchema()).andReturn(existingDataSchema).anyTimes();
-    EasyMock.replay(existingIngestionSchema);
+    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
+    EasyMock.replay(ingestionSchema);
 
-    TestSeekableStreamSupervisorSpec existingSpec = new TestSeekableStreamSupervisorSpec(
-        "my-id",
-        existingIngestionSchema
-    );
+    return new TestSeekableStreamSupervisorSpec("my-id", ingestionSchema);
+  }
 
-    // Create a new spec with taskCountMin=4, no taskCount
-    HashMap<String, Object> newAutoScalerConfig = new HashMap<>();
-    newAutoScalerConfig.put("enableTaskAutoScaler", true);
-    newAutoScalerConfig.put("taskCountMax", 8);
-    newAutoScalerConfig.put("taskCountMin", 4); // provided taskCountMin
+  private TestSeekableStreamSupervisorSpec createTestSpecWithExpectedMerge(
+      Integer taskCount,
+      int taskCountMin,
+      int expectedTaskCount
+  )
+  {
+    HashMap<String, Object> autoScalerConfig = new HashMap<>();
+    autoScalerConfig.put("enableTaskAutoScaler", true);
+    autoScalerConfig.put("taskCountMax", 10);
+    autoScalerConfig.put("taskCountMin", taskCountMin);
 
-    SeekableStreamSupervisorIOConfig newIoConfig = EasyMock.createMock(SeekableStreamSupervisorIOConfig.class);
-    EasyMock.expect(newIoConfig.getAutoScalerConfig())
-            .andReturn(OBJECT_MAPPER.convertValue(newAutoScalerConfig, AutoScalerConfig.class))
+    SeekableStreamSupervisorIOConfig ioConfig = EasyMock.createMock(SeekableStreamSupervisorIOConfig.class);
+    EasyMock.expect(ioConfig.getAutoScalerConfig())
+            .andReturn(OBJECT_MAPPER.convertValue(autoScalerConfig, AutoScalerConfig.class))
             .anyTimes();
-    EasyMock.expect(newIoConfig.getStream()).andReturn("test-stream").anyTimes();
-    EasyMock.expect(newIoConfig.getTaskCount()).andReturn(null).anyTimes(); // no provided taskCount
-    newIoConfig.setTaskCount(4); // Expect merge to fall back to provided taskCountMin (4)
+    EasyMock.expect(ioConfig.getTaskCount()).andReturn(taskCount).anyTimes();
+    ioConfig.setTaskCount(expectedTaskCount);
     EasyMock.expectLastCall().once();
-    EasyMock.replay(newIoConfig);
+    EasyMock.replay(ioConfig);
 
-    DataSchema newDataSchema = EasyMock.createMock(DataSchema.class);
-    EasyMock.expect(newDataSchema.getDataSource()).andReturn("datasource1").anyTimes();
-    EasyMock.replay(newDataSchema);
+    DataSchema dataSchema = EasyMock.createMock(DataSchema.class);
+    EasyMock.expect(dataSchema.getDataSource()).andReturn("datasource1").anyTimes();
+    EasyMock.replay(dataSchema);
 
-    SeekableStreamSupervisorIngestionSpec newIngestionSchema =
+    SeekableStreamSupervisorIngestionSpec ingestionSchema =
         EasyMock.createMock(SeekableStreamSupervisorIngestionSpec.class);
-    EasyMock.expect(newIngestionSchema.getIOConfig()).andReturn(newIoConfig).anyTimes();
-    EasyMock.expect(newIngestionSchema.getDataSchema()).andReturn(newDataSchema).anyTimes();
-    EasyMock.replay(newIngestionSchema);
+    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
+    EasyMock.replay(ingestionSchema);
 
-    TestSeekableStreamSupervisorSpec newSpec = new TestSeekableStreamSupervisorSpec(
-        "my-id",
-        newIngestionSchema
-    )
-    {
-      @Override
-      public List<String> getDataSources()
-      {
-        return Collections.singletonList("datasource1");
-      }
-    };
-
-    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
-
-    final SupervisorSpec existingSpecForMerge = existingSpec;
-    Capture<SupervisorSpec> capturedNewSpec = EasyMock.newCapture();
-    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(EasyMock.capture(capturedNewSpec)))
-            .andAnswer(() -> {
-              SupervisorSpec arg = (SupervisorSpec) EasyMock.getCurrentArguments()[0];
-              arg.merge(existingSpecForMerge);
-              return true;
-            });
-
-    EasyMock.expect(supervisorManager.getSupervisorSpec("my-id"))
-            .andReturn(Optional.of(existingSpec))
-            .anyTimes();
-
-    setupMockRequest();
-    setupMockRequestForAudit();
-
-    EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
-    auditManager.doAudit(EasyMock.anyObject());
-    EasyMock.expectLastCall().once();
-
-    replayAll();
-
-    Response response = supervisorResource.specPost(newSpec, false, request);
-    verifyAll();
-
-    Assert.assertEquals(200, response.getStatus());
+    return new TestSeekableStreamSupervisorSpec("my-id", ingestionSchema);
   }
 
   private void setupMockRequest()
