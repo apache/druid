@@ -32,9 +32,7 @@ import org.apache.druid.query.DruidMetrics;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -43,7 +41,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Cost-based auto-scaler for seekable stream supervisors.
  * Uses a cost function combining lag and idle time metrics to determine optimal task counts.
- * Task counts are selected from predefined values (not arbitrary factors).
+ * Task counts are selected from pre-calculated values (not arbitrary factors).
  * Scale-up happens incrementally, scale-down only during task rollover.
  */
 public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
@@ -53,7 +51,6 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   private static final int SCALE_FACTOR_DISCRETE_DISTANCE = 2;
   public static final String OPTIMAL_TASK_COUNT_METRIC = "task/autoScaler/costBased/optimalTaskCount";
 
-  private static final Map<Integer, int[]> FACTORS_CACHE = new LinkedHashMap<>();
   private final String supervisorId;
   private final SeekableStreamSupervisor supervisor;
   private final ServiceEmitter emitter;
@@ -167,7 +164,16 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   }
 
   /**
-   * @return optimal task count, or -1 if no scaling action needed
+   * Computes the optimal task count based on current metrics.
+   * <p>
+   * Returns -1 (no scaling needed) in the following cases:
+   * <ul>
+   *   <li>Metrics are not available</li>
+   *   <li>Current idle ratio is in the ideal range [0.2, 0.6] - optimal utilization achieved</li>
+   *   <li>Optimal task count equals current task count</li>
+   * </ul>
+   *
+   * @return optimal task count for scale-up, or -1 if no scaling action needed
    */
   public int computeOptimalTaskCount(AtomicReference<CostMetrics> currentMetricsRef)
   {
@@ -187,6 +193,18 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     if (validTaskCounts.length == 0) {
       log.warn("No valid task counts after applying constraints for dataSource [%s]", supervisorId);
+      return -1;
+    }
+
+    // If idle is already in the ideal range [0.2, 0.6], optimal utilization has been achieved.
+    // No scaling is needed - maintain stability by staying at current task count.
+    final double currentIdleRatio = metrics.getPollIdleRatio();
+    if (currentIdleRatio >= 0 && WeightedCostFunction.isIdleInIdealRange(currentIdleRatio)) {
+      log.info(
+          "Idle ratio [%.3f] is in ideal range for dataSource [%s], no scaling needed",
+          currentIdleRatio,
+          supervisorId
+      );
       return -1;
     }
 
