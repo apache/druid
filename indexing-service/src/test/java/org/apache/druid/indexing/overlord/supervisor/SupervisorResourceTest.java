@@ -27,12 +27,23 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
+import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
+import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.TestSeekableStreamDataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIngestionSpec;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
+import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -54,6 +65,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.util.Collections;
@@ -61,6 +73,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 @RunWith(EasyMockRunner.class)
@@ -1083,7 +1096,9 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id1", null)).andReturn(versions1).times(1);
     EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id2", null)).andReturn(versions2).times(1);
     EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id3", null)).andReturn(versions3).times(1);
-    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id4", null)).andReturn(Collections.emptyList()).times(1);
+    EasyMock.expect(supervisorManager.getSupervisorHistoryForId("id4", null))
+            .andReturn(Collections.emptyList())
+            .times(1);
     setupMockRequestForUser("notdruid");
     replayAll();
 
@@ -1183,12 +1198,18 @@ public class SupervisorResourceTest extends EasyMockSupport
     // Test with limit=0 (should return 400 Bad Request)
     response = supervisorResource.specGetHistory(request, "id1", 0);
     Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("error", "Count must be greater than zero if set (count was 0)"), response.getEntity());
+    Assert.assertEquals(
+        ImmutableMap.of("error", "Count must be greater than zero if set (count was 0)"),
+        response.getEntity()
+    );
 
     // Test with negative limit (should return 400 Bad Request)
     response = supervisorResource.specGetHistory(request, "id1", -1);
     Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("error", "Count must be greater than zero if set (count was -1)"), response.getEntity());
+    Assert.assertEquals(
+        ImmutableMap.of("error", "Count must be greater than zero if set (count was -1)"),
+        response.getEntity()
+    );
 
     // Test with limit larger than available history
     response = supervisorResource.specGetHistory(request, "id1", 100);
@@ -1320,6 +1341,99 @@ public class SupervisorResourceTest extends EasyMockSupport
     Assert.assertEquals(spec, specRoundTrip);
   }
 
+  @Test
+  public void testSpecPostMergeUsesExistingTaskCountHigherPriorityHasBeenMissed()
+  {
+    // New spec has no taskCount -> should use existing taskCount (5)
+    TestSeekableStreamSupervisorSpec existingSpec = createTestSpec(5, 1);
+    TestSeekableStreamSupervisorSpec newSpec = createTestSpecWithExpectedMerge(null, 2, 5);
+
+    newSpec.merge(existingSpec);
+    EasyMock.verify(newSpec.getIoConfig());
+  }
+
+  @Test
+  public void testSpecPostMergeUsesProvidedTaskCountOverExistingTaskCount()
+  {
+    // New spec has taskCount=3 -> should use provided taskCount over existing (5)
+    TestSeekableStreamSupervisorSpec existingSpec = createTestSpec(5, 1);
+    TestSeekableStreamSupervisorSpec newSpec = createTestSpecWithExpectedMerge(3, 2, 3);
+
+    newSpec.merge(existingSpec);
+    EasyMock.verify(newSpec.getIoConfig());
+  }
+
+  @Test
+  public void testSpecPostMergeFallsBackToProvidedTaskCountMin()
+  {
+    // Neither has taskCount -> should fall back to taskCountMin (4)
+    TestSeekableStreamSupervisorSpec existingSpec = createTestSpec(null, 1);
+    TestSeekableStreamSupervisorSpec newSpec = createTestSpecWithExpectedMerge(null, 4, 4);
+
+    newSpec.merge(existingSpec);
+    EasyMock.verify(newSpec.getIoConfig());
+  }
+
+  private TestSeekableStreamSupervisorSpec createTestSpec(Integer taskCount, int taskCountMin)
+  {
+    HashMap<String, Object> autoScalerConfig = new HashMap<>();
+    autoScalerConfig.put("enableTaskAutoScaler", true);
+    autoScalerConfig.put("taskCountMax", 10);
+    autoScalerConfig.put("taskCountMin", taskCountMin);
+
+    SeekableStreamSupervisorIOConfig ioConfig = EasyMock.createMock(SeekableStreamSupervisorIOConfig.class);
+    EasyMock.expect(ioConfig.getAutoScalerConfig())
+            .andReturn(OBJECT_MAPPER.convertValue(autoScalerConfig, AutoScalerConfig.class))
+            .anyTimes();
+    EasyMock.expect(ioConfig.getTaskCount()).andReturn(taskCount).anyTimes();
+    EasyMock.replay(ioConfig);
+
+    DataSchema dataSchema = EasyMock.createMock(DataSchema.class);
+    EasyMock.expect(dataSchema.getDataSource()).andReturn("datasource1").anyTimes();
+    EasyMock.replay(dataSchema);
+
+    SeekableStreamSupervisorIngestionSpec ingestionSchema =
+        EasyMock.createMock(SeekableStreamSupervisorIngestionSpec.class);
+    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
+    EasyMock.replay(ingestionSchema);
+
+    return new TestSeekableStreamSupervisorSpec("my-id", ingestionSchema);
+  }
+
+  private TestSeekableStreamSupervisorSpec createTestSpecWithExpectedMerge(
+      Integer taskCount,
+      int taskCountMin,
+      int expectedTaskCount
+  )
+  {
+    HashMap<String, Object> autoScalerConfig = new HashMap<>();
+    autoScalerConfig.put("enableTaskAutoScaler", true);
+    autoScalerConfig.put("taskCountMax", 10);
+    autoScalerConfig.put("taskCountMin", taskCountMin);
+
+    SeekableStreamSupervisorIOConfig ioConfig = EasyMock.createMock(SeekableStreamSupervisorIOConfig.class);
+    EasyMock.expect(ioConfig.getAutoScalerConfig())
+            .andReturn(OBJECT_MAPPER.convertValue(autoScalerConfig, AutoScalerConfig.class))
+            .anyTimes();
+    EasyMock.expect(ioConfig.getTaskCount()).andReturn(taskCount).anyTimes();
+    ioConfig.setTaskCount(expectedTaskCount);
+    EasyMock.expectLastCall().once();
+    EasyMock.replay(ioConfig);
+
+    DataSchema dataSchema = EasyMock.createMock(DataSchema.class);
+    EasyMock.expect(dataSchema.getDataSource()).andReturn("datasource1").anyTimes();
+    EasyMock.replay(dataSchema);
+
+    SeekableStreamSupervisorIngestionSpec ingestionSchema =
+        EasyMock.createMock(SeekableStreamSupervisorIngestionSpec.class);
+    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
+    EasyMock.replay(ingestionSchema);
+
+    return new TestSeekableStreamSupervisorSpec("my-id", ingestionSchema);
+  }
+
   private void setupMockRequest()
   {
     setupMockRequestForUser("druid");
@@ -1445,10 +1559,10 @@ public class SupervisorResourceTest extends EasyMockSupport
       if (getId() != null ? !getId().equals(that.getId()) : that.getId() != null) {
         return false;
       }
-      if (supervisor != null ? !supervisor.equals(that.supervisor) : that.supervisor != null) {
+      if (!Objects.equals(supervisor, that.supervisor)) {
         return false;
       }
-      if (datasources != null ? !datasources.equals(that.datasources) : that.datasources != null) {
+      if (!Objects.equals(datasources, that.datasources)) {
         return false;
       }
       return isSuspended() == that.isSuspended();
@@ -1462,6 +1576,63 @@ public class SupervisorResourceTest extends EasyMockSupport
       result = 31 * result + (supervisor != null ? supervisor.hashCode() : 0);
       result = 31 * result + (datasources != null ? datasources.hashCode() : 0);
       return result;
+    }
+  }
+
+  static class TestSeekableStreamSupervisorSpec extends SeekableStreamSupervisorSpec
+  {
+    public TestSeekableStreamSupervisorSpec(
+        @Nullable String id,
+        SeekableStreamSupervisorIngestionSpec ingestionSchema
+    )
+    {
+      super(
+          id,
+          ingestionSchema,
+          null,
+          false,
+          EasyMock.createMock(TaskStorage.class),
+          EasyMock.createMock(TaskMaster.class),
+          EasyMock.createMock(IndexerMetadataStorageCoordinator.class),
+          EasyMock.createMock(SeekableStreamIndexTaskClientFactory.class),
+          OBJECT_MAPPER,
+          EasyMock.createMock(ServiceEmitter.class),
+          EasyMock.createMock(DruidMonitorSchedulerConfig.class),
+          EasyMock.createMock(RowIngestionMetersFactory.class),
+          EasyMock.createMock(SupervisorStateManagerConfig.class)
+      );
+    }
+
+    @Override
+    public Supervisor createSupervisor()
+    {
+      return null;
+    }
+
+    @Override
+    public String getType()
+    {
+      return "test";
+    }
+
+    @Override
+    public String getSource()
+    {
+      return "test-stream";
+    }
+
+    @Override
+    protected SeekableStreamSupervisorSpec toggleSuspend(boolean suspend)
+    {
+      return null;
+    }
+
+    @JsonIgnore
+    @Nonnull
+    @Override
+    public Set<ResourceAction> getInputSourceResources() throws UnsupportedOperationException
+    {
+      return Collections.singleton(new ResourceAction(new Resource("test", ResourceType.EXTERNAL), Action.READ));
     }
   }
 }
