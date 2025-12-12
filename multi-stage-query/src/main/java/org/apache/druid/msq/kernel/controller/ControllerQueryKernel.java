@@ -23,6 +23,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.math.IntMath;
+import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.ints.Int2IntAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
@@ -35,15 +37,17 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.ExtraInfoHolder;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.exec.OutputChannelMode;
-import org.apache.druid.msq.exec.QueryValidator;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.error.MSQFaultUtils;
+import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
+import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSpecSlicerFactory;
 import org.apache.druid.msq.input.stage.ReadablePartitions;
 import org.apache.druid.msq.kernel.QueryDefinition;
@@ -56,6 +60,7 @@ import org.apache.druid.msq.statistics.CompleteKeyStatisticsInformation;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
+import java.math.RoundingMode;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -292,6 +297,8 @@ public class ControllerQueryKernel
     final WorkerInputs workerInputs = stageKernel.getWorkerInputs();
     final OutputChannelMode outputChannelMode = stageOutputChannelModes.get(stageKernel.getStageDefinition().getId());
 
+    int totalFileCount = 0;
+    boolean fault = false;
     for (int workerNumber : workerInputs.workers()) {
       final Object extraInfo = extraInfos != null ? extraInfos.get(workerNumber) : null;
 
@@ -310,8 +317,17 @@ public class ControllerQueryKernel
           config.getWorkerContextMap()
       );
 
-      QueryValidator.validateWorkOrder(workOrder);
+      final int numInputFiles = Ints.checkedCast(workOrder.getInputs().stream().mapToLong(InputSlice::fileCount).sum());
+      fault = fault || IntMath.divide(numInputFiles, Limits.MAX_INPUT_FILES_PER_WORKER, RoundingMode.CEILING) > 1;
+      totalFileCount += numInputFiles;
       workerToWorkOrder.put(workerNumber, workOrder);
+    }
+
+    final int requiredWorkers = IntMath.divide(totalFileCount, Limits.MAX_INPUT_FILES_PER_WORKER, RoundingMode.CEILING);
+    if (fault) {
+      throw new MSQException(
+          new TooManyInputFilesFault(totalFileCount, Limits.MAX_INPUT_FILES_PER_WORKER, requiredWorkers)
+      );
     }
     stageWorkOrders.put(new StageId(queryDef.getQueryId(), stageNumber), workerToWorkOrder);
     return workerToWorkOrder;

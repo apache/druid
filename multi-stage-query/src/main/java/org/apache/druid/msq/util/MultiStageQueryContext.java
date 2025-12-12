@@ -157,10 +157,22 @@ public class MultiStageQueryContext
   public static final String CTX_REMOVE_NULL_BYTES = "removeNullBytes";
   public static final boolean DEFAULT_REMOVE_NULL_BYTES = false;
 
-  public static final String CTX_ROWS_IN_MEMORY = "rowsInMemory";
-  // Lower than the default to minimize the impact of per-row overheads that are not accounted for by
-  // OnheapIncrementalIndex. For example: overheads related to creating bitmaps during persist.
-  public static final int DEFAULT_ROWS_IN_MEMORY = 100000;
+  /**
+   * Used by {@link #getMaxRowsInMemory(QueryContext)}.
+   */
+  static final String CTX_MAX_ROWS_IN_MEMORY = "maxRowsInMemory";
+
+  /**
+   * Used by {@link #getMaxRowsInMemory(QueryContext)}. Alternate spelling of {@link #CTX_MAX_ROWS_IN_MEMORY}.
+   * Ignored if {@link #CTX_MAX_ROWS_IN_MEMORY} is set.
+   */
+  static final String CTX_ROWS_IN_MEMORY = "rowsInMemory";
+
+  /**
+   * Lower than the default to minimize the impact of per-row overheads that are not accounted for by
+   * OnheapIncrementalIndex. For example: overheads related to creating bitmaps during persist.
+   */
+  public static final int DEFAULT_MAX_ROWS_IN_MEMORY = 100000;
 
   public static final String CTX_IS_REINDEX = "isReindex";
 
@@ -413,9 +425,14 @@ public class MultiStageQueryContext
     return destination;
   }
 
-  public static int getRowsInMemory(final QueryContext queryContext)
+  public static int getMaxRowsInMemory(final QueryContext queryContext)
   {
-    return queryContext.getInt(CTX_ROWS_IN_MEMORY, DEFAULT_ROWS_IN_MEMORY);
+    Integer ctxValue = queryContext.getInt(CTX_MAX_ROWS_IN_MEMORY);
+    if (ctxValue == null) {
+      ctxValue = queryContext.getInt(CTX_ROWS_IN_MEMORY);
+    }
+
+    return ctxValue != null ? ctxValue : DEFAULT_MAX_ROWS_IN_MEMORY;
   }
 
   public static Integer getMaxNumSegments(final QueryContext queryContext)

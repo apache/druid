@@ -1119,7 +1119,7 @@ name: org.bouncycastle bcprov-jdk18on
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: MIT License
-version: "1.78.1"
+version: "1.79"
 libraries:
   - org.bouncycastle: bcprov-jdk18on
   - org.bouncycastle: bcprov-ext-jdk18on
@@ -1455,7 +1455,7 @@ notice: |
     * LICENSE:
       * license/LICENSE.lz4.txt (Apache License 2.0)
     * HOMEPAGE:
-      * https://github.com/jpountz/lz4-java
+      * https://github.com/yawkat/lz4-java
 
   This product optionally depends on 'lzma-java', a LZMA Java compression
   and decompression library, which can be obtained at:
@@ -2464,8 +2464,9 @@ name: LZ4 Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.8.0
+version: 1.8.1
 libraries:
+  - at.yawk.lz4: lz4-java
   - org.lz4: lz4-java
 
 ---
@@ -4584,7 +4585,7 @@ notice: |
     * LICENSE:
       * license/LICENSE.lz4.txt (Apache License 2.0)
     * HOMEPAGE:
-      * https://github.com/jpountz/lz4-java
+      * https://github.com/yawkat/lz4-java
 
   This product optionally depends on 'lzma-java', a LZMA Java compression
   and decompression library, which can be obtained at:
@@ -5550,7 +5551,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Vadim Ogievetsky
-version: 1.2.1
+version: 1.2.3
 
 ---
 
@@ -5848,7 +5849,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 1.2.1
+version: 1.2.2
 
 ---
 
