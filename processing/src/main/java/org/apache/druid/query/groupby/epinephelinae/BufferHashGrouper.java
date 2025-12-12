@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.AbstractList;
 import java.util.Collections;
@@ -50,7 +49,6 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
   // to get a comparator that uses the ordering defined by the OrderByColumnSpec of a query.
   private final boolean useDefaultSorting;
 
-  @Nullable
   private ByteBufferIntList offsetList;
 
   public BufferHashGrouper(
@@ -155,6 +153,18 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
   }
 
   @Override
+  public long getMergeBufferUsage()
+  {
+    if (!initialized) {
+      return 0L;
+    }
+
+    long hashTableUsage = hashTable.getMaxTableBufferUsage();
+    long offSetListUsage = offsetList.getMaxMergeBufferUsageBytes();
+    return hashTableUsage + offSetListUsage;
+  }
+
+  @Override
   public CloseableIterator<Entry<KeyType>> iterator(boolean sorted)
   {
     if (!initialized) {
@@ -199,18 +209,15 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
       }
 
       // Sort offsets in-place.
-      Collections.sort(
-          wrappedOffsets,
-          (lhs, rhs) -> {
-            final ByteBuffer tableBuffer = hashTable.getTableBuffer();
-            return comparator.compare(
-                tableBuffer,
-                tableBuffer,
-                lhs + HASH_SIZE,
-                rhs + HASH_SIZE
-            );
-          }
-      );
+      wrappedOffsets.sort((lhs, rhs) -> {
+        final ByteBuffer tableBuffer = hashTable.getTableBuffer();
+        return comparator.compare(
+            tableBuffer,
+            tableBuffer,
+            lhs + HASH_SIZE,
+            rhs + HASH_SIZE
+        );
+      });
 
       return new CloseableIterator<>()
       {
