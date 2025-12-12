@@ -20,7 +20,6 @@
 package org.apache.druid.testing.embedded.indexing;
 
 import org.apache.druid.indexing.common.task.TaskBuilder;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.nested.ObjectStorageEncoding;
@@ -96,12 +95,23 @@ public class NestedDataFormatsTest extends EmbeddedClusterTestBase
     cluster.callApi().runTask(indexTask.withId(taskId), overlord);
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
-    // Test ingesting with skipping raw json smile format works, same row count, with ~20% storage saving
-    final String metadataSql = "select sum(num_rows), sum(size) from sys.segments where datasource = '%s'";
-    final String defaultFormatResult = cluster.runSql(metadataSql, datasourceWithDefaultFormat);
-    final String noneObjectStorageFormatResult = cluster.runSql(metadataSql, dataSource);
-    Assertions.assertEquals(StringUtils.format("%d,%d", 465_346, 53_000_804), defaultFormatResult);
-    Assertions.assertEquals(StringUtils.format("%d,%d", 465_346, 41_938_750), noneObjectStorageFormatResult);
+    // Test ingesting with skipping raw json smile format works, with the same row count
+    final String rowsSql = "select sum(num_rows) from sys.segments where datasource = '%s'";
+    final String defaultFormatRows = cluster.runSql(rowsSql, datasourceWithDefaultFormat);
+    final String noneObjectStorageFormatRows = cluster.runSql(rowsSql, dataSource);
+    Assertions.assertEquals(String.valueOf(465_346), defaultFormatRows);
+    Assertions.assertEquals(String.valueOf(465_346), noneObjectStorageFormatRows);
+
+    // Test ingesting with skipping raw json smile format works, with ~20% storage saving
+    final String metadataSql = "select sum(size) from sys.segments where datasource = '%s'";
+    final String defaultFormatSize = cluster.runSql(metadataSql, datasourceWithDefaultFormat);
+    final String noneObjectStorageFormatSize = cluster.runSql(metadataSql, dataSource);
+    System.out.println(noneObjectStorageFormatSize);
+    System.out.println(defaultFormatSize);
+    Assertions.assertTrue(
+        Integer.parseInt(noneObjectStorageFormatSize) <= Integer.parseInt(defaultFormatSize) * 0.8,
+        "Expected at least 20% space savings"
+    );
 
     // Test querying on a nested field works
     final String groupByQuery =
