@@ -343,45 +343,6 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   }
 
   @Test
-  public void test_getMetricsAsync() throws Exception
-  {
-    final Map<String, Object> retVal = ImmutableMap.of("pollIdleRatio", 0.5);
-
-    serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, "/metrics").timeout(httpTimeout),
-        HttpResponseStatus.OK,
-        Collections.emptyMap(),
-        jsonMapper.writeValueAsBytes(retVal)
-    );
-
-    Assert.assertEquals(retVal, client.getMetrics(TASK_ID).get());
-  }
-
-  @Test
-  public void test_getMetricsAsync_empty() throws Exception
-  {
-    serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, "/metrics").timeout(httpTimeout),
-        HttpResponseStatus.OK,
-        Collections.emptyMap(),
-        ByteArrays.EMPTY_ARRAY
-    );
-
-    Assert.assertNull(client.getMetrics(TASK_ID).get());
-  }
-
-  @Test
-  public void test_getMetricsAsync_notAvailable() throws Exception
-  {
-    serviceClient.expectAndThrow(
-        new RequestBuilder(HttpMethod.GET, "/metrics").timeout(httpTimeout),
-        new ServiceNotAvailableException(TASK_ID)
-    );
-
-    Assert.assertNull(client.getMetrics(TASK_ID).get());
-  }
-
-  @Test
   public void test_pauseAsync_immediateOk() throws Exception
   {
     final Map<Integer, Long> offsets = ImmutableMap.of(1, 3L);

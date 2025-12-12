@@ -169,7 +169,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
    * Returns -1 (no scaling needed) in the following cases:
    * <ul>
    *   <li>Metrics are not available</li>
-   *   <li>Current idle ratio is in the ideal range [0.2, 0.6] - optimal utilization achieved</li>
+   *   <li>The current idle ratio is in the ideal range [0.2, 0.6] - optimal utilization achieved</li>
    *   <li>Optimal task count equals current task count</li>
    * </ul>
    *

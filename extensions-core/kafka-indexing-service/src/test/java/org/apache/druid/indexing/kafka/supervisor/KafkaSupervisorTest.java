@@ -4404,48 +4404,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testGetTaskMetrics()
-  {
-    supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null, false, kafkaHost);
-    supervisor.addTaskGroupToActivelyReadingTaskGroup(
-        supervisor.getTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 0)),
-        singlePartitionMap(topic, 0, 0L),
-        null,
-        null,
-        ImmutableSet.of("task1"),
-        ImmutableSet.of()
-    );
-
-    supervisor.addTaskGroupToPendingCompletionTaskGroup(
-        supervisor.getTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 1)),
-        singlePartitionMap(topic, 0, 0L),
-        null,
-        null,
-        ImmutableSet.of("task2"),
-        ImmutableSet.of()
-    );
-
-    EasyMock.expect(taskClient.getMetrics("task1"))
-            .andReturn(Futures.immediateFuture(ImmutableMap.of("pollIdleRatio", 0.5)))
-            .times(1);
-
-    EasyMock.expect(taskClient.getMetrics("task2"))
-            .andReturn(Futures.immediateFuture(ImmutableMap.of("pollIdleRatio", 0.8)))
-            .times(1);
-
-    replayAll();
-
-    Map<String, Map<String, Object>> metrics = supervisor.getTaskMetrics();
-
-    verifyAll();
-
-    Assert.assertEquals(2, metrics.size());
-    Assert.assertEquals(ImmutableSet.of("0", "1"), metrics.keySet());
-    Assert.assertEquals(ImmutableMap.of("task1", ImmutableMap.of("pollIdleRatio", 0.5)), metrics.get("0"));
-    Assert.assertEquals(ImmutableMap.of("task2", ImmutableMap.of("pollIdleRatio", 0.8)), metrics.get("1"));
-  }
-
-  @Test
   public void testGetCurrentParseErrors()
   {
     supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null, false, kafkaHost);

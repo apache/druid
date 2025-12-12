@@ -42,7 +42,6 @@ import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -160,7 +159,7 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  @Disabled // Actually make it work, it does not ingest poverfully enough
+  // @Disabled // Actually make it work, it does not ingest poverfully enough
   @Timeout(60)
   public void test_autoScaler_computesOptimalTaskCountAndProducesScaleUp()
   {
@@ -182,14 +181,14 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
         .taskCountMin(1)
         .taskCountMax(50)
         .taskCountStart(lowInitialTaskCount)
-        .metricsCollectionIntervalMillis(200)
+        .metricsCollectionIntervalMillis(500)
         .scaleActionStartDelayMillis(500)
         .scaleActionPeriodMillis(500)
         .minTriggerScaleActionFrequencyMillis(1000)
         // Weight configuration: favor lag as the primary signal for scale-up scenarios
         // High lag with low idle (overloaded) will trigger scale-up
-        .lagWeight(0.7)
-        .idleWeight(0.3)
+        .lagWeight(0.3)
+        .idleWeight(0.7)
         .build();
 
     final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisorWithAutoScaler(

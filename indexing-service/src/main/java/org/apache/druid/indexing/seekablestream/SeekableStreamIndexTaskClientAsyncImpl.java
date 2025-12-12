@@ -258,22 +258,6 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   }
 
   @Override
-  public ListenableFuture<Map<String, Object>> getMetrics(String id)
-  {
-    return makeRequest(id, new RequestBuilder(HttpMethod.GET, "/metrics"))
-        .handler(new BytesFullResponseHandler())
-        .onSuccess(r -> {
-          if (isNullOrEmpty(r.getContent())) {
-            return null;
-          } else {
-            return JacksonUtils.readValue(jsonMapper, r.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
-          }
-        })
-        .onNotAvailable(e -> Either.value(null))
-        .go();
-  }
-
-  @Override
   public ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> pauseAsync(String id)
   {
     final ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> pauseFuture =

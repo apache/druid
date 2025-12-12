@@ -957,7 +957,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     }
     finally {
       try {
-        this.recordSupplier = null;
         if (driver != null) {
           driver.close();
         }
@@ -1665,6 +1664,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     returnMap.put("movingAverages", averagesMap);
     returnMap.put("totals", totalsMap);
+    if (this.recordSupplier != null) {
+      returnMap.put("pollIdleRatio", this.recordSupplier.getPollIdleRatioMetric());
+    }
     return returnMap;
   }
 
@@ -1987,39 +1989,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     authorizationCheck(req);
     return startTime;
-  }
-
-  /**
-   * Returns the poll-idle-ratio-avg metric from the underlying record supplier (e.g., Kafka consumer).
-   * This metric indicates how much time the consumer spends idle vs polling:
-   * <ul>
-   *   <li>0 means the consumer is never idle (always consuming)</li>
-   *   <li>1 means the consumer is always idle (not receiving data)</li>
-   * </ul>
-   *
-   * @return HTTP 200 with JSON containing pollIdleRatio, HTTP 503 if supplier not initialized,
-   *         or HTTP 501 if the stream type doesn't support this metric
-   */
-  @GET
-  @Path("/metrics")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response getMetrics(@Context final HttpServletRequest req)
-  {
-    authorizationCheck(req);
-    final RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> supplier = recordSupplier;
-    if (supplier == null) {
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-                     .entity(ImmutableMap.of("error", "Record supplier isn't initialized"))
-                     .build();
-    }
-    try {
-      return Response.ok(ImmutableMap.of("pollIdleRatio", supplier.getPollIdleRatioMetric())).build();
-    }
-    catch (UnsupportedOperationException e) {
-      return Response.status(501)
-                     .entity(ImmutableMap.of("error", "Poll idle ratio metric isn't supported by this stream type"))
-                     .build();
-    }
   }
 
   @VisibleForTesting

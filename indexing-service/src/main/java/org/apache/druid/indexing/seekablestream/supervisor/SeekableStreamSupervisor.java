@@ -1482,22 +1482,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @Override
-  public Map<String, Map<String, Object>> getTaskMetrics()
-  {
-    try {
-      return getCurrentTaskMetrics();
-    }
-    catch (InterruptedException ie) {
-      Thread.currentThread().interrupt();
-      log.warn(ie, "getTaskMetrics() interrupted.");
-      throw new RuntimeException(ie);
-    }
-    catch (ExecutionException ee) {
-      throw new RuntimeException(ee);
-    }
-  }
-
-  @Override
   public List<ParseExceptionReport> getParseErrors()
   {
     try {
@@ -1590,83 +1574,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     return allStats;
-  }
-
-  /**
-   * Collect metrics from all tasks managed by this supervisor.
-   * Note that {@code StatsFromTaskResult} are reused for metrics collection since
-   * both stats and metrics are represented as {@code Map<String, Object>}.
-   *
-   * @return A map of groupId->taskId->task metrics
-   * @throws InterruptedException
-   * @throws ExecutionException
-   */
-  private Map<String, Map<String, Object>> getCurrentTaskMetrics()
-      throws InterruptedException, ExecutionException
-  {
-    Map<String, Map<String, Object>> allMetrics = new HashMap<>();
-    final List<ListenableFuture<StatsFromTaskResult>> futures = new ArrayList<>();
-    final List<Pair<Integer, String>> groupAndTaskIds = new ArrayList<>();
-
-    for (int groupId : activelyReadingTaskGroups.keySet()) {
-      TaskGroup group = activelyReadingTaskGroups.get(groupId);
-      for (String taskId : group.taskIds()) {
-        futures.add(
-            Futures.transform(
-                taskClient.getMetrics(taskId),
-                (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> new StatsFromTaskResult(
-                    groupId,
-                    taskId,
-                    currentStats
-                ),
-                MoreExecutors.directExecutor()
-            )
-        );
-        groupAndTaskIds.add(new Pair<>(groupId, taskId));
-      }
-    }
-
-    for (int groupId : pendingCompletionTaskGroups.keySet()) {
-      List<TaskGroup> pendingGroups = pendingCompletionTaskGroups.get(groupId);
-      for (TaskGroup pendingGroup : pendingGroups) {
-        for (String taskId : pendingGroup.taskIds()) {
-          futures.add(
-              Futures.transform(
-                  taskClient.getMetrics(taskId),
-                  (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> new StatsFromTaskResult(
-                      groupId,
-                      taskId,
-                      currentStats
-                  ),
-                  MoreExecutors.directExecutor()
-              )
-          );
-          groupAndTaskIds.add(new Pair<>(groupId, taskId));
-        }
-      }
-    }
-
-    List<Either<Throwable, StatsFromTaskResult>> results = coalesceAndAwait(futures);
-    for (int i = 0; i < results.size(); i++) {
-      if (results.get(i).isValue()) {
-        StatsFromTaskResult result = results.get(i).valueOrThrow();
-
-        if (result != null) {
-          Map<String, Object> groupMap = allMetrics.computeIfAbsent(result.getGroupId(), k -> new HashMap<>());
-          groupMap.put(result.getTaskId(), result.getStats());
-        }
-      } else {
-        Pair<Integer, String> groupAndTaskId = groupAndTaskIds.get(i);
-        log.noStackTrace().warn(
-            results.get(i).error(),
-            "Failed to get metrics for group[%d]-task[%s]",
-            groupAndTaskId.lhs,
-            groupAndTaskId.rhs
-        );
-      }
-    }
-
-    return allMetrics;
   }
 
   /**
@@ -4472,7 +4379,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    */
   public double getPollIdleRatioMetric()
   {
-    Map<String, Map<String, Object>> taskMetrics = getTaskMetrics();
+    Map<String, Map<String, Object>> taskMetrics = getStats();
     if (taskMetrics.isEmpty()) {
       return 1.;
     }
