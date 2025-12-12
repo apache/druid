@@ -68,6 +68,7 @@ data: {
     # keyword add it to 'nonReservedKeywords' section.
     keywords: [
       "CLUSTERED"
+      "LONG"
       "OVERWRITE"
       "PARTITIONED"
       "EXTERN"
