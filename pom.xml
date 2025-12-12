@@ -70,7 +70,12 @@
     </scm>
 
     <properties>
-        <java.version>17</java.version>
+        <!--  java 11 is no longer supported, but for backward compatibility reasons we plan to stay on 11 until druid37, see https://github.com/apache/druid/pull/18759.
+          Note for upgrade:
+          - remove the maven-compiler-plugin in embedded-tests
+          - remove exclusion of embedded-tests in strict compilation check
+          -->
+        <java.version>11</java.version>
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
