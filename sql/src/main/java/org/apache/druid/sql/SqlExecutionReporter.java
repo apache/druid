@@ -67,9 +67,22 @@ public class SqlExecutionReporter
     this.startNs = System.nanoTime();
   }
 
+  /**
+   * Report a query failure with an unknown number of byte written. The {@code sqlQuery/bytes} metric will
+   * not be emitted.
+   */
   public void failed(Throwable e)
   {
+    failed(e, -1);
+  }
+
+  /**
+   * Report a query failure with a known number of byte written. It will be emitted as {@code sqlQuery/bytes}.
+   */
+  public void failed(Throwable e, long bytesWritten)
+  {
     this.e = e;
+    this.bytesWritten = bytesWritten;
   }
 
   public void succeeded(final long bytesWritten)
