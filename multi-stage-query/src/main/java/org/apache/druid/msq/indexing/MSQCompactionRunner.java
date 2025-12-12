@@ -730,23 +730,23 @@ public class MSQCompactionRunner implements CompactionRunner
       }
       try {
         if (task.isReady(toolbox.getTaskActionClient())) {
-          log.info("Running MSQControllerTask[%d]: %s", taskCnt, json);
+          log.info("Running MSQControllerTask number[%d]: %s", taskCnt, json);
           final TaskStatus taskStatus = task.run(toolbox);
           if (!taskStatus.isSuccess()) {
             failCnt++;
-            log.warn("Failed to run MSQControllerTask[%d]: %s", taskCnt, taskStatus.getErrorMsg());
+            log.warn("Failed to run MSQControllerTask number[%d]: %s", taskCnt, taskStatus.getErrorMsg());
             if (firstFailure == null) {
               firstFailure = taskStatus;
             }
           }
         } else {
           failCnt++;
-          log.warn("MSQControllerTask[%d] is not ready.", taskCnt);
+          log.warn("MSQControllerTask number[%d] is not ready.", taskCnt);
         }
       }
       catch (Exception e) {
         failCnt++;
-        log.warn(e, "Failed to run MSQControllerTask[%d].", taskCnt);
+        log.warn(e, "Failed to run MSQControllerTask number[%d].", taskCnt);
       }
     }
 
