@@ -20,6 +20,7 @@
 package org.apache.druid.query.groupby.epinephelinae;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.Pair;
@@ -30,11 +31,12 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryResources;
-import org.apache.druid.query.groupby.GroupByStatsProvider;
+import org.apache.druid.query.groupby.GroupByResponseContextKeys;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 
@@ -44,6 +46,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -92,10 +95,10 @@ public class GroupByRowProcessor
       final GroupByQueryConfig config,
       final DruidProcessingConfig processingConfig,
       final GroupByQueryResources resource,
+      final ResponseContext context,
       final ObjectMapper spillMapper,
       final String processingTmpDir,
-      final int mergeBufferSize,
-      final GroupByStatsProvider.PerQueryStats perQueryStats
+      final int mergeBufferSize
   )
   {
     final Closer closeOnExit = Closer.create();
@@ -108,8 +111,7 @@ public class GroupByRowProcessor
 
     final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
         temporaryStorageDirectory,
-        querySpecificConfig.getMaxOnDiskStorage().getBytes(),
-        perQueryStats
+        querySpecificConfig.getMaxOnDiskStorage().getBytes()
     );
 
     closeOnExit.register(temporaryStorage);
@@ -131,10 +133,10 @@ public class GroupByRowProcessor
         },
         temporaryStorage,
         spillMapper,
-        mergeBufferSize,
-        perQueryStats
+        mergeBufferSize
     );
     final Grouper<RowBasedKey> grouper = pair.lhs;
+    Preconditions.checkNotNull(grouper);
     final Accumulator<AggregateResult, ResultRow> accumulator = pair.rhs;
     closeOnExit.register(grouper);
 
@@ -142,6 +144,14 @@ public class GroupByRowProcessor
 
     if (!retVal.isOk()) {
       throw new ResourceLimitExceededException(retVal.getReason());
+    }
+
+    if (context != null) {
+      context.add(GroupByResponseContextKeys.GROUPBY_BYTES_SPILLED_TO_STORAGE_KEY, temporaryStorage.currentSize());
+
+      Map<String, Long> metricsMap = grouper.getQueryMetricsMap();
+      context.add(GroupByResponseContextKeys.GROUPBY_MERGE_DICTIONARY_SIZE_KEY,
+                          metricsMap.getOrDefault(GroupByResponseContextKeys.GROUPBY_MERGE_DICTIONARY_SIZE_NAME, 0L));
     }
 
     return new ResultSupplier()
