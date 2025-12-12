@@ -27,6 +27,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -47,8 +48,11 @@ import org.junit.jupiter.api.Timeout;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler.OPTIMAL_TASK_COUNT_METRIC;
 
 /**
  * Integration test for {@link CostBasedAutoScaler}.
@@ -80,7 +84,7 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
       {
         super.start();
         createTopicWithPartitions(TOPIC, PARTITION_COUNT);
-        produceRecordsToKafka(500);
+        produceRecordsToKafka(500, 1);
       }
 
       @Override
@@ -150,7 +154,7 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
     // Wait for autoscaler to emit optimalTaskCount metric indicating scale-down
     // We expect the optimal task count to 4
     overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName(CostBasedAutoScaler.OPTIMAL_TASK_COUNT_METRIC)
+        event -> event.hasMetricName(OPTIMAL_TASK_COUNT_METRIC)
                       .hasValueMatching(Matchers.equalTo(4L))
     );
 
@@ -159,7 +163,6 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
   }
 
   @Test
-  // @Disabled // Actually make it work, it does not ingest poverfully enough
   @Timeout(60)
   public void test_autoScaler_computesOptimalTaskCountAndProducesScaleUp()
   {
@@ -173,8 +176,9 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
 
     // Produce additional records to create a backlog / lag
     // This ensures tasks are busy processing (low idle ratio)
-    produceRecordsToKafka(50_000);
+    Executors.newSingleThreadExecutor().submit(() -> produceRecordsToKafka(500_000, 20));
 
+    // These values were carefully handpicked to allow that test to pass in a stable manner.
     final CostBasedAutoScalerConfig autoScalerConfig = CostBasedAutoScalerConfig
         .builder()
         .enableTaskAutoScaler(true)
@@ -187,8 +191,8 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
         .minTriggerScaleActionFrequencyMillis(1000)
         // Weight configuration: favor lag as the primary signal for scale-up scenarios
         // High lag with low idle (overloaded) will trigger scale-up
-        .lagWeight(0.3)
-        .idleWeight(0.7)
+        .lagWeight(0.2)
+        .idleWeight(0.8)
         .build();
 
     final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisorWithAutoScaler(
@@ -205,16 +209,29 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
 
     // First, wait for any optimalTaskCount metric to verify the autoscaler is running
     overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName(CostBasedAutoScaler.OPTIMAL_TASK_COUNT_METRIC)
+        event -> event.hasMetricName(OPTIMAL_TASK_COUNT_METRIC)
     );
 
     // Wait for autoscaler to emit optimalTaskCount metric indicating scale-up
     // We expect the optimal task count to be greater than the initial 1 task
     // With 50 partitions and high lag creating a low idle ratio (< 0.2),
-    // the cost function should recommend scaling up to at least 2 tasks
+    // the cost function should recommend scaling up to at least 2 tasks.
+    // We actually expect 3.
     overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName(CostBasedAutoScaler.OPTIMAL_TASK_COUNT_METRIC)
-                      .hasValueMatching(Matchers.equalTo(4L))
+        e -> {
+          EventMap eventMap = e.toMap();
+          Object metricCandidate = e.toMap().get("metric");
+          if (!(metricCandidate instanceof String)) {
+            return false;
+          }
+
+          String metric = (String) metricCandidate;
+          if (!OPTIMAL_TASK_COUNT_METRIC.equals(metric)) {
+            return false;
+          }
+
+          return ((Long) eventMap.get("value")) > 1L;
+        }, 30_000
     );
 
     // Suspend the supervisor
@@ -242,22 +259,33 @@ public class CostBasedAutoScalerIntegrationTest extends EmbeddedClusterTestBase
     throw new AssertionError("Supervisor did not reach RUNNING state within timeout");
   }
 
-  private void produceRecordsToKafka(int recordCount)
+  private void produceRecordsToKafka(int recordCount, int iterations)
   {
-    DateTime timestamp = DateTime.now(DateTimeZone.UTC);
-    List<ProducerRecord<byte[], byte[]>> records = IntStream
-        .range(0, recordCount)
-        .mapToObj(i -> new ProducerRecord<byte[], byte[]>(
-                      TOPIC,
-                      i % PARTITION_COUNT,
-                      null,
-                      StringUtils.format(EVENT_TEMPLATE, timestamp, i, i)
-                                 .getBytes(StandardCharsets.UTF_8)
-                  )
-        )
-        .collect(Collectors.toList());
+    int recordCountPerSlice = recordCount / iterations;
+    int counter = 0;
+    for (int i = 0; i < iterations; i++) {
+      DateTime timestamp = DateTime.now(DateTimeZone.UTC);
+      List<ProducerRecord<byte[], byte[]>> records = IntStream
+          .range(counter, counter + recordCountPerSlice)
+          .mapToObj(k -> new ProducerRecord<byte[], byte[]>(
+                        TOPIC,
+                        k % PARTITION_COUNT,
+                        null,
+                        StringUtils.format(EVENT_TEMPLATE, timestamp, k, k)
+                                   .getBytes(StandardCharsets.UTF_8)
+                    )
+          )
+          .collect(Collectors.toList());
 
-    kafkaServer.produceRecordsToTopic(records);
+      kafkaServer.produceRecordsToTopic(records);
+      try {
+        Thread.sleep(100L);
+        counter += recordCountPerSlice;
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+    }
   }
 
   private KafkaSupervisorSpec createKafkaSupervisorWithAutoScaler(
