@@ -987,7 +987,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                   location.getPath(),
                   mountLocation.getPath()
               );
-            } else {
+            } else if (referenceProvider != null) {
               log.debug("already mounted [%s] in location[%s]", id, mountLocation.getPath());
               return;
             }
@@ -1003,7 +1003,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               );
               atomicMoveAndDeleteCacheEntryDirectory(storageDir);
             } else {
-              needsLoad = referenceProvider != null;
+              needsLoad = false;
             }
           }
           if (needsLoad) {
