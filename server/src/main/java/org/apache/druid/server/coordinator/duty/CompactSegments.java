@@ -76,7 +76,12 @@ public class CompactSegments implements CoordinatorCustomDuty
    * Must be the same as org.apache.druid.indexing.common.task.Tasks.STORE_COMPACTION_STATE_KEY
    */
   public static final String STORE_COMPACTION_STATE_KEY = "storeCompactionState";
-  public static final String COMPACTION_INTERVAL_KEY = "compactionInterval";
+
+  /**
+   * Must be the same as org.apache.druid.indexing.common.task.Tasks.COMPACTION_STATE_FINGERPRINT_KEY
+   */
+  public static final String COMPACTION_STATE_FINGERPRINT_KEY = "compactionStateFingerprint";
+
   private static final String COMPACTION_REASON_KEY = "compactionReason";
 
   private static final Logger LOG = new Logger(CompactSegments.class);

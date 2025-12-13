@@ -641,6 +641,21 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     return tuningConfig.isForceGuaranteedRollup();
   }
 
+  public static Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateFingerprintToSegments(
+      String compactionStateFingerprint
+  )
+  {
+    if (compactionStateFingerprint != null) {
+      return segments -> segments.stream()
+                                 .map(
+                                     segment -> segment.withCompactionStateFingerprint(compactionStateFingerprint)
+                                 )
+                                 .collect(Collectors.toSet());
+    } else {
+      return Function.identity();
+    }
+  }
+
   public static Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateToSegments(
       boolean storeCompactionState,
       TaskToolbox toolbox,

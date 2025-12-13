@@ -1696,6 +1696,12 @@ public class ControllerImpl implements Controller
               Tasks.DEFAULT_STORE_COMPACTION_STATE
           );
 
+      String compactionStateFingerprint = querySpec.getContext()
+          .getString(
+              Tasks.COMPACTION_STATE_FINGERPRINT_KEY,
+              null
+          );
+
       if (storeCompactionState) {
         DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
         if (!destination.isReplaceTimeChunks()) {
@@ -1720,6 +1726,9 @@ public class ControllerImpl implements Controller
               queryDef.getQueryId()
           );
         }
+      }
+      if (compactionStateFingerprint != null) {
+        compactionStateAnnotateFunction = compactionStateAnnotateFunction.andThen(addCompactionStateFingerprintToSegments(compactionStateFingerprint));
       }
       log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segments.size());
       publishAllSegments(segments, compactionStateAnnotateFunction);
@@ -1748,6 +1757,19 @@ public class ControllerImpl implements Controller
       List<String> exportedFiles = (List<String>) queryKernel.getResultObjectForStage(finalStageId);
       log.info("Query [%s] exported %d files.", queryDef.getQueryId(), exportedFiles.size());
       exportMetadataManager.writeMetadata(exportedFiles);
+    }
+  }
+
+  private static Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateFingerprintToSegments(String compactionStateFingerprint)
+  {
+    if (compactionStateFingerprint != null) {
+      return segments -> segments.stream()
+                                 .map(
+                                     segment -> segment.withCompactionStateFingerprint(compactionStateFingerprint)
+                                 )
+                                 .collect(Collectors.toSet());
+    } else {
+      return Function.identity();
     }
   }
 

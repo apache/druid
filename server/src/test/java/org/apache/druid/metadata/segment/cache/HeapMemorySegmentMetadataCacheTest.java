@@ -89,7 +89,7 @@ public class HeapMemorySegmentMetadataCacheTest
     derbyConnector.createSegmentTable();
     derbyConnector.createSegmentSchemasTable();
     derbyConnector.createPendingSegmentsTable();
-    derbyConnector.createCompactionStatesTable();;
+    derbyConnector.createCompactionStatesTable();
 
     schemaTestUtils = new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, TestHelper.JSON_MAPPER);
     EmittingLogger.registerEmitter(serviceEmitter);

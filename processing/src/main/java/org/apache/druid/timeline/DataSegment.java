@@ -258,7 +258,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     this.size = size;
     this.compactionStateFingerprint = compactionStateFingerprint != null
                                       ? STRING_INTERNER.intern(compactionStateFingerprint)
-                                      : null;;
+                                      : null;
   }
 
   /**
