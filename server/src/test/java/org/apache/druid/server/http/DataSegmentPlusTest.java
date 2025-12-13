@@ -75,6 +75,7 @@ public class DataSegmentPlusTest
     final Interval interval = Intervals.of("2011-10-01/2011-10-02");
     final ImmutableMap<String, Object> loadSpec = ImmutableMap.of("something", "or_other");
 
+    String compactionStateFingerprint = "abc123";
     String createdDateStr = "2024-01-20T00:00:00.701Z";
     String usedStatusLastUpdatedDateStr = "2024-01-20T01:00:00.701Z";
     DateTime createdDate = DateTimes.of(createdDateStr);
@@ -107,7 +108,8 @@ public class DataSegmentPlusTest
         null,
         null,
         null,
-        null
+        null,
+        compactionStateFingerprint
     );
 
     final Map<String, Object> objectMap = MAPPER.readValue(
@@ -115,7 +117,7 @@ public class DataSegmentPlusTest
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    Assert.assertEquals(7, objectMap.size());
+    Assert.assertEquals(8, objectMap.size());
     final Map<String, Object> segmentObjectMap = MAPPER.readValue(
         MAPPER.writeValueAsString(segmentPlus.getDataSegment()),
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT

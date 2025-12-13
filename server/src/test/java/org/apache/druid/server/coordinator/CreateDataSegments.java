@@ -63,6 +63,7 @@ public class CreateDataSegments
   private String upgradedFromSegmentId;
   private String schemaFingerprint;
   private Long numRows;
+  private String compactionStateFingerprint;
 
   public static CreateDataSegments ofDatasource(String datasource)
   {
@@ -127,6 +128,12 @@ public class CreateDataSegments
     return this;
   }
 
+  public CreateDataSegments withCompactionStateFingerprint(String compactionStateFingerprint)
+  {
+    this.compactionStateFingerprint = compactionStateFingerprint;
+    return this;
+  }
+
   public CreateDataSegments markUnused()
   {
     this.used = false;
@@ -187,7 +194,8 @@ public class CreateDataSegments
                 new NumberedShardSpec(numPartition, numPartitions),
                 ++uniqueIdInInterval,
                 compactionState,
-                sizeInBytes
+                sizeInBytes,
+                compactionStateFingerprint
             )
         );
       }
@@ -206,7 +214,8 @@ public class CreateDataSegments
         used,
         schemaFingerprint,
         numRows,
-        upgradedFromSegmentId
+        upgradedFromSegmentId,
+        compactionStateFingerprint
     );
   }
 
@@ -225,7 +234,8 @@ public class CreateDataSegments
         NumberedShardSpec shardSpec,
         int uniqueId,
         CompactionState compactionState,
-        long size
+        long size,
+        String compactionStateFingerprint
     )
     {
       super(
@@ -240,6 +250,7 @@ public class CreateDataSegments
           compactionState,
           IndexIO.CURRENT_VERSION_ID,
           size,
+          compactionStateFingerprint,
           PruneSpecsHolder.DEFAULT
       );
       this.uniqueId = uniqueId;

@@ -1807,7 +1807,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             usedSegments.contains(segment),
             segmentMetadata == null ? null : segmentMetadata.getSchemaFingerprint(),
             segmentMetadata == null ? null : segmentMetadata.getNumRows(),
-            null
+            null,
+            segment.getCompactionStateFingerprint()
         );
       }).collect(Collectors.toSet());
 
@@ -1929,7 +1930,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               null,
               oldSegmentMetadata.getSchemaFingerprint(),
               oldSegmentMetadata.getNumRows(),
-              upgradedFromSegmentId
+              upgradedFromSegmentId,
+              oldSegmentMetadata.getCompactionStateFingerprint()
           )
       );
     }
@@ -2021,7 +2023,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           true,
           segmentMetadata == null ? null : segmentMetadata.getSchemaFingerprint(),
           segmentMetadata == null ? null : segmentMetadata.getNumRows(),
-          upgradedFromSegmentIdMap.get(segment.getId().toString())
+          upgradedFromSegmentIdMap.get(segment.getId().toString()),
+          segment.getCompactionStateFingerprint() // TODO this might look different eventually
       );
     }).collect(Collectors.toSet());
 

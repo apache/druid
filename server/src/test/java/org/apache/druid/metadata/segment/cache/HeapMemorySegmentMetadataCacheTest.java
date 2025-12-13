@@ -89,6 +89,7 @@ public class HeapMemorySegmentMetadataCacheTest
     derbyConnector.createSegmentTable();
     derbyConnector.createSegmentSchemasTable();
     derbyConnector.createPendingSegmentsTable();
+    derbyConnector.createCompactionStatesTable();;
 
     schemaTestUtils = new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, TestHelper.JSON_MAPPER);
     EmittingLogger.registerEmitter(serviceEmitter);
@@ -510,6 +511,7 @@ public class HeapMemorySegmentMetadataCacheTest
         usedSegmentPlus.getCreatedDate(),
         updateTime.plus(1),
         true,
+        null,
         null,
         null,
         null

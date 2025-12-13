@@ -32,7 +32,7 @@ public class MetadataStorageTablesConfig
 
   public static MetadataStorageTablesConfig fromBase(String base)
   {
-    return new MetadataStorageTablesConfig(base, null, null, null, null, null, null, null, null, null, null, null, null);
+    return new MetadataStorageTablesConfig(base, null, null, null, null, null, null, null, null, null, null, null, null, null);
   }
 
   private static final String DEFAULT_BASE = "druid";
@@ -76,6 +76,9 @@ public class MetadataStorageTablesConfig
   @JsonProperty("useShortIndexNames")
   private final boolean useShortIndexNames;
 
+  @JsonProperty("compactionStates")
+  private final String compactionStatesTable;
+
   @JsonCreator
   public MetadataStorageTablesConfig(
       @JsonProperty("base") String base,
@@ -90,7 +93,8 @@ public class MetadataStorageTablesConfig
       @JsonProperty("supervisors") String supervisorTable,
       @JsonProperty("upgradeSegments") String upgradeSegmentsTable,
       @JsonProperty("segmentSchemas") String segmentSchemasTable,
-      @JsonProperty("useShortIndexNames") Boolean useShortIndexNames
+      @JsonProperty("useShortIndexNames") Boolean useShortIndexNames,
+      @JsonProperty("compactionStatesTable") String compactionStatesTable
   )
   {
     this.base = (base == null) ? DEFAULT_BASE : base;
@@ -107,6 +111,7 @@ public class MetadataStorageTablesConfig
     this.supervisorTable = makeTableName(supervisorTable, "supervisors");
     this.segmentSchemasTable = makeTableName(segmentSchemasTable, "segmentSchemas");
     this.useShortIndexNames = Configs.valueOrDefault(useShortIndexNames, false);
+    this.compactionStatesTable = makeTableName(compactionStatesTable, "compactionStates");
   }
 
   private String makeTableName(String explicitTableName, String defaultSuffix)
@@ -179,6 +184,11 @@ public class MetadataStorageTablesConfig
   public String getSegmentSchemasTable()
   {
     return segmentSchemasTable;
+  }
+
+  public String getCompactionStatesTable()
+  {
+    return compactionStatesTable;
   }
 
   /**

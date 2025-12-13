@@ -95,4 +95,9 @@ public interface MetadataStorageConnector
    * SegmentSchema table is created only when CentralizedDatasourceSchema feature is enabled.
    */
   void createSegmentSchemasTable();
+
+  /**
+   *
+   */
+  void createCompactionStatesTable();
 }

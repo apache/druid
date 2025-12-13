@@ -513,6 +513,120 @@ public class DataSegmentTest
 
   }
 
+  @Test
+  public void testSerializationWithCompactionStateFingerprint() throws Exception
+  {
+    final Interval interval = Intervals.of("2011-10-01/2011-10-02");
+    final ImmutableMap<String, Object> loadSpec = ImmutableMap.of("something", "or_other");
+    final String fingerprint = "abc123def456";
+
+    DataSegment segment = DataSegment.builder()
+                                     .dataSource("something")
+                                     .interval(interval)
+                                     .version("1")
+                                     .loadSpec(loadSpec)
+                                     .dimensions(Arrays.asList("dim1", "dim2"))
+                                     .metrics(Arrays.asList("met1", "met2"))
+                                     .shardSpec(new NumberedShardSpec(3, 0))
+                                     .compactionStateFingerprint(fingerprint)
+                                     .binaryVersion(TEST_VERSION)
+                                     .size(1)
+                                     .build();
+
+    // Verify fingerprint is present in serialized JSON
+    final Map<String, Object> objectMap = MAPPER.readValue(
+        MAPPER.writeValueAsString(segment),
+        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+    );
+    Assert.assertEquals(fingerprint, objectMap.get("compactionStateFingerprint"));
+
+    // Verify deserialization preserves fingerprint
+    DataSegment deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
+    Assert.assertEquals(fingerprint, deserializedSegment.getCompactionStateFingerprint());
+    Assert.assertEquals(segment.hashCode(), deserializedSegment.hashCode());
+  }
+
+  @Test
+  public void testSerializationWithNullCompactionStateFingerprint() throws Exception
+  {
+    final Interval interval = Intervals.of("2011-10-01/2011-10-02");
+    final ImmutableMap<String, Object> loadSpec = ImmutableMap.of("something", "or_other");
+
+    DataSegment segment = DataSegment.builder()
+                                     .dataSource("something")
+                                     .interval(interval)
+                                     .version("1")
+                                     .loadSpec(loadSpec)
+                                     .dimensions(Arrays.asList("dim1", "dim2"))
+                                     .metrics(Arrays.asList("met1", "met2"))
+                                     .shardSpec(new NumberedShardSpec(3, 0))
+                                     .compactionStateFingerprint(null)
+                                     .binaryVersion(TEST_VERSION)
+                                     .size(1)
+                                     .build();
+
+    // Verify fingerprint is NOT present in serialized JSON (due to @JsonInclude(NON_NULL))
+    final Map<String, Object> objectMap = MAPPER.readValue(
+        MAPPER.writeValueAsString(segment),
+        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+    );
+    Assert.assertFalse("compactionStateFingerprint should not be in JSON when null",
+                       objectMap.containsKey("compactionStateFingerprint"));
+
+    // Verify deserialization handles missing fingerprint
+    DataSegment deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
+    Assert.assertNull(deserializedSegment.getCompactionStateFingerprint());
+    Assert.assertEquals(segment.hashCode(), deserializedSegment.hashCode());
+  }
+
+  @Test
+  public void testDeserializationBackwardCompatibility_missingCompactionStateFingerprint() throws Exception
+  {
+    // Simulate JSON from old Druid version without compactionStateFingerprint field
+    String jsonWithoutFingerprint = "{"
+                                    + "\"dataSource\": \"something\","
+                                    + "\"interval\": \"2011-10-01T00:00:00.000Z/2011-10-02T00:00:00.000Z\","
+                                    + "\"version\": \"1\","
+                                    + "\"loadSpec\": {\"something\": \"or_other\"},"
+                                    + "\"dimensions\": \"dim1,dim2\","
+                                    + "\"metrics\": \"met1,met2\","
+                                    + "\"shardSpec\": {\"type\": \"numbered\", \"partitionNum\": 3, \"partitions\": 0},"
+                                    + "\"binaryVersion\": 9,"
+                                    + "\"size\": 1"
+                                    + "}";
+
+    DataSegment deserializedSegment = MAPPER.readValue(jsonWithoutFingerprint, DataSegment.class);
+    Assert.assertNull("compactionStateFingerprint should be null for backward compatibility",
+                      deserializedSegment.getCompactionStateFingerprint());
+    Assert.assertEquals("something", deserializedSegment.getDataSource());
+    Assert.assertEquals(Intervals.of("2011-10-01/2011-10-02"), deserializedSegment.getInterval());
+  }
+
+  @Test
+  public void testWithCompactionStateFingerprint()
+  {
+    final String fingerprint = "test_fingerprint_12345";
+    final DataSegment segment1 = DataSegment.builder()
+                                            .dataSource("foo")
+                                            .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
+                                            .shardSpec(getShardSpec(7))
+                                            .size(0)
+                                            .compactionStateFingerprint(fingerprint)
+                                            .build();
+    final DataSegment segment2 = DataSegment.builder()
+                                            .dataSource("foo")
+                                            .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
+                                            .shardSpec(getShardSpec(7))
+                                            .size(0)
+                                            .build();
+
+    DataSegment withFingerprint = segment2.withCompactionStateFingerprint(fingerprint);
+    Assert.assertEquals(fingerprint, withFingerprint.getCompactionStateFingerprint());
+    Assert.assertEquals(segment1, withFingerprint);
+  }
+
   private static void assertAllFieldsEquals(DataSegment segment1, DataSegment segment2)
   {
     Assert.assertEquals(segment1.getDataSource(), segment2.getDataSource());

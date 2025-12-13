@@ -585,7 +585,7 @@ public class SqlSegmentsMetadataQuery
       final Query<Map<String, Object>> query = handle.createQuery(
           StringUtils.format(
               "SELECT payload, used, schema_fingerprint, num_rows,"
-              + " upgraded_from_segment_id, used_status_last_updated"
+              + " upgraded_from_segment_id, used_status_last_updated, compaction_state_fingerprint"
               + " FROM %s WHERE dataSource = :dataSource %s",
               dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
           )
@@ -607,7 +607,8 @@ public class SqlSegmentsMetadataQuery
                     r.getBoolean(2),
                     schemaFingerprint,
                     numRows,
-                    r.getString(5)
+                    r.getString(5),
+                    r.getString(7)
                 );
               }
           )
@@ -615,7 +616,7 @@ public class SqlSegmentsMetadataQuery
     } else {
       final Query<Map<String, Object>> query = handle.createQuery(
           StringUtils.format(
-              "SELECT payload, used, upgraded_from_segment_id, used_status_last_updated, created_date"
+              "SELECT payload, used, upgraded_from_segment_id, used_status_last_updated, created_date, compaction_state_fingerprint"
               + " FROM %s WHERE dataSource = :dataSource %s",
               dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
           )
@@ -634,7 +635,8 @@ public class SqlSegmentsMetadataQuery
                   r.getBoolean(2),
                   null,
                   null,
-                  r.getString(3)
+                  r.getString(3),
+                  r.getString(6)
               )
           )
           .iterator();
@@ -1720,6 +1722,7 @@ public class SqlSegmentsMetadataQuery
             DateTimes.of(r.getString(3)),
             nullAndEmptySafeDate(r.getString(4)),
             used,
+            null,
             null,
             null,
             null
