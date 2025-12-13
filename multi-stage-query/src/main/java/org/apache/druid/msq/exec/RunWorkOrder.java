@@ -65,7 +65,6 @@ import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.input.stage.StageInputSliceReader;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.SegmentsInputSliceReader;
-import org.apache.druid.msq.kernel.ShuffleKind;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.shuffle.output.DurableStorageOutputChannelFactory;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -174,7 +173,6 @@ public class RunWorkOrder
 
     try {
       exec.registerCancellationId(cancellationId);
-      initGlobalSortPartitionBoundariesIfNeeded();
       startStageProcessor();
       setUpCompletionCallbacks();
     }
@@ -282,25 +280,6 @@ public class RunWorkOrder
     final ExecutionContext executionContext = makeExecutionContext();
 
     stageResultFuture = processor.execute(executionContext);
-  }
-
-  /**
-   * Initialize {@link #stagePartitionBoundariesFuture} if it will be needed (i.e. if {@link ShuffleKind#GLOBAL_SORT})
-   * but does not need statistics. In this case, it is known upfront, before the job starts.
-   */
-  private void initGlobalSortPartitionBoundariesIfNeeded()
-  {
-    if (workOrder.getStageDefinition().doesShuffle()
-        && workOrder.getStageDefinition().getShuffleSpec().kind() == ShuffleKind.GLOBAL_SORT
-        && !workOrder.getStageDefinition().mustGatherResultKeyStatistics()) {
-      // Result key stats aren't needed, so the partition boundaries are knowable ahead of time. Compute them now.
-      final ClusterByPartitions boundaries =
-          workOrder.getStageDefinition()
-                   .generatePartitionBoundariesForShuffle(null)
-                   .valueOrThrow();
-
-      stagePartitionBoundariesFuture.set(boundaries);
-    }
   }
 
   /**

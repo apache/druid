@@ -1444,6 +1444,7 @@ public class ControllerImpl implements Controller
       final QueryDefinition queryDef,
       final ControllerQueryKernel queryKernel,
       final int stageNumber,
+      final int maxInputFilesPerWorker,
       @Nullable final List<SegmentIdWithShardSpec> segmentsToGenerate
   )
   {
@@ -1454,7 +1455,8 @@ public class ControllerImpl implements Controller
         segmentsToGenerate
     );
 
-    final Int2ObjectMap<WorkOrder> workOrders = queryKernel.createWorkOrders(stageNumber, extraInfos);
+    final Int2ObjectMap<WorkOrder> workOrders =
+        queryKernel.createWorkOrders(stageNumber, maxInputFilesPerWorker, extraInfos);
     final StageId stageId = new StageId(queryDef.getQueryId(), stageNumber);
 
     queryKernel.startStage(stageId);
@@ -2533,8 +2535,12 @@ public class ControllerImpl implements Controller
      */
     private void startStages() throws IOException, InterruptedException
     {
+      final int maxInputFilesPerWorker =
+          MultiStageQueryContext.getMaxInputFilesPerWorker(querySpec.getContext());
       final long maxInputBytesPerWorker =
           MultiStageQueryContext.getMaxInputBytesPerWorker(querySpec.getContext());
+      final int maxPartitions =
+          MultiStageQueryContext.getMaxPartitions(querySpec.getContext());
 
       logKernelStatus(queryDef.getQueryId(), queryKernel);
 
@@ -2545,7 +2551,9 @@ public class ControllerImpl implements Controller
             inputSpecSlicerFactory,
             querySpec.getAssignmentStrategy(),
             rowBasedFrameType,
-            maxInputBytesPerWorker
+            maxInputFilesPerWorker,
+            maxInputBytesPerWorker,
+            maxPartitions
         );
 
         for (final StageId stageId : newStageIds) {
@@ -2573,7 +2581,13 @@ public class ControllerImpl implements Controller
             retryWorkersOrFailJob(queryKernel, workerFaultSet);
           }
           stageRuntimesForLiveReports.put(stageId.getStageNumber(), new Interval(DateTimes.nowUtc(), DateTimes.MAX));
-          startWorkForStage(queryDef, queryKernel, stageId.getStageNumber(), segmentsToGenerate);
+          startWorkForStage(
+              queryDef,
+              queryKernel,
+              stageId.getStageNumber(),
+              maxInputFilesPerWorker,
+              segmentsToGenerate
+          );
         }
       } while (!newStageIds.isEmpty());
     }

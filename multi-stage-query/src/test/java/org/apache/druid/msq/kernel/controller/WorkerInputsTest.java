@@ -79,6 +79,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(denseWorkers(4), true),
         WorkerAssignmentStrategy.MAX,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -108,6 +109,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(new IntAVLTreeSet(new int[]{1, 3, 4, 5}), true),
         WorkerAssignmentStrategy.MAX,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -137,6 +139,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(denseWorkers(4), true),
         WorkerAssignmentStrategy.MAX,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -166,6 +169,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(denseWorkers(4), true),
         WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -192,6 +196,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(denseWorkers(4), true),
         WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -219,6 +224,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(denseWorkers(4), true),
         WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -245,6 +251,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(denseWorkers(4), true),
         WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -274,6 +281,7 @@ public class WorkerInputsTest
             new Int2ObjectAVLTreeMap<>(ImmutableMap.of(0, OutputChannelMode.LOCAL_STORAGE))
         ),
         WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -322,6 +330,7 @@ public class WorkerInputsTest
             new Int2ObjectAVLTreeMap<>(ImmutableMap.of(0, OutputChannelMode.LOCAL_STORAGE))
         ),
         WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -357,6 +366,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(denseWorkers(4), true),
         WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -384,6 +394,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(denseWorkers(2), true),
         WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -417,6 +428,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(denseWorkers(1), true),
         WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -449,6 +461,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         testInputSpecSlicer,
         WorkerAssignmentStrategy.MAX,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
@@ -493,6 +506,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         testInputSpecSlicer,
         WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         100
     );
 
@@ -536,6 +550,7 @@ public class WorkerInputsTest
         Int2IntMaps.EMPTY_MAP,
         testInputSpecSlicer,
         WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
