@@ -63,16 +63,19 @@ public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster
    */
   private final boolean realtime;
 
+  private final boolean loaded;
+
   @JsonCreator
   public SegmentStatusInCluster(
       @JsonProperty("overshadowed") boolean overshadowed,
       @JsonProperty("replicationFactor") @Nullable Integer replicationFactor,
       @JsonProperty("numRows") @Nullable Long numRows,
-      @JsonProperty("realtime") boolean realtime
+      @JsonProperty("realtime") boolean realtime,
+      @JsonProperty("loaded") boolean loaded
   )
   {
     // Jackson will overwrite dataSegment if needed (even though the field is final)
-    this(null, overshadowed, replicationFactor, numRows, realtime);
+    this(null, overshadowed, replicationFactor, numRows, realtime, loaded);
   }
 
   public SegmentStatusInCluster(
@@ -80,7 +83,8 @@ public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster
       boolean overshadowed,
       Integer replicationFactor,
       Long numRows,
-      boolean realtime
+      boolean realtime,
+      boolean loaded
   )
   {
     this.dataSegment = dataSegment;
@@ -88,6 +92,7 @@ public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster
     this.replicationFactor = replicationFactor;
     this.numRows = numRows;
     this.realtime = realtime;
+    this.loaded = loaded;
   }
 
   @JsonProperty
@@ -122,6 +127,12 @@ public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster
     return realtime;
   }
 
+  @JsonProperty
+  public boolean isLoaded()
+  {
+    return loaded;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -131,18 +142,20 @@ public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
+
     SegmentStatusInCluster that = (SegmentStatusInCluster) o;
     return overshadowed == that.overshadowed
            && realtime == that.realtime
            && Objects.equals(replicationFactor, that.replicationFactor)
            && Objects.equals(dataSegment, that.dataSegment)
-           && Objects.equals(numRows, that.numRows);
+           && Objects.equals(numRows, that.numRows)
+           && Objects.equals(loaded, that.loaded);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(overshadowed, replicationFactor, dataSegment, numRows, realtime);
+    return Objects.hash(overshadowed, replicationFactor, dataSegment, numRows, realtime, loaded);
   }
 
   @Override
@@ -160,6 +173,7 @@ public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster
            ", dataSegment=" + dataSegment +
            ", numRows=" + numRows +
            ", realtime=" + realtime +
+           ", loaded=" + loaded +
            '}';
   }
 }

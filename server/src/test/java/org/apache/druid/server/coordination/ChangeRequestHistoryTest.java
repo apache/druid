@@ -46,7 +46,7 @@ public class ChangeRequestHistoryTest
     history.addChangeRequest(new SegmentChangeRequestNoop());
     Assert.assertEquals(1, history.getLastCounter().getCounter());
 
-    ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot = history.getRequestsSince(ChangeRequestHistory.Counter.ZERO)
+    ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot = history.getRequestsSinceAsync(ChangeRequestHistory.Counter.ZERO)
                                                                        .get();
     Assert.assertEquals(1, snapshot.getRequests().size());
     Assert.assertEquals(1, snapshot.getCounter().getCounter());
@@ -54,11 +54,11 @@ public class ChangeRequestHistoryTest
     history.addChangeRequest(new SegmentChangeRequestNoop());
     Assert.assertEquals(2, history.getLastCounter().getCounter());
 
-    snapshot = history.getRequestsSince(snapshot.getCounter()).get();
+    snapshot = history.getRequestsSinceAsync(snapshot.getCounter()).get();
     Assert.assertEquals(1, snapshot.getRequests().size());
     Assert.assertEquals(2, snapshot.getCounter().getCounter());
 
-    snapshot = history.getRequestsSince(ChangeRequestHistory.Counter.ZERO).get();
+    snapshot = history.getRequestsSinceAsync(ChangeRequestHistory.Counter.ZERO).get();
     Assert.assertEquals(2, snapshot.getRequests().size());
     Assert.assertEquals(2, snapshot.getCounter().getCounter());
   }
@@ -66,7 +66,7 @@ public class ChangeRequestHistoryTest
   @Test
   public void testTruncatedHistory() throws Exception
   {
-    ChangeRequestHistory<DataSegmentChangeRequest> history = new ChangeRequestHistory(2);
+    ChangeRequestHistory<DataSegmentChangeRequest> history = new ChangeRequestHistory(2, true);
 
     history.addChangeRequest(new SegmentChangeRequestNoop());
     ChangeRequestHistory.Counter one = history.getLastCounter();
@@ -80,11 +80,11 @@ public class ChangeRequestHistoryTest
     history.addChangeRequest(new SegmentChangeRequestNoop());
     ChangeRequestHistory.Counter four = history.getLastCounter();
 
-    Assert.assertTrue(history.getRequestsSince(ChangeRequestHistory.Counter.ZERO).get().isResetCounter());
-    Assert.assertTrue(history.getRequestsSince(one).get().isResetCounter());
-    Assert.assertTrue(history.getRequestsSince(two).get().isResetCounter());
+    Assert.assertTrue(history.getRequestsSinceAsync(ChangeRequestHistory.Counter.ZERO).get().isResetCounter());
+    Assert.assertTrue(history.getRequestsSinceAsync(one).get().isResetCounter());
+    Assert.assertTrue(history.getRequestsSinceAsync(two).get().isResetCounter());
 
-    ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot = history.getRequestsSince(three).get();
+    ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot = history.getRequestsSinceAsync(three).get();
     Assert.assertEquals(1, snapshot.getRequests().size());
     Assert.assertEquals(4, snapshot.getCounter().getCounter());
   }
@@ -92,9 +92,9 @@ public class ChangeRequestHistoryTest
   @Test
   public void testCounterHashMismatch() throws Exception
   {
-    ChangeRequestHistory<DataSegmentChangeRequest> history = new ChangeRequestHistory(3);
+    ChangeRequestHistory<DataSegmentChangeRequest> history = new ChangeRequestHistory(3, true);
 
-    Assert.assertTrue(history.getRequestsSince(new ChangeRequestHistory.Counter(0, 1234)).get().isResetCounter());
+    Assert.assertTrue(history.getRequestsSinceAsync(new ChangeRequestHistory.Counter(0, 1234)).get().isResetCounter());
 
     history.addChangeRequest(new SegmentChangeRequestNoop());
     ChangeRequestHistory.Counter one = history.getLastCounter();
@@ -102,13 +102,13 @@ public class ChangeRequestHistoryTest
     history.addChangeRequest(new SegmentChangeRequestNoop());
     ChangeRequestHistory.Counter two = history.getLastCounter();
 
-    Assert.assertTrue(history.getRequestsSince(new ChangeRequestHistory.Counter(0, 1234)).get().isResetCounter());
+    Assert.assertTrue(history.getRequestsSinceAsync(new ChangeRequestHistory.Counter(0, 1234)).get().isResetCounter());
 
-    ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot = history.getRequestsSince(one).get();
+    ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot = history.getRequestsSinceAsync(one).get();
     Assert.assertEquals(1, snapshot.getRequests().size());
     Assert.assertEquals(2, snapshot.getCounter().getCounter());
 
-    Assert.assertTrue(history.getRequestsSince(new ChangeRequestHistory.Counter(1, 1234)).get().isResetCounter());
+    Assert.assertTrue(history.getRequestsSinceAsync(new ChangeRequestHistory.Counter(1, 1234)).get().isResetCounter());
 
     history.addChangeRequest(new SegmentChangeRequestNoop());
     ChangeRequestHistory.Counter three = history.getLastCounter();
@@ -116,11 +116,11 @@ public class ChangeRequestHistoryTest
     history.addChangeRequest(new SegmentChangeRequestNoop());
     ChangeRequestHistory.Counter four = history.getLastCounter();
 
-    snapshot = history.getRequestsSince(two).get();
+    snapshot = history.getRequestsSinceAsync(two).get();
     Assert.assertEquals(2, snapshot.getRequests().size());
     Assert.assertEquals(4, snapshot.getCounter().getCounter());
 
-    Assert.assertTrue(history.getRequestsSince(new ChangeRequestHistory.Counter(2, 1234)).get().isResetCounter());
+    Assert.assertTrue(history.getRequestsSinceAsync(new ChangeRequestHistory.Counter(2, 1234)).get().isResetCounter());
   }
 
   @Test
@@ -128,7 +128,7 @@ public class ChangeRequestHistoryTest
   {
     final ChangeRequestHistory<DataSegmentChangeRequest> history = new ChangeRequestHistory();
 
-    ListenableFuture<ChangeRequestsSnapshot<DataSegmentChangeRequest>> future = history.getRequestsSince(
+    ListenableFuture<ChangeRequestsSnapshot<DataSegmentChangeRequest>> future = history.getRequestsSinceAsync(
         ChangeRequestHistory.Counter.ZERO
     );
     Assert.assertEquals(1, history.waitingFutures.size());
@@ -163,7 +163,7 @@ public class ChangeRequestHistoryTest
   {
     final ChangeRequestHistory history = new ChangeRequestHistory();
 
-    Future<ChangeRequestsSnapshot> future = history.getRequestsSince(
+    Future<ChangeRequestsSnapshot> future = history.getRequestsSinceAsync(
         ChangeRequestHistory.Counter.ZERO
     );
 
@@ -186,7 +186,7 @@ public class ChangeRequestHistoryTest
   {
     final ChangeRequestHistory<DataSegmentChangeRequest> history = new ChangeRequestHistory();
 
-    ListenableFuture<ChangeRequestsSnapshot<DataSegmentChangeRequest>> future = history.getRequestsSince(
+    ListenableFuture<ChangeRequestsSnapshot<DataSegmentChangeRequest>> future = history.getRequestsSinceAsync(
         ChangeRequestHistory.Counter.ZERO
     );
     Assert.assertEquals(1, history.waitingFutures.size());

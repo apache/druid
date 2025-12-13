@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.DruidServer;
@@ -134,7 +135,15 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
         QueryStackTests.getParallelMergeConfig(USE_PARALLEL_MERGE_POOL_CONFIGURED),
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        emitter
+        emitter,
+        new BrokerSegmentWatcherConfig()
+        {
+          @Override
+          public boolean detectUnavailableSegments()
+          {
+            return false;
+          }
+        }
     );
     servers = new ArrayList<>();
   }
