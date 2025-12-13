@@ -225,7 +225,8 @@ public class CoordinatorSimulationBuilder
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionStatusTracker(),
         env.configSyncer,
-        env.cloneStatusManager
+        env.cloneStatusManager,
+        null // TODO this probably needs some type of impl
     );
 
     return new SimulationImpl(coordinator, env);

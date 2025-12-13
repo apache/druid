@@ -39,12 +39,14 @@ import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.metadata.CompactionStateManager;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
@@ -103,14 +105,18 @@ public class CompactSegments implements CoordinatorCustomDuty
   // read by HTTP threads processing Coordinator API calls.
   private final AtomicReference<Map<String, AutoCompactionSnapshot>> autoCompactionSnapshotPerDataSource = new AtomicReference<>();
 
+  private final CompactionStateManager compactionStateManager;
+
   @JsonCreator
   public CompactSegments(
       @JacksonInject CompactionStatusTracker statusTracker,
-      @JacksonInject OverlordClient overlordClient
+      @JacksonInject OverlordClient overlordClient,
+      @JacksonInject CompactionStateManager compactionStateManager
   )
   {
     this.overlordClient = overlordClient;
     this.statusTracker = statusTracker;
+    this.compactionStateManager = compactionStateManager;
     resetCompactionSnapshot();
   }
 
@@ -269,9 +275,18 @@ public class CompactSegments implements CoordinatorCustomDuty
         snapshotBuilder.addToComplete(entry);
       }
 
+      CompactionState compactionState =
+          createCompactionStateFromConfig(config);
+
       String compactionStateFingerprint = CompactionState.generateCompactionStateFingerprint(
-          createCompactionStateFromConfig(config),
+          compactionState,
           config.getDataSource()
+      );
+
+      compactionStateManager.persistCompactionState(
+          config.getDataSource(),
+          Map.of(compactionStateFingerprint, compactionState),
+          DateTimes.nowUtc()
       );
 
       final ClientCompactionTaskQuery taskPayload = createCompactionTask(

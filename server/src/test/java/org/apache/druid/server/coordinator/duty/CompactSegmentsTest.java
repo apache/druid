@@ -79,6 +79,7 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.BatchIOConfig;
+import org.apache.druid.segment.metadata.CompactionStateManager;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
@@ -109,6 +110,7 @@ import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.apache.druid.utils.Streams;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -197,6 +199,16 @@ public class CompactSegmentsTest
   private DataSourcesSnapshot dataSources;
   private CompactionStatusTracker statusTracker;
   private final Map<String, List<DataSegment>> datasourceToSegments = new HashMap<>();
+  private final CompactionStateManager compactionStateManager = new CompactionStateManager() {
+    @Override
+    public void persistCompactionState(
+        final String dataSource,
+        final Map<String, CompactionState> fingerprintToStateMap,
+        final DateTime updateTime
+    )
+    {
+    }
+  };
 
   public CompactSegmentsTest(
       PartitionsSpec partitionsSpec,
@@ -277,7 +289,7 @@ public class CompactSegmentsTest
             .addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE)
     );
 
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient, compactionStateManager);
     String compactSegmentString = JSON_MAPPER.writeValueAsString(compactSegments);
     CompactSegments serdeCompactSegments = JSON_MAPPER.readValue(compactSegmentString, CompactSegments.class);
 
@@ -289,7 +301,7 @@ public class CompactSegmentsTest
   public void testRun()
   {
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient, compactionStateManager);
 
     final Supplier<String> expectedVersionSupplier = new Supplier<>()
     {
@@ -372,7 +384,7 @@ public class CompactSegmentsTest
   public void testMakeStats()
   {
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient, compactionStateManager);
 
     // Before any compaction, we do not have any snapshot of compactions
     Map<String, AutoCompactionSnapshot> autoCompactionSnapshots = compactSegments.getAutoCompactionSnapshot();
@@ -496,7 +508,7 @@ public class CompactSegmentsTest
     dataSources = DataSourcesSnapshot.fromUsedSegments(segments);
 
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient, compactionStateManager);
 
     // Before any compaction, we do not have any snapshot of compactions
     Map<String, AutoCompactionSnapshot> autoCompactionSnapshots = compactSegments.getAutoCompactionSnapshot();
@@ -558,7 +570,7 @@ public class CompactSegmentsTest
   public void testMakeStatsWithDeactivatedDatasource()
   {
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient, compactionStateManager);
 
     // Before any compaction, we do not have any snapshot of compactions
     Map<String, AutoCompactionSnapshot> autoCompactionSnapshots = compactSegments.getAutoCompactionSnapshot();
@@ -650,7 +662,7 @@ public class CompactSegmentsTest
     dataSources = DataSourcesSnapshot.fromUsedSegments(segments);
 
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient, compactionStateManager);
 
     // Before any compaction, we do not have any snapshot of compactions
     Map<String, AutoCompactionSnapshot> autoCompactionSnapshots = compactSegments.getAutoCompactionSnapshot();
@@ -709,7 +721,7 @@ public class CompactSegmentsTest
   public void testRunMultipleCompactionTaskSlots()
   {
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient, compactionStateManager);
 
     final CoordinatorRunStats stats = doCompactSegments(compactSegments, 3);
     Assert.assertEquals(3, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
@@ -729,7 +741,7 @@ public class CompactSegmentsTest
     int maxCompactionSlot = 3;
     Assert.assertTrue(maxCompactionSlot < MAXIMUM_CAPACITY_WITH_AUTO_SCALE);
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient, compactionStateManager);
     final CoordinatorRunStats stats =
         doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot);
     Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
@@ -749,7 +761,7 @@ public class CompactSegmentsTest
     int maxCompactionSlot = 100;
     Assert.assertFalse(maxCompactionSlot < MAXIMUM_CAPACITY_WITH_AUTO_SCALE);
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient, compactionStateManager);
     final CoordinatorRunStats stats =
         doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot);
     Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
@@ -771,7 +783,7 @@ public class CompactSegmentsTest
   {
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient, compactionStateManager);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
@@ -802,7 +814,7 @@ public class CompactSegmentsTest
   {
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient, compactionStateManager);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
@@ -826,7 +838,7 @@ public class CompactSegmentsTest
   {
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient, compactionStateManager);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
@@ -849,7 +861,7 @@ public class CompactSegmentsTest
   {
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient, compactionStateManager);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
@@ -886,7 +898,7 @@ public class CompactSegmentsTest
   {
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient, compactionStateManager);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
@@ -917,7 +929,7 @@ public class CompactSegmentsTest
   {
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient, compactionStateManager);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
@@ -940,7 +952,7 @@ public class CompactSegmentsTest
   {
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient, compactionStateManager);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     final List<AggregateProjectionSpec> projections = List.of(
@@ -1015,7 +1027,7 @@ public class CompactSegmentsTest
                     )
                     .buildSpec()
     );
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient, compactionStateManager);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     compactionConfigs.add(
         new CatalogDataSourceCompactionConfig(
@@ -1041,7 +1053,7 @@ public class CompactSegmentsTest
   {
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient, compactionStateManager);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
@@ -1132,7 +1144,7 @@ public class CompactSegmentsTest
     Mockito.when(mockClient.taskPayload(ArgumentMatchers.eq(conflictTaskId)))
            .thenReturn(Futures.immediateFuture(runningConflictCompactionTaskPayload));
 
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient, compactionStateManager);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     compactionConfigs.add(
         InlineSchemaDataSourceCompactionConfig.builder()
@@ -1171,7 +1183,7 @@ public class CompactSegmentsTest
   public void testIntervalIsCompactedAgainWhenSegmentIsAdded()
   {
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient, compactionStateManager);
 
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     final DataSourceCompactionConfig compactionConfig = InlineSchemaDataSourceCompactionConfig
@@ -1217,7 +1229,7 @@ public class CompactSegmentsTest
   public void testRunParallelCompactionMultipleCompactionTaskSlots()
   {
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient, compactionStateManager);
     final CoordinatorRunStats stats;
     // Native uses maxNumConcurrentSubTasks for task slots whereas MSQ uses maxNumTasks.
     if (engine == CompactionEngine.NATIVE) {
@@ -1254,7 +1266,7 @@ public class CompactSegmentsTest
 
     // Verify that locked intervals are skipped and only one compaction task
     // is submitted for dataSource_0
-    CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
+    CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient, compactionStateManager);
     final CoordinatorRunStats stats =
         doCompactSegments(compactSegments, createcompactionConfigsForNative(2), 4);
     Assert.assertEquals(1, stats.get(Stats.Compaction.SUBMITTED_TASKS));
@@ -1273,7 +1285,7 @@ public class CompactSegmentsTest
   {
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient, compactionStateManager);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
@@ -1302,7 +1314,7 @@ public class CompactSegmentsTest
   {
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient, compactionStateManager);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
@@ -1327,7 +1339,7 @@ public class CompactSegmentsTest
     AggregatorFactory[] aggregatorFactories = new AggregatorFactory[] {new CountAggregatorFactory("cnt")};
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient, compactionStateManager);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
@@ -1383,7 +1395,7 @@ public class CompactSegmentsTest
 
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient, compactionStateManager);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     compactionConfigs.add(
         InlineSchemaDataSourceCompactionConfig.builder()
@@ -1443,7 +1455,7 @@ public class CompactSegmentsTest
 
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient, compactionStateManager);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     compactionConfigs.add(
         InlineSchemaDataSourceCompactionConfig.builder()
@@ -1476,7 +1488,7 @@ public class CompactSegmentsTest
   {
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient, compactionStateManager);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
@@ -1503,7 +1515,7 @@ public class CompactSegmentsTest
   {
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
-    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient, compactionStateManager);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(

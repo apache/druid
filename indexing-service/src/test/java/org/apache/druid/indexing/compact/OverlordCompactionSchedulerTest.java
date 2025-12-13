@@ -231,7 +231,8 @@ public class OverlordCompactionSchedulerTest
         (nameFormat, numThreads) -> new WrappingScheduledExecutorService("test", executor, false),
         brokerClient,
         serviceEmitter,
-        OBJECT_MAPPER
+        OBJECT_MAPPER,
+        null // TODO is there any legit testing needed here for compaction state manager
     );
   }
 

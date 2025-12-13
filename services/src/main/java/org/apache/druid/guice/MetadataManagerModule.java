@@ -41,6 +41,7 @@ import org.apache.druid.metadata.segment.SqlSegmentMetadataReadOnlyTransactionFa
 import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
+import org.apache.druid.segment.metadata.CompactionStateManager;
 import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
@@ -60,6 +61,7 @@ import java.util.Set;
  * <li>{@link CoordinatorConfigManager}</li>
  * <li>{@link SegmentMetadataCache}</li>
  * <li>{@link SegmentSchemaCache} - Coordinator only</li>
+ * <li>{@link CompactionStateManager}</li>
  * </ul>
  */
 public class MetadataManagerModule implements Module
@@ -101,6 +103,8 @@ public class MetadataManagerModule implements Module
     binder.bind(SegmentMetadataCache.class)
           .to(HeapMemorySegmentMetadataCache.class)
           .in(LazySingleton.class);
+    binder.bind(CompactionStateManager.class)
+          .in(ManageLifecycle.class);
 
     // Coordinator-only dependencies
     if (nodeRoles.contains(NodeRole.COORDINATOR)) {

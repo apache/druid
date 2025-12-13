@@ -143,7 +143,8 @@ public class CompactionRunSimulator
     );
 
     final CoordinatorRunStats stats = new CoordinatorRunStats();
-    new CompactSegments(simulationStatusTracker, readOnlyOverlordClient).run(
+    // TODO probably need something not null here
+    new CompactSegments(simulationStatusTracker, readOnlyOverlordClient, null).run(
         compactionConfig.withClusterConfig(configWithUnlimitedTaskSlots),
         dataSourcesSnapshot,
         defaultEngine,

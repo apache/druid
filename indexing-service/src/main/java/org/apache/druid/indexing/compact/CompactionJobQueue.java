@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.metadata.CompactionStateManager;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionSlotManager;
@@ -104,7 +105,8 @@ public class CompactionJobQueue
       GlobalTaskLockbox taskLockbox,
       OverlordClient overlordClient,
       BrokerClient brokerClient,
-      ObjectMapper objectMapper
+      ObjectMapper objectMapper,
+      CompactionStateManager compactionStateManager
   )
   {
     this.runStats = new CoordinatorRunStats();
@@ -120,7 +122,8 @@ public class CompactionJobQueue
         DateTimes.nowUtc(),
         clusterCompactionConfig,
         dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource()::get,
-        snapshotBuilder
+        snapshotBuilder,
+        compactionStateManager
     );
 
     this.taskActionClientFactory = taskActionClientFactory;

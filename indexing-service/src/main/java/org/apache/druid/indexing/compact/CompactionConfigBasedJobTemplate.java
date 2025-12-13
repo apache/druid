@@ -23,6 +23,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.input.DruidInputSource;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.server.compaction.CompactionCandidate;
@@ -38,6 +39,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -71,10 +73,20 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
 
     final List<CompactionJob> jobs = new ArrayList<>();
 
+    CompactionState compactionState = CompactSegments.createCompactionStateFromConfig(config);
+
     String compactionStateFingerprint = CompactionState.generateCompactionStateFingerprint(
-        CompactSegments.createCompactionStateFromConfig(config),
+        compactionState,
         config.getDataSource()
     );
+
+    if (segmentIterator.hasNext()) {
+      params.getCompactionStateManager().persistCompactionState(
+          config.getDataSource(),
+          Map.of(compactionStateFingerprint, compactionState),
+          DateTimes.nowUtc()
+      );
+    }
 
     // Create a job for each CompactionCandidate
     while (segmentIterator.hasNext()) {
