@@ -31,6 +31,7 @@ import org.apache.druid.server.compaction.DataSourceCompactibleSegmentIterator;
 import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
 
@@ -70,12 +71,22 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
 
     final List<CompactionJob> jobs = new ArrayList<>();
 
+    String compactionStateFingerprint = CompactionState.generateCompactionStateFingerprint(
+        CompactSegments.createCompactionStateFromConfig(config),
+        config.getDataSource()
+    );
+
     // Create a job for each CompactionCandidate
     while (segmentIterator.hasNext()) {
       final CompactionCandidate candidate = segmentIterator.next();
 
-      ClientCompactionTaskQuery taskPayload
-          = CompactSegments.createCompactionTask(candidate, config, params.getClusterCompactionConfig().getEngine());
+      ClientCompactionTaskQuery taskPayload = CompactSegments.createCompactionTask(
+          candidate,
+          config,
+          params.getClusterCompactionConfig().getEngine(),
+          compactionStateFingerprint,
+          params.getClusterCompactionConfig().isLegacyPersistLastCompactionStateInSegments()
+      );
       jobs.add(
           new CompactionJob(
               taskPayload,

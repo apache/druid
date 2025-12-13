@@ -65,6 +65,7 @@ public class DruidCompactionConfigTest
         null,
         null,
         null,
+        null,
         null
     );
 
@@ -83,7 +84,8 @@ public class DruidCompactionConfigTest
         10,
         new NewestSegmentFirstPolicy(null),
         true,
-        CompactionEngine.MSQ
+        CompactionEngine.MSQ,
+        true
     );
     final DruidCompactionConfig copy = config.withClusterConfig(clusterConfig);
 
@@ -118,5 +120,6 @@ public class DruidCompactionConfigTest
     Assert.assertEquals(CompactionEngine.NATIVE, config.getEngine());
     Assert.assertEquals(0.1, config.getCompactionTaskSlotRatio(), 1e-9);
     Assert.assertEquals(Integer.MAX_VALUE, config.getMaxCompactionTaskSlots());
+    Assert.assertTrue(config.isLegacyPersistLastCompactionStateInSegments());
   }
 }

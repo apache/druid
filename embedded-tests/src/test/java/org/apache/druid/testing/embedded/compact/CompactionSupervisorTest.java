@@ -111,7 +111,7 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   private void configureCompaction(CompactionEngine compactionEngine)
   {
     final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
-        o -> o.updateClusterCompactionConfig(new ClusterCompactionConfig(1.0, 100, null, true, compactionEngine))
+        o -> o.updateClusterCompactionConfig(new ClusterCompactionConfig(1.0, 100, null, true, compactionEngine, true))
     );
     Assertions.assertTrue(updateResponse.isSuccess());
   }

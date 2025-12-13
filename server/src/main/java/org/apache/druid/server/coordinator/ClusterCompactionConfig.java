@@ -45,6 +45,14 @@ public class ClusterCompactionConfig
   private final boolean useSupervisors;
   private final CompactionEngine engine;
   private final CompactionCandidateSearchPolicy compactionPolicy;
+  /**
+   * Whether to persist last compaction state directly in segments for backwards compatibility.
+   * <p>
+   * In a future release this option will be removed and last compaction state will no longer be persisted in segments.
+   * Instead, it will only be stored in the metadata store with a fingerprint id that segments will reference. Some
+   * operators may want to disable this behavior early to begin saving space in segment metadatastore table entries.
+   */
+  private final boolean legacyPersistLastCompactionStateInSegments;
 
   @JsonCreator
   public ClusterCompactionConfig(
@@ -52,7 +60,8 @@ public class ClusterCompactionConfig
       @JsonProperty("maxCompactionTaskSlots") @Nullable Integer maxCompactionTaskSlots,
       @JsonProperty("compactionPolicy") @Nullable CompactionCandidateSearchPolicy compactionPolicy,
       @JsonProperty("useSupervisors") @Nullable Boolean useSupervisors,
-      @JsonProperty("engine") @Nullable CompactionEngine engine
+      @JsonProperty("engine") @Nullable CompactionEngine engine,
+      @JsonProperty("legacyPersistLastCompactionStateInSegments") Boolean legacyPersistLastCompactionStateInSegments
   )
   {
     this.compactionTaskSlotRatio = Configs.valueOrDefault(compactionTaskSlotRatio, 0.1);
@@ -60,6 +69,10 @@ public class ClusterCompactionConfig
     this.compactionPolicy = Configs.valueOrDefault(compactionPolicy, DEFAULT_COMPACTION_POLICY);
     this.engine = Configs.valueOrDefault(engine, CompactionEngine.NATIVE);
     this.useSupervisors = Configs.valueOrDefault(useSupervisors, false);
+    this.legacyPersistLastCompactionStateInSegments = Configs.valueOrDefault(
+        legacyPersistLastCompactionStateInSegments,
+        true
+    );
 
     if (!this.useSupervisors && this.engine == CompactionEngine.MSQ) {
       throw InvalidInput.exception("MSQ Compaction engine can be used only with compaction supervisors.");
@@ -96,6 +109,12 @@ public class ClusterCompactionConfig
     return engine;
   }
 
+  @JsonProperty
+  public boolean isLegacyPersistLastCompactionStateInSegments()
+  {
+    return legacyPersistLastCompactionStateInSegments;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -110,7 +129,8 @@ public class ClusterCompactionConfig
            && Objects.equals(maxCompactionTaskSlots, that.maxCompactionTaskSlots)
            && Objects.equals(compactionPolicy, that.compactionPolicy)
            && Objects.equals(useSupervisors, that.useSupervisors)
-           && Objects.equals(engine, that.engine);
+           && Objects.equals(engine, that.engine)
+           && Objects.equals(legacyPersistLastCompactionStateInSegments, that.legacyPersistLastCompactionStateInSegments);
   }
 
   @Override
@@ -121,7 +141,8 @@ public class ClusterCompactionConfig
         maxCompactionTaskSlots,
         compactionPolicy,
         useSupervisors,
-        engine
+        engine,
+        legacyPersistLastCompactionStateInSegments
     );
   }
 
@@ -134,6 +155,7 @@ public class ClusterCompactionConfig
            ", useSupervisors=" + useSupervisors +
            ", engine=" + engine +
            ", compactionPolicy=" + compactionPolicy +
+           ", legacyPersistLastCompactionStateInSegments=" + legacyPersistLastCompactionStateInSegments +
            '}';
   }
 }

@@ -256,7 +256,7 @@ public class CompactionStatus
   }
 
   @Nullable
-  static PartitionsSpec findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig tuningConfig)
+  public static PartitionsSpec findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig tuningConfig)
   {
     final PartitionsSpec partitionsSpecFromTuningConfig = tuningConfig.getPartitionsSpec();
     if (partitionsSpecFromTuningConfig == null) {

@@ -40,7 +40,7 @@ public class DruidCompactionConfig
   public static final String CONFIG_KEY = "coordinator.compaction.config";
 
   private static final DruidCompactionConfig EMPTY_INSTANCE
-      = new DruidCompactionConfig(List.of(), null, null, null, null, null);
+      = new DruidCompactionConfig(List.of(), null, null, null, null, null, null);
 
   private final List<DataSourceCompactionConfig> compactionConfigs;
   private final ClusterCompactionConfig clusterConfig;
@@ -86,7 +86,8 @@ public class DruidCompactionConfig
       @JsonProperty("maxCompactionTaskSlots") @Nullable Integer maxCompactionTaskSlots,
       @JsonProperty("compactionPolicy") @Nullable CompactionCandidateSearchPolicy compactionPolicy,
       @JsonProperty("useSupervisors") @Nullable Boolean useSupervisors,
-      @JsonProperty("engine") @Nullable CompactionEngine engine
+      @JsonProperty("engine") @Nullable CompactionEngine engine,
+      @JsonProperty("legacyPersistLastCompactionStateInSegments") @Nullable Boolean legacyPersistLastCompactionStateInSegments
   )
   {
     this(
@@ -96,7 +97,8 @@ public class DruidCompactionConfig
             maxCompactionTaskSlots,
             compactionPolicy,
             useSupervisors,
-            engine
+            engine,
+            legacyPersistLastCompactionStateInSegments
         )
     );
   }
@@ -138,6 +140,12 @@ public class DruidCompactionConfig
   public CompactionEngine getEngine()
   {
     return clusterConfig.getEngine();
+  }
+
+  @JsonProperty
+  public boolean isLegacyPersistLastCompactionStateInSegments()
+  {
+    return clusterConfig.isLegacyPersistLastCompactionStateInSegments();
   }
 
   /**
